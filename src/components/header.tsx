@@ -40,10 +40,6 @@ export function Header() {
             <span className="sr-only">Notifications</span>
           </Button>
           <ThemeToggle />
-          <Button variant="ghost" size="icon" className="hidden sm:flex">
-            <Icons.settings className="h-4 w-4" />
-            <span className="sr-only">Settings</span>
-          </Button>
           <Button variant="ghost" size="icon">
             <Icons.github className="h-4 w-4" />
             <span className="sr-only">GitHub</span>
