@@ -48,7 +48,7 @@ export function FilterDropdown({
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="outline" size="default" className="gap-2 shrink-0">
-          <Icons.settings className="h-4 w-4" />
+          <Icons.filter className="h-4 w-4" />
           Filters
           {activeFilterCount > 0 && (
             <Badge variant="secondary" className="text-xs ml-1">
@@ -86,13 +86,13 @@ export function FilterDropdown({
               onValueChange={handleMasteryDrag}
               onValueCommit={handleMasteryCommit}
               min={0}
-              max={16}
+              max={30}
               step={1}
               className="w-full"
             />
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>MR 0</span>
-              <span>MR 16</span>
+              <span>MR 30</span>
             </div>
           </div>
 

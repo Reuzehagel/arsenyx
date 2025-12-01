@@ -27,7 +27,7 @@ export function BrowseContainer({
   // Local filter state for instant updates
   const [masteryMax, setMasteryMax] = useState(() => {
     const param = searchParams.get("mastery");
-    return param ? parseInt(param, 10) : 16;
+    return param ? parseInt(param, 10) : 30;
   });
   const [primeOnly, setPrimeOnly] = useState(
     () => searchParams.get("prime") === "true"
@@ -106,7 +106,7 @@ export function BrowseContainer({
   }, [hideVaulted, syncToUrl]);
 
   const handleClearFilters = useCallback(() => {
-    setMasteryMax(16);
+    setMasteryMax(30);
     setPrimeOnly(false);
     setHideVaulted(false);
     syncToUrl({ mastery: null, prime: null, vaulted: null });
@@ -121,7 +121,7 @@ export function BrowseContainer({
     [syncToUrl]
   );
 
-  const activeFilterCount = [masteryMax < 16, primeOnly, hideVaulted].filter(
+  const activeFilterCount = [masteryMax < 30, primeOnly, hideVaulted].filter(
     Boolean
   ).length;
 
