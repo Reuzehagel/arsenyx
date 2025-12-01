@@ -1,36 +1,88 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Arsenix – Warframe Build Planner
 
-## Getting Started
+Fast, keyboard-first Warframe build planner built with Next.js 16, Tailwind v4, and shadcn/ui. Data is sourced from the community-maintained `@wfcd/items` package.
 
-First, run the development server:
+## Tech Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
+- Next.js 16 (App Router, React 19)
+- Tailwind CSS v4 + shadcn/ui (New York style)
+- Bun (recommended package manager)
+- Data: `@wfcd/items`
+
+## Quick Start
+
+```pwsh
+# Install dependencies
+bun install
+
+# Start the dev server
 bun dev
+
+# Build for production
+bun build
+
+# Start the production server
+bun start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000` in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Warframe Data Sync
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This project imports JSON data directly to avoid server-only fs usage in Next.js. Sync local copies from `@wfcd/items`:
 
-## Learn More
+```pwsh
+# Copy data files from node_modules into src/data/warframe
+bun run sync-data
 
-To learn more about Next.js, take a look at the following resources:
+# Update the @wfcd/items package and re-sync
+bun run update-data
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Data files live in `src/data/warframe/*.json` and are consumed by server-only utilities in `src/lib/warframe/items.ts`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Architecture
 
-## Deploy on Vercel
+- `src/app/` – App Router pages; server components by default
+- `src/components/` – UI and feature components
+  - `ui/` – shadcn/ui primitives (Card, Tabs, etc.)
+  - `browse/` – Browse UI (grid, filters, keyboard handler)
+- `src/lib/warframe/` – Domain utilities
+  - `items.ts` – Server-only item loading and mapping (imports JSON)
+  - `index.ts` – Client-safe exports (types, categories, images, slugs)
+  - `images.ts` – `getImageUrl()` helper for CDN and placeholders
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Server vs Client usage
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```ts
+// Server-only (uses JSON imports)
+import { getItemsByCategory } from "@/lib/warframe/items";
+
+// Client-safe utilities
+import { getImageUrl, getItemUrl } from "@/lib/warframe";
+```
+
+## Conventions & Patterns
+
+- Use `cn()` from `src/lib/utils.ts` to merge Tailwind classes
+- shadcn/ui components have default spacing; override with `gap-0`, `py-0` where needed
+- Images: prefer Next Image `fill` + `object-cover` inside `aspect-square` containers
+- Badges: keep consistent sizing with `text-xs px-2 py-0.5`
+
+## Keyboard Navigation
+
+Keyboard-first interactions are handled in `src/components/browse/use-browse-keyboard.ts` and wired via `BrowseKeyboardHandler` (Suspense) on the Browse page.
+
+## Useful Scripts
+
+Defined in `package.json`:
+
+- `dev` – `next dev`
+- `build` – `next build`
+- `start` – `next start`
+- `sync-data` – `bun run scripts/sync-warframe-data.ts`
+- `update-data` – `bun update @wfcd/items && bun run sync-data`
+
+## Deployment
+
+Standard Next.js deployment (e.g., Vercel). Ensure `@wfcd/items` data is synced into `src/data/warframe` prior to build.
