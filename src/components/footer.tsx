@@ -1,26 +1,47 @@
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { Icons } from "@/components/icons";
+import { SITE_CONFIG, FOOTER_LINKS } from "@/lib/constants";
+import type { NavLink } from "@/lib/types";
 
-const footerLinks = {
-  build: [
-    { label: "Browse Items", href: "/browse" },
-    { label: "Create Build", href: "/create" },
-    { label: "Import Build", href: "/import" },
-    { label: "Templates", href: "/templates" },
-  ],
-  community: [
-    { label: "Build Feed", href: "/feed" },
-    { label: "Documentation", href: "/docs" },
-    { label: "Changelog", href: "/changelog" },
-    { label: "GitHub", href: "https://github.com/arsenix", external: true },
-  ],
-  legal: [
-    { label: "Privacy Policy", href: "/privacy" },
-    { label: "Terms of Service", href: "/terms" },
-    { label: "About", href: "/about" },
-  ],
-};
+// Footer link component
+function FooterLink({ label, href, external }: NavLink) {
+  return (
+    <li>
+      <Link
+        href={href}
+        className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
+        {...(external && {
+          target: "_blank",
+          rel: "noopener noreferrer",
+        })}
+      >
+        {label}
+        {external && <Icons.externalLink className="h-3 w-3" />}
+      </Link>
+    </li>
+  );
+}
+
+// Footer link section component
+function FooterLinkSection({
+  title,
+  links,
+}: {
+  title: string;
+  links: readonly NavLink[];
+}) {
+  return (
+    <div className="space-y-4">
+      <h4 className="text-sm font-semibold">{title}</h4>
+      <ul className="space-y-2">
+        {links.map((link) => (
+          <FooterLink key={link.href} {...link} />
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 export function Footer() {
   return (
@@ -29,77 +50,25 @@ export function Footer() {
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold tracking-tight">ARSENIX</h3>
+            <h3 className="text-lg font-semibold tracking-tight">
+              {SITE_CONFIG.name}
+            </h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Open-source Warframe build planner. Fast, keyboard-first, and
-              community-driven.
+              {SITE_CONFIG.description}
             </p>
           </div>
 
-          {/* Build Links */}
-          <div className="space-y-4">
-            <h4 className="text-sm font-semibold">Build</h4>
-            <ul className="space-y-2">
-              {footerLinks.build.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Community Links */}
-          <div className="space-y-4">
-            <h4 className="text-sm font-semibold">Community</h4>
-            <ul className="space-y-2">
-              {footerLinks.community.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
-                    {...(link.external && {
-                      target: "_blank",
-                      rel: "noopener noreferrer",
-                    })}
-                  >
-                    {link.label}
-                    {link.external && (
-                      <Icons.externalLink className="h-3 w-3" />
-                    )}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Legal Links */}
-          <div className="space-y-4">
-            <h4 className="text-sm font-semibold">Legal</h4>
-            <ul className="space-y-2">
-              {footerLinks.legal.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <FooterLinkSection title="Build" links={FOOTER_LINKS.build} />
+          <FooterLinkSection title="Community" links={FOOTER_LINKS.community} />
+          <FooterLinkSection title="Legal" links={FOOTER_LINKS.legal} />
         </div>
 
         <Separator className="my-8" />
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            © 2025 Arsenix. Not affiliated with Digital Extremes.
+            © {SITE_CONFIG.year} {SITE_CONFIG.author}. Not affiliated with
+            Digital Extremes.
           </p>
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <span>Made with</span>

@@ -1,10 +1,6 @@
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
-import {
-  HeroSection,
-  FeaturesSection,
-  CTASection,
-} from "@/components/landing-sections";
+import { HeroSection, FeaturesSection, CTASection } from "@/components/landing";
 
 export default function Home() {
   return (
