@@ -77,7 +77,7 @@ function CompactModCard({ mod, rarity }: FrameCardProps) {
           src={getImageUrl(mod.imageName)}
           alt={mod.name}
           fill
-          className="object-cover"
+          className="object-cover object-top"
         />
       </div>
       {/* Top Frame */}
@@ -104,12 +104,12 @@ function ExpandedModCard({ mod, rarity }: FrameCardProps) {
   return (
     <div className="relative w-[158px] h-[245px] flex items-center justify-center">
       {/* Mod Image */}
-      <div className="absolute inset-0 z-10 overflow-hidden">
+      <div className="absolute top-[4px] left-[3px] right-[3px] bottom-[4px] z-10 overflow-hidden">
         <Image
           src={getImageUrl(mod.imageName)}
           alt={mod.name}
           fill
-          className="object-contain object-top p-2"
+          className="object-contain object-top"
         />
       </div>
       {/* Top Frame */}
