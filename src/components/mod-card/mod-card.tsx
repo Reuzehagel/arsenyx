@@ -86,6 +86,17 @@ function CompactModCard({ mod, rarity }: FrameCardProps) {
         alt="Top Frame"
         className="absolute top-0 left-1/2 -translate-x-1/2 z-20 w-full"
       />
+      {/* Mod Name */}
+      <span
+        className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-30 text-[17px] font-normal text-[#C79989] text-center"
+        style={{
+          fontFamily: "Roboto, sans-serif",
+          textShadow:
+            "0 0 8px rgba(0,0,0,1), 0 0 16px rgba(0,0,0,0.9), 0 2px 4px rgba(0,0,0,1)",
+        }}
+      >
+        {mod.name}
+      </span>
       {/* Bottom Frame */}
       <img
         src={getModAssetUrl(rarity, "FrameBottom")}
