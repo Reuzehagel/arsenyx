@@ -126,31 +126,34 @@ interface InternalModCardProps {
 }
 
 // Frame colors for compact card
-const COMPACT_FRAME_COLORS: Record<ModRarity, { border: string; corner: string; glow: string }> = {
-  Common: { 
-    border: "border-amber-800/70", 
+const COMPACT_FRAME_COLORS: Record<
+  ModRarity,
+  { border: string; corner: string; glow: string }
+> = {
+  Common: {
+    border: "border-amber-800/70",
     corner: "bg-amber-600",
-    glow: "shadow-amber-600/20"
+    glow: "shadow-amber-600/20",
   },
-  Uncommon: { 
-    border: "border-slate-500/70", 
+  Uncommon: {
+    border: "border-slate-500/70",
     corner: "bg-slate-400",
-    glow: "shadow-slate-400/20"
+    glow: "shadow-slate-400/20",
   },
-  Rare: { 
-    border: "border-yellow-600/70", 
+  Rare: {
+    border: "border-yellow-600/70",
     corner: "bg-yellow-500",
-    glow: "shadow-yellow-500/30"
+    glow: "shadow-yellow-500/30",
   },
-  Legendary: { 
-    border: "border-slate-300/70", 
+  Legendary: {
+    border: "border-slate-300/70",
     corner: "bg-white",
-    glow: "shadow-white/20"
+    glow: "shadow-white/20",
   },
-  Peculiar: { 
-    border: "border-purple-600/70", 
+  Peculiar: {
+    border: "border-purple-600/70",
     corner: "bg-purple-500",
-    glow: "shadow-purple-500/20"
+    glow: "shadow-purple-500/20",
   },
 };
 
@@ -165,7 +168,7 @@ function CompactModCard({
   className,
 }: InternalModCardProps) {
   const frameColors = COMPACT_FRAME_COLORS[rarity];
-  
+
   return (
     <div
       onClick={isDisabled ? undefined : onClick}
@@ -181,76 +184,98 @@ function CompactModCard({
       <div className="relative w-full h-full">
         {/* Dark background */}
         <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-slate-950 to-black rounded-sm" />
-        
+
         {/* Border frame */}
-        <div className={cn(
-          "absolute inset-0 border rounded-sm",
-          frameColors.border,
-          isSelected && "border-primary"
-        )} />
-        
+        <div
+          className={cn(
+            "absolute inset-0 border rounded-sm",
+            frameColors.border,
+            isSelected && "border-primary"
+          )}
+        />
+
         {/* Top frame line with corner accents */}
         <div className="absolute top-0 left-0 right-0 h-[2px]">
           {/* Left corner accent */}
-          <div className={cn(
-            "absolute left-0 top-0 w-3 h-[2px]",
-            frameColors.corner
-          )} />
+          <div
+            className={cn(
+              "absolute left-0 top-0 w-3 h-[2px]",
+              frameColors.corner
+            )}
+          />
           {/* Center thin line */}
           <div className="absolute left-3 right-12 top-0 h-[1px] bg-slate-600/50" />
           {/* Right corner (drain backer area) */}
-          <div className={cn(
-            "absolute right-0 top-0 w-12 h-[2px]",
-            frameColors.corner
-          )} />
+          <div
+            className={cn(
+              "absolute right-0 top-0 w-12 h-[2px]",
+              frameColors.corner
+            )}
+          />
         </div>
-        
+
         {/* Bottom frame with corner accents */}
         <div className="absolute bottom-0 left-0 right-0 h-[2px]">
           {/* Left corner */}
-          <div className={cn(
-            "absolute left-0 bottom-0 w-4 h-[2px]",
-            frameColors.corner
-          )} />
+          <div
+            className={cn(
+              "absolute left-0 bottom-0 w-4 h-[2px]",
+              frameColors.corner
+            )}
+          />
           {/* Center line */}
           <div className="absolute left-4 right-4 bottom-0 h-[1px] bg-slate-600/50" />
           {/* Right corner */}
-          <div className={cn(
-            "absolute right-0 bottom-0 w-4 h-[2px]",
-            frameColors.corner
-          )} />
+          <div
+            className={cn(
+              "absolute right-0 bottom-0 w-4 h-[2px]",
+              frameColors.corner
+            )}
+          />
         </div>
-        
+
         {/* Left side accent */}
-        <div className={cn(
-          "absolute left-0 top-0 bottom-0 w-[2px]",
-          "bg-gradient-to-b from-transparent via-slate-600/30 to-transparent"
-        )}>
-          <div className={cn(
-            "absolute top-0 left-0 w-[2px] h-3",
-            frameColors.corner
-          )} />
-          <div className={cn(
-            "absolute bottom-0 left-0 w-[2px] h-3",
-            frameColors.corner
-          )} />
+        <div
+          className={cn(
+            "absolute left-0 top-0 bottom-0 w-[2px]",
+            "bg-gradient-to-b from-transparent via-slate-600/30 to-transparent"
+          )}
+        >
+          <div
+            className={cn(
+              "absolute top-0 left-0 w-[2px] h-3",
+              frameColors.corner
+            )}
+          />
+          <div
+            className={cn(
+              "absolute bottom-0 left-0 w-[2px] h-3",
+              frameColors.corner
+            )}
+          />
         </div>
-        
+
         {/* Right side accent */}
-        <div className={cn(
-          "absolute right-0 top-0 bottom-0 w-[2px]",
-          "bg-gradient-to-b from-transparent via-slate-600/30 to-transparent"
-        )}>
-          <div className={cn(
-            "absolute top-0 right-0 w-[2px] h-3",
-            frameColors.corner
-          )} />
-          <div className={cn(
-            "absolute bottom-0 right-0 w-[2px] h-3",
-            frameColors.corner
-          )} />
+        <div
+          className={cn(
+            "absolute right-0 top-0 bottom-0 w-[2px]",
+            "bg-gradient-to-b from-transparent via-slate-600/30 to-transparent"
+          )}
+        >
+          <div
+            className={cn(
+              "absolute top-0 right-0 w-[2px] h-3",
+              frameColors.corner
+            )}
+          />
+          <div
+            className={cn(
+              "absolute bottom-0 right-0 w-[2px] h-3",
+              frameColors.corner
+            )}
+          />
         </div>
-        
+
         {/* Content area */}
         <div className="absolute inset-[3px] flex items-center">
           {/* Mod Image */}
@@ -262,7 +287,7 @@ function CompactModCard({
               className="object-contain"
             />
           </div>
-          
+
           {/* Mod Name & Info */}
           <div className="flex-1 min-w-0 px-2 flex flex-col justify-center">
             <span className="font-medium text-[11px] text-white/90 truncate leading-tight">
@@ -273,7 +298,7 @@ function CompactModCard({
               <RankPips currentRank={currentRank} maxRank={maxRank} size="sm" />
             </div>
           </div>
-          
+
           {/* Drain & Polarity (top right area) */}
           <div className="absolute top-0 right-0 flex items-center gap-1 px-1.5 py-0.5 bg-slate-900/80">
             {mod.polarity && mod.polarity !== "universal" && (
@@ -284,13 +309,15 @@ function CompactModCard({
             </span>
           </div>
         </div>
-        
+
         {/* Selection glow */}
         {isSelected && (
-          <div className={cn(
-            "absolute inset-0 rounded-sm shadow-[inset_0_0_8px_rgba(59,130,246,0.5)]",
-            "pointer-events-none"
-          )} />
+          <div
+            className={cn(
+              "absolute inset-0 rounded-sm shadow-[inset_0_0_8px_rgba(59,130,246,0.5)]",
+              "pointer-events-none"
+            )}
+          />
         )}
       </div>
     </div>

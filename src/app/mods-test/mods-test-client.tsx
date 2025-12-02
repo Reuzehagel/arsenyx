@@ -53,7 +53,9 @@ export function ModsTestClient({ sampleMods }: ModsTestClientProps) {
             <div className="flex items-center gap-2">
               <span
                 className={
-                  size === "compact" ? "text-foreground" : "text-muted-foreground"
+                  size === "compact"
+                    ? "text-foreground"
+                    : "text-muted-foreground"
                 }
               >
                 Compact
