@@ -17,6 +17,7 @@ export const ROUTES = {
   create: "/create",
   import: "/import",
   templates: "/templates",
+  modsTest: "/mods-test",
   feed: "/feed",
   docs: "/docs",
   changelog: "/changelog",
@@ -36,6 +37,7 @@ export const NAV_ITEMS = [
   { label: "Browse", href: ROUTES.browse },
   { label: "Builds", href: ROUTES.builds },
   { label: "Templates", href: ROUTES.templates },
+  { label: "Mods Test", href: ROUTES.modsTest },
 ] as const;
 
 // Footer link sections

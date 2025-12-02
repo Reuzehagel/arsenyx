@@ -8,6 +8,11 @@ const nextConfig: NextConfig = {
         hostname: "cdn.warframestat.us",
         pathname: "/img/**",
       },
+      {
+        protocol: "https",
+        hostname: "wiki.warframe.com",
+        pathname: "/images/**",
+      },
     ],
   },
 };

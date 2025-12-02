@@ -77,14 +77,14 @@ export const Icons = {
 // =============================================================================
 
 const polaritySvgMap: Record<Polarity, string> = {
-  madurai: "/Madurai_Pol.svg",
-  vazarin: "/Vazarin_Pol.svg",
-  naramon: "/Naramon_Pol.svg",
-  zenurik: "/Zenurik_Pol.svg",
-  unairu: "/Unairu_Pol.svg",
-  penjaga: "/Penjaga_Pol.svg",
-  umbra: "/Umbra_Pol.svg",
-  universal: "/Any_Pol.svg",
+  madurai: "/focus-schools/Madurai_Pol.svg",
+  vazarin: "/focus-schools/Vazarin_Pol.svg",
+  naramon: "/focus-schools/Naramon_Pol.svg",
+  zenurik: "/focus-schools/Zenurik_Pol.svg",
+  unairu: "/focus-schools/Unairu_Pol.svg",
+  penjaga: "/focus-schools/Penjaga_Pol.svg",
+  umbra: "/focus-schools/Umbra_Pol.svg",
+  universal: "/focus-schools/Any_Pol.svg",
 };
 
 const polarityColorMap: Record<Polarity, string> = {
