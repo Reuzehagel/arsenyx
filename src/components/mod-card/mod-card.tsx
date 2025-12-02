@@ -154,13 +154,13 @@ function ExpandedModCard({ mod, rarity }: FrameCardProps) {
       </div>
 
       {/* Info Panel - positioned at bottom, sized by content */}
-      <div className="absolute bottom-[4px] left-[3px] right-[3px] z-15">
+      <div className="absolute bottom-[12px] left-[8px] right-[8px] z-15">
         {/* Background Image - clips to panel height */}
-        <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute inset-x-0 -left-1 -right-1 -top-2 bottom-0 overflow-hidden">
           <img
             src={getModAssetUrl(rarity, "Background")}
             alt=""
-            className="absolute bottom-0 left-0 w-full"
+            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[calc(100%+16px)]"
           />
         </div>
         {/* Text Content */}
@@ -189,7 +189,7 @@ function ExpandedModCard({ mod, rarity }: FrameCardProps) {
           <img
             src={getModAssetUrl(rarity, "LowerTab")}
             alt=""
-            className="mt-1 w-[80%]"
+            className="mt-1 w-[80%] z-10"
           />
         </div>
       </div>
