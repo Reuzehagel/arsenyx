@@ -62,10 +62,7 @@ export function ModsTestClient({ sampleMods }: ModsTestClientProps) {
             <div className="flex flex-wrap gap-4">
               {sampleMods[rarity].length > 0 ? (
                 sampleMods[rarity].map((mod) => (
-                  <ModCard
-                    key={mod.uniqueName}
-                    mod={mod}
-                  />
+                  <ModCard key={mod.uniqueName} mod={mod} />
                 ))
               ) : (
                 <p className="text-muted-foreground text-sm">
