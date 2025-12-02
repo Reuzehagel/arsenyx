@@ -85,9 +85,13 @@ export function ModSearchPanel({
 
     // Filter by slot type
     if (slotType === "aura") {
-      mods = mods.filter((m) => m.type?.toLowerCase().includes("aura"));
+      // Aura mods have compatName "AURA" (uppercase)
+      mods = mods.filter((m) => m.compatName?.toUpperCase() === "AURA");
     } else if (slotType === "exilus") {
       mods = mods.filter((m) => m.isExilus);
+    } else if (slotType === "normal") {
+      // Exclude aura mods from normal slots
+      mods = mods.filter((m) => m.compatName?.toUpperCase() !== "AURA");
     }
 
     // Filter by search query
