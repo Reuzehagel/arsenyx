@@ -6,10 +6,12 @@ import { ItemSidebar } from "./item-sidebar";
 import { ModGrid } from "./mod-grid";
 import { ModSearchPanel } from "./mod-search-panel";
 import { useBuildKeyboard } from "./use-build-keyboard";
-import { getCapacityStatus } from "@/lib/warframe/capacity";
+import {
+  getCapacityStatus,
+  calculateTotalEndoCost,
+} from "@/lib/warframe/capacity";
 import { copyBuildToClipboard } from "@/lib/build-codec";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getImageUrl } from "@/lib/warframe/images";
 import type {
@@ -136,8 +138,9 @@ export function BuildContainer({
   // Copy notification
   const [showCopied, setShowCopied] = useState(false);
 
-  // Calculate capacity
+  // Calculate capacity and endo cost
   const capacityStatus = getCapacityStatus(buildState);
+  const totalEndoCost = calculateTotalEndoCost(buildState);
 
   // Auto-save to localStorage
   useEffect(() => {
@@ -338,86 +341,78 @@ export function BuildContainer({
   });
 
   return (
-    <div className="container py-8 max-w-[1440px]">
-      <div className="flex gap-4 items-start">
-        {/* Main Build Card */}
-        <div className="flex-1 bg-card border rounded-lg shadow-sm p-6 min-h-[760px]">
-          {/* Header */}
-          <div className="flex gap-4 mb-6">
-            <div className="relative w-32 h-32 bg-muted/10 rounded-md flex items-center justify-center overflow-hidden border">
-              <Image
-                src={getImageUrl(item.imageName)}
-                alt={item.name}
-                fill
-                className="object-cover"
-              />
-            </div>
-            <div className="flex flex-col justify-center gap-3">
-              <h1 className="text-3xl font-bold tracking-tight">{item.name}</h1>
-              <div className="flex items-center gap-3">
-                {/* Capacity indicator */}
-                <Badge
-                  variant="secondary"
-                  className={cn(
-                    "gap-1.5 px-2 py-1 h-6 font-semibold",
-                    capacityStatus.isOverCapacity
-                      ? "bg-destructive/20 text-destructive hover:bg-destructive/30"
-                      : "bg-muted/50 hover:bg-muted"
-                  )}
-                >
-                  <Hexagon className="w-3 h-3 fill-current" />
-                  {capacityStatus.remaining}/{capacityStatus.max}
-                </Badge>
-                {/* Reactor status */}
-                <Badge
-                  variant="secondary"
-                  className={cn(
-                    "gap-1.5 px-2 py-1 h-6 font-semibold",
-                    buildState.hasReactor
-                      ? "bg-primary/20 text-primary hover:bg-primary/30"
-                      : "bg-muted/50 hover:bg-muted"
-                  )}
-                >
-                  <Diamond className="w-3 h-3 fill-current" />
-                  {buildState.hasReactor ? "Reactor" : "No Reactor"}
-                </Badge>
-              </div>
-            </div>
+    <div className="container py-6 max-w-[1600px]">
+      {/* Header Card */}
+      <div className="bg-card border rounded-lg p-4 mb-4">
+        <div className="flex gap-4 items-center">
+          <div className="relative w-24 h-24 bg-muted/10 rounded-md flex items-center justify-center overflow-hidden">
+            <Image
+              src={getImageUrl(item.imageName)}
+              alt={item.name}
+              fill
+              className="object-cover"
+            />
           </div>
-
-          {/* Editor Area */}
-          <div className="flex gap-3 h-full">
-            {/* Left Sidebar (Stats) */}
-            <div className="w-[240px] shrink-0 bg-card border rounded-lg shadow-sm flex flex-col">
-              <ItemSidebar
-                buildState={buildState}
-                capacityStatus={capacityStatus}
-                onToggleReactor={handleToggleReactor}
-                onCopyBuild={handleCopyBuild}
-                onClearBuild={handleClearBuild}
-                showCopied={showCopied}
-                itemStats={extractItemStats(item)}
-              />
-            </div>
-
-            {/* Mod Grid Area */}
-            <div className="flex-1 bg-card border rounded-lg shadow-sm p-3">
-              <ModGrid
-                auraSlot={buildState.auraSlot}
-                exilusSlot={buildState.exilusSlot}
-                normalSlots={buildState.normalSlots}
-                activeSlotId={activeSlotId}
-                onSelectSlot={handleSelectSlot}
-                onRemoveMod={handleRemoveMod}
-                onApplyForma={handleApplyForma}
-                isWarframe={isWarframeOrNecramech}
-              />
+          <div className="flex flex-col justify-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight">{item.name}</h1>
+            <div className="flex items-center gap-3">
+              {/* Capacity indicator */}
+              <Badge
+                variant="secondary"
+                className={cn(
+                  "gap-1.5 px-2 py-0.5 font-semibold text-xs",
+                  capacityStatus.isOverCapacity
+                    ? "bg-destructive/20 text-destructive hover:bg-destructive/30"
+                    : "bg-muted/50 hover:bg-muted"
+                )}
+              >
+                <Hexagon className="w-3 h-3 fill-current" />
+                {capacityStatus.remaining}/{capacityStatus.max}
+              </Badge>
+              {/* Endo cost indicator */}
+              <Badge
+                variant="secondary"
+                className="gap-1.5 px-2 py-0.5 font-semibold text-xs bg-muted/50 hover:bg-muted"
+              >
+                <Diamond className="w-3 h-3 fill-current" />
+                {totalEndoCost.toLocaleString()}
+              </Badge>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Right Search Panel */}
-        <div className="w-[360px] shrink-0">
+      {/* Main Content: 3-column layout */}
+      <div className="flex gap-4 items-start">
+        {/* Left Sidebar (Stats) */}
+        <div className="w-[260px] shrink-0 bg-card border rounded-lg">
+          <ItemSidebar
+            buildState={buildState}
+            capacityStatus={capacityStatus}
+            onToggleReactor={handleToggleReactor}
+            onCopyBuild={handleCopyBuild}
+            onClearBuild={handleClearBuild}
+            showCopied={showCopied}
+            itemStats={extractItemStats(item)}
+          />
+        </div>
+
+        {/* Center: Mod Grid */}
+        <div className="flex-1 bg-card border rounded-lg p-4 min-h-[600px]">
+          <ModGrid
+            auraSlot={buildState.auraSlot}
+            exilusSlot={buildState.exilusSlot}
+            normalSlots={buildState.normalSlots}
+            activeSlotId={activeSlotId}
+            onSelectSlot={handleSelectSlot}
+            onRemoveMod={handleRemoveMod}
+            onApplyForma={handleApplyForma}
+            isWarframe={isWarframeOrNecramech}
+          />
+        </div>
+
+        {/* Right: Mod Search Panel */}
+        <div className="w-[320px] shrink-0 h-[600px]">
           <ModSearchPanel
             isOpen={true}
             onClose={() => setIsSearchOpen(false)}

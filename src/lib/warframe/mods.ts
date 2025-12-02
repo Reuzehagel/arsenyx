@@ -54,6 +54,18 @@ export function getAllMods(): Mod[] {
       if (!mod.name) return false;
       if (mod.name.includes("Riven Mod")) return false;
       if (!mod.compatName && !mod.type) return false;
+
+      // Filter out variant mods (duplicates with different stats)
+      // - Beginner: Tutorial versions with lower ranks (ends with "Beginner")
+      // - Expert: Special event versions with higher ranks (ends with "Expert")
+      // - Nemesis: Duplicate entries from Nemesis system
+      // - SubMod: Internal sub-components of other mods (ends with "SubMod")
+      const uniqueName = mod.uniqueName ?? "";
+      if (uniqueName.includes("/Beginner/")) return false;
+      if (uniqueName.endsWith("Expert")) return false;
+      if (uniqueName.includes("/Nemesis/")) return false;
+      if (uniqueName.endsWith("SubMod")) return false;
+
       return true;
     })
     .map((mod) => ({
@@ -74,9 +86,14 @@ export function getModsByCompatibility(compatibility: ModCompatibility): Mod[] {
 
     switch (compatibility) {
       case "Warframe":
-        return modType.includes("warframe") && !mod.isAugment;
+        // Include general warframe mods (compatName is "WARFRAME") and aura mods
+        // Exclude warframe-specific augments (where compatName is a specific warframe name like "Trinity")
+        return (
+          modType.includes("warframe") &&
+          (compatName === "warframe" || compatName === "aura")
+        );
       case "Aura":
-        return modType.includes("aura");
+        return modType.includes("aura") || compatName === "aura";
       case "Exilus":
         return mod.isExilus === true;
       case "Rifle":

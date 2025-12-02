@@ -205,3 +205,58 @@ export function calculatePolarityBenefit(
 
   return currentDrain - newDrain; // Positive = saves capacity
 }
+
+// =============================================================================
+// ENDO COST CALCULATION
+// =============================================================================
+
+/**
+ * Base endo costs per rank by rarity (approximate Warframe values)
+ */
+const ENDO_PER_RANK: Record<string, number> = {
+  Common: 10,
+  Uncommon: 15,
+  Rare: 20,
+  Legendary: 30,
+  Peculiar: 15,
+};
+
+/**
+ * Calculate endo cost for a single mod at a given rank
+ */
+export function calculateModEndoCost(mod: PlacedMod): number {
+  const baseEndo = ENDO_PER_RANK[mod.rarity] ?? 15;
+  // Endo cost scales roughly exponentially with rank
+  // This is a simplified approximation
+  let totalEndo = 0;
+  for (let i = 0; i < mod.rank; i++) {
+    totalEndo += baseEndo * Math.pow(2, i);
+  }
+  return totalEndo;
+}
+
+/**
+ * Calculate total endo cost for all mods in a build
+ */
+export function calculateTotalEndoCost(build: BuildState): number {
+  let totalEndo = 0;
+
+  // Aura slot
+  if (build.auraSlot?.mod) {
+    totalEndo += calculateModEndoCost(build.auraSlot.mod);
+  }
+
+  // Exilus slot
+  if (build.exilusSlot?.mod) {
+    totalEndo += calculateModEndoCost(build.exilusSlot.mod);
+  }
+
+  // Normal slots
+  for (const slot of build.normalSlots) {
+    if (slot.mod) {
+      totalEndo += calculateModEndoCost(slot.mod);
+    }
+  }
+
+  return totalEndo;
+}
