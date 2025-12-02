@@ -371,15 +371,14 @@ function ModCard({
       data-index={dataIndex}
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-all",
-        "border-l-4 bg-muted/30 hover:bg-muted/50",
-        RARITY_BORDER_COLORS[mod.rarity] || "border-l-gray-500",
-        isSelected && "ring-1 ring-primary bg-muted/50",
-        isUsed && "opacity-40 cursor-not-allowed"
+        "flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-all group",
+        "border border-transparent bg-card hover:bg-accent/50 hover:border-border/50",
+        isSelected && "ring-1 ring-primary bg-accent/50 border-primary/30",
+        isUsed && "opacity-50 grayscale cursor-not-allowed"
       )}
     >
       {/* Mod Image */}
-      <div className="relative w-12 h-14 rounded bg-black/30 flex-shrink-0 overflow-hidden">
+      <div className="relative w-10 h-10 rounded bg-black/20 flex-shrink-0 overflow-hidden border border-white/5">
         <Image
           src={getImageUrl(mod.imageName)}
           alt={mod.name}
@@ -389,15 +388,38 @@ function ModCard({
       </div>
 
       {/* Mod Info */}
-      <div className="flex-1 min-w-0">
-        <span
-          className={cn(
-            "font-medium text-sm block truncate",
-            isUsed && "line-through"
-          )}
-        >
-          {mod.name}
-        </span>
+      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+        <div className="flex items-center justify-between gap-2">
+          <span
+            className={cn(
+              "font-medium text-sm truncate",
+              isUsed && "line-through decoration-muted-foreground"
+            )}
+          >
+            {mod.name}
+          </span>
+          {/* Drain & Polarity */}
+          <div className="flex items-center gap-1 bg-muted/50 px-1.5 py-0.5 rounded text-[10px] font-mono text-muted-foreground">
+            <span>{mod.baseDrain}</span>
+            <PolarityIcon polarity={mod.polarity} className="text-[10px]" />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+          <span
+            className={cn(
+              "uppercase tracking-wider font-medium",
+              mod.rarity === "Legendary" && "text-amber-500",
+              mod.rarity === "Rare" && "text-yellow-500",
+              mod.rarity === "Uncommon" && "text-gray-400",
+              mod.rarity === "Common" && "text-orange-700"
+            )}
+          >
+            {mod.rarity}
+          </span>
+          <span>•</span>
+          <span>Rank {mod.fusionLimit}</span>
+        </div>
       </div>
     </div>
   );

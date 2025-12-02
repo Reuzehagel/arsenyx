@@ -13,6 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { calculateSlotDrain, getSlotPolarity } from "@/lib/warframe/capacity";
 import type { ModSlot, Polarity } from "@/lib/warframe/types";
+import { Plus } from "lucide-react";
 
 interface ModGridProps {
   auraSlot?: ModSlot;
@@ -34,136 +35,105 @@ export function ModGrid({
   onRemoveMod,
   isWarframe,
 }: ModGridProps) {
-  const [activeGridTab, setActiveGridTab] = useState<"mods" | "shards">("mods");
+  const [activeTab, setActiveTab] = useState<"mods" | "shards">("mods");
 
   return (
     <div className="flex flex-col h-full">
-      {/* Mods / Shards Tabs */}
-      <div className="flex gap-4 mb-4">
+      {/* Tabs */}
+      <div className="flex gap-1 p-1 bg-muted/50 rounded-lg w-fit mb-6">
         <button
-          onClick={() => setActiveGridTab("mods")}
+          onClick={() => setActiveTab("mods")}
           className={cn(
-            "text-sm font-medium pb-1 border-b-2 transition-colors",
-            activeGridTab === "mods"
-              ? "border-foreground text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground"
+            "px-3 py-1 text-xs font-medium rounded-md transition-all",
+            activeTab === "mods"
+              ? "bg-background shadow-sm text-foreground"
+              : "text-muted-foreground hover:text-foreground"
           )}
         >
           Mods
         </button>
         <button
-          onClick={() => setActiveGridTab("shards")}
+          onClick={() => setActiveTab("shards")}
           className={cn(
-            "text-sm font-medium pb-1 border-b-2 transition-colors",
-            activeGridTab === "shards"
-              ? "border-foreground text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground"
+            "px-3 py-1 text-xs font-medium rounded-md transition-all",
+            activeTab === "shards"
+              ? "bg-background shadow-sm text-foreground"
+              : "text-muted-foreground hover:text-foreground"
           )}
         >
           Shards
         </button>
       </div>
 
-      {activeGridTab === "mods" ? (
-        <div className="flex flex-col gap-3">
-          {/* Row 1: Aura + 2 Normal Slots */}
-          <div className="grid grid-cols-4 gap-2">
-            {isWarframe && auraSlot ? (
+      {activeTab === "mods" ? (
+        <div className="flex flex-col gap-4 items-center">
+          {/* Row 1: Aura & Exilus */}
+          <div className="flex gap-4 w-full justify-center">
+            {isWarframe && auraSlot && (
               <ModSlotCard
                 slot={auraSlot}
                 isActive={activeSlotId === auraSlot.id}
                 onSelect={() => onSelectSlot(auraSlot.id)}
                 onRemove={() => onRemoveMod(auraSlot.id)}
+                label="Aura"
+                className="w-[180px] h-[90px]"
+                horizontal
               />
-            ) : (
-              <div className="aspect-[3/4]" />
             )}
-            <ModSlotCard
-              slot={normalSlots[0]}
-              isActive={activeSlotId === normalSlots[0]?.id}
-              onSelect={() => onSelectSlot(normalSlots[0]?.id)}
-              onRemove={() => onRemoveMod(normalSlots[0]?.id)}
-            />
-            <ModSlotCard
-              slot={normalSlots[1]}
-              isActive={activeSlotId === normalSlots[1]?.id}
-              onSelect={() => onSelectSlot(normalSlots[1]?.id)}
-              onRemove={() => onRemoveMod(normalSlots[1]?.id)}
-            />
-            <div className="aspect-[3/4]" /> {/* Empty slot */}
-          </div>
-
-          {/* Row 2: 4 Normal Slots with polarity indicators */}
-          <div className="grid grid-cols-4 gap-2">
-            <ModSlotCard
-              slot={normalSlots[2]}
-              isActive={activeSlotId === normalSlots[2]?.id}
-              onSelect={() => onSelectSlot(normalSlots[2]?.id)}
-              onRemove={() => onRemoveMod(normalSlots[2]?.id)}
-              showPolarityCorner="bottom-left"
-            />
-            <ModSlotCard
-              slot={normalSlots[3]}
-              isActive={activeSlotId === normalSlots[3]?.id}
-              onSelect={() => onSelectSlot(normalSlots[3]?.id)}
-              onRemove={() => onRemoveMod(normalSlots[3]?.id)}
-              showPolarityCorner="top-right"
-            />
-            <ModSlotCard
-              slot={normalSlots[4]}
-              isActive={activeSlotId === normalSlots[4]?.id}
-              onSelect={() => onSelectSlot(normalSlots[4]?.id)}
-              onRemove={() => onRemoveMod(normalSlots[4]?.id)}
-            />
-            <ModSlotCard
-              slot={normalSlots[5]}
-              isActive={activeSlotId === normalSlots[5]?.id}
-              onSelect={() => onSelectSlot(normalSlots[5]?.id)}
-              onRemove={() => onRemoveMod(normalSlots[5]?.id)}
-            />
-          </div>
-
-          {/* Row 3: 3 Normal Slots + 1 empty */}
-          <div className="grid grid-cols-4 gap-2">
-            <ModSlotCard
-              slot={normalSlots[6]}
-              isActive={activeSlotId === normalSlots[6]?.id}
-              onSelect={() => onSelectSlot(normalSlots[6]?.id)}
-              onRemove={() => onRemoveMod(normalSlots[6]?.id)}
-              showPolarityCorner="bottom-left"
-            />
-            <ModSlotCard
-              slot={normalSlots[7]}
-              isActive={activeSlotId === normalSlots[7]?.id}
-              onSelect={() => onSelectSlot(normalSlots[7]?.id)}
-              onRemove={() => onRemoveMod(normalSlots[7]?.id)}
-            />
-            <div className="aspect-[3/4]" />
-            <div className="aspect-[3/4]" />
-          </div>
-
-          {/* Row 4: Exilus slots (centered) */}
-          <div className="grid grid-cols-4 gap-2">
-            <div className="aspect-[3/4]" />
             <ModSlotCard
               slot={exilusSlot}
               isActive={activeSlotId === exilusSlot.id}
               onSelect={() => onSelectSlot(exilusSlot.id)}
               onRemove={() => onRemoveMod(exilusSlot.id)}
+              label="Exilus"
+              className="w-[180px] h-[90px]"
+              horizontal
             />
-            <ModSlotCard
-              slot={{ id: "exilus-1", type: "exilus" }}
-              isActive={false}
-              onSelect={() => {}}
-              onRemove={() => {}}
-            />
-            <div className="aspect-[3/4]" />
+          </div>
+
+          {/* Row 2: Normal Slots 1-4 */}
+          <div className="flex gap-4 w-full justify-center">
+            {normalSlots.slice(0, 4).map((slot, i) => (
+              <ModSlotCard
+                key={slot.id}
+                slot={slot}
+                isActive={activeSlotId === slot.id}
+                onSelect={() => onSelectSlot(slot.id)}
+                onRemove={() => onRemoveMod(slot.id)}
+                className="w-[180px] h-[90px]"
+                horizontal
+              />
+            ))}
+          </div>
+
+          {/* Row 3: Normal Slots 5-8 */}
+          <div className="flex gap-4 w-full justify-center">
+            {normalSlots.slice(4, 8).map((slot, i) => (
+              <ModSlotCard
+                key={slot.id}
+                slot={slot}
+                isActive={activeSlotId === slot.id}
+                onSelect={() => onSelectSlot(slot.id)}
+                onRemove={() => onRemoveMod(slot.id)}
+                className="w-[180px] h-[90px]"
+                horizontal
+              />
+            ))}
+          </div>
+
+          {/* Row 4: Arcanes (Placeholder for now as they are not in buildState yet fully) */}
+          <div className="flex gap-4 w-full justify-center mt-2">
+            <div className="w-[180px] h-[75px] border border-dashed rounded-lg flex items-center justify-center text-muted-foreground/30">
+              <Plus className="w-6 h-6" />
+            </div>
+            <div className="w-[180px] h-[75px] border border-dashed rounded-lg flex items-center justify-center text-muted-foreground/30">
+              <Plus className="w-6 h-6" />
+            </div>
           </div>
         </div>
       ) : (
-        /* Shards Tab Content */
-        <div className="flex items-center justify-center h-48 text-muted-foreground">
-          <p className="text-sm">Archon Shards coming soon</p>
+        <div className="flex items-center justify-center h-64 text-muted-foreground">
+          Archon Shards coming soon
         </div>
       )}
     </div>
@@ -179,11 +149,10 @@ interface ModSlotCardProps {
   isActive: boolean;
   onSelect: () => void;
   onRemove: () => void;
-  showPolarityCorner?:
-    | "top-left"
-    | "top-right"
-    | "bottom-left"
-    | "bottom-right";
+  slotNumber?: number;
+  className?: string;
+  label?: string;
+  horizontal?: boolean;
 }
 
 function ModSlotCard({
@@ -191,19 +160,14 @@ function ModSlotCard({
   isActive,
   onSelect,
   onRemove,
-  showPolarityCorner,
+  slotNumber,
+  className,
+  label,
+  horizontal,
 }: ModSlotCardProps) {
   const hasMod = !!slot.mod;
   const polarity = getSlotPolarity(slot);
   const drain = hasMod ? calculateSlotDrain(slot) : 0;
-
-  // Position classes for polarity indicator
-  const polarityPositionClasses: Record<string, string> = {
-    "top-left": "top-0 left-0 -translate-x-1/3 -translate-y-1/3",
-    "top-right": "top-0 right-0 translate-x-1/3 -translate-y-1/3",
-    "bottom-left": "bottom-0 left-0 -translate-x-1/3 translate-y-1/3",
-    "bottom-right": "bottom-0 right-0 translate-x-1/3 translate-y-1/3",
-  };
 
   return (
     <TooltipProvider>
@@ -211,10 +175,16 @@ function ModSlotCard({
         <TooltipTrigger asChild>
           <div
             className={cn(
-              "relative aspect-[3/4] flex flex-col items-center justify-center cursor-pointer transition-all rounded-lg",
-              "border border-border/50 hover:border-primary/50 bg-muted/20",
-              isActive && "border-primary ring-1 ring-primary/30",
-              !hasMod && "border-dashed"
+              "relative flex cursor-pointer transition-all rounded-lg overflow-hidden group",
+              "bg-card border border-dashed border-border/60",
+              isActive
+                ? "border-primary ring-1 ring-primary/30"
+                : "hover:border-primary/50 hover:bg-accent/5",
+              hasMod && "border-solid border-border",
+              horizontal
+                ? "flex-row items-center p-2 gap-3"
+                : "flex-col items-center justify-center",
+              className
             )}
             onClick={onSelect}
             onContextMenu={(e: React.MouseEvent) => {
@@ -222,53 +192,83 @@ function ModSlotCard({
               if (hasMod) onRemove();
             }}
           >
-            {/* Polarity Indicator in corner */}
-            {polarity && showPolarityCorner && (
-              <div
-                className={cn(
-                  "absolute z-10",
-                  polarityPositionClasses[showPolarityCorner]
-                )}
-              >
-                <PolarityIcon polarity={polarity} className="text-sm" />
+            {/* Polarity Icon (Background) */}
+            {polarity && !hasMod && (
+              <div className="absolute right-2 top-2 opacity-20 pointer-events-none">
+                <PolarityIcon polarity={polarity} className="text-xl" />
               </div>
+            )}
+
+            {/* Label (Aura/Exilus) */}
+            {label && !hasMod && (
+              <span className="absolute left-2 top-1 text-[10px] font-mono text-muted-foreground/50 uppercase tracking-wider">
+                {label}
+              </span>
             )}
 
             {hasMod ? (
               <>
                 {/* Mod Image */}
-                <div className="relative w-full h-full p-1">
+                <div
+                  className={cn(
+                    "relative shrink-0",
+                    horizontal ? "h-full aspect-[2/3]" : "w-full h-full p-1"
+                  )}
+                >
                   <Image
                     src={getImageUrl(slot.mod!.imageName)}
                     alt={slot.mod!.name}
                     fill
-                    className="object-contain p-1"
+                    className="object-contain"
                   />
                 </div>
 
-                {/* Drain Badge */}
-                <Badge
-                  variant="secondary"
-                  className={cn(
-                    "absolute bottom-1 right-1 text-[9px] px-1 py-0 h-4",
-                    polarity &&
-                      slot.mod!.polarity === polarity &&
-                      "bg-green-500/20 text-green-600",
-                    polarity &&
-                      slot.mod!.polarity !== polarity &&
-                      "bg-red-500/20 text-red-600"
-                  )}
-                >
-                  {drain}
-                </Badge>
+                {/* Mod Info (Horizontal Layout) */}
+                {horizontal && (
+                  <div className="flex flex-col min-w-0 flex-1 gap-0.5">
+                    <p className="text-sm font-medium truncate leading-tight">
+                      {slot.mod!.name}
+                    </p>
+                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                      <span className="uppercase tracking-wider">
+                        {slot.mod!.rarity}
+                      </span>
+                      <span>•</span>
+                      <span>Rank {slot.mod!.rank}</span>
+                    </div>
+
+                    {/* Drain & Polarity */}
+                    <div className="flex items-center gap-1 mt-1">
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          "text-[10px] px-1 py-0 h-4 font-mono",
+                          polarity &&
+                            slot.mod!.polarity === polarity &&
+                            "bg-green-500/10 text-green-600 hover:bg-green-500/20",
+                          polarity &&
+                            slot.mod!.polarity !== polarity &&
+                            "bg-red-500/10 text-red-600 hover:bg-red-500/20"
+                        )}
+                      >
+                        {drain}
+                      </Badge>
+                      {polarity && (
+                        <PolarityIcon
+                          polarity={polarity}
+                          className="text-xs opacity-50"
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
               </>
-            ) : /* Empty slot with subtle polarity indicator */
-            polarity && !showPolarityCorner ? (
-              <PolarityIcon
-                polarity={polarity}
-                className="text-lg opacity-30"
-              />
-            ) : null}
+            ) : (
+              /* Empty State */
+              <div className="flex items-center justify-center w-full h-full">
+                <Plus className="w-5 h-5 text-muted-foreground/20 group-hover:text-muted-foreground/40 transition-colors" />
+              </div>
+            )}
           </div>
         </TooltipTrigger>
         <TooltipContent side="bottom">
@@ -312,19 +312,9 @@ function PolarityIcon({ polarity, className }: PolarityIconProps) {
     universal: "○", // Universal (circle)
   };
 
-  const colorMap: Record<Polarity, string> = {
-    madurai: "text-orange-500",
-    vazarin: "text-blue-500",
-    naramon: "text-green-500",
-    zenurik: "text-yellow-500",
-    unairu: "text-purple-500",
-    penjaga: "text-cyan-500",
-    umbra: "text-amber-600",
-    universal: "text-gray-400",
-  };
-
+  // Using currentColor for flexibility, but keeping map for reference if needed
   return (
-    <span className={cn("font-bold", colorMap[polarity], className)}>
+    <span className={cn("font-bold font-mono", className)}>
       {iconMap[polarity]}
     </span>
   );

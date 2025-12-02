@@ -1,18 +1,32 @@
 "use client";
 
-import { useState } from "react";
 import Image from "next/image";
-import { getImageUrl } from "@/lib/warframe/images";
 import { Separator } from "@/components/ui/separator";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
+import { getImageUrl } from "@/lib/warframe/images";
 import type { BuildState } from "@/lib/warframe/types";
 import type { CapacityStatus } from "@/lib/warframe/capacity";
+import {
+  Zap,
+  Heart,
+  Shield,
+  Wind,
+  Timer,
+  Activity,
+  Maximize,
+  BicepsFlexed,
+  ShieldPlus,
+} from "lucide-react";
+
+interface ItemStats {
+  health?: number;
+  shield?: number;
+  armor?: number;
+  energy?: number;
+  sprintSpeed?: number;
+  abilities?: Array<{ name: string; imageName?: string }>;
+}
 
 interface ItemSidebarProps {
   buildState: BuildState;
@@ -21,24 +35,15 @@ interface ItemSidebarProps {
   onCopyBuild: () => void;
   onClearBuild: () => void;
   showCopied: boolean;
+  itemStats?: ItemStats;
 }
-
-// Tab icons for warframe abilities/info
-const ABILITY_TABS = [
-  { id: "passive", icon: "◈", label: "Passive" },
-  { id: "ability1", icon: "①", label: "Ability 1" },
-  { id: "ability2", icon: "②", label: "Ability 2" },
-  { id: "ability3", icon: "③", label: "Ability 3" },
-  { id: "ability4", icon: "④", label: "Ability 4" },
-];
 
 export function ItemSidebar({
   buildState,
   capacityStatus,
   onToggleReactor,
+  itemStats,
 }: ItemSidebarProps) {
-  const [activeTab, setActiveTab] = useState("passive");
-  const imageUrl = getImageUrl(buildState.itemImageName);
   const isWarframeOrNecramech =
     buildState.itemCategory === "warframes" ||
     buildState.itemCategory === "necramechs";
@@ -47,73 +52,55 @@ export function ItemSidebar({
   const usedCapacity = capacityStatus.max - capacityStatus.remaining;
   const maxCapacity = capacityStatus.max;
 
-  return (
-    <div className="flex flex-col gap-0 bg-card rounded-xl border overflow-hidden">
-      {/* Item Image */}
-      <div className="relative aspect-square w-full bg-gradient-to-b from-muted/30 to-muted/10">
-        <Image
-          src={imageUrl}
-          alt={buildState.itemName}
-          fill
-          className="object-contain p-4"
-          priority
-        />
-      </div>
+  // Get abilities from item stats
+  const abilities = itemStats?.abilities ?? [];
 
-      {/* Ability Tabs (Warframes only) */}
-      {isWarframeOrNecramech && (
-        <div className="flex border-t border-b bg-muted/30">
-          {ABILITY_TABS.map((tab) => (
-            <TooltipProvider key={tab.id}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => setActiveTab(tab.id)}
-                    className={cn(
-                      "flex-1 py-2 text-lg transition-colors hover:bg-muted/50",
-                      activeTab === tab.id
-                        ? "bg-muted text-foreground"
-                        : "text-muted-foreground"
-                    )}
-                  >
-                    {tab.icon}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{tab.label}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+  return (
+    <div className="flex flex-col h-full">
+      {/* Abilities */}
+      {isWarframeOrNecramech && abilities.length > 0 && (
+        <div className="p-3 flex gap-3">
+          {abilities.slice(0, 4).map((ability, i) => (
+            <div
+              key={i}
+              className="w-8 h-8 rounded bg-muted border overflow-hidden relative"
+              title={ability.name}
+            >
+              {ability.imageName ? (
+                <Image
+                  src={getImageUrl(ability.imageName)}
+                  alt={ability.name}
+                  fill
+                  className="object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                  {i + 1}
+                </div>
+              )}
+            </div>
           ))}
         </div>
       )}
 
-      {/* Reactor Toggle & Capacity */}
-      <div className="p-3 space-y-2">
+      <Separator />
+
+      {/* Capacity */}
+      <div className="p-3 space-y-3">
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Reactor</span>
-          <button
-            onClick={onToggleReactor}
-            className={cn(
-              "relative w-10 h-5 rounded-full transition-colors",
-              buildState.hasReactor ? "bg-primary" : "bg-muted"
-            )}
-          >
-            <span
-              className={cn(
-                "absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all",
-                buildState.hasReactor ? "left-5" : "left-0.5"
-              )}
-            />
-          </button>
+          <Switch
+            checked={buildState.hasReactor}
+            onCheckedChange={onToggleReactor}
+            className="scale-75 origin-right"
+          />
         </div>
 
-        {/* Capacity Slider */}
         <div className="space-y-1">
-          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+          <div className="h-3 bg-muted rounded-full overflow-hidden relative">
             <div
               className={cn(
-                "h-full transition-all duration-200",
+                "h-full transition-all duration-200 rounded-full",
                 capacityStatus.remaining < 0 ? "bg-destructive" : "bg-primary"
               )}
               style={{
@@ -123,16 +110,7 @@ export function ItemSidebar({
                 )}%`,
               }}
             />
-          </div>
-          <div className="flex justify-end">
-            <span
-              className={cn(
-                "text-xs font-mono",
-                capacityStatus.remaining < 0
-                  ? "text-destructive"
-                  : "text-muted-foreground"
-              )}
-            >
+            <span className="absolute inset-0 flex items-center justify-center text-[10px] font-medium text-primary-foreground mix-blend-difference">
               {usedCapacity}/{maxCapacity}
             </span>
           </div>
@@ -142,32 +120,80 @@ export function ItemSidebar({
       <Separator />
 
       {/* Base Stats */}
-      <div className="p-3 space-y-1">
-        <StatRow label="Energy" value="251" />
-        <StatRow label="Health" value="350" />
-        <StatRow label="Shield" value="353" />
-        <StatRow label="Sprint Speed" value="1.07" />
+      <div className="p-3 space-y-2">
+        <StatRow
+          label="Energy"
+          value={itemStats?.energy?.toString() ?? "—"}
+          icon={<Zap className="w-3 h-3" />}
+        />
+        <StatRow
+          label="Health"
+          value={itemStats?.health?.toString() ?? "—"}
+          icon={<Heart className="w-3 h-3" />}
+        />
+        <StatRow
+          label="Shield"
+          value={itemStats?.shield?.toString() ?? "—"}
+          icon={<Shield className="w-3 h-3" />}
+        />
+        <StatRow
+          label="Armor"
+          value={itemStats?.armor?.toString() ?? "—"}
+          icon={<ShieldPlus className="w-3 h-3" />}
+        />
+        <StatRow
+          label="Sprint Speed"
+          value={itemStats?.sprintSpeed?.toFixed(2) ?? "—"}
+          icon={<Wind className="w-3 h-3" />}
+        />
       </div>
 
       <Separator />
 
       {/* Ability Stats */}
       {isWarframeOrNecramech && (
-        <div className="p-3 space-y-1">
-          <StatRow label="Duration" value="100%" />
-          <StatRow label="Efficiency" value="100%" />
-          <StatRow label="Range" value="100%" />
-          <StatRow label="Strength" value="100%" />
+        <div className="p-3 space-y-2">
+          <StatRow
+            label="Duration"
+            value="100%"
+            icon={<Timer className="w-3 h-3" />}
+          />
+          <StatRow
+            label="Efficiency"
+            value="100%"
+            icon={<Activity className="w-3 h-3" />}
+          />
+          <StatRow
+            label="Range"
+            value="100%"
+            icon={<Maximize className="w-3 h-3" />}
+          />
+          <StatRow
+            label="Strength"
+            value="100%"
+            icon={<BicepsFlexed className="w-3 h-3" />}
+          />
         </div>
       )}
     </div>
   );
 }
 
-function StatRow({ label, value }: { label: string; value: string }) {
+function StatRow({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: string;
+  icon?: React.ReactNode;
+}) {
   return (
-    <div className="flex justify-between text-xs">
-      <span className="text-muted-foreground">{label}</span>
+    <div className="flex justify-between items-center text-xs">
+      <div className="flex items-center gap-2 text-muted-foreground">
+        {icon}
+        <span>{label}</span>
+      </div>
       <span className="font-medium tabular-nums">{value}</span>
     </div>
   );

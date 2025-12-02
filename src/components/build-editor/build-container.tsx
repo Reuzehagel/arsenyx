@@ -1,12 +1,17 @@
 "use client";
 
 import { useState, useCallback, useEffect, useMemo } from "react";
+import Image from "next/image";
 import { ItemSidebar } from "./item-sidebar";
 import { ModGrid } from "./mod-grid";
 import { ModSearchPanel } from "./mod-search-panel";
 import { useBuildKeyboard } from "./use-build-keyboard";
 import { getCapacityStatus } from "@/lib/warframe/capacity";
 import { copyBuildToClipboard } from "@/lib/build-codec";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { getImageUrl } from "@/lib/warframe/images";
 import type {
   BuildState,
   ModSlot,
@@ -16,6 +21,7 @@ import type {
   BrowseableItem,
   Mod,
 } from "@/lib/warframe/types";
+import { Hexagon, Diamond } from "lucide-react";
 
 interface BuildContainerProps {
   item: BrowseableItem;
@@ -23,6 +29,35 @@ interface BuildContainerProps {
   categoryLabel: string;
   compatibleMods: Mod[];
   importedBuild?: Partial<BuildState>;
+}
+
+// Extract warframe stats from item data
+interface ItemStats {
+  health?: number;
+  shield?: number;
+  armor?: number;
+  energy?: number;
+  sprintSpeed?: number;
+  abilities?: Array<{ name: string; imageName?: string }>;
+}
+
+function extractItemStats(item: BrowseableItem): ItemStats {
+  const wf = item as {
+    health?: number;
+    shield?: number;
+    armor?: number;
+    power?: number;
+    sprintSpeed?: number;
+    abilities?: Array<{ name: string; imageName?: string }>;
+  };
+  return {
+    health: wf.health,
+    shield: wf.shield,
+    armor: wf.armor,
+    energy: wf.power,
+    sprintSpeed: wf.sprintSpeed,
+    abilities: wf.abilities,
+  };
 }
 
 // Create initial mod slots
@@ -303,64 +338,86 @@ export function BuildContainer({
   });
 
   return (
-    <div className="container py-6">
-      {/* Header with title and actions */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold">New Build: {item.name}</h1>
-          <span className="px-2 py-0.5 text-xs bg-muted rounded font-mono">
-            ⬡ 5
-          </span>
-          <span className="px-2 py-0.5 text-xs bg-muted rounded font-mono">
-            ⟡ 999,999
-          </span>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={handleClearBuild}
-            className="px-3 py-1.5 text-xs border rounded hover:bg-muted transition-colors"
-          >
-            Clear
-          </button>
-          <button
-            onClick={handleCopyBuild}
-            className="px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-          >
-            {showCopied ? "Copied!" : "Copy Build"}
-          </button>
-        </div>
-      </div>
+    <div className="container py-8 max-w-[1440px]">
+      <div className="flex gap-4 items-start">
+        {/* Main Build Card */}
+        <div className="flex-1 bg-card border rounded-lg shadow-sm p-6 min-h-[760px]">
+          {/* Header */}
+          <div className="flex gap-4 mb-6">
+            <div className="relative w-32 h-32 bg-muted/10 rounded-md flex items-center justify-center overflow-hidden border">
+              <Image
+                src={getImageUrl(item.imageName)}
+                alt={item.name}
+                fill
+                className="object-cover"
+              />
+            </div>
+            <div className="flex flex-col justify-center gap-3">
+              <h1 className="text-3xl font-bold tracking-tight">{item.name}</h1>
+              <div className="flex items-center gap-3">
+                {/* Capacity indicator */}
+                <Badge
+                  variant="secondary"
+                  className={cn(
+                    "gap-1.5 px-2 py-1 h-6 font-semibold",
+                    capacityStatus.isOverCapacity
+                      ? "bg-destructive/20 text-destructive hover:bg-destructive/30"
+                      : "bg-muted/50 hover:bg-muted"
+                  )}
+                >
+                  <Hexagon className="w-3 h-3 fill-current" />
+                  {capacityStatus.remaining}/{capacityStatus.max}
+                </Badge>
+                {/* Reactor status */}
+                <Badge
+                  variant="secondary"
+                  className={cn(
+                    "gap-1.5 px-2 py-1 h-6 font-semibold",
+                    buildState.hasReactor
+                      ? "bg-primary/20 text-primary hover:bg-primary/30"
+                      : "bg-muted/50 hover:bg-muted"
+                  )}
+                >
+                  <Diamond className="w-3 h-3 fill-current" />
+                  {buildState.hasReactor ? "Reactor" : "No Reactor"}
+                </Badge>
+              </div>
+            </div>
+          </div>
 
-      {/* Main 3-column layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Left: Item sidebar with image and stats */}
-        <div className="lg:col-span-2">
-          <ItemSidebar
-            buildState={buildState}
-            capacityStatus={capacityStatus}
-            onToggleReactor={handleToggleReactor}
-            onCopyBuild={handleCopyBuild}
-            onClearBuild={handleClearBuild}
-            showCopied={showCopied}
-          />
+          {/* Editor Area */}
+          <div className="flex gap-3 h-full">
+            {/* Left Sidebar (Stats) */}
+            <div className="w-[240px] shrink-0 bg-card border rounded-lg shadow-sm flex flex-col">
+              <ItemSidebar
+                buildState={buildState}
+                capacityStatus={capacityStatus}
+                onToggleReactor={handleToggleReactor}
+                onCopyBuild={handleCopyBuild}
+                onClearBuild={handleClearBuild}
+                showCopied={showCopied}
+                itemStats={extractItemStats(item)}
+              />
+            </div>
+
+            {/* Mod Grid Area */}
+            <div className="flex-1 bg-card border rounded-lg shadow-sm p-3">
+              <ModGrid
+                auraSlot={buildState.auraSlot}
+                exilusSlot={buildState.exilusSlot}
+                normalSlots={buildState.normalSlots}
+                activeSlotId={activeSlotId}
+                onSelectSlot={handleSelectSlot}
+                onRemoveMod={handleRemoveMod}
+                onApplyForma={handleApplyForma}
+                isWarframe={isWarframeOrNecramech}
+              />
+            </div>
+          </div>
         </div>
 
-        {/* Center: Mod grid */}
-        <div className="lg:col-span-6">
-          <ModGrid
-            auraSlot={buildState.auraSlot}
-            exilusSlot={buildState.exilusSlot}
-            normalSlots={buildState.normalSlots}
-            activeSlotId={activeSlotId}
-            onSelectSlot={handleSelectSlot}
-            onRemoveMod={handleRemoveMod}
-            onApplyForma={handleApplyForma}
-            isWarframe={isWarframeOrNecramech}
-          />
-        </div>
-
-        {/* Right: Mod search panel (always visible) */}
-        <div className="lg:col-span-4 h-[600px]">
+        {/* Right Search Panel */}
+        <div className="w-[360px] shrink-0">
           <ModSearchPanel
             isOpen={true}
             onClose={() => setIsSearchOpen(false)}
