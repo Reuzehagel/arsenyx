@@ -154,17 +154,17 @@ function ExpandedModCard({ mod, rarity }: FrameCardProps) {
       </div>
 
       {/* Info Panel - positioned at bottom, sized by content */}
-      <div className="absolute bottom-[12px] left-[8px] right-[8px] z-15">
-        {/* Background Image - clips to panel height */}
-        <div className="absolute inset-x-0 -left-1 -right-1 -top-2 bottom-0 overflow-hidden">
+      <div className="absolute top-[168px] bottom-[20px] left-[3px] right-[3px] z-15 overflow-hidden">
+        {/* Background Image - positioned to fill gap */}
+        <div className="absolute inset-0">
           <img
             src={getModAssetUrl(rarity, "Background")}
             alt=""
-            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[calc(100%+16px)]"
+            className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full object-cover"
           />
         </div>
         {/* Text Content */}
-        <div className="relative z-20 flex flex-col items-center px-2 pt-2 pb-1">
+        <div className="relative z-20 flex flex-col items-center justify-center h-full px-2 pt-2 pb-1">
           {/* Mod Name */}
           <span
             className="text-[14px] font-medium text-center leading-tight"
