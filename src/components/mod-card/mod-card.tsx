@@ -63,15 +63,33 @@ export function ModCard({ mod, className }: ModCardProps) {
 
   return (
     <div
-      className={cn("relative", className)}
+      className={cn("relative w-[184px] h-[64px]", className)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {isHovered ? (
-        <ExpandedModCard mod={mod} rarity={rarity} />
-      ) : (
+      {/* Compact card - hidden when hovered */}
+      <div
+        className={cn(
+          "transition-opacity duration-200",
+          isHovered ? "opacity-0" : "opacity-100"
+        )}
+      >
         <CompactModCard mod={mod} rarity={rarity} />
-      )}
+      </div>
+
+      {/* Expanded card overlays, centered vertically on the compact card */}
+      <div
+        className={cn(
+          "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none",
+          "transition-all duration-200 ease-out origin-center",
+          "drop-shadow-[0_0_20px_rgba(0,0,0,0.8)] shadow-2xl",
+          isHovered
+            ? "opacity-100 scale-100"
+            : "opacity-0 scale-75 pointer-events-none"
+        )}
+      >
+        <ExpandedModCard mod={mod} rarity={rarity} />
+      </div>
     </div>
   );
 }
