@@ -19,34 +19,34 @@ function RankCompleteLine({
 }) {
   return (
     <div className={cn("overflow-hidden", className)}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={`/mod-components/${RARITY_ASSET_MAP[rarity].folder}/RankCompleteLine.png`}
         alt="Max Rank"
-        className="w-full animate-rank-shimmer"
+        className="w-full"
         style={{
-          maskImage: "linear-gradient(90deg, transparent, white, transparent)",
-          maskSize: "200% 100%",
-          maskPosition: "100% 0",
+          maskImage:
+            "linear-gradient(90deg, transparent 0%, white 50%, transparent 100%)",
+          maskSize: "0% 100%",
+          maskPosition: "center",
+          maskRepeat: "no-repeat",
           WebkitMaskImage:
-            "linear-gradient(90deg, transparent, white, transparent)",
-          WebkitMaskSize: "200% 100%",
-          WebkitMaskPosition: "100% 0",
-          animation: "rankShimmer 2s ease-in-out infinite",
+            "linear-gradient(90deg, transparent 0%, white 50%, transparent 100%)",
+          WebkitMaskSize: "0% 100%",
+          WebkitMaskPosition: "center",
+          WebkitMaskRepeat: "no-repeat",
+          animation: "rankReveal 0.4s ease-out forwards",
         }}
       />
       <style jsx>{`
-        @keyframes rankShimmer {
+        @keyframes rankReveal {
           0% {
-            mask-position: 100% 0;
-            -webkit-mask-position: 100% 0;
-          }
-          50% {
-            mask-position: 0% 0;
-            -webkit-mask-position: 0% 0;
+            mask-size: 0% 100%;
+            -webkit-mask-size: 0% 100%;
           }
           100% {
-            mask-position: 100% 0;
-            -webkit-mask-position: 100% 0;
+            mask-size: 200% 100%;
+            -webkit-mask-size: 200% 100%;
           }
         }
       `}</style>
@@ -260,8 +260,15 @@ function CompactModCard({ mod, rarity, rank, isMaxRank }: FrameCardProps) {
               key={i}
               className={cn(
                 "w-[5px] h-[5px] rounded-full",
-                i < rank ? "bg-cyan-400" : "bg-gray-800/60"
+                i < rank ? "bg-[#a8d4ff]" : "bg-gray-800/60"
               )}
+              style={
+                i < rank
+                  ? {
+                      boxShadow: "0 0 2px 0.5px rgba(120, 180, 255, 0.6)",
+                    }
+                  : undefined
+              }
             />
           ))}
         </div>
@@ -362,8 +369,15 @@ function ExpandedModCard({ mod, rarity, rank, isMaxRank }: FrameCardProps) {
               key={i}
               className={cn(
                 "w-[5px] h-[5px] rounded-full",
-                i < rank ? "bg-cyan-400" : "bg-gray-800/60"
+                i < rank ? "bg-[#a8d4ff]" : "bg-gray-800/60"
               )}
+              style={
+                i < rank
+                  ? {
+                      boxShadow: "0 0 2px 0.5px rgba(120, 180, 255, 0.6)",
+                    }
+                  : undefined
+              }
             />
           ))}
         </div>
