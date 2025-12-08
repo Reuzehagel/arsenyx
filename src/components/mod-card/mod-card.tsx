@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { getImageUrl } from "@/lib/warframe/images";
@@ -143,6 +144,16 @@ export function ModCard({
   setCount = 0,
 }: ModCardProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(
+    null
+  );
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    setPortalContainer(document.body);
+  }, []);
+
   const maxRank = mod.fusionLimit ?? 0;
   const [internalRank, setInternalRank] = useState(maxRank);
   const rarity = (mod.rarity as ModRarity) ?? "Common";
@@ -181,10 +192,22 @@ export function ModCard({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isHovered, currentRank, handleRankChange]);
 
+  const handleMouseEnter = () => {
+    if (cardRef.current) {
+      const rect = cardRef.current.getBoundingClientRect();
+      setCoords({
+        top: rect.top + rect.height / 2,
+        left: rect.left + rect.width / 2,
+      });
+    }
+    setIsHovered(true);
+  };
+
   return (
     <div
+      ref={cardRef}
       className={cn("relative w-[184px] h-[64px]", className)}
-      onMouseEnter={() => setIsHovered(true)}
+      onMouseEnter={handleMouseEnter}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Compact card - hidden when hovered */}
@@ -203,25 +226,36 @@ export function ModCard({
         />
       </div>
 
-      {/* Expanded card overlays, centered vertically on the compact card */}
-      <div
-        className={cn(
-          "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none",
-          "transition-all duration-200 ease-out origin-center",
-          "drop-shadow-[0_0_20px_rgba(0,0,0,0.8)] shadow-2xl",
-          isHovered
-            ? "opacity-100 scale-100"
-            : "opacity-0 scale-75 pointer-events-none"
+      {/* Expanded card overlays, portal to body to avoid clipping */}
+      {isHovered &&
+        portalContainer &&
+        createPortal(
+          <div
+            className="fixed z-[9999] pointer-events-none"
+            style={{
+              top: coords.top,
+              left: coords.left,
+              transform: "translate(-50%, -50%)",
+            }}
+          >
+            <div
+              className={cn(
+                "transition-all duration-200 ease-out origin-center",
+                "drop-shadow-[0_0_20px_rgba(0,0,0,0.8)] shadow-2xl",
+                "animate-in fade-in zoom-in-75 duration-200"
+              )}
+            >
+              <ExpandedModCard
+                mod={mod}
+                rarity={rarity}
+                rank={currentRank}
+                isMaxRank={isMaxRank}
+                setCount={setCount}
+              />
+            </div>
+          </div>,
+          portalContainer
         )}
-      >
-        <ExpandedModCard
-          mod={mod}
-          rarity={rarity}
-          rank={currentRank}
-          isMaxRank={isMaxRank}
-          setCount={setCount}
-        />
-      </div>
     </div>
   );
 }

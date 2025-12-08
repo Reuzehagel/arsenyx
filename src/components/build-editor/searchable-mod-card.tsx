@@ -78,8 +78,9 @@ export function SearchableModCard({
       data-index={dataIndex}
       className={cn(
         "relative flex flex-col items-center cursor-pointer transition-all rounded-lg p-2 group",
-        "bg-card/30 border border-transparent hover:border-border/50 hover:bg-card/50",
-        isDisabled && "opacity-40 grayscale cursor-not-allowed"
+        "bg-card/30 border border-transparent",
+        isDisabled && "opacity-40 grayscale cursor-not-allowed",
+        isHovered ? "z-50" : "z-0"
       )}
       onClick={handleClick}
       onMouseEnter={() => setIsHovered(true)}

@@ -97,7 +97,7 @@ export function ItemSidebar({
         </div>
 
         <div className="space-y-1">
-          <div className="h-3 bg-muted rounded-full overflow-hidden relative">
+          <div className="h-4 bg-muted rounded-full overflow-hidden relative">
             <div
               className={cn(
                 "h-full transition-all duration-200 rounded-full",
@@ -110,7 +110,7 @@ export function ItemSidebar({
                 )}%`,
               }}
             />
-            <span className="absolute inset-0 flex items-center justify-center text-[10px] font-medium text-primary-foreground mix-blend-difference">
+            <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white mix-blend-difference">
               {usedCapacity}/{maxCapacity}
             </span>
           </div>
