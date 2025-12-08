@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useDroppable, useDraggable } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
 import {
   Tooltip,
   TooltipContent,
@@ -184,6 +186,33 @@ function ModSlotCard({
 }: ModSlotCardProps) {
   const hasMod = !!slot.mod;
   const polarity = getSlotPolarity(slot);
+
+  // Droppable for the slot
+  const { setNodeRef: setDroppableRef, isOver } = useDroppable({
+    id: `slot-${slot.id}`,
+    data: { slotId: slot.id, type: "slot" },
+  });
+
+  // Draggable for the placed mod
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setDraggableRef,
+    transform,
+    isDragging,
+  } = useDraggable({
+    id: `placed-${slot.id}`,
+    data: { slotId: slot.id, mod: slot.mod, type: "placed-mod" },
+    disabled: !hasMod,
+  });
+
+  const style = transform
+    ? {
+        transform: CSS.Translate.toString(transform),
+        opacity: isDragging ? 0 : 1,
+      }
+    : undefined;
+
   // Convert PlacedMod to Mod format for ModCard
   const modForCard: Mod | null = hasMod
     ? {
@@ -207,17 +236,27 @@ function ModSlotCard({
   if (hasMod && modForCard) {
     return (
       <div
+        ref={setDroppableRef}
         className={cn(
-          "relative flex items-start justify-center cursor-pointer transition-all rounded-lg overflow-visible group",
-          className
+          "relative flex items-start justify-center transition-all rounded-lg overflow-visible group",
+          className,
+          isOver && "ring-2 ring-primary ring-offset-2 ring-offset-background z-10"
         )}
-        onClick={onSelect}
-        onContextMenu={(e: React.MouseEvent) => {
-          e.preventDefault();
-          onRemove();
-        }}
       >
-        <ModCard mod={modForCard} rank={slot.mod!.rank} setCount={setCount} />
+        <div
+          ref={setDraggableRef}
+          {...listeners}
+          {...attributes}
+          style={style}
+          className="cursor-grab active:cursor-grabbing"
+          onClick={onSelect}
+          onContextMenu={(e: React.MouseEvent) => {
+            e.preventDefault();
+            onRemove();
+          }}
+        >
+          <ModCard mod={modForCard} rank={slot.mod!.rank} setCount={setCount} />
+        </div>
       </div>
     );
   }
@@ -228,12 +267,14 @@ function ModSlotCard({
       <Tooltip>
         <TooltipTrigger asChild>
           <div
+            ref={setDroppableRef}
             className={cn(
               "relative flex items-center justify-center cursor-pointer transition-all rounded-lg overflow-visible group",
               "bg-card border border-dashed border-border/60",
               isActive
                 ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
                 : "hover:ring-1 hover:ring-primary/50",
+              isOver && "ring-2 ring-primary ring-offset-2 ring-offset-background bg-accent/50",
               className
             )}
             onClick={onSelect}

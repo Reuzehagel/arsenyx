@@ -1,2 +1,3 @@
-export { ModCard } from "./mod-card";
+export { ModCard, CompactModCard } from "./mod-card";
 export type { ModCardProps, ModRarity } from "./mod-card";
+

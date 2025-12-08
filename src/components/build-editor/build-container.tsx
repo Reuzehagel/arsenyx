@@ -2,9 +2,19 @@
 
 import { useState, useCallback, useEffect, useMemo } from "react";
 import Image from "next/image";
+import {
+  DndContext,
+  DragOverlay,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  DragStartEvent,
+  DragEndEvent,
+} from "@dnd-kit/core";
 import { ItemSidebar } from "./item-sidebar";
 import { ModGrid } from "./mod-grid";
 import { ModSearchGrid } from "./mod-search-grid";
+import { ModCard, CompactModCard } from "@/components/mod-card";
 import { useBuildKeyboard } from "./use-build-keyboard";
 import {
   getCapacityStatus,
@@ -174,6 +184,150 @@ export function BuildContainer({
 
   // Copy notification
   const [showCopied, setShowCopied] = useState(false);
+
+  // Drag and Drop State
+  const [activeDragItem, setActiveDragItem] = useState<any>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  // Place a mod in a specific slot
+  const placeModInSlot = useCallback(
+    (mod: Mod, rank: number, slotId: string) => {
+      const placedMod: PlacedMod = {
+        uniqueName: mod.uniqueName,
+        name: mod.name,
+        imageName: mod.imageName,
+        polarity: mod.polarity,
+        baseDrain: mod.baseDrain,
+        fusionLimit: mod.fusionLimit,
+        rank,
+        rarity: mod.rarity,
+        compatName: mod.compatName,
+        type: mod.type,
+        levelStats: mod.levelStats,
+        modSet: mod.modSet,
+        modSetStats: mod.modSetStats,
+      };
+
+      setBuildState((prev) => {
+        const newState = { ...prev };
+
+        // Remove existing instance of this mod if it exists to prevent duplicates
+        if (newState.auraSlot?.mod?.uniqueName === mod.uniqueName) {
+          newState.auraSlot = { ...newState.auraSlot, mod: undefined };
+        }
+        if (newState.exilusSlot?.mod?.uniqueName === mod.uniqueName) {
+          newState.exilusSlot = { ...newState.exilusSlot, mod: undefined };
+        }
+        newState.normalSlots = newState.normalSlots.map((s) =>
+          s.mod?.uniqueName === mod.uniqueName ? { ...s, mod: undefined } : s
+        );
+
+        // Place in new slot
+        if (slotId.startsWith("aura") && newState.auraSlot) {
+          newState.auraSlot = { ...newState.auraSlot, mod: placedMod };
+        } else if (slotId.startsWith("exilus")) {
+          newState.exilusSlot = { ...newState.exilusSlot, mod: placedMod };
+        } else {
+          const slotIndex = parseInt(slotId.replace("normal-", ""));
+          if (!isNaN(slotIndex)) {
+            newState.normalSlots = [...newState.normalSlots];
+            newState.normalSlots[slotIndex] = {
+              ...newState.normalSlots[slotIndex],
+              mod: placedMod,
+            };
+          }
+        }
+
+        return newState;
+      });
+    },
+    []
+  );
+
+  // Move mod from one slot to another (swap)
+  const moveMod = useCallback((sourceSlotId: string, targetSlotId: string) => {
+    setBuildState((prev) => {
+      const newState = { ...prev };
+
+      // Helper to get mod from slot ID
+      const getMod = (id: string, state: BuildState) => {
+        if (id.startsWith("aura")) return state.auraSlot?.mod;
+        if (id.startsWith("exilus")) return state.exilusSlot.mod;
+        const idx = parseInt(id.replace("normal-", ""));
+        return state.normalSlots[idx]?.mod;
+      };
+
+      const sourceMod = getMod(sourceSlotId, newState);
+      const targetMod = getMod(targetSlotId, newState);
+
+      // Helper to set mod in slot
+      const setModInSlot = (
+        id: string,
+        mod: PlacedMod | undefined,
+        state: BuildState
+      ) => {
+        if (id.startsWith("aura") && state.auraSlot) {
+          state.auraSlot = { ...state.auraSlot, mod };
+        } else if (id.startsWith("exilus")) {
+          state.exilusSlot = { ...state.exilusSlot, mod };
+        } else {
+          const idx = parseInt(id.replace("normal-", ""));
+          if (!isNaN(idx)) {
+            state.normalSlots = [...state.normalSlots];
+            state.normalSlots[idx] = { ...state.normalSlots[idx], mod };
+          }
+        }
+      };
+
+      // Clone arrays/objects to avoid mutation
+      if (newState.auraSlot) newState.auraSlot = { ...newState.auraSlot };
+      newState.exilusSlot = { ...newState.exilusSlot };
+      newState.normalSlots = [...newState.normalSlots];
+
+      setModInSlot(sourceSlotId, targetMod, newState);
+      setModInSlot(targetSlotId, sourceMod, newState);
+
+      return newState;
+    });
+  }, []);
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragItem(event.active.data.current);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDragItem(null);
+
+    if (!over) return;
+
+    const activeData = active.data.current;
+    const overData = over.data.current;
+
+    if (!activeData || !overData) return;
+
+    // Case 1: Search Mod -> Slot
+    if (activeData.type === "search-mod" && overData.type === "slot") {
+      placeModInSlot(activeData.mod, activeData.rank, overData.slotId);
+    }
+
+    // Case 2: Placed Mod -> Slot (Swap/Move)
+    if (activeData.type === "placed-mod" && overData.type === "slot") {
+      const sourceSlotId = activeData.slotId;
+      const targetSlotId = overData.slotId;
+
+      if (sourceSlotId !== targetSlotId) {
+        moveMod(sourceSlotId, targetSlotId);
+      }
+    }
+  };
 
   // Calculate capacity and endo cost
   const capacityStatus = getCapacityStatus(buildState);
@@ -382,90 +536,111 @@ export function BuildContainer({
   });
 
   return (
-    <div className="container py-6 max-w-[1400px]">
-      {/* Header Card */}
-      <div className="bg-card border rounded-lg p-4 mb-4">
-        <div className="flex gap-4 items-center">
-          <div className="relative w-24 h-24 bg-muted/10 rounded-md flex items-center justify-center overflow-hidden">
-            <Image
-              src={getImageUrl(item.imageName)}
-              alt={item.name}
-              fill
-              className="object-cover"
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="container py-6 max-w-[1400px]">
+        {/* Header Card */}
+        <div className="bg-card border rounded-lg p-4 mb-4">
+          <div className="flex gap-4 items-center">
+            <div className="relative w-24 h-24 bg-muted/10 rounded-md flex items-center justify-center overflow-hidden">
+              <Image
+                src={getImageUrl(item.imageName)}
+                alt={item.name}
+                fill
+                className="object-cover"
+              />
+            </div>
+            <div className="flex flex-col justify-center gap-2">
+              <h1 className="text-2xl font-bold tracking-tight">{item.name}</h1>
+              <div className="flex items-center gap-3">
+                {/* Capacity indicator */}
+                <Badge
+                  variant="secondary"
+                  className={cn(
+                    "gap-1.5 px-2 py-0.5 font-semibold text-xs",
+                    capacityStatus.isOverCapacity
+                      ? "bg-destructive/20 text-destructive hover:bg-destructive/30"
+                      : "bg-muted/50 hover:bg-muted"
+                  )}
+                >
+                  <Hexagon className="w-3 h-3 fill-current" />
+                  {capacityStatus.remaining}/{capacityStatus.max}
+                </Badge>
+                {/* Endo cost indicator */}
+                <Badge
+                  variant="secondary"
+                  className="gap-1.5 px-2 py-0.5 font-semibold text-xs bg-muted/50 hover:bg-muted"
+                >
+                  <Diamond className="w-3 h-3 fill-current" />
+                  {totalEndoCost.toLocaleString()}
+                </Badge>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content: Sidebar + Vertical Stack */}
+        <div className="flex gap-4 items-start">
+          {/* Left Sidebar (Stats) */}
+          <div className="w-[260px] shrink-0 bg-card border rounded-lg">
+            <ItemSidebar
+              buildState={buildState}
+              capacityStatus={capacityStatus}
+              onToggleReactor={handleToggleReactor}
+              onCopyBuild={handleCopyBuild}
+              onClearBuild={handleClearBuild}
+              showCopied={showCopied}
+              itemStats={extractItemStats(item)}
             />
           </div>
-          <div className="flex flex-col justify-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight">{item.name}</h1>
-            <div className="flex items-center gap-3">
-              {/* Capacity indicator */}
-              <Badge
-                variant="secondary"
-                className={cn(
-                  "gap-1.5 px-2 py-0.5 font-semibold text-xs",
-                  capacityStatus.isOverCapacity
-                    ? "bg-destructive/20 text-destructive hover:bg-destructive/30"
-                    : "bg-muted/50 hover:bg-muted"
-                )}
-              >
-                <Hexagon className="w-3 h-3 fill-current" />
-                {capacityStatus.remaining}/{capacityStatus.max}
-              </Badge>
-              {/* Endo cost indicator */}
-              <Badge
-                variant="secondary"
-                className="gap-1.5 px-2 py-0.5 font-semibold text-xs bg-muted/50 hover:bg-muted"
-              >
-                <Diamond className="w-3 h-3 fill-current" />
-                {totalEndoCost.toLocaleString()}
-              </Badge>
+
+          {/* Main Content: Vertical Stack */}
+          <div className="flex-1 flex flex-col gap-4 min-w-0">
+            {/* Mod Slots Grid */}
+            <div className="bg-card border rounded-lg p-4">
+              <ModGrid
+                auraSlot={buildState.auraSlot}
+                exilusSlot={buildState.exilusSlot}
+                normalSlots={buildState.normalSlots}
+                activeSlotId={activeSlotId}
+                onSelectSlot={handleSelectSlot}
+                onRemoveMod={handleRemoveMod}
+                onApplyForma={handleApplyForma}
+                isWarframe={isWarframeOrNecramech}
+              />
+            </div>
+
+            {/* Mod Search Grid */}
+            <div className="bg-card border rounded-lg p-4">
+              <ModSearchGrid
+                availableMods={compatibleMods}
+                slotType={getSlotType(activeSlotId)}
+                usedModNames={usedModNames}
+                onSelectMod={handlePlaceMod}
+              />
             </div>
           </div>
         </div>
       </div>
-
-      {/* Main Content: Sidebar + Vertical Stack */}
-      <div className="flex gap-4 items-start">
-        {/* Left Sidebar (Stats) */}
-        <div className="w-[260px] shrink-0 bg-card border rounded-lg">
-          <ItemSidebar
-            buildState={buildState}
-            capacityStatus={capacityStatus}
-            onToggleReactor={handleToggleReactor}
-            onCopyBuild={handleCopyBuild}
-            onClearBuild={handleClearBuild}
-            showCopied={showCopied}
-            itemStats={extractItemStats(item)}
-          />
-        </div>
-
-        {/* Main Content: Vertical Stack */}
-        <div className="flex-1 flex flex-col gap-4 min-w-0">
-          {/* Mod Slots Grid */}
-          <div className="bg-card border rounded-lg p-4">
-            <ModGrid
-              auraSlot={buildState.auraSlot}
-              exilusSlot={buildState.exilusSlot}
-              normalSlots={buildState.normalSlots}
-              activeSlotId={activeSlotId}
-              onSelectSlot={handleSelectSlot}
-              onRemoveMod={handleRemoveMod}
-              onApplyForma={handleApplyForma}
-              isWarframe={isWarframeOrNecramech}
+      <DragOverlay>
+        {activeDragItem ? (
+          <div className="opacity-90 scale-105 cursor-grabbing shadow-2xl rounded-lg overflow-hidden">
+            <CompactModCard
+              mod={activeDragItem.mod}
+              rarity={activeDragItem.mod.rarity || "Common"}
+              rank={activeDragItem.rank ?? activeDragItem.mod.rank}
+              isMaxRank={
+                (activeDragItem.rank ?? activeDragItem.mod.rank) >=
+                (activeDragItem.mod.fusionLimit ?? 0)
+              }
             />
           </div>
-
-          {/* Mod Search Grid */}
-          <div className="bg-card border rounded-lg p-4">
-            <ModSearchGrid
-              availableMods={compatibleMods}
-              slotType={getSlotType(activeSlotId)}
-              usedModNames={usedModNames}
-              onSelectMod={handlePlaceMod}
-            />
-          </div>
-        </div>
-      </div>
-    </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 }
 

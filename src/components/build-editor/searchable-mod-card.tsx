@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 import { ModCard } from "@/components/mod-card";
 import { Minus, Plus } from "lucide-react";
 import type { Mod } from "@/lib/warframe/types";
+import { useDraggable } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
 
 // =============================================================================
 // SEARCHABLE MOD CARD COMPONENT
@@ -28,6 +30,20 @@ export function SearchableModCard({
   const maxRank = mod.fusionLimit ?? 0;
   const [rank, setRank] = useState(maxRank);
   const [isHovered, setIsHovered] = useState(false);
+
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({
+      id: `search-${mod.uniqueName}`,
+      data: { mod, rank, type: "search-mod" },
+      disabled: isDisabled,
+    });
+
+  const style = transform
+    ? {
+        transform: CSS.Translate.toString(transform),
+        opacity: isDragging ? 0.5 : 1,
+      }
+    : undefined;
 
   const handleDecreaseRank = useCallback(
     (e: React.MouseEvent) => {
@@ -75,9 +91,13 @@ export function SearchableModCard({
 
   return (
     <div
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
       data-index={dataIndex}
       className={cn(
-        "relative flex flex-col items-center cursor-pointer transition-all rounded-lg p-2 group",
+        "relative flex flex-col items-center cursor-pointer transition-all rounded-lg p-2 group touch-none",
         "bg-card/30 border border-transparent",
         isDisabled && "opacity-40 grayscale cursor-not-allowed",
         isHovered ? "z-50" : "z-0"

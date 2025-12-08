@@ -264,14 +264,19 @@ export function ModCard({
 // COMPACT MOD CARD (Just frames)
 // =============================================================================
 
-interface FrameCardProps {
+export interface CompactModCardProps {
   mod: Mod;
   rarity: ModRarity;
   rank: number;
   isMaxRank: boolean;
 }
 
-function CompactModCard({ mod, rarity, rank, isMaxRank }: FrameCardProps) {
+export function CompactModCard({
+  mod,
+  rarity,
+  rank,
+  isMaxRank,
+}: CompactModCardProps) {
   const maxRank = mod.fusionLimit ?? 0;
 
   return (
@@ -347,7 +352,7 @@ function CompactModCard({ mod, rarity, rank, isMaxRank }: FrameCardProps) {
 // EXPANDED MOD CARD (Vertical frames, on hover)
 // =============================================================================
 
-interface ExpandedModCardProps extends FrameCardProps {
+interface ExpandedModCardProps extends CompactModCardProps {
   setCount?: number;
 }
 
