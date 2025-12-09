@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import Image from "next/image";
 import {
   DndContext,
@@ -10,6 +10,8 @@ import {
   PointerSensor,
   DragStartEvent,
   DragEndEvent,
+  DragCancelEvent,
+  DragOverEvent,
 } from "@dnd-kit/core";
 import { ItemSidebar } from "./item-sidebar";
 import { ModGrid } from "./mod-grid";
@@ -188,11 +190,12 @@ export function BuildContainer({
 
   // Drag and Drop State
   const [activeDragItem, setActiveDragItem] = useState<DragItem | null>(null);
+  const lastOverRef = useRef<{ id: string; data: any } | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 3,
       },
     })
   );
@@ -301,16 +304,33 @@ export function BuildContainer({
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveDragItem(event.active.data.current as DragItem);
+    lastOverRef.current = null;
+    setActiveSlotId(null);
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { over } = event;
+    if (over?.data?.current?.type === "slot") {
+      lastOverRef.current = {
+        id: String(over.id),
+        data: over.data.current,
+      };
+    }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
+    const { active } = event;
+    const over = event.over ?? lastOverRef.current;
     setActiveDragItem(null);
+    lastOverRef.current = null;
 
     if (!over) return;
 
     const activeData = active.data.current;
-    const overData = over.data.current;
+    const overData =
+      "data" in over && (over as any).data?.current !== undefined
+        ? (over as any).data.current
+        : (over as any).data;
 
     if (!activeData || !overData) return;
 
@@ -328,6 +348,11 @@ export function BuildContainer({
         moveMod(sourceSlotId, targetSlotId);
       }
     }
+  };
+
+  const handleDragCancel = (event: DragCancelEvent) => {
+    setActiveDragItem(null);
+    lastOverRef.current = null;
   };
 
   // Calculate capacity and endo cost
@@ -539,7 +564,9 @@ export function BuildContainer({
     <DndContext
       sensors={sensors}
       onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
     >
       <div className="container py-6 max-w-[1400px]">
         {/* Header Card */}

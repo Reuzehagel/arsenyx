@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { memo, useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -98,6 +98,8 @@ export interface ModCardProps {
   onClick?: () => void;
   className?: string;
   setCount?: number;
+  /** Skip heavy hover/portal rendering (used while dragging) */
+  disableHover?: boolean;
 }
 
 // Helper to get stats at a given rank
@@ -135,13 +137,14 @@ function getModStats(mod: Mod, rank: number, setCount: number = 0): string[] {
   return baseStats;
 }
 
-export function ModCard({
+function ModCardComponent({
   mod,
   rank: externalRank,
   onRankChange,
   isSelected,
   className,
   setCount = 0,
+  disableHover = false,
 }: ModCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -149,6 +152,9 @@ export function ModCard({
     typeof document === "undefined" ? null : document.body
   );
   const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const [showOverlay, setShowOverlay] = useState(false);
+  const [isFadingOverlay, setIsFadingOverlay] = useState(false);
+  const fadeTimeoutRef = useRef<number | null>(null);
 
   const maxRank = mod.fusionLimit ?? 0;
   const [internalRank, setInternalRank] = useState(maxRank);
@@ -170,9 +176,26 @@ export function ModCard({
     [maxRank, onRankChange]
   );
 
+  const clearFadeTimeout = () => {
+    if (fadeTimeoutRef.current) {
+      window.clearTimeout(fadeTimeoutRef.current);
+      fadeTimeoutRef.current = null;
+    }
+  };
+
+  const startOverlayFadeOut = () => {
+    clearFadeTimeout();
+    setIsFadingOverlay(true);
+    fadeTimeoutRef.current = window.setTimeout(() => {
+      setShowOverlay(false);
+      setIsFadingOverlay(false);
+      fadeTimeoutRef.current = null;
+    }, 150);
+  };
+
   // Handle keyboard events for rank adjustment
   useEffect(() => {
-    if (!isHovered) return;
+    if (!isHovered || disableHover) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "-" || e.key === "_") {
@@ -186,9 +209,14 @@ export function ModCard({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isHovered, currentRank, handleRankChange]);
+  }, [isHovered, disableHover, currentRank, handleRankChange]);
 
   const handleMouseEnter = () => {
+    if (disableHover) return;
+    clearFadeTimeout();
+    setShowOverlay(true);
+    setIsFadingOverlay(false);
+
     if (cardRef.current) {
       const rect = cardRef.current.getBoundingClientRect();
       setCoords({
@@ -199,12 +227,30 @@ export function ModCard({
     setIsHovered(true);
   };
 
+  const handleMouseLeave = () => {
+    if (disableHover) return;
+    setIsHovered(false);
+    startOverlayFadeOut();
+  };
+
+  // When hover rendering is disabled during drag, gracefully fade the overlay
+  useEffect(() => {
+    if (disableHover && showOverlay) {
+      setIsHovered(false);
+      startOverlayFadeOut();
+    }
+  }, [disableHover, showOverlay]);
+
+  useEffect(() => {
+    return () => clearFadeTimeout();
+  }, []);
+
   return (
     <div
       ref={cardRef}
       className={cn("relative w-[184px] h-[64px]", className)}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseEnter={disableHover ? undefined : handleMouseEnter}
+      onMouseLeave={disableHover ? undefined : handleMouseLeave}
     >
       {/* Compact card - hidden when hovered */}
       <div
@@ -223,7 +269,7 @@ export function ModCard({
       </div>
 
       {/* Expanded card overlays, portal to body to avoid clipping */}
-      {isHovered &&
+      {showOverlay &&
         portalContainer &&
         createPortal(
           <div
@@ -233,13 +279,14 @@ export function ModCard({
               left: coords.left,
               transform: "translate(-50%, -50%)",
             }}
-          >
-            <div
-              className={cn(
-                "transition-all duration-200 ease-out origin-center",
-                "drop-shadow-[0_0_20px_rgba(0,0,0,0.8)] shadow-2xl",
-                "animate-in fade-in zoom-in-75 duration-200"
-              )}
+            >
+              <div
+                className={cn(
+                  "transition-all duration-200 ease-out origin-center",
+                  "drop-shadow-[0_0_20px_rgba(0,0,0,0.8)] shadow-2xl",
+                  "animate-in fade-in zoom-in-75 duration-200",
+                  isFadingOverlay ? "opacity-0 duration-150" : "opacity-100"
+                )}
             >
               <ExpandedModCard
                 mod={mod}
@@ -558,6 +605,8 @@ function ExpandedModCard({
     </div>
   );
 }
+
+export const ModCard = memo(ModCardComponent);
 
 // =============================================================================
 // EXPORTS

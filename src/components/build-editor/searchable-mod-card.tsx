@@ -42,6 +42,7 @@ export function SearchableModCard({
     ? {
         transform: CSS.Translate.toString(transform),
         opacity: isDragging ? 0.5 : 1,
+        willChange: "transform",
       }
     : undefined;
 
@@ -108,7 +109,12 @@ export function SearchableModCard({
     >
       {/* Use the real ModCard component; keep hover effects */}
       <div>
-        <ModCard mod={mod} rank={rank} isSelected={isSelected} />
+        <ModCard
+          mod={mod}
+          rank={rank}
+          isSelected={isSelected}
+          disableHover={isDragging}
+        />
       </div>
 
       {/* Rank Controls - Show on hover when mod has ranks */}

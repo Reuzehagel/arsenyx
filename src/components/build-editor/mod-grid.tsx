@@ -210,6 +210,7 @@ function ModSlotCard({
     ? {
         transform: CSS.Translate.toString(transform),
         opacity: isDragging ? 0 : 1,
+        willChange: "transform",
       }
     : undefined;
 
@@ -247,16 +248,21 @@ function ModSlotCard({
         <div
           ref={setDraggableRef}
           {...listeners}
-          {...attributes}
-          style={style}
-          className="cursor-grab active:cursor-grabbing"
-          onClick={onSelect}
-          onContextMenu={(e: React.MouseEvent) => {
+        {...attributes}
+        style={style}
+        className="cursor-grab active:cursor-grabbing"
+        onClick={onSelect}
+        onContextMenu={(e: React.MouseEvent) => {
             e.preventDefault();
             onRemove();
           }}
         >
-          <ModCard mod={modForCard} rank={slot.mod!.rank} setCount={setCount} />
+          <ModCard
+            mod={modForCard}
+            rank={slot.mod!.rank}
+            setCount={setCount}
+            disableHover={isDragging}
+          />
         </div>
       </div>
     );
