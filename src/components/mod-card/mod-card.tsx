@@ -1,5 +1,4 @@
 "use client";
-/* eslint-disable @next/next/no-img-element */
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -288,10 +287,13 @@ export function CompactModCard({
         />
       </div>
       {/* Top Frame */}
-      <img
+      <Image
         src={getModAssetUrl(rarity, "FrameTop")}
         alt="Top Frame"
-        className="absolute top-0 left-1/2 -translate-x-1/2 z-20 w-full"
+        width={184}
+        height={44}
+        className="absolute top-0 left-1/2 -translate-x-1/2 z-20 pointer-events-none"
+        priority={false}
       />
       {/* Mod Name */}
       <span
@@ -306,10 +308,13 @@ export function CompactModCard({
         {mod.name}
       </span>
       {/* Bottom Frame */}
-      <img
+      <Image
         src={getModAssetUrl(rarity, "FrameBottom")}
         alt="Bottom Frame"
-        className="absolute -bottom-8 left-1/2 -translate-x-1/2 z-20 w-full"
+        width={184}
+        height={64}
+        className="absolute -bottom-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none"
+        priority={false}
       />
 
       {/* Rank Complete Line - shown when at max rank, on bottom frame behind dots */}
@@ -390,10 +395,13 @@ function ExpandedModCard({
   return (
     <div className="relative w-[184px] h-[285px]">
       {/* Top Frame */}
-      <img
+      <Image
         src={getModAssetUrl(rarity, "FrameTop")}
         alt="Top Frame"
-        className="absolute top-0 left-1/2 -translate-x-1/2 z-20 w-full"
+        width={184}
+        height={44}
+        className="absolute top-0 left-1/2 -translate-x-1/2 z-20 pointer-events-none"
+        priority={false}
       />
 
       {/* Mod Image - full card, will be covered by info panel at bottom */}
@@ -409,11 +417,14 @@ function ExpandedModCard({
       {/* Info Panel - positioned at bottom, sized by content */}
       <div className="absolute bottom-[20px] left-[3px] right-[3px] z-15">
         {/* Background Image - stretches to fill content */}
-        <div className="absolute inset-0 overflow-hidden">
-          <img
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <Image
             src={getModAssetUrl(rarity, "Background")}
             alt=""
-            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-[200%] object-cover object-bottom"
+            width={184}
+            height={200}
+            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-full object-cover object-bottom"
+            priority={false}
           />
         </div>
         {/* Text Content */}
@@ -487,11 +498,14 @@ function ExpandedModCard({
             </div>
           )}
           {/* Lower Tab with Compatibility Badge */}
-          <div className="relative mt-4 w-[80%]">
-            <img
+          <div className="relative mt-4 w-[80%] h-[32px]">
+            <Image
               src={getModAssetUrl(rarity, "LowerTab")}
               alt=""
-              className="w-full"
+              fill
+              sizes="148px"
+              className="object-contain"
+              priority={false}
             />
             {compatLabel && (
               <span className="absolute inset-0 flex items-center justify-center text-[9px] uppercase tracking-wider text-white">
@@ -503,10 +517,13 @@ function ExpandedModCard({
       </div>
 
       {/* Bottom Frame */}
-      <img
+      <Image
         src={getModAssetUrl(rarity, "FrameBottom")}
         alt="Bottom Frame"
-        className="absolute bottom-0 left-1/2 -translate-x-1/2 z-20 w-full"
+        width={184}
+        height={64}
+        className="absolute bottom-0 left-1/2 -translate-x-1/2 z-20 pointer-events-none"
+        priority={false}
       />
 
       {/* Rank Complete Line - shown when at max rank, on bottom frame behind dots */}
