@@ -207,6 +207,7 @@ export interface Mod {
   modSet?: string;
   modSetStats?: string[];
   transmutable?: boolean;
+  stats?: string[];
   drops?: Array<{
     chance: number;
     location: string;

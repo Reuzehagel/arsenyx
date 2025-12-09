@@ -80,8 +80,7 @@ export function getAllMods(): Mod[] {
       if (mod.modSet) {
         const setMod = allMods.find((m) => m.uniqueName === mod.modSet);
         if (setMod && setMod.stats) {
-          // @ts-expect-error - stats is not in Mod type but exists in JSON
-          modSetStats = setMod.stats as string[];
+          modSetStats = setMod.stats;
         }
       }
 

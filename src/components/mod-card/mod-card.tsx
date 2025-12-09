@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { getImageUrl } from "@/lib/warframe/images";
-import type { Mod } from "@/lib/warframe/types";
+import type { Mod, Polarity } from "@/lib/warframe/types";
 
 // =============================================================================
 // RANK COMPLETE LINE COMPONENT WITH ANIMATION
@@ -85,6 +85,80 @@ const RARITY_COLOR_MAP: Record<ModRarity, string> = {
 function getModAssetUrl(rarity: ModRarity, asset: string): string {
   const { folder, prefix } = RARITY_ASSET_MAP[rarity];
   return `/mod-components/${folder}/${prefix}${asset}.png`;
+}
+
+// =============================================================================
+// POLARITY HELPERS
+// =============================================================================
+
+const POLARITY_ICON_MAP: Record<Polarity, string> = {
+  madurai: "Madurai_Pol.svg",
+  vazarin: "Vazarin_Pol.svg",
+  naramon: "Naramon_Pol.svg",
+  zenurik: "Zenurik_Pol.svg",
+  unairu: "Unairu_Pol.svg",
+  penjaga: "Penjaga_Pol.svg",
+  umbra: "Umbra_Pol.svg",
+  universal: "Any_Pol.svg",
+};
+
+function getPolarityIcon(polarity: Polarity): string {
+  const filename = POLARITY_ICON_MAP[polarity] || "Any_Pol.svg";
+  return `/focus-schools/${filename}`;
+}
+
+// =============================================================================
+// MOD DRAIN BADGE COMPONENT
+// =============================================================================
+
+interface ModDrainBadgeProps {
+  mod: Mod;
+  rank: number;
+  rarity: ModRarity;
+}
+
+function ModDrainBadge({ mod, rank, rarity }: ModDrainBadgeProps) {
+  const drain = mod.baseDrain + rank;
+
+  return (
+    <div className="absolute top-[7px] right-[2px] z-30 flex items-center justify-center">
+      {/* Backer Image */}
+      <Image
+        src={getModAssetUrl(rarity, "TopRightBacker")}
+        alt=""
+        width={36}
+        height={18}
+        className="pointer-events-none"
+        priority={false}
+      />
+
+      {/* Content Container */}
+      <div className="absolute inset-0 flex items-center justify-center gap-[1px] pt-[0.5px] pl-[3px]">
+        {/* Drain Value */}
+        <span
+          className="text-[12px] font-bold leading-none tracking-tighter"
+          style={{ color: RARITY_COLOR_MAP[rarity] }}
+        >
+          {drain}
+        </span>
+
+        {/* Polarity Icon */}
+        <div className="relative w-[13px] h-[13px]">
+          <Image
+            src={getPolarityIcon(mod.polarity)}
+            alt={mod.polarity}
+            fill
+            className={cn(
+              "object-contain",
+            )}
+            style={{
+              filter: "brightness(0) invert(1)" // Ensure it's white/bright to stand out against dark backer
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // =============================================================================
@@ -360,6 +434,8 @@ export function CompactModCard({
 
   return (
     <div className="relative w-[184px] h-[64px] flex items-center justify-center">
+      {/* Drain & Polarity Badge */}
+      <ModDrainBadge mod={mod} rank={rank} rarity={rarity} />
       {/* Mod Image */}
       <div className="absolute top-[4px] left-[3px] right-[3px] -bottom-4 z-10 overflow-hidden rounded-b-[5px]">
         <Image
@@ -478,6 +554,8 @@ function ExpandedModCard({
 
   return (
     <div className="relative w-[184px] h-[285px]">
+      {/* Drain & Polarity Badge */}
+      <ModDrainBadge mod={mod} rank={rank} rarity={rarity} />
       {/* Top Frame */}
       <Image
         src={getModAssetUrl(rarity, "FrameTop")}
