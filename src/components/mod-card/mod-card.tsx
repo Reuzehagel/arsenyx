@@ -504,7 +504,7 @@ export function CompactModCard({
       />
       {/* Mod Name */}
       <span
-        className="absolute top-[65%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 text-[16px] font-normal text-center max-w-[180px] whitespace-nowrap"
+        className="absolute top-[70%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 text-[16px] font-normal text-center max-w-[180px] whitespace-nowrap"
         style={{
           fontFamily: "Roboto, sans-serif",
           color: RARITY_COLOR_MAP[rarity],
