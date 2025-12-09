@@ -31,27 +31,32 @@ export function FilterPanel({
 }: FilterPanelProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const searchParamsString = searchParams.toString();
 
   const updateFilter = useCallback(
     (key: string, value: string | null) => {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(searchParamsString);
       if (value === null || value === "") {
         params.delete(key);
       } else {
         params.set(key, value);
       }
-      router.push(`?${params.toString()}`, { scroll: false });
+      const next = params.toString();
+      if (next === searchParamsString) return;
+      router.push(`?${next}`, { scroll: false });
     },
-    [router, searchParams]
+    [router, searchParamsString]
   );
 
   const clearFilters = useCallback(() => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParamsString);
     params.delete("mastery");
     params.delete("prime");
     params.delete("vaulted");
-    router.push(`?${params.toString()}`, { scroll: false });
-  }, [router, searchParams]);
+    const next = params.toString();
+    if (next === searchParamsString) return;
+    router.push(`?${next}`, { scroll: false });
+  }, [router, searchParamsString]);
 
   const activeFilterCount = [masteryMax < 16, primeOnly, hideVaulted].filter(
     Boolean

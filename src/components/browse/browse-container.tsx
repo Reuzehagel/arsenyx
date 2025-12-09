@@ -23,6 +23,7 @@ export function BrowseContainer({
 }: BrowseContainerProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const searchParamsString = searchParams.toString();
 
   // Local filter state for instant updates
   const [masteryMax, setMasteryMax] = useState(() => {
@@ -72,7 +73,7 @@ export function BrowseContainer({
   // Update URL params (debounced, doesn't block UI)
   const syncToUrl = useCallback(
     (updates: Record<string, string | null>) => {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(searchParamsString);
       Object.entries(updates).forEach(([key, value]) => {
         if (value === null || value === "") {
           params.delete(key);
@@ -80,10 +81,12 @@ export function BrowseContainer({
           params.set(key, value);
         }
       });
+      const next = params.toString();
+      if (next === searchParamsString) return;
       // Use replace to avoid history spam, scroll: false to prevent jumping
-      router.replace(`?${params.toString()}`, { scroll: false });
+      router.replace(`?${next}`, { scroll: false });
     },
-    [router, searchParams]
+    [router, searchParamsString]
   );
 
   const handleMasteryChange = useCallback(

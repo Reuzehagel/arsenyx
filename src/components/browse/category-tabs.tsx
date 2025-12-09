@@ -20,16 +20,19 @@ export function CategoryTabs({
 }: CategoryTabsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const searchParamsString = searchParams.toString();
 
   const handleCategoryChange = useCallback(
     (category: string) => {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(searchParamsString);
       params.set("category", category);
       // Reset query when changing category
       params.delete("q");
-      router.push(`?${params.toString()}`, { scroll: false });
+      const next = params.toString();
+      if (next === searchParamsString) return;
+      router.push(`?${next}`, { scroll: false });
     },
-    [router, searchParams]
+    [router, searchParamsString]
   );
 
   return (

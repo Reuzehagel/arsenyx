@@ -23,6 +23,8 @@ export function SearchBar({
   const router = useRouter();
   const searchParams = useSearchParams();
   const inputRef = useRef<HTMLInputElement>(null);
+  const searchParamsString = searchParams.toString();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSearch = useCallback(
     (value: string) => {
@@ -31,15 +33,17 @@ export function SearchBar({
         onSearchChange(value);
         return;
       }
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(searchParamsString);
       if (value) {
         params.set("q", value);
       } else {
         params.delete("q");
       }
-      router.push(`?${params.toString()}`, { scroll: false });
+      const next = params.toString();
+      if (next === searchParamsString) return;
+      router.push(`?${next}`, { scroll: false });
     },
-    [router, searchParams, onSearchChange]
+    [router, searchParamsString, onSearchChange]
   );
 
   // Debounced search
@@ -47,11 +51,21 @@ export function SearchBar({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
       // Use a small debounce for better UX
-      const timeoutId = setTimeout(() => handleSearch(value), 150);
-      return () => clearTimeout(timeoutId);
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+      debounceRef.current = setTimeout(() => handleSearch(value), 150);
     },
     [handleSearch]
   );
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, []);
 
   // Global keyboard shortcut
   useEffect(() => {
