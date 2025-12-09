@@ -121,20 +121,7 @@ interface ModDrainBadgeProps {
 
 function ModDrainBadge({ mod, rank, rarity, drainOverride, matchState = "neutral" }: ModDrainBadgeProps) {
   const drain = drainOverride ?? (mod.baseDrain + rank);
-
-  // Color based on polarity match state
-  const drainColor = matchState === "match"
-    ? "#4ade80" // green-400 for matching polarity
-    : matchState === "mismatch"
-      ? "#f87171" // red-400 for mismatching polarity
-      : RARITY_COLOR_MAP[rarity]; // default rarity color
-
-  // Polarity icon filter for coloring
-  const polarityFilter = matchState === "match"
-    ? "brightness(0) saturate(100%) invert(76%) sepia(43%) saturate(512%) hue-rotate(88deg) brightness(96%) contrast(88%)" // green
-    : matchState === "mismatch"
-      ? "brightness(0) saturate(100%) invert(56%) sepia(86%) saturate(1058%) hue-rotate(327deg) brightness(98%) contrast(97%)" // red
-      : "brightness(0) invert(1)"; // white/default
+  const color = RARITY_COLOR_MAP[rarity];
 
   return (
     <div className="absolute top-[7px] right-[2px] z-30 flex items-center justify-center">
@@ -153,25 +140,26 @@ function ModDrainBadge({ mod, rank, rarity, drainOverride, matchState = "neutral
         {/* Drain Value */}
         <span
           className="text-[12px] font-bold leading-none tracking-tighter"
-          style={{ color: drainColor }}
+          style={{ fontFamily: "Roboto, sans-serif", color: color }}
         >
           {drain}
         </span>
 
         {/* Polarity Icon */}
-        <div className="relative w-[13px] h-[13px]">
-          <Image
-            src={getPolarityIcon(mod.polarity)}
-            alt={mod.polarity}
-            fill
-            className={cn(
-              "object-contain",
-            )}
-            style={{
-              filter: polarityFilter
-            }}
-          />
-        </div>
+        <div
+          className="relative w-[13px] h-[13px]"
+          style={{
+            backgroundColor: color,
+            maskImage: `url(${getPolarityIcon(mod.polarity)})`,
+            maskSize: "contain",
+            maskRepeat: "no-repeat",
+            maskPosition: "center",
+            WebkitMaskImage: `url(${getPolarityIcon(mod.polarity)})`,
+            WebkitMaskSize: "contain",
+            WebkitMaskRepeat: "no-repeat",
+            WebkitMaskPosition: "center",
+          }}
+        />
       </div>
     </div>
   );
@@ -491,11 +479,12 @@ export function CompactModCard({
       />
       {/* Mod Name */}
       <span
-        className="absolute top-[48px] left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 text-[16px] font-normal text-center max-w-[180px] whitespace-nowrap"
+        className="absolute -bottom-1 left-1/2 -translate-x-1/2 z-30 text-[16px] font-normal text-center max-w-[180px] whitespace-nowrap"
         style={{
           fontFamily: "Roboto, sans-serif",
           color: RARITY_COLOR_MAP[rarity],
-          textShadow: "1px 1px 0px #000000",
+          textShadow:
+            "0 0 8px rgba(0,0,0,1), 0 0 16px rgba(0,0,0,0.9), 0 2px 4px rgba(0,0,0,1)",
         }}
       >
         {mod.name}
@@ -629,8 +618,8 @@ function ExpandedModCard({
         <div className="relative z-20 flex flex-col items-center px-2 pt-3 pb-2">
           {/* Mod Name */}
           <span
-            className="text-[14px] font-medium text-center leading-tight"
-            style={{ color: RARITY_COLOR_MAP[rarity] }}
+            className="text-[14px] font-normal text-center leading-tight"
+            style={{ fontFamily: "Roboto, sans-serif", color: RARITY_COLOR_MAP[rarity] }}
           >
             {mod.name}
           </span>
@@ -638,7 +627,8 @@ function ExpandedModCard({
           {formattedStats && (
             <div className="flex flex-col items-center gap-1 mt-1 w-full px-1">
               <span
-                className="text-[11px] text-gray-300 text-center leading-tight"
+                className="text-[11px] font-normal text-gray-300 text-center leading-tight"
+                style={{ fontFamily: "Roboto, sans-serif" }}
                 dangerouslySetInnerHTML={{ __html: formattedStats }}
               />
 
