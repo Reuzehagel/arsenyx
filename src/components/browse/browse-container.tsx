@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ItemGrid } from "./item-grid";
 import { SearchBar } from "./search-bar";
@@ -36,6 +36,8 @@ export function BrowseContainer({
     () => searchParams.get("vaulted") === "hide"
   );
   const [searchQuery, setSearchQuery] = useState(initialQuery);
+  const [pendingSearch, setPendingSearch] = useState(initialQuery);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Filter items client-side for instant feedback
   const filteredItems = useMemo(() => {
@@ -112,14 +114,26 @@ export function BrowseContainer({
     syncToUrl({ mastery: null, prime: null, vaulted: null });
   }, [syncToUrl]);
 
-  const handleSearchChange = useCallback(
-    (value: string) => {
-      setSearchQuery(value);
-      // Debounce URL update for search
-      syncToUrl({ q: value || null });
-    },
-    [syncToUrl]
-  );
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value);
+    setPendingSearch(value);
+  }, []);
+
+  // Debounce syncing search query to the URL to avoid router churn
+  useEffect(() => {
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+    searchDebounceRef.current = setTimeout(() => {
+      syncToUrl({ q: pendingSearch || null });
+    }, 250);
+
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, [pendingSearch, syncToUrl]);
 
   const activeFilterCount = [masteryMax < 30, primeOnly, hideVaulted].filter(
     Boolean

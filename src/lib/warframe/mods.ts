@@ -10,6 +10,10 @@ import type { Mod, Arcane, Polarity, ModCompatibility } from "./types";
 const allMods = ModsData as unknown as Mod[];
 const allArcanes = ArcanesData as unknown as Arcane[];
 
+// Caches to avoid re-normalizing large mod lists on every call
+let cachedAllMods: Mod[] | null = null;
+const cachedModsByCompat = new Map<ModCompatibility, Mod[]>();
+
 // =============================================================================
 // POLARITY UTILITIES
 // =============================================================================
@@ -48,7 +52,9 @@ export function normalizePolarity(polarity?: string): Polarity {
  * Get all mods from the data
  */
 export function getAllMods(): Mod[] {
-  return allMods
+  if (cachedAllMods) return cachedAllMods;
+
+  cachedAllMods = allMods
     .filter((mod) => {
       // Filter out Riven mods and other special cases
       if (!mod.name) return false;
@@ -85,15 +91,20 @@ export function getAllMods(): Mod[] {
         modSetStats,
       };
     });
+
+  return cachedAllMods;
 }
 
 /**
  * Get mods by compatibility category (e.g., "Warframe", "Rifle", "Melee")
  */
 export function getModsByCompatibility(compatibility: ModCompatibility): Mod[] {
+  const cached = cachedModsByCompat.get(compatibility);
+  if (cached) return cached;
+
   const allModsNormalized = getAllMods();
 
-  return allModsNormalized.filter((mod) => {
+  const filtered = allModsNormalized.filter((mod) => {
     const compatName = mod.compatName?.toLowerCase() ?? "";
     const modType = mod.type?.toLowerCase() ?? "";
 
@@ -129,6 +140,9 @@ export function getModsByCompatibility(compatibility: ModCompatibility): Mod[] {
         return false;
     }
   });
+
+  cachedModsByCompat.set(compatibility, filtered);
+  return filtered;
 }
 
 /**

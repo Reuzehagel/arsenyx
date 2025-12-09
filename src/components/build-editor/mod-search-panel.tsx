@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { PolarityIcon } from "@/components/icons";
-import type { Mod, Polarity, SlotType } from "@/lib/warframe/types";
+import type { Mod, SlotType } from "@/lib/warframe/types";
 
 interface ModSearchPanelProps {
   isOpen: boolean;
@@ -33,14 +33,6 @@ const RARITY_ORDER: Record<string, number> = {
 };
 
 // Rarity colors - matching the Warframe mod card style
-const RARITY_BORDER_COLORS: Record<string, string> = {
-  Legendary: "border-l-amber-500",
-  Rare: "border-l-yellow-500",
-  Uncommon: "border-l-gray-400",
-  Common: "border-l-orange-700",
-  Peculiar: "border-l-purple-500",
-};
-
 // Available filter options
 const RARITY_OPTIONS = [
   "All",

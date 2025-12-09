@@ -14,7 +14,7 @@ import {
 import { ItemSidebar } from "./item-sidebar";
 import { ModGrid } from "./mod-grid";
 import { ModSearchGrid } from "./mod-search-grid";
-import { ModCard, CompactModCard } from "@/components/mod-card";
+import { CompactModCard } from "@/components/mod-card";
 import { useBuildKeyboard } from "./use-build-keyboard";
 import {
   getCapacityStatus,
@@ -34,6 +34,10 @@ import type {
   Mod,
 } from "@/lib/warframe/types";
 import { Hexagon, Diamond } from "lucide-react";
+
+type DragItem =
+  | { type: "search-mod"; mod: Mod; rank: number }
+  | { type: "placed-mod"; mod: PlacedMod; slotId: string; rank?: number };
 
 interface BuildContainerProps {
   item: BrowseableItem;
@@ -167,7 +171,7 @@ const STORAGE_KEY_PREFIX = "arsenix_build_";
 export function BuildContainer({
   item,
   category,
-  categoryLabel: _categoryLabel,
+  categoryLabel,
   compatibleMods,
   importedBuild,
 }: BuildContainerProps) {
@@ -179,14 +183,11 @@ export function BuildContainer({
   // Active slot for mod placement
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
 
-  // Search panel visibility
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-
   // Copy notification
   const [showCopied, setShowCopied] = useState(false);
 
   // Drag and Drop State
-  const [activeDragItem, setActiveDragItem] = useState<any>(null);
+  const [activeDragItem, setActiveDragItem] = useState<DragItem | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -299,7 +300,7 @@ export function BuildContainer({
   }, []);
 
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveDragItem(event.active.data.current);
+    setActiveDragItem(event.active.data.current as DragItem);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -333,14 +334,18 @@ export function BuildContainer({
   const capacityStatus = getCapacityStatus(buildState);
   const totalEndoCost = calculateTotalEndoCost(buildState);
 
-  // Auto-save to localStorage
+  // Auto-save to localStorage (debounced to avoid chatty writes while dragging)
   useEffect(() => {
     const key = `${STORAGE_KEY_PREFIX}${item.uniqueName}`;
-    try {
-      localStorage.setItem(key, JSON.stringify(buildState));
-    } catch {
-      // Ignore storage errors
-    }
+    const handle = window.setTimeout(() => {
+      try {
+        localStorage.setItem(key, JSON.stringify(buildState));
+      } catch {
+        // Ignore storage errors
+      }
+    }, 300);
+
+    return () => window.clearTimeout(handle);
   }, [buildState, item.uniqueName]);
 
   // Load from localStorage on mount
@@ -379,7 +384,6 @@ export function BuildContainer({
   // Select a slot for mod placement
   const handleSelectSlot = useCallback((slotId: string) => {
     setActiveSlotId(slotId);
-    setIsSearchOpen(true);
   }, []);
 
   // Place a mod in the active slot
@@ -430,7 +434,6 @@ export function BuildContainer({
       if (!isNaN(currentIndex) && currentIndex < 7) {
         setActiveSlotId(`normal-${currentIndex + 1}`);
       } else {
-        setIsSearchOpen(false);
         setActiveSlotId(null);
       }
     },
@@ -501,7 +504,6 @@ export function BuildContainer({
   const handleClearBuild = useCallback(() => {
     setBuildState(createInitialBuildState(item, category, compatibleMods));
     setActiveSlotId(null);
-    setIsSearchOpen(false);
   }, [item, category, compatibleMods]);
 
   // Get all used mod names for duplicate checking
@@ -523,11 +525,9 @@ export function BuildContainer({
     category === "warframes" || category === "necramechs";
 
   useBuildKeyboard({
-    isSearchOpen,
     onSelectSlot: handleSelectSlot,
-    onOpenSearch: () => setIsSearchOpen(true),
+    onOpenSearch: () => {},
     onCloseSearch: () => {
-      setIsSearchOpen(false);
       setActiveSlotId(null);
     },
     onCopyBuild: handleCopyBuild,
@@ -555,6 +555,9 @@ export function BuildContainer({
             </div>
             <div className="flex flex-col justify-center gap-2">
               <h1 className="text-2xl font-bold tracking-tight">{item.name}</h1>
+              <span className="text-sm text-muted-foreground">
+                {categoryLabel}
+              </span>
               <div className="flex items-center gap-3">
                 {/* Capacity indicator */}
                 <Badge

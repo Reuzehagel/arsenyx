@@ -3,7 +3,6 @@
 import { useEffect, useCallback } from "react";
 
 interface UseBuildKeyboardOptions {
-  isSearchOpen: boolean;
   onSelectSlot: (slotId: string) => void;
   onOpenSearch: () => void;
   onCloseSearch: () => void;
@@ -22,7 +21,6 @@ interface UseBuildKeyboardOptions {
  * - Escape: Deselect slot / clear focus
  */
 export function useBuildKeyboard({
-  isSearchOpen,
   onSelectSlot,
   onOpenSearch,
   onCloseSearch,

@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -145,14 +146,10 @@ export function ModCard({
 }: ModCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
-  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(
-    null
+  const [portalContainer] = useState<HTMLElement | null>(() =>
+    typeof document === "undefined" ? null : document.body
   );
   const [coords, setCoords] = useState({ top: 0, left: 0 });
-
-  useEffect(() => {
-    setPortalContainer(document.body);
-  }, []);
 
   const maxRank = mod.fusionLimit ?? 0;
   const [internalRank, setInternalRank] = useState(maxRank);

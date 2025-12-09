@@ -16,10 +16,10 @@ import type {
   BrowseFilters,
   BrowseableItem,
 } from "./types";
-import { BROWSE_CATEGORIES, getCategoryConfig } from "./categories";
+import { BROWSE_CATEGORIES } from "./categories";
 import { slugify } from "./slugs";
 
-// Combined items array from all categories
+// Combined items array from all categories (loaded once at module init)
 const allItems: BrowseableItem[] = [
   ...(WarframesData as BrowseableItem[]),
   ...(PrimaryData as BrowseableItem[]),
@@ -28,6 +28,19 @@ const allItems: BrowseableItem[] = [
   ...(SentinelsData as BrowseableItem[]),
   ...(PetsData as BrowseableItem[]),
 ];
+
+// Precomputed caches to avoid repeated expensive work per request
+const itemsByCategory = new Map<BrowseCategory, BrowseItem[]>();
+const slugLookup = new Map<string, BrowseableItem>(); // key: `${category}|${slug}`
+const uniqueNameLookup = new Map<string, BrowseableItem>();
+const categoryCounts: Record<BrowseCategory, number> = {
+  warframes: 0,
+  primary: 0,
+  secondary: 0,
+  melee: 0,
+  necramechs: 0,
+  companions: 0,
+};
 
 /**
  * Check if an item is a Necramech
@@ -61,57 +74,61 @@ function toBrowseItem(
   };
 }
 
+// Determine all browse categories an item belongs to
+function categorizeItem(item: BrowseableItem): BrowseCategory[] {
+  if (!item.name || item.name.includes(" Blueprint")) return [];
+
+  const itemCategory = item.category as string;
+  const categories: BrowseCategory[] = [];
+
+  if (itemCategory === "Warframes") {
+    if (isNecramech(item)) {
+      categories.push("necramechs");
+    } else {
+      categories.push("warframes");
+    }
+  }
+
+  if (itemCategory === "Primary") categories.push("primary");
+  if (itemCategory === "Secondary") categories.push("secondary");
+  if (itemCategory === "Melee") categories.push("melee");
+  if (itemCategory === "Sentinels" || itemCategory === "Pets") {
+    categories.push("companions");
+  }
+
+  return categories;
+}
+
+// Build caches once
+for (const config of BROWSE_CATEGORIES) {
+  itemsByCategory.set(config.id, []);
+}
+
+for (const item of allItems) {
+  uniqueNameLookup.set(item.uniqueName, item);
+
+  const categories = categorizeItem(item);
+  for (const category of categories) {
+    const list = itemsByCategory.get(category);
+    if (!list) continue;
+
+    const browseItem = toBrowseItem(item, category);
+    list.push(browseItem);
+    slugLookup.set(`${category}|${browseItem.slug}`, item);
+  }
+}
+
+// Sort lists and count once
+for (const [category, list] of itemsByCategory.entries()) {
+  list.sort((a, b) => a.name.localeCompare(b.name));
+  categoryCounts[category] = list.length;
+}
+
 /**
  * Get all items for a specific browse category
  */
 export function getItemsByCategory(category: BrowseCategory): BrowseItem[] {
-  const config = getCategoryConfig(category);
-
-  if (!config) return [];
-
-  const result: BrowseItem[] = [];
-
-  for (const item of allItems) {
-    // Skip items without names or that are components
-    if (!item.name || item.name.includes(" Blueprint")) continue;
-
-    const itemCategory = item.category as string;
-
-    // Handle Necramechs specially
-    if (category === "necramechs") {
-      if (isNecramech(item as BrowseableItem)) {
-        result.push(toBrowseItem(item as BrowseableItem, category));
-      }
-      continue;
-    }
-
-    // For Warframes, exclude Necramechs
-    if (category === "warframes") {
-      if (
-        itemCategory === "Warframes" &&
-        !isNecramech(item as BrowseableItem)
-      ) {
-        result.push(toBrowseItem(item as BrowseableItem, category));
-      }
-      continue;
-    }
-
-    // For companions, include both Sentinels and Pets
-    if (category === "companions") {
-      if (itemCategory === "Sentinels" || itemCategory === "Pets") {
-        result.push(toBrowseItem(item as BrowseableItem, category));
-      }
-      continue;
-    }
-
-    // Standard category matching
-    if (config.wfcdCategories.includes(itemCategory as never)) {
-      result.push(toBrowseItem(item as BrowseableItem, category));
-    }
-  }
-
-  // Sort alphabetically by name
-  return result.sort((a, b) => a.name.localeCompare(b.name));
+  return itemsByCategory.get(category) ?? [];
 }
 
 /**
@@ -160,44 +177,8 @@ export function getItemBySlug(
   category: BrowseCategory,
   slug: string
 ): BrowseableItem | null {
-  const config = getCategoryConfig(category);
-
-  if (!config) return null;
-
-  for (const item of allItems) {
-    if (!item.name) continue;
-
-    const itemSlug = slugify(item.name);
-    if (itemSlug !== slug) continue;
-
-    const itemCategory = item.category as string;
-
-    // Verify the item belongs to the requested category
-    if (category === "necramechs" && isNecramech(item as BrowseableItem)) {
-      return item as BrowseableItem;
-    }
-
-    if (
-      category === "warframes" &&
-      itemCategory === "Warframes" &&
-      !isNecramech(item as BrowseableItem)
-    ) {
-      return item as BrowseableItem;
-    }
-
-    if (
-      category === "companions" &&
-      (itemCategory === "Sentinels" || itemCategory === "Pets")
-    ) {
-      return item as BrowseableItem;
-    }
-
-    if (config.wfcdCategories.includes(itemCategory as never)) {
-      return item as BrowseableItem;
-    }
-  }
-
-  return null;
+  const key = `${category}|${slug}`;
+  return slugLookup.get(key) ?? null;
 }
 
 /**
@@ -235,13 +216,7 @@ export function getStaticItems(limit = 50): Array<{
  * Get total count of items per category (for UI display)
  */
 export function getCategoryCounts(): Record<BrowseCategory, number> {
-  const counts = {} as Record<BrowseCategory, number>;
-
-  for (const config of BROWSE_CATEGORIES) {
-    counts[config.id] = getItemsByCategory(config.id).length;
-  }
-
-  return counts;
+  return categoryCounts;
 }
 
 /**
@@ -252,13 +227,14 @@ export function getFullItem(
   category: BrowseCategory,
   uniqueName: string
 ): BrowseableItem | null {
-  const config = getCategoryConfig(category);
-  if (!config) return null;
+  // Validate the unique name exists at all
+  const item = uniqueNameLookup.get(uniqueName);
+  if (!item) return null;
 
-  for (const item of allItems) {
-    if (item.uniqueName === uniqueName) {
-      return item as BrowseableItem;
-    }
+  // Ensure the item belongs to the requested category
+  const categories = categorizeItem(item);
+  if (categories.includes(category)) {
+    return item;
   }
 
   return null;

@@ -1,6 +1,13 @@
 "use client";
 
-import { useMemo, useCallback, useRef, useEffect, useState } from "react";
+import {
+  useMemo,
+  useCallback,
+  useRef,
+  useEffect,
+  useState,
+  useDeferredValue,
+} from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -75,6 +82,7 @@ export function ModSearchGrid({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+  const deferredSearchQuery = useDeferredValue(searchQuery);
 
   // Filter and sort mods
   const filteredMods = useMemo(() => {
@@ -90,8 +98,8 @@ export function ModSearchGrid({
     }
 
     // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
+    if (deferredSearchQuery.trim()) {
+      const query = deferredSearchQuery.toLowerCase();
       mods = mods.filter(
         (m) =>
           m.name.toLowerCase().includes(query) ||
@@ -132,7 +140,7 @@ export function ModSearchGrid({
     return mods;
   }, [
     availableMods,
-    searchQuery,
+    deferredSearchQuery,
     sortBy,
     rarityFilter,
     polarityFilter,
