@@ -7,7 +7,6 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import {
-    GuideSidebar,
     GuideReader,
     GuideBreadcrumbs,
     GuideHeader,
@@ -15,7 +14,6 @@ import {
 } from "@/components/guides";
 import {
     getGuideBySlug,
-    getGuidesByCategory,
     getRelatedGuides,
     getPublishedGuides,
     GUIDE_CATEGORY_INFO,
@@ -76,7 +74,7 @@ export default async function GuidePage({ params }: GuidePageProps) {
         notFound();
     }
 
-    const guidesByCategory = getGuidesByCategory();
+
     const relatedGuides = getRelatedGuides(guide.id);
     const categoryInfo = GUIDE_CATEGORY_INFO[guide.category];
 
@@ -85,57 +83,48 @@ export default async function GuidePage({ params }: GuidePageProps) {
             <Header />
             <main className="flex-1">
                 <div className="container py-8">
-                    {/* Main Layout with Sidebar */}
-                    <div className="flex gap-8">
+                    {/* Main Content */}
+                    <div className="max-w-3xl mx-auto">
+                        {/* Breadcrumbs */}
+                        <GuideBreadcrumbs
+                            items={[
+                                { label: "Guides", href: "/guides" },
+                                { label: categoryInfo.label, href: `/guides?category=${guide.category}` },
+                                { label: guide.title },
+                            ]}
+                        />
+
+                        {/* Actions (dev mode only for now) */}
+                        {process.env.NODE_ENV === "development" && (
+                            <div className="flex items-center justify-end gap-2 mb-4">
+                                <Button variant="outline" size="sm" asChild>
+                                    <Link href={`/guides/${slug}/edit`}>
+                                        <Pencil className="h-4 w-4 mr-2" />
+                                        Edit
+                                    </Link>
+                                </Button>
+                                <Button variant="outline" size="sm">
+                                    <Share2 className="h-4 w-4 mr-2" />
+                                    Share
+                                </Button>
+                                <Button variant="outline" size="icon" title="Copy link">
+                                    <Copy className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        )}
+
+                        {/* Guide Header */}
+                        <GuideHeader guide={guide} />
+
+                        {/* Guide Content */}
+                        <article>
+                            <GuideReader content={guide.content} />
+                        </article>
+
+                        {/* Related Guides */}
                         <Suspense>
-                            <GuideSidebar
-                                guidesByCategory={guidesByCategory}
-                                currentSlug={slug}
-                            />
+                            <RelatedGuides guides={relatedGuides} />
                         </Suspense>
-
-                        <div className="flex-1 min-w-0 max-w-3xl">
-                            {/* Breadcrumbs */}
-                            <GuideBreadcrumbs
-                                items={[
-                                    { label: "Guides", href: "/guides" },
-                                    { label: categoryInfo.label, href: `/guides?category=${guide.category}` },
-                                    { label: guide.title },
-                                ]}
-                            />
-
-                            {/* Actions (dev mode only for now) */}
-                            {process.env.NODE_ENV === "development" && (
-                                <div className="flex items-center justify-end gap-2 mb-4">
-                                    <Button variant="outline" size="sm" asChild>
-                                        <Link href={`/guides/${slug}/edit`}>
-                                            <Pencil className="h-4 w-4 mr-2" />
-                                            Edit
-                                        </Link>
-                                    </Button>
-                                    <Button variant="outline" size="sm">
-                                        <Share2 className="h-4 w-4 mr-2" />
-                                        Share
-                                    </Button>
-                                    <Button variant="outline" size="icon" title="Copy link">
-                                        <Copy className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            )}
-
-                            {/* Guide Header */}
-                            <GuideHeader guide={guide} />
-
-                            {/* Guide Content */}
-                            <article>
-                                <GuideReader content={guide.content} />
-                            </article>
-
-                            {/* Related Guides */}
-                            <Suspense>
-                                <RelatedGuides guides={relatedGuides} />
-                            </Suspense>
-                        </div>
                     </div>
                 </div>
             </main>

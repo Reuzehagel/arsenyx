@@ -55,6 +55,7 @@ export const SEED_GUIDES: Guide[] = [
             name: "TennoGuide",
         },
         status: "published",
+        isCurated: true,
         content: createEditorState([
             "Railjack is Warframe's ship-based combat system introduced in the Empyrean update. It offers a unique blend of space combat, ground missions, and cooperative gameplay.",
             "",
@@ -103,39 +104,7 @@ export const SEED_GUIDES: Guide[] = [
             "",
             "Don't forget: Duplicate mods can be dissolved for Endo. Check your inventory regularly for mods you don't need!",
         ]),
-    },
-    {
-        id: "mod-fusion-efficiency",
-        slug: "mod-fusion-efficiency",
-        title: "Mod Fusion & Endo Efficiency Guide",
-        summary:
-            "Understand how mod fusion works and learn to maximize your Endo investment. Includes tips on which mods to prioritize.",
-        category: "gear",
-        tags: ["mods", "endo", "fusion", "optimization"],
-        readingTime: 5,
-        createdAt: "2024-09-20T12:00:00Z",
-        updatedAt: "2024-11-28T16:00:00Z",
-        author: {
-            name: "ModMaster",
-        },
-        status: "published",
-        content: createEditorState([
-            "Understanding mod fusion is critical to efficiently powering up your arsenal. Each mod has a drain cost and a rank, with costs increasing exponentially at higher ranks.",
-            "",
-            "The first few ranks of any mod are extremely cheap. Getting mods to rank 6-8 costs a fraction of maxing them. Consider this when building on a budget.",
-            "",
-            "Primed and Umbral mods cost significantly more to rank up. Prioritize your 'workhorse' mods that you use across many builds.",
-            "",
-            "Some mods to prioritize early:",
-            "- Serration / Hornet Strike / Pressure Point (base damage mods)",
-            "- Vitality / Steel Fiber / Redirection (survivability)",
-            "- Streamline / Flow / Intensify (frame power mods)",
-            "",
-            "Don't max niche mods until you have a specific build that needs them. It's better to have many usable mods than a few maxed ones.",
-            "",
-            "Use the mod segment in your Orbiter to dissolve duplicate mods for Endo. Silver and Gold duplicates give meaningful amounts.",
-        ]),
-        relatedGuideIds: ["endo-farming-routes"],
+        relatedGuideIds: ["railjack-basics"],
     },
 ];
 

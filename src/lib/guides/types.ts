@@ -65,6 +65,7 @@ export interface Guide {
     };
     content: SerializedEditorState;
     status: GuideStatus;
+    isCurated?: boolean; // true for featured/official guides
     relatedBuildIds?: string[];
     relatedGuideIds?: string[];
 }
@@ -85,6 +86,7 @@ export interface GuideListItem {
         avatar?: string;
     };
     status: GuideStatus;
+    isCurated?: boolean; // true for featured/official guides
 }
 
 // Guide create/update input
