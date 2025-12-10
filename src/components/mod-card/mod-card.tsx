@@ -299,7 +299,7 @@ function ModCardComponent({
       setShowOverlay(false);
       setIsFadingOverlay(false);
       fadeTimeoutRef.current = null;
-    }, 100);
+    }, 80); // Reduced from 100ms for snappier feel
   }, []);
 
   // Handle keyboard events for rank adjustment
@@ -325,8 +325,8 @@ function ModCardComponent({
     clearFadeTimeout();
     clearHoverTimeout();
 
-    // Debounce hover activation - only show expanded view if hovering for 80ms+
-    // This prevents jitter when quickly swiping across multiple cards
+    // Debounce hover activation - only show expanded view if hovering for 50ms+
+    // This prevents jitter when quickly swiping across multiple cards while feeling responsive
     hoverTimeoutRef.current = window.setTimeout(() => {
       if (!cardRef.current) return;
 
@@ -342,7 +342,7 @@ function ModCardComponent({
         top: rect.top + rect.height / 2,
         left: rect.left + rect.width / 2,
       });
-    }, 80);
+    }, 50); // Reduced from 80ms for more responsive feel
   }, [disableHover]);
 
   const handleMouseLeave = useCallback(() => {
@@ -395,6 +395,11 @@ function ModCardComponent({
     <div
       ref={cardRef}
       className={cn("relative w-[184px] h-[64px] select-none", className)}
+      style={{
+        isolation: "isolate",
+        transform: "translateZ(0)",
+        backfaceVisibility: "hidden",
+      }}
       onMouseEnter={disableHover ? undefined : handleMouseEnter}
       onMouseLeave={disableHover ? undefined : handleMouseLeave}
     >
@@ -403,10 +408,11 @@ function ModCardComponent({
       {/* Compact card - hidden when hovered */}
       <div
         className={cn(
-          "transition-opacity duration-200",
+          "transition-opacity duration-150 ease-out",
           isHovered ? "opacity-0" : "opacity-100",
           isSelected && "filter drop-shadow-[0_0_6px_rgba(255,255,255,0.7)]"
         )}
+        style={{ willChange: isHovered ? "opacity" : "auto" }}
       >
         <CompactModCard
           mod={mod}
@@ -432,11 +438,17 @@ function ModCardComponent({
           >
             <div
               className={cn(
-                "transition-all duration-200 ease-out origin-center",
+                "origin-center",
                 "drop-shadow-[0_0_20px_rgba(0,0,0,0.8)] shadow-2xl",
-                "animate-in fade-in zoom-in-75 duration-200",
-                isFadingOverlay ? "opacity-0 duration-100" : "opacity-100"
+                isFadingOverlay ? "opacity-0" : "opacity-100 animate-in fade-in zoom-in-90"
               )}
+              style={{
+                willChange: "transform, opacity",
+                transition: isFadingOverlay
+                  ? "opacity 80ms ease-out, transform 80ms ease-out"
+                  : "opacity 120ms cubic-bezier(0.16, 1, 0.3, 1), transform 120ms cubic-bezier(0.16, 1, 0.3, 1)",
+                transform: isFadingOverlay ? "scale(0.95)" : "scale(1)",
+              }}
             >
               <ExpandedModCard
                 mod={mod}
@@ -484,7 +496,15 @@ export function CompactModCard({
   const maxRank = mod.fusionLimit ?? 0;
 
   return (
-    <div className="relative w-[184px] h-[64px] flex items-center justify-center select-none">
+    <div
+      className="relative w-[184px] h-[64px] flex items-center justify-center select-none"
+      style={{
+        isolation: "isolate",
+        transformOrigin: "center center",
+        transform: "translateZ(0)", // Force GPU compositing layer
+        backfaceVisibility: "hidden", // Prevents subpixel rendering issues
+      }}
+    >
       {/* Drain & Polarity Badge */}
       <ModDrainBadge mod={mod} rank={rank} rarity={rarity} drainOverride={drainOverride} matchState={matchState} />
       {/* Mod Image */}
@@ -616,7 +636,14 @@ function ExpandedModCard({
       : null;
 
   return (
-    <div className="relative w-[184px] h-[285px] select-none">
+    <div
+      className="relative w-[184px] h-[285px] select-none"
+      style={{
+        isolation: "isolate",
+        transform: "translateZ(0)",
+        backfaceVisibility: "hidden",
+      }}
+    >
       {/* Drain & Polarity Badge */}
       <ModDrainBadge mod={mod} rank={rank} rarity={rarity} drainOverride={drainOverride} matchState={matchState} />
       {/* Top Frame */}

@@ -316,6 +316,7 @@ const ModSlotCard = memo(function ModSlotCard({
               isOver &&
               "ring-2 ring-primary ring-offset-2 ring-offset-background z-10"
             )}
+            style={{ isolation: "isolate" }}
           >
             <div
               ref={setDraggableRef}
@@ -371,6 +372,7 @@ const ModSlotCard = memo(function ModSlotCard({
                   "ring-2 ring-primary ring-offset-2 ring-offset-background bg-accent/50",
                   className
                 )}
+                style={{ isolation: "isolate" }}
                 onClick={(e) => {
                   if (e.shiftKey) {
                     setPolarityOpen(true);
