@@ -38,7 +38,7 @@ import type {
   BrowseableItem,
   Mod,
 } from "@/lib/warframe/types";
-import { Hexagon, Diamond, Gem, Save, X } from "lucide-react";
+import { Diamond, Gem, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type DragItem =
@@ -689,18 +689,7 @@ export function BuildContainer({
                 </span>
                 <div className="flex items-center gap-3">
                   {/* Capacity indicator */}
-                  <Badge
-                    variant="secondary"
-                    className={cn(
-                      "gap-1.5 px-2 py-0.5 font-semibold text-xs",
-                      capacityStatus.isOverCapacity
-                        ? "bg-destructive/20 text-destructive hover:bg-destructive/30"
-                        : "bg-muted/50 hover:bg-muted"
-                    )}
-                  >
-                    <Hexagon className="w-3 h-3 fill-current" />
-                    {capacityStatus.remaining}/{capacityStatus.max}
-                  </Badge>
+
                   {/* Endo cost indicator */}
                   <Badge
                     variant="secondary"
