@@ -17,6 +17,9 @@
 11. [Migration Plan](#11-migration-plan)
 12. [Environment Variables](#12-environment-variables)
 13. [Implementation Order](#13-implementation-order)
+14. [Appendix A: File Structure](#appendix-a-file-structure)
+15. [Appendix B: Glossary](#appendix-b-glossary)
+16. [Appendix C: Testing Strategy](#appendix-c-testing-strategy)
 
 ---
 
@@ -103,6 +106,13 @@ Local `DATABASE_URL`:
 postgresql://arsenix:arsenix_dev@localhost:5432/arsenix
 ```
 
+### Operational Defaults
+
+- Connection pooling: use Prisma Accelerate/Data Proxy (or Neon pooler) for serverless to avoid exhausting Postgres connections.
+- Backups: nightly Neon branch snapshot; keep 7–14 days; document restore steps and test quarterly.
+- Preview environments: per-PR Neon branch created from `main` migration state; inject `DATABASE_URL` per preview to avoid clobbering shared dev data.
+- Monitoring: Sentry for errors + basic cron heartbeat for WFCD sync; log WFCD sync results to `WfcdSyncLog` and surface in admin UI.
+
 ---
 
 ## 3. Database Schema
@@ -134,6 +144,7 @@ model User {
 
   // App-specific fields
   username      String?   @unique  // Display name / handle
+  usernameLower String?   @unique  // Enforce lowercase uniqueness
   bio           String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -516,8 +527,6 @@ model Guide {
   status        String       @default("draft")  // "draft" | "published"
   isCurated     Boolean      @default(false)    // Featured/official guides
 
-  isCurated     Boolean      @default(false)    // Featured/official guides
-
   // Computed
   readingTime   Int          @default(1)        // Minutes
   viewCount     Int          @default(0)
@@ -717,10 +726,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: "/auth/signin",
     verifyRequest: "/auth/verify",
     error: "/auth/error",
-  pages: {
-    signIn: "/auth/signin",
-    verifyRequest: "/auth/verify",
-    error: "/auth/error",
   },
 });
 
@@ -767,6 +772,74 @@ export function Component() {
 }
 ```
 
+### 4.4 Roles and Moderation
+
+- Authorization rules:
+  - `USER`: standard permissions (own builds/guides CRUD, delete own content).
+  - `MODERATOR` and above: can delete/flag any build/guide, trigger WFCD sync, view admin dashboards.
+  - `ADMIN`: manage API keys for others, grant roles.
+- Enforce role checks in server actions (build delete/update for non-owners, guide moderation, API key creation, manual sync endpoint).
+- Normalize usernames to lowercase on creation/update; store both display casing and a `usernameLower` field for uniqueness checks.
+
+### 4.5 Account Deletion
+
+When a user deletes their account, **cascade delete** all their data:
+
+- All builds owned by the user are deleted
+- All votes cast by the user are deleted (and denormalized counts decremented)
+- All favorites are deleted (and denormalized counts decremented)
+- All guides owned by the user are deleted
+- All API keys owned by the user are revoked
+- Build links where user's builds are involved are deleted
+- Guide embeds referencing user's builds are deleted
+
+Implementation:
+
+```typescript
+export async function deleteAccount(userId: string) {
+  const session = await auth();
+  if (!session?.user?.id || session.user.id !== userId) {
+    throw new Error("Not authorized");
+  }
+
+  // Prisma cascades will handle most relations due to onDelete: Cascade
+  // But we need to manually decrement denormalized counts first
+
+  // Get all builds to decrement their vote/favorite counts
+  const userVotes = await prisma.buildVote.findMany({ where: { userId } });
+  const userFavorites = await prisma.buildFavorite.findMany({ where: { userId } });
+  const userGuideVotes = await prisma.guideVote.findMany({ where: { userId } });
+  const userGuideFavorites = await prisma.guideFavorite.findMany({ where: { userId } });
+
+  await prisma.$transaction([
+    // Decrement build vote counts
+    ...userVotes.map(v => prisma.build.update({
+      where: { id: v.buildId },
+      data: { voteCount: { decrement: 1 } },
+    })),
+    // Decrement build favorite counts
+    ...userFavorites.map(f => prisma.build.update({
+      where: { id: f.buildId },
+      data: { favoriteCount: { decrement: 1 } },
+    })),
+    // Decrement guide vote counts
+    ...userGuideVotes.map(v => prisma.guide.update({
+      where: { id: v.guideId },
+      data: { voteCount: { decrement: 1 } },
+    })),
+    // Decrement guide favorite counts
+    ...userGuideFavorites.map(f => prisma.guide.update({
+      where: { id: f.guideId },
+      data: { favoriteCount: { decrement: 1 } },
+    })),
+    // Delete user (cascades to all related records)
+    prisma.user.delete({ where: { id: userId } }),
+  ]);
+}
+```
+
+Note: Builds that were forked from a deleted user's build will have `forkedFromId` set to `null` (due to `onDelete: SetNull`).
+
 ---
 
 ## 5. WFCD Data Sync
@@ -778,6 +851,8 @@ Instead of static JSON imports, sync WFCD data to the database:
 1. **Initial seed**: Populate Items, Mods, Arcanes from `@wfcd/items`
 2. **Scheduled sync**: Daily/weekly cron job to update from latest WFCD
 3. **Manual trigger**: Admin endpoint to force sync
+4. **Version tracking**: Read `@wfcd/items` package version (or commit hash if available) and store on `WfcdSyncLog` + `Item/Mod/Arcane.wfcdVersion`. Keep only latest data; delete records whose `uniqueName` disappeared in new payloads (soft-delete flag first, hard delete after a grace window if needed).
+5. **Cache invalidation**: After a successful sync, revalidate cache tags (`items`, `mods`, `arcanes`) and rebuild any denormalized summaries used by browse pages.
 
 ### 5.2 Sync Script
 
@@ -1789,7 +1864,103 @@ revalidateTag(`builds-user-${userId}`);
 | Favorites        | 20                 | per minute |
 | Build create     | 10                 | per hour   |
 | Build update     | 30                 | per hour   |
+| Sign-in (email)  | 5                  | per hour   |
 | Image generation | Per API key config | per hour   |
+| Manual WFCD sync | 1                  | per hour   |
+
+### 10.4 Search & Discovery
+
+- Postgres `pg_trgm` trigram indexes on `Item.name`, `Item.browseCategory`, `Build.name`, `Build.description` for fuzzy search; fall back to prefix search if `pg_trgm` is unavailable on Neon.
+- Filters for browse pages: item category, mastery requirement, polarity (mods), shards flag, visibility, vote/favorite counts, owner username.
+- Add lightweight search API/server action returning IDs + highlight snippets; paginate to avoid full scans.
+- Rebuild search indexes after WFCD sync and major build migrations.
+
+### 10.5 Error Response Format
+
+Standardize all API error responses for consistency:
+
+```typescript
+// src/lib/api-error.ts
+
+export interface ApiError {
+  error: string;        // Human-readable message
+  code?: string;        // Machine-readable error code
+  details?: object;     // Additional context (validation errors, etc.)
+}
+
+export class ApiException extends Error {
+  constructor(
+    public statusCode: number,
+    public error: string,
+    public code?: string,
+    public details?: object
+  ) {
+    super(error);
+  }
+
+  toResponse() {
+    return Response.json(
+      {
+        error: this.error,
+        ...(this.code && { code: this.code }),
+        ...(this.details && { details: this.details }),
+      },
+      { status: this.statusCode }
+    );
+  }
+}
+
+// Common errors
+export const Errors = {
+  UNAUTHORIZED: new ApiException(401, "Authentication required", "UNAUTHORIZED"),
+  FORBIDDEN: new ApiException(403, "Permission denied", "FORBIDDEN"),
+  NOT_FOUND: (resource: string) => new ApiException(404, `${resource} not found`, "NOT_FOUND"),
+  RATE_LIMITED: new ApiException(429, "Rate limit exceeded", "RATE_LIMITED"),
+  VALIDATION: (details: object) => new ApiException(400, "Validation error", "VALIDATION_ERROR", details),
+  INTERNAL: new ApiException(500, "Internal server error", "INTERNAL_ERROR"),
+};
+```
+
+Usage in API routes:
+
+```typescript
+export async function POST(request: Request) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return Errors.UNAUTHORIZED.toResponse();
+    }
+
+    const body = await request.json();
+    const validation = validateBuildInput(body);
+    if (!validation.success) {
+      return Errors.VALIDATION(validation.errors).toResponse();
+    }
+
+    const build = await createBuild(body);
+    return Response.json(build, { status: 201 });
+
+  } catch (error) {
+    if (error instanceof ApiException) {
+      return error.toResponse();
+    }
+    console.error("Unhandled error:", error);
+    return Errors.INTERNAL.toResponse();
+  }
+}
+```
+
+Error codes for reference:
+
+| Code | HTTP Status | Description |
+|------|-------------|-------------|
+| `UNAUTHORIZED` | 401 | Missing or invalid authentication |
+| `FORBIDDEN` | 403 | Authenticated but not allowed |
+| `NOT_FOUND` | 404 | Resource doesn't exist |
+| `VALIDATION_ERROR` | 400 | Request body validation failed |
+| `RATE_LIMITED` | 429 | Too many requests |
+| `CONFLICT` | 409 | Resource already exists (e.g., duplicate username) |
+| `INTERNAL_ERROR` | 500 | Unexpected server error |
 
 ---
 
@@ -1943,6 +2114,7 @@ NEXT_PUBLIC_APP_URL="https://arsenix.app"
 | `DATABASE_URL` | Docker local                   | Neon connection string |
 | `NEXTAUTH_URL` | `http://localhost:3000`        | `https://arsenix.app`  |
 | `USE_DATABASE` | `false` initially, then `true` | `true`                 |
+| Preview envs   | Neon branch per PR (unique `DATABASE_URL`) | - |
 
 ---
 
@@ -1999,9 +2171,12 @@ NEXT_PUBLIC_APP_URL="https://arsenix.app"
 ### Ongoing
 
 - [ ] Monitor Neon usage, upgrade if needed
+- [ ] Nightly DB backup/branch snapshot (verify restore quarterly)
 - [ ] Set up WFCD sync cron job
 - [ ] Add error monitoring (Sentry)
+- [ ] Add cron heartbeat/alerting for WFCD sync and image cleanup
 - [ ] Performance optimization as needed
+- [ ] Weekly cleanup job for expired generated images
 
 ---
 
@@ -2072,3 +2247,221 @@ arsenix/
 | **Shard**      | Archon Shard - permanent upgrade for Warframes                         |
 | **Forma**      | Polarity change applied to a mod slot                                  |
 | **Visibility** | PUBLIC (browseable), PRIVATE (owner only), UNLISTED (link only)        |
+
+---
+
+## Appendix C: Testing Strategy
+
+### C.1 Testing Stack
+
+```bash
+# Testing dependencies
+bun add -D vitest @testing-library/react @testing-library/user-event
+bun add -D @playwright/test
+bun add -D prisma-test-utils  # Or use Prisma's built-in test utilities
+```
+
+### C.2 Test Categories
+
+| Category | Tool | Purpose |
+|----------|------|---------|
+| Unit tests | Vitest | Pure functions, utilities, data transformations |
+| Integration tests | Vitest + Prisma | Database operations, server actions |
+| Component tests | Vitest + Testing Library | React components in isolation |
+| E2E tests | Playwright | Full user flows |
+
+### C.3 What to Test
+
+**Unit Tests (fast, run frequently)**
+
+- `src/lib/warframe/capacity.ts` - Drain calculations, forma counting
+- `src/lib/rate-limit.ts` - Rate limiting logic
+- `src/lib/api-error.ts` - Error formatting
+- Build data validation/transformation
+- Slug generation
+
+```typescript
+// Example: capacity.test.ts
+import { describe, it, expect } from 'vitest';
+import { calculateDrain, calculateFormaCount } from './capacity';
+
+describe('calculateDrain', () => {
+  it('halves drain for matching polarity', () => {
+    expect(calculateDrain(10, 'madurai', 'madurai')).toBe(5);
+  });
+
+  it('increases drain for mismatched polarity', () => {
+    expect(calculateDrain(10, 'madurai', 'vazarin')).toBe(13); // ceil(10 * 1.25)
+  });
+});
+```
+
+**Integration Tests (slower, test DB interactions)**
+
+- WFCD sync script - verify upserts work correctly
+- Build CRUD - create, read, update, delete with ownership checks
+- Vote/favorite toggling - verify count updates
+- Visibility rules - private/public/unlisted access
+
+```typescript
+// Example: builds.integration.test.ts
+import { describe, it, expect, beforeEach } from 'vitest';
+import { prisma } from '@/lib/db';
+import { createBuild, getBuildBySlug } from '@/lib/db/builds';
+
+describe('Build operations', () => {
+  beforeEach(async () => {
+    await prisma.build.deleteMany();
+    await prisma.user.deleteMany();
+    // Seed test user
+  });
+
+  it('creates build with correct slug', async () => {
+    const build = await createBuild({
+      itemId: 'test-item-id',
+      name: 'Test Build',
+      buildData: { /* ... */ },
+    });
+
+    expect(build.slug).toMatch(/^[a-zA-Z0-9_-]{10}$/);
+  });
+
+  it('respects visibility rules', async () => {
+    // Create private build as user A
+    // Try to fetch as user B - should return null
+  });
+});
+```
+
+**E2E Tests (slowest, run before deploy)**
+
+- Auth flow: sign in with email magic link
+- Auth flow: sign in with GitHub
+- Create build: select item → add mods → save → view
+- Vote on build: click vote → verify count updates
+- Fork build: view public build → fork → verify new build
+- Image generation: API key → request image → verify response
+
+```typescript
+// Example: auth.e2e.test.ts
+import { test, expect } from '@playwright/test';
+
+test('can sign in with GitHub', async ({ page }) => {
+  await page.goto('/auth/signin');
+  await page.click('button:has-text("Sign in with GitHub")');
+  // ... handle GitHub OAuth flow (may need mocking)
+  await expect(page).toHaveURL('/');
+  await expect(page.locator('[data-testid="user-menu"]')).toBeVisible();
+});
+
+test('can create and save a build', async ({ page }) => {
+  // Sign in first
+  await page.goto('/browse/warframes');
+  await page.click('text=Trinity');
+  await page.click('button:has-text("Create Build")');
+
+  // Add a mod
+  await page.click('[data-slot="normal-0"]');
+  await page.fill('[placeholder="Search mods"]', 'Vitality');
+  await page.click('text=Vitality');
+
+  // Save
+  await page.click('button:has-text("Save")');
+  await expect(page.locator('text=Build saved')).toBeVisible();
+});
+```
+
+### C.4 Test Database
+
+Use a separate test database to avoid polluting development data:
+
+```bash
+# .env.test
+DATABASE_URL="postgresql://arsenix:arsenix_dev@localhost:5432/arsenix_test"
+```
+
+```typescript
+// vitest.config.ts
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  test: {
+    env: {
+      DATABASE_URL: process.env.DATABASE_URL_TEST,
+    },
+    setupFiles: ['./tests/setup.ts'],
+  },
+});
+```
+
+```typescript
+// tests/setup.ts
+import { prisma } from '@/lib/db';
+import { beforeAll, afterAll } from 'vitest';
+
+beforeAll(async () => {
+  // Run migrations on test DB
+  // Optionally seed with minimal test data
+});
+
+afterAll(async () => {
+  await prisma.$disconnect();
+});
+```
+
+### C.5 CI/CD Integration
+
+```yaml
+# .github/workflows/test.yml
+name: Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: arsenix
+          POSTGRES_PASSWORD: arsenix_test
+          POSTGRES_DB: arsenix_test
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v1
+
+      - run: bun install
+      - run: bun prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://arsenix:arsenix_test@localhost:5432/arsenix_test
+
+      - run: bun test
+        env:
+          DATABASE_URL: postgresql://arsenix:arsenix_test@localhost:5432/arsenix_test
+
+      - run: bun playwright install --with-deps
+      - run: bun playwright test
+        env:
+          DATABASE_URL: postgresql://arsenix:arsenix_test@localhost:5432/arsenix_test
+```
+
+### C.6 Test Coverage Goals
+
+| Area | Target | Notes |
+|------|--------|-------|
+| Utility functions | 90%+ | Pure functions, easy to test |
+| DB operations | 80%+ | Focus on edge cases, auth checks |
+| API routes | 70%+ | Test error handling, validation |
+| Components | 50%+ | Focus on interactive components |
+| E2E | Critical paths | Auth, build CRUD, voting |
+
+Don't aim for 100% coverage - focus on:
+1. Business logic (capacity calculations, sync logic)
+2. Authorization (ownership checks, visibility rules)
+3. Data integrity (vote counts, cascade deletes)
+4. User-facing flows (E2E for critical paths)
