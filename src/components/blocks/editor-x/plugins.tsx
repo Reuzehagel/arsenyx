@@ -84,7 +84,6 @@ import { CodeLanguageToolbarPlugin } from "@/components/editor/plugins/toolbar/c
 import { ElementFormatToolbarPlugin } from "@/components/editor/plugins/toolbar/element-format-toolbar-plugin"
 
 import { FontFormatToolbarPlugin } from "@/components/editor/plugins/toolbar/font-format-toolbar-plugin"
-import { FontSizeToolbarPlugin } from "@/components/editor/plugins/toolbar/font-size-toolbar-plugin"
 import { HistoryToolbarPlugin } from "@/components/editor/plugins/toolbar/history-toolbar-plugin"
 import { LinkToolbarPlugin } from "@/components/editor/plugins/toolbar/link-toolbar-plugin"
 import { SubSuperToolbarPlugin } from "@/components/editor/plugins/toolbar/subsuper-toolbar-plugin"
@@ -131,8 +130,6 @@ export function Plugins({ }) {
               <CodeLanguageToolbarPlugin />
             ) : (
               <>
-                <FontSizeToolbarPlugin />
-                <Separator orientation="vertical" className="!h-7" />
                 <FontFormatToolbarPlugin />
                 <Separator orientation="vertical" className="!h-7" />
                 <SubSuperToolbarPlugin />

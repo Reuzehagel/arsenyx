@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { format } from "date-fns";
 import { Pen } from "lucide-react";
 import { GuideReader } from "@/components/guides/guide-reader";
 import { GuideEditorDialog } from "@/components/build-editor/guide-editor-dialog";
@@ -26,24 +27,30 @@ export function BuildGuideSection({
     const [lastUpdated, setLastUpdated] = useState<Date | undefined>(updatedAt);
     const [key, setKey] = useState(0); // Force re-render of editor
 
-    const handleSave = async (payload: { guide: string }) => {
+    const handleSave = (payload: { guide: string }) => {
+        // Optimistic update
         try {
-            const result = await updateBuildGuideAction(buildId, payload.guide);
-            if (result.success && result.build?.buildGuide) {
-                // Parse the new content to update the view immediately
-                const newContent = typeof result.build.buildGuide.content === 'string'
-                    ? JSON.parse(result.build.buildGuide.content)
-                    : result.build.buildGuide.content;
-
-                setContent(newContent);
-                setLastUpdated(new Date()); // Optimistic update
-                setKey(prev => prev + 1); // Force re-render if needed
-
-                router.refresh();
-            }
+            const newContent = JSON.parse(payload.guide);
+            setContent(newContent);
+            setLastUpdated(new Date()); // Optimistic update
+            setKey(prev => prev + 1); // Force re-render if needed
         } catch (error) {
-            console.error("Failed to save guide:", error);
+            console.error("Failed to parse guide content:", error);
         }
+
+        // Background save
+        updateBuildGuideAction(buildId, payload.guide)
+            .then((result) => {
+                if (result.success && result.build?.buildGuide) {
+                    router.refresh();
+                } else {
+                    console.error("Failed to save guide:", result.error);
+                    // TODO: Show error toast and potentially revert state
+                }
+            })
+            .catch((error) => {
+                console.error("Failed to save guide:", error);
+            });
     };
 
     if (!content && !isOwner) return null;
@@ -71,13 +78,16 @@ export function BuildGuideSection({
                     </div>
                     {lastUpdated && (
                         <span className="text-xs text-muted-foreground">
-                            Last updated {lastUpdated.toLocaleDateString()}
+                            Last updated {format(lastUpdated, "P")}
                         </span>
                     )}
                 </div>
                 <div className="p-6">
                     {content ? (
-                        <GuideReader content={content} />
+                        <GuideReader
+                            key={lastUpdated?.toISOString()}
+                            content={content}
+                        />
                     ) : (
                         <div className="text-center py-8 text-muted-foreground">
                             <p>No guide written yet.</p>
