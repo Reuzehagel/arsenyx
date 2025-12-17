@@ -17,8 +17,9 @@ import {
 import { cn } from "@/lib/utils";
 import { getSlotPolarity, calculateModDrain, getMatchState, type MatchState } from "@/lib/warframe/capacity";
 import { ModCard } from "@/components/mod-card";
-import type { ModSlot, Polarity, Mod, PlacedMod } from "@/lib/warframe/types";
+import type { ModSlot, Polarity, Mod, PlacedMod, PlacedArcane, Arcane } from "@/lib/warframe/types";
 import { Plus } from "lucide-react";
+import { ArcaneSlotCard } from "./arcane-slot-card";
 import { PolarityIcon } from "@/components/icons";
 
 // All available polarities for the selector
@@ -35,6 +36,13 @@ interface ModGridProps {
   onApplyForma: (slotId: string, polarity: Polarity) => void;
   isWarframe: boolean;
   draggedMod?: Mod | PlacedMod;
+  // Arcane props
+  arcaneSlots?: PlacedArcane[];
+  onRemoveArcane?: (index: number) => void;
+  onChangeArcaneRank?: (index: number, rank: number) => void;
+  draggedArcane?: Arcane | PlacedArcane;
+  /** Full arcane data for hydrating placed arcanes (for levelStats display) */
+  arcaneDataMap?: Map<string, Arcane>;
 }
 
 export function ModGrid({
@@ -48,6 +56,11 @@ export function ModGrid({
   onApplyForma,
   isWarframe,
   draggedMod,
+  arcaneSlots = [],
+  onRemoveArcane,
+  onChangeArcaneRank,
+  draggedArcane,
+  arcaneDataMap,
 }: ModGridProps) {
   const [activeTab, setActiveTab] = useState<"mods" | "shards">("mods");
 
@@ -166,15 +179,33 @@ export function ModGrid({
             ))}
           </div>
 
-          {/* Row 4: Arcanes (Placeholder) */}
-          <div className="flex gap-4 w-full justify-center mt-2">
-            <div className="w-[184px] h-[100px] border border-dashed rounded-lg flex items-center justify-center text-muted-foreground/30">
-              <Plus className="w-5 h-5" />
+          {/* Row 4: Arcanes */}
+          {isWarframe && (
+            <div className="flex gap-4 w-full justify-center mt-2">
+              <ArcaneSlotCard
+                arcane={arcaneSlots[0]}
+                slotIndex={0}
+                isActive={activeSlotId === "arcane-0"}
+                onSelect={() => onSelectSlot("arcane-0")}
+                onRemove={() => onRemoveArcane?.(0)}
+                onChangeRank={(rank) => onChangeArcaneRank?.(0, rank)}
+                className="w-[120px] h-[140px]"
+                draggedArcane={draggedArcane}
+                fullArcaneData={arcaneSlots[0] ? arcaneDataMap?.get(arcaneSlots[0].uniqueName) : undefined}
+              />
+              <ArcaneSlotCard
+                arcane={arcaneSlots[1]}
+                slotIndex={1}
+                isActive={activeSlotId === "arcane-1"}
+                onSelect={() => onSelectSlot("arcane-1")}
+                onRemove={() => onRemoveArcane?.(1)}
+                onChangeRank={(rank) => onChangeArcaneRank?.(1, rank)}
+                className="w-[120px] h-[140px]"
+                draggedArcane={draggedArcane}
+                fullArcaneData={arcaneSlots[1] ? arcaneDataMap?.get(arcaneSlots[1].uniqueName) : undefined}
+              />
             </div>
-            <div className="w-[184px] h-[100px] border border-dashed rounded-lg flex items-center justify-center text-muted-foreground/30">
-              <Plus className="w-5 h-5" />
-            </div>
-          </div>
+          )}
         </div>
       ) : (
         <div className="flex items-center justify-center h-64 text-muted-foreground">

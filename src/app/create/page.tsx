@@ -8,7 +8,7 @@ import { BuildContainer } from "@/components/build-editor/build-container";
 import { Skeleton } from "@/components/ui/skeleton";
 // Server-only imports
 import { getItemBySlug, getFullItem } from "@/lib/warframe/items";
-import { getModsForCategory } from "@/lib/warframe/mods";
+import { getModsForCategory, getArcanesForSlot } from "@/lib/warframe/mods";
 import { isValidCategory, getCategoryConfig } from "@/lib/warframe";
 import { decodeBuild } from "@/lib/build-codec";
 import type { BrowseCategory } from "@/lib/warframe/types";
@@ -78,6 +78,9 @@ export default async function CreatePage({ searchParams }: CreatePageProps) {
       if (fullItem) {
         const categoryConfig = getCategoryConfig(category);
         const compatibleMods = getModsForCategory(category);
+        // Fetch arcanes for warframes/necramechs
+        const isWarframeCategory = category === "warframes" || category === "necramechs";
+        const compatibleArcanes = isWarframeCategory ? getArcanesForSlot("warframe") : [];
 
         return (
           <div className="relative min-h-screen flex flex-col">
@@ -89,6 +92,7 @@ export default async function CreatePage({ searchParams }: CreatePageProps) {
                   category={category}
                   categoryLabel={categoryConfig?.label ?? "Item"}
                   compatibleMods={compatibleMods}
+                  compatibleArcanes={compatibleArcanes}
                   importedBuild={decodedBuild}
                 />
               </Suspense>
@@ -116,6 +120,9 @@ export default async function CreatePage({ searchParams }: CreatePageProps) {
     const fullItem = getFullItem(category, item.uniqueName);
     const categoryConfig = getCategoryConfig(category);
     const compatibleMods = getModsForCategory(category);
+    // Fetch arcanes for warframes/necramechs
+    const isWarframeCategory = category === "warframes" || category === "necramechs";
+    const compatibleArcanes = isWarframeCategory ? getArcanesForSlot("warframe") : [];
 
     return (
       <div className="relative min-h-screen flex flex-col">
@@ -127,6 +134,7 @@ export default async function CreatePage({ searchParams }: CreatePageProps) {
               category={category}
               categoryLabel={categoryConfig?.label ?? "Item"}
               compatibleMods={compatibleMods}
+              compatibleArcanes={compatibleArcanes}
             />
           </Suspense>
         </main>

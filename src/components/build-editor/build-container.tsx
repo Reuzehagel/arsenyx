@@ -17,7 +17,9 @@ import { ItemSidebar } from "./item-sidebar";
 import { GuideEditorDialog } from "./guide-editor-dialog";
 import { ModGrid } from "./mod-grid";
 import { ModSearchGrid } from "./mod-search-grid";
+import { ArcaneSearchPanel } from "./arcane-search-panel";
 import { CompactModCard, type ModRarity } from "@/components/mod-card";
+import { CompactArcaneCard, type ArcaneRarity } from "@/components/arcane-card";
 import { useBuildKeyboard } from "./use-build-keyboard";
 import {
   getCapacityStatus,
@@ -26,30 +28,34 @@ import {
 } from "@/lib/warframe/capacity";
 import { normalizePolarity } from "@/lib/warframe/mods";
 import { copyBuildToClipboard } from "@/lib/build-codec";
-import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { getImageUrl } from "@/lib/warframe/images";
 import type {
   BuildState,
   ModSlot,
   PlacedMod,
+  PlacedArcane,
   Polarity,
   BrowseCategory,
   BrowseableItem,
   Mod,
+  Arcane,
 } from "@/lib/warframe/types";
 import { Diamond, Gem, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type DragItem =
   | { type: "search-mod"; mod: Mod; rank: number }
-  | { type: "placed-mod"; mod: PlacedMod; slotId: string; rank?: number };
+  | { type: "placed-mod"; mod: PlacedMod; slotId: string; rank?: number }
+  | { type: "search-arcane"; arcane: Arcane; rank: number }
+  | { type: "placed-arcane"; arcane: PlacedArcane; slotIndex: number };
 
 interface BuildContainerProps {
   item: BrowseableItem;
   category: BrowseCategory;
   categoryLabel: string;
   compatibleMods: Mod[];
+  compatibleArcanes?: Arcane[];
   importedBuild?: Partial<BuildState>;
 }
 
@@ -189,6 +195,7 @@ export function BuildContainer({
   category,
   categoryLabel,
   compatibleMods,
+  compatibleArcanes = [],
   importedBuild,
 }: BuildContainerProps) {
   // Build state
@@ -207,7 +214,7 @@ export function BuildContainer({
 
   // Drag and Drop State
   const [activeDragItem, setActiveDragItem] = useState<DragItem | null>(null);
-  const lastOverRef = useRef<{ id: string; data: { type: string; slotId?: string } } | null>(null);
+  const lastOverRef = useRef<{ id: string; data: { type: string; slotId?: string; slotIndex?: number } } | null>(null);
 
   // Router for navigation
   const router = useRouter();
@@ -326,6 +333,122 @@ export function BuildContainer({
     });
   }, []);
 
+  // ==========================================================================
+  // ARCANE HANDLERS
+  // ==========================================================================
+
+  // Place an arcane in a specific slot
+  const placeArcaneInSlot = useCallback(
+    (arcane: Arcane, rank: number, slotIndex: number) => {
+      const placedArcane: PlacedArcane = {
+        uniqueName: arcane.uniqueName,
+        name: arcane.name,
+        imageName: arcane.imageName,
+        rank,
+        rarity: arcane.rarity,
+      };
+
+      setBuildState((prev) => {
+        const newArcaneSlots = [...(prev.arcaneSlots || [])];
+
+        // Remove existing instance of this arcane if it exists
+        const existingIndex = newArcaneSlots.findIndex(
+          (a) => a?.uniqueName === arcane.uniqueName
+        );
+        if (existingIndex !== -1 && existingIndex !== slotIndex) {
+          newArcaneSlots[existingIndex] = undefined as unknown as PlacedArcane;
+        }
+
+        // Place in new slot
+        newArcaneSlots[slotIndex] = placedArcane;
+
+        return { ...prev, arcaneSlots: newArcaneSlots };
+      });
+    },
+    []
+  );
+
+  // Move arcane between slots (swap)
+  const moveArcane = useCallback((sourceIndex: number, targetIndex: number) => {
+    setBuildState((prev) => {
+      const newArcaneSlots = [...(prev.arcaneSlots || [])];
+      const sourceArcane = newArcaneSlots[sourceIndex];
+      const targetArcane = newArcaneSlots[targetIndex];
+
+      newArcaneSlots[sourceIndex] = targetArcane;
+      newArcaneSlots[targetIndex] = sourceArcane;
+
+      return { ...prev, arcaneSlots: newArcaneSlots };
+    });
+  }, []);
+
+  // Remove arcane from a slot
+  const handleRemoveArcane = useCallback((slotIndex: number) => {
+    setBuildState((prev) => {
+      const newArcaneSlots = [...(prev.arcaneSlots || [])];
+      newArcaneSlots[slotIndex] = undefined as unknown as PlacedArcane;
+      return { ...prev, arcaneSlots: newArcaneSlots };
+    });
+  }, []);
+
+  // Change rank of an arcane in a slot
+  const handleChangeArcaneRank = useCallback(
+    (slotIndex: number, newRank: number) => {
+      setBuildState((prev) => {
+        const newArcaneSlots = [...(prev.arcaneSlots || [])];
+        const arcane = newArcaneSlots[slotIndex];
+        if (arcane) {
+          // Max rank for arcanes is typically 5 (index 0-5 in levelStats)
+          const maxRank = 5;
+          const clampedRank = Math.max(0, Math.min(newRank, maxRank));
+          newArcaneSlots[slotIndex] = { ...arcane, rank: clampedRank };
+        }
+        return { ...prev, arcaneSlots: newArcaneSlots };
+      });
+    },
+    []
+  );
+
+  // Place arcane in active slot (for click-to-place)
+  const handlePlaceArcane = useCallback(
+    (arcane: Arcane, rank: number) => {
+      if (!activeSlotId || !activeSlotId.startsWith("arcane-")) return;
+
+      const slotIndex = parseInt(activeSlotId.replace("arcane-", ""));
+      if (isNaN(slotIndex)) return;
+
+      placeArcaneInSlot(arcane, rank, slotIndex);
+
+      // Auto-advance to next arcane slot or clear
+      if (slotIndex === 0) {
+        setActiveSlotId("arcane-1");
+      } else {
+        setActiveSlotId(null);
+      }
+    },
+    [activeSlotId, placeArcaneInSlot]
+  );
+
+  // Get all used arcane names for duplicate checking
+  const usedArcaneNames = useMemo((): string[] => {
+    return (buildState.arcaneSlots || [])
+      .filter(Boolean)
+      .map((a) => a.name);
+  }, [buildState.arcaneSlots]);
+
+  // Create a map of arcane uniqueName -> full Arcane data for hydration
+  const arcaneDataMap = useMemo(() => {
+    const map = new Map<string, Arcane>();
+    for (const arcane of compatibleArcanes) {
+      map.set(arcane.uniqueName, arcane);
+    }
+    return map;
+  }, [compatibleArcanes]);
+
+  // ==========================================================================
+  // DRAG HANDLERS
+  // ==========================================================================
+
   const handleDragStart = (event: DragStartEvent) => {
     setActiveDragItem(event.active.data.current as DragItem);
     lastOverRef.current = null;
@@ -334,11 +457,11 @@ export function BuildContainer({
 
   const handleDragOver = (event: DragOverEvent) => {
     const { over } = event;
-    const overCurrent = over?.data?.current as { type?: string; slotId?: string } | undefined;
-    if (overCurrent?.type === "slot") {
+    const overCurrent = over?.data?.current as { type?: string; slotId?: string; slotIndex?: number } | undefined;
+    if (overCurrent?.type === "slot" || overCurrent?.type === "arcane-slot") {
       lastOverRef.current = {
         id: String(over!.id),
-        data: { type: overCurrent.type, slotId: overCurrent.slotId },
+        data: { type: overCurrent.type, slotId: overCurrent.slotId, slotIndex: overCurrent.slotIndex },
       };
     }
   };
@@ -351,17 +474,21 @@ export function BuildContainer({
 
     if (!over) return;
 
-    const activeData = active.data.current;
+    const activeData = active.data.current as DragItem | undefined;
     // Extract overData - handle both DragOverEvent's over object and our cached lastOverRef
     const rawOverData = "data" in over && typeof over.data === "object" && over.data !== null && "current" in over.data
       ? (over.data as { current?: unknown }).current
       : (over as { data?: unknown }).data;
-    const overData = rawOverData as { type?: string; slotId?: string; mod?: PlacedMod } | undefined;
+    const overData = rawOverData as { type?: string; slotId?: string; slotIndex?: number; mod?: PlacedMod } | undefined;
 
     if (!activeData || !overData) return;
 
-    // Validate slot restrictions
-    if (overData.type === "slot" && overData.slotId) {
+    // ==========================================================================
+    // MOD DRAG HANDLING
+    // ==========================================================================
+
+    // Validate mod slot restrictions
+    if (overData.type === "slot" && overData.slotId && (activeData.type === "search-mod" || activeData.type === "placed-mod")) {
       // Find full mod data to ensure we have correct flags (isExilus etc) in case placed mod state is stale
       const mod = activeData.mod;
       const fullMod = compatibleMods.find((m) => m.uniqueName === mod.uniqueName) || mod;
@@ -393,6 +520,25 @@ export function BuildContainer({
 
       if (sourceSlotId !== targetSlotId) {
         moveMod(sourceSlotId, targetSlotId);
+      }
+    }
+
+    // ==========================================================================
+    // ARCANE DRAG HANDLING
+    // ==========================================================================
+
+    // Case 3: Search Arcane -> Arcane Slot
+    if (activeData.type === "search-arcane" && overData.type === "arcane-slot" && overData.slotIndex !== undefined) {
+      placeArcaneInSlot(activeData.arcane, activeData.rank, overData.slotIndex);
+    }
+
+    // Case 4: Placed Arcane -> Arcane Slot (Swap/Move)
+    if (activeData.type === "placed-arcane" && overData.type === "arcane-slot" && overData.slotIndex !== undefined) {
+      const sourceIndex = activeData.slotIndex;
+      const targetIndex = overData.slotIndex;
+
+      if (sourceIndex !== targetIndex) {
+        moveArcane(sourceIndex, targetIndex);
       }
     }
   };
@@ -792,24 +938,37 @@ export function BuildContainer({
                 onChangeRank={handleChangeRank}
                 onApplyForma={handleApplyForma}
                 isWarframe={isWarframeOrNecramech}
-                draggedMod={activeDragItem?.mod}
+                draggedMod={activeDragItem?.type === "search-mod" || activeDragItem?.type === "placed-mod" ? activeDragItem.mod : undefined}
+                arcaneSlots={buildState.arcaneSlots}
+                onRemoveArcane={handleRemoveArcane}
+                onChangeArcaneRank={handleChangeArcaneRank}
+                draggedArcane={activeDragItem?.type === "search-arcane" ? activeDragItem.arcane : activeDragItem?.type === "placed-arcane" ? activeDragItem.arcane : undefined}
+                arcaneDataMap={arcaneDataMap}
               />
             </div>
 
-            {/* Mod Search Grid */}
+            {/* Mod/Arcane Search Grid - switches based on active slot */}
             <div className="bg-card border rounded-lg p-4">
-              <ModSearchGrid
-                availableMods={compatibleMods}
-                slotType={getSlotType(activeSlotId)}
-                usedModNames={usedModNames}
-                onSelectMod={handlePlaceMod}
-              />
+              {getSlotType(activeSlotId) === "arcane" && isWarframeOrNecramech && compatibleArcanes.length > 0 ? (
+                <ArcaneSearchPanel
+                  availableArcanes={compatibleArcanes}
+                  usedArcaneNames={usedArcaneNames}
+                  onSelectArcane={handlePlaceArcane}
+                />
+              ) : (
+                <ModSearchGrid
+                  availableMods={compatibleMods}
+                  slotType={getSlotType(activeSlotId)}
+                  usedModNames={usedModNames}
+                  onSelectMod={handlePlaceMod}
+                />
+              )}
             </div>
           </div>
         </div>
       </div>
       <DragOverlay dropAnimation={null}>
-        {activeDragItem ? (
+        {activeDragItem && (activeDragItem.type === "search-mod" || activeDragItem.type === "placed-mod") ? (
           <div className="opacity-90 cursor-grabbing shadow-xl rounded-lg">
             <CompactModCard
               mod={activeDragItem.mod as Mod}
@@ -823,6 +982,26 @@ export function BuildContainer({
                   ("rank" in activeDragItem.mod ? activeDragItem.mod.rank : 0)) >=
                 (activeDragItem.mod.fusionLimit ?? 0)
               }
+              disableAnimation
+            />
+          </div>
+        ) : activeDragItem && activeDragItem.type === "search-arcane" ? (
+          <div className="opacity-90 cursor-grabbing shadow-xl rounded-lg">
+            <CompactArcaneCard
+              arcane={activeDragItem.arcane}
+              rarity={(activeDragItem.arcane.rarity || "Common") as ArcaneRarity}
+              rank={activeDragItem.rank}
+              isMaxRank={activeDragItem.rank >= 5}
+              disableAnimation
+            />
+          </div>
+        ) : activeDragItem && activeDragItem.type === "placed-arcane" ? (
+          <div className="opacity-90 cursor-grabbing shadow-xl rounded-lg">
+            <CompactArcaneCard
+              arcane={arcaneDataMap.get(activeDragItem.arcane.uniqueName) ?? activeDragItem.arcane as unknown as Arcane}
+              rarity={(activeDragItem.arcane.rarity || "Common") as ArcaneRarity}
+              rank={activeDragItem.arcane.rank}
+              isMaxRank={activeDragItem.arcane.rank >= 5}
               disableAnimation
             />
           </div>

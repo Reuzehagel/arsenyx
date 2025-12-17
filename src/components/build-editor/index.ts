@@ -7,3 +7,5 @@ export { ModSearchPanel } from "./mod-search-panel";
 export { ModSearchGrid } from "./mod-search-grid";
 export { SearchableModCard } from "./searchable-mod-card";
 export { useBuildKeyboard } from "./use-build-keyboard";
+export { ArcaneSlotCard } from "./arcane-slot-card";
+export { ArcaneSearchPanel } from "./arcane-search-panel";

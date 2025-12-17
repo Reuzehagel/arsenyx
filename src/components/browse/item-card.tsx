@@ -24,25 +24,15 @@ export function ItemCard({ item, index }: ItemCardProps) {
       className="group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-xl"
     >
       <Card className="relative h-full overflow-hidden transition-all duration-200 hover:border-primary/50 hover:shadow-md group-focus-visible:border-primary/50 py-0 gap-0">
-        {/* Prime / Vaulted badges */}
-        <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 items-end">
-          {item.isPrime && (
-            <Badge
-              variant="secondary"
-              className="bg-amber-500/90 text-white text-xs px-2 py-0.5"
-            >
-              Prime
-            </Badge>
-          )}
-          {item.vaulted && (
-            <Badge
-              variant="outline"
-              className="bg-background/80 text-xs px-2 py-0.5"
-            >
-              Vaulted
-            </Badge>
-          )}
-        </div>
+        {/* Vaulted badge */}
+        {item.vaulted && (
+          <Badge
+            variant="outline"
+            className="absolute top-2 right-2 z-10 bg-background/80 text-xs px-2 py-0.5"
+          >
+            Vaulted
+          </Badge>
+        )}
 
         {/* Image container */}
         <div className="relative aspect-square bg-muted/30 flex items-center justify-center overflow-hidden">

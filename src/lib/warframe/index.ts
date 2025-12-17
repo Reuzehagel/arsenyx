@@ -6,6 +6,7 @@
 export * from "./types";
 export * from "./categories";
 export * from "./images";
+export * from "./arcane-images";
 export * from "./slugs";
 
 // Server-only exports should be imported directly:
