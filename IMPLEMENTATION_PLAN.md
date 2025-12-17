@@ -2140,7 +2140,6 @@ NEXT_PUBLIC_APP_URL="https://arsenix.app"
 4. [x] Implement build visibility (public/private/unlisted) - API ready, needs UI selector
 5. [x] Add slug-based build URLs
 6. [x] Create build browse/list pages
-7. [ ] Add localStorage migration flow on sign-in
 
 ### Sprint 3: Social Features
 
