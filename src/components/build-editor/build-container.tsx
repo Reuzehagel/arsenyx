@@ -42,8 +42,9 @@ import type {
   BrowseableItem,
   Mod,
   Arcane,
+  HelminthAbility,
 } from "@/lib/warframe/types";
-import { Diamond, Gem, Save, X, Loader2, LogIn, UploadCloud } from "lucide-react";
+import { Diamond, Gem, Save, X, Loader2, UploadCloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PublishDialog, type Visibility } from "./publish-dialog";
 
@@ -224,7 +225,7 @@ export function BuildContainer({
 
   // Build metadata for database persistence
   const [buildId, setBuildId] = useState<string | undefined>(savedBuildId);
-  const [buildSlug, setBuildSlug] = useState<string | undefined>(savedBuildSlug);
+  const [_buildSlug, setBuildSlug] = useState<string | undefined>(savedBuildSlug);
   const [buildName, setBuildName] = useState<string>(
     importedBuild?.buildName || `${item.name} Build`
   );
@@ -233,7 +234,7 @@ export function BuildContainer({
   type SaveStatus = "idle" | "saving" | "saved" | "error";
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
 
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [_saveError, setSaveError] = useState<string | null>(null);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
 
   // Active slot for mod placement
@@ -811,7 +812,7 @@ export function BuildContainer({
   }, [item, category, compatibleMods]);
 
   // Handle Helminth ability selection
-  const handleHelminthAbilityChange = useCallback((slotIndex: number, ability: any | null) => {
+  const handleHelminthAbilityChange = useCallback((slotIndex: number, ability: HelminthAbility | null) => {
     setBuildState((prev) => ({
       ...prev,
       helminthAbility: ability

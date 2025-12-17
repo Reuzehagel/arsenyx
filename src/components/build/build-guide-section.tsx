@@ -11,7 +11,7 @@ import { updateBuildGuideAction } from "@/app/actions/builds";
 
 interface BuildGuideSectionProps {
     buildId: string;
-    initialContent: any;
+    initialContent: Record<string, unknown> | null;
     updatedAt?: Date;
     isOwner: boolean;
 }
@@ -23,7 +23,7 @@ export function BuildGuideSection({
     isOwner,
 }: BuildGuideSectionProps) {
     const router = useRouter();
-    const [content, setContent] = useState<any>(initialContent);
+    const [content, setContent] = useState<Record<string, unknown> | null>(initialContent);
     const [lastUpdated, setLastUpdated] = useState<Date | undefined>(updatedAt);
     const [key, setKey] = useState(0); // Force re-render of editor
 

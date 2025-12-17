@@ -68,7 +68,7 @@ export function ItemSidebar({
   };
 
   // Helper to get ability to display (replaced or original)
-  const getDisplayAbility = (index: number, originalAbility: any) => {
+  const getDisplayAbility = (index: number, originalAbility: { name: string; imageName?: string }) => {
     if (
       buildState.helminthAbility &&
       buildState.helminthAbility.slotIndex === index

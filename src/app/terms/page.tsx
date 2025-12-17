@@ -25,7 +25,7 @@ export default function TermsPage() {
             <section>
               <h2 className="text-2xl font-semibold mb-4">2. Use of Service</h2>
               <p>
-                {SITE_CONFIG.name} is an open-source Warframe build planner provided "as is".
+                {SITE_CONFIG.name} is an open-source Warframe build planner provided &quot;as is&quot;.
                 You agree to use this service only for lawful purposes and in accordance with these Terms.
               </p>
             </section>

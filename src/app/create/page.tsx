@@ -11,7 +11,7 @@ import { getItemBySlug, getFullItem } from "@/lib/warframe/items";
 import { getModsForCategory, getArcanesForSlot } from "@/lib/warframe/mods";
 import { isValidCategory, getCategoryConfig } from "@/lib/warframe";
 import { decodeBuild } from "@/lib/build-codec";
-import type { BrowseCategory } from "@/lib/warframe/types";
+import type { BrowseCategory, Arcane } from "@/lib/warframe/types";
 
 export const metadata: Metadata = {
   title: "Build Editor | ARSENIX",
@@ -79,7 +79,7 @@ export default async function CreatePage({ searchParams }: CreatePageProps) {
         const categoryConfig = getCategoryConfig(category);
         const compatibleMods = getModsForCategory(category);
         // Fetch arcanes based on category
-        let compatibleArcanes: any[] = [];
+        let compatibleArcanes: Arcane[] = [];
         if (["warframes", "necramechs"].includes(category)) {
           compatibleArcanes = getArcanesForSlot("warframe");
         } else if (["primary", "secondary", "melee"].includes(category)) {
@@ -125,7 +125,7 @@ export default async function CreatePage({ searchParams }: CreatePageProps) {
     const categoryConfig = getCategoryConfig(category);
     const compatibleMods = getModsForCategory(category);
     // Fetch arcanes based on category
-    let compatibleArcanes: any[] = [];
+    let compatibleArcanes: Arcane[] = [];
     if (["warframes", "necramechs"].includes(category)) {
       compatibleArcanes = getArcanesForSlot("warframe");
     } else if (["primary", "secondary", "melee"].includes(category)) {

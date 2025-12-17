@@ -1,5 +1,5 @@
 import WarframesData from "@/data/warframe/Warframes.json";
-import type { Warframe, Ability, HelminthAbility } from "./types";
+import type { Warframe, HelminthAbility } from "./types";
 
 // Manually maintained list of subsumable abilities
 // Mapped from Warframe Name -> Ability Name

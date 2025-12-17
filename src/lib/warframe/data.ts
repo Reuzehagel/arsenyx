@@ -38,7 +38,7 @@ import {
 /**
  * Check if database mode is enabled
  */
-function useDatabase(): boolean {
+function isDatabaseEnabled(): boolean {
   return process.env.USE_DATABASE === "true";
 }
 
@@ -52,7 +52,7 @@ function useDatabase(): boolean {
 export async function getItemsByCategory(
   category: BrowseCategory
 ): Promise<BrowseItem[]> {
-  if (useDatabase()) {
+  if (isDatabaseEnabled()) {
     return getItemsByCategoryFromDb(category);
   }
   return jsonItems.getItemsByCategory(category);
@@ -65,7 +65,7 @@ export async function getItemBySlug(
   category: BrowseCategory,
   slug: string
 ): Promise<BrowseableItem | null> {
-  if (useDatabase()) {
+  if (isDatabaseEnabled()) {
     return getItemBySlugFromDb(category, slug);
   }
   return jsonItems.getItemBySlug(category, slug);
@@ -78,7 +78,7 @@ export async function getFullItem(
   category: BrowseCategory,
   uniqueName: string
 ): Promise<BrowseableItem | null> {
-  if (useDatabase()) {
+  if (isDatabaseEnabled()) {
     return getItemBySlugFromDb(category, uniqueName); // Will need adjustment
   }
   return jsonItems.getFullItem(category, uniqueName);
@@ -90,7 +90,7 @@ export async function getFullItem(
 export async function getCategoryCounts(): Promise<
   Record<BrowseCategory, number>
 > {
-  if (useDatabase()) {
+  if (isDatabaseEnabled()) {
     return getCategoryCountsFromDb();
   }
   return jsonItems.getCategoryCounts();
@@ -133,7 +133,7 @@ export function getStaticItems(
  * Get all mods
  */
 export async function getAllMods(): Promise<Mod[]> {
-  if (useDatabase()) {
+  if (isDatabaseEnabled()) {
     return getAllModsFromDb();
   }
   return jsonMods.getAllMods();
@@ -143,7 +143,7 @@ export async function getAllMods(): Promise<Mod[]> {
  * Get mods for a browse category
  */
 export async function getModsForCategory(category: string): Promise<Mod[]> {
-  if (useDatabase()) {
+  if (isDatabaseEnabled()) {
     return getModsForCategoryFromDb(category);
   }
   return jsonMods.getModsForCategory(category);
@@ -155,7 +155,7 @@ export async function getModsForCategory(category: string): Promise<Mod[]> {
 export async function getModsByCompatibility(
   compatibility: ModCompatibility
 ): Promise<Mod[]> {
-  if (useDatabase()) {
+  if (isDatabaseEnabled()) {
     const { getModsByCompatibilityFromDb } = await import("@/lib/db/mods");
     return getModsByCompatibilityFromDb(compatibility);
   }
@@ -168,7 +168,7 @@ export async function getModsByCompatibility(
 export async function getModByUniqueName(
   uniqueName: string
 ): Promise<Mod | undefined> {
-  if (useDatabase()) {
+  if (isDatabaseEnabled()) {
     const mod = await getModByUniqueNameFromDb(uniqueName);
     return mod ?? undefined;
   }
@@ -179,7 +179,7 @@ export async function getModByUniqueName(
  * Get a specific mod by name
  */
 export async function getModByName(name: string): Promise<Mod | undefined> {
-  if (useDatabase()) {
+  if (isDatabaseEnabled()) {
     const mods = await getAllModsFromDb();
     return mods.find((m) => m.name.toLowerCase() === name.toLowerCase());
   }
@@ -208,7 +208,7 @@ export function canAddModToBuild(mod: Mod, existingMods: Mod[]): boolean {
  * Get all arcanes
  */
 export async function getAllArcanes(): Promise<Arcane[]> {
-  if (useDatabase()) {
+  if (isDatabaseEnabled()) {
     return getAllArcanesFromDb();
   }
   return jsonMods.getAllArcanes();
@@ -220,7 +220,7 @@ export async function getAllArcanes(): Promise<Arcane[]> {
 export async function getArcanesForSlot(
   slotType: "warframe" | "operator" | "weapon"
 ): Promise<Arcane[]> {
-  if (useDatabase()) {
+  if (isDatabaseEnabled()) {
     return getArcanesForSlotFromDb(slotType);
   }
   return jsonMods.getArcanesForSlot(slotType);
@@ -232,7 +232,7 @@ export async function getArcanesForSlot(
 export async function getArcaneByUniqueName(
   uniqueName: string
 ): Promise<Arcane | undefined> {
-  if (useDatabase()) {
+  if (isDatabaseEnabled()) {
     const arcanes = await getAllArcanesFromDb();
     return arcanes.find((a) => a.uniqueName === uniqueName);
   }
@@ -243,7 +243,7 @@ export async function getArcaneByUniqueName(
  * Get a specific arcane by name
  */
 export async function getArcaneByName(name: string): Promise<Arcane | undefined> {
-  if (useDatabase()) {
+  if (isDatabaseEnabled()) {
     const arcanes = await getAllArcanesFromDb();
     return arcanes.find((a) => a.name.toLowerCase() === name.toLowerCase());
   }

@@ -58,7 +58,7 @@ export interface BuildWithUser {
     };
     // Guide
     buildGuide: {
-        content: any;
+        content: Record<string, unknown>;
         updatedAt: Date;
     } | null;
 }

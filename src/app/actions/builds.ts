@@ -170,7 +170,7 @@ export async function deleteBuildAction(
  * TODO: Implement in Sprint 4
  */
 export async function forkBuildAction(
-    buildId: string
+    _buildId: string
 ): Promise<SaveBuildResult> {
     try {
         const session = await auth();

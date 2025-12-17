@@ -12,8 +12,7 @@ import { getBuildBySlug } from "@/lib/db/index";
 import { getFullItem } from "@/lib/warframe/items";
 import { getModsForCategory, getArcanesForSlot } from "@/lib/warframe/mods";
 import { getCategoryConfig } from "@/lib/warframe";
-import type { BrowseCategory } from "@/lib/warframe/types";
-import { GuideReader } from "@/components/guides/guide-reader";
+import type { BrowseCategory, Arcane } from "@/lib/warframe/types";
 import { BuildGuideSection } from "@/components/build/build-guide-section";
 import { slugify } from "@/lib/warframe/slugs";
 import { ViewTracker } from "@/components/build/view-tracker";
@@ -123,7 +122,7 @@ export default async function BuildPage({ params }: BuildPageProps) {
     const compatibleMods = getModsForCategory(category);
     const isWarframeCategory = category === "warframes" || category === "necramechs";
 
-    let compatibleArcanes: any[] = [];
+    let compatibleArcanes: Arcane[] = [];
     if (isWarframeCategory) {
         compatibleArcanes = getArcanesForSlot("warframe");
     } else if (category === "primary") {
