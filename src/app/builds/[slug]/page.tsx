@@ -1,4 +1,6 @@
 import { Suspense } from "react";
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Header } from "@/components/header";
@@ -11,6 +13,8 @@ import { getFullItem } from "@/lib/warframe/items";
 import { getModsForCategory, getArcanesForSlot } from "@/lib/warframe/mods";
 import { getCategoryConfig } from "@/lib/warframe";
 import type { BrowseCategory } from "@/lib/warframe/types";
+import { GuideReader } from "@/components/guides/guide-reader";
+import { slugify } from "@/lib/warframe/slugs";
 
 interface BuildPageProps {
     params: Promise<{
@@ -127,9 +131,28 @@ export default async function BuildPage({ params }: BuildPageProps) {
                 {/* Build Info Banner */}
                 <div className="border-b bg-muted/30">
                     <div className="container py-3">
+                        {/* Breadcrumbs */}
+                        <div className="flex items-center text-sm text-muted-foreground mb-3">
+                            <Link href="/builds" className="hover:text-primary transition-colors">
+                                Builds
+                            </Link>
+                            <ChevronRight className="h-4 w-4 mx-1" />
+                            <Link href={`/browse/${category}`} className="hover:text-primary transition-colors capitalize">
+                                {category}
+                            </Link>
+                            <ChevronRight className="h-4 w-4 mx-1" />
+                            <Link href={`/browse/${category}/${slugify(build.item.name)}`} className="hover:text-primary transition-colors">
+                                {build.item.name}
+                            </Link>
+                            <ChevronRight className="h-4 w-4 mx-1" />
+                            <span className="text-foreground font-medium truncate max-w-[200px]">
+                                {build.name}
+                            </span>
+                        </div>
+
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <h1 className="text-lg font-semibold">{build.name}</h1>
+                                <h1 className="text-xl font-bold">{build.name}</h1>
                                 <span className="text-sm text-muted-foreground">
                                     by {build.user.username || build.user.name || "Anonymous"}
                                 </span>
@@ -137,6 +160,7 @@ export default async function BuildPage({ params }: BuildPageProps) {
                             <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                 <span>{build.voteCount} votes</span>
                                 <span>{build.viewCount} views</span>
+                                <span>Updated {new Date(build.updatedAt).toLocaleDateString()}</span>
                             </div>
                         </div>
                     </div>
@@ -155,6 +179,27 @@ export default async function BuildPage({ params }: BuildPageProps) {
                         readOnly={!isOwner}
                     />
                 </Suspense>
+
+                {/* Build Guide */}
+                {build.buildGuide && (
+                    <div className="container pb-4">
+                        <div className="bg-card/50 border rounded-xl overflow-hidden">
+                            <div className="border-b bg-muted/30 px-6 py-4 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <h2 className="text-lg font-semibold">Build Guide</h2>
+                                </div>
+                                {build.buildGuide.updatedAt && (
+                                    <span className="text-xs text-muted-foreground">
+                                        Last updated {new Date(build.buildGuide.updatedAt).toLocaleDateString()}
+                                    </span>
+                                )}
+                            </div>
+                            <div className="p-6">
+                                <GuideReader content={build.buildGuide.content as any} />
+                            </div>
+                        </div>
+                    </div>
+                )}
             </main>
             <Footer />
         </div>

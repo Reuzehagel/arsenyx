@@ -19,6 +19,7 @@ export interface CreateBuildInput {
     description?: string;
     visibility?: BuildVisibility;
     buildData: BuildState;
+    guide?: string; // Serialized Lexical state
 }
 
 export interface UpdateBuildInput {
@@ -26,6 +27,7 @@ export interface UpdateBuildInput {
     description?: string;
     visibility?: BuildVisibility;
     buildData?: BuildState;
+    guide?: string;
 }
 
 export interface BuildWithUser {
@@ -54,6 +56,11 @@ export interface BuildWithUser {
         imageName: string | null;
         browseCategory: string;
     };
+    // Guide
+    buildGuide: {
+        content: any;
+        updatedAt: Date;
+    } | null;
 }
 
 export interface GetBuildsOptions {
@@ -135,6 +142,11 @@ export async function createBuild(
             visibility: input.visibility ?? "PUBLIC",
             buildData: input.buildData as unknown as Prisma.JsonObject,
             hasShards: false, // TODO: Detect from buildData when shards are implemented
+            buildGuide: input.guide ? {
+                create: {
+                    content: JSON.parse(input.guide),
+                }
+            } : undefined,
         },
         include: {
             user: {
@@ -152,6 +164,12 @@ export async function createBuild(
                     name: true,
                     imageName: true,
                     browseCategory: true,
+                },
+            },
+            buildGuide: {
+                select: {
+                    content: true,
+                    updatedAt: true,
                 },
             },
         },
@@ -194,6 +212,12 @@ export async function getBuildBySlug(
                     name: true,
                     imageName: true,
                     browseCategory: true,
+                },
+            },
+            buildGuide: {
+                select: {
+                    content: true,
+                    updatedAt: true,
                 },
             },
         },
@@ -239,6 +263,12 @@ export async function getBuildById(
                     name: true,
                     imageName: true,
                     browseCategory: true,
+                },
+            },
+            buildGuide: {
+                select: {
+                    content: true,
+                    updatedAt: true,
                 },
             },
         },
@@ -299,6 +329,12 @@ export async function getUserBuilds(
                         name: true,
                         imageName: true,
                         browseCategory: true,
+                    },
+                },
+                buildGuide: {
+                    select: {
+                        content: true,
+                        updatedAt: true,
                     },
                 },
             },
@@ -367,6 +403,12 @@ export async function getPublicBuildsForItem(
                         browseCategory: true,
                     },
                 },
+                buildGuide: {
+                    select: {
+                        content: true,
+                        updatedAt: true,
+                    },
+                },
             },
             orderBy: getOrderBy(sortBy),
             skip,
@@ -428,6 +470,12 @@ export async function getPublicBuilds(
                         browseCategory: true,
                     },
                 },
+                buildGuide: {
+                    select: {
+                        content: true,
+                        updatedAt: true,
+                    },
+                },
             },
             orderBy: getOrderBy(sortBy),
             skip,
@@ -486,6 +534,19 @@ export async function updateBuild(
         updateData.buildData = input.buildData as unknown as Prisma.JsonObject;
     }
 
+    if (input.guide !== undefined) {
+        updateData.buildGuide = {
+            upsert: {
+                create: {
+                    content: JSON.parse(input.guide),
+                },
+                update: {
+                    content: JSON.parse(input.guide),
+                },
+            },
+        };
+    }
+
     const build = await prisma.build.update({
         where: { id: buildId },
         data: updateData,
@@ -505,6 +566,12 @@ export async function updateBuild(
                     name: true,
                     imageName: true,
                     browseCategory: true,
+                },
+            },
+            buildGuide: {
+                select: {
+                    content: true,
+                    updatedAt: true,
                 },
             },
         },

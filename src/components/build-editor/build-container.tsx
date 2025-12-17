@@ -835,6 +835,7 @@ export function BuildContainer({
           name: buildName,
           visibility: "PUBLIC", // TODO: Add visibility selector
           buildData: { ...buildState, buildName },
+          guide: guideData || undefined,
         });
 
         if (result.success && result.build) {
