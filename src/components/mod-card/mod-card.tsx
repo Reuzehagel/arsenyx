@@ -1,6 +1,13 @@
 "use client";
 
-import { memo, useState, useEffect, useLayoutEffect, useCallback, useRef } from "react";
+import {
+  memo,
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useCallback,
+  useRef,
+} from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -38,7 +45,9 @@ function RankCompleteLine({
           WebkitMaskSize: disableAnimation ? "200% 100%" : "0% 100%",
           WebkitMaskPosition: "center",
           WebkitMaskRepeat: "no-repeat",
-          animation: disableAnimation ? "none" : "rankReveal 0.4s ease-out forwards",
+          animation: disableAnimation
+            ? "none"
+            : "rankReveal 0.4s ease-out forwards",
         }}
       />
       <style jsx>{`
@@ -65,13 +74,13 @@ type ModRarity = "Common" | "Uncommon" | "Rare" | "Legendary" | "Peculiar";
 
 // Map rarity to asset folder and prefix
 const RARITY_ASSET_MAP: Record<ModRarity, { folder: string; prefix: string }> =
-{
-  Common: { folder: "common", prefix: "Bronze" },
-  Uncommon: { folder: "uncommon", prefix: "Silver" },
-  Rare: { folder: "rare", prefix: "Gold" },
-  Legendary: { folder: "legendary", prefix: "Legendary" },
-  Peculiar: { folder: "legendary", prefix: "Legendary" }, // Peculiar uses Legendary assets
-};
+  {
+    Common: { folder: "common", prefix: "Bronze" },
+    Uncommon: { folder: "uncommon", prefix: "Silver" },
+    Rare: { folder: "rare", prefix: "Gold" },
+    Legendary: { folder: "legendary", prefix: "Legendary" },
+    Peculiar: { folder: "legendary", prefix: "Legendary" }, // Peculiar uses Legendary assets
+  };
 
 // Map rarity to text color
 const RARITY_COLOR_MAP: Record<ModRarity, string> = {
@@ -119,20 +128,26 @@ interface ModDrainBadgeProps {
   matchState?: "match" | "mismatch" | "neutral";
 }
 
-function ModDrainBadge({ mod, rank, rarity, drainOverride, matchState = "neutral" }: ModDrainBadgeProps) {
-  const drain = drainOverride ?? (mod.baseDrain + rank);
+function ModDrainBadge({
+  mod,
+  rank,
+  rarity,
+  drainOverride,
+  matchState = "neutral",
+}: ModDrainBadgeProps) {
+  const drain = drainOverride ?? mod.baseDrain + rank;
   const badgeColor =
     matchState === "match"
       ? "#4ade80" // Green for matching polarity
       : matchState === "mismatch"
-        ? "#f87171" // Red for mismatched polarity
-        : RARITY_COLOR_MAP[rarity];
+      ? "#f87171" // Red for mismatched polarity
+      : RARITY_COLOR_MAP[rarity];
   const glow =
     matchState === "match"
       ? "0 0 8px rgba(74, 222, 128, 0.45)"
       : matchState === "mismatch"
-        ? "0 0 8px rgba(248, 113, 113, 0.45)"
-        : undefined;
+      ? "0 0 8px rgba(248, 113, 113, 0.45)"
+      : undefined;
 
   return (
     <div className="absolute top-[7px] right-[2px] z-30 flex items-center justify-center">
@@ -403,8 +418,6 @@ function ModCardComponent({
       onMouseEnter={disableHover ? undefined : handleMouseEnter}
       onMouseLeave={disableHover ? undefined : handleMouseLeave}
     >
-
-
       {/* Compact card - hidden when hovered */}
       <div
         className={cn(
@@ -440,7 +453,9 @@ function ModCardComponent({
               className={cn(
                 "origin-center",
                 "drop-shadow-[0_0_20px_rgba(0,0,0,0.8)] shadow-2xl",
-                isFadingOverlay ? "opacity-0" : "opacity-100 animate-in fade-in zoom-in-90"
+                isFadingOverlay
+                  ? "opacity-0"
+                  : "opacity-100 animate-in fade-in zoom-in-90"
               )}
               style={{
                 willChange: "transform, opacity",
@@ -506,7 +521,13 @@ export function CompactModCard({
       }}
     >
       {/* Drain & Polarity Badge */}
-      <ModDrainBadge mod={mod} rank={rank} rarity={rarity} drainOverride={drainOverride} matchState={matchState} />
+      <ModDrainBadge
+        mod={mod}
+        rank={rank}
+        rarity={rarity}
+        drainOverride={drainOverride}
+        matchState={matchState}
+      />
       {/* Mod Image */}
       <div className="absolute top-[4px] left-[3px] right-[3px] -bottom-4 z-10 overflow-hidden rounded-b-[5px]">
         <Image
@@ -579,8 +600,8 @@ export function CompactModCard({
               style={
                 i < rank
                   ? {
-                    boxShadow: "0 0 2px 0.5px rgba(120, 180, 255, 0.6)",
-                  }
+                      boxShadow: "0 0 2px 0.5px rgba(120, 180, 255, 0.6)",
+                    }
                   : undefined
               }
             />
@@ -645,7 +666,13 @@ function ExpandedModCard({
       }}
     >
       {/* Drain & Polarity Badge */}
-      <ModDrainBadge mod={mod} rank={rank} rarity={rarity} drainOverride={drainOverride} matchState={matchState} />
+      <ModDrainBadge
+        mod={mod}
+        rank={rank}
+        rarity={rarity}
+        drainOverride={drainOverride}
+        matchState={matchState}
+      />
       {/* Top Frame */}
       <Image
         src={getModAssetUrl(rarity, "FrameTop")}
@@ -684,7 +711,10 @@ function ExpandedModCard({
           {/* Mod Name */}
           <span
             className="text-[14px] font-normal text-center leading-tight"
-            style={{ fontFamily: "Roboto, sans-serif", color: RARITY_COLOR_MAP[rarity] }}
+            style={{
+              fontFamily: "Roboto, sans-serif",
+              color: RARITY_COLOR_MAP[rarity],
+            }}
           >
             {mod.name}
           </span>
@@ -800,8 +830,8 @@ function ExpandedModCard({
               style={
                 i < rank
                   ? {
-                    boxShadow: "0 0 2px 0.5px rgba(120, 180, 255, 0.6)",
-                  }
+                      boxShadow: "0 0 2px 0.5px rgba(120, 180, 255, 0.6)",
+                    }
                   : undefined
               }
             />
@@ -870,4 +900,3 @@ export function DragGhost({ mod, rarity }: DragGhostProps) {
 // =============================================================================
 
 export type { ModRarity };
-
