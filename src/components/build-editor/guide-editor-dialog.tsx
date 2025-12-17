@@ -55,13 +55,15 @@ const stringifyEditorState = (state: SerializedEditorState): string => {
 interface GuideEditorDialogProps {
     buildId: string;
     initialGuide?: string | null;
-    onSaved?: (payload: { guide: string }) => void;
+    onSaved?: (payload: { guide: string }) => void | Promise<void>;
+    trigger?: React.ReactNode;
 }
 
 export function GuideEditorDialog({
     buildId,
     initialGuide,
     onSaved,
+    trigger,
 }: GuideEditorDialogProps) {
     const [open, setOpen] = useState(false);
     const [guideValue, setGuideValue] = useState<SerializedEditorState>(() =>
@@ -92,7 +94,9 @@ export function GuideEditorDialog({
             localStorage.setItem(storageKey, guideString);
 
             // Call the onSaved callback if provided
-            onSaved?.({ guide: guideString });
+            if (onSaved) {
+                await onSaved({ guide: guideString });
+            }
 
             setSaveStatus("saved");
 
@@ -111,10 +115,12 @@ export function GuideEditorDialog({
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                    <BookOpen className="w-4 h-4" />
-                    Guide
-                </Button>
+                {trigger || (
+                    <Button variant="outline" size="sm" className="gap-2">
+                        <BookOpen className="w-4 h-4" />
+                        Guide
+                    </Button>
+                )}
             </DialogTrigger>
             <DialogContent className="sm:max-w-[1200px] w-[95vw] max-h-[95vh] flex flex-col" showCloseButton={false}>
                 {/* Custom top-right action buttons */}

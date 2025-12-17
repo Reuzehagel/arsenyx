@@ -15,6 +15,7 @@ import {
     type CreateBuildInput,
     type UpdateBuildInput,
     type BuildWithUser,
+    incrementBuildViewCount,
 } from "@/lib/db/index";
 import type { BuildVisibility } from "@prisma/client";
 import type { BuildState } from "@/lib/warframe/types";
@@ -195,6 +196,83 @@ export async function forkBuildAction(
         return {
             success: false,
             error: error instanceof Error ? error.message : "Failed to fork build",
+        };
+    }
+}
+
+// =============================================================================
+// VIEW COUNT
+// =============================================================================
+
+/**
+ * Increment view count for a build
+ * Safe to call from client - handles its own errors silently
+ */
+export async function incrementViewCountAction(buildId: string): Promise<void> {
+    try {
+        await incrementBuildViewCount(buildId);
+    } catch {
+        // Silently fail for analytics
+    }
+}
+
+// =============================================================================
+// GUIDE UPDATE
+// =============================================================================
+
+/**
+ * Update a build's guide content
+ */
+export async function updateBuildGuideAction(
+    buildId: string,
+    guideContent: string
+): Promise<SaveBuildResult> {
+    try {
+        const session = await auth();
+
+        if (!session?.user?.id) {
+            return {
+                success: false,
+                error: "You must be signed in to update a guide",
+            };
+        }
+
+        const userId = session.user.id;
+        const exists = await getBuildById(buildId, userId);
+
+        if (!exists) {
+            return {
+                success: false,
+                error: "Build not found",
+            };
+        }
+
+        if (exists.userId !== userId) {
+            return {
+                success: false,
+                error: "You are not authorized to update this guide",
+            };
+        }
+
+        // We can reuse updateBuild which handles the guide upsert logic
+        const build = await updateBuild(buildId, userId, {
+            guide: guideContent,
+        });
+
+        // Revalidate the page
+        // Note: In a deeper implementation we might accept the path to revalidate
+        // For now, client navigation or router.refresh() will handle the UI update
+
+        return {
+            success: true,
+            build,
+        };
+
+    } catch (error) {
+        console.error("Failed to update guide:", error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : "Failed to update guide",
         };
     }
 }

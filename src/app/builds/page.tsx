@@ -8,6 +8,7 @@ import { getImageUrl } from "@/lib/warframe/images";
 import { Eye, ThumbsUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const metadata: Metadata = {
     title: "Browse Builds | ARSENIX",
@@ -148,29 +149,32 @@ export default async function BuildsPage({ searchParams }: BuildsPageProps) {
                     </div>
 
                     {/* Filters */}
-                    <div className="flex items-center gap-4 flex-wrap">
+                    <div className="flex flex-col gap-6">
                         {/* Category Filter */}
-                        <div className="flex items-center gap-2">
-                            {CATEGORY_OPTIONS.map((opt) => (
-                                <Link
-                                    key={opt.value}
-                                    href={`/builds?${new URLSearchParams({
-                                        ...(opt.value && { category: opt.value }),
-                                        sort: sortBy,
-                                    }).toString()}`}
-                                >
-                                    <Badge
-                                        variant={category === opt.value || (!category && !opt.value) ? "default" : "outline"}
-                                        className="cursor-pointer"
+                        <Tabs value={category || ""} className="w-full">
+                            <TabsList className="h-auto p-1 flex-wrap justify-start bg-muted/50">
+                                {CATEGORY_OPTIONS.map((opt) => (
+                                    <TabsTrigger
+                                        key={opt.value}
+                                        value={opt.value}
+                                        asChild
+                                        className="data-[state=active]:bg-background gap-2"
                                     >
-                                        {opt.label}
-                                    </Badge>
-                                </Link>
-                            ))}
-                        </div>
+                                        <Link
+                                            href={`/builds?${new URLSearchParams({
+                                                ...(opt.value && { category: opt.value }),
+                                                sort: sortBy,
+                                            }).toString()}`}
+                                        >
+                                            {opt.label}
+                                        </Link>
+                                    </TabsTrigger>
+                                ))}
+                            </TabsList>
+                        </Tabs>
 
                         {/* Sort Options */}
-                        <div className="flex items-center gap-2 ml-auto">
+                        <div className="flex items-center justify-end gap-2">
                             <span className="text-sm text-muted-foreground">Sort:</span>
                             {SORT_OPTIONS.map((opt) => (
                                 <Link

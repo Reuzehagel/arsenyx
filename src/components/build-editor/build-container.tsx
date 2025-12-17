@@ -15,7 +15,6 @@ import {
   DragOverEvent,
 } from "@dnd-kit/core";
 import { ItemSidebar } from "./item-sidebar";
-import { GuideEditorDialog } from "./guide-editor-dialog";
 import { ModGrid } from "./mod-grid";
 import { ModSearchGrid } from "./mod-search-grid";
 import { ArcaneSearchPanel } from "./arcane-search-panel";
@@ -236,9 +235,6 @@ export function BuildContainer({
 
   // Copy notification
   const [showCopied, setShowCopied] = useState(false);
-
-  // Guide state
-  const [guideData, setGuideData] = useState<string | null>(null);
 
   // Drag and Drop State
   const [activeDragItem, setActiveDragItem] = useState<DragItem | null>(null);
@@ -835,7 +831,6 @@ export function BuildContainer({
           name: buildName,
           visibility: "PUBLIC", // TODO: Add visibility selector
           buildData: { ...buildState, buildName },
-          guide: guideData || undefined,
         });
 
         if (result.success && result.build) {
@@ -972,11 +967,6 @@ export function BuildContainer({
                     className="w-48 h-8 text-sm"
                   />
                 )}
-                <GuideEditorDialog
-                  buildId={item.uniqueName}
-                  initialGuide={guideData}
-                  onSaved={(payload) => setGuideData(payload.guide)}
-                />
                 {isAuthenticated ? (
                   <Button
                     variant="default"

@@ -8,13 +8,15 @@ import { Footer } from "@/components/footer";
 import { BuildContainer } from "@/components/build-editor/build-container";
 import { Skeleton } from "@/components/ui/skeleton";
 import { auth } from "@/lib/auth";
-import { getBuildBySlug, incrementBuildViewCount } from "@/lib/db/index";
+import { getBuildBySlug } from "@/lib/db/index";
 import { getFullItem } from "@/lib/warframe/items";
 import { getModsForCategory, getArcanesForSlot } from "@/lib/warframe/mods";
 import { getCategoryConfig } from "@/lib/warframe";
 import type { BrowseCategory } from "@/lib/warframe/types";
 import { GuideReader } from "@/components/guides/guide-reader";
+import { BuildGuideSection } from "@/components/build/build-guide-section";
 import { slugify } from "@/lib/warframe/slugs";
+import { ViewTracker } from "@/components/build/view-tracker";
 
 interface BuildPageProps {
     params: Promise<{
@@ -100,10 +102,11 @@ export default async function BuildPage({ params }: BuildPageProps) {
         notFound();
     }
 
-    // Increment view count (fire and forget)
-    incrementBuildViewCount(build.id).catch(() => {
-        // Ignore errors - view count is not critical
-    });
+    // ... inside the component ...
+
+    if (!build) {
+        notFound();
+    }
 
     // Get the category from the build's item
     const category = build.item.browseCategory as BrowseCategory;
@@ -181,27 +184,15 @@ export default async function BuildPage({ params }: BuildPageProps) {
                 </Suspense>
 
                 {/* Build Guide */}
-                {build.buildGuide && (
-                    <div className="container pb-4">
-                        <div className="bg-card/50 border rounded-xl overflow-hidden">
-                            <div className="border-b bg-muted/30 px-6 py-4 flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <h2 className="text-lg font-semibold">Build Guide</h2>
-                                </div>
-                                {build.buildGuide.updatedAt && (
-                                    <span className="text-xs text-muted-foreground">
-                                        Last updated {new Date(build.buildGuide.updatedAt).toLocaleDateString()}
-                                    </span>
-                                )}
-                            </div>
-                            <div className="p-6">
-                                <GuideReader content={build.buildGuide.content as any} />
-                            </div>
-                        </div>
-                    </div>
-                )}
+                <BuildGuideSection
+                    buildId={build.id}
+                    initialContent={build.buildGuide?.content}
+                    updatedAt={build.buildGuide?.updatedAt}
+                    isOwner={isOwner}
+                />
             </main>
             <Footer />
+            <ViewTracker buildId={build.id} />
         </div>
     );
 }
