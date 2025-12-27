@@ -129,12 +129,7 @@ function ArcaneCardComponent({
       </div>
 
       {/* Arcane Name */}
-      <span
-        className="text-[10px] font-medium leading-tight text-center px-1 mt-1 line-clamp-1"
-        style={{
-          color: RARITY_COLOR_MAP[rarity],
-        }}
-      >
+      <span className="text-[10px] font-medium leading-tight text-center px-1 mt-1 line-clamp-1 text-foreground">
         {arcane.name}
       </span>
 
@@ -161,7 +156,7 @@ function ArcaneCardComponent({
           sideOffset={4}
         >
           <div className="space-y-2">
-            <div className="font-medium" style={{ color: RARITY_COLOR_MAP[rarity] }}>
+            <div className="font-medium text-foreground">
               {arcane.name}
             </div>
             <div className="text-[10px] uppercase text-muted-foreground">
@@ -202,10 +197,7 @@ export function ArcaneDragGhost({ arcane }: ArcaneDragGhostProps) {
         "bg-card shadow-lg cursor-grabbing"
       )}
     >
-      <span
-        className="text-xs font-medium text-center truncate"
-        style={{ color: RARITY_COLOR_MAP[rarity] }}
-      >
+      <span className="text-xs font-medium text-center truncate text-foreground">
         {arcane.name}
       </span>
     </div>

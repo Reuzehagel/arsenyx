@@ -44,7 +44,7 @@ import type {
   Arcane,
   HelminthAbility,
 } from "@/lib/warframe/types";
-import { Diamond, Gem, Save, X, Loader2, UploadCloud } from "lucide-react";
+import { Diamond, Gem, Save, X, Loader2, UploadCloud, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PublishDialog, type Visibility } from "./publish-dialog";
 
@@ -64,6 +64,7 @@ interface BuildContainerProps {
   savedBuildId?: string; // If editing an existing database build
   savedBuildSlug?: string;
   readOnly?: boolean; // View-only mode for non-owners
+  isOwner?: boolean; // Whether the current user owns this build
 }
 
 // Extract warframe stats from item data
@@ -210,13 +211,18 @@ export function BuildContainer({
   savedBuildId,
   savedBuildSlug,
   readOnly = false,
+  isOwner = false,
 }: BuildContainerProps) {
   // Auth session
   const { data: session, status: sessionStatus } = useSession();
   const isAuthenticated = sessionStatus === "authenticated" && !!session?.user;
 
-  // In read-only mode, disable all editing
-  const canEdit = !readOnly;
+  // Track edit mode for owners (initially false = view mode)
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  // canEdit: owners can edit when in edit mode, non-owners never
+  // For new builds (no savedBuildId), always allow editing
+  const canEdit = savedBuildId ? (isOwner && isEditMode) : !readOnly;
 
   // Build state
   const [buildState, setBuildState] = useState<BuildState>(() =>
@@ -954,7 +960,22 @@ export function BuildContainer({
                 </div>
               </div>
             </div>
-            {/* Build Actions - Top Right (only show when editing is allowed) */}
+            {/* Build Actions - Top Right */}
+            {/* Show Edit button for owners in view mode */}
+            {isOwner && !isEditMode && savedBuildId && (
+              <div className="self-start flex items-center gap-2">
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setIsEditMode(true)}
+                >
+                  <Pencil className="w-4 h-4" />
+                  Edit
+                </Button>
+              </div>
+            )}
+            {/* Show full editing controls when in edit mode */}
             {canEdit && (
               <div className="self-start flex items-center gap-2">
                 {/* Build Name Input (for authenticated users) */}

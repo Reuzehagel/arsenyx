@@ -196,6 +196,7 @@ export default async function BuildPage({ params }: BuildPageProps) {
                         savedBuildId={isOwner ? build.id : undefined}
                         savedBuildSlug={isOwner ? build.slug : undefined}
                         readOnly={!isOwner}
+                        isOwner={isOwner}
                     />
                 </Suspense>
 
