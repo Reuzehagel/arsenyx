@@ -3,7 +3,6 @@ export { BuildContainer } from "./build-container";
 export { ItemSidebar } from "./item-sidebar";
 export { GuideEditorDialog } from "./guide-editor-dialog";
 export { ModGrid, PolarityIcon } from "./mod-grid";
-export { ModSearchPanel } from "./mod-search-panel";
 export { ModSearchGrid } from "./mod-search-grid";
 export { SearchableModCard } from "./searchable-mod-card";
 export { useBuildKeyboard } from "./use-build-keyboard";

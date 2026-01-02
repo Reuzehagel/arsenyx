@@ -12,12 +12,25 @@ import { HelminthAbilityDialog } from "./helminth-ability-dialog";
 import { ShardsPanel } from "./shards-panel";
 
 interface ItemStats {
+  // Warframe stats
   health?: number;
   shield?: number;
   armor?: number;
   energy?: number;
   sprintSpeed?: number;
   abilities?: Array<{ name: string; imageName?: string }>;
+  // Weapon stats (all)
+  fireRate?: number;
+  criticalChance?: number;
+  criticalMultiplier?: number;
+  procChance?: number; // status chance
+  totalDamage?: number;
+  // Gun stats (primary/secondary)
+  magazineSize?: number;
+  reloadTime?: number;
+  // Melee stats
+  range?: number;
+  comboDuration?: number;
 }
 
 interface ItemSidebarProps {
@@ -51,6 +64,15 @@ export function ItemSidebar({
   const isWarframeOrNecramech =
     buildState.itemCategory === "warframes" ||
     buildState.itemCategory === "necramechs";
+
+  const isWeapon = ["primary", "secondary", "melee"].includes(
+    buildState.itemCategory
+  );
+  const isMelee = buildState.itemCategory === "melee";
+  const isGun = buildState.itemCategory === "primary" || buildState.itemCategory === "secondary";
+
+  // Reactor for warframes/necramechs, Catalyst for weapons
+  const capacityBoosterLabel = isWarframeOrNecramech ? "Reactor" : "Catalyst";
 
   // Calculate used and max capacity
   const usedCapacity = capacityStatus.max - capacityStatus.remaining;
@@ -129,8 +151,6 @@ export function ItemSidebar({
       </div>
       )}
 
-      <Separator />
-
       <HelminthAbilityDialog
         open={isHelminthDialogOpen}
         onOpenChange={setIsHelminthDialogOpen}
@@ -145,20 +165,23 @@ export function ItemSidebar({
       {/* Archon Shards - Warframes only (not Necramechs) */}
       {buildState.itemCategory === "warframes" && onPlaceShard && onRemoveShard && (
         <>
+          <Separator />
           <ShardsPanel
             shards={buildState.shardSlots}
             onPlaceShard={onPlaceShard}
             onRemoveShard={onRemoveShard}
             readOnly={readOnly}
           />
-          <Separator />
         </>
       )}
+
+      {/* Separator after abilities/shards, before capacity - only if there's content above */}
+      {isWarframeOrNecramech && <Separator />}
 
       {/* Capacity */}
       <div className="p-3 space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">Reactor</span>
+          <span className="text-sm text-muted-foreground">{capacityBoosterLabel}</span>
           {!readOnly && (
             <Switch
               checked={buildState.hasReactor}
@@ -196,52 +219,105 @@ export function ItemSidebar({
 
       <Separator />
 
-      {/* Base Stats */}
-      <div className="p-3 space-y-2">
-        <StatRow
-          label="Energy"
-          value={itemStats?.energy?.toString() ?? "—"}
-        />
-        <StatRow
-          label="Health"
-          value={itemStats?.health?.toString() ?? "—"}
-        />
-        <StatRow
-          label="Shield"
-          value={itemStats?.shield?.toString() ?? "—"}
-        />
-        <StatRow
-          label="Armor"
-          value={itemStats?.armor?.toString() ?? "—"}
-        />
-        <StatRow
-          label="Sprint Speed"
-          value={itemStats?.sprintSpeed?.toFixed(2) ?? "—"}
-        />
-      </div>
-
-      <Separator />
-
-      {/* Ability Stats */}
+      {/* Warframe Base Stats */}
       {isWarframeOrNecramech && (
         <div className="p-3 space-y-2">
           <StatRow
-            label="Duration"
-            value="100%"
+            label="Energy"
+            value={itemStats?.energy?.toString() ?? "—"}
           />
           <StatRow
-            label="Efficiency"
-            value="100%"
+            label="Health"
+            value={itemStats?.health?.toString() ?? "—"}
           />
           <StatRow
-            label="Range"
-            value="100%"
+            label="Shield"
+            value={itemStats?.shield?.toString() ?? "—"}
           />
           <StatRow
-            label="Strength"
-            value="100%"
+            label="Armor"
+            value={itemStats?.armor?.toString() ?? "—"}
+          />
+          <StatRow
+            label="Sprint Speed"
+            value={itemStats?.sprintSpeed?.toFixed(2) ?? "—"}
           />
         </div>
+      )}
+
+      {/* Weapon Stats */}
+      {isWeapon && (
+        <div className="p-3 space-y-2">
+          <StatRow
+            label="Total Damage"
+            value={itemStats?.totalDamage?.toFixed(0) ?? "—"}
+          />
+          <StatRow
+            label="Critical Chance"
+            value={itemStats?.criticalChance != null ? `${(itemStats.criticalChance * 100).toFixed(1)}%` : "—"}
+          />
+          <StatRow
+            label="Critical Multiplier"
+            value={itemStats?.criticalMultiplier != null ? `${itemStats.criticalMultiplier.toFixed(1)}x` : "—"}
+          />
+          <StatRow
+            label="Status Chance"
+            value={itemStats?.procChance != null ? `${(itemStats.procChance * 100).toFixed(1)}%` : "—"}
+          />
+          <StatRow
+            label="Fire Rate"
+            value={itemStats?.fireRate?.toFixed(2) ?? "—"}
+          />
+          {isGun && (
+            <>
+              <StatRow
+                label="Magazine"
+                value={itemStats?.magazineSize?.toString() ?? "—"}
+              />
+              <StatRow
+                label="Reload Time"
+                value={itemStats?.reloadTime != null ? `${itemStats.reloadTime.toFixed(1)}s` : "—"}
+              />
+            </>
+          )}
+          {isMelee && (
+            <>
+              <StatRow
+                label="Range"
+                value={itemStats?.range != null ? `${itemStats.range.toFixed(1)}m` : "—"}
+              />
+              <StatRow
+                label="Combo Duration"
+                value={itemStats?.comboDuration != null ? `${itemStats.comboDuration.toFixed(0)}s` : "—"}
+              />
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Ability Stats - Warframes only */}
+      {isWarframeOrNecramech && (
+        <>
+          <Separator />
+          <div className="p-3 space-y-2">
+            <StatRow
+              label="Duration"
+              value="100%"
+            />
+            <StatRow
+              label="Efficiency"
+              value="100%"
+            />
+            <StatRow
+              label="Range"
+              value="100%"
+            />
+            <StatRow
+              label="Strength"
+              value="100%"
+            />
+          </div>
+        </>
       )}
     </div>
   );

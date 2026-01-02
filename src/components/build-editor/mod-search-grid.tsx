@@ -52,6 +52,68 @@ const POLARITY_OPTIONS = [
 ] as const;
 const SORT_OPTIONS = ["Name", "Drain", "Rarity"] as const;
 
+// Search keyword aliases - maps user-friendly terms to what appears in mod stats
+// Combined elements also include their component elements
+const SEARCH_ALIASES: Record<string, string[]> = {
+  // Abbreviations for ability stats
+  dur: ["duration"],
+  str: ["strength"],
+  eff: ["efficiency"],
+  rng: ["range"],
+  crit: ["critical"],
+  multi: ["multishot"],
+  fr: ["fire rate"],
+  sc: ["status chance"],
+  cd: ["critical damage"],
+  cc: ["critical chance"],
+  as: ["attack speed"],
+  // Combined elements -> base elements that create them
+  viral: ["viral", "toxin", "cold"],
+  corrosive: ["corrosive", "toxin", "electricity", "electric"],
+  radiation: ["radiation", "heat", "electricity", "electric"],
+  blast: ["blast", "heat", "cold"],
+  gas: ["gas", "heat", "toxin"],
+  magnetic: ["magnetic", "cold", "electricity", "electric"],
+  // Base elements
+  fire: ["heat"],
+  electric: ["electricity"],
+  poison: ["toxin"],
+  // Physical damage types
+  ips: ["impact", "puncture", "slash"],
+};
+
+/**
+ * Extracts searchable stat text from a mod's max rank stats.
+ * Strips HTML-like color tags (e.g., <DT_VIRAL_COLOR>) from stat strings.
+ */
+function getModSearchableStats(mod: Mod): string {
+  if (!mod.levelStats || mod.levelStats.length === 0) return "";
+  // Get max rank stats (last entry)
+  const maxRankStats = mod.levelStats[mod.levelStats.length - 1]?.stats ?? [];
+  // Clean stat strings: strip <TAG> patterns and join
+  return maxRankStats
+    .map((s) => s.replace(/<[^>]+>/g, ""))
+    .join(" ")
+    .toLowerCase();
+}
+
+/**
+ * Expands a search query using aliases.
+ * Returns an array of terms to match against.
+ */
+function expandSearchQuery(query: string): string[] {
+  const terms = [query];
+  const queryLower = query.toLowerCase();
+
+  for (const [alias, expansions] of Object.entries(SEARCH_ALIASES)) {
+    if (queryLower === alias || queryLower.includes(alias)) {
+      terms.push(...expansions);
+    }
+  }
+
+  return [...new Set(terms)]; // Deduplicate
+}
+
 type RarityFilter = (typeof RARITY_OPTIONS)[number];
 type PolarityFilter = (typeof POLARITY_OPTIONS)[number];
 type SortOption = (typeof SORT_OPTIONS)[number];
@@ -97,14 +159,19 @@ export function ModSearchGrid({
       mods = mods.filter((m) => m.compatName?.toUpperCase() !== "AURA");
     }
 
-    // Filter by search query
+    // Filter by search query (with keyword aliases and stat matching)
     if (deferredSearchQuery.trim()) {
       const query = deferredSearchQuery.toLowerCase();
-      mods = mods.filter(
-        (m) =>
-          m.name.toLowerCase().includes(query) ||
-          m.description?.toLowerCase().includes(query)
-      );
+      const searchTerms = expandSearchQuery(query);
+
+      mods = mods.filter((m) => {
+        const name = m.name.toLowerCase();
+        const description = m.description?.toLowerCase() ?? "";
+        const stats = getModSearchableStats(m);
+        const searchable = `${name} ${description} ${stats}`;
+
+        return searchTerms.some((term) => searchable.includes(term));
+      });
     }
 
     // Filter by rarity

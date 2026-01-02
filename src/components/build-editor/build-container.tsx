@@ -68,32 +68,67 @@ interface BuildContainerProps {
   isOwner?: boolean; // Whether the current user owns this build
 }
 
-// Extract warframe stats from item data
+// Extract stats from item data (warframes and weapons)
 interface ItemStats {
+  // Warframe stats
   health?: number;
   shield?: number;
   armor?: number;
   energy?: number;
   sprintSpeed?: number;
   abilities?: Array<{ name: string; imageName?: string }>;
+  // Weapon stats (all)
+  fireRate?: number;
+  criticalChance?: number;
+  criticalMultiplier?: number;
+  procChance?: number; // status chance
+  totalDamage?: number;
+  // Gun stats (primary/secondary)
+  magazineSize?: number;
+  reloadTime?: number;
+  // Melee stats
+  range?: number;
+  comboDuration?: number;
 }
 
 function extractItemStats(item: BrowseableItem): ItemStats {
-  const wf = item as {
+  const data = item as {
+    // Warframe
     health?: number;
     shield?: number;
     armor?: number;
     power?: number;
     sprintSpeed?: number;
     abilities?: Array<{ name: string; imageName?: string }>;
+    // Weapon
+    fireRate?: number;
+    criticalChance?: number;
+    criticalMultiplier?: number;
+    procChance?: number;
+    totalDamage?: number;
+    magazineSize?: number;
+    reloadTime?: number;
+    range?: number;
+    comboDuration?: number;
   };
   return {
-    health: wf.health,
-    shield: wf.shield,
-    armor: wf.armor,
-    energy: wf.power,
-    sprintSpeed: wf.sprintSpeed,
-    abilities: wf.abilities,
+    // Warframe stats
+    health: data.health,
+    shield: data.shield,
+    armor: data.armor,
+    energy: data.power,
+    sprintSpeed: data.sprintSpeed,
+    abilities: data.abilities,
+    // Weapon stats
+    fireRate: data.fireRate,
+    criticalChance: data.criticalChance,
+    criticalMultiplier: data.criticalMultiplier,
+    procChance: data.procChance,
+    totalDamage: data.totalDamage,
+    magazineSize: data.magazineSize,
+    reloadTime: data.reloadTime,
+    range: data.range,
+    comboDuration: data.comboDuration,
   };
 }
 
@@ -262,16 +297,16 @@ export function BuildContainer({
   // Router for navigation
   const router = useRouter();
 
-  // Sensors for drag-and-drop (disabled in read-only mode)
-  const editSensors = useSensors(
+  // Sensors for drag-and-drop
+  // Always use the same sensor to avoid React hook array size changes
+  // Use a huge distance constraint when read-only to effectively disable dragging
+  const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 3,
+        distance: canEdit ? 3 : 999999,
       },
     })
   );
-  const noSensors = useSensors(); // Empty sensors for read-only mode
-  const sensors = canEdit ? editSensors : noSensors;
 
   // Stable ID for DndContext to prevent hydration mismatch
   const dndContextId = useId();
