@@ -6,7 +6,9 @@ import type {
   ModSlot,
   Polarity,
   BrowseCategory,
+  PlacedShard,
 } from "./warframe/types";
+import { SHARD_COLORS, getStatIndex, getStatByIndex } from "./warframe/shards";
 
 // =============================================================================
 // BUILD ENCODING
@@ -21,6 +23,7 @@ interface EncodedBuild {
   e?: EncodedSlot; // Exilus slot
   s: EncodedSlot[]; // Normal slots (8)
   ar?: EncodedArcane[]; // Arcane slots (2)
+  sh?: number[]; // Shard slots (5) - encoded as numbers
   n?: string; // Build name
 }
 
@@ -66,6 +69,11 @@ export function encodeBuild(state: BuildState): string {
       .map((a) => ({ u: a.uniqueName, r: a.rank }));
   }
 
+  // Encode shards (warframes only)
+  if (state.shardSlots?.length > 0 && state.shardSlots.some((s) => s !== null)) {
+    encoded.sh = encodeShards(state.shardSlots);
+  }
+
   if (state.buildName) {
     encoded.n = state.buildName;
   }
@@ -97,6 +105,42 @@ function encodeSlot(slot: ModSlot): EncodedSlot {
   }
 
   return encoded;
+}
+
+/**
+ * Encode shards to a compact number array
+ * Format per slot: 0 = empty, or (colorIndex << 4) | (statIndex << 1) | tauforged
+ */
+function encodeShards(shards: (PlacedShard | null)[]): number[] {
+  return shards.map((shard) => {
+    if (!shard) return 0;
+    const colorIndex = SHARD_COLORS.indexOf(shard.color) + 1; // 1-5
+    const statIndex = getStatIndex(shard.color, shard.stat); // 0-3
+    return (colorIndex << 4) | (statIndex << 1) | (shard.tauforged ? 1 : 0);
+  });
+}
+
+/**
+ * Decode shards from a number array
+ */
+function decodeShards(encoded: number[]): (PlacedShard | null)[] {
+  return encoded.map((byte) => {
+    if (byte === 0) return null;
+    const colorIndex = (byte >> 4) - 1; // 0-4
+    const statIndex = (byte >> 1) & 0x7; // 0-7 (using 3 bits)
+    const tauforged = (byte & 1) === 1;
+
+    if (colorIndex < 0 || colorIndex >= SHARD_COLORS.length) return null;
+
+    const color = SHARD_COLORS[colorIndex];
+    const stat = getStatByIndex(color, statIndex);
+
+    return {
+      color,
+      stat,
+      tauforged,
+    };
+  });
 }
 
 // =============================================================================
@@ -159,6 +203,11 @@ export function decodeBuild(base64String: string): Partial<BuildState> | null {
         rank: a.r,
         rarity: "",
       }));
+    }
+
+    // Decode shards
+    if (encoded.sh) {
+      state.shardSlots = decodeShards(encoded.sh);
     }
 
     return state;

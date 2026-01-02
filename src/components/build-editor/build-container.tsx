@@ -37,6 +37,7 @@ import type {
   ModSlot,
   PlacedMod,
   PlacedArcane,
+  PlacedShard,
   Polarity,
   BrowseCategory,
   BrowseableItem,
@@ -127,6 +128,7 @@ function createInitialBuildState(
     exilusSlot: { id: "exilus-0", type: "exilus" },
     normalSlots: createInitialSlots(itemPolarities),
     arcaneSlots: [],
+    shardSlots: [], // Will be initialized below for warframes
     baseCapacity: 60,
     currentCapacity: 60,
     formaCount: 0,
@@ -140,6 +142,10 @@ function createInitialBuildState(
       innatePolarity: auraPolarity ? normalizePolarity(auraPolarity) : undefined,
     };
     baseState.arcaneSlots = [undefined as unknown as PlacedArcane, undefined as unknown as PlacedArcane];
+    // Only actual warframes (not necramechs) have shard slots
+    if (category === "warframes") {
+      baseState.shardSlots = [null, null, null, null, null];
+    }
   } else if (["primary", "secondary", "melee"].includes(category)) {
     // Weapons have 1 arcane slot
     baseState.arcaneSlots = [undefined as unknown as PlacedArcane];
@@ -484,6 +490,28 @@ export function BuildContainer({
     }
     return map;
   }, [compatibleArcanes]);
+
+  // ==========================================================================
+  // SHARD HANDLERS
+  // ==========================================================================
+
+  // Place a shard in a specific slot
+  const handlePlaceShard = useCallback((slotIndex: number, shard: PlacedShard) => {
+    setBuildState((prev) => {
+      const newShardSlots = [...(prev.shardSlots || [null, null, null, null, null])];
+      newShardSlots[slotIndex] = shard;
+      return { ...prev, shardSlots: newShardSlots };
+    });
+  }, []);
+
+  // Remove a shard from a slot
+  const handleRemoveShard = useCallback((slotIndex: number) => {
+    setBuildState((prev) => {
+      const newShardSlots = [...(prev.shardSlots || [null, null, null, null, null])];
+      newShardSlots[slotIndex] = null;
+      return { ...prev, shardSlots: newShardSlots };
+    });
+  }, []);
 
   // ==========================================================================
   // DRAG HANDLERS
@@ -1061,6 +1089,8 @@ export function BuildContainer({
               itemStats={extractItemStats(item)}
               readOnly={!canEdit}
               onHelminthAbilityChange={handleHelminthAbilityChange}
+              onPlaceShard={handlePlaceShard}
+              onRemoveShard={handleRemoveShard}
             />
           </div>
 

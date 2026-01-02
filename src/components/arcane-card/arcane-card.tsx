@@ -152,21 +152,21 @@ function ArcaneCardComponent({
         </TooltipTrigger>
         <TooltipContent
           side="bottom"
-          className="max-w-[280px] p-3 bg-zinc-950 border-zinc-800 text-zinc-100"
+          className="max-w-[280px] p-3"
           sideOffset={4}
         >
           <div className="space-y-2">
-            <div className="font-medium text-foreground">
+            <div className="font-medium">
               {arcane.name}
             </div>
-            <div className="text-[10px] uppercase text-muted-foreground">
+            <div className="text-[10px] uppercase opacity-70">
               {rarity} • Rank {currentRank}
             </div>
-            <div className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
+            <div className="text-xs opacity-80 whitespace-pre-wrap leading-relaxed">
               {formattedStats}
             </div>
             {onRankChange && (
-              <div className="text-[9px] text-muted-foreground/70 pt-1 border-t border-border/50">
+              <div className="text-[9px] opacity-50 pt-1 border-t border-current/20">
                 Press +/- to change rank
               </div>
             )}

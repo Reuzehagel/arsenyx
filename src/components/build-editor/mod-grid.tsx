@@ -86,8 +86,6 @@ export function ModGrid({
   arcaneDataMap,
   readOnly = false,
 }: ModGridProps) {
-  const [activeTab, setActiveTab] = useState<"mods" | "shards">("mods");
-
   // Calculate set counts
   const setCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -105,34 +103,7 @@ export function ModGrid({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-muted/50 rounded-lg w-fit mb-6">
-        <button
-          onClick={() => setActiveTab("mods")}
-          className={cn(
-            "px-3 py-1 text-xs font-medium rounded-md transition-all",
-            activeTab === "mods"
-              ? "bg-background shadow-sm text-foreground"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          Mods
-        </button>
-        <button
-          onClick={() => setActiveTab("shards")}
-          className={cn(
-            "px-3 py-1 text-xs font-medium rounded-md transition-all",
-            activeTab === "shards"
-              ? "bg-background shadow-sm text-foreground"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          Shards
-        </button>
-      </div>
-
-      {activeTab === "mods" ? (
-        <div className="flex flex-col gap-4 items-center">
+      <div className="flex flex-col gap-4 items-center">
           {/* Row 1: Aura & Exilus */}
           <div className="flex gap-4 w-full justify-center">
             {isWarframe && auraSlot && (
@@ -231,12 +202,7 @@ export function ModGrid({
               ))}
             </div>
           )}
-        </div>
-      ) : (
-        <div className="flex items-center justify-center h-64 text-muted-foreground">
-          Archon Shards coming soon
-        </div>
-      )}
+      </div>
     </div>
   );
 }

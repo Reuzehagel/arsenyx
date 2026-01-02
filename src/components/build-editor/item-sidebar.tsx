@@ -6,9 +6,10 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { getImageUrl } from "@/lib/warframe/images";
-import type { BuildState, HelminthAbility } from "@/lib/warframe/types";
+import type { BuildState, HelminthAbility, PlacedShard } from "@/lib/warframe/types";
 import type { CapacityStatus } from "@/lib/warframe/capacity";
 import { HelminthAbilityDialog } from "./helminth-ability-dialog";
+import { ShardsPanel } from "./shards-panel";
 
 interface ItemStats {
   health?: number;
@@ -29,6 +30,8 @@ interface ItemSidebarProps {
   itemStats?: ItemStats;
   readOnly?: boolean;
   onHelminthAbilityChange?: (slotIndex: number, ability: HelminthAbility | null) => void;
+  onPlaceShard?: (slotIndex: number, shard: PlacedShard) => void;
+  onRemoveShard?: (slotIndex: number) => void;
 }
 
 export function ItemSidebar({
@@ -38,6 +41,8 @@ export function ItemSidebar({
   itemStats,
   readOnly = false,
   onHelminthAbilityChange,
+  onPlaceShard,
+  onRemoveShard,
 }: ItemSidebarProps) {
   // Helminth Selection State
   const [selectedAbilityIndex, setSelectedAbilityIndex] = useState<number | null>(null);
@@ -134,6 +139,19 @@ export function ItemSidebar({
             : undefined
         }
       />
+
+      {/* Archon Shards - Warframes only (not Necramechs) */}
+      {buildState.itemCategory === "warframes" && onPlaceShard && onRemoveShard && (
+        <>
+          <ShardsPanel
+            shards={buildState.shardSlots}
+            onPlaceShard={onPlaceShard}
+            onRemoveShard={onRemoveShard}
+            readOnly={readOnly}
+          />
+          <Separator />
+        </>
+      )}
 
       <Separator />
 

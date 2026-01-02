@@ -8,6 +8,7 @@ export * from "./categories";
 export * from "./images";
 export * from "./arcane-images";
 export * from "./slugs";
+export * from "./shards";
 
 // Server-only exports should be imported directly:
 // - Static JSON (default): import { getItemsByCategory, ... } from "@/lib/warframe/items";

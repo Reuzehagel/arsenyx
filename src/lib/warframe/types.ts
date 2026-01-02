@@ -304,6 +304,9 @@ export interface BuildState {
   normalSlots: ModSlot[]; // 8 slots
   arcaneSlots: PlacedArcane[]; // 2 slots for Warframes
 
+  // Archon Shards (Warframes only) - 5 slots
+  shardSlots: (PlacedShard | null)[];
+
   // Capacity tracking
   baseCapacity: number; // 30 base, 60 with reactor
   currentCapacity: number; // Remaining after mods
@@ -345,3 +348,22 @@ export type ModCompatibility =
   | "Archgun"
   | "Archmelee"
   | "Necramech";
+
+// =============================================================================
+// ARCHON SHARD TYPES
+// =============================================================================
+
+export type ShardColor = "crimson" | "amber" | "azure" | "violet" | "emerald";
+
+export interface ShardStat {
+  name: string;           // e.g., "Health", "Ability Strength"
+  baseValue: number;      // Regular shard bonus
+  tauforgedValue: number; // Tauforged bonus (+50%)
+  unit: string;           // "", "%", "s", etc.
+}
+
+export interface PlacedShard {
+  color: ShardColor;
+  stat: string;           // Stat name key
+  tauforged: boolean;
+}
