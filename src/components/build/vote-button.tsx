@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth-client";
 import { ThumbsUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -19,13 +19,13 @@ export function VoteButton({
   initialVoteCount,
   initialHasVoted,
 }: VoteButtonProps) {
-  const { data: session, status } = useSession();
+  const { data: session, isPending: isSessionLoading } = useSession();
   const [isPending, startTransition] = useTransition();
   const [hasVoted, setHasVoted] = useState(initialHasVoted);
   const [voteCount, setVoteCount] = useState(initialVoteCount);
 
   const handleVote = () => {
-    if (status === "loading") return;
+    if (isSessionLoading) return;
 
     if (!session?.user) {
       toast.error("Sign in to vote on builds");

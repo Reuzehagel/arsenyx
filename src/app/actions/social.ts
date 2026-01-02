@@ -7,6 +7,7 @@
  */
 
 import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 import {
   toggleBuildVote,
   hasUserVotedForBuild,
@@ -48,7 +49,9 @@ export interface SocialStatusResult {
  */
 export async function toggleVoteAction(buildId: string): Promise<VoteResult> {
   try {
-    const session = await auth();
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
 
     if (!session?.user?.id) {
       return {
@@ -93,7 +96,9 @@ export async function toggleFavoriteAction(
   buildId: string
 ): Promise<FavoriteResult> {
   try {
-    const session = await auth();
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
 
     if (!session?.user?.id) {
       return {
@@ -138,7 +143,9 @@ export async function toggleFavoriteAction(
 export async function getSocialStatusAction(
   buildId: string
 ): Promise<SocialStatusResult> {
-  const session = await auth();
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
 
   if (!session?.user?.id) {
     return { hasVoted: false, hasFavorited: false };

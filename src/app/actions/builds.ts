@@ -7,6 +7,7 @@
  */
 
 import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 import {
     createBuild,
     updateBuild,
@@ -56,7 +57,9 @@ export async function saveBuildAction(
     input: SaveBuildInput
 ): Promise<SaveBuildResult> {
     try {
-        const session = await auth();
+        const session = await auth.api.getSession({
+            headers: await headers(),
+        });
 
         if (!session?.user?.id) {
             return {
@@ -138,7 +141,9 @@ export async function deleteBuildAction(
     buildId: string
 ): Promise<DeleteBuildResult> {
     try {
-        const session = await auth();
+        const session = await auth.api.getSession({
+            headers: await headers(),
+        });
 
         if (!session?.user?.id) {
             return {
@@ -173,7 +178,9 @@ export async function forkBuildAction(
     _buildId: string
 ): Promise<SaveBuildResult> {
     try {
-        const session = await auth();
+        const session = await auth.api.getSession({
+            headers: await headers(),
+        });
 
         if (!session?.user?.id) {
             return {
@@ -228,7 +235,9 @@ export async function updateBuildGuideAction(
     guideContent: string
 ): Promise<SaveBuildResult> {
     try {
-        const session = await auth();
+        const session = await auth.api.getSession({
+            headers: await headers(),
+        });
 
         if (!session?.user?.id) {
             return {

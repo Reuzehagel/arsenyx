@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth-client";
 import { Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -22,13 +22,13 @@ export function FavoriteButton({
   initialHasFavorited,
   showCount = true,
 }: FavoriteButtonProps) {
-  const { data: session, status } = useSession();
+  const { data: session, isPending: isSessionLoading } = useSession();
   const [isPending, startTransition] = useTransition();
   const [hasFavorited, setHasFavorited] = useState(initialHasFavorited);
   const [favoriteCount, setFavoriteCount] = useState(initialFavoriteCount);
 
   const handleFavorite = () => {
-    if (status === "loading") return;
+    if (isSessionLoading) return;
 
     if (!session?.user) {
       toast.error("Sign in to save favorites");

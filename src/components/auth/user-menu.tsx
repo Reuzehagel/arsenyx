@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
+import { useSession, signOut } from "@/lib/auth-client";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -12,9 +12,9 @@ import {
 import { Separator } from "@/components/ui/separator";
 
 export function UserMenu() {
-  const { data: session, status } = useSession();
+  const { data: session, isPending } = useSession();
 
-  if (status === "loading") {
+  if (isPending) {
     return (
       <div className="size-8 animate-pulse rounded-full bg-muted" />
     );
@@ -64,7 +64,7 @@ export function UserMenu() {
         </div>
         <Separator className="my-2" />
         <button
-          onClick={() => signOut({ callbackUrl: "/" })}
+          onClick={() => signOut({ fetchOptions: { onSuccess: () => window.location.href = "/" } })}
           className="w-full rounded-md px-2 py-1.5 text-left text-sm text-destructive hover:bg-destructive/10"
         >
           Sign Out

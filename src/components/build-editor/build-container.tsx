@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef, useId } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth-client";
 import {
   DndContext,
   DragOverlay,

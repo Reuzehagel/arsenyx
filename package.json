@@ -16,7 +16,6 @@
     "db:studio": "bunx prisma studio"
   },
   "dependencies": {
-    "@auth/prisma-adapter": "^2.11.1",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
@@ -51,6 +50,7 @@
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@wfcd/items": "^1.1272.88",
+    "better-auth": "^1.4.10",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -60,7 +60,6 @@
     "lru-cache": "^11.2.4",
     "lucide-react": "^0.556.0",
     "next": "^16.1.1",
-    "next-auth": "^5.0.0-beta.30",
     "next-themes": "^0.4.6",
     "pg": "^8.16.3",
     "react": "^19.2.3",

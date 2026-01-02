@@ -7,6 +7,7 @@
 
 import { Eye } from "lucide-react";
 import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 import { hasUserVotedForBuild, hasUserFavoritedBuild } from "@/lib/db/index";
 import { VoteButton } from "./vote-button";
 import { FavoriteButton } from "./favorite-button";
@@ -24,7 +25,9 @@ export async function BuildSocialActions({
   favoriteCount,
   viewCount,
 }: BuildSocialActionsProps) {
-  const session = await auth();
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
   const userId = session?.user?.id;
 
   // Fetch initial social status

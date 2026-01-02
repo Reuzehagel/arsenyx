@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Mark pg as external to avoid Turbopack bundling issues
+  serverExternalPackages: ["pg"],
+  turbopack: {
+    root: process.cwd(),
+  },
   images: {
     remotePatterns: [
       {

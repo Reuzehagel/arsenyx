@@ -8,6 +8,7 @@ import { Footer } from "@/components/footer";
 import { BuildContainer } from "@/components/build-editor/build-container";
 import { Skeleton } from "@/components/ui/skeleton";
 import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 import { getBuildBySlug } from "@/lib/db/index";
 import { getFullItem } from "@/lib/warframe/items";
 import { getModsForCategory, getArcanesForSlot } from "@/lib/warframe/mods";
@@ -92,7 +93,9 @@ export default async function BuildPage({ params }: BuildPageProps) {
     const { slug } = await params;
 
     // Get current user session for visibility checks
-    const session = await auth();
+    const session = await auth.api.getSession({
+        headers: await headers(),
+    });
     const viewerId = session?.user?.id;
 
     // Fetch the build with visibility check

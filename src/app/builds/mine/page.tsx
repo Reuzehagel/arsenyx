@@ -7,6 +7,7 @@ import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 import { getUserBuilds } from "@/lib/db/index";
 import { getImageUrl } from "@/lib/warframe/images";
 import {
@@ -34,7 +35,9 @@ interface MyBuildsPageProps {
 export default async function MyBuildsPage({
   searchParams,
 }: MyBuildsPageProps) {
-  const session = await auth();
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
 
   if (!session?.user?.id) {
     redirect("/auth/signin?callbackUrl=/builds/mine");

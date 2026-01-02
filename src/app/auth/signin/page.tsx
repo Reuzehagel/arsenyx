@@ -1,19 +1,23 @@
-import { auth, signIn } from "@/lib/auth";
-import { redirect } from "next/navigation";
+"use client";
+
+import { signIn } from "@/lib/auth-client";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
-export default async function SignInPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ callbackUrl?: string }>;
-}) {
-  const session = await auth();
-  const { callbackUrl } = await searchParams;
+export default function SignInPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const callbackUrl = searchParams.get("callbackUrl") ?? "/";
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Already signed in, redirect to callback or home
-  if (session?.user) {
-    redirect(callbackUrl ?? "/");
-  }
+  const handleSignIn = async () => {
+    setIsLoading(true);
+    await signIn.social({
+      provider: "github",
+      callbackURL: callbackUrl,
+    });
+  };
 
   return (
     <div className="flex min-h-[80vh] items-center justify-center">
@@ -25,17 +29,16 @@ export default async function SignInPage({
           </p>
         </div>
 
-        <form
-          action={async () => {
-            "use server";
-            await signIn("github", { redirectTo: callbackUrl ?? "/" });
-          }}
+        <Button 
+          type="button" 
+          className="w-full" 
+          size="lg"
+          onClick={handleSignIn}
+          disabled={isLoading}
         >
-          <Button type="submit" className="w-full" size="lg">
-            <GitHubIcon className="mr-2 size-5" />
-            Continue with GitHub
-          </Button>
-        </form>
+          <GitHubIcon className="mr-2 size-5" />
+          {isLoading ? "Redirecting..." : "Continue with GitHub"}
+        </Button>
 
         <p className="text-center text-xs text-muted-foreground">
           By signing in, you agree to our{" "}

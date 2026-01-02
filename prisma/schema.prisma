@@ -1,3 +1,4 @@
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,35 +8,35 @@ datasource db {
 }
 
 // =============================================================================
-// AUTH (NextAuth required tables)
+// AUTH (Better Auth required tables)
 // =============================================================================
 
 model User {
   id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
   image         String?
 
   // App-specific fields
-  username      String?   @unique  // Display name / handle
-  usernameLower String?   @unique  // Enforce lowercase uniqueness
-  bio           String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  username          String?  @unique // Display name / handle
+  displayUsername   String?           // Original case display name
+  bio               String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   // Relations
-  accounts      Account[]
-  sessions      Session[]
-  builds        Build[]
-  votes         BuildVote[]
-  favorites     BuildFavorite[]
-  guideVotes    GuideVote[]
+  accounts       Account[]
+  sessions       Session[]
+  builds         Build[]
+  votes          BuildVote[]
+  favorites      BuildFavorite[]
+  guideVotes     GuideVote[]
   guideFavorites GuideFavorite[]
-  guides        Guide[]
-  apiKeys       ApiKey[]
+  guides         Guide[]
+  apiKeys        ApiKey[]
 
-  role          Role      @default(USER)
+  role Role @default(USER)
 
   @@map("users")
 }
@@ -49,43 +50,52 @@ enum Role {
 }
 
 model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
+  id                    String    @id @default(cuid())
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([provider, providerAccountId])
+  @@unique([providerId, accountId])
   @@map("accounts")
+  @@index([userId])
 }
 
 model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
+  @@index([userId])
 }
 
-model VerificationToken {
+model Verification {
+  id         String   @id @default(cuid())
   identifier String
-  token      String   @unique
-  expires    DateTime
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  @@unique([identifier, token])
-  @@map("verification_tokens")
+  @@map("verifications")
 }
 
 // =============================================================================
@@ -93,33 +103,33 @@ model VerificationToken {
 // =============================================================================
 
 model Item {
-  id              String   @id @default(cuid())
-  uniqueName      String   @unique  // WFCD unique identifier
-  name            String
-  description     String?
-  imageName       String?
-  category        String   // "Warframes", "Primary", "Secondary", "Melee", etc.
-  browseCategory  String   // "warframes", "primary", "secondary", "melee", etc.
+  id             String  @id @default(cuid())
+  uniqueName     String  @unique // WFCD unique identifier
+  name           String
+  description    String?
+  imageName      String?
+  category       String // "Warframes", "Primary", "Secondary", "Melee", etc.
+  browseCategory String // "warframes", "primary", "secondary", "melee", etc.
 
   // Common fields
-  tradable        Boolean  @default(false)
-  masteryReq      Int?
-  isPrime         Boolean  @default(false)
-  vaulted         Boolean  @default(false)
-  releaseDate     DateTime?
+  tradable    Boolean   @default(false)
+  masteryReq  Int?
+  isPrime     Boolean   @default(false)
+  vaulted     Boolean   @default(false)
+  releaseDate DateTime?
 
   // Full WFCD data as JSON (stats, abilities, etc.)
-  data            Json
+  data Json
 
   // Warframe-specific: can use archon shards
-  supportsShards  Boolean  @default(false)
+  supportsShards Boolean @default(false)
 
   // Sync metadata
-  wfcdVersion     String?  // Track which WFCD version this came from
-  syncedAt        DateTime @default(now())
+  wfcdVersion String? // Track which WFCD version this came from
+  syncedAt    DateTime @default(now())
 
   // Relations
-  builds          Build[]
+  builds Build[]
 
   @@index([browseCategory])
   @@index([name])
@@ -127,27 +137,27 @@ model Item {
 }
 
 model Mod {
-  id           String   @id @default(cuid())
-  uniqueName   String   @unique
-  name         String
-  description  String?
-  imageName    String?
-  polarity     String   // "madurai", "vazarin", etc.
-  rarity       String   // "Common", "Uncommon", "Rare", "Legendary"
-  baseDrain    Int
-  fusionLimit  Int
-  compatName   String?  // "Warframe", "Rifle", "Melee", etc.
-  type         String   // "Warframe Mod", "Primary Mod", etc.
-  tradable     Boolean  @default(false)
-  isAugment    Boolean  @default(false)
-  isPrime      Boolean  @default(false)
-  isExilus     Boolean  @default(false)
+  id          String  @id @default(cuid())
+  uniqueName  String  @unique
+  name        String
+  description String?
+  imageName   String?
+  polarity    String // "madurai", "vazarin", etc.
+  rarity      String // "Common", "Uncommon", "Rare", "Legendary"
+  baseDrain   Int
+  fusionLimit Int
+  compatName  String? // "Warframe", "Rifle", "Melee", etc.
+  type        String // "Warframe Mod", "Primary Mod", etc.
+  tradable    Boolean @default(false)
+  isAugment   Boolean @default(false)
+  isPrime     Boolean @default(false)
+  isExilus    Boolean @default(false)
 
   // Full WFCD data as JSON (levelStats, drops, etc.)
-  data         Json
+  data Json
 
   // Sync metadata
-  syncedAt     DateTime @default(now())
+  syncedAt DateTime @default(now())
 
   @@index([compatName])
   @@index([type])
@@ -156,20 +166,20 @@ model Mod {
 }
 
 model Arcane {
-  id          String   @id @default(cuid())
-  uniqueName  String   @unique
+  id          String  @id @default(cuid())
+  uniqueName  String  @unique
   name        String
   description String?
   imageName   String?
   rarity      String
-  type        String   // "Warframe", "Operator", "Weapon", etc.
-  tradable    Boolean  @default(false)
+  type        String // "Warframe", "Operator", "Weapon", etc.
+  tradable    Boolean @default(false)
 
   // Full WFCD data as JSON
-  data        Json
+  data Json
 
   // Sync metadata
-  syncedAt    DateTime @default(now())
+  syncedAt DateTime @default(now())
 
   @@index([type])
   @@index([name])
@@ -177,16 +187,17 @@ model Arcane {
 }
 
 // Track WFCD sync history
+
 model WfcdSyncLog {
-  id           String   @id @default(cuid())
-  startedAt    DateTime @default(now())
-  completedAt  DateTime?
-  status       String   // "running", "completed", "failed"
-  itemsUpdated Int      @default(0)
-  modsUpdated  Int      @default(0)
-  arcanesUpdated Int    @default(0)
-  error        String?
-  triggeredBy  String?  // "cron", "manual", "webhook"
+  id             String    @id @default(cuid())
+  startedAt      DateTime  @default(now())
+  completedAt    DateTime?
+  status         String // "running", "completed", "failed"
+  itemsUpdated   Int       @default(0)
+  modsUpdated    Int       @default(0)
+  arcanesUpdated Int       @default(0)
+  error          String?
+  triggeredBy    String? // "cron", "manual", "webhook"
 
   @@map("wfcd_sync_logs")
 }
@@ -202,52 +213,52 @@ enum BuildVisibility {
 }
 
 model Build {
-  id           String          @id @default(cuid())
-  slug         String          @unique  // URL-friendly identifier
+  id   String @id @default(cuid())
+  slug String @unique // URL-friendly identifier
 
   // Ownership
-  userId       String
-  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Item reference
-  itemId       String
-  item         Item            @relation(fields: [itemId], references: [id])
+  itemId String
+  item   Item   @relation(fields: [itemId], references: [id])
 
   // Build metadata
-  name         String
-  description  String?
-  visibility   BuildVisibility @default(PUBLIC)
+  name        String
+  description String?
+  visibility  BuildVisibility @default(PUBLIC)
 
   // The actual build configuration (stored as JSON)
   // Contains: slots, mods, arcanes, shards, reactor, forma, etc.
-  buildData    Json
+  buildData Json
 
   // Archon shards (for warframes) - stored in buildData but also indexed here for queries
-  hasShards    Boolean         @default(false)
+  hasShards Boolean @default(false)
 
   // Denormalized counts for performance
-  voteCount     Int             @default(0)
-  favoriteCount Int             @default(0)
-  viewCount     Int             @default(0)
+  voteCount     Int @default(0)
+  favoriteCount Int @default(0)
+  viewCount     Int @default(0)
 
   // Forking
   forkedFromId String?
-  forkedFrom   Build?          @relation("BuildForks", fields: [forkedFromId], references: [id], onDelete: SetNull)
-  forks        Build[]         @relation("BuildForks")
+  forkedFrom   Build?  @relation("BuildForks", fields: [forkedFromId], references: [id], onDelete: SetNull)
+  forks        Build[] @relation("BuildForks")
 
   // Timestamps
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  votes        BuildVote[]
-  favorites    BuildFavorite[]
-  linkedFrom   BuildLink[]     @relation("LinkedFromBuild")
-  linkedTo     BuildLink[]     @relation("LinkedToBuild")
-  guideEmbeds  GuideEmbed[]
+  votes       BuildVote[]
+  favorites   BuildFavorite[]
+  linkedFrom  BuildLink[]     @relation("LinkedFromBuild")
+  linkedTo    BuildLink[]     @relation("LinkedToBuild")
+  guideEmbeds GuideEmbed[]
 
   // Build guide (rich text explanation for this specific build)
-  buildGuide   BuildGuide?
+  buildGuide BuildGuide?
 
   @@index([userId])
   @@index([itemId])
@@ -258,13 +269,14 @@ model Build {
 }
 
 // Build guide - rich text attached to a build
+
 model BuildGuide {
-  id        String   @id @default(cuid())
-  buildId   String   @unique
-  build     Build    @relation(fields: [buildId], references: [id], onDelete: Cascade)
+  id      String @id @default(cuid())
+  buildId String @unique
+  build   Build  @relation(fields: [buildId], references: [id], onDelete: Cascade)
 
   // Lexical editor serialized state
-  content   Json
+  content Json
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -273,24 +285,25 @@ model BuildGuide {
 }
 
 // Link builds together (e.g., Warframe build references weapon builds)
+
 model BuildLink {
-  id            String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // The parent build (e.g., Warframe build)
-  fromBuildId   String
-  fromBuild     Build    @relation("LinkedFromBuild", fields: [fromBuildId], references: [id], onDelete: Cascade)
+  fromBuildId String
+  fromBuild   Build  @relation("LinkedFromBuild", fields: [fromBuildId], references: [id], onDelete: Cascade)
 
   // The linked build (e.g., weapon build)
-  toBuildId     String
-  toBuild       Build    @relation("LinkedToBuild", fields: [toBuildId], references: [id], onDelete: Cascade)
+  toBuildId String
+  toBuild   Build  @relation("LinkedToBuild", fields: [toBuildId], references: [id], onDelete: Cascade)
 
   // Optional label (e.g., "Primary Weapon", "Companion")
-  label         String?
+  label String?
 
   // Order for display
-  sortOrder     Int      @default(0)
+  sortOrder Int @default(0)
 
-  createdAt     DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([fromBuildId, toBuildId])
   @@map("build_links")
@@ -301,16 +314,16 @@ model BuildLink {
 // =============================================================================
 
 model BuildVote {
-  id        String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  buildId   String
-  build     Build    @relation(fields: [buildId], references: [id], onDelete: Cascade)
+  buildId String
+  build   Build  @relation(fields: [buildId], references: [id], onDelete: Cascade)
 
   // +1 for upvote (keeping it simple, no downvotes)
-  value     Int      @default(1)
+  value Int @default(1)
 
   createdAt DateTime @default(now())
 
@@ -319,13 +332,13 @@ model BuildVote {
 }
 
 model BuildFavorite {
-  id        String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  buildId   String
-  build     Build    @relation(fields: [buildId], references: [id], onDelete: Cascade)
+  buildId String
+  build   Build  @relation(fields: [buildId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
@@ -338,42 +351,42 @@ model BuildFavorite {
 // =============================================================================
 
 model Guide {
-  id            String       @id @default(cuid())
-  slug          String       @unique
+  id   String @id @default(cuid())
+  slug String @unique
 
   // Ownership
-  userId        String
-  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Content
-  title         String
-  summary       String
-  category      String       // "systems", "resources", "modes", "warframes", "gear"
-  tags          String[]
-  coverImage    String?
+  title      String
+  summary    String
+  category   String // "systems", "resources", "modes", "warframes", "gear"
+  tags       String[]
+  coverImage String?
 
   // Lexical editor serialized state
-  content       Json
+  content Json
 
   // Status
-  status        String       @default("draft")  // "draft" | "published"
-  isCurated     Boolean      @default(false)    // Featured/official guides
+  status    String  @default("draft") // "draft" | "published"
+  isCurated Boolean @default(false) // Featured/official guides
 
   // Computed
-  readingTime   Int          @default(1)        // Minutes
-  viewCount     Int          @default(0)
-  voteCount     Int          @default(0)
-  favoriteCount Int          @default(0)
+  readingTime   Int @default(1) // Minutes
+  viewCount     Int @default(0)
+  voteCount     Int @default(0)
+  favoriteCount Int @default(0)
 
   // Timestamps
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  publishedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  publishedAt DateTime?
 
   // Relations
-  embeds        GuideEmbed[]
-  votes         GuideVote[]
-  favorites     GuideFavorite[]
+  embeds    GuideEmbed[]
+  votes     GuideVote[]
+  favorites GuideFavorite[]
 
   @@index([category])
   @@index([status])
@@ -382,18 +395,19 @@ model Guide {
 }
 
 // Embed builds within guides
+
 model GuideEmbed {
-  id        String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  guideId   String
-  guide     Guide    @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  guideId String
+  guide   Guide  @relation(fields: [guideId], references: [id], onDelete: Cascade)
 
-  buildId   String
-  build     Build    @relation(fields: [buildId], references: [id], onDelete: Cascade)
+  buildId String
+  build   Build  @relation(fields: [buildId], references: [id], onDelete: Cascade)
 
   // Position/label within guide
   label     String?
-  sortOrder Int      @default(0)
+  sortOrder Int     @default(0)
 
   createdAt DateTime @default(now())
 
@@ -402,15 +416,15 @@ model GuideEmbed {
 }
 
 model GuideVote {
-  id        String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  guideId   String
-  guide     Guide    @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  guideId String
+  guide   Guide  @relation(fields: [guideId], references: [id], onDelete: Cascade)
 
-  value     Int      @default(1)
+  value Int @default(1)
 
   createdAt DateTime @default(now())
 
@@ -419,13 +433,13 @@ model GuideVote {
 }
 
 model GuideFavorite {
-  id        String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  guideId   String
-  guide     Guide    @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  guideId String
+  guide   Guide  @relation(fields: [guideId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
@@ -438,51 +452,52 @@ model GuideFavorite {
 // =============================================================================
 
 model ApiKey {
-  id          String    @id @default(cuid())
+  id String @id @default(cuid())
 
   // Owner (admin who created the key)
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Key details
-  name        String    // "Profit-Taker Discord Bot", etc.
-  key         String    @unique  // The actual API key (hashed)
-  keyPrefix   String    // First 8 chars for identification (e.g., "ask_abc1...")
+  name      String // "Profit-Taker Discord Bot", etc.
+  key       String @unique // The actual API key (hashed)
+  keyPrefix String // First 8 chars for identification (e.g., "ask_abc1...")
 
   // Permissions
-  scopes      String[]  // ["image:generate", "build:read"]
+  scopes String[] // ["image:generate", "build:read"]
 
   // Rate limiting
-  rateLimit   Int       @default(100)  // Requests per hour
+  rateLimit Int @default(100) // Requests per hour
 
   // Status
-  isActive    Boolean   @default(true)
-  lastUsedAt  DateTime?
+  isActive   Boolean   @default(true)
+  lastUsedAt DateTime?
 
   // Timestamps
-  createdAt   DateTime  @default(now())
-  expiresAt   DateTime?
+  createdAt DateTime  @default(now())
+  expiresAt DateTime?
 
   @@map("api_keys")
 }
 
 // Track generated images (optional, for caching)
+
 model GeneratedImage {
-  id          String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // What was rendered
-  buildId     String
-  template    String   // "full", "compact", "mods-only", etc.
-  options     Json?    // { showStats: true, showShards: true, ... }
+  buildId  String
+  template String // "full", "compact", "mods-only", etc.
+  options  Json? // { showStats: true, showShards: true, ... }
 
   // Result
-  imageUrl    String   // R2/Blob URL
-  width       Int
-  height      Int
+  imageUrl String // R2/Blob URL
+  width    Int
+  height   Int
 
   // Cache management
-  createdAt   DateTime @default(now())
-  expiresAt   DateTime // Auto-delete after X days
+  createdAt DateTime @default(now())
+  expiresAt DateTime // Auto-delete after X days
 
   @@unique([buildId, template, options])
   @@map("generated_images")
