@@ -1110,29 +1110,29 @@ export function BuildContainer({
           isUpdate={!!buildId}
         />
 
-        {/* Main Content: Sidebar + Vertical Stack */}
-        <div className="flex gap-4 items-start">
-          {/* Left Sidebar (Stats) */}
-          <div className="w-[260px] shrink-0 bg-card border rounded-lg">
-            <ItemSidebar
-              buildState={buildState}
-              capacityStatus={capacityStatus}
-              onToggleReactor={handleToggleReactor}
-              onCopyBuild={handleCopyBuild}
-              onClearBuild={handleClearBuild}
-              showCopied={showCopied}
-              itemStats={extractItemStats(item)}
-              readOnly={!canEdit}
-              onHelminthAbilityChange={handleHelminthAbilityChange}
-              onPlaceShard={handlePlaceShard}
-              onRemoveShard={handleRemoveShard}
-            />
-          </div>
+        {/* Main Content: Sidebar + Mod Grid (same height) + Search below */}
+        <div className="flex flex-col gap-4">
+          {/* Top row: Sidebar + Mod Grid */}
+          <div className="flex gap-4 items-stretch">
+            {/* Left Sidebar (Stats) */}
+            <div className="w-[260px] shrink-0 bg-card border rounded-lg">
+              <ItemSidebar
+                buildState={buildState}
+                capacityStatus={capacityStatus}
+                onToggleReactor={handleToggleReactor}
+                onCopyBuild={handleCopyBuild}
+                onClearBuild={handleClearBuild}
+                showCopied={showCopied}
+                itemStats={extractItemStats(item)}
+                readOnly={!canEdit}
+                onHelminthAbilityChange={handleHelminthAbilityChange}
+                onPlaceShard={handlePlaceShard}
+                onRemoveShard={handleRemoveShard}
+              />
+            </div>
 
-          {/* Main Content: Vertical Stack */}
-          <div className="flex-1 flex flex-col gap-4 min-w-0">
             {/* Mod Slots Grid */}
-            <div className="bg-card border rounded-lg p-4">
+            <div className="flex-1 bg-card border rounded-lg p-4 min-w-0">
               <ModGrid
                 auraSlot={buildState.auraSlot}
                 exilusSlot={buildState.exilusSlot}
@@ -1152,27 +1152,27 @@ export function BuildContainer({
                 readOnly={!canEdit}
               />
             </div>
-
-            {/* Mod/Arcane Search Grid - only show when editing */}
-            {canEdit && (
-              <div className="bg-card border rounded-lg p-4">
-                {(getSlotType(activeSlotId) === "arcane" || activeDragItem?.type === "search-arcane" || activeDragItem?.type === "placed-arcane") && compatibleArcanes.length > 0 ? (
-                  <ArcaneSearchPanel
-                    availableArcanes={compatibleArcanes}
-                    usedArcaneNames={usedArcaneNames}
-                    onSelectArcane={handlePlaceArcane}
-                  />
-                ) : (
-                  <ModSearchGrid
-                    availableMods={compatibleMods}
-                    slotType={getSlotType(activeSlotId)}
-                    usedModNames={usedModNames}
-                    onSelectMod={handlePlaceMod}
-                  />
-                )}
-              </div>
-            )}
           </div>
+
+          {/* Mod/Arcane Search Grid - only show when editing */}
+          {canEdit && (
+            <div className="bg-card border rounded-lg p-4">
+              {(getSlotType(activeSlotId) === "arcane" || activeDragItem?.type === "search-arcane" || activeDragItem?.type === "placed-arcane") && compatibleArcanes.length > 0 ? (
+                <ArcaneSearchPanel
+                  availableArcanes={compatibleArcanes}
+                  usedArcaneNames={usedArcaneNames}
+                  onSelectArcane={handlePlaceArcane}
+                />
+              ) : (
+                <ModSearchGrid
+                  availableMods={compatibleMods}
+                  slotType={getSlotType(activeSlotId)}
+                  usedModNames={usedModNames}
+                  onSelectMod={handlePlaceMod}
+                />
+              )}
+            </div>
+          )}
         </div>
       </div>
       <DragOverlay dropAnimation={null}>

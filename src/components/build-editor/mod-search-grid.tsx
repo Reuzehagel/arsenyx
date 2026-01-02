@@ -62,24 +62,46 @@ const SEARCH_ALIASES: Record<string, string[]> = {
   rng: ["range"],
   crit: ["critical"],
   multi: ["multishot"],
+  ms: ["multishot"],
   fr: ["fire rate"],
   sc: ["status chance"],
   cd: ["critical damage"],
   cc: ["critical chance"],
   as: ["attack speed"],
+  hp: ["health"],
   // Combined elements -> base elements that create them
   viral: ["viral", "toxin", "cold"],
+  vir: ["viral", "toxin", "cold"],
   corrosive: ["corrosive", "toxin", "electricity", "electric"],
+  corr: ["corrosive", "toxin", "electricity", "electric"],
   radiation: ["radiation", "heat", "electricity", "electric"],
+  rad: ["radiation", "heat", "electricity", "electric"],
   blast: ["blast", "heat", "cold"],
   gas: ["gas", "heat", "toxin"],
   magnetic: ["magnetic", "cold", "electricity", "electric"],
+  mag: ["magnetic", "cold", "electricity", "electric"],
   // Base elements
   fire: ["heat"],
   electric: ["electricity"],
+  elec: ["electricity", "electric"],
   poison: ["toxin"],
+  tox: ["toxin"],
+  cold: ["cold"],
+  ice: ["cold"],
+  heat: ["heat"],
   // Physical damage types
   ips: ["impact", "puncture", "slash"],
+  punc: ["puncture"],
+  imp: ["impact"],
+  // Survivability
+  armor: ["armor"],
+  shield: ["shield"],
+  energy: ["energy"],
+  // Other common terms
+  reload: ["reload"],
+  ammo: ["ammo", "magazine"],
+  punch: ["punch through"],
+  dmg: ["damage"],
 };
 
 /**
