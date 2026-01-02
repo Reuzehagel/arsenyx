@@ -61,6 +61,22 @@ export const BROWSE_CATEGORIES: CategoryConfig[] = [
     iconKey: "pawPrint",
   },
   {
+    id: "companion-weapons",
+    label: "Companion Weapon",
+    labelPlural: "Companion Weapons",
+    wfcdCategories: ["Primary"], // Sentinel weapons use Primary category in WFCD
+    description: "Weapons for Sentinels and other companions",
+    iconKey: "zap",
+  },
+  {
+    id: "exalted-weapons",
+    label: "Exalted Weapon",
+    labelPlural: "Exalted Weapons",
+    wfcdCategories: ["Melee"], // Exalted weapons are in Misc but we filter by type
+    description: "Weapons summoned by Warframe abilities",
+    iconKey: "sparkles",
+  },
+  {
     id: "archwing",
     label: "Archwing",
     labelPlural: "Archwing",

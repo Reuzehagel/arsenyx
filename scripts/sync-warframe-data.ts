@@ -15,6 +15,8 @@ const DATA_FILES = [
   "Melee.json",
   "Sentinels.json",
   "Pets.json",
+  "SentinelWeapons.json",
+  "Misc.json",
   "Mods.json",
   "Arcanes.json",
   "Archwing.json",

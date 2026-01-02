@@ -8,6 +8,8 @@ export type BrowseCategory =
   | "melee"
   | "necramechs"
   | "companions"
+  | "companion-weapons"
+  | "exalted-weapons"
   | "archwing";
 
 export type WfcdCategory =

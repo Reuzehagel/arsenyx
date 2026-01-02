@@ -87,6 +87,8 @@ export const getCategoryCountsFromDb = unstable_cache(
       "melee",
       "necramechs",
       "companions",
+      "companion-weapons",
+      "exalted-weapons",
       "archwing",
     ];
 
@@ -97,6 +99,8 @@ export const getCategoryCountsFromDb = unstable_cache(
       melee: 0,
       necramechs: 0,
       companions: 0,
+      "companion-weapons": 0,
+      "exalted-weapons": 0,
       archwing: 0,
     };
 

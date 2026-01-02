@@ -12,6 +12,8 @@ import PetsData from "@/data/warframe/Pets.json";
 import ArchwingData from "@/data/warframe/Archwing.json";
 import ArchGunData from "@/data/warframe/Arch-Gun.json";
 import ArchMeleeData from "@/data/warframe/Arch-Melee.json";
+import SentinelWeaponsData from "@/data/warframe/SentinelWeapons.json";
+import MiscData from "@/data/warframe/Misc.json";
 
 import type {
   BrowseCategory,
@@ -34,6 +36,8 @@ const allItems: BrowseableItem[] = [
   ...(ArchwingData as BrowseableItem[]),
   ...(ArchGunData as BrowseableItem[]),
   ...(ArchMeleeData as BrowseableItem[]),
+  ...(SentinelWeaponsData as BrowseableItem[]),
+  ...(MiscData as BrowseableItem[]),
 ];
 
 // Precomputed caches to avoid repeated expensive work per request
@@ -47,6 +51,8 @@ const categoryCounts: Record<BrowseCategory, number> = {
   melee: 0,
   necramechs: 0,
   companions: 0,
+  "companion-weapons": 0,
+  "exalted-weapons": 0,
   archwing: 0,
 };
 
@@ -115,6 +121,17 @@ function categorizeItem(item: BrowseableItem): BrowseCategory[] {
     itemCategory === "Arch-Melee"
   ) {
     categories.push("archwing");
+  }
+
+  // Companion weapons (sentinel weapons and pet weapons)
+  const itemType = (item as { type?: string }).type;
+  if (itemType === "Companion Weapon") {
+    categories.push("companion-weapons");
+  }
+
+  // Exalted weapons (abilities that summon weapons)
+  if (itemType === "Exalted Weapon") {
+    categories.push("exalted-weapons");
   }
 
   return categories;
