@@ -38,7 +38,7 @@
         "@radix-ui/react-toggle": "^1.1.10",
         "@radix-ui/react-toggle-group": "^1.1.11",
         "@radix-ui/react-tooltip": "^1.2.8",
-        "@wfcd/items": "^1.1272.88",
+        "@wfcd/items": "^1.1272.89",
         "better-auth": "^1.4.10",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
@@ -554,7 +554,7 @@
 
     "@unrs/resolver-binding-win32-x64-msvc": ["@unrs/resolver-binding-win32-x64-msvc@1.11.1", "", { "os": "win32", "cpu": "x64" }, "sha512-lrW200hZdbfRtztbygyaq/6jP6AKE8qQN2KvPcJ+x7wiD038YtnYtZ82IMNJ69GJibV7bwL3y9FgK+5w/pYt6g=="],
 
-    "@wfcd/items": ["@wfcd/items@1.1272.88", "", { "peerDependencies": { "warframe-worldstate-data": "^3.0.0" } }, "sha512-MH1AN95x+iJfqY8daU6CwYFzTGIgf8enHmPNvO/2VZpJNp8VPPVUyGO+1ccq/5+wAxdVJcaV6/AgbW2VV6N8mw=="],
+    "@wfcd/items": ["@wfcd/items@1.1272.89", "", { "peerDependencies": { "warframe-worldstate-data": "^3.0.0" } }, "sha512-PuAzWVMSvtkyXhCwIDG+N4ZPqXlfdD2VaUyOLbn4ty94gCOv86W41afHj6Ebsc75jX6hSlfgHYszmNf+qGLiYQ=="],
 
     "acorn": ["acorn@8.15.0", "", { "bin": { "acorn": "bin/acorn" } }, "sha512-NZyJarBfL7nWwIq+FDL6Zp/yHEhePMNnnJ0y3qfieCrmNvYct8uvtiV41UvlSe6apAfk0fY1FbWx+NwfmpvtTg=="],
 

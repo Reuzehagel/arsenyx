@@ -247,9 +247,8 @@ function ExpandedModCard({
           <Image
             src={getModAssetUrl(rarity, "Background")}
             alt=""
-            width={184}
-            height={200}
-            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-full object-cover object-bottom"
+            fill
+            className="object-cover object-bottom"
             priority={false}
           />
         </div>
