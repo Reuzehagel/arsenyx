@@ -109,9 +109,13 @@ function categorizeItem(item: BrowseableItem): BrowseCategory[] {
     }
   }
 
-  if (itemCategory === "Primary") categories.push("primary");
-  if (itemCategory === "Secondary") categories.push("secondary");
-  if (itemCategory === "Melee") categories.push("melee");
+  const itemType = (item as { type?: string }).type;
+  const isCompanionWeapon = itemType === "Companion Weapon";
+
+  // Exclude companion weapons from primary/secondary/melee categories
+  if (itemCategory === "Primary" && !isCompanionWeapon) categories.push("primary");
+  if (itemCategory === "Secondary" && !isCompanionWeapon) categories.push("secondary");
+  if (itemCategory === "Melee" && !isCompanionWeapon) categories.push("melee");
   if (itemCategory === "Sentinels" || itemCategory === "Pets") {
     categories.push("companions");
   }
@@ -124,8 +128,7 @@ function categorizeItem(item: BrowseableItem): BrowseCategory[] {
   }
 
   // Companion weapons (sentinel weapons and pet weapons)
-  const itemType = (item as { type?: string }).type;
-  if (itemType === "Companion Weapon") {
+  if (isCompanionWeapon) {
     categories.push("companion-weapons");
   }
 
