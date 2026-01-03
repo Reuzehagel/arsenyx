@@ -45,6 +45,7 @@ next-env.d.ts
 
 !README.md
 !IMPLEMENTATION_PLAN.md
+!CLAUDE.md
 /src/generated/prisma
 
 nul
