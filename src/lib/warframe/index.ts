@@ -10,6 +10,7 @@ export * from "./arcane-images";
 export * from "./slugs";
 export * from "./shards";
 export * from "./mod-card-config";
+export * from "./mod-variants";
 
 // Server-only exports should be imported directly:
 // - Static JSON (default): import { getItemsByCategory, ... } from "@/lib/warframe/items";

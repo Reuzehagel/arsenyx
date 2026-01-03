@@ -34,6 +34,7 @@ import {
   calculateFormaCount,
 } from "@/lib/warframe/capacity";
 import { normalizePolarity } from "@/lib/warframe/mods";
+import { getModBaseName } from "@/lib/warframe/mod-variants";
 import { copyBuildToClipboard } from "@/lib/build-codec";
 import { saveBuildAction } from "@/app/actions/builds";
 import { Badge } from "@/components/ui/badge";
@@ -360,16 +361,25 @@ export function BuildContainer({
 
       setBuildState((prev) => {
         const newState = { ...prev };
+        const baseName = getModBaseName(mod.name);
 
-        // Remove existing instance of this mod if it exists to prevent duplicates
-        if (newState.auraSlot?.mod?.uniqueName === mod.uniqueName) {
+        // Remove existing instance of this mod or its variants to prevent duplicates
+        if (
+          newState.auraSlot?.mod &&
+          getModBaseName(newState.auraSlot.mod.name) === baseName
+        ) {
           newState.auraSlot = { ...newState.auraSlot, mod: undefined };
         }
-        if (newState.exilusSlot?.mod?.uniqueName === mod.uniqueName) {
+        if (
+          newState.exilusSlot?.mod &&
+          getModBaseName(newState.exilusSlot.mod.name) === baseName
+        ) {
           newState.exilusSlot = { ...newState.exilusSlot, mod: undefined };
         }
         newState.normalSlots = newState.normalSlots.map((s) =>
-          s.mod?.uniqueName === mod.uniqueName ? { ...s, mod: undefined } : s
+          s.mod && getModBaseName(s.mod.name) === baseName
+            ? { ...s, mod: undefined }
+            : s
         );
 
         // Place in new slot
@@ -1023,15 +1033,17 @@ export function BuildContainer({
     router.back();
   }, [item.uniqueName, router]);
 
-  // Get all used mod names for duplicate checking
+  // Get all used mod base names for duplicate/variant checking
   const usedModNames = useMemo((): string[] => {
     const names: string[] = [];
 
-    if (buildState.auraSlot?.mod) names.push(buildState.auraSlot.mod.name);
-    if (buildState.exilusSlot?.mod) names.push(buildState.exilusSlot.mod.name);
+    if (buildState.auraSlot?.mod)
+      names.push(getModBaseName(buildState.auraSlot.mod.name));
+    if (buildState.exilusSlot?.mod)
+      names.push(getModBaseName(buildState.exilusSlot.mod.name));
 
     for (const slot of buildState.normalSlots) {
-      if (slot.mod) names.push(slot.mod.name);
+      if (slot.mod) names.push(getModBaseName(slot.mod.name));
     }
 
     return names;

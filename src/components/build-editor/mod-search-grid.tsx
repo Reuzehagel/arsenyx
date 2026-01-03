@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { SearchableModCard } from "./searchable-mod-card";
+import { getModBaseName } from "@/lib/warframe/mod-variants";
 import type { Mod, SlotType } from "@/lib/warframe/types";
 
 // =============================================================================
@@ -160,7 +161,7 @@ export function ModSearchGrid({
   className,
 }: ModSearchGridProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<SortOption>("Name");
+  const [sortBy, setSortBy] = useState<SortOption>("Drain");
   const [rarityFilter, setRarityFilter] = useState<RarityFilter>("All");
   const [polarityFilter, setPolarityFilter] = useState<PolarityFilter>("All");
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -242,9 +243,9 @@ export function ModSearchGrid({
     ? 0
     : Math.min(selectedIndex, filteredMods.length - 1);
 
-  // Check if a mod is already used
+  // Check if a mod (or its variant) is already used
   const isModUsed = useCallback(
-    (mod: Mod) => usedModNames.includes(mod.name),
+    (mod: Mod) => usedModNames.includes(getModBaseName(mod.name)),
     [usedModNames]
   );
 
