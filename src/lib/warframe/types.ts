@@ -206,7 +206,15 @@ export interface Mod {
   description?: string;
   imageName?: string;
   polarity: Polarity;
-  rarity: "Common" | "Uncommon" | "Rare" | "Legendary" | "Peculiar";
+  rarity:
+    | "Common"
+    | "Uncommon"
+    | "Rare"
+    | "Legendary"
+    | "Peculiar"
+    | "Riven"
+    | "Amalgam"
+    | "Galvanized";
   baseDrain: number;
   fusionLimit: number;
   compatName?: string; // e.g., "Warframe", "Rifle", "Shotgun", "Pistol", "Melee"
