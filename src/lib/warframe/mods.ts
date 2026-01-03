@@ -91,10 +91,20 @@ export function getAllMods(): Mod[] {
         }
       }
 
+      // Transform rarity for Amalgam and Galvanized mods
+      // WFCD data has these as "Rare" but they need special rarity for frame rendering
+      let rarity = mod.rarity;
+      if (mod.name.startsWith("Amalgam ")) {
+        rarity = "Amalgam";
+      } else if (mod.name.startsWith("Galvanized ")) {
+        rarity = "Galvanized";
+      }
+
       return {
         ...mod,
         polarity: normalizePolarity(mod.polarity as unknown as string),
         modSetStats,
+        rarity,
       };
     });
 

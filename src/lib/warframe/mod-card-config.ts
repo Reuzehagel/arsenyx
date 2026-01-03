@@ -23,7 +23,12 @@ export type ModRarity =
  * Rarity groups based on asset structure.
  * Different groups have different frame dimensions and require different scaling.
  */
-export type RarityGroup = "standard" | "legendary" | "riven" | "galvanized";
+export type RarityGroup =
+  | "standard"
+  | "legendary"
+  | "riven"
+  | "amalgam"
+  | "galvanized";
 
 /**
  * Map each rarity to its asset group and folder/prefix for loading images.
@@ -74,7 +79,7 @@ export const RARITY_CONFIG: Record<
     textColor: "#D9A8FF",
   },
   Amalgam: {
-    group: "riven",
+    group: "amalgam",
     folder: "amalgam",
     prefix: "Amalgam",
     textColor: "#98D9EB",
@@ -117,6 +122,11 @@ export const ASSET_DIMENSIONS: Record<
     background: { w: 242, h: 338 },
     frameTop: { w: 281, h: 117 },
     frameBottom: { w: 292, h: 120 },
+  },
+  amalgam: {
+    background: { w: 242, h: 338 },
+    frameTop: { w: 279, h: 94 },
+    frameBottom: { w: 274, h: 94 },
   },
   galvanized: {
     background: { w: 256, h: 512 },

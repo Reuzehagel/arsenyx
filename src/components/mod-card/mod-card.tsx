@@ -271,7 +271,7 @@ function ExpandedModCard({
           {formattedStats && (
             <div className="flex flex-col items-center gap-1 mt-1 w-full px-1">
               <span
-                className="text-[11px] font-normal text-gray-300 text-center leading-tight"
+                className="text-[12px] font-normal text-gray-300 text-center leading-snug"
                 style={{ fontFamily: "Roboto, sans-serif" }}
                 dangerouslySetInnerHTML={{ __html: formattedStats }}
               />

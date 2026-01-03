@@ -12,6 +12,8 @@ interface ModsTestClientProps {
     Rare: Mod[];
     Legendary: Mod[];
     Peculiar: Mod[];
+    Amalgam: Mod[];
+    Galvanized: Mod[];
   };
 }
 
@@ -40,21 +42,12 @@ const createMockMod = (
   ],
 });
 
+// Only Riven mods need mocking - Amalgam/Galvanized come from real data now
 const MOCK_SPECIAL_MODS = {
   Riven: [
     createMockMod("Visi-critacan", "Riven", "madurai"),
     createMockMod("Acri-hexalis", "Riven", "naramon"),
     createMockMod("Toxi-critadex", "Riven", "vazarin"),
-  ],
-  Amalgam: [
-    createMockMod("Amalgam Serration", "Amalgam", "madurai"),
-    createMockMod("Amalgam Barrel Diffusion", "Amalgam", "naramon"),
-    createMockMod("Amalgam Organ Shatter", "Amalgam", "madurai"),
-  ],
-  Galvanized: [
-    createMockMod("Galvanized Chamber", "Galvanized", "madurai"),
-    createMockMod("Galvanized Aptitude", "Galvanized", "naramon"),
-    createMockMod("Galvanized Scope", "Galvanized", "madurai"),
   ],
 };
 
@@ -93,6 +86,8 @@ export function ModsTestClient({ sampleMods }: ModsTestClientProps) {
     return [];
   };
 
+  const isMockRarity = (rarity: string) => rarity === "Riven";
+
   const handleRankChange = (modId: string, rank: number) => {
     setSelectedRank((prev) => ({ ...prev, [modId]: rank }));
   };
@@ -115,7 +110,7 @@ export function ModsTestClient({ sampleMods }: ModsTestClientProps) {
               to adjust rank
             </li>
             <li>
-              Riven, Amalgam, and Galvanized are mock mods for testing frames
+              Riven mods are mock data for testing frames (no real Riven data)
             </li>
           </ul>
         </div>
@@ -125,7 +120,7 @@ export function ModsTestClient({ sampleMods }: ModsTestClientProps) {
       <div className="space-y-12">
         {allRarities.map((rarity) => {
           const mods = getMods(rarity);
-          const isMock = ["Riven", "Amalgam", "Galvanized"].includes(rarity);
+          const isMock = isMockRarity(rarity);
 
           return (
             <section key={rarity}>
