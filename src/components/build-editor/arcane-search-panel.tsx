@@ -293,8 +293,7 @@ function SearchableArcaneCard({
 }: SearchableArcaneCardProps) {
   const maxRank = arcane.levelStats ? arcane.levelStats.length - 1 : 5;
 
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
       id: `search-arcane-${arcane.uniqueName}`,
       data: { arcane, rank: maxRank, type: "search-arcane" },
       disabled: isDisabled,

@@ -1,13 +1,12 @@
 "use client";
 
 import { signIn } from "@/lib/auth-client";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useState, Suspense } from "react";
 
 function SignInContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/";
   const [isLoading, setIsLoading] = useState(false);
 

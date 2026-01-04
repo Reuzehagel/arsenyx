@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils";
 import { ModCard } from "@/components/mod-card";
 import type { Mod } from "@/lib/warframe/types";
 import { useDraggable } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
 
 // =============================================================================
 // SEARCHABLE MOD CARD COMPONENT
@@ -28,8 +27,7 @@ export function SearchableModCard({
 }: SearchableModCardProps) {
   const maxRank = mod.fusionLimit ?? 0;
 
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
       id: `search-${mod.uniqueName}`,
       data: { mod, rank: maxRank, type: "search-mod" },
       disabled: isDisabled,

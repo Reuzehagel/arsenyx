@@ -182,6 +182,7 @@ export async function forkBuildAction(
   _buildId: string
 ): Promise<SaveBuildResult> {
   try {
+    void _buildId;
     const session = await auth.api.getSession({
       headers: await headers(),
     });

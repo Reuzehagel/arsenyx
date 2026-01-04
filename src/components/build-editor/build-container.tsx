@@ -327,7 +327,7 @@ export function BuildContainer({
 
   // Build metadata for database persistence
   const [buildId, setBuildId] = useState<string | undefined>(savedBuildId);
-  const [_buildSlug, setBuildSlug] = useState<string | undefined>(
+  const [, setBuildSlug] = useState<string | undefined>(
     savedBuildSlug
   );
   const [buildName, setBuildName] = useState<string>(
@@ -358,7 +358,7 @@ export function BuildContainer({
     }[]
   >([]);
 
-  const [_saveError, setSaveError] = useState<string | null>(null);
+  const [, setSaveError] = useState<string | null>(null);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
 
   // Active slot for mod placement

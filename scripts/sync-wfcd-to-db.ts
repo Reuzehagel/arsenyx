@@ -171,7 +171,7 @@ function normalizePolarity(polarity?: string): string {
 /**
  * Sync all items to the database
  */
-async function syncItems(logId: string): Promise<number> {
+async function syncItems(): Promise<number> {
   console.log("Syncing items...");
 
   // Load all item data files
@@ -251,7 +251,7 @@ async function syncItems(logId: string): Promise<number> {
 /**
  * Sync all mods to the database
  */
-async function syncMods(logId: string): Promise<number> {
+async function syncMods(): Promise<number> {
   console.log("Syncing mods...");
 
   const mods = readJsonFile<WfcdMod[]>("Mods.json");
@@ -308,7 +308,7 @@ async function syncMods(logId: string): Promise<number> {
 /**
  * Sync all arcanes to the database
  */
-async function syncArcanes(logId: string): Promise<number> {
+async function syncArcanes(): Promise<number> {
   console.log("Syncing arcanes...");
 
   const arcanes = readJsonFile<WfcdArcane[]>("Arcanes.json");
@@ -382,9 +382,9 @@ async function main() {
   });
 
   try {
-    const itemsUpdated = await syncItems(log.id);
-    const modsUpdated = await syncMods(log.id);
-    const arcanesUpdated = await syncArcanes(log.id);
+    const itemsUpdated = await syncItems();
+    const modsUpdated = await syncMods();
+    const arcanesUpdated = await syncArcanes();
 
     // Update log with success
     await prisma.wfcdSyncLog.update({

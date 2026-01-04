@@ -18,13 +18,6 @@ import type { Arcane } from "@/lib/warframe/types";
 
 type ArcaneRarity = "Common" | "Uncommon" | "Rare" | "Legendary";
 
-const RARITY_COLOR_MAP: Record<ArcaneRarity, string> = {
-  Common: "#C79989",
-  Uncommon: "#BEC0C2",
-  Rare: "#FBECC4",
-  Legendary: "#D4A5FF",
-};
-
 // =============================================================================
 // ARCANE CARD PROPS
 // =============================================================================
@@ -188,8 +181,6 @@ export interface ArcaneDragGhostProps {
 }
 
 export function ArcaneDragGhost({ arcane }: ArcaneDragGhostProps) {
-  const rarity = (arcane.rarity || "Common") as ArcaneRarity;
-
   return (
     <div
       className={cn(
