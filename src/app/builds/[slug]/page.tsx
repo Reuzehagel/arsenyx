@@ -220,7 +220,15 @@ export default async function BuildPage({ params }: BuildPageProps) {
         {/* Build Guide */}
         <BuildGuideSection
           buildId={build.id}
-          initialContent={build.buildGuide?.content ?? null}
+          initialSummary={build.buildGuide?.summary}
+          initialDescription={build.buildGuide?.description}
+          initialPartnerBuilds={build.partnerBuilds.map((pb) => ({
+            id: pb.id,
+            slug: pb.slug,
+            name: pb.name,
+            item: pb.item,
+            buildData: pb.buildData as { formaCount: number },
+          }))}
           updatedAt={build.buildGuide?.updatedAt}
           isOwner={isOwner}
         />

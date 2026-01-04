@@ -13,6 +13,7 @@ import {
   updateBuild,
   deleteBuild,
   getBuildById,
+  getUserBuildsForPartnerSelector,
   type CreateBuildInput,
   type UpdateBuildInput,
   type BuildWithUser,
@@ -32,7 +33,6 @@ export interface SaveBuildInput {
   description?: string;
   visibility?: BuildVisibility;
   buildData: BuildState;
-  guide?: string;
 }
 
 export interface SaveBuildResult {
@@ -94,7 +94,6 @@ export async function saveBuildAction(
         description: input.description,
         visibility: input.visibility,
         buildData: input.buildData,
-        guide: input.guide,
       };
 
       const build = await updateBuild(input.buildId, userId, updateData);
@@ -112,7 +111,6 @@ export async function saveBuildAction(
       description: input.description,
       visibility: input.visibility ?? "PUBLIC",
       buildData: input.buildData,
-      guide: input.guide,
     };
 
     const build = await createBuild(userId, createData);
@@ -227,12 +225,21 @@ export async function incrementViewCountAction(buildId: string): Promise<void> {
 // GUIDE UPDATE
 // =============================================================================
 
+export interface UpdateBuildGuideInput {
+  summary?: string;
+  description?: string;
+  partnerBuildIds?: string[];
+}
+
+const MAX_SUMMARY_LENGTH = 400;
+const MAX_PARTNER_BUILDS = 10;
+
 /**
- * Update a build's guide content
+ * Update a build's guide content (summary, description, partner builds)
  */
 export async function updateBuildGuideAction(
   buildId: string,
-  guideContent: string
+  input: UpdateBuildGuideInput
 ): Promise<SaveBuildResult> {
   try {
     const session = await auth.api.getSession({
@@ -263,14 +270,27 @@ export async function updateBuildGuideAction(
       };
     }
 
-    // We can reuse updateBuild which handles the guide upsert logic
-    const build = await updateBuild(buildId, userId, {
-      guide: guideContent,
-    });
+    // Validate summary length
+    if (input.summary && input.summary.length > MAX_SUMMARY_LENGTH) {
+      return {
+        success: false,
+        error: `Summary must be ${MAX_SUMMARY_LENGTH} characters or less`,
+      };
+    }
 
-    // Revalidate the page
-    // Note: In a deeper implementation we might accept the path to revalidate
-    // For now, client navigation or router.refresh() will handle the UI update
+    // Validate partner builds count
+    if (input.partnerBuildIds && input.partnerBuildIds.length > MAX_PARTNER_BUILDS) {
+      return {
+        success: false,
+        error: `Maximum ${MAX_PARTNER_BUILDS} partner builds allowed`,
+      };
+    }
+
+    const build = await updateBuild(buildId, userId, {
+      guideSummary: input.summary,
+      guideDescription: input.description,
+      partnerBuildIds: input.partnerBuildIds,
+    });
 
     return {
       success: true,
@@ -281,6 +301,45 @@ export async function updateBuildGuideAction(
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to update guide",
+    };
+  }
+}
+
+// =============================================================================
+// PARTNER BUILD SELECTOR
+// =============================================================================
+
+/**
+ * Get user's builds for partner build selector
+ */
+export async function getUserBuildsForPartnerSelectorAction(): Promise<{
+  success: boolean;
+  builds?: Awaited<ReturnType<typeof getUserBuildsForPartnerSelector>>;
+  error?: string;
+}> {
+  try {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+
+    if (!session?.user?.id) {
+      return {
+        success: false,
+        error: "You must be signed in",
+      };
+    }
+
+    const builds = await getUserBuildsForPartnerSelector(session.user.id);
+
+    return {
+      success: true,
+      builds,
+    };
+  } catch (error) {
+    console.error("Failed to get builds for partner selector:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to get builds",
     };
   }
 }

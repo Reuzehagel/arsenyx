@@ -19,7 +19,6 @@ export interface CreateBuildInput {
     description?: string;
     visibility?: BuildVisibility;
     buildData: BuildState;
-    guide?: string; // Serialized Lexical state
 }
 
 export interface UpdateBuildInput {
@@ -27,7 +26,10 @@ export interface UpdateBuildInput {
     description?: string;
     visibility?: BuildVisibility;
     buildData?: BuildState;
-    guide?: string;
+    // Guide fields
+    guideSummary?: string | null;
+    guideDescription?: string | null;
+    partnerBuildIds?: string[];
 }
 
 export interface BuildWithUser {
@@ -58,9 +60,22 @@ export interface BuildWithUser {
     };
     // Guide
     buildGuide: {
-        content: Record<string, unknown>;
+        summary: string | null;
+        description: string | null;
         updatedAt: Date;
     } | null;
+    // Partner builds
+    partnerBuilds: {
+        id: string;
+        slug: string;
+        name: string;
+        item: {
+            name: string;
+            imageName: string | null;
+            browseCategory: string;
+        };
+        buildData: unknown;
+    }[];
 }
 
 export interface GetBuildsOptions {
@@ -110,6 +125,66 @@ async function generateUniqueSlug(): Promise<string> {
 }
 
 // =============================================================================
+// COMMON INCLUDES
+// =============================================================================
+
+const buildInclude = {
+    user: {
+        select: {
+            id: true,
+            name: true,
+            username: true,
+            image: true,
+        },
+    },
+    item: {
+        select: {
+            id: true,
+            uniqueName: true,
+            name: true,
+            imageName: true,
+            browseCategory: true,
+        },
+    },
+    buildGuide: {
+        select: {
+            summary: true,
+            description: true,
+            updatedAt: true,
+        },
+    },
+    partnerBuilds: {
+        select: {
+            id: true,
+            slug: true,
+            name: true,
+            buildData: true,
+            item: {
+                select: {
+                    name: true,
+                    imageName: true,
+                    browseCategory: true,
+                },
+            },
+        },
+    },
+} as const;
+
+function mapBuildResult(build: {
+    buildData: unknown;
+    buildGuide: { summary: string | null; description: string | null; updatedAt: Date } | null;
+    partnerBuilds: { id: string; slug: string; name: string; buildData: unknown; item: { name: string; imageName: string | null; browseCategory: string } }[];
+    [key: string]: unknown;
+}): BuildWithUser {
+    return {
+        ...build,
+        buildData: build.buildData as unknown as BuildState,
+        buildGuide: build.buildGuide,
+        partnerBuilds: build.partnerBuilds,
+    } as BuildWithUser;
+}
+
+// =============================================================================
 // CREATE
 // =============================================================================
 
@@ -142,44 +217,11 @@ export async function createBuild(
             visibility: input.visibility ?? "PUBLIC",
             buildData: input.buildData as unknown as Prisma.JsonObject,
             hasShards: false, // TODO: Detect from buildData when shards are implemented
-            buildGuide: input.guide ? {
-                create: {
-                    content: JSON.parse(input.guide),
-                }
-            } : undefined,
         },
-        include: {
-            user: {
-                select: {
-                    id: true,
-                    name: true,
-                    username: true,
-                    image: true,
-                },
-            },
-            item: {
-                select: {
-                    id: true,
-                    uniqueName: true,
-                    name: true,
-                    imageName: true,
-                    browseCategory: true,
-                },
-            },
-            buildGuide: {
-                select: {
-                    content: true,
-                    updatedAt: true,
-                },
-            },
-        },
+        include: buildInclude,
     });
 
-    return {
-        ...build,
-        buildData: build.buildData as unknown as BuildState,
-        buildGuide: build.buildGuide as BuildWithUser["buildGuide"],
-    };
+    return mapBuildResult(build);
 }
 
 // =============================================================================
@@ -197,31 +239,7 @@ export async function getBuildBySlug(
 ): Promise<BuildWithUser | null> {
     const build = await prisma.build.findUnique({
         where: { slug },
-        include: {
-            user: {
-                select: {
-                    id: true,
-                    name: true,
-                    username: true,
-                    image: true,
-                },
-            },
-            item: {
-                select: {
-                    id: true,
-                    uniqueName: true,
-                    name: true,
-                    imageName: true,
-                    browseCategory: true,
-                },
-            },
-            buildGuide: {
-                select: {
-                    content: true,
-                    updatedAt: true,
-                },
-            },
-        },
+        include: buildInclude,
     });
 
     if (!build) {
@@ -233,11 +251,7 @@ export async function getBuildBySlug(
         return null;
     }
 
-    return {
-        ...build,
-        buildData: build.buildData as unknown as BuildState,
-        buildGuide: build.buildGuide as BuildWithUser["buildGuide"],
-    };
+    return mapBuildResult(build);
 }
 
 /**
@@ -249,31 +263,7 @@ export async function getBuildById(
 ): Promise<BuildWithUser | null> {
     const build = await prisma.build.findUnique({
         where: { id },
-        include: {
-            user: {
-                select: {
-                    id: true,
-                    name: true,
-                    username: true,
-                    image: true,
-                },
-            },
-            item: {
-                select: {
-                    id: true,
-                    uniqueName: true,
-                    name: true,
-                    imageName: true,
-                    browseCategory: true,
-                },
-            },
-            buildGuide: {
-                select: {
-                    content: true,
-                    updatedAt: true,
-                },
-            },
-        },
+        include: buildInclude,
     });
 
     if (!build) {
@@ -285,11 +275,7 @@ export async function getBuildById(
         return null;
     }
 
-    return {
-        ...build,
-        buildData: build.buildData as unknown as BuildState,
-        buildGuide: build.buildGuide as BuildWithUser["buildGuide"],
-    };
+    return mapBuildResult(build);
 }
 
 /**
@@ -316,31 +302,7 @@ export async function getUserBuilds(
                 userId,
                 ...visibilityFilter,
             },
-            include: {
-                user: {
-                    select: {
-                        id: true,
-                        name: true,
-                        username: true,
-                        image: true,
-                    },
-                },
-                item: {
-                    select: {
-                        id: true,
-                        uniqueName: true,
-                        name: true,
-                        imageName: true,
-                        browseCategory: true,
-                    },
-                },
-                buildGuide: {
-                    select: {
-                        content: true,
-                        updatedAt: true,
-                    },
-                },
-            },
+            include: buildInclude,
             orderBy: getOrderBy(sortBy),
             skip,
             take: limit,
@@ -354,11 +316,7 @@ export async function getUserBuilds(
     ]);
 
     return {
-        builds: builds.map((b) => ({
-            ...b,
-            buildData: b.buildData as unknown as BuildState,
-            buildGuide: b.buildGuide as BuildWithUser["buildGuide"],
-        })),
+        builds: builds.map(mapBuildResult),
         total,
     };
 }
@@ -390,31 +348,7 @@ export async function getPublicBuildsForItem(
                     itemId: item.id,
                     visibility: "PUBLIC",
                 },
-                include: {
-                    user: {
-                        select: {
-                            id: true,
-                            name: true,
-                            username: true,
-                            image: true,
-                        },
-                    },
-                    item: {
-                        select: {
-                            id: true,
-                            uniqueName: true,
-                            name: true,
-                            imageName: true,
-                            browseCategory: true,
-                        },
-                    },
-                    buildGuide: {
-                        select: {
-                            content: true,
-                            updatedAt: true,
-                        },
-                    },
-                },
+                include: buildInclude,
                 orderBy: getOrderBy(sortBy),
                 skip,
                 take: limit,
@@ -428,11 +362,7 @@ export async function getPublicBuildsForItem(
         ]);
 
         return {
-            builds: builds.map((b) => ({
-                ...b,
-                buildData: b.buildData as unknown as BuildState,
-                buildGuide: b.buildGuide as BuildWithUser["buildGuide"],
-            })),
+            builds: builds.map(mapBuildResult),
             total,
         };
     } catch {
@@ -462,31 +392,7 @@ export async function getPublicBuilds(
     const [builds, total] = await Promise.all([
         prisma.build.findMany({
             where,
-            include: {
-                user: {
-                    select: {
-                        id: true,
-                        name: true,
-                        username: true,
-                        image: true,
-                    },
-                },
-                item: {
-                    select: {
-                        id: true,
-                        uniqueName: true,
-                        name: true,
-                        imageName: true,
-                        browseCategory: true,
-                    },
-                },
-                buildGuide: {
-                    select: {
-                        content: true,
-                        updatedAt: true,
-                    },
-                },
-            },
+            include: buildInclude,
             orderBy: getOrderBy(sortBy),
             skip,
             take: limit,
@@ -495,11 +401,7 @@ export async function getPublicBuilds(
     ]);
 
     return {
-        builds: builds.map((b) => ({
-            ...b,
-            buildData: b.buildData as unknown as BuildState,
-            buildGuide: b.buildGuide as BuildWithUser["buildGuide"],
-        })),
+        builds: builds.map(mapBuildResult),
         total,
     };
 }
@@ -545,54 +447,55 @@ export async function updateBuild(
         updateData.buildData = input.buildData as unknown as Prisma.JsonObject;
     }
 
-    if (input.guide !== undefined) {
+    // Handle guide summary and description
+    const hasGuideUpdate = input.guideSummary !== undefined || input.guideDescription !== undefined;
+    if (hasGuideUpdate) {
         updateData.buildGuide = {
             upsert: {
                 create: {
-                    content: JSON.parse(input.guide),
+                    summary: input.guideSummary ?? null,
+                    description: input.guideDescription ?? null,
                 },
                 update: {
-                    content: JSON.parse(input.guide),
+                    ...(input.guideSummary !== undefined && { summary: input.guideSummary }),
+                    ...(input.guideDescription !== undefined && { description: input.guideDescription }),
                 },
             },
+        };
+    }
+
+    // Handle partner builds update
+    if (input.partnerBuildIds !== undefined) {
+        // Verify all partner builds belong to the same user
+        if (input.partnerBuildIds.length > 0) {
+            const partnerBuilds = await prisma.build.findMany({
+                where: {
+                    id: { in: input.partnerBuildIds },
+                    userId: userId, // Must be own builds
+                },
+                select: { id: true },
+            });
+
+            const validIds = new Set(partnerBuilds.map(b => b.id));
+            const invalidIds = input.partnerBuildIds.filter(id => !validIds.has(id));
+
+            if (invalidIds.length > 0) {
+                throw new Error("Can only link to your own builds");
+            }
+        }
+
+        updateData.partnerBuilds = {
+            set: input.partnerBuildIds.map(id => ({ id })),
         };
     }
 
     const build = await prisma.build.update({
         where: { id: buildId },
         data: updateData,
-        include: {
-            user: {
-                select: {
-                    id: true,
-                    name: true,
-                    username: true,
-                    image: true,
-                },
-            },
-            item: {
-                select: {
-                    id: true,
-                    uniqueName: true,
-                    name: true,
-                    imageName: true,
-                    browseCategory: true,
-                },
-            },
-            buildGuide: {
-                select: {
-                    content: true,
-                    updatedAt: true,
-                },
-            },
-        },
+        include: buildInclude,
     });
 
-    return {
-        ...build,
-        buildData: build.buildData as unknown as BuildState,
-        buildGuide: build.buildGuide as BuildWithUser["buildGuide"],
-    };
+    return mapBuildResult(build);
 }
 
 /**
@@ -605,6 +508,54 @@ export async function incrementBuildViewCount(buildId: string): Promise<void> {
             viewCount: { increment: 1 },
         },
     });
+}
+
+/**
+ * Get user's builds for partner build selector
+ * Returns minimal info needed for the selector UI
+ */
+export async function getUserBuildsForPartnerSelector(
+    userId: string
+): Promise<{
+    id: string;
+    slug: string;
+    name: string;
+    item: {
+        name: string;
+        imageName: string | null;
+        browseCategory: string;
+    };
+    buildData: {
+        formaCount: number;
+    };
+}[]> {
+    const builds = await prisma.build.findMany({
+        where: { userId },
+        select: {
+            id: true,
+            slug: true,
+            name: true,
+            buildData: true,
+            item: {
+                select: {
+                    name: true,
+                    imageName: true,
+                    browseCategory: true,
+                },
+            },
+        },
+        orderBy: { name: "asc" },
+    });
+
+    return builds.map((b) => ({
+        id: b.id,
+        slug: b.slug,
+        name: b.name,
+        item: b.item,
+        buildData: {
+            formaCount: (b.buildData as { formaCount?: number })?.formaCount ?? 0,
+        },
+    }));
 }
 
 // =============================================================================

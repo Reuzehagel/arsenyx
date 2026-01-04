@@ -1,104 +1,180 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Pen } from "lucide-react";
-import { SerializedEditorState } from "lexical";
 import { GuideReader } from "@/components/guides/guide-reader";
-import { GuideEditorDialog } from "@/components/build-editor/guide-editor-dialog";
+import {
+  GuideEditorDialog,
+  type GuideEditorData,
+} from "@/components/build-editor/guide-editor-dialog";
+import { PartnerBuildsSection } from "@/components/build/partner-builds-section";
 import { Button } from "@/components/ui/button";
-import { updateBuildGuideAction } from "@/app/actions/builds";
+import {
+  updateBuildGuideAction,
+  getUserBuildsForPartnerSelectorAction,
+} from "@/app/actions/builds";
+import type { PartnerBuildOption } from "@/components/build-editor/partner-build-selector";
+import type { PartnerBuild } from "@/components/build-editor/partner-build-card";
+import type { VisiblePartnerBuild } from "@/components/build/partner-builds-section";
 
 interface BuildGuideSectionProps {
-    buildId: string;
-    initialContent: Record<string, unknown> | null;
-    updatedAt?: Date;
-    isOwner: boolean;
+  buildId: string;
+  initialSummary?: string | null;
+  initialDescription?: string | null;
+  initialPartnerBuilds?: VisiblePartnerBuild[];
+  updatedAt?: Date;
+  isOwner: boolean;
 }
 
 export function BuildGuideSection({
-    buildId,
-    initialContent,
-    updatedAt,
-    isOwner,
+  buildId,
+  initialSummary,
+  initialDescription,
+  initialPartnerBuilds = [],
+  updatedAt,
+  isOwner,
 }: BuildGuideSectionProps) {
-    const router = useRouter();
-    const [content, setContent] = useState<Record<string, unknown> | null>(initialContent);
-    const [lastUpdated, setLastUpdated] = useState<Date | undefined>(updatedAt);
-    const [key, setKey] = useState(0); // Force re-render of editor
+  const router = useRouter();
+  const [summary, setSummary] = useState(initialSummary ?? null);
+  const [description, setDescription] = useState(initialDescription ?? null);
+  const [partnerBuilds, setPartnerBuilds] =
+    useState<VisiblePartnerBuild[]>(initialPartnerBuilds);
+  const [lastUpdated, setLastUpdated] = useState<Date | undefined>(updatedAt);
+  const [key, setKey] = useState(0);
+  const [availableBuilds, setAvailableBuilds] = useState<PartnerBuildOption[]>(
+    []
+  );
 
-    const handleSave = (payload: { guide: string }) => {
-        // Optimistic update
-        try {
-            const newContent = JSON.parse(payload.guide);
-            setContent(newContent);
-            setLastUpdated(new Date()); // Optimistic update
-            setKey(prev => prev + 1); // Force re-render if needed
-        } catch (error) {
-            console.error("Failed to parse guide content:", error);
+  // Load available builds for the editor
+  useEffect(() => {
+    if (isOwner) {
+      getUserBuildsForPartnerSelectorAction().then((result) => {
+        if (result.success && result.builds) {
+          setAvailableBuilds(result.builds);
         }
+      });
+    }
+  }, [isOwner]);
 
-        // Background save
-        updateBuildGuideAction(buildId, payload.guide)
-            .then((result) => {
-                if (result.success && result.build?.buildGuide) {
-                    router.refresh();
-                } else {
-                    console.error("Failed to save guide:", result.error);
-                    // TODO: Show error toast and potentially revert state
+  const handleSave = async (data: GuideEditorData) => {
+    // Optimistic update
+    setSummary(data.summary || null);
+    setDescription(data.description || null);
+    setLastUpdated(new Date());
+    setKey((prev) => prev + 1);
+
+    // Update partner builds from available builds
+    const newPartnerBuilds = data.partnerBuildIds
+      .map((id) => {
+        const build = availableBuilds.find((b) => b.id === id);
+        if (!build) return null;
+        return {
+          id: build.id,
+          slug: build.slug,
+          name: build.name,
+          item: build.item,
+          buildData: { formaCount: build.buildData.formaCount },
+        } as VisiblePartnerBuild;
+      })
+      .filter((b): b is VisiblePartnerBuild => b !== null);
+    setPartnerBuilds(newPartnerBuilds);
+
+    // Background save
+    const result = await updateBuildGuideAction(buildId, {
+      summary: data.summary,
+      description: data.description,
+      partnerBuildIds: data.partnerBuildIds,
+    });
+
+    if (result.success) {
+      router.refresh();
+    } else {
+      console.error("Failed to save guide:", result.error);
+      // TODO: Show error toast
+    }
+  };
+
+  const hasContent = summary || description || partnerBuilds.length > 0;
+
+  if (!hasContent && !isOwner) return null;
+
+  // Convert partner builds to the format expected by editor
+  const partnerBuildsForEditor: PartnerBuild[] = partnerBuilds
+    .filter((b) => !b.isDeleted && b.item && b.buildData)
+    .map((b) => ({
+      id: b.id,
+      slug: b.slug,
+      name: b.name,
+      item: b.item!,
+      buildData: b.buildData!,
+    }));
+
+  return (
+    <div className="container pb-4">
+      <div className="bg-card/50 border rounded-xl overflow-hidden">
+        <div className="border-b bg-muted/30 px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h2 className="text-lg font-semibold">Build Guide</h2>
+            {isOwner && (
+              <GuideEditorDialog
+                key={`edit-${key}`}
+                buildId={buildId}
+                initialSummary={summary}
+                initialDescription={description}
+                initialPartnerBuilds={partnerBuildsForEditor}
+                availableBuilds={availableBuilds}
+                onSave={handleSave}
+                trigger={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 hover:bg-background"
+                  >
+                    <Pen className="w-4 h-4" />
+                    <span className="sr-only">Edit Guide</span>
+                  </Button>
                 }
-            })
-            .catch((error) => {
-                console.error("Failed to save guide:", error);
-            });
-    };
-
-    if (!content && !isOwner) return null;
-
-    return (
-        <div className="container pb-4">
-            <div className="bg-card/50 border rounded-xl overflow-hidden">
-                <div className="border-b bg-muted/30 px-6 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <h2 className="text-lg font-semibold">Build Guide</h2>
-                        {isOwner && (
-                            <GuideEditorDialog
-                                key={`edit-${key}`} // Force fresh state on re-open
-                                buildId={buildId}
-                                initialGuide={content ? JSON.stringify(content) : null}
-                                onSaved={handleSave}
-                                trigger={
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-background">
-                                        <Pen className="w-4 h-4" />
-                                        <span className="sr-only">Edit Guide</span>
-                                    </Button>
-                                }
-                            />
-                        )}
-                    </div>
-                    {lastUpdated && (
-                        <span className="text-xs text-muted-foreground">
-                            Last updated {format(lastUpdated, "P")}
-                        </span>
-                    )}
-                </div>
-                <div className="p-6">
-                    {content ? (
-                        <GuideReader
-                            key={lastUpdated?.toISOString()}
-                            content={content as unknown as SerializedEditorState}
-                        />
-                    ) : (
-                        <div className="text-center py-8 text-muted-foreground">
-                            <p>No guide written yet.</p>
-                            {isOwner && (
-                                <p className="text-sm mt-2">Click the edit button above to start writing.</p>
-                            )}
-                        </div>
-                    )}
-                </div>
-            </div>
+              />
+            )}
+          </div>
+          {lastUpdated && (
+            <span className="text-xs text-muted-foreground">
+              Last updated {format(lastUpdated, "P")}
+            </span>
+          )}
         </div>
-    );
+        <div className="p-6 space-y-6">
+          {hasContent ? (
+            <>
+              {/* Summary */}
+              {summary && (
+                <div className="text-muted-foreground">{summary}</div>
+              )}
+
+              {/* Description */}
+              {description && (
+                <GuideReader key={lastUpdated?.toISOString()} content={description} />
+              )}
+
+              {/* Partner Builds */}
+              {partnerBuilds.length > 0 && (
+                <PartnerBuildsSection partnerBuilds={partnerBuilds} />
+              )}
+            </>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>No guide written yet.</p>
+              {isOwner && (
+                <p className="text-sm mt-2">
+                  Click the edit button above to start writing.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }

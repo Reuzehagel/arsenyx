@@ -39,6 +39,7 @@ export {
   getPublicBuilds,
   incrementBuildViewCount,
   generateSlug,
+  getUserBuildsForPartnerSelector,
 } from "./builds";
 
 export type {

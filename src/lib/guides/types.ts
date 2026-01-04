@@ -1,5 +1,4 @@
 // Guide content model types
-import { SerializedEditorState } from "lexical";
 
 // Guide categories
 export const GUIDE_CATEGORIES = [
@@ -63,7 +62,7 @@ export interface Guide {
         name: string;
         avatar?: string;
     };
-    content: SerializedEditorState;
+    content: string; // Markdown content
     status: GuideStatus;
     isCurated?: boolean; // true for featured/official guides
     relatedBuildIds?: string[];
@@ -96,7 +95,7 @@ export interface GuideInput {
     category: GuideCategory;
     tags: string[];
     coverImage?: string;
-    content: SerializedEditorState;
+    content: string; // Markdown content
     status: GuideStatus;
     relatedBuildIds?: string[];
     relatedGuideIds?: string[];

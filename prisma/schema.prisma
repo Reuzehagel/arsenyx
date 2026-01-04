@@ -257,6 +257,10 @@ model Build {
   linkedTo    BuildLink[]     @relation("LinkedToBuild")
   guideEmbeds GuideEmbed[]
 
+  // Partner builds (many-to-many self-relation)
+  partnerBuilds Build[] @relation("PartnerBuilds")
+  partneredBy   Build[] @relation("PartnerBuilds")
+
   // Build guide (rich text explanation for this specific build)
   buildGuide BuildGuide?
 
@@ -268,15 +272,16 @@ model Build {
   @@map("builds")
 }
 
-// Build guide - rich text attached to a build
+// Build guide - markdown-based guide attached to a build
 
 model BuildGuide {
   id      String @id @default(cuid())
   buildId String @unique
   build   Build  @relation(fields: [buildId], references: [id], onDelete: Cascade)
 
-  // Lexical editor serialized state
-  content Json
+  // Guide content
+  summary     String? @db.VarChar(400) // Short summary, 400 char limit
+  description String? @db.Text // Raw markdown
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
