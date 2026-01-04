@@ -46,6 +46,7 @@ next-env.d.ts
 !README.md
 !IMPLEMENTATION_PLAN.md
 !CLAUDE.md
+!MOBILE_SUPPORT_PLAN.md
 !docs/*.md
 /src/generated/prisma
 
