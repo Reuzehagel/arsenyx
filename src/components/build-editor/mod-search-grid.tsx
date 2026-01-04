@@ -123,13 +123,15 @@ function getModSearchableStats(mod: Mod): string {
 /**
  * Expands a search query using aliases.
  * Returns an array of terms to match against.
+ * Only expands aliases when a word exactly matches (not substrings).
  */
 function expandSearchQuery(query: string): string[] {
   const terms = [query];
-  const queryLower = query.toLowerCase();
+  const queryWords = query.toLowerCase().split(/\s+/);
 
   for (const [alias, expansions] of Object.entries(SEARCH_ALIASES)) {
-    if (queryLower === alias || queryLower.includes(alias)) {
+    // Only expand if a whole word matches the alias exactly
+    if (queryWords.includes(alias)) {
       terms.push(...expansions);
     }
   }
