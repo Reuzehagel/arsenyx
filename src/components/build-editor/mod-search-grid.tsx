@@ -390,20 +390,20 @@ export function ModSearchGrid({
         </div>
       </div>
 
-      {/* Responsive Mod Grid - Horizontal scrolling with 2 rows */}
+      {/* Responsive Mod Grid - Horizontal scrolling with responsive rows */}
       <div
         ref={gridRef}
-        className="grid gap-x-4 gap-y-12 overflow-x-auto overflow-y-hidden pt-2 pb-8 px-2 max-w-full h-72 content-center"
+        className="grid gap-x-2 sm:gap-x-4 gap-y-8 sm:gap-y-12 overflow-x-auto overflow-y-hidden pt-2 pb-8 px-2 max-w-full h-auto sm:h-72 content-center"
         style={{
           gridTemplateRows: "repeat(2, min-content)",
           gridAutoFlow: "column",
-          gridAutoColumns: "200px",
+          gridAutoColumns: "160px",
         }}
         onKeyDown={handleKeyDown}
         tabIndex={0}
       >
         {filteredMods.length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-muted-foreground text-sm w-[200px]">
+          <div className="flex items-center justify-center h-32 text-muted-foreground text-sm w-[160px]">
             No mods found
           </div>
         ) : (

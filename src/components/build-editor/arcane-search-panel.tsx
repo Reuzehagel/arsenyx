@@ -252,14 +252,14 @@ export function ArcaneSearchPanel({
         </div>
       </div>
 
-      {/* Arcane Grid - Horizontal scrolling with 2 rows */}
+      {/* Arcane Grid - Horizontal scrolling with responsive rows */}
       <div
         ref={gridRef}
-        className="grid gap-3 overflow-x-auto overflow-y-hidden pt-2 pb-8 px-2 max-w-full h-72 content-center"
+        className="grid gap-2 sm:gap-3 overflow-x-auto overflow-y-hidden pt-2 pb-8 px-2 max-w-full h-auto sm:h-72 content-center"
         style={{
           gridTemplateRows: "repeat(2, min-content)",
           gridAutoFlow: "column",
-          gridAutoColumns: "110px",
+          gridAutoColumns: "100px",
         }}
         onKeyDown={handleKeyDown}
         tabIndex={0}

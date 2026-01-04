@@ -103,9 +103,9 @@ export function ModGrid({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex flex-col gap-4 items-center">
+      <div className="flex flex-col gap-2 sm:gap-4 items-center">
           {/* Row 1: Aura & Exilus */}
-          <div className="flex gap-4 w-full justify-center">
+          <div className="flex gap-2 sm:gap-4 w-full justify-center">
             {isWarframe && auraSlot && (
               <ModSlotCard
                 slot={auraSlot}
@@ -115,7 +115,7 @@ export function ModGrid({
                 onChangeRank={(rank) => onChangeRank(auraSlot.id, rank)}
                 onApplyForma={(polarity) => onApplyForma(auraSlot.id, polarity)}
                 label="Aura"
-                className="w-[184px] h-[100px]"
+                className="w-[120px] h-[80px] sm:w-[150px] sm:h-[90px] md:w-[184px] md:h-[100px]"
                 setCount={
                   auraSlot.mod?.modSet ? setCounts[auraSlot.mod.modSet] : 0
                 }
@@ -131,7 +131,7 @@ export function ModGrid({
               onChangeRank={(rank) => onChangeRank(exilusSlot.id, rank)}
               onApplyForma={(polarity) => onApplyForma(exilusSlot.id, polarity)}
               label="Exilus"
-              className="w-[184px] h-[100px]"
+              className="w-[120px] h-[80px] sm:w-[150px] sm:h-[90px] md:w-[184px] md:h-[100px]"
               setCount={
                 exilusSlot.mod?.modSet ? setCounts[exilusSlot.mod.modSet] : 0
               }
@@ -141,7 +141,7 @@ export function ModGrid({
           </div>
 
           {/* Row 2: Normal Slots 1-4 */}
-          <div className="flex gap-4 w-full justify-center">
+          <div className="grid grid-cols-2 sm:flex sm:gap-4 gap-2 w-full justify-center">
             {normalSlots.slice(0, 4).map((slot) => (
               <ModSlotCard
                 key={slot.id}
@@ -151,7 +151,7 @@ export function ModGrid({
                 onRemove={() => onRemoveMod(slot.id)}
                 onChangeRank={(rank) => onChangeRank(slot.id, rank)}
                 onApplyForma={(polarity) => onApplyForma(slot.id, polarity)}
-                className="w-[184px] h-[100px]"
+                className="w-full sm:w-[150px] sm:h-[90px] md:w-[184px] md:h-[100px] h-[80px]"
                 setCount={slot.mod?.modSet ? setCounts[slot.mod.modSet] : 0}
                 draggedMod={draggedMod}
                 readOnly={readOnly}
@@ -160,7 +160,7 @@ export function ModGrid({
           </div>
 
           {/* Row 3: Normal Slots 5-8 */}
-          <div className="flex gap-4 w-full justify-center">
+          <div className="grid grid-cols-2 sm:flex sm:gap-4 gap-2 w-full justify-center">
             {normalSlots.slice(4, 8).map((slot) => (
               <ModSlotCard
                 key={slot.id}
@@ -170,7 +170,7 @@ export function ModGrid({
                 onRemove={() => onRemoveMod(slot.id)}
                 onChangeRank={(rank) => onChangeRank(slot.id, rank)}
                 onApplyForma={(polarity) => onApplyForma(slot.id, polarity)}
-                className="w-[184px] h-[100px]"
+                className="w-full sm:w-[150px] sm:h-[90px] md:w-[184px] md:h-[100px] h-[80px]"
                 setCount={slot.mod?.modSet ? setCounts[slot.mod.modSet] : 0}
                 draggedMod={draggedMod}
                 readOnly={readOnly}
@@ -180,7 +180,7 @@ export function ModGrid({
 
           {/* Row 4: Arcanes */}
           {arcaneSlots.length > 0 && (
-            <div className="flex gap-6 w-full justify-center mt-2">
+            <div className="flex gap-3 sm:gap-6 w-full justify-center mt-2">
               {arcaneSlots.map((arcane, index) => (
                 <ArcaneSlotCard
                   key={`arcane-${index}`}
@@ -190,7 +190,7 @@ export function ModGrid({
                   onSelect={() => onSelectSlot(`arcane-${index}`)}
                   onRemove={() => onRemoveArcane?.(index)}
                   onChangeRank={(rank) => onChangeArcaneRank?.(index, rank)}
-                  className="w-[140px] h-[100px]"
+                  className="w-[100px] h-[80px] sm:w-[120px] sm:h-[90px] md:w-[140px] md:h-[100px]"
                   draggedArcane={draggedArcane}
                   fullArcaneData={
                     arcane

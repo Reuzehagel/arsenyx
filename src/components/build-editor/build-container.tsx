@@ -1256,9 +1256,9 @@ export function BuildContainer({
       <div className="container py-6">
         {/* Header Card */}
         <div className="bg-card border rounded-lg p-4 mb-4">
-          <div className="flex gap-4 items-center justify-between">
+          <div className="flex flex-col gap-4 md:flex-row md:gap-4 md:items-center md:justify-between">
             <div className="flex gap-4 items-center">
-              <div className="relative w-24 h-24 bg-muted/10 rounded-md flex items-center justify-center overflow-hidden">
+              <div className="relative w-16 h-16 md:w-24 md:h-24 bg-muted/10 rounded-md flex items-center justify-center overflow-hidden shrink-0">
                 <Image
                   src={getImageUrl(item.imageName)}
                   alt={item.name}
@@ -1267,15 +1267,13 @@ export function BuildContainer({
                 />
               </div>
               <div className="flex flex-col justify-center gap-2">
-                <h1 className="text-2xl font-bold tracking-tight">
+                <h1 className="text-xl md:text-2xl font-bold tracking-tight">
                   {item.name}
                 </h1>
                 <span className="text-sm text-muted-foreground">
                   {categoryLabel}
                 </span>
                 <div className="flex items-center gap-3">
-                  {/* Capacity indicator */}
-
                   {/* Endo cost indicator */}
                   <Badge
                     variant="secondary"
@@ -1297,10 +1295,10 @@ export function BuildContainer({
                 </div>
               </div>
             </div>
-            {/* Build Actions - Top Right */}
+            {/* Build Actions */}
             {/* Show Edit button for owners in view mode */}
             {isOwner && !isEditMode && savedBuildId && (
-              <div className="self-start flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <Button
                   variant="default"
                   size="sm"
@@ -1314,61 +1312,65 @@ export function BuildContainer({
             )}
             {/* Show full editing controls when in edit mode */}
             {canEdit && (
-              <div className="self-start flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
                 {/* Build Name Input (for authenticated users) */}
                 {isAuthenticated && (
                   <Input
                     value={buildName}
                     onChange={(e) => setBuildName(e.target.value)}
                     placeholder="Build name..."
-                    className="w-48 h-8 text-sm"
+                    className="w-full sm:w-48 h-8 text-sm"
                   />
                 )}
-                {isAuthenticated ? (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => setPublishDialogOpen(true)}
-                    disabled={saveStatus === "saving"}
-                  >
-                    {saveStatus === "saving" ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : buildId ? (
+                <div className="flex gap-2">
+                  {isAuthenticated ? (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="gap-2 flex-1 sm:flex-initial"
+                      onClick={() => setPublishDialogOpen(true)}
+                      disabled={saveStatus === "saving"}
+                    >
+                      {saveStatus === "saving" ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : buildId ? (
+                        <Save className="w-4 h-4" />
+                      ) : (
+                        <UploadCloud className="w-4 h-4" />
+                      )}
+                      <span className="hidden sm:inline">
+                        {saveStatus === "saving"
+                          ? "Saving..."
+                          : saveStatus === "saved"
+                          ? "Saved!"
+                          : saveStatus === "error"
+                          ? "Error"
+                          : buildId
+                          ? "Update"
+                          : "Publish"}
+                      </span>
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 flex-1 sm:flex-initial"
+                      onClick={handleCopyBuild}
+                    >
                       <Save className="w-4 h-4" />
-                    ) : (
-                      <UploadCloud className="w-4 h-4" />
-                    )}
-                    {saveStatus === "saving"
-                      ? "Saving..."
-                      : saveStatus === "saved"
-                      ? "Saved!"
-                      : saveStatus === "error"
-                      ? "Error"
-                      : buildId
-                      ? "Update"
-                      : "Publish"}
-                  </Button>
-                ) : (
+                      <span className="hidden sm:inline">{showCopied ? "Copied!" : "Copy Link"}</span>
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
                     className="gap-2"
-                    onClick={handleCopyBuild}
+                    onClick={handleCancel}
                   >
-                    <Save className="w-4 h-4" />
-                    {showCopied ? "Copied!" : "Copy Link"}
+                    <X className="w-4 h-4" />
+                    <span className="hidden sm:inline">Cancel</span>
                   </Button>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  onClick={handleCancel}
-                >
-                  <X className="w-4 h-4" />
-                  Cancel
-                </Button>
+                </div>
               </div>
             )}
           </div>
@@ -1384,10 +1386,10 @@ export function BuildContainer({
 
         {/* Main Content: Sidebar + Mod Grid (same height) + Search below */}
         <div className="flex flex-col gap-4">
-          {/* Top row: Sidebar + Mod Grid */}
-          <div className="flex gap-4 items-stretch">
-            {/* Left Sidebar (Stats) */}
-            <div className="w-[260px] shrink-0 bg-card border rounded-lg">
+          {/* Top row: Sidebar + Mod Grid - Stack on mobile, side-by-side on desktop */}
+          <div className="flex flex-col lg:flex-row gap-4 items-stretch">
+            {/* Left Sidebar (Stats) - Full width on mobile, fixed width on desktop */}
+            <div className="w-full lg:w-[260px] lg:shrink-0 bg-card border rounded-lg">
               <ItemSidebar
                 buildState={buildState}
                 capacityStatus={capacityStatus}
@@ -1404,8 +1406,8 @@ export function BuildContainer({
               />
             </div>
 
-            {/* Mod Slots Grid */}
-            <div className="flex-1 bg-card border rounded-lg p-4 min-w-0">
+            {/* Mod Slots Grid - Full width on mobile, flex-1 on desktop */}
+            <div className="flex-1 bg-card border rounded-lg p-2 sm:p-4 min-w-0">
               <ModGrid
                 auraSlot={buildState.auraSlot}
                 exilusSlot={buildState.exilusSlot}
