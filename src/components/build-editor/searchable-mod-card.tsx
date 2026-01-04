@@ -28,10 +28,10 @@ export function SearchableModCard({
   const maxRank = mod.fusionLimit ?? 0;
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-      id: `search-${mod.uniqueName}`,
-      data: { mod, rank: maxRank, type: "search-mod" },
-      disabled: isDisabled,
-    });
+    id: `search-${mod.uniqueName}`,
+    data: { mod, rank: maxRank, type: "search-mod" },
+    disabled: isDisabled,
+  });
 
   const style = {
     // Hide the original element when dragging - DragOverlay shows the ghost

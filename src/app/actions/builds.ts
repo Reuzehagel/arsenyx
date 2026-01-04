@@ -107,7 +107,7 @@ export async function saveBuildAction(
       };
     }
 
-// Create new build
+    // Create new build
     const createData: CreateBuildInput = {
       itemUniqueName: input.itemUniqueName,
       name: input.name,
@@ -286,7 +286,10 @@ export async function updateBuildGuideAction(
     }
 
     // Validate partner builds count
-    if (input.partnerBuildIds && input.partnerBuildIds.length > MAX_PARTNER_BUILDS) {
+    if (
+      input.partnerBuildIds &&
+      input.partnerBuildIds.length > MAX_PARTNER_BUILDS
+    ) {
       return {
         success: false,
         error: `Maximum ${MAX_PARTNER_BUILDS} partner builds allowed`,

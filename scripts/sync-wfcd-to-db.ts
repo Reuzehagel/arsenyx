@@ -131,12 +131,14 @@ function shouldIncludeMod(mod: WfcdMod): boolean {
   if (!mod.name) return false;
   if (mod.name.includes("Riven Mod")) return false;
   if (!mod.compatName && !mod.type) return false;
-  if (mod.baseDrain === undefined || mod.fusionLimit === undefined) return false;
+  if (mod.baseDrain === undefined || mod.fusionLimit === undefined)
+    return false;
 
   const uniqueName = mod.uniqueName ?? "";
   if (uniqueName.includes("/Beginner/")) return false;
   if (uniqueName.endsWith("Intermediate")) return false;
-  if (uniqueName.endsWith("Expert") && !mod.name.includes("Primed")) return false;
+  if (uniqueName.endsWith("Expert") && !mod.name.includes("Primed"))
+    return false;
   if (uniqueName.includes("/Nemesis/")) return false;
   if (uniqueName.endsWith("SubMod")) return false;
 

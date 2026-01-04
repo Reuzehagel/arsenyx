@@ -31,7 +31,13 @@ const RARITY_ORDER: Record<string, number> = {
   Common: 3,
 };
 
-const RARITY_OPTIONS = ["All", "Legendary", "Rare", "Uncommon", "Common"] as const;
+const RARITY_OPTIONS = [
+  "All",
+  "Legendary",
+  "Rare",
+  "Uncommon",
+  "Common",
+] as const;
 const SORT_OPTIONS = ["Name", "Rarity"] as const;
 
 type RarityFilter = (typeof RARITY_OPTIONS)[number];
@@ -69,9 +75,7 @@ export function ArcaneSearchPanel({
     // Filter by search query
     if (deferredSearchQuery.trim()) {
       const query = deferredSearchQuery.toLowerCase();
-      arcanes = arcanes.filter((a) =>
-        a.name.toLowerCase().includes(query)
-      );
+      arcanes = arcanes.filter((a) => a.name.toLowerCase().includes(query));
     }
 
     // Filter by rarity
@@ -125,7 +129,10 @@ export function ArcaneSearchPanel({
       const isInputFocused = e.target === inputRef.current;
 
       // Select first item if nothing is selected
-      if (selectedIndex === -1 && ["ArrowDown", "ArrowUp", "ArrowRight", "ArrowLeft"].includes(e.key)) {
+      if (
+        selectedIndex === -1 &&
+        ["ArrowDown", "ArrowUp", "ArrowRight", "ArrowLeft"].includes(e.key)
+      ) {
         e.preventDefault();
         setSelectedIndex(0);
         return;
@@ -177,7 +184,13 @@ export function ArcaneSearchPanel({
           break;
       }
     },
-    [filteredArcanes, boundedSelectedIndex, isArcaneUsed, handleSelectArcane, selectedIndex]
+    [
+      filteredArcanes,
+      boundedSelectedIndex,
+      isArcaneUsed,
+      handleSelectArcane,
+      selectedIndex,
+    ]
   );
 
   // Scroll selected item into view
@@ -294,10 +307,10 @@ function SearchableArcaneCard({
   const maxRank = arcane.levelStats ? arcane.levelStats.length - 1 : 5;
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-      id: `search-arcane-${arcane.uniqueName}`,
-      data: { arcane, rank: maxRank, type: "search-arcane" },
-      disabled: isDisabled,
-    });
+    id: `search-arcane-${arcane.uniqueName}`,
+    data: { arcane, rank: maxRank, type: "search-arcane" },
+    disabled: isDisabled,
+  });
 
   const style = {
     // Hide the original element when dragging - DragOverlay shows the ghost

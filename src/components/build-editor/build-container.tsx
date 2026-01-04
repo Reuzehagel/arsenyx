@@ -327,9 +327,7 @@ export function BuildContainer({
 
   // Build metadata for database persistence
   const [buildId, setBuildId] = useState<string | undefined>(savedBuildId);
-  const [, setBuildSlug] = useState<string | undefined>(
-    savedBuildSlug
-  );
+  const [, setBuildSlug] = useState<string | undefined>(savedBuildSlug);
   const [buildName, setBuildName] = useState<string>(
     importedBuild?.buildName || `${item.name} Build`
   );

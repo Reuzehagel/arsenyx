@@ -95,16 +95,15 @@ function ArcaneCardComponent({
 
   // Get stats for tooltip
   const stats = getArcaneStats(arcane, currentRank);
-  const formattedStats = stats
-    .map((s) => s.replace(/\\n/g, "\n"))
-    .join("\n");
+  const formattedStats = stats.map((s) => s.replace(/\\n/g, "\n")).join("\n");
 
   const cardContent = (
     <div
       ref={cardRef}
       className={cn(
         "relative w-[140px] h-[100px] flex flex-col items-center select-none rounded-md overflow-hidden bg-card/80",
-        isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background",
+        isSelected &&
+          "ring-2 ring-primary ring-offset-1 ring-offset-background",
         className
       )}
       onMouseEnter={() => setIsHovered(true)}
@@ -140,18 +139,14 @@ function ArcaneCardComponent({
   return (
     <TooltipProvider>
       <Tooltip delayDuration={200}>
-        <TooltipTrigger asChild>
-          {cardContent}
-        </TooltipTrigger>
+        <TooltipTrigger asChild>{cardContent}</TooltipTrigger>
         <TooltipContent
           side="bottom"
           className="max-w-[280px] p-3"
           sideOffset={4}
         >
           <div className="space-y-2">
-            <div className="font-medium">
-              {arcane.name}
-            </div>
+            <div className="font-medium">{arcane.name}</div>
             <div className="text-[10px] uppercase opacity-70">
               {rarity} • Rank {currentRank}
             </div>
