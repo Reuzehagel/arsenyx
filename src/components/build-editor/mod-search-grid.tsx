@@ -174,13 +174,13 @@ export function ModSearchGrid({
     let mods = [...availableMods];
 
     // Filter by slot type
+    // Note: Aura mods are always shown in search results and auto-snap to the aura slot when clicked
     if (slotType === "aura") {
       mods = mods.filter((m) => m.compatName?.toUpperCase() === "AURA");
     } else if (slotType === "exilus") {
       mods = mods.filter((m) => m.isExilus);
-    } else if (slotType === "normal") {
-      mods = mods.filter((m) => m.compatName?.toUpperCase() !== "AURA");
     }
+    // Normal slot: show all mods including aura (they auto-snap to aura slot)
 
     // Filter by search query (with keyword aliases and stat matching)
     if (deferredSearchQuery.trim()) {

@@ -926,9 +926,13 @@ export function BuildContainer({
   }, []);
 
   // Place a mod in the active slot
+  // Aura mods auto-snap to the aura slot regardless of which slot is active
   const handlePlaceMod = useCallback(
     (mod: Mod, rank: number = mod.fusionLimit) => {
-      if (!activeSlotId) return;
+      const isAuraMod = mod.compatName?.toUpperCase() === "AURA";
+
+      // Aura mods always go to aura slot, other mods require an active slot
+      if (!isAuraMod && !activeSlotId) return;
 
       const placedMod: PlacedMod = {
         uniqueName: mod.uniqueName,
@@ -949,12 +953,18 @@ export function BuildContainer({
       setBuildState((prev) => {
         const newState = { ...prev };
 
-        // Find and update the slot
-        if (activeSlotId.startsWith("aura") && newState.auraSlot) {
+        // Aura mods always go to the aura slot
+        if (isAuraMod && newState.auraSlot) {
           newState.auraSlot = { ...newState.auraSlot, mod: placedMod };
-        } else if (activeSlotId.startsWith("exilus")) {
+          return newState;
+        }
+
+        // Find and update the slot
+        if (activeSlotId?.startsWith("aura") && newState.auraSlot) {
+          newState.auraSlot = { ...newState.auraSlot, mod: placedMod };
+        } else if (activeSlotId?.startsWith("exilus")) {
           newState.exilusSlot = { ...newState.exilusSlot, mod: placedMod };
-        } else {
+        } else if (activeSlotId) {
           const slotIndex = parseInt(activeSlotId.replace("normal-", ""));
           if (!isNaN(slotIndex)) {
             newState.normalSlots = [...newState.normalSlots];
@@ -968,8 +978,11 @@ export function BuildContainer({
         return newState;
       });
 
+      // Don't change slot selection if placing an aura mod
+      if (isAuraMod) return;
+
       // Auto-advance to next slot
-      const currentIndex = parseInt(activeSlotId.replace("normal-", ""));
+      const currentIndex = parseInt(activeSlotId?.replace("normal-", "") ?? "");
       if (!isNaN(currentIndex) && currentIndex < 7) {
         setActiveSlotId(`normal-${currentIndex + 1}`);
       } else {
@@ -1383,6 +1396,7 @@ export function BuildContainer({
                 onClearBuild={handleClearBuild}
                 showCopied={showCopied}
                 itemStats={extractItemStats(item)}
+                item={item}
                 readOnly={!canEdit}
                 onHelminthAbilityChange={handleHelminthAbilityChange}
                 onPlaceShard={handlePlaceShard}

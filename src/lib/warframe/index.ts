@@ -12,6 +12,13 @@ export * from "./shards";
 export * from "./mod-card-config";
 export * from "./mod-variants";
 
+// Stats calculation system (client-safe)
+export * from "./stat-types";
+export * from "./stat-caps";
+export * from "./stat-parser";
+export * from "./aura-effects";
+export * from "./stats-calculator";
+
 // Server-only exports should be imported directly:
 // - Static JSON (default): import { getItemsByCategory, ... } from "@/lib/warframe/items";
 // - Unified API with feature flag: import { getItemsByCategory, ... } from "@/lib/warframe/data";

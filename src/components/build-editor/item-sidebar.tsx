@@ -7,10 +7,14 @@ import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { getImageUrl } from "@/lib/warframe/images";
-import type { BuildState, HelminthAbility, PlacedShard } from "@/lib/warframe/types";
+import type { BuildState, HelminthAbility, PlacedShard, BrowseableItem } from "@/lib/warframe/types";
 import type { CapacityStatus } from "@/lib/warframe/capacity";
+import { useCalculatedStats } from "@/hooks/use-calculated-stats";
 import { HelminthAbilityDialog } from "./helminth-ability-dialog";
 import { ShardsPanel } from "./shards-panel";
+import { CalculatedStatRow, SimpleStatRow } from "./stat-row";
+import { ConditionalToggle } from "./conditional-toggle";
+import { DamageBreakdownSection } from "./damage-breakdown";
 
 interface ItemStats {
   // Warframe stats
@@ -42,6 +46,7 @@ interface ItemSidebarProps {
   onClearBuild: () => void;
   showCopied: boolean;
   itemStats?: ItemStats;
+  item?: BrowseableItem; // Full item data for stat calculations
   readOnly?: boolean;
   onHelminthAbilityChange?: (slotIndex: number, ability: HelminthAbility | null) => void;
   onPlaceShard?: (slotIndex: number, shard: PlacedShard) => void;
@@ -53,6 +58,7 @@ export function ItemSidebar({
   capacityStatus,
   onToggleReactor,
   itemStats,
+  item,
   readOnly = false,
   onHelminthAbilityChange,
   onPlaceShard,
@@ -61,6 +67,27 @@ export function ItemSidebar({
   // Helminth Selection State
   const [selectedAbilityIndex, setSelectedAbilityIndex] = useState<number | null>(null);
   const [isHelminthDialogOpen, setIsHelminthDialogOpen] = useState(false);
+
+  // Create a fallback item for the hook (required for hooks rules)
+  // The actual calculation will only be used if item is provided
+  const fallbackItem = {
+    uniqueName: "",
+    name: "",
+    tradable: false,
+    health: 0,
+    shield: 0,
+    armor: 0,
+    power: 0,
+  };
+
+  // Always call hook (React rules) but use fallback if no item
+  const calculatedStatsResult = useCalculatedStats({
+    item: item ?? fallbackItem,
+    buildState,
+  });
+
+  // Only use calculated stats if item was provided
+  const calculatedStats = item ? calculatedStatsResult : null;
 
   const isWarframeOrNecramech =
     buildState.itemCategory === "warframes" ||
@@ -108,6 +135,10 @@ export function ItemSidebar({
     }
     return { ...originalAbility, isHelminth: false };
   };
+
+  // Get warframe stats from calculated or fallback to base
+  const warframeStats = calculatedStats?.stats.warframe;
+  const weaponStats = calculatedStats?.stats.weapon;
 
   return (
     <div className="flex flex-col h-full">
@@ -224,64 +255,176 @@ export function ItemSidebar({
         </div>
       </div>
 
+      {/* Conditional Toggle - Show when there are conditional mods */}
+      {calculatedStats && (
+        <ConditionalToggle
+          showMaxStacks={calculatedStats.showMaxStacks}
+          onToggle={calculatedStats.setShowMaxStacks}
+          hasConditionalMods={calculatedStats.hasConditionalMods}
+        />
+      )}
+
       <Separator />
 
-      {/* Warframe Base Stats */}
-      {isWarframeOrNecramech && (
+      {/* Warframe Base Stats - Calculated */}
+      {isWarframeOrNecramech && warframeStats && (
         <div className="p-3 space-y-2">
-          <StatRow
+          <CalculatedStatRow
+            label="Energy"
+            stat={warframeStats.energy}
+          />
+          <CalculatedStatRow
+            label="Health"
+            stat={warframeStats.health}
+          />
+          <CalculatedStatRow
+            label="Shield"
+            stat={warframeStats.shield}
+          />
+          <CalculatedStatRow
+            label="Armor"
+            stat={warframeStats.armor}
+          />
+          <CalculatedStatRow
+            label="Sprint Speed"
+            stat={warframeStats.sprintSpeed}
+            format="decimal"
+          />
+        </div>
+      )}
+
+      {/* Warframe Base Stats - Fallback to static display */}
+      {isWarframeOrNecramech && !warframeStats && (
+        <div className="p-3 space-y-2">
+          <SimpleStatRow
             label="Energy"
             value={itemStats?.energy?.toString() ?? "—"}
           />
-          <StatRow
+          <SimpleStatRow
             label="Health"
             value={itemStats?.health?.toString() ?? "—"}
           />
-          <StatRow
+          <SimpleStatRow
             label="Shield"
             value={itemStats?.shield?.toString() ?? "—"}
           />
-          <StatRow
+          <SimpleStatRow
             label="Armor"
             value={itemStats?.armor?.toString() ?? "—"}
           />
-          <StatRow
+          <SimpleStatRow
             label="Sprint Speed"
             value={itemStats?.sprintSpeed?.toFixed(2) ?? "—"}
           />
         </div>
       )}
 
-      {/* Weapon Stats */}
-      {isWeapon && (
+      {/* Weapon Stats - Calculated */}
+      {isWeapon && weaponStats && weaponStats.attackModes.length > 0 && (
         <div className="p-3 space-y-2">
-          <StatRow
+          {/* Primary attack mode stats */}
+          {weaponStats.attackModes.map((mode, i) => (
+            <div key={i} className="space-y-2">
+              {weaponStats.attackModes.length > 1 && (
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                  {mode.name}
+                </span>
+              )}
+              <CalculatedStatRow
+                label="Total Damage"
+                stat={mode.totalDamage}
+              />
+              <CalculatedStatRow
+                label="Critical Chance"
+                stat={mode.criticalChance}
+                format="percent"
+              />
+              <CalculatedStatRow
+                label="Critical Multiplier"
+                stat={mode.criticalMultiplier}
+                format="percent"
+                unit="x"
+              />
+              <CalculatedStatRow
+                label="Status Chance"
+                stat={mode.statusChance}
+                format="percent"
+              />
+              <CalculatedStatRow
+                label="Fire Rate"
+                stat={mode.fireRate}
+                format="decimal"
+              />
+              {mode.magazineSize && isGun && (
+                <CalculatedStatRow
+                  label="Magazine"
+                  stat={mode.magazineSize}
+                />
+              )}
+              {mode.reloadTime && isGun && (
+                <CalculatedStatRow
+                  label="Reload Time"
+                  stat={mode.reloadTime}
+                  format="decimal"
+                  unit="s"
+                />
+              )}
+              {mode.range && isMelee && (
+                <CalculatedStatRow
+                  label="Range"
+                  stat={mode.range}
+                  format="decimal"
+                  unit="m"
+                />
+              )}
+
+              {/* Damage breakdown */}
+              <Separator className="my-2" />
+              <DamageBreakdownSection breakdown={mode.damageBreakdown} />
+            </div>
+          ))}
+
+          {/* Multishot (shared across modes) */}
+          <Separator className="my-2" />
+          <CalculatedStatRow
+            label="Multishot"
+            stat={weaponStats.multishot}
+            format="decimal"
+            unit="x"
+          />
+        </div>
+      )}
+
+      {/* Weapon Stats - Fallback to static display */}
+      {isWeapon && !weaponStats && (
+        <div className="p-3 space-y-2">
+          <SimpleStatRow
             label="Total Damage"
             value={itemStats?.totalDamage?.toFixed(0) ?? "—"}
           />
-          <StatRow
+          <SimpleStatRow
             label="Critical Chance"
             value={itemStats?.criticalChance != null ? `${(itemStats.criticalChance * 100).toFixed(1)}%` : "—"}
           />
-          <StatRow
+          <SimpleStatRow
             label="Critical Multiplier"
             value={itemStats?.criticalMultiplier != null ? `${itemStats.criticalMultiplier.toFixed(1)}x` : "—"}
           />
-          <StatRow
+          <SimpleStatRow
             label="Status Chance"
             value={itemStats?.procChance != null ? `${(itemStats.procChance * 100).toFixed(1)}%` : "—"}
           />
-          <StatRow
+          <SimpleStatRow
             label="Fire Rate"
             value={itemStats?.fireRate?.toFixed(2) ?? "—"}
           />
           {isGun && (
             <>
-              <StatRow
+              <SimpleStatRow
                 label="Magazine"
                 value={itemStats?.magazineSize?.toString() ?? "—"}
               />
-              <StatRow
+              <SimpleStatRow
                 label="Reload Time"
                 value={itemStats?.reloadTime != null ? `${itemStats.reloadTime.toFixed(1)}s` : "—"}
               />
@@ -289,11 +432,11 @@ export function ItemSidebar({
           )}
           {isMelee && (
             <>
-              <StatRow
+              <SimpleStatRow
                 label="Range"
                 value={itemStats?.range != null ? `${itemStats.range.toFixed(1)}m` : "—"}
               />
-              <StatRow
+              <SimpleStatRow
                 label="Combo Duration"
                 value={itemStats?.comboDuration != null ? `${itemStats.comboDuration.toFixed(0)}s` : "—"}
               />
@@ -302,47 +445,59 @@ export function ItemSidebar({
         </div>
       )}
 
-      {/* Ability Stats - Warframes only */}
-      {isWarframeOrNecramech && (
+      {/* Ability Stats - Calculated */}
+      {isWarframeOrNecramech && warframeStats && (
         <>
           <Separator />
           <div className="p-3 space-y-2">
-            <StatRow
+            <CalculatedStatRow
+              label="Duration"
+              stat={warframeStats.abilityDuration}
+              format="percent"
+            />
+            <CalculatedStatRow
+              label="Efficiency"
+              stat={warframeStats.abilityEfficiency}
+              format="percent"
+            />
+            <CalculatedStatRow
+              label="Range"
+              stat={warframeStats.abilityRange}
+              format="percent"
+            />
+            <CalculatedStatRow
+              label="Strength"
+              stat={warframeStats.abilityStrength}
+              format="percent"
+            />
+          </div>
+        </>
+      )}
+
+      {/* Ability Stats - Fallback to static display */}
+      {isWarframeOrNecramech && !warframeStats && (
+        <>
+          <Separator />
+          <div className="p-3 space-y-2">
+            <SimpleStatRow
               label="Duration"
               value="100%"
             />
-            <StatRow
+            <SimpleStatRow
               label="Efficiency"
               value="100%"
             />
-            <StatRow
+            <SimpleStatRow
               label="Range"
               value="100%"
             />
-            <StatRow
+            <SimpleStatRow
               label="Strength"
               value="100%"
             />
           </div>
         </>
       )}
-    </div>
-  );
-}
-
-function StatRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex justify-between items-center text-xs">
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <span>{label}</span>
-      </div>
-      <span className="font-medium tabular-nums">{value}</span>
     </div>
   );
 }
