@@ -1253,7 +1253,7 @@ export function BuildContainer({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="container py-6">
+      <div className="container py-4 md:py-6 px-4">
         {/* Header Card */}
         <div className="bg-card border rounded-lg p-4 mb-4">
           <div className="flex flex-col gap-4 md:flex-row md:gap-4 md:items-center md:justify-between">

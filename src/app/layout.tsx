@@ -54,7 +54,13 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             {children}
-            <Toaster richColors position="bottom-right" />
+            <Toaster
+              richColors
+              position="bottom-right"
+              toastOptions={{
+                className: "sm:max-w-md",
+              }}
+            />
           </ThemeProvider>
         </SessionProvider>
       </body>
