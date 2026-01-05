@@ -55,10 +55,7 @@ function createBaseBuildState(
         ? normalizePolarity(auraPolarity)
         : undefined,
     };
-    baseState.arcaneSlots = [
-      null,
-      null,
-    ];
+    baseState.arcaneSlots = [null, null];
     if (category === "warframes") {
       baseState.shardSlots = [null, null, null, null, null];
     }

@@ -21,7 +21,10 @@ import {
   STORMBRINGER,
   GALVANIZED_CHAMBER,
 } from "@/test/fixtures/mods";
-import { createEmptyBuildState, createWeaponBuildState } from "@/test/fixtures/builds";
+import {
+  createEmptyBuildState,
+  createWeaponBuildState,
+} from "@/test/fixtures/builds";
 import type { PlacedMod } from "../types";
 
 // =============================================================================
@@ -242,7 +245,9 @@ describe("calculateWarframeStats", () => {
       const stats = calculateWarframeStats(EXCALIBUR, build);
 
       // Should have set_bonus source due to 2-piece bonus
-      expect(stats.health.contributions.some((c) => c.source === "set_bonus")).toBe(true);
+      expect(
+        stats.health.contributions.some((c) => c.source === "set_bonus")
+      ).toBe(true);
     });
   });
 });
@@ -329,8 +334,14 @@ describe("calculateWeaponStats", () => {
       const stats = calculateWeaponStats(BRATON, build);
 
       // Should have heat damage in breakdown
-      expect(stats.attackModes[0].damageBreakdown.elemental.length).toBeGreaterThan(0);
-      expect(stats.attackModes[0].damageBreakdown.elemental.some((e) => e.type === "heat")).toBe(true);
+      expect(
+        stats.attackModes[0].damageBreakdown.elemental.length
+      ).toBeGreaterThan(0);
+      expect(
+        stats.attackModes[0].damageBreakdown.elemental.some(
+          (e) => e.type === "heat"
+        )
+      ).toBe(true);
     });
 
     it("combines two elementals into combined type", () => {

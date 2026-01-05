@@ -225,10 +225,7 @@ function createInitialBuildState(
         ? normalizePolarity(auraPolarity)
         : undefined,
     };
-    baseState.arcaneSlots = [
-      null,
-      null,
-    ];
+    baseState.arcaneSlots = [null, null];
     // Only actual warframes (not necramechs) have shard slots
     if (category === "warframes") {
       baseState.shardSlots = [null, null, null, null, null];
@@ -1365,7 +1362,9 @@ export function BuildContainer({
                       onClick={handleCopyBuild}
                     >
                       <Save className="w-4 h-4" />
-                      <span className="hidden sm:inline">{showCopied ? "Copied!" : "Copy Link"}</span>
+                      <span className="hidden sm:inline">
+                        {showCopied ? "Copied!" : "Copy Link"}
+                      </span>
                     </Button>
                   )}
                   <Button

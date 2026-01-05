@@ -1,7 +1,16 @@
 // Stats Calculator - Main calculation engine for real-time stat updates
 // Pure functions with no React dependencies for easy testing
 
-import type { BuildState, PlacedMod, BrowseableItem, Warframe, Gun, Melee, PlacedShard, DamageTypes } from "./types";
+import type {
+  BuildState,
+  PlacedMod,
+  BrowseableItem,
+  Warframe,
+  Gun,
+  Melee,
+  PlacedShard,
+  DamageTypes,
+} from "./types";
 import type {
   CalculatedStats,
   WarframeStats,
@@ -22,7 +31,11 @@ import { applyStatCap } from "./stat-caps";
 import { findStat as findShardStat } from "./shards";
 
 // Umbral mod set tracking
-const UMBRAL_MODS = new Set(["Umbral Vitality", "Umbral Intensify", "Umbral Fiber"]);
+const UMBRAL_MODS = new Set([
+  "Umbral Vitality",
+  "Umbral Intensify",
+  "Umbral Fiber",
+]);
 
 type WarframeRankUpBonus = {
   health: number;
@@ -77,7 +90,8 @@ const WARFRAME_RANKUP_BONUS_BY_NAME: Record<string, WarframeRankUpBonus> = {
 };
 
 function getWarframeRank30BaseStats(warframe: Warframe) {
-  const bonus = WARFRAME_RANKUP_BONUS_BY_NAME[warframe.name] ??
+  const bonus =
+    WARFRAME_RANKUP_BONUS_BY_NAME[warframe.name] ??
     DEFAULT_WARFRAME_RANKUP_BONUS;
 
   return {
@@ -113,13 +127,25 @@ export function calculateStats(
 
   if (category === "warframes" || category === "necramechs") {
     return {
-      warframe: calculateWarframeStats(item as Warframe, buildState, showMaxStacks),
+      warframe: calculateWarframeStats(
+        item as Warframe,
+        buildState,
+        showMaxStacks
+      ),
     };
   }
 
-  if (category === "primary" || category === "secondary" || category === "melee") {
+  if (
+    category === "primary" ||
+    category === "secondary" ||
+    category === "melee"
+  ) {
     return {
-      weapon: calculateWeaponStats(item as Gun | Melee, buildState, showMaxStacks),
+      weapon: calculateWeaponStats(
+        item as Gun | Melee,
+        buildState,
+        showMaxStacks
+      ),
     };
   }
 
@@ -141,15 +167,70 @@ export function calculateWarframeStats(
   const rank30 = getWarframeRank30BaseStats(warframe);
 
   return {
-    health: calculateSingleStat("health", rank30.health, mods, shards, umbralCount, showMaxStacks),
-    shield: calculateSingleStat("shield", rank30.shield, mods, shards, umbralCount, showMaxStacks),
-    armor: calculateSingleStat("armor", rank30.armor, mods, shards, umbralCount, showMaxStacks),
-    energy: calculateSingleStat("energy", rank30.energy, mods, shards, umbralCount, showMaxStacks),
-    sprintSpeed: calculateSingleStat("sprint_speed", warframe.sprintSpeed ?? 1.0, mods, shards, umbralCount, showMaxStacks),
-    abilityStrength: calculateAbilityStat("ability_strength", mods, shards, showMaxStacks),
-    abilityDuration: calculateAbilityStat("ability_duration", mods, shards, showMaxStacks),
-    abilityEfficiency: calculateAbilityStat("ability_efficiency", mods, shards, showMaxStacks),
-    abilityRange: calculateAbilityStat("ability_range", mods, shards, showMaxStacks),
+    health: calculateSingleStat(
+      "health",
+      rank30.health,
+      mods,
+      shards,
+      umbralCount,
+      showMaxStacks
+    ),
+    shield: calculateSingleStat(
+      "shield",
+      rank30.shield,
+      mods,
+      shards,
+      umbralCount,
+      showMaxStacks
+    ),
+    armor: calculateSingleStat(
+      "armor",
+      rank30.armor,
+      mods,
+      shards,
+      umbralCount,
+      showMaxStacks
+    ),
+    energy: calculateSingleStat(
+      "energy",
+      rank30.energy,
+      mods,
+      shards,
+      umbralCount,
+      showMaxStacks
+    ),
+    sprintSpeed: calculateSingleStat(
+      "sprint_speed",
+      warframe.sprintSpeed ?? 1.0,
+      mods,
+      shards,
+      umbralCount,
+      showMaxStacks
+    ),
+    abilityStrength: calculateAbilityStat(
+      "ability_strength",
+      mods,
+      shards,
+      showMaxStacks
+    ),
+    abilityDuration: calculateAbilityStat(
+      "ability_duration",
+      mods,
+      shards,
+      showMaxStacks
+    ),
+    abilityEfficiency: calculateAbilityStat(
+      "ability_efficiency",
+      mods,
+      shards,
+      showMaxStacks
+    ),
+    abilityRange: calculateAbilityStat(
+      "ability_range",
+      mods,
+      shards,
+      showMaxStacks
+    ),
   };
 }
 
@@ -184,24 +265,63 @@ export function calculateWeaponStats(
     const primaryMode: AttackModeStats = {
       name: "Normal Attack",
       totalDamage: calculateWeaponDamage(baseDamage, mods, showMaxStacks),
-      criticalChance: calculateWeaponStat("critical_chance", baseCrit * 100, mods, showMaxStacks),
-      criticalMultiplier: calculateWeaponStat("critical_multiplier", baseCritMult, mods, showMaxStacks),
-      statusChance: calculateWeaponStat("status_chance", baseStatus * 100, mods, showMaxStacks),
-      fireRate: calculateWeaponStat("fire_rate", baseFireRate, mods, showMaxStacks),
-      damageBreakdown: calculateDamageBreakdown(weapon.damage ?? {}, mods, showMaxStacks),
+      criticalChance: calculateWeaponStat(
+        "critical_chance",
+        baseCrit * 100,
+        mods,
+        showMaxStacks
+      ),
+      criticalMultiplier: calculateWeaponStat(
+        "critical_multiplier",
+        baseCritMult,
+        mods,
+        showMaxStacks
+      ),
+      statusChance: calculateWeaponStat(
+        "status_chance",
+        baseStatus * 100,
+        mods,
+        showMaxStacks
+      ),
+      fireRate: calculateWeaponStat(
+        "fire_rate",
+        baseFireRate,
+        mods,
+        showMaxStacks
+      ),
+      damageBreakdown: calculateDamageBreakdown(
+        weapon.damage ?? {},
+        mods,
+        showMaxStacks
+      ),
     };
 
     // Add gun-specific stats
     if ("magazineSize" in weapon && weapon.magazineSize) {
-      primaryMode.magazineSize = calculateWeaponStat("magazine_size", weapon.magazineSize, mods, showMaxStacks);
+      primaryMode.magazineSize = calculateWeaponStat(
+        "magazine_size",
+        weapon.magazineSize,
+        mods,
+        showMaxStacks
+      );
     }
     if ("reloadTime" in weapon && weapon.reloadTime) {
-      primaryMode.reloadTime = calculateWeaponStat("reload_speed", weapon.reloadTime, mods, showMaxStacks);
+      primaryMode.reloadTime = calculateWeaponStat(
+        "reload_speed",
+        weapon.reloadTime,
+        mods,
+        showMaxStacks
+      );
     }
 
     // Add melee-specific stats
     if ("range" in weapon && weapon.range) {
-      primaryMode.range = calculateWeaponStat("range", weapon.range, mods, showMaxStacks);
+      primaryMode.range = calculateWeaponStat(
+        "range",
+        weapon.range,
+        mods,
+        showMaxStacks
+      );
     }
 
     attackModes.push(primaryMode);
@@ -229,10 +349,30 @@ export function calculateWeaponStats(
       const mode: AttackModeStats = {
         name: attack.name,
         totalDamage: calculateWeaponDamage(attackDamage, mods, showMaxStacks),
-        criticalChance: calculateWeaponStat("critical_chance", critBase, mods, showMaxStacks),
-        criticalMultiplier: calculateWeaponStat("critical_multiplier", critMultBase, mods, showMaxStacks),
-        statusChance: calculateWeaponStat("status_chance", statusBase, mods, showMaxStacks),
-        fireRate: calculateWeaponStat("fire_rate", attack.speed ?? weapon.fireRate ?? 1, mods, showMaxStacks),
+        criticalChance: calculateWeaponStat(
+          "critical_chance",
+          critBase,
+          mods,
+          showMaxStacks
+        ),
+        criticalMultiplier: calculateWeaponStat(
+          "critical_multiplier",
+          critMultBase,
+          mods,
+          showMaxStacks
+        ),
+        statusChance: calculateWeaponStat(
+          "status_chance",
+          statusBase,
+          mods,
+          showMaxStacks
+        ),
+        fireRate: calculateWeaponStat(
+          "fire_rate",
+          attack.speed ?? weapon.fireRate ?? 1,
+          mods,
+          showMaxStacks
+        ),
         damageBreakdown: calculateDamageBreakdown(
           typeof attack.damage === "object" ? attack.damage : {},
           mods,
@@ -242,15 +382,30 @@ export function calculateWeaponStats(
 
       // Add gun-specific stats (shared across attack modes)
       if ("magazineSize" in weapon && weapon.magazineSize) {
-        mode.magazineSize = calculateWeaponStat("magazine_size", weapon.magazineSize, mods, showMaxStacks);
+        mode.magazineSize = calculateWeaponStat(
+          "magazine_size",
+          weapon.magazineSize,
+          mods,
+          showMaxStacks
+        );
       }
       if ("reloadTime" in weapon && weapon.reloadTime) {
-        mode.reloadTime = calculateWeaponStat("reload_speed", weapon.reloadTime, mods, showMaxStacks);
+        mode.reloadTime = calculateWeaponStat(
+          "reload_speed",
+          weapon.reloadTime,
+          mods,
+          showMaxStacks
+        );
       }
 
       // Add melee-specific stats
       if ("range" in weapon && weapon.range) {
-        mode.range = calculateWeaponStat("range", weapon.range, mods, showMaxStacks);
+        mode.range = calculateWeaponStat(
+          "range",
+          weapon.range,
+          mods,
+          showMaxStacks
+        );
       }
 
       attackModes.push(mode);
@@ -275,7 +430,9 @@ function getAllPlacedMods(buildState: BuildState): PlacedMod[] {
 
   // Aura slot
   if (buildState.auraSlot?.mod) {
-    if (!AURA_MODS_IGNORE_FOR_PLAYER_STATS.has(buildState.auraSlot.mod.uniqueName)) {
+    if (
+      !AURA_MODS_IGNORE_FOR_PLAYER_STATS.has(buildState.auraSlot.mod.uniqueName)
+    ) {
       mods.push(buildState.auraSlot.mod);
     }
   }
@@ -335,7 +492,9 @@ function calculateSingleStat(
         } else if (stat.operation === "percent_add") {
           // Apply Umbral set bonus if applicable
           const isUmbral = UMBRAL_MODS.has(mod.name);
-          const setMultiplier = isUmbral ? (UMBRAL_SET_BONUSES[umbralCount] ?? 1) : 1;
+          const setMultiplier = isUmbral
+            ? UMBRAL_SET_BONUSES[umbralCount] ?? 1
+            : 1;
           const adjustedValue = value * setMultiplier;
 
           percentBonus += adjustedValue;
@@ -368,14 +527,18 @@ function calculateSingleStat(
 
     const mappedType = shardStatMap[shard.stat];
     if (mappedType === statType) {
-      const value = shard.tauforged ? shardStat.tauforgedValue : shardStat.baseValue;
+      const value = shard.tauforged
+        ? shardStat.tauforgedValue
+        : shardStat.baseValue;
 
       // Azure shards for health/shield/armor/energy are flat additions
       if (shardStat.unit === "") {
         flatBonus += value;
         contributions.push({
           source: "shard",
-          name: `${shard.color.charAt(0).toUpperCase() + shard.color.slice(1)} Archon Shard`,
+          name: `${
+            shard.color.charAt(0).toUpperCase() + shard.color.slice(1)
+          } Archon Shard`,
           absoluteValue: value,
           percentOfBonus: 0,
         });
@@ -383,7 +546,9 @@ function calculateSingleStat(
         percentBonus += value;
         contributions.push({
           source: "shard",
-          name: `${shard.color.charAt(0).toUpperCase() + shard.color.slice(1)} Archon Shard`,
+          name: `${
+            shard.color.charAt(0).toUpperCase() + shard.color.slice(1)
+          } Archon Shard`,
           absoluteValue: (baseValue * value) / 100,
           percentOfBonus: 0,
         });
@@ -455,12 +620,16 @@ function calculateAbilityStat(
 
     const mappedType = shardStatMap[shard.stat];
     if (mappedType === statType && shardStat.unit === "%") {
-      const value = shard.tauforged ? shardStat.tauforgedValue : shardStat.baseValue;
+      const value = shard.tauforged
+        ? shardStat.tauforgedValue
+        : shardStat.baseValue;
       totalBonus += value;
 
       contributions.push({
         source: "shard",
-        name: `${shard.color.charAt(0).toUpperCase() + shard.color.slice(1)} Archon Shard`,
+        name: `${
+          shard.color.charAt(0).toUpperCase() + shard.color.slice(1)
+        } Archon Shard`,
         absoluteValue: value,
         percentOfBonus: 0,
       });
@@ -476,7 +645,8 @@ function calculateAbilityStat(
   const actualBonus = Math.abs(totalBonus);
   if (actualBonus > 0) {
     for (const contrib of contributions) {
-      contrib.percentOfBonus = (Math.abs(contrib.absoluteValue) / actualBonus) * 100;
+      contrib.percentOfBonus =
+        (Math.abs(contrib.absoluteValue) / actualBonus) * 100;
     }
   }
 
@@ -532,7 +702,8 @@ function calculateWeaponStat(
   const totalBonus = roundedModified - roundedBase;
   if (Math.abs(totalBonus) > 0.001) {
     for (const contrib of contributions) {
-      contrib.percentOfBonus = (Math.abs(contrib.absoluteValue) / Math.abs(totalBonus)) * 100;
+      contrib.percentOfBonus =
+        (Math.abs(contrib.absoluteValue) / Math.abs(totalBonus)) * 100;
     }
   }
 
@@ -611,13 +782,25 @@ function calculateDamageBreakdown(
   // Calculate physical damage (IPS)
   const physical: PhysicalDamage = {};
   if (baseDamage.impact) {
-    physical.impact = Math.round(baseDamage.impact * baseDamageMultiplier * getPhysicalMultiplier("impact", mods, showMaxStacks));
+    physical.impact = Math.round(
+      baseDamage.impact *
+        baseDamageMultiplier *
+        getPhysicalMultiplier("impact", mods, showMaxStacks)
+    );
   }
   if (baseDamage.puncture) {
-    physical.puncture = Math.round(baseDamage.puncture * baseDamageMultiplier * getPhysicalMultiplier("puncture", mods, showMaxStacks));
+    physical.puncture = Math.round(
+      baseDamage.puncture *
+        baseDamageMultiplier *
+        getPhysicalMultiplier("puncture", mods, showMaxStacks)
+    );
   }
   if (baseDamage.slash) {
-    physical.slash = Math.round(baseDamage.slash * baseDamageMultiplier * getPhysicalMultiplier("slash", mods, showMaxStacks));
+    physical.slash = Math.round(
+      baseDamage.slash *
+        baseDamageMultiplier *
+        getPhysicalMultiplier("slash", mods, showMaxStacks)
+    );
   }
 
   // Calculate total modded base damage (for elemental calculation)
@@ -625,12 +808,16 @@ function calculateDamageBreakdown(
     (physical.impact ?? 0) + (physical.puncture ?? 0) + (physical.slash ?? 0);
 
   // Collect elemental mods in order
-  const elementalMods: { type: DamageType; value: number; modName: string }[] = [];
+  const elementalMods: { type: DamageType; value: number; modName: string }[] =
+    [];
 
   for (const mod of mods) {
     const parsedStats = parseModStats(mod);
     for (const stat of parsedStats) {
-      if (BASE_ELEMENTS.includes(stat.type as DamageType) && stat.operation === "percent_add") {
+      if (
+        BASE_ELEMENTS.includes(stat.type as DamageType) &&
+        stat.operation === "percent_add"
+      ) {
         elementalMods.push({
           type: stat.type as DamageType,
           value: getStatValue(stat, showMaxStacks),
@@ -699,7 +886,8 @@ function combineElements(
     let combined = false;
     for (let i = 0; i < remaining.length; i++) {
       const second = remaining[i];
-      const combinedType = ELEMENTAL_COMBINATIONS[`${first.type}+${second.type}`];
+      const combinedType =
+        ELEMENTAL_COMBINATIONS[`${first.type}+${second.type}`];
 
       if (combinedType) {
         // Combine these elements
@@ -742,7 +930,10 @@ function getStatValue(stat: ParsedStat, showMaxStacks: boolean): number {
  * Sum all damage types to get total damage
  */
 function sumDamageTypes(damage: DamageTypes): number {
-  return Object.values(damage).reduce<number>((sum, val) => sum + (val ?? 0), 0);
+  return Object.values(damage).reduce<number>(
+    (sum, val) => sum + (val ?? 0),
+    0
+  );
 }
 
 /**

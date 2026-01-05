@@ -273,7 +273,9 @@ export async function createBuild(
       name: input.name,
       description: input.description,
       visibility: input.visibility ?? "PUBLIC",
-      buildData: sanitizeBuildDataForDb(input.buildData) as unknown as Prisma.JsonObject,
+      buildData: sanitizeBuildDataForDb(
+        input.buildData
+      ) as unknown as Prisma.JsonObject,
       hasShards: false, // TODO: Detect from buildData when shards are implemented
       buildGuide: guideCreate,
       partnerBuilds: partnerBuildsConnect,
