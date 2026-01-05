@@ -58,8 +58,9 @@ describe("calculateWarframeStats", () => {
       const build = createEmptyBuildState();
       const stats = calculateWarframeStats(EXCALIBUR, build);
 
-      expect(stats.energy.base).toBe(100);
-      expect(stats.energy.modified).toBe(100);
+      // Warframes gain +50 energy at rank 30, so 100 base + 50 = 150
+      expect(stats.energy.base).toBe(150);
+      expect(stats.energy.modified).toBe(150);
     });
 
     it("returns 100% for all ability stats", () => {
@@ -250,8 +251,8 @@ describe("calculateWeaponStats", () => {
       const build = createWeaponBuildState("primary");
       const stats = calculateWeaponStats(BRATON, build);
 
-      // Braton has 1.6x crit mult = 160%
-      expect(stats.attackModes[0].criticalMultiplier.base).toBe(160);
+      // Braton has 1.6x crit mult (stored as multiplier, not percentage)
+      expect(stats.attackModes[0].criticalMultiplier.base).toBe(1.6);
     });
 
     it("returns base multishot of 1", () => {
@@ -282,8 +283,8 @@ describe("calculateWeaponStats", () => {
 
       const stats = calculateWeaponStats(BRATON, build);
 
-      // 12 + 150 = 162%
-      expect(stats.attackModes[0].criticalChance.modified).toBe(162);
+      // Warframe uses multiplicative formula: 12% × (1 + 150%) = 30%
+      expect(stats.attackModes[0].criticalChance.modified).toBe(30);
     });
 
     it("applies Vital Sense correctly", () => {
@@ -292,8 +293,8 @@ describe("calculateWeaponStats", () => {
 
       const stats = calculateWeaponStats(BRATON, build);
 
-      // 160 + 120 = 280%
-      expect(stats.attackModes[0].criticalMultiplier.modified).toBe(280);
+      // Warframe uses multiplicative formula: 1.6x × (1 + 120%) = 3.52x
+      expect(stats.attackModes[0].criticalMultiplier.modified).toBe(3.52);
     });
   });
 
@@ -332,8 +333,8 @@ describe("calculateWeaponStats", () => {
       const stats = calculateWeaponStats(SOMA_PRIME, build);
 
       // Soma Prime has 30% base crit
-      // 30 + 150 = 180%
-      expect(stats.attackModes[0].criticalChance.modified).toBe(180);
+      // Warframe uses multiplicative formula: 30% × (1 + 150%) = 75%
+      expect(stats.attackModes[0].criticalChance.modified).toBe(75);
     });
   });
 
