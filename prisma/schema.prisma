@@ -269,6 +269,11 @@ model Build {
   @@index([visibility])
   @@index([voteCount])
   @@index([createdAt])
+  // Composite indexes for common query patterns
+  @@index([visibility, voteCount]) // Popular public builds
+  @@index([visibility, createdAt]) // Newest public builds
+  @@index([userId, visibility]) // User profile pages
+  @@index([itemId, visibility, voteCount]) // Popular builds for an item
   @@map("builds")
 }
 

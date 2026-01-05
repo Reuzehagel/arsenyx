@@ -2,38 +2,17 @@
 
 import { cn } from "@/lib/utils";
 import type { StatValue } from "@/lib/warframe/stat-types";
-import type { StatFormat } from "./stat-row";
+import {
+  formatDisplayValue,
+  formatContribution,
+  formatPercent,
+  type StatFormat,
+} from "@/lib/warframe/formatting";
 
 interface StatBreakdownTooltipProps {
   stat: StatValue;
   format: StatFormat;
   unit: string;
-}
-
-/**
- * Format a contribution value for tooltip display
- */
-function formatContribution(value: number, format: StatFormat): string {
-  const sign = value >= 0 ? "+" : "";
-  switch (format) {
-    case "percent":
-      return `${sign}${value.toFixed(1).replace(/\.0$/, "")}%`;
-    case "multiplier":
-      return `${sign}${value.toFixed(1).replace(/\.0$/, "")}x`;
-    case "decimal":
-      return `${sign}${value.toFixed(2).replace(/\.?0+$/, "")}`;
-    case "number":
-    default:
-      // Warframe floors stat values
-      return `${sign}${Math.floor(value)}`;
-  }
-}
-
-/**
- * Format a percentage value for tooltip display
- */
-function formatPercent(value: number): string {
-  return `${value.toFixed(1).replace(/\.0$/, "")}%`;
 }
 
 /**
@@ -50,21 +29,8 @@ export function StatBreakdownTooltip({
   const setBonusContributions = stat.contributions.filter((c) => c.source === "set_bonus");
   const auraContributions = stat.contributions.filter((c) => c.source === "aura");
 
-  // Format base value for display
-  const formatValue = (value: number): string => {
-    switch (format) {
-      case "percent":
-        return `${value.toFixed(1).replace(/\.0$/, "")}%`;
-      case "multiplier":
-        return `${value.toFixed(1).replace(/\.0$/, "")}x`;
-      case "decimal":
-        return value.toFixed(2).replace(/\.?0+$/, "");
-      case "number":
-      default:
-        // Warframe floors stat values
-        return Math.floor(value).toString();
-    }
-  };
+  // Helper to format values with the current format
+  const formatValue = (value: number) => formatDisplayValue(value, format);
 
   return (
     <div className="space-y-1.5 text-xs min-w-[180px]">

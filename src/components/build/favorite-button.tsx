@@ -53,7 +53,7 @@ export function FavoriteButton({
     });
   };
 
-  const isDisabled = isPending || status === "loading";
+  const isDisabled = isPending || isSessionLoading;
 
   return (
     <Button

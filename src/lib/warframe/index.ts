@@ -5,6 +5,7 @@
 // Client-safe exports (no Node.js dependencies)
 export * from "./types";
 export * from "./categories";
+export * from "./formatting";
 export * from "./images";
 export * from "./arcane-images";
 export * from "./slugs";

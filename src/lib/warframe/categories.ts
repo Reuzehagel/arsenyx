@@ -135,3 +135,52 @@ export function mapWfcdCategory(
   const config = getCategoryByWfcd(wfcdCategory);
   return config?.id ?? null;
 }
+
+// =============================================================================
+// CATEGORY TYPE GUARDS
+// =============================================================================
+// Use these helpers instead of repeating category checks throughout the codebase
+
+/** Categories that represent warframes or warframe-like items */
+const WARFRAME_CATEGORIES: BrowseCategory[] = ["warframes", "necramechs"];
+
+/** Categories that represent weapons */
+const WEAPON_CATEGORIES: BrowseCategory[] = ["primary", "secondary", "melee"];
+
+/** Categories that represent gun-type weapons (not melee) */
+const GUN_CATEGORIES: BrowseCategory[] = ["primary", "secondary"];
+
+/**
+ * Check if a category represents a warframe or necramech
+ */
+export function isWarframeCategory(category: BrowseCategory): boolean {
+  return WARFRAME_CATEGORIES.includes(category);
+}
+
+/**
+ * Check if a category represents a weapon (primary, secondary, or melee)
+ */
+export function isWeaponCategory(category: BrowseCategory): boolean {
+  return WEAPON_CATEGORIES.includes(category);
+}
+
+/**
+ * Check if a category represents a gun (primary or secondary, not melee)
+ */
+export function isGunCategory(category: BrowseCategory): boolean {
+  return GUN_CATEGORIES.includes(category);
+}
+
+/**
+ * Check if a category represents a melee weapon
+ */
+export function isMeleeCategory(category: BrowseCategory): boolean {
+  return category === "melee";
+}
+
+/**
+ * Check if a category represents a companion
+ */
+export function isCompanionCategory(category: BrowseCategory): boolean {
+  return category === "companions";
+}

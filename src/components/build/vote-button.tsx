@@ -50,7 +50,7 @@ export function VoteButton({
     });
   };
 
-  const isDisabled = isPending || status === "loading";
+  const isDisabled = isPending || isSessionLoading;
 
   return (
     <Button

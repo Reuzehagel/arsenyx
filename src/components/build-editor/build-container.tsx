@@ -785,13 +785,18 @@ export function BuildContainer({
     lastOverRef.current = null;
   };
 
-  // Calculate capacity and endo cost
-  const capacityStatus = getCapacityStatus(buildState);
-  const totalEndoCost = calculateTotalEndoCost(buildState);
-  const formaCount = calculateFormaCount(
-    buildState.normalSlots,
-    buildState.auraSlot,
-    buildState.exilusSlot
+  // Calculate capacity and endo cost (memoized to prevent recalculation on unrelated state changes)
+  const { capacityStatus, totalEndoCost, formaCount } = useMemo(
+    () => ({
+      capacityStatus: getCapacityStatus(buildState),
+      totalEndoCost: calculateTotalEndoCost(buildState),
+      formaCount: calculateFormaCount(
+        buildState.normalSlots,
+        buildState.auraSlot,
+        buildState.exilusSlot
+      ),
+    }),
+    [buildState]
   );
 
   // Auto-save to localStorage (debounced to avoid chatty writes while dragging)
@@ -1488,16 +1493,6 @@ export function BuildContainer({
                   showSaveButtons={false}
                 />
 
-                {isAuthenticated && (
-                  <PartnerBuildSelector
-                    currentBuildId=""
-                    selectedBuilds={partnerBuilds as PartnerBuild[]}
-                    availableBuilds={availableBuilds}
-                    onAdd={handleAddPartner}
-                    onRemove={handleRemovePartner}
-                  />
-                )}
-
                 <p className="text-xs text-muted-foreground">
                   Your guide will be saved when you publish the build.
                 </p>
@@ -1513,28 +1508,17 @@ export function BuildContainer({
               </div>
               <div className="p-6 space-y-6">
                 {canEdit ? (
-                  <>
-                    <GuideEditor
-                      buildId={savedBuildId}
-                      initialSummary={guideSummary}
-                      initialDescription={guideDescription}
-                      onSummaryChange={setGuideSummary}
-                      onDescriptionChange={setGuideDescription}
-                      initialPartnerBuilds={partnerBuilds as PartnerBuild[]}
-                      availableBuilds={availableBuilds}
-                      showPartnerBuilds={true}
-                      showSaveButtons={false}
-                    />
-
-                    {/* Additional Partner Builds Selector below the editor */}
-                    <PartnerBuildSelector
-                      currentBuildId={savedBuildId}
-                      selectedBuilds={partnerBuilds as PartnerBuild[]}
-                      availableBuilds={availableBuilds}
-                      onAdd={handleAddPartner}
-                      onRemove={handleRemovePartner}
-                    />
-                  </>
+                  <GuideEditor
+                    buildId={savedBuildId}
+                    initialSummary={guideSummary}
+                    initialDescription={guideDescription}
+                    onSummaryChange={setGuideSummary}
+                    onDescriptionChange={setGuideDescription}
+                    initialPartnerBuilds={partnerBuilds as PartnerBuild[]}
+                    availableBuilds={availableBuilds}
+                    showPartnerBuilds={true}
+                    showSaveButtons={false}
+                  />
                 ) : (
                   <>
                     {/* Read-only guide view */}

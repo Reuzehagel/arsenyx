@@ -3,36 +3,17 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { StatValue } from "@/lib/warframe/stat-types";
+import { formatDisplayValue, type StatFormat } from "@/lib/warframe/formatting";
 import { StatBreakdownTooltip } from "./stat-breakdown";
 
-export type StatFormat = "number" | "percent" | "decimal" | "multiplier";
+// Re-export StatFormat for backwards compatibility
+export type { StatFormat };
 
 interface CalculatedStatRowProps {
   label: string;
   stat: StatValue;
   unit?: string;
   format?: StatFormat;
-}
-
-/**
- * Format a stat value for display with smart rounding
- */
-function formatValue(value: number, format: StatFormat): string {
-  switch (format) {
-    case "percent":
-      // Show as percentage, no trailing zeros
-      return value.toFixed(1).replace(/\.0$/, "") + "%";
-    case "multiplier":
-      // Show with x suffix
-      return value.toFixed(1).replace(/\.0$/, "") + "x";
-    case "decimal":
-      // Show with 2 decimal places, no trailing zeros
-      return value.toFixed(2).replace(/\.?0+$/, "");
-    case "number":
-    default:
-      // Floor to integer for most stats (Warframe floors stat values)
-      return Math.floor(value).toString();
-  }
 }
 
 /**
@@ -65,11 +46,11 @@ export function CalculatedStatRow({
               isModified && (isIncrease ? "text-green-500" : "text-red-500")
             )}
           >
-            {formatValue(stat.modified, format)}
+            {formatDisplayValue(stat.modified, format)}
             {unit}
             {hasCap && (
               <span className="text-yellow-500 ml-1">
-                ({formatValue(stat.capped!, format)}
+                ({formatDisplayValue(stat.capped!, format)}
                 {unit} uncapped)
               </span>
             )}
