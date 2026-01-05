@@ -83,6 +83,13 @@ Defined in `package.json`:
 - `sync-data` – `bun run scripts/sync-warframe-data.ts`
 - `update-data` – `bun update @wfcd/items && bun run sync-data`
 
+### Go utilities
+
+Ad-hoc helpers live in `scripts/go/`:
+
+- Scrape Overframe item IDs → `src/data/overframe/items.csv`: `go run ./scripts/go/scraper.go`
+- Find the current max Overframe item ID: `go run ./scripts/go/find_max.go`
+
 ## Deployment
 
 Standard Next.js deployment (e.g., Vercel). Ensure `@wfcd/items` data is synced into `src/data/warframe` prior to build.

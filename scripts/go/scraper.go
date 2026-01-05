@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sync"
 	"time"
@@ -26,6 +27,8 @@ type Result struct {
 func main() {
 	startTime := time.Now()
 
+	outputPath := filepath.FromSlash("src/data/overframe/items.csv")
+
 	ids := make(chan int, MAX_PAGE_ID)
 	results := make(chan Result, MAX_PAGE_ID)
 	var wg sync.WaitGroup
@@ -44,7 +47,7 @@ func main() {
 
 	doneWriting := make(chan bool)
 	go func() {
-		file, _ := os.Create("items.csv")
+		file, _ := os.Create(outputPath)
 		defer file.Close()
 		file.WriteString("id,name\n")
 
@@ -65,7 +68,7 @@ func main() {
 	close(results)
 	<-doneWriting
 
-	fmt.Printf("\nFinished! Results saved to items.csv\n")
+	fmt.Printf("\nFinished! Results saved to %s\n", outputPath)
 	fmt.Printf("Total time taken: %v\n", time.Since(startTime))
 }
 
