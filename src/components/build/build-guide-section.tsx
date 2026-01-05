@@ -6,9 +6,17 @@ import { format } from "date-fns";
 import { Pen } from "lucide-react";
 import { GuideReader } from "@/components/guides/guide-reader";
 import {
-  GuideEditorDialog,
+  GuideEditor,
   type GuideEditorData,
-} from "@/components/build-editor/guide-editor-dialog";
+} from "@/components/build-editor/guide-editor";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { PartnerBuildsSection } from "@/components/build/partner-builds-section";
 import { Button } from "@/components/ui/button";
 import {
@@ -118,15 +126,8 @@ export function BuildGuideSection({
           <div className="flex items-center gap-4">
             <h2 className="text-lg font-semibold">Build Guide</h2>
             {isOwner && (
-              <GuideEditorDialog
-                key={`edit-${key}`}
-                buildId={buildId}
-                initialSummary={summary}
-                initialDescription={description}
-                initialPartnerBuilds={partnerBuildsForEditor}
-                availableBuilds={availableBuilds}
-                onSave={handleSave}
-                trigger={
+              <Dialog>
+                <DialogTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -135,8 +136,32 @@ export function BuildGuideSection({
                     <Pen className="w-4 h-4" />
                     <span className="sr-only">Edit Guide</span>
                   </Button>
-                }
-              />
+                </DialogTrigger>
+                <DialogContent
+                  key={`edit-${key}`}
+                  className="sm:max-w-[900px] w-[95vw] max-h-[95vh] flex flex-col"
+                >
+                  <DialogHeader>
+                    <DialogTitle>Build Guide</DialogTitle>
+                    <DialogDescription>
+                      Write a guide for your build with a summary, linked partner builds,
+                      and detailed description.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="flex-1 overflow-y-auto pr-2">
+                    <GuideEditor
+                      buildId={buildId}
+                      initialSummary={summary}
+                      initialDescription={description}
+                      initialPartnerBuilds={partnerBuildsForEditor}
+                      availableBuilds={availableBuilds}
+                      onSave={handleSave}
+                      showPartnerBuilds={true}
+                      showSaveButtons={true}
+                    />
+                  </div>
+                </DialogContent>
+              </Dialog>
             )}
           </div>
           {lastUpdated && (

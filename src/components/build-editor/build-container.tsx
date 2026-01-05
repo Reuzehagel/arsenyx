@@ -25,7 +25,7 @@ import { ItemSidebar } from "./item-sidebar";
 import { ModGrid } from "./mod-grid";
 import { ModSearchGrid } from "./mod-search-grid";
 import { ArcaneSearchPanel } from "./arcane-search-panel";
-import { InlineGuideEditor } from "./inline-guide-editor";
+import { GuideEditor } from "./guide-editor";
 import { PartnerBuildSelector } from "./partner-build-selector";
 import type { PartnerBuild } from "./partner-build-card";
 import { PartnerBuildsSection } from "@/components/build/partner-builds-section";
@@ -1476,25 +1476,26 @@ export function BuildContainer({
                 <h2 className="text-lg font-semibold">Build Guide</h2>
               </div>
               <div className="p-6 space-y-6">
-                <InlineGuideEditor
-                  summary={guideSummary}
-                  description={guideDescription}
+                <GuideEditor
+                  buildId=""
+                  initialSummary={guideSummary}
+                  initialDescription={guideDescription}
                   onSummaryChange={setGuideSummary}
                   onDescriptionChange={setGuideDescription}
+                  initialPartnerBuilds={partnerBuilds as PartnerBuild[]}
+                  availableBuilds={availableBuilds}
+                  showPartnerBuilds={isAuthenticated}
+                  showSaveButtons={false}
                 />
 
-                {/* Partner Builds Selector for new builds */}
                 {isAuthenticated && (
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-medium">Partner Builds</h3>
-                    <PartnerBuildSelector
-                      currentBuildId=""
-                      selectedBuilds={partnerBuilds as PartnerBuild[]}
-                      availableBuilds={availableBuilds}
-                      onAdd={handleAddPartner}
-                      onRemove={handleRemovePartner}
-                    />
-                  </div>
+                  <PartnerBuildSelector
+                    currentBuildId=""
+                    selectedBuilds={partnerBuilds as PartnerBuild[]}
+                    availableBuilds={availableBuilds}
+                    onAdd={handleAddPartner}
+                    onRemove={handleRemovePartner}
+                  />
                 )}
 
                 <p className="text-xs text-muted-foreground">
@@ -1513,25 +1514,26 @@ export function BuildContainer({
               <div className="p-6 space-y-6">
                 {canEdit ? (
                   <>
-                    {/* Editable guide content */}
-                    <InlineGuideEditor
-                      summary={guideSummary}
-                      description={guideDescription}
+                    <GuideEditor
+                      buildId={savedBuildId}
+                      initialSummary={guideSummary}
+                      initialDescription={guideDescription}
                       onSummaryChange={setGuideSummary}
                       onDescriptionChange={setGuideDescription}
+                      initialPartnerBuilds={partnerBuilds as PartnerBuild[]}
+                      availableBuilds={availableBuilds}
+                      showPartnerBuilds={true}
+                      showSaveButtons={false}
                     />
 
-                    {/* Partner Builds Selector */}
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-medium">Partner Builds</h3>
-                      <PartnerBuildSelector
-                        currentBuildId={savedBuildId}
-                        selectedBuilds={partnerBuilds as PartnerBuild[]}
-                        availableBuilds={availableBuilds}
-                        onAdd={handleAddPartner}
-                        onRemove={handleRemovePartner}
-                      />
-                    </div>
+                    {/* Additional Partner Builds Selector below the editor */}
+                    <PartnerBuildSelector
+                      currentBuildId={savedBuildId}
+                      selectedBuilds={partnerBuilds as PartnerBuild[]}
+                      availableBuilds={availableBuilds}
+                      onAdd={handleAddPartner}
+                      onRemove={handleRemovePartner}
+                    />
                   </>
                 ) : (
                   <>

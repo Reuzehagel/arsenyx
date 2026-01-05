@@ -1,7 +1,8 @@
 // Build Editor Components
 export { BuildContainer } from "./build-container";
 export { ItemSidebar } from "./item-sidebar";
-export { GuideEditorDialog, type GuideEditorData } from "./guide-editor-dialog";
+export { GuideEditor, type GuideEditorData } from "./guide-editor";
+export { DescriptionEditor } from "./description-editor";
 export { ModGrid, PolarityIcon } from "./mod-grid";
 export { ModSearchGrid } from "./mod-search-grid";
 export { SearchableModCard } from "./searchable-mod-card";
