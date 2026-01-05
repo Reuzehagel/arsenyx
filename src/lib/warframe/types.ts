@@ -223,6 +223,7 @@ export interface Mod {
   isAugment?: boolean;
   isPrime?: boolean;
   isExilus?: boolean;
+  isUtility?: boolean; // Also indicates exilus-compatible mods in WFCD data
   levelStats?: Array<{ stats: string[] }>;
   modSet?: string;
   modSetStats?: string[];
@@ -286,6 +287,7 @@ export interface PlacedMod {
   modSet?: string;
   modSetStats?: string[];
   isExilus?: boolean;
+  isUtility?: boolean; // Also indicates exilus-compatible mods in WFCD data
 }
 
 export interface PlacedArcane {

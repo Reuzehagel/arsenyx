@@ -68,11 +68,15 @@ export function calculateWarframeStats(
   const shards = buildState.shardSlots ?? [];
   const umbralCount = countUmbralMods(mods);
 
+  // WFCD data has health/shield at rank 30, but power (energy) is at rank 0
+  // At rank 30, warframes gain +50 energy from base
+  const rank30Energy = warframe.power + 50;
+
   return {
     health: calculateSingleStat("health", warframe.health, mods, shards, umbralCount, showMaxStacks),
     shield: calculateSingleStat("shield", warframe.shield, mods, shards, umbralCount, showMaxStacks),
     armor: calculateSingleStat("armor", warframe.armor, mods, shards, umbralCount, showMaxStacks),
-    energy: calculateSingleStat("energy", warframe.power, mods, shards, umbralCount, showMaxStacks),
+    energy: calculateSingleStat("energy", rank30Energy, mods, shards, umbralCount, showMaxStacks),
     sprintSpeed: calculateSingleStat("sprint_speed", warframe.sprintSpeed ?? 1.0, mods, shards, umbralCount, showMaxStacks),
     abilityStrength: calculateAbilityStat("ability_strength", mods, shards, showMaxStacks),
     abilityDuration: calculateAbilityStat("ability_duration", mods, shards, showMaxStacks),

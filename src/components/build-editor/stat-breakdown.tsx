@@ -24,7 +24,8 @@ function formatContribution(value: number, format: StatFormat): string {
       return `${sign}${value.toFixed(2).replace(/\.?0+$/, "")}`;
     case "number":
     default:
-      return `${sign}${Math.round(value)}`;
+      // Warframe floors stat values
+      return `${sign}${Math.floor(value)}`;
   }
 }
 
@@ -60,7 +61,8 @@ export function StatBreakdownTooltip({
         return value.toFixed(2).replace(/\.?0+$/, "");
       case "number":
       default:
-        return Math.round(value).toString();
+        // Warframe floors stat values
+        return Math.floor(value).toString();
     }
   };
 

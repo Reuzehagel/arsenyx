@@ -271,6 +271,7 @@ function createInitialBuildState(
             modSet: fullMod.modSet,
             modSetStats: fullMod.modSetStats,
             isExilus: fullMod.isExilus,
+            isUtility: fullMod.isUtility,
           };
         }
       }
@@ -407,6 +408,7 @@ export function BuildContainer({
         modSet: mod.modSet,
         modSetStats: mod.modSetStats,
         isExilus: mod.isExilus,
+        isUtility: mod.isUtility,
       };
 
       setBuildState((prev) => {
@@ -720,10 +722,10 @@ export function BuildContainer({
         if (!isAura) return;
       }
 
-      // Exilus slot restriction
+      // Exilus slot restriction - both isExilus and isUtility indicate exilus-compatible mods
       if (overData.slotId.startsWith("exilus")) {
         // Exilus slots can only accept Exilus mods
-        if (!fullMod.isExilus) return;
+        if (!fullMod.isExilus && !fullMod.isUtility) return;
       }
     }
 

@@ -189,9 +189,11 @@ export function getModsForCategory(category: string): Mod[] {
  * Get mods compatible with a specific item
  * Matches mods based on the item's type field (e.g., "Rifle", "Shotgun", "Bow", etc.)
  * For items without a type field, falls back to category-based filtering
+ * For warframes, also includes augment mods specific to that warframe
  */
-export function getModsForItem(item: { type?: string; category?: string }): Mod[] {
+export function getModsForItem(item: { type?: string; category?: string; name?: string }): Mod[] {
   const itemType = item.type;
+  const itemName = item.name;
 
   if (!itemType) {
     // No type info - fall back to category-based filtering
@@ -248,10 +250,21 @@ export function getModsForItem(item: { type?: string; category?: string }): Mod[
 
     // Warframes
     if (itemTypeLower === "warframe") {
-      return (
-        modType.includes("warframe") &&
-        (compatName === "warframe" || compatName === "aura")
-      );
+      // Include general warframe mods and aura mods
+      if (modType.includes("warframe") && (compatName === "warframe" || compatName === "aura")) {
+        return true;
+      }
+      // Include warframe-specific augment mods if we have the warframe name
+      // Also handle Prime variants (e.g., "Ash Prime" should match "Ash" augments)
+      if (itemName && mod.isAugment && modType.includes("warframe")) {
+        const itemNameLower = itemName.toLowerCase();
+        // Check exact match or base warframe name (remove " Prime" suffix)
+        const baseItemName = itemNameLower.replace(" prime", "");
+        if (compatName === itemNameLower || compatName === baseItemName) {
+          return true;
+        }
+      }
+      return false;
     }
 
     // Necramech
@@ -401,6 +414,9 @@ export function getAllArcanes(): Arcane[] {
   return allArcanes.filter((arcane) => {
     if (!arcane.name) return false;
     if (arcane.name === "Arcane") return false;
+    // Filter out duplicate/legacy arcanes marked as excluded from codex
+    // (e.g., the incorrect Arcane Fury that shows pistol damage instead of melee damage)
+    if ((arcane as { excludeFromCodex?: boolean }).excludeFromCodex) return false;
     return true;
   });
 }

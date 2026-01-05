@@ -109,7 +109,7 @@ function DamageTypeRow({ type, value }: { type: DamageType; value: number }) {
         <DamageIcon type={type} />
         <span>{DAMAGE_TYPE_NAMES[type]}</span>
       </span>
-      <span className="font-medium tabular-nums">{Math.round(value)}</span>
+      <span className="font-medium tabular-nums">{Math.floor(value)}</span>
     </div>
   );
 }
@@ -126,7 +126,7 @@ function ElementalDamageRow({ element }: { element: ElementalDamage }) {
         <DamageIcon type={element.type} />
         <span>{DAMAGE_TYPE_NAMES[element.type]}</span>
       </span>
-      <span className="font-medium tabular-nums">{Math.round(element.value)}</span>
+      <span className="font-medium tabular-nums">{Math.floor(element.value)}</span>
     </div>
   );
 

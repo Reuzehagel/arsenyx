@@ -30,8 +30,8 @@ function formatValue(value: number, format: StatFormat): string {
       return value.toFixed(2).replace(/\.?0+$/, "");
     case "number":
     default:
-      // Round to nearest integer for most stats
-      return Math.round(value).toString();
+      // Floor to integer for most stats (Warframe floors stat values)
+      return Math.floor(value).toString();
   }
 }
 

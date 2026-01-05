@@ -122,6 +122,12 @@ export function parseStatString(statString: string): ParsedStat[] {
     return results;
   }
 
+  // Skip pickup-related effects (e.g., Equilibrium: "Health pickups give +110% Energy")
+  // These are gameplay mechanics, not direct stat buffs
+  if (statString.toLowerCase().includes("pickups give")) {
+    return results;
+  }
+
   // Check if this is a conditional stat
   const isConditional = CONDITIONAL_PATTERNS.some((p) => p.test(statString));
   const stackMatch = statString.match(STACK_PATTERN);

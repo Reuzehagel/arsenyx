@@ -255,9 +255,9 @@ const ModSlotCard = memo(function ModSlotCard({
       return !isAura;
     }
 
-    // Exilus slot check
+    // Exilus slot check - both isExilus and isUtility indicate exilus-compatible mods
     if (slot.type === "exilus" && slot.id.startsWith("exilus")) {
-      return !draggedMod.isExilus;
+      return !draggedMod.isExilus && !draggedMod.isUtility;
     }
 
     // Normal slots accept everything (except maybe Aura?)

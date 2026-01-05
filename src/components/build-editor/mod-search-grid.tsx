@@ -339,7 +339,7 @@ export function ModSearchGrid({
   }, [boundedSelectedIndex]);
 
   return (
-    <div className={cn("flex flex-col gap-4", className)}>
+    <div className={cn("flex flex-col gap-2", className)}>
       {/* Search and Filter Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         {/* Search Input */}
@@ -393,7 +393,7 @@ export function ModSearchGrid({
       {/* Responsive Mod Grid - Horizontal scrolling with responsive rows */}
       <div
         ref={gridRef}
-        className="grid gap-x-2 sm:gap-x-4 gap-y-8 sm:gap-y-12 overflow-x-auto overflow-y-hidden pt-2 pb-8 px-2 max-w-full h-auto sm:h-72 content-center"
+        className="grid gap-x-6 sm:gap-x-8 gap-y-6 sm:gap-y-10 overflow-x-auto overflow-y-hidden pt-1 pb-4 pl-4 pr-8 max-w-full h-auto sm:h-72 content-center"
         style={{
           gridTemplateRows: "repeat(2, min-content)",
           gridAutoFlow: "column",
