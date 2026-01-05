@@ -441,7 +441,7 @@ export function GuideEditorDialog({
                     placeholder="Write your guide in markdown... (optional)"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    rows={12}
+                    rows={30}
                     className="font-mono text-sm resize-none"
                   />
                 </div>

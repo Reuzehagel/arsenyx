@@ -64,6 +64,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",
+    "@tailwindcss/typography": "^0.5.19",
     "@types/lodash": "^4.17.21",
     "@types/node": "^20.19.27",
     "@types/pg": "^8.16.0",

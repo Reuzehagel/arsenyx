@@ -101,8 +101,12 @@ export function calculateWeaponStats(
   // Build attack mode stats
   const attackModes: AttackModeStats[] = [];
 
+  // Check if weapon has specific attack modes defined
+  const hasSpecificAttackModes = weapon.attacks && weapon.attacks.length > 0;
+
   // Primary attack mode from base weapon stats
-  if (weapon.totalDamage || weapon.damage) {
+  // Only create "Normal Attack" if there are no specific attack modes defined
+  if (!hasSpecificAttackModes && (weapon.totalDamage || weapon.damage)) {
     const baseDamage = weapon.totalDamage ?? 0;
     const baseCrit = weapon.criticalChance ?? 0;
     const baseCritMult = weapon.criticalMultiplier ?? 1;
@@ -112,9 +116,9 @@ export function calculateWeaponStats(
     const primaryMode: AttackModeStats = {
       name: "Normal Attack",
       totalDamage: calculateWeaponDamage(baseDamage, mods, showMaxStacks),
-      criticalChance: calculateWeaponStat("critical_chance", baseCrit * 100, mods, showMaxStacks, true),
-      criticalMultiplier: calculateWeaponStat("critical_multiplier", baseCritMult * 100, mods, showMaxStacks, true),
-      statusChance: calculateWeaponStat("status_chance", baseStatus * 100, mods, showMaxStacks, true),
+      criticalChance: calculateWeaponStat("critical_chance", baseCrit * 100, mods, showMaxStacks),
+      criticalMultiplier: calculateWeaponStat("critical_multiplier", baseCritMult, mods, showMaxStacks),
+      statusChance: calculateWeaponStat("status_chance", baseStatus * 100, mods, showMaxStacks),
       fireRate: calculateWeaponStat("fire_rate", baseFireRate, mods, showMaxStacks),
       damageBreakdown: calculateDamageBreakdown(weapon.damage ?? {}, mods, showMaxStacks),
     };
@@ -148,8 +152,8 @@ export function calculateWeaponStats(
       const rawCrit = attack.crit_chance ?? weapon.criticalChance ?? 0;
       const critBase = rawCrit > 1 ? rawCrit : rawCrit * 100;
 
-      const rawCritMult = attack.crit_mult ?? weapon.criticalMultiplier ?? 1;
-      const critMultBase = rawCritMult > 10 ? rawCritMult : rawCritMult * 100;
+      // Critical multiplier is stored as actual multiplier (e.g., 3 for 3x)
+      const critMultBase = attack.crit_mult ?? weapon.criticalMultiplier ?? 1;
 
       const rawStatus = attack.status_chance ?? weapon.procChance ?? 0;
       const statusBase = rawStatus > 1 ? rawStatus : rawStatus * 100;
@@ -157,27 +161,9 @@ export function calculateWeaponStats(
       const mode: AttackModeStats = {
         name: attack.name,
         totalDamage: calculateWeaponDamage(attackDamage, mods, showMaxStacks),
-        criticalChance: calculateWeaponStat(
-          "critical_chance",
-          critBase,
-          mods,
-          showMaxStacks,
-          true
-        ),
-        criticalMultiplier: calculateWeaponStat(
-          "critical_multiplier",
-          critMultBase,
-          mods,
-          showMaxStacks,
-          true
-        ),
-        statusChance: calculateWeaponStat(
-          "status_chance",
-          statusBase,
-          mods,
-          showMaxStacks,
-          true
-        ),
+        criticalChance: calculateWeaponStat("critical_chance", critBase, mods, showMaxStacks),
+        criticalMultiplier: calculateWeaponStat("critical_multiplier", critMultBase, mods, showMaxStacks),
+        statusChance: calculateWeaponStat("status_chance", statusBase, mods, showMaxStacks),
         fireRate: calculateWeaponStat("fire_rate", attack.speed ?? weapon.fireRate ?? 1, mods, showMaxStacks),
         damageBreakdown: calculateDamageBreakdown(
           typeof attack.damage === "object" ? attack.damage : {},
@@ -185,6 +171,19 @@ export function calculateWeaponStats(
           showMaxStacks
         ),
       };
+
+      // Add gun-specific stats (shared across attack modes)
+      if ("magazineSize" in weapon && weapon.magazineSize) {
+        mode.magazineSize = calculateWeaponStat("magazine_size", weapon.magazineSize, mods, showMaxStacks);
+      }
+      if ("reloadTime" in weapon && weapon.reloadTime) {
+        mode.reloadTime = calculateWeaponStat("reload_speed", weapon.reloadTime, mods, showMaxStacks);
+      }
+
+      // Add melee-specific stats
+      if ("range" in weapon && weapon.range) {
+        mode.range = calculateWeaponStat("range", weapon.range, mods, showMaxStacks);
+      }
 
       attackModes.push(mode);
     }
@@ -455,8 +454,12 @@ function calculateWeaponStat(
     ? baseValue + percentBonus
     : baseValue * (1 + percentBonus / 100);
 
+  // Round both base and modified to avoid floating point comparison issues
+  const roundedBase = Math.round(baseValue * 100) / 100;
+  const roundedModified = Math.round(modified * 100) / 100;
+
   // Calculate percent of bonus
-  const totalBonus = modified - baseValue;
+  const totalBonus = roundedModified - roundedBase;
   if (Math.abs(totalBonus) > 0.001) {
     for (const contrib of contributions) {
       contrib.percentOfBonus = (Math.abs(contrib.absoluteValue) / Math.abs(totalBonus)) * 100;
@@ -464,8 +467,8 @@ function calculateWeaponStat(
   }
 
   return {
-    base: baseValue,
-    modified: Math.round(modified * 100) / 100,
+    base: roundedBase,
+    modified: roundedModified,
     contributions,
   };
 }

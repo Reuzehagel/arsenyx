@@ -322,9 +322,65 @@ export function ItemSidebar({
       {/* Weapon Stats - Calculated */}
       {isWeapon && weaponStats && weaponStats.attackModes.length > 0 && (
         <div className="p-3 space-y-2">
-          {/* Primary attack mode stats */}
+          {/* For multiple attack modes, show shared stats first */}
+          {weaponStats.attackModes.length > 1 && (
+            <>
+              <CalculatedStatRow
+                label="Critical Chance"
+                stat={weaponStats.attackModes[0].criticalChance}
+                format="percent"
+              />
+              <CalculatedStatRow
+                label="Critical Multiplier"
+                stat={weaponStats.attackModes[0].criticalMultiplier}
+                format="multiplier"
+              />
+              <CalculatedStatRow
+                label="Status Chance"
+                stat={weaponStats.attackModes[0].statusChance}
+                format="percent"
+              />
+              <CalculatedStatRow
+                label="Fire Rate"
+                stat={weaponStats.attackModes[0].fireRate}
+                format="decimal"
+              />
+              {weaponStats.attackModes[0].magazineSize && isGun && (
+                <CalculatedStatRow
+                  label="Magazine"
+                  stat={weaponStats.attackModes[0].magazineSize}
+                />
+              )}
+              {weaponStats.attackModes[0].reloadTime && isGun && (
+                <CalculatedStatRow
+                  label="Reload Time"
+                  stat={weaponStats.attackModes[0].reloadTime}
+                  format="decimal"
+                  unit="s"
+                />
+              )}
+              {weaponStats.attackModes[0].range && isMelee && (
+                <CalculatedStatRow
+                  label="Range"
+                  stat={weaponStats.attackModes[0].range}
+                  format="decimal"
+                  unit="m"
+                />
+              )}
+              <CalculatedStatRow
+                label="Multishot"
+                stat={weaponStats.multishot}
+                format="decimal"
+                unit="x"
+              />
+            </>
+          )}
+
+          {/* Attack mode stats */}
           {weaponStats.attackModes.map((mode, i) => (
             <div key={i} className="space-y-2">
+              {/* Separator between sections */}
+              {(weaponStats.attackModes.length > 1 || i > 0) && <Separator className="my-2" />}
               {weaponStats.attackModes.length > 1 && (
                 <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
                   {mode.name}
@@ -334,64 +390,71 @@ export function ItemSidebar({
                 label="Total Damage"
                 stat={mode.totalDamage}
               />
-              <CalculatedStatRow
-                label="Critical Chance"
-                stat={mode.criticalChance}
-                format="percent"
-              />
-              <CalculatedStatRow
-                label="Critical Multiplier"
-                stat={mode.criticalMultiplier}
-                format="percent"
-                unit="x"
-              />
-              <CalculatedStatRow
-                label="Status Chance"
-                stat={mode.statusChance}
-                format="percent"
-              />
-              <CalculatedStatRow
-                label="Fire Rate"
-                stat={mode.fireRate}
-                format="decimal"
-              />
-              {mode.magazineSize && isGun && (
-                <CalculatedStatRow
-                  label="Magazine"
-                  stat={mode.magazineSize}
-                />
-              )}
-              {mode.reloadTime && isGun && (
-                <CalculatedStatRow
-                  label="Reload Time"
-                  stat={mode.reloadTime}
-                  format="decimal"
-                  unit="s"
-                />
-              )}
-              {mode.range && isMelee && (
-                <CalculatedStatRow
-                  label="Range"
-                  stat={mode.range}
-                  format="decimal"
-                  unit="m"
-                />
+              {/* For single attack mode, show all stats inline */}
+              {weaponStats.attackModes.length === 1 && (
+                <>
+                  <CalculatedStatRow
+                    label="Critical Chance"
+                    stat={mode.criticalChance}
+                    format="percent"
+                  />
+                  <CalculatedStatRow
+                    label="Critical Multiplier"
+                    stat={mode.criticalMultiplier}
+                    format="multiplier"
+                  />
+                  <CalculatedStatRow
+                    label="Status Chance"
+                    stat={mode.statusChance}
+                    format="percent"
+                  />
+                  <CalculatedStatRow
+                    label="Fire Rate"
+                    stat={mode.fireRate}
+                    format="decimal"
+                  />
+                  {mode.magazineSize && isGun && (
+                    <CalculatedStatRow
+                      label="Magazine"
+                      stat={mode.magazineSize}
+                    />
+                  )}
+                  {mode.reloadTime && isGun && (
+                    <CalculatedStatRow
+                      label="Reload Time"
+                      stat={mode.reloadTime}
+                      format="decimal"
+                      unit="s"
+                    />
+                  )}
+                  {mode.range && isMelee && (
+                    <CalculatedStatRow
+                      label="Range"
+                      stat={mode.range}
+                      format="decimal"
+                      unit="m"
+                    />
+                  )}
+                </>
               )}
 
               {/* Damage breakdown */}
-              <Separator className="my-2" />
               <DamageBreakdownSection breakdown={mode.damageBreakdown} />
             </div>
           ))}
 
-          {/* Multishot (shared across modes) */}
-          <Separator className="my-2" />
-          <CalculatedStatRow
-            label="Multishot"
-            stat={weaponStats.multishot}
-            format="decimal"
-            unit="x"
-          />
+          {/* Multishot for single attack mode weapons */}
+          {weaponStats.attackModes.length === 1 && (
+            <>
+              <Separator className="my-2" />
+              <CalculatedStatRow
+                label="Multishot"
+                stat={weaponStats.multishot}
+                format="decimal"
+                unit="x"
+              />
+            </>
+          )}
         </div>
       )}
 

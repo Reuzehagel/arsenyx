@@ -253,7 +253,7 @@ export function InlineGuideEditor({
               placeholder="Write your guide in markdown... (optional)"
               value={description}
               onChange={(e) => onDescriptionChange(e.target.value)}
-              rows={8}
+              rows={20}
               className="font-mono text-sm resize-none"
             />
           </div>
