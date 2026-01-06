@@ -36,7 +36,7 @@ bun run db:sync      # Sync WFCD data to PostgreSQL database
 
 ## Project Structure
 
-```
+```txt
 src/
 ├── app/                    # Next.js App Router pages
 │   ├── api/               # API routes (auth)
@@ -100,6 +100,7 @@ import { getImageUrl, type BrowseItem } from "@/lib/warframe";
 ### Import Path Aliases
 
 Always use the `@/` alias for imports:
+
 ```typescript
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -109,6 +110,7 @@ import type { BrowseItem } from "@/lib/warframe/types";
 ### Component Barrel Exports
 
 Each component folder has an `index.ts` with named exports:
+
 ```typescript
 // src/components/browse/index.ts
 export { ItemCard } from "./item-card";
@@ -122,22 +124,26 @@ import { ItemCard, ItemGrid } from "@/components/browse";
 ### Styling Conventions
 
 1. **Use `cn()` for class merging**:
+
    ```typescript
    import { cn } from "@/lib/utils";
    <div className={cn("base-class", isActive && "active-class")} />
    ```
 
 2. **Override shadcn/ui defaults explicitly**:
+
    ```typescript
    <Card className="py-0 gap-0">  // Remove default padding/gap
    ```
 
 3. **Consistent badge sizing**:
+
    ```typescript
    <Badge className="text-xs px-2 py-0.5">
    ```
 
 4. **Images**: Use Next.js Image with `fill` + `object-cover` in `aspect-square` containers:
+
    ```typescript
    <div className="relative aspect-square">
      <Image src={url} alt={name} fill className="object-cover" unoptimized />
@@ -200,7 +206,8 @@ Main models in `prisma/schema.prisma`:
 ## Environment Variables
 
 Required in `.env`:
-```
+
+```txt
 DATABASE_URL=postgresql://arsenyx:arsenyx_dev@localhost:5432/arsenyx
 GITHUB_ID=...
 GITHUB_SECRET=...
@@ -214,7 +221,7 @@ USE_DATABASE=true  # Optional: use DB instead of static JSON
 2. **Push schema**: `bun run db:push`
 3. **Sync WFCD data**: `bun run db:sync` (if using database mode)
 4. **Start dev server**: `bun dev`
-5. **View at**: http://localhost:3000
+5. **View at**: <http://localhost:3000>
 
 ## Important Notes
 
