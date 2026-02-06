@@ -239,15 +239,3 @@ export function getPolarityIconUrl(polarity: Polarity): string {
   return `/focus-schools/${filename}`;
 }
 
-// =============================================================================
-// ANIMATION CONFIG
-// =============================================================================
-
-/**
- * Framer Motion transition config for the hover animation.
- */
-export const HOVER_TRANSITION = {
-  type: "tween" as const,
-  duration: 0.15,
-  ease: [0.4, 0, 0.2, 1] as const, // ease-out cubic
-};

@@ -343,7 +343,14 @@ export function BuildContainer({
 }: BuildContainerProps) {
   // Auth session
   const { data: session, isPending: isSessionPending } = useSession();
-  const isAuthenticated = !isSessionPending && !!session?.user;
+  // Track client-side mounting to avoid hydration mismatch with auth state
+  const [hasMounted, setHasMounted] = useState(false);
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  // Only consider authenticated after mount to prevent hydration mismatch
+  const isAuthenticated = hasMounted && !isSessionPending && !!session?.user;
 
   // Track edit mode for owners (initially false = view mode)
   const [isEditMode, setIsEditMode] = useState(false);

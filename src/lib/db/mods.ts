@@ -1,6 +1,7 @@
+import "server-only";
+
 /**
  * Database queries for Mods and Arcanes
- * Server-only - do not import in client components
  */
 
 import { prisma } from "@/lib/db";

@@ -2,7 +2,6 @@
 
 import { memo, useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { getImageUrl, getPlaceholderUrl } from "@/lib/warframe/images";
@@ -12,7 +11,6 @@ import {
   DISPLAY_SIZE,
   getRarityColor,
   getModAssetUrl,
-  HOVER_TRANSITION,
 } from "@/lib/warframe/mod-card-config";
 import {
   ModCardFrame,
@@ -471,7 +469,6 @@ function ModCardComponent({
   }, [disableHover]);
 
   const compactSize = DISPLAY_SIZE.compact;
-  const expandedSize = DISPLAY_SIZE.expanded;
 
   return (
     <div
@@ -500,51 +497,39 @@ function ModCardComponent({
       </div>
 
       {/* Expanded card - in portal */}
-      <AnimatePresence>
-        {isHovered && portalContainer && (
-          <>
-            {createPortal(
+      {isHovered && portalContainer && (
+        <>
+          {createPortal(
+            <div
+              className="fixed z-[9999] pointer-events-none"
+              style={{
+                left: expandedPosition.x,
+                top: expandedPosition.y,
+                transform: "translate(-50%, -50%)",
+              }}
+            >
               <div
-                className="fixed z-[9999] pointer-events-none"
+                className="drop-shadow-[0_0_20px_rgba(0,0,0,0.8)]"
                 style={{
-                  left: expandedPosition.x,
-                  top: expandedPosition.y,
-                  transform: "translate(-50%, -50%)",
+                  animation: "mod-card-expand 150ms cubic-bezier(0.4, 0, 0.2, 1) forwards",
+                  transformOrigin: "center center",
                 }}
               >
-                <motion.div
-                  initial={{
-                    scale: compactSize.height / expandedSize.height,
-                    opacity: 0,
-                  }}
-                  animate={{
-                    scale: 1,
-                    opacity: 1,
-                  }}
-                  exit={{
-                    scale: compactSize.height / expandedSize.height,
-                    opacity: 0,
-                  }}
-                  transition={HOVER_TRANSITION}
-                  style={{ originX: 0.5, originY: 0.5 }}
-                  className="drop-shadow-[0_0_20px_rgba(0,0,0,0.8)]"
-                >
-                  <ExpandedModCard
-                    mod={mod}
-                    rarity={rarity}
-                    rank={currentRank}
-                    isMaxRank={isMaxRank}
-                    setCount={setCount}
-                    drainOverride={drainOverride}
-                    matchState={matchState}
-                  />
-                </motion.div>
-              </div>,
-              portalContainer
-            )}
-          </>
-        )}
-      </AnimatePresence>
+                <ExpandedModCard
+                  mod={mod}
+                  rarity={rarity}
+                  rank={currentRank}
+                  isMaxRank={isMaxRank}
+                  setCount={setCount}
+                  drainOverride={drainOverride}
+                  matchState={matchState}
+                />
+              </div>
+            </div>,
+            portalContainer
+          )}
+        </>
+      )}
     </div>
   );
 }

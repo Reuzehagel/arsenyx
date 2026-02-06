@@ -80,10 +80,3 @@ export {
 } from "./users";
 
 export type { UserProfile, UserStats } from "./users";
-
-/**
- * Check if database mode is enabled
- */
-export function useDatabase(): boolean {
-  return process.env.USE_DATABASE === "true";
-}

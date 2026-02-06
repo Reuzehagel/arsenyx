@@ -1,12 +1,13 @@
+import "server-only";
+
 /**
  * Database queries for Items
- * Server-only - do not import in client components
  */
 
 import { prisma } from "@/lib/db";
 import { unstable_cache } from "next/cache";
 import type { BrowseCategory, BrowseItem, BrowseableItem } from "@/lib/warframe/types";
-import { slugify } from "@/lib/warframe/slugs";
+import { slugify, unslugify } from "@/lib/warframe/slugs";
 
 /**
  * Get all items for a specific browse category from the database
@@ -60,13 +61,16 @@ export async function getItemBySlugFromDb(
   category: BrowseCategory,
   slug: string
 ): Promise<BrowseableItem | null> {
-  // Since we don't store slugs in DB, we need to find by name pattern
-  // This is a limitation - for better performance, consider storing slugs in DB
-  const items = await prisma.item.findMany({
-    where: { browseCategory: category },
+  // Convert slug back to a search term and query with case-insensitive contains
+  const searchTerm = unslugify(slug);
+  const candidates = await prisma.item.findMany({
+    where: {
+      browseCategory: category,
+      name: { contains: searchTerm, mode: "insensitive" },
+    },
   });
 
-  for (const item of items) {
+  for (const item of candidates) {
     if (slugify(item.name) === slug) {
       return item.data as unknown as BrowseableItem;
     }
@@ -76,22 +80,10 @@ export async function getItemBySlugFromDb(
 }
 
 /**
- * Get category counts from the database
+ * Get category counts from the database (single grouped query)
  */
 export const getCategoryCountsFromDb = unstable_cache(
   async (): Promise<Record<BrowseCategory, number>> => {
-    const categories: BrowseCategory[] = [
-      "warframes",
-      "primary",
-      "secondary",
-      "melee",
-      "necramechs",
-      "companions",
-      "companion-weapons",
-      "exalted-weapons",
-      "archwing",
-    ];
-
     const counts: Record<BrowseCategory, number> = {
       warframes: 0,
       primary: 0,
@@ -104,10 +96,16 @@ export const getCategoryCountsFromDb = unstable_cache(
       archwing: 0,
     };
 
-    for (const category of categories) {
-      counts[category] = await prisma.item.count({
-        where: { browseCategory: category },
-      });
+    const grouped = await prisma.item.groupBy({
+      by: ["browseCategory"],
+      _count: true,
+    });
+
+    for (const row of grouped) {
+      const category = row.browseCategory as BrowseCategory;
+      if (category in counts) {
+        counts[category] = row._count;
+      }
     }
 
     return counts;

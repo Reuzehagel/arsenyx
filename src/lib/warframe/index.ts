@@ -21,7 +21,5 @@ export * from "./aura-effects";
 export * from "./stats-calculator";
 
 // Server-only exports should be imported directly:
-// - Static JSON (default): import { getItemsByCategory, ... } from "@/lib/warframe/items";
-// - Unified API with feature flag: import { getItemsByCategory, ... } from "@/lib/warframe/data";
-//
-// Set USE_DATABASE=true in .env to use database queries instead of static JSON
+// import { getItemsByCategory, ... } from "@/lib/warframe/items";
+// import { getAllMods, ... } from "@/lib/warframe/mods";
