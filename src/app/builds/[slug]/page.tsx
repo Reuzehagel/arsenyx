@@ -194,6 +194,7 @@ export default async function BuildPage({ params }: BuildPageProps) {
                 <ShareButton
                   buildName={build.name}
                   itemName={build.item.name}
+                  buildSlug={build.slug}
                 />
                 <span className="text-sm text-muted-foreground">
                   Updated {new Date(build.updatedAt).toLocaleDateString()}

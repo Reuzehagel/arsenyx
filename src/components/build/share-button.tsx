@@ -1,7 +1,7 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
-import { Link2, Share2 } from "lucide-react";
+import { useState, useSyncExternalStore } from "react";
+import { Link2, Share2, ImageIcon, Download } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,14 +20,16 @@ const getServerCanShare = () => false;
 interface ShareButtonProps {
   buildName: string;
   itemName: string;
+  buildSlug: string;
 }
 
-export function ShareButton({ buildName, itemName }: ShareButtonProps) {
+export function ShareButton({ buildName, itemName, buildSlug }: ShareButtonProps) {
   const canShare = useSyncExternalStore(
     emptySubscribe,
     getCanShare,
     getServerCanShare,
   );
+  const [imageLoading, setImageLoading] = useState(false);
 
   const copyLink = async () => {
     try {
@@ -45,11 +47,56 @@ export function ShareButton({ buildName, itemName }: ShareButtonProps) {
         url: window.location.href,
       });
     } catch (e) {
-      // User cancelled share — not an error
       if (e instanceof Error && e.name !== "AbortError") {
         toast.error("Failed to share");
       }
     }
+  };
+
+  const fetchImageBlob = async (): Promise<Blob | null> => {
+    try {
+      setImageLoading(true);
+      const res = await fetch(`/api/builds/${buildSlug}/image`);
+      if (!res.ok) throw new Error("Failed to generate image");
+      return await res.blob();
+    } catch {
+      toast.error("Failed to generate image");
+      return null;
+    } finally {
+      setImageLoading(false);
+    }
+  };
+
+  const downloadBlob = (blob: Blob) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${buildName}-${itemName}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success("Image downloaded!");
+  };
+
+  const copyImage = async () => {
+    const blob = await fetchImageBlob();
+    if (!blob) return;
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({ "image/png": blob }),
+      ]);
+      toast.success("Image copied!");
+    } catch {
+      // Fallback: download instead
+      downloadBlob(blob);
+    }
+  };
+
+  const downloadImage = async () => {
+    const blob = await fetchImageBlob();
+    if (!blob) return;
+    downloadBlob(blob);
   };
 
   return (
@@ -72,6 +119,14 @@ export function ShareButton({ buildName, itemName }: ShareButtonProps) {
               Share...
             </DropdownMenuItem>
           )}
+          <DropdownMenuItem onSelect={copyImage} disabled={imageLoading}>
+            <ImageIcon />
+            {imageLoading ? "Generating..." : "Copy Image"}
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={downloadImage} disabled={imageLoading}>
+            <Download />
+            {imageLoading ? "Generating..." : "Download Image"}
+          </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
