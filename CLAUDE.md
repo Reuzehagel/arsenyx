@@ -1,8 +1,8 @@
-# CLAUDE.md - AI Assistant Guide for Arsenyx
+# CLAUDE.md - Arsenyx
 
 ## Project Overview
 
-Arsenyx is a Warframe build planner - a web application for creating, sharing, and discovering equipment builds for the game Warframe. It features keyboard-first navigation, rich text guides, mod/arcane management, and social features (voting, favorites, forking builds).
+Arsenyx is a Warframe build planner — create, share, and discover equipment builds. Features keyboard-first navigation, rich text guides, mod/arcane management, and social features (voting, favorites, forking).
 
 ## Tech Stack
 
@@ -15,161 +15,143 @@ Arsenyx is a Warframe build planner - a web application for creating, sharing, a
 - **Package Manager**: Bun (required)
 - **Data Source**: `@wfcd/items` (Warframe Community Data)
 
-## Quick Commands
+## Commands
 
 ```bash
-bun install          # Install dependencies (runs prisma generate)
-bun dev              # Start dev server (Next.js with Turbopack)
-bun build            # Production build
-bun lint             # Run ESLint
+bun install              # Install deps (runs prisma generate via postinstall)
+bun dev                  # Dev server (Next.js + Turbopack)
+bun build                # Production build
+bun lint                 # ESLint
+bun test                 # Run tests
+bun test:watch           # Watch mode
+bun test:coverage        # Coverage report
 
 # Database
-bun run db:push      # Push schema to database
-bun run db:migrate   # Run migrations
-bun run db:studio    # Open Prisma Studio
+bun run db:push          # Push schema to database
+bun run db:migrate       # Run migrations
+bun run db:studio        # Open Prisma Studio
 
-# Warframe Data Sync
-bun run sync-data    # Copy WFCD JSON files to src/data/warframe/
-bun run update-data  # Update @wfcd/items package + sync
-bun run db:sync      # Sync WFCD data to PostgreSQL database
+# Warframe Data
+bun run sync-data        # Copy WFCD JSON files to src/data/warframe/
+bun run update-data      # Update @wfcd/items package + sync
+bun run db:sync          # Sync WFCD data to PostgreSQL database
+
+# Overframe Import
+bun run overframe:build-map  # Convert Overframe item mappings
 ```
+
+## Development Workflow
+
+1. `docker compose up -d` — start PostgreSQL
+2. `bun run db:push` — push schema
+3. `bun run db:sync` — sync WFCD data (if using database mode)
+4. `bun dev` — start dev server at http://localhost:3000
 
 ## Project Structure
 
 ```txt
 src/
-├── app/                    # Next.js App Router pages
-│   ├── api/               # API routes (auth)
-│   ├── browse/            # Item browsing (warframes, weapons, etc.)
-│   ├── builds/            # Build viewing and management
-│   ├── guides/            # User guides
-│   └── ...
+├── app/
+│   ├── actions/            # Server actions (builds, social)
+│   ├── api/                # API routes (auth)
+│   ├── auth/               # Auth pages (signin, error)
+│   ├── browse/             # Item browsing (warframes, weapons, etc.)
+│   ├── builds/             # Build viewing and management
+│   ├── create/             # Build creation
+│   ├── favorites/          # User favorites
+│   ├── guides/             # User guides
+│   ├── import/             # Overframe build import
+│   ├── profile/[username]/ # User profiles
+│   ├── about/ privacy/ terms/  # Static pages
+│   ├── layout.tsx          # Root layout
+│   └── page.tsx            # Landing page
 ├── components/
-│   ├── ui/                # shadcn/ui primitives (DO NOT modify unless necessary)
-│   ├── browse/            # Browse page components
-│   ├── build/             # Build display components
-│   ├── build-editor/      # Build creation/editing
-│   ├── editor/            # Lexical rich text editor
-│   ├── mod-card/          # Mod card rendering
-│   ├── arcane-card/       # Arcane card rendering
-│   ├── auth/              # Authentication components
-│   ├── guides/            # Guide components
-│   └── landing/           # Homepage components
+│   ├── ui/                 # shadcn/ui primitives (DO NOT modify)
+│   ├── arcane-card/        # Arcane card rendering
+│   ├── auth/               # Authentication components
+│   ├── browse/             # Browse page components
+│   ├── build/              # Build display components
+│   ├── build-editor/       # Build creation/editing
+│   ├── guides/             # Guide components
+│   ├── landing/            # Homepage components
+│   ├── mod-card/           # Mod card rendering
+│   ├── header.tsx          # Site header
+│   ├── footer.tsx          # Site footer
+│   ├── mobile-nav.tsx      # Mobile navigation
+│   ├── icons.tsx           # Custom icons
+│   └── theme-*.tsx         # Theme provider + toggle
 ├── lib/
-│   ├── warframe/          # Warframe domain utilities
-│   │   ├── items.ts       # SERVER-ONLY: JSON data loading
-│   │   ├── data.ts        # SERVER-ONLY: Unified data API
-│   │   ├── index.ts       # Client-safe exports
-│   │   ├── types.ts       # All TypeScript types
-│   │   ├── images.ts      # getImageUrl() helper
-│   │   ├── categories.ts  # Category definitions
-│   │   └── ...
-│   ├── db/                # Database query functions
-│   │   ├── builds.ts      # Build CRUD operations
-│   │   ├── items.ts       # Item queries
-│   │   ├── mods.ts        # Mod queries
-│   │   └── ...
-│   ├── auth.ts            # Better Auth server config
-│   ├── auth-client.ts     # Better Auth client
-│   ├── db.ts              # Prisma client singleton
-│   └── utils.ts           # cn() utility
+│   ├── warframe/           # Warframe domain logic
+│   │   ├── items.ts        # SERVER-ONLY: JSON data loading
+│   │   ├── index.ts        # Client-safe re-exports
+│   │   ├── types.ts        # All Warframe TypeScript types
+│   │   ├── images.ts       # getImageUrl() helper
+│   │   ├── categories.ts   # Category definitions
+│   │   ├── mods.ts         # Mod utilities
+│   │   ├── capacity.ts     # Mod capacity calculations
+│   │   ├── schemas.ts      # Zod schemas
+│   │   ├── stats/          # Stat engine (warframe, weapon stats)
+│   │   ├── stat-parser.ts  # Stat string parsing
+│   │   ├── helminth.ts     # Helminth ability data
+│   │   ├── shards.ts       # Archon shard data
+│   │   └── ...             # formatting, slugs, aura-effects, etc.
+│   ├── db/                 # Database query functions
+│   │   ├── builds.ts       # Build CRUD
+│   │   ├── items.ts        # Item queries
+│   │   ├── mods.ts         # Mod queries
+│   │   ├── users.ts        # User queries
+│   │   ├── votes.ts        # Vote queries
+│   │   ├── favorites.ts    # Favorite queries
+│   │   └── index.ts        # Barrel exports
+│   ├── guides/             # Guide data + types
+│   ├── overframe/          # Overframe import/decode logic
+│   ├── auth.ts             # Better Auth server config
+│   ├── auth-client.ts      # Better Auth client
+│   ├── build-codec.ts      # Build URL encoding/decoding
+│   ├── constants.ts        # App constants
+│   ├── db.ts               # Prisma client singleton
+│   ├── rate-limit.ts       # Rate limiting
+│   ├── result.ts           # Result type utility
+│   ├── types.ts            # Shared app types
+│   └── utils.ts            # cn() utility
 ├── data/
-│   └── warframe/          # Static JSON from @wfcd/items
+│   └── warframe/           # Static JSON from @wfcd/items
 prisma/
-└── schema.prisma          # Database schema
+└── schema.prisma           # Database schema
 scripts/
-├── sync-warframe-data.ts  # Copy JSON from node_modules
-└── sync-wfcd-to-db.ts     # Sync WFCD data to database
+├── sync-warframe-data.ts   # Copy JSON from node_modules
+├── sync-wfcd-to-db.ts      # Sync WFCD data to database
+└── convert-overframe-items.ts  # Overframe item mapping
 ```
 
 ## Key Patterns
 
-### Server vs Client Components
+### Server vs Client Boundary
 
 ```typescript
-// SERVER Component (default) - can use database, fs, etc.
+// SERVER (default) - can use database, fs, JSON loading
 import { getItemsByCategory } from "@/lib/warframe/items";
 import { prisma } from "@/lib/db";
 
-// CLIENT Component - must use "use client" directive
+// CLIENT - must have "use client" directive
 "use client";
 import { getImageUrl, type BrowseItem } from "@/lib/warframe";
-// Never import from "@/lib/warframe/items" or "@/lib/db" in client components
-```
-
-### Import Path Aliases
-
-Always use the `@/` alias for imports:
-
-```typescript
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import type { BrowseItem } from "@/lib/warframe/types";
+// NEVER import from "@/lib/warframe/items" or "@/lib/db" in client components
 ```
 
 ### Component Barrel Exports
 
-Each component folder has an `index.ts` with named exports:
+Each component folder has an `index.ts` with named exports. Import from the folder, not individual files:
 
 ```typescript
-// src/components/browse/index.ts
-export { ItemCard } from "./item-card";
-export { ItemGrid } from "./item-grid";
-// ...
-
-// Usage:
 import { ItemCard, ItemGrid } from "@/components/browse";
 ```
 
-### Styling Conventions
+### Images
 
-1. **Use `cn()` for class merging**:
-
-   ```typescript
-   import { cn } from "@/lib/utils";
-   <div className={cn("base-class", isActive && "active-class")} />
-   ```
-
-2. **Override shadcn/ui defaults explicitly**:
-
-   ```typescript
-   <Card className="py-0 gap-0">  // Remove default padding/gap
-   ```
-
-3. **Consistent badge sizing**:
-
-   ```typescript
-   <Badge className="text-xs px-2 py-0.5">
-   ```
-
-4. **Images**: Use Next.js Image with `fill` + `object-cover` in `aspect-square` containers:
-
-   ```typescript
-   <div className="relative aspect-square">
-     <Image src={url} alt={name} fill className="object-cover" unoptimized />
-   </div>
-   ```
-
-### Warframe Image URLs
-
-```typescript
-import { getImageUrl } from "@/lib/warframe";
-
-const imageUrl = getImageUrl(item.imageName);
-// Returns CDN URL (cdn.warframestat.us) or placeholder SVG
-```
-
-### Database Access
-
-```typescript
-import { prisma } from "@/lib/db";
-
-// Always use typed queries
-const build = await prisma.build.findUnique({
-  where: { slug },
-  include: { user: true, item: true },
-});
-```
+- CDN: `cdn.warframestat.us` and `wiki.warframe.com` (configured in `next.config.ts`)
+- Use `getImageUrl(item.imageName)` from `@/lib/warframe`
+- Use Next.js `<Image>` with `fill` + `object-cover` in `aspect-square` containers, always with `unoptimized`
 
 ### Adding shadcn/ui Components
 
@@ -177,31 +159,15 @@ const build = await prisma.build.findUnique({
 npx shadcn@latest add <component-name> -y
 ```
 
-## Type Definitions
-
-Key types in `@/lib/warframe/types.ts`:
-
-- `BrowseCategory`: `"warframes" | "primary" | "secondary" | "melee" | ...`
-- `BrowseItem`: Simplified item for grid display
-- `Warframe`, `Gun`, `Melee`, `Companion`: Full item types
-- `Mod`, `PlacedMod`: Mod types
-- `Arcane`, `PlacedArcane`: Arcane types
-- `BuildState`: Complete build configuration
-- `Polarity`: `"madurai" | "vazarin" | "naramon" | ...`
-- `ShardColor`, `PlacedShard`: Archon shard types
-
-## Database Schema Overview
-
-Main models in `prisma/schema.prisma`:
+## Database Schema (Key Models)
 
 - **User**: Auth + profile, roles (USER, VERIFIED, DEVELOPER, MODERATOR, ADMIN)
 - **Item**: Synced Warframe items (warframes, weapons, companions)
-- **Mod**: All game mods with stats
-- **Arcane**: All arcanes
-- **Build**: User-created builds with mod/arcane configurations
+- **Mod** / **Arcane**: Game mods and arcanes with stats
+- **Build**: User-created builds with mod/arcane/shard configurations
 - **BuildGuide**: Rich text (Lexical) attached to builds
 - **Guide**: Standalone user guides
-- **BuildVote/BuildFavorite**: Social features
+- **BuildVote** / **BuildFavorite**: Social features
 
 ## Environment Variables
 
@@ -212,23 +178,26 @@ DATABASE_URL=postgresql://arsenyx:arsenyx_dev@localhost:5432/arsenyx
 GITHUB_ID=...
 GITHUB_SECRET=...
 BETTER_AUTH_SECRET=...
-USE_DATABASE=true  # Optional: use DB instead of static JSON
+USE_DATABASE=true  # Toggle DB mode vs static JSON
 ```
 
-## Development Workflow
+## Testing
 
-1. **Start database**: `docker compose up -d`
-2. **Push schema**: `bun run db:push`
-3. **Sync WFCD data**: `bun run db:sync` (if using database mode)
-4. **Start dev server**: `bun dev`
-5. **View at**: <http://localhost:3000>
+Tests exist in `__tests__/` directories alongside source code:
+- `src/lib/__tests__/build-codec.test.ts`
+- `src/lib/warframe/__tests__/capacity.test.ts`
+- `src/lib/warframe/__tests__/stat-parser.test.ts`
+- `src/lib/warframe/__tests__/stats-calculator.test.ts`
 
-## Important Notes
+Coverage is limited — be careful with refactoring untested code.
 
-- **No tests currently** - be careful with refactoring
-- **Keyboard-first UX** - preserve keyboard navigation in browse components
-- **Server Components first** - only add `"use client"` when necessary
-- **Don't modify `src/components/ui/`** unless absolutely required
-- **Lexical editor** is complex - changes require understanding the plugin architecture
-- **Images are from CDN** (cdn.warframestat.us) - don't try to serve locally
-- **Prisma adapter-pg** is used for edge compatibility - keep pg as serverExternalPackages
+## Gotchas
+
+- **`pg` must be external** — `serverExternalPackages: ["pg"]` in `next.config.ts` prevents Turbopack bundling issues with the PostgreSQL driver
+- **Keyboard-first UX** — preserve keyboard navigation in browse components
+- **Server Components first** — only add `"use client"` when actually needed
+- **Don't modify `src/components/ui/`** — shadcn/ui primitives, override via className instead
+- **Lexical editor is complex** — changes require understanding the plugin architecture
+- **`USE_DATABASE` env var** — toggles between PostgreSQL queries and static JSON file loading
+- **Always use `@/` import alias** — never use relative paths
+- **Use `cn()` for conditional classes** — `import { cn } from "@/lib/utils"`
