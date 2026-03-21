@@ -14,6 +14,7 @@ import type {
 } from "@/lib/warframe/types";
 import { getModBaseName } from "@/lib/warframe/mod-variants";
 import { normalizePolarity } from "@/lib/warframe/mods";
+import { isWeaponCategory } from "@/lib/warframe/categories";
 import {
   getCapacityStatus,
   calculateTotalEndoCost,
@@ -168,7 +169,7 @@ export function createInitialBuildState(
     };
     baseState.shardSlots = [null, null, null, null, null];
     baseState.arcaneSlots = [null, null];
-  } else if (["primary", "secondary", "melee"].includes(category)) {
+  } else if (isWeaponCategory(category)) {
     baseState.arcaneSlots = [null];
   }
 

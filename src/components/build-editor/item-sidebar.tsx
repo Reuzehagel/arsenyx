@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { getImageUrl } from "@/lib/warframe/images";
 import type { BuildState, HelminthAbility, PlacedShard, BrowseableItem } from "@/lib/warframe/types";
 import type { CapacityStatus } from "@/lib/warframe/capacity";
+import { isWarframeCategory, isWeaponCategory, isGunCategory, isMeleeCategory } from "@/lib/warframe/categories";
 import { useCalculatedStats } from "@/hooks/use-calculated-stats";
 import { HelminthAbilityDialog } from "./helminth-ability-dialog";
 import { ShardsPanel } from "./shards-panel";
@@ -89,15 +90,10 @@ export function ItemSidebar({
   // Only use calculated stats if item was provided
   const calculatedStats = item ? calculatedStatsResult : null;
 
-  const isWarframeOrNecramech =
-    buildState.itemCategory === "warframes" ||
-    buildState.itemCategory === "necramechs";
-
-  const isWeapon = ["primary", "secondary", "melee"].includes(
-    buildState.itemCategory
-  );
-  const isMelee = buildState.itemCategory === "melee";
-  const isGun = buildState.itemCategory === "primary" || buildState.itemCategory === "secondary";
+  const isWarframeOrNecramech = isWarframeCategory(buildState.itemCategory);
+  const isWeapon = isWeaponCategory(buildState.itemCategory);
+  const isMelee = isMeleeCategory(buildState.itemCategory);
+  const isGun = isGunCategory(buildState.itemCategory);
 
   // Reactor for warframes/necramechs, Catalyst for weapons
   const capacityBoosterLabel = isWarframeOrNecramech ? "Reactor" : "Catalyst";
@@ -109,7 +105,7 @@ export function ItemSidebar({
   // Get abilities from item stats
   const abilities = itemStats?.abilities ?? [];
 
-  const isWarframe = buildState.itemCategory === "warframes";
+  const isWarframe = buildState.itemCategory === "warframes"; // Specifically warframes, not necramechs
 
   const handleAbilityClick = (index: number) => {
     if (readOnly || !isWarframe) return;
@@ -169,6 +165,7 @@ export function ItemSidebar({
                         src={getImageUrl(displayAbility.imageName)}
                         alt={displayAbility.name}
                         fill
+                        sizes="40px"
                         className="object-cover"
                       />
                     ) : (

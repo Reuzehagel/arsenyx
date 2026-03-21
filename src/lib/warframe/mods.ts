@@ -57,6 +57,14 @@ export function normalizePolarity(polarity?: string): Polarity {
 export function getAllMods(): Mod[] {
   if (cachedAllMods) return cachedAllMods;
 
+  // Pre-index mod sets by uniqueName for O(1) lookup during mapping
+  const modSetIndex = new Map<string, Mod>();
+  for (const mod of allMods) {
+    if (mod.uniqueName && mod.stats) {
+      modSetIndex.set(mod.uniqueName, mod);
+    }
+  }
+
   cachedAllMods = allMods
     .filter((mod) => {
       // Filter out Riven mods and other special cases
@@ -86,10 +94,10 @@ export function getAllMods(): Mod[] {
       return true;
     })
     .map((mod) => {
-      // Find set bonus stats if applicable
+      // Find set bonus stats if applicable (uses pre-built index for O(1) lookup)
       let modSetStats: string[] | undefined;
       if (mod.modSet) {
-        const setMod = allMods.find((m) => m.uniqueName === mod.modSet);
+        const setMod = modSetIndex.get(mod.modSet);
         if (setMod && setMod.stats) {
           modSetStats = setMod.stats;
         }

@@ -17,7 +17,7 @@ import type {
   Mod,
   Arcane,
 } from "@/lib/warframe/types";
-
+import { isWarframeCategory } from "@/lib/warframe/categories";
 import {
   useBuildState,
   extractItemStats,
@@ -208,8 +208,7 @@ export function BuildContainer({
 
   // --- Keyboard navigation ---
 
-  const isWarframeOrNecramech =
-    category === "warframes" || category === "necramechs";
+  const isWarframeOrNecramech = isWarframeCategory(category);
 
   useBuildKeyboard({
     onSelectSlot: handleSelectSlot,

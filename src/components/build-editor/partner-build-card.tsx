@@ -50,6 +50,7 @@ export function PartnerBuildCard({
           src={imageUrl}
           alt={build.item.name}
           fill
+          sizes="40px"
           className="object-cover"
           unoptimized
         />

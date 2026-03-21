@@ -105,12 +105,10 @@ export async function getModsForCategoryFromDb(category: string): Promise<Mod[]>
   const compatibilities = categoryMap[category];
   if (!compatibilities) return [];
 
-  const result: Mod[] = [];
-  for (const compat of compatibilities) {
-    const mods = await getModsByCompatibilityFromDb(compat);
-    result.push(...mods);
-  }
-  return result;
+  const results = await Promise.all(
+    compatibilities.map((compat) => getModsByCompatibilityFromDb(compat))
+  );
+  return results.flat();
 }
 
 /**

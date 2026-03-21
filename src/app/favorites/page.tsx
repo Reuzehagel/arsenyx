@@ -1,14 +1,13 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { getServerSession } from "@/lib/auth";
 import { getUserFavoriteBuilds } from "@/lib/db/index";
-import { getImageUrl } from "@/lib/warframe/images";
-import { ThumbsUp, Eye, Heart } from "lucide-react";
+import { BuildCardLink } from "@/components/build/build-card-link";
+import { Heart } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Favorites | ARSENYX",
@@ -64,39 +63,21 @@ export default async function FavoritesPage({
             <>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                 {builds.map((build) => (
-                  <Link
+                  <BuildCardLink
                     key={build.id}
-                    href={`/builds/${build.slug}`}
-                    className="block bg-card border rounded-lg overflow-hidden hover:border-primary transition-colors"
-                  >
-                    <div className="relative aspect-video bg-muted/20">
-                      <Image
-                        src={getImageUrl(build.item.imageName ?? undefined)}
-                        alt={build.item.name}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                    <div className="p-2 flex flex-col gap-1">
-                      <h3 className="font-medium text-sm line-clamp-1">
-                        {build.name}
-                      </h3>
+                    slug={build.slug}
+                    name={build.name}
+                    itemName={build.item.name}
+                    itemImageName={build.item.imageName}
+                    voteCount={build.voteCount}
+                    viewCount={build.viewCount}
+                    subtitle={
                       <p className="text-xs text-muted-foreground line-clamp-1">
                         {build.item.name} by{" "}
                         {build.user.username || build.user.name || "Anonymous"}
                       </p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-0.5">
-                          <ThumbsUp className="h-3 w-3" />
-                          {build.voteCount}
-                        </span>
-                        <span className="flex items-center gap-0.5">
-                          <Eye className="h-3 w-3" />
-                          {build.viewCount}
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
+                    }
+                  />
                 ))}
               </div>
 

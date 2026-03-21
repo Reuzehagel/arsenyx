@@ -91,6 +91,7 @@ export function ShardSlot({
         src={getShardImageUrl(shard.color, shard.tauforged)}
         alt={`${shard.tauforged ? "Tauforged " : ""}${SHARD_COLOR_NAMES[shard.color]} Archon Shard`}
         fill
+        sizes="32px"
         className="object-contain p-0.5"
         unoptimized // Wiki images are external
       />

@@ -163,6 +163,7 @@ export function DrainBadge({
         width={36}
         height={18}
         className="pointer-events-none"
+        style={{ width: "auto", height: "auto" }}
         priority={false}
       />
 
@@ -255,6 +256,7 @@ export function ModCardFrame({
             src={getModAssetUrl(rarity, "Background")}
             alt=""
             fill
+            sizes="148px"
             className="object-cover object-bottom"
             priority={false}
           />

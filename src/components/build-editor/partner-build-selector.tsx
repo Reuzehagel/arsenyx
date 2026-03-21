@@ -5,7 +5,7 @@ import { Check, ChevronsUpDown, Search } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { getImageUrl } from "@/lib/warframe";
+import { getImageUrl, getCategoryConfig } from "@/lib/warframe";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -58,17 +58,8 @@ interface PartnerBuildSelectorProps {
 }
 
 function formatCategory(category: string): string {
-  const categoryMap: Record<string, string> = {
-    warframes: "Warframe",
-    primary: "Primary",
-    secondary: "Secondary",
-    melee: "Melee",
-    companions: "Companion",
-    archwing: "Archwing",
-    "archwing-gun": "Arch-Gun",
-    "archwing-melee": "Arch-Melee",
-  };
-  return categoryMap[category] || category;
+  const config = getCategoryConfig(category as import("@/lib/warframe/types").BrowseCategory);
+  return config?.label ?? category;
 }
 
 export function PartnerBuildSelector({
@@ -178,6 +169,7 @@ export function PartnerBuildSelector({
                           src={imageUrl}
                           alt={build.item.name}
                           fill
+                          sizes="32px"
                           className="object-cover"
                           unoptimized
                         />

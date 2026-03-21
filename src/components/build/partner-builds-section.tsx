@@ -80,6 +80,7 @@ function PartnerBuildViewCard({ build }: PartnerBuildViewCardProps) {
           src={imageUrl}
           alt={build.item.name}
           fill
+          sizes="40px"
           className="object-cover transition-transform group-hover:scale-110"
           unoptimized
         />

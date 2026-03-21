@@ -115,6 +115,7 @@ function ArcaneCardComponent({
           src={getArcaneImageUrl(arcane.name)}
           alt={arcane.name}
           fill
+          sizes="80px"
           className="object-cover"
           unoptimized
         />

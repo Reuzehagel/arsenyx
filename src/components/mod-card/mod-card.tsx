@@ -111,6 +111,7 @@ function ModImage({ mod, alt, className, style }: ModImageProps) {
       src={src}
       alt={alt}
       fill
+      sizes="148px"
       className={className}
       style={style}
       onError={() => {
@@ -277,6 +278,7 @@ function ExpandedModCard({
             src={getModAssetUrl(rarity, "Background")}
             alt=""
             fill
+            sizes="148px"
             className="object-cover object-bottom"
             priority={false}
           />

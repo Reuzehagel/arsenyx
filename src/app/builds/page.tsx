@@ -6,7 +6,9 @@ import { Footer } from "@/components/footer";
 import { Icons } from "@/components/icons";
 import { getPublicBuilds, type BuildWithUser } from "@/lib/db/index";
 import { getImageUrl } from "@/lib/warframe/images";
-import { Eye, ThumbsUp, XIcon } from "lucide-react";
+import { XIcon } from "lucide-react";
+import { BuildStats } from "@/components/build/build-card-link";
+import { BROWSE_CATEGORIES } from "@/lib/warframe/categories";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -85,6 +87,7 @@ function BuildCard({ build }: { build: BuildWithUser }) {
                     src={getImageUrl(build.item.imageName ?? undefined)}
                     alt={build.item.name}
                     fill
+                    sizes="(max-width: 768px) 100vw, 300px"
                     className="object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
@@ -111,16 +114,7 @@ function BuildCard({ build }: { build: BuildWithUser }) {
                     <span className="line-clamp-1">
                         by {build.user.username || build.user.name || "Anonymous"}
                     </span>
-                    <div className="flex items-center gap-2 shrink-0">
-                        <span className="flex items-center gap-0.5">
-                            <ThumbsUp className="size-3" />
-                            {build.voteCount}
-                        </span>
-                        <span className="flex items-center gap-0.5">
-                            <Eye className="size-3" />
-                            {build.viewCount}
-                        </span>
-                    </div>
+                    <BuildStats voteCount={build.voteCount} viewCount={build.viewCount} />
                 </div>
 
                 <p className="text-xs text-muted-foreground">{timeAgo}</p>
@@ -131,13 +125,7 @@ function BuildCard({ build }: { build: BuildWithUser }) {
 
 const CATEGORY_OPTIONS = [
     { value: "", label: "All Categories" },
-    { value: "warframes", label: "Warframes" },
-    { value: "primary", label: "Primary" },
-    { value: "secondary", label: "Secondary" },
-    { value: "melee", label: "Melee" },
-    { value: "companions", label: "Companions" },
-    { value: "archwing", label: "Archwing" },
-    { value: "necramechs", label: "Necramechs" },
+    ...BROWSE_CATEGORIES.map((c) => ({ value: c.id, label: c.labelPlural })),
 ];
 
 const SORT_OPTIONS = [

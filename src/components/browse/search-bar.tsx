@@ -27,7 +27,10 @@ export function SearchBar({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [inputValue, setInputValue] = useState(defaultValue);
   const inputValueRef = useRef(inputValue);
-  inputValueRef.current = inputValue;
+
+  useEffect(() => {
+    inputValueRef.current = inputValue;
+  }, [inputValue]);
 
   const handleSearch = useCallback(
     (value: string) => {

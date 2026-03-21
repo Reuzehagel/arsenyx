@@ -117,6 +117,7 @@ export function ShardSelectionDialog({
                     src={getShardImageUrl(color, false)}
                     alt={`${SHARD_COLOR_NAMES[color]} Shard`}
                     fill
+                    sizes="48px"
                     className="object-contain p-1"
                     unoptimized
                   />

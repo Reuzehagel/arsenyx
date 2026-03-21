@@ -38,6 +38,7 @@ export function ItemCard({ item, index }: ItemCardProps) {
             src={imageUrl}
             alt={item.name}
             fill
+            sizes="(max-width: 768px) 50vw, 200px"
             className={cn(
               "object-cover transition-transform duration-200 group-hover:scale-110",
               !item.imageName && "opacity-50"
