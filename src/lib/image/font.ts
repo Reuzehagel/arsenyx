@@ -1,8 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-let regularFontCache: ArrayBuffer | null = null;
-let boldFontCache: ArrayBuffer | null = null;
+let fontCache: Array<{ name: string; data: ArrayBuffer; weight: 400 | 700; style: "normal" }> | null = null;
 
 async function loadFontFile(filename: string): Promise<ArrayBuffer> {
   const fontPath = join(
@@ -17,22 +16,17 @@ async function loadFontFile(filename: string): Promise<ArrayBuffer> {
   );
 }
 
-/**
- * Load Geist fonts as ArrayBuffers for satori.
- * Cached after first load.
- */
-export async function loadFonts(): Promise<
-  Array<{ name: string; data: ArrayBuffer; weight: number; style: "normal" }>
-> {
-  if (!regularFontCache) {
-    regularFontCache = await loadFontFile("Geist-Regular.ttf");
-  }
-  if (!boldFontCache) {
-    boldFontCache = await loadFontFile("Geist-Bold.ttf");
-  }
+export async function loadFonts() {
+  if (fontCache) return fontCache;
 
-  return [
-    { name: "Geist", data: regularFontCache, weight: 400, style: "normal" as const },
-    { name: "Geist", data: boldFontCache, weight: 700, style: "normal" as const },
+  const [regular, bold] = await Promise.all([
+    loadFontFile("Geist-Regular.ttf"),
+    loadFontFile("Geist-Bold.ttf"),
+  ]);
+
+  fontCache = [
+    { name: "Geist", data: regular, weight: 400 as const, style: "normal" as const },
+    { name: "Geist", data: bold, weight: 700 as const, style: "normal" as const },
   ];
+  return fontCache;
 }

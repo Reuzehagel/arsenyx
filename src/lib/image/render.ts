@@ -7,8 +7,7 @@ import { BuildCardTemplate } from "./build-card";
 import { getImageUrl } from "@/lib/warframe/images";
 import type { BuildState } from "@/lib/warframe/types";
 
-const WIDTH = 1200;
-const HEIGHT = 630;
+export const IMAGE_DIMENSIONS = { width: 1200, height: 630 } as const;
 
 /**
  * Fetch an image and return as base64 data URI for embedding in satori.
@@ -70,16 +69,22 @@ async function loadRawPolaritySvgs(): Promise<Map<string, string>> {
  * Tint a polarity SVG to a specific color and return as base64 data URI.
  * Replaces fill and stroke colors in the SVG.
  */
-function tintSvg(svgString: string, color: string): string {
+const tintCache = new Map<string, string>();
+
+function tintSvg(svgString: string, polarity: string, color: string): string {
+  const key = `${polarity}:${color}`;
+  const cached = tintCache.get(key);
+  if (cached) return cached;
+
   const tinted = svgString
     .replace(/fill:#[0-9a-fA-F]{6}/g, `fill:${color}`)
     .replace(/stroke:#[0-9a-fA-F]{6}/g, `stroke:${color}`);
-  const base64 = Buffer.from(tinted).toString("base64");
-  return `data:image/svg+xml;base64,${base64}`;
+  const result = `data:image/svg+xml;base64,${Buffer.from(tinted).toString("base64")}`;
+  tintCache.set(key, result);
+  return result;
 }
 
 export interface PolarityIcons {
-  rawSvgs: Map<string, string>;
   tint: (polarity: string, color: string) => string | undefined;
 }
 
@@ -147,11 +152,10 @@ export async function renderBuildImage(
   ]);
 
   const polarityIcons: PolarityIcons = {
-    rawSvgs,
     tint: (polarity: string, color: string) => {
       const svg = rawSvgs.get(polarity);
       if (!svg) return undefined;
-      return tintSvg(svg, color);
+      return tintSvg(svg, polarity, color);
     },
   };
 
@@ -168,8 +172,8 @@ export async function renderBuildImage(
   });
 
   const svg = await satori(element, {
-    width: WIDTH,
-    height: HEIGHT,
+    width: IMAGE_DIMENSIONS.width,
+    height: IMAGE_DIMENSIONS.height,
     fonts,
   });
 

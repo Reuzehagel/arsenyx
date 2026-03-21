@@ -69,9 +69,10 @@ export function ShareButton({ buildName, itemName, buildSlug }: ShareButtonProps
 
   const downloadBlob = (blob: Blob) => {
     const url = URL.createObjectURL(blob);
+    const safeName = `${buildName}-${itemName}`.replace(/[<>:"/\\|?*]/g, "_");
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${buildName}-${itemName}.png`;
+    a.download = `${safeName}.png`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

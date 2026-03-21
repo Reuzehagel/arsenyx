@@ -7,10 +7,9 @@ import type {
   Polarity,
 } from "@/lib/warframe/types";
 import { getImageUrl } from "@/lib/warframe/images";
+import { RARITY_CONFIG, type ModRarity } from "@/lib/warframe/mod-card-config";
 import type { PolarityIcons } from "./render";
-
-const WIDTH = 1200;
-const HEIGHT = 630;
+import { IMAGE_DIMENSIONS } from "./render";
 
 const COLORS = {
   bg: "#0f0f13",
@@ -26,20 +25,10 @@ const COLORS = {
   polarityMismatch: "#f87171", // red-400
 };
 
-const RARITY_TEXT_COLORS: Record<string, string> = {
-  Common: "#C79989",
-  Uncommon: "#BEC0C2",
-  Rare: "#FBECC4",
-  Legendary: "#DFDFDF",
-  Peculiar: "#DFDFDF",
-  Riven: "#D9A8FF",
-  Amalgam: "#98D9EB",
-  Galvanized: "#7CB8E4",
-};
-
 function getRarityTextColor(rarity?: string): string {
   if (!rarity) return COLORS.textMuted;
-  return RARITY_TEXT_COLORS[rarity] ?? COLORS.textMuted;
+  const config = RARITY_CONFIG[rarity as ModRarity];
+  return config?.textColor ?? COLORS.textMuted;
 }
 
 function getSlotPolarity(slot: ModSlot): Polarity | undefined {
@@ -54,11 +43,11 @@ function getSlotPolarity(slot: ModSlot): Polarity | undefined {
  * - "neutral": no slot polarity, or no mod (gray)
  */
 function getPolarityStatus(
+  slotPol: Polarity | undefined,
   slot: ModSlot,
   mod?: PlacedMod
 ): "match" | "mismatch" | "neutral" {
   if (slot.formaPolarity === "universal" && mod) return "match";
-  const slotPol = getSlotPolarity(slot);
   if (!slotPol || !mod) return "neutral";
   if (!mod.polarity) return "neutral";
   return slotPol === mod.polarity ? "match" : "mismatch";
@@ -84,7 +73,7 @@ function ModCard({
   const mod = slot.mod!;
   const textColor = getRarityTextColor(mod.rarity);
   const slotPol = getSlotPolarity(slot);
-  const status = getPolarityStatus(slot, mod);
+  const status = getPolarityStatus(slotPol, slot, mod);
   const polColor = getPolarityColor(status);
   const polIconSrc = slotPol ? polarityIcons.tint(slotPol, polColor) : undefined;
 
@@ -303,8 +292,8 @@ export function BuildCardTemplate({
       style={{
         display: "flex",
         flexDirection: "column",
-        width: WIDTH,
-        height: HEIGHT,
+        width: IMAGE_DIMENSIONS.width,
+        height: IMAGE_DIMENSIONS.height,
         backgroundColor: COLORS.bg,
         padding: "28px 32px",
         fontFamily: "Geist",
