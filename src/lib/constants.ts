@@ -17,7 +17,6 @@ export const ROUTES = {
   guides: "/guides",
   create: "/create",
   import: "/import",
-  templates: "/templates",
   modsTest: "/mods-test",
   feed: "/feed",
   docs: "/docs",
@@ -38,7 +37,6 @@ export const NAV_ITEMS = [
   { label: "Browse", href: ROUTES.browse },
   { label: "Builds", href: ROUTES.builds },
   { label: "Guides", href: ROUTES.guides },
-  { label: "Templates", href: ROUTES.templates },
 ] as const;
 
 // Footer link sections
@@ -46,7 +44,6 @@ export const FOOTER_LINKS = {
   build: [
     { label: "Browse Items", href: ROUTES.browse },
     { label: "Import Build", href: ROUTES.import },
-    { label: "Templates", href: ROUTES.templates },
   ],
   community: [
     { label: "Build Feed", href: ROUTES.feed },
