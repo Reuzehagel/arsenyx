@@ -138,7 +138,7 @@
 /* Virtualization: skip layout/paint for off-screen search grid items */
 .search-grid-item {
   content-visibility: auto;
-  contain-intrinsic-size: 160px 200px;
+  contain-intrinsic-size: 200px 80px;
 }
 
 @keyframes mod-card-expand {

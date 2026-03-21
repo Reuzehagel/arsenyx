@@ -258,11 +258,11 @@ export function ModSearchGrid({
       {/* Mod Grid */}
       <div
         ref={gridRef}
-        className="grid gap-x-6 sm:gap-x-8 gap-y-6 sm:gap-y-10 overflow-x-auto overflow-y-hidden pt-1 pb-4 pl-4 pr-8 max-w-full h-auto sm:h-72 content-center"
+        className="grid gap-x-2 gap-y-4 overflow-x-auto pt-2 pb-6 px-2 max-w-full content-start"
         style={{
           gridTemplateRows: "repeat(2, min-content)",
           gridAutoFlow: "column",
-          gridAutoColumns: "160px",
+          gridAutoColumns: "200px",
         }}
         onKeyDown={handleKeyDown}
         tabIndex={0}

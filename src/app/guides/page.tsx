@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
-import { GuidesContent } from "@/components/guides/guides-content";
-import { getGuides } from "@/lib/guides";
+import { Star, ExternalLink } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CURATED_RESOURCES } from "@/lib/guides/curated-resources";
 
 export const metadata: Metadata = {
@@ -11,19 +11,7 @@ export const metadata: Metadata = {
         "Learn about Warframe mechanics, farming strategies, and game systems with in-depth guides.",
 };
 
-// ISR: Revalidate every hour
-export const revalidate = 3600;
-
 export default function GuidesPage() {
-    const guides = getGuides();
-
-    // Split guides: promoted guides go to Curated, rest to Community
-    const curatedGuides = guides.filter((g) => g.isCurated);
-    const communityGuides = guides.filter((g) => !g.isCurated);
-
-    // Show curated section if there are external resources OR promoted guides
-    const hasCuratedContent = CURATED_RESOURCES.length > 0 || curatedGuides.length > 0;
-
     return (
         <div className="relative min-h-screen flex flex-col">
             <Header />
@@ -37,17 +25,41 @@ export default function GuidesPage() {
                         </p>
                     </div>
 
-                    {/* Search and New Guide - Always at top */}
-                    <GuidesContent
-                        curatedResources={CURATED_RESOURCES}
-                        curatedGuides={curatedGuides}
-                        communityGuides={communityGuides}
-                        hasCuratedContent={hasCuratedContent}
-                    />
+                    {/* Curated Resources */}
+                    {CURATED_RESOURCES.length > 0 && (
+                        <section className="flex flex-col gap-4">
+                            <div className="flex items-center gap-2">
+                                <Star className="h-5 w-5 text-warning" />
+                                <h2 className="text-xl font-semibold">Curated</h2>
+                            </div>
+                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                {CURATED_RESOURCES.map((resource) => (
+                                    <a
+                                        key={resource.id}
+                                        href={resource.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="group"
+                                    >
+                                        <Card className="h-full transition-colors hover:bg-accent/50">
+                                            <CardHeader>
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <CardTitle className="text-lg group-hover:underline">
+                                                        {resource.title}
+                                                    </CardTitle>
+                                                    <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0" />
+                                                </div>
+                                                <CardDescription>{resource.description}</CardDescription>
+                                            </CardHeader>
+                                        </Card>
+                                    </a>
+                                ))}
+                            </div>
+                        </section>
+                    )}
                 </div>
             </main>
             <Footer />
         </div>
     );
 }
-
