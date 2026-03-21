@@ -118,7 +118,8 @@ export function calculateWeaponStats(
   // Add additional attack modes from attacks array
   if (weapon.attacks && weapon.attacks.length > 0) {
     for (const attack of weapon.attacks) {
-      if (attack.name === "Normal Attack") continue; // Skip if already added
+      // Skip "Normal Attack" only if we already created it from base weapon stats above
+      if (attack.name === "Normal Attack" && attackModes.length > 0) continue;
 
       const attackDamage =
         typeof attack.damage === "object" ? sumDamageTypes(attack.damage) : 0;

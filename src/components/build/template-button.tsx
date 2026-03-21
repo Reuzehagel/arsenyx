@@ -15,7 +15,7 @@ export function TemplateButton({ buildSlug, itemName, category }: TemplateButton
         href={`/create?category=${category}&item=${slugify(itemName)}&fork=${buildSlug}`}
       />} nativeButton={false}>
         <Copy data-icon="inline-start" />
-        Copy
+        Copy Build
     </Button>
   );
 }

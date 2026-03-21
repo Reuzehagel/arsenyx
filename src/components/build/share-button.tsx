@@ -31,13 +31,11 @@ export function ShareButton({ buildName, itemName, buildSlug }: ShareButtonProps
   );
   const [imageLoading, setImageLoading] = useState(false);
 
-  const copyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      toast.success("Link copied!");
-    } catch {
-      toast.error("Failed to copy link");
-    }
+  const copyLink = () => {
+    navigator.clipboard.writeText(window.location.href).then(
+      () => toast.success("Link copied!"),
+      () => toast.error("Failed to copy link"),
+    );
   };
 
   const nativeShare = async () => {
@@ -53,19 +51,11 @@ export function ShareButton({ buildName, itemName, buildSlug }: ShareButtonProps
     }
   };
 
-  const fetchImageBlob = async (): Promise<Blob | null> => {
-    try {
-      setImageLoading(true);
-      const res = await fetch(`/api/builds/${buildSlug}/image`);
+  const fetchImageBlob = () =>
+    fetch(`/api/builds/${buildSlug}/image`).then((res) => {
       if (!res.ok) throw new Error("Failed to generate image");
-      return await res.blob();
-    } catch {
-      toast.error("Failed to generate image");
-      return null;
-    } finally {
-      setImageLoading(false);
-    }
-  };
+      return res.blob();
+    });
 
   const downloadBlob = (blob: Blob) => {
     const url = URL.createObjectURL(blob);
@@ -80,24 +70,28 @@ export function ShareButton({ buildName, itemName, buildSlug }: ShareButtonProps
     toast.success("Image downloaded!");
   };
 
-  const copyImage = async () => {
-    const blob = await fetchImageBlob();
-    if (!blob) return;
-    try {
-      await navigator.clipboard.write([
-        new ClipboardItem({ "image/png": blob }),
-      ]);
-      toast.success("Image copied!");
-    } catch {
-      // Fallback: download instead
-      downloadBlob(blob);
-    }
+  const copyImage = () => {
+    setImageLoading(true);
+    // Pass a Promise<Blob> to ClipboardItem so the browser keeps the
+    // user gesture alive while the network request completes.
+    navigator.clipboard
+      .write([new ClipboardItem({ "image/png": fetchImageBlob() })])
+      .then(
+        () => toast.success("Image copied!"),
+        () => toast.error("Failed to copy image"),
+      )
+      .finally(() => setImageLoading(false));
   };
 
   const downloadImage = async () => {
-    const blob = await fetchImageBlob();
-    if (!blob) return;
-    downloadBlob(blob);
+    setImageLoading(true);
+    try {
+      downloadBlob(await fetchImageBlob());
+    } catch {
+      toast.error("Failed to generate image");
+    } finally {
+      setImageLoading(false);
+    }
   };
 
   return (
@@ -106,23 +100,23 @@ export function ShareButton({ buildName, itemName, buildSlug }: ShareButtonProps
           <Share2 data-icon="inline-start" />
           Share
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" className="w-auto whitespace-nowrap">
         <DropdownMenuGroup>
-          <DropdownMenuItem onSelect={copyLink}>
+          <DropdownMenuItem onClick={copyLink}>
             <Link2 />
             Copy Link
           </DropdownMenuItem>
           {canShare && (
-            <DropdownMenuItem onSelect={nativeShare}>
+            <DropdownMenuItem onClick={nativeShare}>
               <Share2 />
               Share...
             </DropdownMenuItem>
           )}
-          <DropdownMenuItem onSelect={copyImage} disabled={imageLoading}>
+          <DropdownMenuItem onClick={copyImage} disabled={imageLoading}>
             <ImageIcon />
             {imageLoading ? "Generating..." : "Copy Image"}
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={downloadImage} disabled={imageLoading}>
+          <DropdownMenuItem onClick={downloadImage} disabled={imageLoading}>
             <Download />
             {imageLoading ? "Generating..." : "Download Image"}
           </DropdownMenuItem>

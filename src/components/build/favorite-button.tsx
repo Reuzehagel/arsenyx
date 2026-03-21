@@ -53,15 +53,13 @@ export function FavoriteButton({
     });
   };
 
-  const isDisabled = isPending || isSessionLoading;
-
   return (
     <Button
       variant="ghost"
       size="sm"
       className={cn("gap-1.5 h-8", hasFavorited && "text-destructive")}
       onClick={handleFavorite}
-      disabled={isDisabled}
+      disabled={isPending}
     >
       <Heart data-icon="inline-start" className={cn(hasFavorited && "fill-current")} />
       {showCount && <span className="tabular-nums">{favoriteCount}</span>}

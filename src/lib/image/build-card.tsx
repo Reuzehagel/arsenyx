@@ -7,7 +7,6 @@ import type {
   Polarity,
 } from "@/lib/warframe/types";
 import { getImageUrl } from "@/lib/warframe/images";
-import { RARITY_CONFIG, type ModRarity } from "@/lib/warframe/mod-card-config";
 import type { PolarityIcons } from "./render";
 import { IMAGE_DIMENSIONS } from "./render";
 
@@ -16,8 +15,8 @@ const COLORS = {
   cardBg: "#1a1a21",
   border: "#2a2a35",
   text: "#fafafa",
-  textMuted: "#a1a1aa",
-  textDim: "#71717a",
+  textMuted: "#b4b4bc",
+  textDim: "#8a8a94",
   accent: "#3b82f6",
   emptySlot: "#15151b",
   polarityMatch: "#4ade80",   // green-400
@@ -25,14 +24,14 @@ const COLORS = {
   polarityMismatch: "#f87171", // red-400
 };
 
-function getRarityTextColor(rarity?: string): string {
-  if (!rarity) return COLORS.textMuted;
-  const config = RARITY_CONFIG[rarity as ModRarity];
-  return config?.textColor ?? COLORS.textMuted;
-}
+const CARD_WIDTH = 270;
+const CARD_GAP = 12;
+// Center 2 cards over the 4-card grid: (4w + 3g - (2w + g)) / 2
+const CENTER_PADDING = (4 * CARD_WIDTH + 3 * CARD_GAP - (2 * CARD_WIDTH + CARD_GAP)) / 2;
 
 function getSlotPolarity(slot: ModSlot): Polarity | undefined {
-  if (slot.formaPolarity === "universal") return "any";
+  if (slot.formaPolarity === "universal" || slot.formaPolarity === "any")
+    return "any";
   return slot.formaPolarity ?? slot.innatePolarity;
 }
 
@@ -47,7 +46,8 @@ function getPolarityStatus(
   slot: ModSlot,
   mod?: PlacedMod
 ): "match" | "mismatch" | "neutral" {
-  if (slot.formaPolarity === "universal" && mod) return "match";
+  const fp = slot.formaPolarity;
+  if ((fp === "universal" || fp === "any") && mod) return "match";
   if (!slotPol || !mod) return "neutral";
   if (!mod.polarity) return "neutral";
   return slotPol === mod.polarity ? "match" : "mismatch";
@@ -71,7 +71,6 @@ function ModCard({
   polarityIcons: PolarityIcons;
 }) {
   const mod = slot.mod!;
-  const textColor = getRarityTextColor(mod.rarity);
   const slotPol = getSlotPolarity(slot);
   const status = getPolarityStatus(slotPol, slot, mod);
   const polColor = getPolarityColor(status);
@@ -83,27 +82,27 @@ function ModCard({
         display: "flex",
         alignItems: "center",
         gap: 10,
-        padding: "8px 12px",
+        padding: "10px 14px",
         backgroundColor: COLORS.cardBg,
         border: `1px solid ${COLORS.border}`,
         borderRadius: 8,
-        width: 270,
-        height: 64,
+        width: CARD_WIDTH,
+        height: 72,
         overflow: "hidden",
       }}
     >
       {imageSrc ? (
         <img
           src={imageSrc}
-          width={44}
-          height={44}
+          width={48}
+          height={48}
           style={{ borderRadius: 4, flexShrink: 0, objectFit: "contain" }}
         />
       ) : (
         <div
           style={{
-            width: 44,
-            height: 44,
+            width: 48,
+            height: 48,
             backgroundColor: COLORS.bg,
             borderRadius: 4,
             display: "flex",
@@ -118,8 +117,9 @@ function ModCard({
 
       <span
         style={{
-          fontSize: 13,
-          color: textColor,
+          fontSize: 15,
+          fontWeight: 600,
+          color: COLORS.text,
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
@@ -129,13 +129,13 @@ function ModCard({
         {mod.name || "Unknown"}
       </span>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
         {polIconSrc ? (
           <img src={polIconSrc} width={16} height={16} />
         ) : (
           <div style={{ display: "flex" }} />
         )}
-        <span style={{ fontSize: 11, color: COLORS.textDim }}>
+        <span style={{ fontSize: 12, color: COLORS.textDim, fontWeight: 500 }}>
           R{mod.rank ?? 0}
         </span>
       </div>
@@ -161,8 +161,8 @@ function EmptySlot({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        width: 270,
-        height: 64,
+        width: CARD_WIDTH,
+        height: 72,
         backgroundColor: COLORS.emptySlot,
         border: `1px dashed ${COLORS.border}`,
         borderRadius: 8,
@@ -176,7 +176,7 @@ function EmptySlot({
       ) : (
         <div style={{ display: "flex" }} />
       )}
-      <span style={{ fontSize: 11, color: COLORS.border }}>Empty</span>
+      <span style={{ fontSize: 12, color: COLORS.border }}>Empty</span>
     </div>
   );
 }
@@ -193,19 +193,20 @@ function ArcaneCard({
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 8,
-        padding: "8px 14px",
+        gap: 10,
+        padding: "10px 16px",
         backgroundColor: COLORS.cardBg,
         border: `1px solid ${COLORS.accent}`,
         borderRadius: 8,
-        height: 52,
+        height: 56,
+        width: CARD_WIDTH,
       }}
     >
       {imageSrc ? (
         <img
           src={imageSrc}
-          width={34}
-          height={34}
+          width={36}
+          height={36}
           style={{ borderRadius: 4, flexShrink: 0, objectFit: "contain" }}
         />
       ) : (
@@ -213,16 +214,18 @@ function ArcaneCard({
       )}
       <span
         style={{
-          fontSize: 13,
+          fontSize: 15,
+          fontWeight: 600,
           color: COLORS.text,
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
+          flex: 1,
         }}
       >
         {arcane.name || "Unknown"}
       </span>
-      <span style={{ fontSize: 11, color: COLORS.textDim, flexShrink: 0 }}>
+      <span style={{ fontSize: 12, color: COLORS.textDim, flexShrink: 0, fontWeight: 500 }}>
         R{arcane.rank ?? 0}
       </span>
     </div>
@@ -246,7 +249,7 @@ function SlotCard({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       {label ? (
-        <span style={{ fontSize: 10, color: COLORS.textDim, textTransform: "uppercase", letterSpacing: 1 }}>
+        <span style={{ fontSize: 11, color: COLORS.textDim, textTransform: "uppercase", letterSpacing: 1, fontWeight: 600 }}>
           {label}
         </span>
       ) : (
@@ -295,7 +298,7 @@ export function BuildCardTemplate({
         width: IMAGE_DIMENSIONS.width,
         height: IMAGE_DIMENSIONS.height,
         backgroundColor: COLORS.bg,
-        padding: "28px 32px",
+        padding: "32px 36px",
         fontFamily: "Geist",
         color: COLORS.text,
       }}
@@ -305,22 +308,22 @@ export function BuildCardTemplate({
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 16,
-          marginBottom: 20,
+          gap: 18,
+          marginBottom: 28,
         }}
       >
         {itemImageSrc ? (
           <img
             src={itemImageSrc}
-            width={64}
-            height={64}
+            width={72}
+            height={72}
             style={{ borderRadius: 8, objectFit: "contain" }}
           />
         ) : (
           <div
             style={{
-              width: 64,
-              height: 64,
+              width: 72,
+              height: 72,
               backgroundColor: COLORS.cardBg,
               borderRadius: 8,
               display: "flex",
@@ -328,14 +331,14 @@ export function BuildCardTemplate({
               justifyContent: "center",
             }}
           >
-            <span style={{ fontSize: 24, color: COLORS.border }}>?</span>
+            <span style={{ fontSize: 28, color: COLORS.border }}>?</span>
           </div>
         )}
 
         <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
           <span
             style={{
-              fontSize: 26,
+              fontSize: 28,
               fontWeight: 700,
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -345,11 +348,11 @@ export function BuildCardTemplate({
             {buildName}
           </span>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 15, color: COLORS.textMuted }}>
+            <span style={{ fontSize: 16, color: COLORS.textMuted }}>
               {itemName} · by {authorName}
             </span>
             {formaCount > 0 ? (
-              <span style={{ fontSize: 14, color: COLORS.textMuted }}>
+              <span style={{ fontSize: 15, color: COLORS.textMuted }}>
                 · {formaCount} forma
               </span>
             ) : (
@@ -370,8 +373,8 @@ export function BuildCardTemplate({
         </span>
       </div>
 
-      {/* Aura + Exilus row */}
-      <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+      {/* Aura + Exilus centered over the mod grid */}
+      <div style={{ display: "flex", gap: CARD_GAP, marginBottom: 14, paddingLeft: CENTER_PADDING }}>
         {auraSlot ? (
           <SlotCard slot={auraSlot} imageMap={imageMap} polarityIcons={polarityIcons} label="Aura" />
         ) : (
@@ -389,45 +392,47 @@ export function BuildCardTemplate({
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: 10,
-          marginBottom: 16,
+          gap: CARD_GAP,
+          marginBottom: 20,
         }}
       >
-        <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ display: "flex", gap: CARD_GAP }}>
           {normalSlots.slice(0, 4).map((slot) => (
             <SlotCard slot={slot} imageMap={imageMap} polarityIcons={polarityIcons} />
           ))}
         </div>
-        <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ display: "flex", gap: CARD_GAP }}>
           {normalSlots.slice(4, 8).map((slot) => (
             <SlotCard slot={slot} imageMap={imageMap} polarityIcons={polarityIcons} />
           ))}
         </div>
       </div>
 
-      {/* Arcanes row */}
+      {/* Arcanes centered over the mod grid */}
       {arcanes.length > 0 ? (
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingLeft: CENTER_PADDING }}>
           <span
             style={{
-              fontSize: 10,
+              fontSize: 11,
               color: COLORS.textDim,
               textTransform: "uppercase",
               letterSpacing: 1,
-              marginRight: 4,
+              fontWeight: 600,
             }}
           >
             Arcanes
           </span>
-          {arcanes.map((arcane) => {
-            const arcaneImageUrl = arcane.imageName
-              ? getImageUrl(arcane.imageName)
-              : undefined;
-            const arcaneImageSrc = arcaneImageUrl
-              ? imageMap.get(arcaneImageUrl)
-              : undefined;
-            return <ArcaneCard arcane={arcane} imageSrc={arcaneImageSrc} />;
-          })}
+          <div style={{ display: "flex", gap: CARD_GAP }}>
+            {arcanes.map((arcane) => {
+              const arcaneImageUrl = arcane.imageName
+                ? getImageUrl(arcane.imageName)
+                : undefined;
+              const arcaneImageSrc = arcaneImageUrl
+                ? imageMap.get(arcaneImageUrl)
+                : undefined;
+              return <ArcaneCard arcane={arcane} imageSrc={arcaneImageSrc} />;
+            })}
+          </div>
         </div>
       ) : (
         <div style={{ display: "flex" }} />

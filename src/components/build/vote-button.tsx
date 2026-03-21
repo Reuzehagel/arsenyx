@@ -50,15 +50,13 @@ export function VoteButton({
     });
   };
 
-  const isDisabled = isPending || isSessionLoading;
-
   return (
     <Button
       variant="ghost"
       size="sm"
       className={cn("gap-1.5 h-8", hasVoted && "text-primary")}
       onClick={handleVote}
-      disabled={isDisabled}
+      disabled={isPending}
     >
       <ThumbsUp data-icon="inline-start" className={cn(hasVoted && "fill-current")} />
       <span className="tabular-nums">{voteCount}</span>

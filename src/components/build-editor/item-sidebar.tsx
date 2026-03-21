@@ -159,10 +159,10 @@ export function ItemSidebar({
                     className={cn(
                       "size-10 rounded bg-muted border overflow-hidden relative transition-colors",
                       displayAbility.isHelminth ? "border-destructive" : "border-border",
-                      !readOnly && isWarframe && "hover:border-primary hover:cursor-pointer"
+                      !readOnly && isWarframe ? "hover:border-primary hover:cursor-pointer" : "cursor-default"
                     )}
-                    onClick={() => handleAbilityClick(i)}
-                    disabled={readOnly || !isWarframe}
+                    onClick={!readOnly && isWarframe ? () => handleAbilityClick(i) : undefined}
+                    type="button"
                   />}>
                     {displayAbility.imageName ? (
                       <Image

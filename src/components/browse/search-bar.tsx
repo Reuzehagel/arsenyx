@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Icons } from "@/components/icons";
@@ -25,6 +25,9 @@ export function SearchBar({
   const inputRef = useRef<HTMLInputElement>(null);
   const searchParamsString = searchParams.toString();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [inputValue, setInputValue] = useState(defaultValue);
+  const inputValueRef = useRef(inputValue);
+  inputValueRef.current = inputValue;
 
   const handleSearch = useCallback(
     (value: string) => {
@@ -50,6 +53,7 @@ export function SearchBar({
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
+      setInputValue(value);
       // Use a small debounce for better UX
       if (debounceRef.current) {
         clearTimeout(debounceRef.current);
@@ -87,8 +91,8 @@ export function SearchBar({
       // Escape to clear and blur
       if (e.key === "Escape" && document.activeElement === inputRef.current) {
         e.preventDefault();
-        if (inputRef.current?.value) {
-          inputRef.current.value = "";
+        if (inputValueRef.current) {
+          setInputValue("");
           handleSearch("");
         } else {
           inputRef.current?.blur();
@@ -107,7 +111,7 @@ export function SearchBar({
         ref={inputRef}
         type="search"
         placeholder={placeholder}
-        defaultValue={defaultValue}
+        value={inputValue}
         onChange={handleChange}
         className="pl-9"
       />

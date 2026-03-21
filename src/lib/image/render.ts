@@ -76,9 +76,14 @@ function tintSvg(svgString: string, polarity: string, color: string): string {
   const cached = tintCache.get(key);
   if (cached) return cached;
 
-  const tinted = svgString
+  // Replace existing fill/stroke hex colors
+  let tinted = svgString
     .replace(/fill:#[0-9a-fA-F]{6}/g, `fill:${color}`)
     .replace(/stroke:#[0-9a-fA-F]{6}/g, `stroke:${color}`);
+  // For SVGs with no explicit fill (like Any_Pol.svg), add fill attribute to <path> elements
+  if (!svgString.includes("fill:") && !svgString.includes('fill="')) {
+    tinted = tinted.replace(/<path /g, `<path fill="${color}" `);
+  }
   const result = `data:image/svg+xml;base64,${Buffer.from(tinted).toString("base64")}`;
   tintCache.set(key, result);
   return result;
