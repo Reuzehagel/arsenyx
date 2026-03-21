@@ -58,9 +58,7 @@ export default async function FavoritesPage({
               <p className="text-muted-foreground mb-4">
                 You haven&apos;t favorited any builds yet.
               </p>
-              <Button asChild>
-                <Link href="/builds">Browse community builds</Link>
-              </Button>
+              <Button render={<Link href="/builds" />} nativeButton={false}>Browse community builds</Button>
             </div>
           ) : (
             <>

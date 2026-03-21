@@ -67,9 +67,7 @@ export function ShardSlot({
     return (
       <TooltipProvider>
         <Tooltip>
-          <TooltipTrigger asChild>
-            {emptySlot}
-          </TooltipTrigger>
+          <TooltipTrigger render={emptySlot} />
           <TooltipContent side="bottom">
             <p>Click to add Archon Shard</p>
           </TooltipContent>
@@ -105,9 +103,7 @@ export function ShardSlot({
     return (
       <TooltipProvider>
         <Tooltip>
-          <TooltipTrigger asChild>
-            {shardSlot}
-          </TooltipTrigger>
+          <TooltipTrigger render={shardSlot} />
           <TooltipContent side="bottom" className="max-w-xs">
             <div className="flex flex-col gap-0.5">
               <span className="font-medium">
@@ -129,9 +125,7 @@ export function ShardSlot({
       <ContextMenuTrigger>
         <TooltipProvider>
           <Tooltip>
-            <TooltipTrigger asChild>
-              {shardSlot}
-            </TooltipTrigger>
+            <TooltipTrigger render={shardSlot} />
             <TooltipContent side="bottom" className="max-w-xs">
               <div className="flex flex-col gap-0.5">
                 <span className="font-medium">

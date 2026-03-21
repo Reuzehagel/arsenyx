@@ -36,18 +36,17 @@ export function FilterDropdown({
   const [localMastery, setLocalMastery] = useState(masteryMax);
 
   // Update local state during drag, commit on release
-  const handleMasteryDrag = (value: number[]) => {
-    setLocalMastery(value[0]);
+  const handleMasteryDrag = (value: number | readonly number[]) => {
+    setLocalMastery(Array.isArray(value) ? value[0] : value);
   };
 
-  const handleMasteryCommit = (value: number[]) => {
-    onMasteryChange(value[0]);
+  const handleMasteryCommit = (value: number | readonly number[]) => {
+    onMasteryChange(Array.isArray(value) ? value[0] : value);
   };
 
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="outline" size="default" className="gap-2 shrink-0">
+      <PopoverTrigger render={<Button variant="outline" size="default" className="gap-2 shrink-0" />}>
           <Icons.filter data-icon="inline-start" />
           Filters
           {activeFilterCount > 0 && (
@@ -55,7 +54,6 @@ export function FilterDropdown({
               {activeFilterCount}
             </Badge>
           )}
-        </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80" align="end">
         <div className="flex flex-col gap-4">
@@ -84,7 +82,7 @@ export function FilterDropdown({
             <Slider
               value={[localMastery]}
               onValueChange={handleMasteryDrag}
-              onValueCommit={handleMasteryCommit}
+              onValueCommitted={handleMasteryCommit}
               min={0}
               max={30}
               step={1}

@@ -147,21 +147,19 @@ export function DescriptionEditor({
       {mode === "edit" ? (
         <div className="flex flex-col gap-2">
           {/* Toolbar */}
-          <TooltipProvider delayDuration={300}>
+          <TooltipProvider delay={300}>
             <div className="flex items-center gap-1 p-1 border rounded-md bg-muted/30">
               {/* eslint-disable-next-line react-hooks/refs -- ref accessed only inside click handlers, not during render */}
               {toolbarButtons.map((button) => (
                 <Tooltip key={button.label}>
-                  <TooltipTrigger asChild>
-                    <Button
+                  <TooltipTrigger render={<Button
                       type="button"
                       variant="ghost"
                       size="icon"
                       className={toolbarClass}
                       onClick={button.action}
-                    >
+                    />}>
                       <button.icon className="size-4" />
-                    </Button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom">
                     {button.label}

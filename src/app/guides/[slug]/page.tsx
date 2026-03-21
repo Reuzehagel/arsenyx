@@ -94,11 +94,9 @@ export default async function GuidePage({ params }: GuidePageProps) {
                         {/* Actions (dev mode only for now) */}
                         {process.env.NODE_ENV === "development" && (
                             <div className="flex items-center justify-end gap-2 mb-4">
-                                <Button variant="outline" size="sm" asChild>
-                                    <Link href={`/guides/${slug}/edit`}>
+                                <Button variant="outline" size="sm" render={<Link href={`/guides/${slug}/edit`} />} nativeButton={false}>
                                         <Pencil className="h-4 w-4 mr-2" />
                                         Edit
-                                    </Link>
                                 </Button>
                                 <Button variant="outline" size="sm">
                                     <Share2 className="h-4 w-4 mr-2" />

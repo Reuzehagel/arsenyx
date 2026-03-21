@@ -40,12 +40,8 @@ export default async function AuthErrorPage({
         </div>
 
         <div className="flex flex-col gap-2">
-          <Button asChild>
-            <Link href="/auth/signin">Try Again</Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/">Go Home</Link>
-          </Button>
+          <Button render={<Link href="/auth/signin" />} nativeButton={false}>Try Again</Button>
+          <Button variant="outline" render={<Link href="/" />} nativeButton={false}>Go Home</Button>
         </div>
       </div>
     </div>

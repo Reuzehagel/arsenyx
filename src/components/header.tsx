@@ -25,9 +25,7 @@ export function Header() {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-1">
             {NAV_ITEMS.map((item) => (
-              <Button key={item.href} variant="ghost" size="sm" asChild>
-                <Link href={item.href}>{item.label}</Link>
-              </Button>
+              <Button key={item.href} variant="ghost" size="sm" render={<Link href={item.href} />} nativeButton={false}>{item.label}</Button>
             ))}
           </nav>
         </div>

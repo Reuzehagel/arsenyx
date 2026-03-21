@@ -20,16 +20,13 @@ export function UserMenu() {
 
   if (!session?.user) {
     return (
-      <Button variant="outline" size="sm" asChild>
-        <Link href="/auth/signin">Sign In</Link>
-      </Button>
+      <Button variant="outline" size="sm" render={<Link href="/auth/signin" />} nativeButton={false}>Sign In</Button>
     );
   }
 
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <button className="flex items-center gap-2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <PopoverTrigger render={<button className="flex items-center gap-2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring" />}>
           {session.user.image ? (
             <Image
               src={session.user.image}
@@ -43,7 +40,6 @@ export function UserMenu() {
               {session.user.name?.charAt(0).toUpperCase() ?? "U"}
             </div>
           )}
-        </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-56 p-2">
         <div className="px-2 py-1.5">

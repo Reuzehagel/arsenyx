@@ -137,9 +137,9 @@ function ArcaneCardComponent({
   }
 
   return (
-    <TooltipProvider>
-      <Tooltip delayDuration={200}>
-        <TooltipTrigger asChild>{cardContent}</TooltipTrigger>
+    <TooltipProvider delay={200}>
+      <Tooltip>
+        <TooltipTrigger render={cardContent} />
         <TooltipContent
           side="bottom"
           className="max-w-[280px] p-3"

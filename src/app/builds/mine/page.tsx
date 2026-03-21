@@ -89,11 +89,9 @@ export default async function MyBuildsPage({
                 {total} build{total !== 1 ? "s" : ""}
               </p>
             </div>
-            <Button asChild>
-              <Link href="/browse">
+            <Button render={<Link href="/browse" />} nativeButton={false}>
                 <Plus className="h-4 w-4 mr-2" />
                 New Build
-              </Link>
             </Button>
           </div>
 
@@ -127,9 +125,7 @@ export default async function MyBuildsPage({
               <p className="text-muted-foreground mb-4">
                 You haven&apos;t created any builds yet.
               </p>
-              <Button asChild>
-                <Link href="/browse">Create your first build</Link>
-              </Button>
+              <Button render={<Link href="/browse" />} nativeButton={false}>Create your first build</Button>
             </div>
           ) : (
             <>

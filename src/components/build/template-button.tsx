@@ -11,13 +11,11 @@ interface TemplateButtonProps {
 
 export function TemplateButton({ buildSlug, itemName, category }: TemplateButtonProps) {
   return (
-    <Button variant="outline" size="sm" asChild>
-      <Link
+    <Button variant="outline" size="sm" render={<Link
         href={`/create?category=${category}&item=${slugify(itemName)}&fork=${buildSlug}`}
-      >
+      />} nativeButton={false}>
         <Copy data-icon="inline-start" />
         Use as Template
-      </Link>
     </Button>
   );
 }

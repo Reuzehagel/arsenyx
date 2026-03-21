@@ -136,9 +136,7 @@ function ElementalDamageRow({ element }: { element: ElementalDamage }) {
 
   return (
     <Tooltip>
-      <TooltipTrigger asChild>
-        <div className="cursor-help">{content}</div>
-      </TooltipTrigger>
+      <TooltipTrigger render={<div className="cursor-help" />}>{content}</TooltipTrigger>
       <TooltipContent side="left">
         <div className="text-xs">
           <span className="text-muted-foreground">Combined from: </span>

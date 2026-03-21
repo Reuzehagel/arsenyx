@@ -74,9 +74,10 @@ export function FilterPanel({
         </div>
         <Slider
           value={[masteryMax]}
-          onValueChange={([value]) =>
-            updateFilter("mastery", value < 16 ? String(value) : null)
-          }
+          onValueChange={(value) => {
+            const v = Array.isArray(value) ? value[0] : value;
+            updateFilter("mastery", v < 16 ? String(v) : null);
+          }}
           min={0}
           max={16}
           step={1}
@@ -145,8 +146,7 @@ export function FilterPanel({
       {/* Mobile: Sheet */}
       <div className="lg:hidden">
         <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2">
+          <SheetTrigger render={<Button variant="outline" size="sm" className="gap-2" />}>
               <Icons.settings data-icon="inline-start" />
               Filters
               {activeFilterCount > 0 && (
@@ -154,7 +154,6 @@ export function FilterPanel({
                   {activeFilterCount}
                 </Badge>
               )}
-            </Button>
           </SheetTrigger>
           <SheetContent side="right" className="w-[300px] sm:w-[400px]">
             <SheetHeader>

@@ -23,12 +23,11 @@ export function FilterDropdown({
 }: FilterDropdownProps) {
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <Button
+      <PopoverTrigger render={<Button
           variant="outline"
           size="sm"
           className="h-8 text-xs bg-muted/50 border-border/50 hover:bg-muted gap-1"
-        >
+        />}>
           {label}
           <svg
             className="size-3 opacity-50"
@@ -43,7 +42,6 @@ export function FilterDropdown({
               d="M19 9l-7 7-7-7"
             />
           </svg>
-        </Button>
       </PopoverTrigger>
       <PopoverContent className="w-32 p-1" align="start">
         {options.map((option) => (

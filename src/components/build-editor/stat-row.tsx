@@ -32,13 +32,12 @@ export function CalculatedStatRow({
 
   return (
     <Tooltip>
-      <TooltipTrigger asChild>
-        <div
+      <TooltipTrigger render={<div
           className={cn(
             "flex justify-between items-center text-xs",
             hasContributions && "cursor-help"
           )}
-        >
+        />}>
           <span className="text-muted-foreground">{label}</span>
           <span
             className={cn(
@@ -55,7 +54,6 @@ export function CalculatedStatRow({
               </span>
             )}
           </span>
-        </div>
       </TooltipTrigger>
       {hasContributions && (
         <TooltipContent side="left" className="max-w-xs">

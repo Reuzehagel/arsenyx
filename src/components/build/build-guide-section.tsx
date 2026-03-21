@@ -132,15 +132,13 @@ export function BuildGuideSection({
             <h2 className="text-lg font-semibold">Build Guide</h2>
             {isOwner && (
               <Dialog>
-                <DialogTrigger asChild>
-                  <Button
+                <DialogTrigger render={<Button
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 hover:bg-background"
-                  >
+                  />}>
                     <Pen className="size-4" />
                     <span className="sr-only">Edit Guide</span>
-                  </Button>
                 </DialogTrigger>
                 <DialogContent
                   key={`edit-${key}`}

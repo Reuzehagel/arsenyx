@@ -20,15 +20,13 @@ export function MobileNav() {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button
+      <SheetTrigger render={<Button
           variant="ghost"
           size="icon"
           className="md:hidden"
           aria-label="Open menu"
-        >
+        />}>
           <Menu />
-        </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-[300px] sm:w-[400px]">
         <SheetHeader>

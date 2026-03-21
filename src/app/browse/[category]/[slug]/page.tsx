@@ -182,11 +182,9 @@ export default async function ItemPage({ params }: ItemPageProps) {
 
               {/* CTA Buttons */}
               <div className="flex flex-wrap gap-3 pt-4">
-                <Button size="lg" className="gap-2" asChild>
-                  <Link href={`/create?item=${slug}&category=${category}`}>
+                <Button size="lg" className="gap-2" render={<Link href={`/create?item=${slug}&category=${category}`} />} nativeButton={false}>
                     <Icons.plus className="h-4 w-4" />
                     Create Build
-                  </Link>
                 </Button>
               </div>
             </div>
@@ -377,9 +375,7 @@ async function CommunityBuildsSection({
           )}
         </h2>
         {total > 6 && (
-          <Button variant="outline" size="sm" asChild>
-            <Link href={`/builds?category=${category}`}>View All</Link>
-          </Button>
+          <Button variant="outline" size="sm" render={<Link href={`/builds?category=${category}`} />} nativeButton={false}>View All</Button>
         )}
       </div>
 
@@ -393,11 +389,9 @@ async function CommunityBuildsSection({
             <p className="text-sm text-muted-foreground mb-4">
               Be the first to share a {itemName} build with the community!
             </p>
-            <Button className="gap-2" asChild>
-              <Link href={`/create?item=${slug}&category=${category}`}>
+            <Button className="gap-2" render={<Link href={`/create?item=${slug}&category=${category}`} />} nativeButton={false}>
                 <Icons.plus className="h-4 w-4" />
                 Create Build
-              </Link>
             </Button>
           </CardContent>
         </Card>

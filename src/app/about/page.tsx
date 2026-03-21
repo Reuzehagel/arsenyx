@@ -36,11 +36,9 @@ export default function AboutPage() {
                                 Anyone can contribute code, suggest features, or report bugs. We&apos;re building this together.
                             </p>
                             <div className="flex gap-4 mt-6">
-                                <Button asChild>
-                                    <Link href={EXTERNAL_LINKS.github} target="_blank" rel="noopener noreferrer">
+                                <Button render={<Link href={EXTERNAL_LINKS.github} target="_blank" rel="noopener noreferrer" />} nativeButton={false}>
                                         <Icons.github className="mr-2 h-4 w-4" />
                                         View on GitHub
-                                    </Link>
                                 </Button>
                             </div>
                         </section>

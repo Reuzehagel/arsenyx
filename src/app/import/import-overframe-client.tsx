@@ -79,9 +79,7 @@ export function ImportOverframeClient() {
                 {isLoading ? "Importing…" : "Import"}
               </Button>
               {createUrl ? (
-                <Button asChild variant="secondary" disabled={isLoading}>
-                  <Link href={createUrl}>Open in editor</Link>
-                </Button>
+                <Button variant="secondary" disabled={isLoading} render={<Link href={createUrl} />} nativeButton={false}>Open in editor</Button>
               ) : null}
             </div>
           </div>

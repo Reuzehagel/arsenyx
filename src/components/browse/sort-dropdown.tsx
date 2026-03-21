@@ -24,7 +24,7 @@ const sortLabels: Record<SortOption, string> = {
 export function SortDropdown({ sortOption, onSortChange }: SortDropdownProps) {
   return (
     <div className="shrink-0">
-      <Select value={sortOption} onValueChange={onSortChange}>
+      <Select value={sortOption} onValueChange={(value) => { if (value) onSortChange(value as SortOption); }}>
         <SelectTrigger className="w-[140px]">
           <SelectValue />
         </SelectTrigger>

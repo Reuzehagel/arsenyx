@@ -102,11 +102,9 @@ export function ShareButton({ buildName, itemName, buildSlug }: ShareButtonProps
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm">
+      <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
           <Share2 data-icon="inline-start" />
           Share
-        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuGroup>

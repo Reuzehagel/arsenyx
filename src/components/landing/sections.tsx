@@ -44,10 +44,9 @@ export function HeroSection() {
               size="lg"
               variant="outline"
               className="w-full sm:w-auto"
-              asChild
-            >
-              <Link href={cta.secondary.href}>{cta.secondary.label}</Link>
-            </Button>
+              render={<Link href={cta.secondary.href} />}
+              nativeButton={false}
+            >{cta.secondary.label}</Button>
           </div>
 
           {/* Trust signals */}
@@ -104,15 +103,13 @@ export function CTASection() {
           </h2>
           <p className="text-lg text-muted-foreground">{description}</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button size="lg" variant="outline" className="gap-2" asChild>
-              <Link
+            <Button size="lg" variant="outline" className="gap-2" render={<Link
                 href={secondaryCta.href}
                 target="_blank"
                 rel="noopener noreferrer"
-              >
+              />} nativeButton={false}>
                 <Icons.github data-icon="inline-start" />
                 {secondaryCta.label}
-              </Link>
             </Button>
           </div>
         </div>

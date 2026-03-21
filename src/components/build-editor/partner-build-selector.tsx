@@ -132,14 +132,13 @@ export function PartnerBuildSelector({
     <div className="flex flex-col gap-3">
       {/* Search Combobox */}
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
+        <PopoverTrigger render={<Button
             variant="outline"
             role="combobox"
             aria-expanded={open}
             className="w-full justify-between"
             disabled={disabled || !canAddMore}
-          >
+          />}>
             <span className="flex items-center gap-2 text-muted-foreground">
               <Search className="size-4" />
               {canAddMore
@@ -147,7 +146,6 @@ export function PartnerBuildSelector({
                 : `Maximum ${MAX_PARTNER_BUILDS} partners reached`}
             </span>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[400px] p-0" align="start">
           <Command shouldFilter={false}>

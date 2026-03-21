@@ -131,8 +131,7 @@ export const ArcaneSlotCard = memo(function ArcaneSlotCard({
   return (
     <TooltipProvider>
       <Tooltip>
-        <TooltipTrigger asChild>
-          <div
+        <TooltipTrigger render={<div
             ref={setDroppableRef}
             className={cn(
               "relative flex flex-col items-center justify-center cursor-pointer transition-all rounded-lg overflow-visible group",
@@ -145,13 +144,12 @@ export const ArcaneSlotCard = memo(function ArcaneSlotCard({
             )}
             style={{ isolation: "isolate" }}
             onClick={onSelect}
-          >
+          />}>
             <Plus className="size-6 text-muted-foreground/20 group-hover:text-muted-foreground/40 transition-colors" />
             {/* Label */}
             <span className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-wider mt-1">
               Arcane
             </span>
-          </div>
         </TooltipTrigger>
         <TooltipContent side="bottom">
           <p>Click to add arcane</p>

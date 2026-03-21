@@ -155,8 +155,7 @@ export function ItemSidebar({
 
             return (
               <Tooltip key={i}>
-                <TooltipTrigger asChild>
-                  <button
+                <TooltipTrigger render={<button
                     className={cn(
                       "size-10 rounded bg-muted border overflow-hidden relative transition-colors",
                       displayAbility.isHelminth ? "border-destructive" : "border-border",
@@ -164,7 +163,7 @@ export function ItemSidebar({
                     )}
                     onClick={() => handleAbilityClick(i)}
                     disabled={readOnly || !isWarframe}
-                  >
+                  />}>
                     {displayAbility.imageName ? (
                       <Image
                         src={getImageUrl(displayAbility.imageName)}
@@ -177,7 +176,6 @@ export function ItemSidebar({
                         {i + 1}
                       </div>
                     )}
-                  </button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-xs">
                   <p className="font-semibold">{displayAbility.name}</p>

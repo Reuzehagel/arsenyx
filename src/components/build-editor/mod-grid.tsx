@@ -362,8 +362,7 @@ const ModSlotCard = memo(function ModSlotCard({
         open={readOnly ? false : polarityOpen}
         onOpenChange={readOnly ? undefined : setPolarityOpen}
       >
-        <PopoverTrigger asChild>
-          <div
+        <PopoverTrigger render={<div
             ref={setDroppableRef}
             className={cn(
               "relative flex items-start justify-center transition-all rounded-lg overflow-visible group",
@@ -372,7 +371,7 @@ const ModSlotCard = memo(function ModSlotCard({
                 "ring-2 ring-primary ring-offset-2 ring-offset-background z-10"
             )}
             style={{ isolation: "isolate" }}
-          >
+          />}>
             <div
               ref={setDraggableRef}
               {...(readOnly ? {} : listeners)}
@@ -409,7 +408,6 @@ const ModSlotCard = memo(function ModSlotCard({
                 matchState={matchState}
               />
             </div>
-          </div>
         </PopoverTrigger>
         {!readOnly && polaritySelectorContent}
       </Popover>
@@ -476,9 +474,7 @@ const ModSlotCard = memo(function ModSlotCard({
     <Popover open={polarityOpen} onOpenChange={setPolarityOpen}>
       <TooltipProvider>
         <Tooltip>
-          <PopoverTrigger asChild>
-            <TooltipTrigger asChild>{emptySlotContent}</TooltipTrigger>
-          </PopoverTrigger>
+          <PopoverTrigger render={<TooltipTrigger render={emptySlotContent} />} />
           <TooltipContent side="bottom">
             <p>Click to add mod</p>
           </TooltipContent>

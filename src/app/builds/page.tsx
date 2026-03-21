@@ -228,14 +228,11 @@ export default async function BuildsPage({ searchParams }: BuildsPageProps) {
                                     <TabsTrigger
                                         key={opt.value}
                                         value={opt.value}
-                                        asChild
                                         className="data-[state=active]:bg-background gap-2 flex-1 xl:flex-none"
+                                        render={<Link href={buildFilterUrl({ category: opt.value || undefined }, filterState)} />}
+                                        nativeButton={false}
                                     >
-                                        <Link
-                                            href={buildFilterUrl({ category: opt.value || undefined }, filterState)}
-                                        >
                                             {opt.label}
-                                        </Link>
                                     </TabsTrigger>
                                 ))}
                             </TabsList>
@@ -249,14 +246,11 @@ export default async function BuildsPage({ searchParams }: BuildsPageProps) {
                                         <TabsTrigger
                                             key={opt.value}
                                             value={opt.value}
-                                            asChild
                                             className="flex-1 xl:flex-none"
+                                            render={<Link href={buildFilterUrl({ sort: opt.value }, filterState)} />}
+                                            nativeButton={false}
                                         >
-                                            <Link
-                                                href={buildFilterUrl({ sort: opt.value }, filterState)}
-                                            >
                                                 {opt.label}
-                                            </Link>
                                         </TabsTrigger>
                                     ))}
                                 </TabsList>

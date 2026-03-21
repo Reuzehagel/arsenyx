@@ -18,17 +18,13 @@ export default function GuideNotFound() {
                         The guide you&apos;re looking for doesn&apos;t exist or has been removed.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                        <Button variant="outline" asChild>
-                            <Link href="/guides" className="gap-2">
+                        <Button variant="outline" className="gap-2" render={<Link href="/guides" />} nativeButton={false}>
                                 <ArrowLeft className="h-4 w-4" />
                                 Back to Guides
-                            </Link>
                         </Button>
-                        <Button asChild>
-                            <Link href="/guides" className="gap-2">
+                        <Button className="gap-2" render={<Link href="/guides" />} nativeButton={false}>
                                 <BookOpen className="h-4 w-4" />
                                 Browse All Guides
-                            </Link>
                         </Button>
                     </div>
                 </div>
