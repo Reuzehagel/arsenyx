@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import satori from "satori";
 import sharp from "sharp";
 import { loadFonts } from "./font";
@@ -25,6 +27,45 @@ async function fetchImageAsDataUri(url: string): Promise<string | undefined> {
   }
 }
 
+const POLARITY_FILES: Record<string, string> = {
+  madurai: "Madurai_Pol.svg",
+  vazarin: "Vazarin_Pol.svg",
+  naramon: "Naramon_Pol.svg",
+  zenurik: "Zenurik_Pol.svg",
+  unairu: "Unairu_Pol.svg",
+  penjaga: "Penjaga_Pol.svg",
+  umbra: "Umbra_Pol.svg",
+  any: "Any_Pol.svg",
+  universal: "Any_Pol.svg",
+};
+
+let polarityCache: Map<string, string> | null = null;
+
+/**
+ * Load all polarity SVGs from public/focus-schools/ as base64 data URIs.
+ */
+async function loadPolarityIcons(): Promise<Map<string, string>> {
+  if (polarityCache) return polarityCache;
+
+  const map = new Map<string, string>();
+  const dir = join(process.cwd(), "public/focus-schools");
+
+  await Promise.all(
+    Object.entries(POLARITY_FILES).map(async ([polarity, filename]) => {
+      try {
+        const buffer = await readFile(join(dir, filename));
+        const base64 = buffer.toString("base64");
+        map.set(polarity, `data:image/svg+xml;base64,${base64}`);
+      } catch {
+        // Skip missing files
+      }
+    })
+  );
+
+  polarityCache = map;
+  return map;
+}
+
 /**
  * Collect all unique image URLs from the build state and fetch them in parallel.
  * Returns a Map from CDN URL → base64 data URI.
@@ -37,7 +78,6 @@ async function fetchAllImages(
 
   if (itemImageUrl) urls.add(itemImageUrl);
 
-  // Mod images
   const allSlots = [
     buildState.auraSlot,
     buildState.exilusSlot,
@@ -49,14 +89,12 @@ async function fetchAllImages(
     }
   }
 
-  // Arcane images
   for (const arcane of buildState.arcaneSlots ?? []) {
     if (arcane?.imageName) {
       urls.add(getImageUrl(arcane.imageName));
     }
   }
 
-  // Fetch all in parallel
   const entries = await Promise.all(
     [...urls].map(async (url) => {
       const dataUri = await fetchImageAsDataUri(url);
@@ -85,9 +123,10 @@ export interface RenderBuildImageInput {
 export async function renderBuildImage(
   input: RenderBuildImageInput
 ): Promise<Buffer> {
-  const [fonts, imageMap] = await Promise.all([
+  const [fonts, imageMap, polarityIcons] = await Promise.all([
     loadFonts(),
     fetchAllImages(input.buildState, input.itemImageUrl),
+    loadPolarityIcons(),
   ]);
 
   const element = BuildCardTemplate({
@@ -99,6 +138,7 @@ export async function renderBuildImage(
       ? imageMap.get(input.itemImageUrl)
       : undefined,
     imageMap,
+    polarityIcons,
   });
 
   const svg = await satori(element, {
