@@ -6,8 +6,7 @@
  * Vote and favorite operations with authentication
  */
 
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { getServerSession } from "@/lib/auth";
 import {
   toggleBuildVote,
   hasUserVotedForBuild,
@@ -39,9 +38,7 @@ export interface SocialStatusResult {
  */
 export async function toggleVoteAction(buildId: string): Promise<VoteResult> {
   try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
+    const session = await getServerSession();
 
     if (!session?.user?.id) {
       return err("You must be signed in to vote");
@@ -73,9 +70,7 @@ export async function toggleFavoriteAction(
   buildId: string
 ): Promise<FavoriteResult> {
   try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
+    const session = await getServerSession();
 
     if (!session?.user?.id) {
       return err("You must be signed in to save favorites");
@@ -107,9 +102,7 @@ export async function toggleFavoriteAction(
 export async function getSocialStatusAction(
   buildId: string
 ): Promise<SocialStatusResult> {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const session = await getServerSession();
 
   if (!session?.user?.id) {
     return { hasVoted: false, hasFavorited: false };

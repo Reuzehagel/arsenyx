@@ -38,7 +38,6 @@ export interface BuildContainerProps {
   compatibleArcanes?: Arcane[];
   importedBuild?: Partial<BuildState>;
   savedBuildId?: string;
-  savedBuildSlug?: string;
   readOnly?: boolean;
   isOwner?: boolean;
   initialGuide?: {

@@ -210,13 +210,13 @@ describe("calculateWarframeStats", () => {
       build.auraSlot.mod = {
         uniqueName: "/Lotus/Upgrades/Mods/Aura/EnemyArmorReductionAuraMod",
         name: "Corrosive Projection",
-        polarity: "madurai" as any,
+        polarity: "madurai",
         baseDrain: -4,
         fusionLimit: 5,
         rank: 5,
         rarity: "Rare",
         levelStats: [{ stats: ["Enemies lose -18% Armor"] }],
-      } as any;
+      } as PlacedMod;
 
       const stats = calculateWarframeStats(EXCALIBUR, build);
 
@@ -443,7 +443,7 @@ describe("calculateStats", () => {
   });
 
   it("returns empty object for unknown category", () => {
-    const build = createEmptyBuildState({ itemCategory: "companions" as any });
+    const build = createEmptyBuildState({ itemCategory: "companions" });
     const result = calculateStats(EXCALIBUR, build);
 
     expect(result.warframe).toBeUndefined();

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useCallback } from "react";
+import { Search } from "lucide-react";
 import { useDraggable } from "@dnd-kit/core";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -41,7 +42,11 @@ export function ArcaneSearchPanel({
   onSelectArcane,
   className,
 }: ArcaneSearchPanelProps) {
-  const panel = useSearchPanel({
+  const {
+    searchQuery, setSearchQuery, deferredSearchQuery,
+    rarityFilter, setRarityFilter, sortBy, setSortBy,
+    selectedIndex, setSelectedIndex, inputRef, gridRef,
+  } = useSearchPanel({
     initialSelectedIndex: -1,
     defaultSort: "Name",
   });
@@ -50,16 +55,16 @@ export function ArcaneSearchPanel({
   const filteredArcanes = useMemo(() => {
     let arcanes = [...availableArcanes];
 
-    if (panel.deferredSearchQuery.trim()) {
-      const query = panel.deferredSearchQuery.toLowerCase();
+    if (deferredSearchQuery.trim()) {
+      const query = deferredSearchQuery.toLowerCase();
       arcanes = arcanes.filter((a) => a.name.toLowerCase().includes(query));
     }
 
-    if (panel.rarityFilter !== "All") {
-      arcanes = arcanes.filter((a) => a.rarity === panel.rarityFilter);
+    if (rarityFilter !== "All") {
+      arcanes = arcanes.filter((a) => a.rarity === rarityFilter);
     }
 
-    switch (panel.sortBy) {
+    switch (sortBy) {
       case "Name":
         arcanes.sort((a, b) => a.name.localeCompare(b.name));
         break;
@@ -74,11 +79,11 @@ export function ArcaneSearchPanel({
     }
 
     return arcanes;
-  }, [availableArcanes, panel.deferredSearchQuery, panel.sortBy, panel.rarityFilter]);
+  }, [availableArcanes, deferredSearchQuery, sortBy, rarityFilter]);
 
-  const boundedSelectedIndex = computeBoundedIndex(panel.selectedIndex, filteredArcanes.length);
+  const boundedSelectedIndex = computeBoundedIndex(selectedIndex, filteredArcanes.length);
 
-  useScrollIntoView(panel.gridRef, boundedSelectedIndex);
+  useScrollIntoView(gridRef, boundedSelectedIndex);
 
   const isArcaneUsed = useCallback(
     (arcane: Arcane) => usedArcaneNames.has(arcane.name),
@@ -97,12 +102,12 @@ export function ArcaneSearchPanel({
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       handleGridKeyDown(e, {
-        gridRef: panel.gridRef,
-        inputRef: panel.inputRef,
+        gridRef,
+        inputRef,
         itemCount: filteredArcanes.length,
         boundedSelectedIndex,
-        selectedIndex: panel.selectedIndex,
-        setSelectedIndex: panel.setSelectedIndex,
+        selectedIndex,
+        setSelectedIndex,
         onEnterSelect: (index) => {
           const selectedArcane = filteredArcanes[index];
           if (selectedArcane && !isArcaneUsed(selectedArcane)) {
@@ -114,7 +119,7 @@ export function ArcaneSearchPanel({
         },
       });
     },
-    [filteredArcanes, boundedSelectedIndex, panel.selectedIndex, panel.setSelectedIndex, panel.gridRef, panel.inputRef, isArcaneUsed, handleSelectArcane]
+    [filteredArcanes, boundedSelectedIndex, selectedIndex, setSelectedIndex, gridRef, inputRef, isArcaneUsed, handleSelectArcane]
   );
 
   return (
@@ -122,24 +127,12 @@ export function ArcaneSearchPanel({
       {/* Search and Filter */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
-          <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
-            ref={panel.inputRef}
+            ref={inputRef}
             placeholder="Search arcanes..."
-            value={panel.searchQuery}
-            onChange={(e) => panel.setSearchQuery(e.target.value)}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             className="pl-9 bg-muted/50 border-border/50"
           />
@@ -147,23 +140,23 @@ export function ArcaneSearchPanel({
 
         <div className="flex gap-2 flex-wrap">
           <FilterDropdown
-            label={panel.sortBy}
+            label={sortBy}
             options={[...SORT_OPTIONS]}
-            value={panel.sortBy}
-            onChange={(v) => panel.setSortBy(v as SortOption)}
+            value={sortBy}
+            onChange={(v) => setSortBy(v as SortOption)}
           />
           <FilterDropdown
-            label={panel.rarityFilter === "All" ? "Rarity" : panel.rarityFilter}
+            label={rarityFilter === "All" ? "Rarity" : rarityFilter}
             options={[...RARITY_OPTIONS]}
-            value={panel.rarityFilter}
-            onChange={(v) => panel.setRarityFilter(v as (typeof RARITY_OPTIONS)[number])}
+            value={rarityFilter}
+            onChange={(v) => setRarityFilter(v as (typeof RARITY_OPTIONS)[number])}
           />
         </div>
       </div>
 
       {/* Arcane Grid */}
       <div
-        ref={panel.gridRef}
+        ref={gridRef}
         className="grid gap-2 sm:gap-3 overflow-x-auto overflow-y-hidden pt-2 pb-8 px-2 max-w-full h-auto sm:h-72 content-center"
         style={{
           gridTemplateRows: "repeat(2, min-content)",

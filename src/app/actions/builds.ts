@@ -6,8 +6,7 @@
  * Authenticated actions for build CRUD operations
  */
 
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { getServerSession } from "@/lib/auth";
 import {
   createBuild,
   updateBuild,
@@ -54,9 +53,7 @@ export async function saveBuildAction(
   input: SaveBuildInput
 ): Promise<SaveBuildResult> {
   try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
+    const session = await getServerSession();
 
     if (!session?.user?.id) {
       return err("You must be signed in to save a build");
@@ -119,9 +116,7 @@ export async function deleteBuildAction(
   buildId: string
 ): Promise<DeleteBuildResult> {
   try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
+    const session = await getServerSession();
 
     if (!session?.user?.id) {
       return err("You must be signed in to delete a build");
@@ -139,33 +134,12 @@ export async function deleteBuildAction(
 // FORK BUILD (Stub for future implementation)
 // =============================================================================
 
-/**
- * Fork (copy) a public build to the current user's account
- * TODO: Implement in Sprint 4
- */
+/** Fork (copy) a public build to the current user's account — not yet implemented */
 export async function forkBuildAction(
   _buildId: string
 ): Promise<SaveBuildResult> {
-  try {
-    void _buildId;
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
-
-    if (!session?.user?.id) {
-      return err("You must be signed in to fork a build");
-    }
-
-    // TODO: Implement forking logic
-    // 1. Get the source build (must be public or unlisted)
-    // 2. Create a copy with forkedFromId set
-    // 3. Return the new build
-
-    return err("Fork functionality not yet implemented");
-  } catch (error) {
-    console.error("Failed to fork build:", error);
-    return err(getErrorMessage(error, "Failed to fork build"));
-  }
+  void _buildId;
+  return err("Fork functionality not yet implemented");
 }
 
 // =============================================================================
@@ -207,9 +181,7 @@ export async function updateBuildGuideAction(
   input: UpdateBuildGuideInput
 ): Promise<SaveBuildResult> {
   try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
+    const session = await getServerSession();
 
     if (!session?.user?.id) {
       return err("You must be signed in to update a guide");
@@ -263,9 +235,7 @@ type PartnerSelectorBuilds = Awaited<ReturnType<typeof getUserBuildsForPartnerSe
 
 export async function getUserBuildsForPartnerSelectorAction(): Promise<Result<PartnerSelectorBuilds>> {
   try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
+    const session = await getServerSession();
 
     if (!session?.user?.id) {
       return err("You must be signed in");

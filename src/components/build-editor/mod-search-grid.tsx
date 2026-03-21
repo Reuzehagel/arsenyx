@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useCallback, useState } from "react";
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { SearchableModCard } from "./searchable-mod-card";
@@ -120,7 +121,11 @@ export function ModSearchGrid({
 }: ModSearchGridProps) {
   const [polarityFilter, setPolarityFilter] = useState<PolarityFilter>("All");
 
-  const panel = useSearchPanel({ defaultSort: "Drain" });
+  const {
+    searchQuery, setSearchQuery, deferredSearchQuery,
+    rarityFilter, setRarityFilter, sortBy, setSortBy,
+    selectedIndex, setSelectedIndex, inputRef, gridRef,
+  } = useSearchPanel({ defaultSort: "Drain" });
 
   // Filter and sort mods
   const filteredMods = useMemo(() => {
@@ -132,8 +137,8 @@ export function ModSearchGrid({
       mods = mods.filter((m) => m.isExilus || m.isUtility);
     }
 
-    if (panel.deferredSearchQuery.trim()) {
-      const query = panel.deferredSearchQuery.toLowerCase();
+    if (deferredSearchQuery.trim()) {
+      const query = deferredSearchQuery.toLowerCase();
       const searchTerms = expandSearchQuery(query);
       mods = mods.filter((m) => {
         const name = m.name.toLowerCase();
@@ -144,8 +149,8 @@ export function ModSearchGrid({
       });
     }
 
-    if (panel.rarityFilter !== "All") {
-      mods = mods.filter((m) => m.rarity === panel.rarityFilter);
+    if (rarityFilter !== "All") {
+      mods = mods.filter((m) => m.rarity === rarityFilter);
     }
 
     if (polarityFilter !== "All") {
@@ -154,7 +159,7 @@ export function ModSearchGrid({
       );
     }
 
-    switch (panel.sortBy) {
+    switch (sortBy) {
       case "Name":
         mods.sort((a, b) => a.name.localeCompare(b.name));
         break;
@@ -172,11 +177,11 @@ export function ModSearchGrid({
     }
 
     return mods;
-  }, [availableMods, panel.deferredSearchQuery, panel.sortBy, panel.rarityFilter, polarityFilter, slotType]);
+  }, [availableMods, deferredSearchQuery, sortBy, rarityFilter, polarityFilter, slotType]);
 
-  const boundedSelectedIndex = computeBoundedIndex(panel.selectedIndex, filteredMods.length);
+  const boundedSelectedIndex = computeBoundedIndex(selectedIndex, filteredMods.length);
 
-  useScrollIntoView(panel.gridRef, boundedSelectedIndex);
+  useScrollIntoView(gridRef, boundedSelectedIndex);
 
   const isModUsed = useCallback(
     (mod: Mod) => usedModNames.has(getModBaseName(mod.name)),
@@ -195,12 +200,12 @@ export function ModSearchGrid({
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       handleGridKeyDown(e, {
-        gridRef: panel.gridRef,
-        inputRef: panel.inputRef,
+        gridRef,
+        inputRef,
         itemCount: filteredMods.length,
         boundedSelectedIndex,
-        selectedIndex: panel.selectedIndex,
-        setSelectedIndex: panel.setSelectedIndex,
+        selectedIndex,
+        setSelectedIndex,
         onEnterSelect: (index) => {
           const selectedMod = filteredMods[index];
           if (selectedMod && !isModUsed(selectedMod)) {
@@ -209,7 +214,7 @@ export function ModSearchGrid({
         },
       });
     },
-    [filteredMods, boundedSelectedIndex, panel.selectedIndex, panel.setSelectedIndex, panel.gridRef, panel.inputRef, isModUsed, handleSelectMod]
+    [filteredMods, boundedSelectedIndex, selectedIndex, setSelectedIndex, gridRef, inputRef, isModUsed, handleSelectMod]
   );
 
   return (
@@ -217,24 +222,12 @@ export function ModSearchGrid({
       {/* Search and Filter Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
-          <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
-            ref={panel.inputRef}
+            ref={inputRef}
             placeholder="Search mods..."
-            value={panel.searchQuery}
-            onChange={(e) => panel.setSearchQuery(e.target.value)}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             className="pl-9 bg-muted/50 border-border/50"
           />
@@ -242,16 +235,16 @@ export function ModSearchGrid({
 
         <div className="flex gap-2 flex-wrap">
           <FilterDropdown
-            label={panel.sortBy}
+            label={sortBy}
             options={[...SORT_OPTIONS]}
-            value={panel.sortBy}
-            onChange={(v) => panel.setSortBy(v as SortOption)}
+            value={sortBy}
+            onChange={(v) => setSortBy(v as SortOption)}
           />
           <FilterDropdown
-            label={panel.rarityFilter === "All" ? "Rarity" : panel.rarityFilter}
+            label={rarityFilter === "All" ? "Rarity" : rarityFilter}
             options={[...RARITY_OPTIONS]}
-            value={panel.rarityFilter}
-            onChange={(v) => panel.setRarityFilter(v as (typeof RARITY_OPTIONS)[number])}
+            value={rarityFilter}
+            onChange={(v) => setRarityFilter(v as (typeof RARITY_OPTIONS)[number])}
           />
           <FilterDropdown
             label={polarityFilter === "All" ? "Polarity" : polarityFilter}
@@ -264,7 +257,7 @@ export function ModSearchGrid({
 
       {/* Mod Grid */}
       <div
-        ref={panel.gridRef}
+        ref={gridRef}
         className="grid gap-x-6 sm:gap-x-8 gap-y-6 sm:gap-y-10 overflow-x-auto overflow-y-hidden pt-1 pb-4 pl-4 pr-8 max-w-full h-auto sm:h-72 content-center"
         style={{
           gridTemplateRows: "repeat(2, min-content)",

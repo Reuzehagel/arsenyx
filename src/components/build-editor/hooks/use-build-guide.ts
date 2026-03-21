@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { getUserBuildsForPartnerSelectorAction } from "@/app/actions/builds";
-
-const GUIDE_STORAGE_KEY_PREFIX = "arsenyx_build_guide_";
+import { GUIDE_STORAGE_KEY_PREFIX } from "./use-build-persistence";
 
 interface PartnerBuild {
   id: string;
@@ -47,12 +46,25 @@ export function useBuildGuide({
   initialGuide,
   initialPartnerBuilds = [],
 }: UseBuildGuideProps): UseBuildGuideReturn {
-  const [guideSummary, setGuideSummary] = useState<string>(
-    initialGuide?.summary ?? ""
-  );
-  const [guideDescription, setGuideDescription] = useState<string>(
-    initialGuide?.description ?? ""
-  );
+  // Load guide from localStorage on init (for new builds only)
+  const [guideSummary, setGuideSummary] = useState<string>(() => {
+    if (initialGuide?.summary) return initialGuide.summary;
+    if (savedBuildId) return "";
+    try {
+      const saved = localStorage.getItem(`${GUIDE_STORAGE_KEY_PREFIX}${itemUniqueName}`);
+      if (saved) return JSON.parse(saved).summary || "";
+    } catch { /* ignore */ }
+    return "";
+  });
+  const [guideDescription, setGuideDescription] = useState<string>(() => {
+    if (initialGuide?.description) return initialGuide.description;
+    if (savedBuildId) return "";
+    try {
+      const saved = localStorage.getItem(`${GUIDE_STORAGE_KEY_PREFIX}${itemUniqueName}`);
+      if (saved) return JSON.parse(saved).description || "";
+    } catch { /* ignore */ }
+    return "";
+  });
   const [partnerBuilds, setPartnerBuilds] =
     useState<PartnerBuild[]>(initialPartnerBuilds);
   const [availableBuilds, setAvailableBuilds] = useState<PartnerBuild[]>([]);
@@ -78,23 +90,6 @@ export function useBuildGuide({
 
     return () => window.clearTimeout(handle);
   }, [guideSummary, guideDescription, itemUniqueName, canEdit]);
-
-  // Load guide from localStorage on mount
-  useEffect(() => {
-    if (savedBuildId) return; // Don't load for existing saved builds
-
-    const key = `${GUIDE_STORAGE_KEY_PREFIX}${itemUniqueName}`;
-    try {
-      const saved = localStorage.getItem(key);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.summary) setGuideSummary(parsed.summary);
-        if (parsed.description) setGuideDescription(parsed.description);
-      }
-    } catch {
-      // Ignore parse errors
-    }
-  }, [itemUniqueName, savedBuildId]);
 
   // Fetch available builds for partner selector
   useEffect(() => {

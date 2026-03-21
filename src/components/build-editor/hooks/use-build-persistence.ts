@@ -18,9 +18,7 @@ interface UseBuildPersistenceProps {
   buildState: BuildState;
   hydrateBuildState: (partial: Partial<BuildState>) => void;
   savedBuildId?: string;
-  savedBuildSlug?: string;
   importedBuild?: Partial<BuildState>;
-  isOwner: boolean;
   isAuthenticated: boolean;
   canEdit: boolean;
   guideSummary: string;
@@ -46,9 +44,7 @@ export function useBuildPersistence({
   buildState,
   hydrateBuildState,
   savedBuildId,
-  savedBuildSlug,
   importedBuild,
-  isOwner,
   isAuthenticated,
   canEdit,
   guideSummary,
@@ -59,12 +55,10 @@ export function useBuildPersistence({
   const router = useRouter();
 
   const [buildId, setBuildId] = useState<string | undefined>(savedBuildId);
-  const [, setBuildSlug] = useState<string | undefined>(savedBuildSlug);
   const [buildName, setBuildName] = useState<string>(
     importedBuild?.buildName || `${item.name} Build`
   );
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
-  const [, setSaveError] = useState<string | null>(null);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
 
   // Auto-save buildState to localStorage (debounced 300ms)
@@ -111,7 +105,6 @@ export function useBuildPersistence({
         const isUpdating = !!buildId;
 
         setSaveStatus("saving");
-        setSaveError(null);
 
         try {
           const result = await saveBuildAction({
@@ -127,11 +120,9 @@ export function useBuildPersistence({
 
           if (!result.success) {
             setSaveStatus("error");
-            setSaveError(result.error || "Failed to save build");
             window.setTimeout(() => setSaveStatus("idle"), 3000);
           } else {
             setBuildId(result.data.id);
-            setBuildSlug(result.data.slug);
             setSaveStatus("saved");
             setPublishDialogOpen(false);
 
@@ -155,7 +146,6 @@ export function useBuildPersistence({
         } catch (error) {
           console.error("Save build error:", error);
           setSaveStatus("error");
-          setSaveError("An unexpected error occurred");
           window.setTimeout(() => setSaveStatus("idle"), 3000);
         }
         return;

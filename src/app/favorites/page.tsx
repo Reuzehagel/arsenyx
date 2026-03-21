@@ -5,8 +5,7 @@ import Image from "next/image";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { getServerSession } from "@/lib/auth";
 import { getUserFavoriteBuilds } from "@/lib/db/index";
 import { getImageUrl } from "@/lib/warframe/images";
 import { ThumbsUp, Eye, Heart } from "lucide-react";
@@ -24,7 +23,7 @@ export default async function FavoritesPage({
   searchParams,
 }: FavoritesPageProps) {
   const [session, params] = await Promise.all([
-    auth.api.getSession({ headers: await headers() }),
+    getServerSession(),
     searchParams,
   ]);
 

@@ -6,9 +6,8 @@ import {
   generateBuildUrl,
   extractBuildFromUrl,
 } from "../build-codec";
-import type { BuildState, PlacedMod, Polarity } from "../warframe/types";
-import { createEmptyBuildState, createModSlot } from "@/test/fixtures/builds";
-import { createTestMod, VITALITY, SERRATION } from "@/test/fixtures/mods";
+import { createEmptyBuildState } from "@/test/fixtures/builds";
+import { createTestMod, VITALITY } from "@/test/fixtures/mods";
 
 // =============================================================================
 // ENCODING TESTS

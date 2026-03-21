@@ -6,8 +6,7 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { getServerSession } from "@/lib/auth";
 import { getUserBuilds } from "@/lib/db/index";
 import { getImageUrl } from "@/lib/warframe/images";
 import {
@@ -36,7 +35,7 @@ export default async function MyBuildsPage({
   searchParams,
 }: MyBuildsPageProps) {
   const [session, params] = await Promise.all([
-    auth.api.getSession({ headers: await headers() }),
+    getServerSession(),
     searchParams,
   ]);
 

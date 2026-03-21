@@ -149,6 +149,7 @@ export function DescriptionEditor({
           {/* Toolbar */}
           <TooltipProvider delayDuration={300}>
             <div className="flex items-center gap-1 p-1 border rounded-md bg-muted/30">
+              {/* eslint-disable-next-line react-hooks/refs -- ref accessed only inside click handlers, not during render */}
               {toolbarButtons.map((button) => (
                 <Tooltip key={button.label}>
                   <TooltipTrigger asChild>

@@ -10,7 +10,7 @@ import { prisma } from "../db";
 import { nanoid } from "nanoid";
 import type { BuildVisibility, Prisma } from "@prisma/client";
 import type { BuildState } from "@/lib/warframe/types";
-import { BuildStateSchema, safeParseOrCast } from "@/lib/warframe/schemas";
+import { BuildStateSchema, safeParseOrCast, safeParse } from "@/lib/warframe/schemas";
 
 // =============================================================================
 // TYPES
@@ -91,14 +91,18 @@ export interface GetBuildsOptions {
   category?: string;
 }
 
-function sanitizeBuildDataForDb(buildData: BuildState): BuildState {
+function sanitizeBuildDataForDb(buildData: BuildState): Prisma.JsonObject {
+  // Validate before writing — log warning if schema doesn't match
+  safeParse(BuildStateSchema, buildData, "buildData write");
+
   // Prisma JSON fields cannot contain `undefined` values anywhere inside arrays.
   // Use `null` for empty slots.
-  return {
+  const sanitized = {
     ...buildData,
     arcaneSlots: (buildData.arcaneSlots ?? []).map((a) => a ?? null),
     shardSlots: (buildData.shardSlots ?? []).map((s) => s ?? null),
   };
+  return sanitized as unknown as Prisma.JsonObject;
 }
 
 function detectHasShards(buildData: BuildState): boolean {
@@ -227,7 +231,7 @@ function mapBuildResult(
       slug: pb.slug,
       name: pb.name,
       item: pb.item,
-      buildData: pb.buildData,
+      buildData: safeParseOrCast(BuildStateSchema, pb.buildData, `partner build ${pb.id} buildData`),
     })),
   } as BuildWithUser;
 }
@@ -281,9 +285,7 @@ export async function createBuild(
       name: input.name,
       description: input.description,
       visibility: input.visibility ?? "PUBLIC",
-      buildData: sanitizeBuildDataForDb(
-        input.buildData
-      ) as unknown as Prisma.JsonObject,
+      buildData: sanitizeBuildDataForDb(input.buildData),
       hasShards: detectHasShards(input.buildData),
       buildGuide: guideCreate,
       partnerBuilds: partnerBuildsConnect,
@@ -514,9 +516,7 @@ export async function updateBuild(
     updateData.visibility = input.visibility;
   }
   if (input.buildData !== undefined) {
-    updateData.buildData = sanitizeBuildDataForDb(
-      input.buildData
-    ) as unknown as Prisma.JsonObject;
+    updateData.buildData = sanitizeBuildDataForDb(input.buildData);
     updateData.hasShards = detectHasShards(input.buildData);
   }
 

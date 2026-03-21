@@ -15,8 +15,8 @@ import {
   wouldMatchPolarity,
   wouldMismatchPolarity,
 } from "../capacity";
-import type { ModSlot, PlacedMod, Polarity } from "../types";
-import { createTestMod, VITALITY, STEEL_CHARGE } from "@/test/fixtures/mods";
+import type { ModSlot, Polarity } from "../types";
+import { createTestMod, STEEL_CHARGE } from "@/test/fixtures/mods";
 import { createEmptyBuildState, createModSlot } from "@/test/fixtures/builds";
 
 // =============================================================================

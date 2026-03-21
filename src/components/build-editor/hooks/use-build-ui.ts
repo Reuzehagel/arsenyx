@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useRef, useSyncExternalStore, useEffect } from "react";
 import { useSession } from "@/lib/auth-client";
 import { copyBuildToClipboard } from "@/lib/build-codec";
 import type { BuildState } from "@/lib/warframe/types";
@@ -35,10 +35,11 @@ export function useBuildUI({
   const { data: session, isPending: isSessionPending } = useSession();
 
   // Track client-side mounting to avoid hydration mismatch with auth state
-  const [hasMounted, setHasMounted] = useState(false);
-  useEffect(() => {
-    setHasMounted(true);
-  }, []);
+  const hasMounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   // Only consider authenticated after mount to prevent hydration mismatch
   const isAuthenticated = hasMounted && !isSessionPending && !!session?.user;
@@ -55,6 +56,14 @@ export function useBuildUI({
 
   // Copy notification
   const [showCopied, setShowCopied] = useState(false);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // Clean up copy timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
 
   // Select a slot for mod placement
   const handleSelectSlot = useCallback((slotId: string) => {
@@ -66,7 +75,8 @@ export function useBuildUI({
     const success = await copyBuildToClipboard(buildState);
     if (success) {
       setShowCopied(true);
-      window.setTimeout(() => setShowCopied(false), 2000);
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = setTimeout(() => setShowCopied(false), 2000);
     }
   }, [buildState]);
 

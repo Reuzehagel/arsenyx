@@ -7,8 +7,7 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { BuildContainer } from "@/components/build-editor/build-container";
 import { Skeleton } from "@/components/ui/skeleton";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { getServerSession } from "@/lib/auth";
 import { getBuildBySlug } from "@/lib/db/index";
 import { getFullItem } from "@/lib/warframe/items";
 import { getModsForItem, getArcanesForSlot } from "@/lib/warframe/mods";
@@ -95,7 +94,7 @@ function BuildViewSkeleton() {
 export default async function BuildPage({ params }: BuildPageProps) {
   const [{ slug }, session] = await Promise.all([
     params,
-    auth.api.getSession({ headers: await headers() }),
+    getServerSession(),
   ]);
   const viewerId = session?.user?.id;
 
@@ -202,7 +201,6 @@ export default async function BuildPage({ params }: BuildPageProps) {
             compatibleArcanes={compatibleArcanes}
             importedBuild={build.buildData}
             savedBuildId={build.id}
-            savedBuildSlug={build.slug}
             readOnly={!isOwner}
             isOwner={isOwner}
             initialGuide={{
