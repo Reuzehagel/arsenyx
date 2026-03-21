@@ -24,6 +24,7 @@ interface CreatePageProps {
     item?: string;
     category?: string;
     build?: string;
+    fork?: string;
   }>;
 }
 
@@ -108,6 +109,75 @@ export default async function CreatePage({ searchParams }: CreatePageProps) {
         );
       }
     }
+  }
+
+  // Check for fork (Use as Template) — copies only mod slots from source build
+  if (params.fork && params.item && params.category) {
+    if (!isValidCategory(params.category)) {
+      notFound();
+    }
+
+    const category = params.category as BrowseCategory;
+    const item = getItemBySlug(category, params.item);
+
+    if (!item) {
+      notFound();
+    }
+
+    // Fetch the source build to copy mods from
+    const { getBuildBySlug } = await import("@/lib/db/index");
+    const sourceBuild = await getBuildBySlug(params.fork);
+
+    const fullItem = getFullItem(category, item.uniqueName);
+    const categoryConfig = getCategoryConfig(category);
+    const compatibleMods = fullItem ? getModsForItem(fullItem) : [];
+    let compatibleArcanes: Arcane[] = [];
+    if (["warframes", "necramechs"].includes(category)) {
+      compatibleArcanes = getArcanesForSlot("warframe");
+    } else if (["primary", "secondary", "melee"].includes(category)) {
+      compatibleArcanes = getArcanesForSlot(
+        category as "primary" | "secondary" | "melee"
+      );
+    }
+
+    // Extract only mod configuration from source build
+    const importedBuild = sourceBuild
+      ? {
+          itemUniqueName: item.uniqueName,
+          itemName: item.name,
+          itemCategory: category,
+          itemImageName: item.imageName,
+          normalSlots: sourceBuild.buildData.normalSlots,
+          auraSlot: sourceBuild.buildData.auraSlot,
+          exilusSlot: sourceBuild.buildData.exilusSlot,
+          hasReactor: sourceBuild.buildData.hasReactor,
+          formaCount: sourceBuild.buildData.formaCount,
+          // Everything else uses defaults from BuildContainer
+          arcaneSlots: [],
+          shardSlots: [],
+          baseCapacity: sourceBuild.buildData.hasReactor ? 60 : 30,
+          currentCapacity: 0, // Will be recalculated
+        }
+      : undefined;
+
+    return (
+      <div className="relative min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1">
+          <Suspense fallback={<BuildEditorSkeleton />}>
+            <BuildContainer
+              item={fullItem ?? item}
+              category={category}
+              categoryLabel={categoryConfig?.label ?? "Item"}
+              compatibleMods={compatibleMods}
+              compatibleArcanes={compatibleArcanes}
+              importedBuild={importedBuild}
+            />
+          </Suspense>
+        </main>
+        <Footer />
+      </div>
+    );
   }
 
   // Check for item + category params

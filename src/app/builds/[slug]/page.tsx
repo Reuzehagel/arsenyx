@@ -16,6 +16,7 @@ import type { BrowseCategory, Arcane } from "@/lib/warframe/types";
 import { BuildSocialActions } from "@/components/build/build-social-actions";
 import { slugify } from "@/lib/warframe/slugs";
 import { ViewTracker } from "@/components/build/view-tracker";
+import { TemplateButton } from "@/components/build/template-button";
 
 interface BuildPageProps {
   params: Promise<{
@@ -183,6 +184,11 @@ export default async function BuildPage({ params }: BuildPageProps) {
                   voteCount={build.voteCount}
                   favoriteCount={build.favoriteCount}
                   viewCount={build.viewCount}
+                />
+                <TemplateButton
+                  buildSlug={build.slug}
+                  itemName={build.item.name}
+                  category={category}
                 />
                 <span className="text-sm text-muted-foreground">
                   Updated {new Date(build.updatedAt).toLocaleDateString()}
