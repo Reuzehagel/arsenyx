@@ -4,6 +4,7 @@ import { Icons } from "@/components/icons";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/auth";
 import { MobileNav } from "@/components/mobile-nav";
+import { SearchCommand } from "@/components/search-command";
 import { SITE_CONFIG, NAV_ITEMS, ROUTES } from "@/lib/constants";
 
 export function Header() {
@@ -32,10 +33,9 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="hidden sm:flex">
-            <Icons.search />
-            <span className="sr-only">Search</span>
-          </Button>
+          <div className="hidden sm:flex">
+            <SearchCommand />
+          </div>
           <Button variant="ghost" size="icon" className="hidden sm:flex">
             <Icons.bell />
             <span className="sr-only">Notifications</span>
