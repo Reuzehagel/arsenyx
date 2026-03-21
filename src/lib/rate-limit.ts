@@ -80,3 +80,11 @@ export const searchLimiter = rateLimit({
   interval: 60 * 1000,
   uniqueTokenPerInterval: 500,
 });
+
+/**
+ * Image generation rate limiter: 10 images per minute per IP
+ */
+export const imageLimiter = rateLimit({
+  interval: 60 * 1000,
+  uniqueTokenPerInterval: 500,
+});
