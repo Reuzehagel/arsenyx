@@ -78,6 +78,7 @@ src/
 │   ├── header.tsx          # Site header
 │   ├── footer.tsx          # Site footer
 │   ├── mobile-nav.tsx      # Mobile navigation
+│   ├── search-command.tsx  # Global search (⌘K)
 │   ├── icons.tsx           # Custom icons
 │   └── theme-*.tsx         # Theme provider + toggle
 ├── lib/
@@ -103,6 +104,7 @@ src/
 │   │   ├── votes.ts        # Vote queries
 │   │   ├── favorites.ts    # Favorite queries
 │   │   └── index.ts        # Barrel exports
+│   ├── image/              # Satori image generation (build cards)
 │   ├── guides/             # Guide data + types
 │   ├── overframe/          # Overframe import/decode logic
 │   ├── auth.ts             # Better Auth server config
@@ -193,7 +195,8 @@ Coverage is limited — be careful with refactoring untested code.
 
 ## Gotchas
 
-- **`pg` must be external** — `serverExternalPackages: ["pg"]` in `next.config.ts` prevents Turbopack bundling issues with the PostgreSQL driver
+- **Satori (image generation)** — JSX renderer for server-side image gen. Only supports flexbox (no grid), inline `style` objects (no Tailwind/className), `.ttf`/`.woff` fonts (NOT `.woff2`). Returns `null` or `&&` short-circuits crash satori — always use ternaries with `<div style={{ display: "flex" }} />` fallbacks. ESLint `react/jsx-key` must be disabled since satori doesn't support `key` props.
+- **`pg` and `sharp` must be external** — `serverExternalPackages: ["pg", "sharp"]` in `next.config.ts` prevents Turbopack bundling issues
 - **Keyboard-first UX** — preserve keyboard navigation in browse components
 - **Server Components first** — only add `"use client"` when actually needed
 - **Don't modify `src/components/ui/`** — shadcn/ui primitives, override via className instead
