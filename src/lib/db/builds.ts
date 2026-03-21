@@ -89,6 +89,10 @@ export interface GetBuildsOptions {
   limit?: number;
   sortBy?: "newest" | "votes" | "views" | "updated" | "popular";
   category?: string;
+  query?: string;
+  author?: string;
+  hasGuide?: boolean;
+  hasShards?: boolean;
 }
 
 function sanitizeBuildDataForDb(buildData: BuildState): Prisma.JsonObject {
@@ -287,6 +291,7 @@ export async function createBuild(
       visibility: input.visibility ?? "PUBLIC",
       buildData: sanitizeBuildDataForDb(input.buildData),
       hasShards: detectHasShards(input.buildData),
+      hasGuide: !!(input.guideSummary || input.guideDescription),
       buildGuide: guideCreate,
       partnerBuilds: partnerBuildsConnect,
     },
@@ -449,7 +454,7 @@ export async function getPublicBuildsForItem(
 export async function getPublicBuilds(
   options: GetBuildsOptions = {}
 ): Promise<{ builds: BuildWithUser[]; total: number }> {
-  const { page = 1, limit = 20, sortBy = "newest", category } = options;
+  const { page = 1, limit = 20, sortBy = "newest", category, query, author, hasGuide, hasShards } = options;
   const skip = (page - 1) * limit;
 
   const where: Prisma.BuildWhereInput = {
@@ -459,7 +464,19 @@ export async function getPublicBuilds(
         browseCategory: category,
       },
     }),
+    ...(author && {
+      user: {
+        username: { equals: author, mode: "insensitive" },
+      },
+    }),
+    ...(hasGuide === true && { hasGuide: true }),
+    ...(hasShards === true && { hasShards: true }),
   };
+
+  // If there's a text query, use raw SQL for tsvector search
+  if (query && query.trim().length >= 2) {
+    return searchBuildsWithFilters(query.trim(), where, sortBy, skip, limit);
+  }
 
   const [builds, total] = await Promise.all([
     prisma.build.findMany({
@@ -540,6 +557,16 @@ export async function updateBuild(
         },
       },
     };
+
+    // Update denormalized hasGuide flag.
+    // Only set to false when BOTH fields are explicitly null (clearing the guide).
+    // If only one field is provided, the other may still have content in DB.
+    if (input.guideSummary === null && input.guideDescription === null) {
+      updateData.hasGuide = false;
+    } else if (input.guideSummary || input.guideDescription) {
+      updateData.hasGuide = true;
+    }
+    // If one field is undefined (not being updated), don't change hasGuide
   }
 
   // Handle partner builds update
@@ -666,6 +693,60 @@ export async function deleteBuild(
   await prisma.build.delete({
     where: { id: buildId },
   });
+}
+
+// =============================================================================
+// FULL-TEXT SEARCH
+// =============================================================================
+
+/**
+ * Search builds using PostgreSQL full-text search with additional Prisma filters.
+ * Uses $queryRaw for the tsvector query, then fetches full build data via Prisma.
+ */
+async function searchBuildsWithFilters(
+  query: string,
+  where: Prisma.BuildWhereInput,
+  sortBy: string,
+  skip: number,
+  limit: number
+): Promise<{ builds: BuildWithUser[]; total: number }> {
+  // First, get matching build IDs via raw SQL full-text search
+  const searchResults = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT b.id
+    FROM builds b
+    WHERE b."searchVector" @@ plainto_tsquery('english', ${query})
+      AND b.visibility = 'PUBLIC'
+    ORDER BY ts_rank(b."searchVector", plainto_tsquery('english', ${query})) DESC
+    LIMIT 200
+  `;
+
+  const matchingIds = searchResults.map((r) => r.id);
+
+  if (matchingIds.length === 0) {
+    return { builds: [], total: 0 };
+  }
+
+  // Apply additional Prisma filters on the matched IDs
+  const fullWhere: Prisma.BuildWhereInput = {
+    ...where,
+    id: { in: matchingIds },
+  };
+
+  const [builds, total] = await Promise.all([
+    prisma.build.findMany({
+      where: fullWhere,
+      include: buildInclude,
+      orderBy: getOrderBy(sortBy as "newest" | "votes" | "views" | "updated" | "popular"),
+      skip,
+      take: limit,
+    }),
+    prisma.build.count({ where: fullWhere }),
+  ]);
+
+  return {
+    builds: builds.map((b) => mapBuildResult(b)),
+    total,
+  };
 }
 
 // =============================================================================
