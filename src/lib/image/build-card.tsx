@@ -70,7 +70,9 @@ function PolarityIcon({
   size: number;
 }) {
   const iconSrc = polarityIcons.get(polarity);
-  if (!iconSrc) return null;
+  if (!iconSrc) {
+    return <div style={{ width: size, height: size, display: "flex" }} />;
+  }
   return (
     <img
       src={iconSrc}
@@ -78,7 +80,6 @@ function PolarityIcon({
       height={size}
       style={{
         opacity: isMatch ? 1 : 0.5,
-        filter: undefined,
       }}
     />
   );
@@ -149,18 +150,20 @@ function ModCard({
           flex: 1,
         }}
       >
-        {mod.name}
+        {mod.name || "Unknown"}
       </span>
 
       {/* Polarity icon + Rank */}
       <div style={{ display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
-        {slotPol && (
+        {slotPol ? (
           <PolarityIcon
             polarity={slotPol}
             isMatch={isMatch}
             polarityIcons={polarityIcons}
             size={14}
           />
+        ) : (
+          <div style={{ display: "flex" }} />
         )}
         <span
           style={{
@@ -168,7 +171,7 @@ function ModCard({
             color: isMatch ? COLORS.polarityMatch : COLORS.textDim,
           }}
         >
-          R{mod.rank}
+          R{mod.rank ?? 0}
         </span>
       </div>
     </div>
@@ -197,7 +200,7 @@ function EmptySlot({
         position: "relative",
       }}
     >
-      {slotPol && (
+      {slotPol ? (
         <div style={{ position: "absolute", top: 6, right: 8, display: "flex" }}>
           <PolarityIcon
             polarity={slotPol}
@@ -206,6 +209,8 @@ function EmptySlot({
             size={12}
           />
         </div>
+      ) : (
+        <div style={{ display: "flex" }} />
       )}
       <span style={{ fontSize: 11, color: COLORS.border }}>Empty</span>
     </div>
@@ -232,13 +237,15 @@ function ArcaneCard({
         height: 48,
       }}
     >
-      {imageSrc && (
+      {imageSrc ? (
         <img
           src={imageSrc}
           width={32}
           height={32}
           style={{ borderRadius: 4, flexShrink: 0, objectFit: "contain" }}
         />
+      ) : (
+        <div style={{ display: "flex" }} />
       )}
       <span
         style={{
@@ -249,10 +256,10 @@ function ArcaneCard({
           whiteSpace: "nowrap",
         }}
       >
-        {arcane.name}
+        {arcane.name || "Unknown"}
       </span>
       <span style={{ fontSize: 11, color: COLORS.textDim, flexShrink: 0 }}>
-        R{arcane.rank}
+        R{arcane.rank ?? 0}
       </span>
     </div>
   );
@@ -375,10 +382,10 @@ export function BuildCardTemplate({
             <span style={{ fontSize: 14, color: COLORS.textMuted }}>
               {itemName} · by {authorName}
             </span>
-            {formaCount > 0 && (
+            {formaCount > 0 ? (
               <span style={{ fontSize: 13, color: COLORS.textMuted }}>
                 · {formaCount} forma
-              </span>
+              </span>) : (<div style={{ display: "flex" }} />
             )}
           </div>
         </div>
@@ -397,8 +404,10 @@ export function BuildCardTemplate({
 
       {/* Aura + Exilus row */}
       <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-        {auraSlot && (
+        {auraSlot ? (
           <SlotCard slot={auraSlot} imageMap={imageMap} polarityIcons={polarityIcons} label="Aura" />
+        ) : (
+          <div style={{ display: "flex" }} />
         )}
         <SlotCard slot={exilusSlot} imageMap={imageMap} polarityIcons={polarityIcons} label="Exilus" />
       </div>
@@ -425,7 +434,7 @@ export function BuildCardTemplate({
       </div>
 
       {/* Arcanes row */}
-      {arcanes.length > 0 && (
+      {arcanes.length > 0 ? (
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <span
             style={{
@@ -448,6 +457,8 @@ export function BuildCardTemplate({
             return <ArcaneCard arcane={arcane} imageSrc={arcaneImageSrc} />;
           })}
         </div>
+      ) : (
+        <div style={{ display: "flex" }} />
       )}
     </div>
   );
