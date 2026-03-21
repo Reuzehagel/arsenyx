@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
-import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { Icons } from "@/components/icons";
 import { cn } from "@/lib/utils";
 
@@ -68,25 +67,17 @@ export function SearchBar({
     };
   }, []);
 
-  // Global keyboard shortcut
+  // Local keyboard shortcuts (/ to focus, Escape to clear/blur)
+  // Note: Ctrl+K is handled globally by the Cmd+K search palette
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd/Ctrl + K or /
-      if (
-        (e.key === "k" && (e.metaKey || e.ctrlKey)) ||
-        (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey)
-      ) {
-        // Don't trigger if already focused on an input
+      // / to focus search (not in inputs)
+      if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey) {
         if (
           document.activeElement?.tagName === "INPUT" ||
           document.activeElement?.tagName === "TEXTAREA"
         ) {
-          if (e.key === "/") return; // Allow / in inputs
-          if (e.key === "k") {
-            e.preventDefault();
-            inputRef.current?.select();
-            return;
-          }
+          return; // Allow / in inputs
         }
         e.preventDefault();
         inputRef.current?.focus();
@@ -118,14 +109,8 @@ export function SearchBar({
         placeholder={placeholder}
         defaultValue={defaultValue}
         onChange={handleChange}
-        className="pl-9 pr-20"
+        className="pl-9"
       />
-      <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1">
-        <KbdGroup>
-          <Kbd>Ctrl</Kbd>
-          <Kbd>K</Kbd>
-        </KbdGroup>
-      </div>
     </div>
   );
 }
