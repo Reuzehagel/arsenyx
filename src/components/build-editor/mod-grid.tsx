@@ -52,7 +52,7 @@ const EMPTY_ARCANE_SLOTS: (PlacedArcane | null)[] = [];
 
 interface ModGridProps {
   auraSlot?: ModSlot;
-  exilusSlot: ModSlot;
+  exilusSlot?: ModSlot;
   normalSlots: ModSlot[];
   activeSlotId: string | null;
   onSelectSlot: (slotId: string) => void;
@@ -108,79 +108,66 @@ export function ModGrid({
   return (
     <div className="flex flex-col h-full">
       <div className="flex flex-col gap-2 sm:gap-4 items-center">
-        {/* Row 1: Aura & Exilus */}
-        <div className="flex gap-2 sm:gap-4 w-full justify-center">
-          {isWarframe && auraSlot && (
-            <ModSlotCard
-              slot={auraSlot}
-              isActive={activeSlotId === auraSlot.id}
-              onSelect={() => onSelectSlot(auraSlot.id)}
-              onRemove={() => onRemoveMod(auraSlot.id)}
-              onChangeRank={(rank) => onChangeRank(auraSlot.id, rank)}
-              onApplyForma={(polarity) => onApplyForma(auraSlot.id, polarity)}
-              label="Aura"
-              className="w-[120px] h-[80px] sm:w-[150px] sm:h-[90px] md:w-[184px] md:h-[100px]"
-              setCount={
-                auraSlot.mod?.modSet ? setCounts[auraSlot.mod.modSet] : 0
-              }
-              draggedMod={draggedMod}
-              readOnly={readOnly}
-            />
-          )}
-          <ModSlotCard
-            slot={exilusSlot}
-            isActive={activeSlotId === exilusSlot.id}
-            onSelect={() => onSelectSlot(exilusSlot.id)}
-            onRemove={() => onRemoveMod(exilusSlot.id)}
-            onChangeRank={(rank) => onChangeRank(exilusSlot.id, rank)}
-            onApplyForma={(polarity) => onApplyForma(exilusSlot.id, polarity)}
-            label="Exilus"
-            className="w-[120px] h-[80px] sm:w-[150px] sm:h-[90px] md:w-[184px] md:h-[100px]"
-            setCount={
-              exilusSlot.mod?.modSet ? setCounts[exilusSlot.mod.modSet] : 0
-            }
-            draggedMod={draggedMod}
-            readOnly={readOnly}
-          />
-        </div>
+        {/* Row 1: Aura & Exilus (not shown for Necramechs) */}
+        {(auraSlot || exilusSlot) && (
+          <div className="flex gap-2 sm:gap-4 w-full justify-center">
+            {isWarframe && auraSlot && (
+              <ModSlotCard
+                slot={auraSlot}
+                isActive={activeSlotId === auraSlot.id}
+                onSelect={() => onSelectSlot(auraSlot.id)}
+                onRemove={() => onRemoveMod(auraSlot.id)}
+                onChangeRank={(rank) => onChangeRank(auraSlot.id, rank)}
+                onApplyForma={(polarity) => onApplyForma(auraSlot.id, polarity)}
+                label="Aura"
+                className="w-[120px] h-[80px] sm:w-[150px] sm:h-[90px] md:w-[184px] md:h-[100px]"
+                setCount={
+                  auraSlot.mod?.modSet ? setCounts[auraSlot.mod.modSet] : 0
+                }
+                draggedMod={draggedMod}
+                readOnly={readOnly}
+              />
+            )}
+            {exilusSlot && (
+              <ModSlotCard
+                slot={exilusSlot}
+                isActive={activeSlotId === exilusSlot.id}
+                onSelect={() => onSelectSlot(exilusSlot.id)}
+                onRemove={() => onRemoveMod(exilusSlot.id)}
+                onChangeRank={(rank) => onChangeRank(exilusSlot.id, rank)}
+                onApplyForma={(polarity) => onApplyForma(exilusSlot.id, polarity)}
+                label="Exilus"
+                className="w-[120px] h-[80px] sm:w-[150px] sm:h-[90px] md:w-[184px] md:h-[100px]"
+                setCount={
+                  exilusSlot.mod?.modSet ? setCounts[exilusSlot.mod.modSet] : 0
+                }
+                draggedMod={draggedMod}
+                readOnly={readOnly}
+              />
+            )}
+          </div>
+        )}
 
-        {/* Row 2: Normal Slots 1-4 */}
-        <div className="grid grid-cols-2 sm:flex sm:gap-4 gap-2 w-full justify-center">
-          {normalSlots.slice(0, 4).map((slot) => (
-            <ModSlotCard
-              key={slot.id}
-              slot={slot}
-              isActive={activeSlotId === slot.id}
-              onSelect={() => onSelectSlot(slot.id)}
-              onRemove={() => onRemoveMod(slot.id)}
-              onChangeRank={(rank) => onChangeRank(slot.id, rank)}
-              onApplyForma={(polarity) => onApplyForma(slot.id, polarity)}
-              className="w-full sm:w-[150px] sm:h-[90px] md:w-[184px] md:h-[100px] h-[80px]"
-              setCount={slot.mod?.modSet ? setCounts[slot.mod.modSet] : 0}
-              draggedMod={draggedMod}
-              readOnly={readOnly}
-            />
-          ))}
-        </div>
-
-        {/* Row 3: Normal Slots 5-8 */}
-        <div className="grid grid-cols-2 sm:flex sm:gap-4 gap-2 w-full justify-center">
-          {normalSlots.slice(4, 8).map((slot) => (
-            <ModSlotCard
-              key={slot.id}
-              slot={slot}
-              isActive={activeSlotId === slot.id}
-              onSelect={() => onSelectSlot(slot.id)}
-              onRemove={() => onRemoveMod(slot.id)}
-              onChangeRank={(rank) => onChangeRank(slot.id, rank)}
-              onApplyForma={(polarity) => onApplyForma(slot.id, polarity)}
-              className="w-full sm:w-[150px] sm:h-[90px] md:w-[184px] md:h-[100px] h-[80px]"
-              setCount={slot.mod?.modSet ? setCounts[slot.mod.modSet] : 0}
-              draggedMod={draggedMod}
-              readOnly={readOnly}
-            />
-          ))}
-        </div>
+        {/* Normal Slots - rendered in rows of 4 */}
+        {Array.from({ length: Math.ceil(normalSlots.length / 4) }, (_, rowIdx) => (
+          <div key={rowIdx} className="grid grid-cols-2 sm:flex sm:gap-4 gap-2 w-full justify-center">
+            {normalSlots.slice(rowIdx * 4, rowIdx * 4 + 4).map((slot) => (
+              <ModSlotCard
+                key={slot.id}
+                slot={slot}
+                isActive={activeSlotId === slot.id}
+                onSelect={() => onSelectSlot(slot.id)}
+                onRemove={() => onRemoveMod(slot.id)}
+                onChangeRank={(rank) => onChangeRank(slot.id, rank)}
+                onApplyForma={(polarity) => onApplyForma(slot.id, polarity)}
+                className="w-full sm:w-[150px] sm:h-[90px] md:w-[184px] md:h-[100px] h-[80px]"
+                setCount={slot.mod?.modSet ? setCounts[slot.mod.modSet] : 0}
+                draggedMod={draggedMod}
+                readOnly={readOnly}
+              />
+            ))}
+          </div>
+        ))}
 
         {/* Row 4: Arcanes */}
         {arcaneSlots.length > 0 && (

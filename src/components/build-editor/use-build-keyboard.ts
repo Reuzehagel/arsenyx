@@ -9,6 +9,7 @@ interface UseBuildKeyboardOptions {
   onCopyBuild: () => void;
   onClearBuild: () => void;
   hasAuraSlot: boolean;
+  hasExilusSlot: boolean;
 }
 
 /**
@@ -27,6 +28,7 @@ export function useBuildKeyboard({
   onCopyBuild,
   onClearBuild,
   hasAuraSlot,
+  hasExilusSlot,
 }: UseBuildKeyboardOptions) {
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -75,9 +77,11 @@ export function useBuildKeyboard({
           }
           break;
         case "e":
-          e.preventDefault();
-          onSelectSlot("exilus-0");
-          onOpenSearch();
+          if (hasExilusSlot) {
+            e.preventDefault();
+            onSelectSlot("exilus-0");
+            onOpenSearch();
+          }
           break;
         case "c":
           if (e.ctrlKey || e.metaKey) {
@@ -100,6 +104,7 @@ export function useBuildKeyboard({
       onCopyBuild,
       onClearBuild,
       hasAuraSlot,
+      hasExilusSlot,
     ]
   );
 

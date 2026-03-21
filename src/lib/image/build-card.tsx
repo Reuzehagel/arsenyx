@@ -377,7 +377,11 @@ export function BuildCardTemplate({
         ) : (
           <div style={{ display: "flex" }} />
         )}
-        <SlotCard slot={exilusSlot} imageMap={imageMap} polarityIcons={polarityIcons} label="Exilus" />
+        {exilusSlot ? (
+          <SlotCard slot={exilusSlot} imageMap={imageMap} polarityIcons={polarityIcons} label="Exilus" />
+        ) : (
+          <div style={{ display: "flex" }} />
+        )}
       </div>
 
       {/* Normal mod grid (4x2) */}

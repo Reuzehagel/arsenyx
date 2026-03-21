@@ -312,8 +312,8 @@ export interface BuildState {
 
   // Mod slots
   auraSlot?: ModSlot; // Warframes only
-  exilusSlot: ModSlot;
-  normalSlots: ModSlot[]; // 8 slots
+  exilusSlot?: ModSlot;
+  normalSlots: ModSlot[]; // 8 slots (12 for Necramechs)
   arcaneSlots: (PlacedArcane | null)[]; // Warframes: 2 slots, Weapons: 1 slot
 
   // Archon Shards (Warframes only) - 5 slots

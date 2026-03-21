@@ -82,7 +82,7 @@ export const BuildStateSchema = z.object({
   hasReactor: z.boolean(),
 
   auraSlot: ModSlotSchema.optional(),
-  exilusSlot: ModSlotSchema,
+  exilusSlot: ModSlotSchema.optional(),
   normalSlots: z.array(ModSlotSchema),
   arcaneSlots: z.array(PlacedArcaneSchema.nullable()),
 

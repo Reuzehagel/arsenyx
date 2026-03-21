@@ -219,7 +219,8 @@ export function BuildContainer({
     },
     onCopyBuild: handleCopyBuild,
     onClearBuild: handleClearBuild,
-    hasAuraSlot: isWarframeOrNecramech,
+    hasAuraSlot: category === "warframes",
+    hasExilusSlot: category !== "necramechs",
   });
 
   // --- Derived ---

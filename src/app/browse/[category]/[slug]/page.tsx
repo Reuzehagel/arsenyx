@@ -264,7 +264,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
                     {(item as Gun).fireRate && (
                       <StatItem
                         label="Fire Rate"
-                        value={(item as Gun).fireRate}
+                        value={parseFloat((item as Gun).fireRate!.toFixed(3))}
                       />
                     )}
                     {(item as Gun).magazineSize && (
@@ -276,7 +276,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
                     {(item as Gun).reloadTime && (
                       <StatItem
                         label="Reload"
-                        value={`${(item as Gun).reloadTime}s`}
+                        value={`${parseFloat((item as Gun).reloadTime!.toFixed(2))}s`}
                       />
                     )}
                     {isMelee && (item as Melee).range && (

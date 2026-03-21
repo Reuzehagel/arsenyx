@@ -109,8 +109,10 @@ export function ItemSidebar({
   // Get abilities from item stats
   const abilities = itemStats?.abilities ?? [];
 
+  const isWarframe = buildState.itemCategory === "warframes";
+
   const handleAbilityClick = (index: number) => {
-    if (readOnly) return;
+    if (readOnly || !isWarframe) return;
     setSelectedAbilityIndex(index);
     setIsHelminthDialogOpen(true);
   };
@@ -158,10 +160,10 @@ export function ItemSidebar({
                     className={cn(
                       "size-10 rounded bg-muted border overflow-hidden relative transition-colors",
                       displayAbility.isHelminth ? "border-destructive" : "border-border",
-                      !readOnly && "hover:border-primary hover:cursor-pointer"
+                      !readOnly && isWarframe && "hover:border-primary hover:cursor-pointer"
                     )}
                     onClick={() => handleAbilityClick(i)}
-                    disabled={readOnly}
+                    disabled={readOnly || !isWarframe}
                   >
                     {displayAbility.imageName ? (
                       <Image

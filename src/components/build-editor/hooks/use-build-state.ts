@@ -121,8 +121,8 @@ export function extractItemStats(item: BrowseableItem): ItemStats {
   };
 }
 
-export function createInitialSlots(polarities?: string[]): ModSlot[] {
-  return Array.from({ length: 8 }, (_, i) => ({
+export function createInitialSlots(polarities?: string[], count = 8): ModSlot[] {
+  return Array.from({ length: count }, (_, i) => ({
     id: `normal-${i}`,
     type: "normal" as const,
     innatePolarity: polarities?.[i]
@@ -138,7 +138,7 @@ export function createInitialBuildState(
   importedBuild?: Partial<BuildState>,
   compatibleArcanes?: Arcane[]
 ): BuildState {
-  const isWarframe = category === "warframes" || category === "necramechs";
+  const isNecramech = category === "necramechs";
 
   const itemPolarities = (item as { polarities?: string[] }).polarities;
   const auraPolarity = (item as { aura?: string }).aura;
@@ -149,8 +149,8 @@ export function createInitialBuildState(
     itemCategory: category,
     itemImageName: item.imageName,
     hasReactor: true,
-    exilusSlot: { id: "exilus-0", type: "exilus" },
-    normalSlots: createInitialSlots(itemPolarities),
+    exilusSlot: isNecramech ? undefined : { id: "exilus-0", type: "exilus" },
+    normalSlots: createInitialSlots(itemPolarities, isNecramech ? 12 : 8),
     arcaneSlots: [],
     shardSlots: [],
     baseCapacity: 60,
@@ -158,7 +158,7 @@ export function createInitialBuildState(
     formaCount: 0,
   };
 
-  if (isWarframe) {
+  if (category === "warframes") {
     baseState.auraSlot = {
       id: "aura-0",
       type: "aura",
@@ -166,10 +166,8 @@ export function createInitialBuildState(
         ? normalizePolarity(auraPolarity)
         : undefined,
     };
+    baseState.shardSlots = [null, null, null, null, null];
     baseState.arcaneSlots = [null, null];
-    if (category === "warframes") {
-      baseState.shardSlots = [null, null, null, null, null];
-    }
   } else if (["primary", "secondary", "melee"].includes(category)) {
     baseState.arcaneSlots = [null];
   }
@@ -196,10 +194,9 @@ export function createInitialBuildState(
       ? mergeSlot(baseState.auraSlot, importedBuild.auraSlot)
       : importedBuild.auraSlot;
 
-    const mergedExilusSlot = mergeSlot(
-      baseState.exilusSlot,
-      importedBuild.exilusSlot
-    );
+    const mergedExilusSlot = baseState.exilusSlot
+      ? mergeSlot(baseState.exilusSlot, importedBuild.exilusSlot)
+      : undefined;
 
     const hydratedState: BuildState = {
       ...baseState,
@@ -316,7 +313,7 @@ function getModFromSlot(
   state: BuildState
 ): PlacedMod | undefined {
   if (id.startsWith("aura")) return state.auraSlot?.mod;
-  if (id.startsWith("exilus")) return state.exilusSlot.mod;
+  if (id.startsWith("exilus")) return state.exilusSlot?.mod;
   const idx = parseInt(id.replace("normal-", ""));
   return state.normalSlots[idx]?.mod;
 }
@@ -328,7 +325,7 @@ function setModInSlot(
 ) {
   if (id.startsWith("aura") && state.auraSlot) {
     state.auraSlot = { ...state.auraSlot, mod };
-  } else if (id.startsWith("exilus")) {
+  } else if (id.startsWith("exilus") && state.exilusSlot) {
     state.exilusSlot = { ...state.exilusSlot, mod };
   } else {
     const idx = parseInt(id.replace("normal-", ""));
@@ -395,7 +392,7 @@ function buildReducer(state: BuildState, action: BuildAction): BuildState {
       // Place in target slot
       if (slotId.startsWith("aura") && newState.auraSlot) {
         newState.auraSlot = { ...newState.auraSlot, mod: placedMod };
-      } else if (slotId.startsWith("exilus")) {
+      } else if (slotId.startsWith("exilus") && newState.exilusSlot) {
         newState.exilusSlot = { ...newState.exilusSlot, mod: placedMod };
       } else {
         const slotIndex = parseInt(slotId.replace("normal-", ""));
@@ -416,7 +413,7 @@ function buildReducer(state: BuildState, action: BuildAction): BuildState {
       const newState = { ...state };
 
       if (newState.auraSlot) newState.auraSlot = { ...newState.auraSlot };
-      newState.exilusSlot = { ...newState.exilusSlot };
+      if (newState.exilusSlot) newState.exilusSlot = { ...newState.exilusSlot };
       newState.normalSlots = [...newState.normalSlots];
 
       const sourceMod = getModFromSlot(sourceSlotId, newState);
@@ -434,7 +431,7 @@ function buildReducer(state: BuildState, action: BuildAction): BuildState {
 
       if (slotId.startsWith("aura") && newState.auraSlot) {
         newState.auraSlot = { ...newState.auraSlot, mod: undefined };
-      } else if (slotId.startsWith("exilus")) {
+      } else if (slotId.startsWith("exilus") && newState.exilusSlot) {
         newState.exilusSlot = { ...newState.exilusSlot, mod: undefined };
       } else {
         const slotIndex = parseInt(slotId.replace("normal-", ""));
@@ -456,7 +453,7 @@ function buildReducer(state: BuildState, action: BuildAction): BuildState {
 
       if (slotId.startsWith("aura") && newState.auraSlot) {
         newState.auraSlot = updateModRankInSlot(newState.auraSlot, newRank);
-      } else if (slotId.startsWith("exilus")) {
+      } else if (slotId.startsWith("exilus") && newState.exilusSlot) {
         newState.exilusSlot = updateModRankInSlot(
           newState.exilusSlot,
           newRank
@@ -490,7 +487,7 @@ function buildReducer(state: BuildState, action: BuildAction): BuildState {
       if (slotId.startsWith("aura") && newState.auraSlot) {
         const formaValue = getFormaValue(newState.auraSlot.innatePolarity);
         newState.auraSlot = { ...newState.auraSlot, formaPolarity: formaValue };
-      } else if (slotId.startsWith("exilus")) {
+      } else if (slotId.startsWith("exilus") && newState.exilusSlot) {
         const formaValue = getFormaValue(newState.exilusSlot.innatePolarity);
         newState.exilusSlot = {
           ...newState.exilusSlot,

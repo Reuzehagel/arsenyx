@@ -46,7 +46,7 @@ function cloneSlot(slot: ModSlot): ModSlot {
 
 function resolveSlot(state: BuildState, slotId: string): ModSlot | null {
   if (slotId.startsWith("aura-")) return state.auraSlot ?? null;
-  if (slotId.startsWith("exilus-")) return state.exilusSlot;
+  if (slotId.startsWith("exilus-")) return state.exilusSlot ?? null;
   if (slotId.startsWith("normal-")) {
     const idx = Number(slotId.slice("normal-".length));
     if (!Number.isFinite(idx) || idx < 0 || idx >= state.normalSlots.length)
@@ -83,7 +83,7 @@ export function applyOverframeImportToBuildState(
   const next: BuildState = {
     ...prev,
     auraSlot: prev.auraSlot ? cloneSlot(prev.auraSlot) : undefined,
-    exilusSlot: cloneSlot(prev.exilusSlot),
+    exilusSlot: prev.exilusSlot ? cloneSlot(prev.exilusSlot) : undefined,
     normalSlots: prev.normalSlots.map(cloneSlot),
     arcaneSlots: prev.arcaneSlots ? [...prev.arcaneSlots] : [],
     shardSlots: prev.shardSlots ? [...prev.shardSlots] : [],
