@@ -45,3 +45,5 @@ next-env.d.ts
 
 # claude temp files
 /.claude/
+.agents/
+skills-lock.json
