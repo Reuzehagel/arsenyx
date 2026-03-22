@@ -64,6 +64,7 @@ export function BuildEditorHeader({
                 src={getImageUrl(item.imageName)}
                 alt={item.name}
                 fill
+                unoptimized
                 sizes="96px"
                 className="object-cover"
               />

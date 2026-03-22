@@ -165,6 +165,7 @@ export function ItemSidebar({
                         src={getImageUrl(displayAbility.imageName)}
                         alt={displayAbility.name}
                         fill
+                        unoptimized
                         sizes="40px"
                         className="object-cover"
                       />

@@ -69,6 +69,7 @@ export async function getItemBySlugFromDb(
       browseCategory: category,
       name: { contains: searchTerm, mode: "insensitive" },
     },
+    take: 20,
   });
 
   for (const item of candidates) {

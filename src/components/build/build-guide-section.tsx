@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { format } from "date-fns";
 import { Pen } from "lucide-react";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
@@ -169,7 +168,7 @@ export function BuildGuideSection({
           </div>
           {lastUpdated && (
             <span className="text-xs text-muted-foreground">
-              Last updated {format(lastUpdated, "P")}
+              Last updated {lastUpdated.toLocaleDateString()}
             </span>
           )}
         </div>

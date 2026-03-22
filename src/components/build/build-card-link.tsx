@@ -40,6 +40,7 @@ export function BuildCardLink({
           src={getImageUrl(itemImageName ?? undefined)}
           alt={itemName}
           fill
+          unoptimized
           sizes="(max-width: 768px) 100vw, 300px"
           className="object-cover"
         />

@@ -11,7 +11,6 @@ import {
   createBuild,
   updateBuild,
   deleteBuild,
-  getBuildById,
   getUserBuildsForPartnerSelector,
   type CreateBuildInput,
   type UpdateBuildInput,
@@ -63,17 +62,6 @@ export async function saveBuildAction(
 
     // If buildId is provided, update existing build
     if (input.buildId) {
-      // Verify ownership first
-      const existing = await getBuildById(input.buildId, userId);
-
-      if (!existing) {
-        return err("Build not found");
-      }
-
-      if (existing.userId !== userId) {
-        return err("You are not authorized to update this build");
-      }
-
       const updateData: UpdateBuildInput = {
         name: input.name,
         description: input.description,
@@ -81,8 +69,13 @@ export async function saveBuildAction(
         buildData: input.buildData,
       };
 
-      const build = await updateBuild(input.buildId, userId, updateData);
-      return ok(build);
+      try {
+        const build = await updateBuild(input.buildId, userId, updateData);
+        return ok(build);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to update build";
+        return err(message);
+      }
     }
 
     // Create new build
@@ -188,15 +181,6 @@ export async function updateBuildGuideAction(
     }
 
     const userId = session.user.id;
-    const exists = await getBuildById(buildId, userId);
-
-    if (!exists) {
-      return err("Build not found");
-    }
-
-    if (exists.userId !== userId) {
-      return err("You are not authorized to update this guide");
-    }
 
     // Validate summary length
     if (input.summary && input.summary.length > MAX_SUMMARY_LENGTH) {

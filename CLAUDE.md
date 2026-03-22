@@ -193,6 +193,12 @@ Tests exist in `__tests__/` directories alongside source code:
 
 Coverage is limited — be careful with refactoring untested code.
 
+## Database Workflow
+
+- **Development phase** — no migrations. Use `bun run db:push` to sync schema directly. Reset with `bun run db:push --force-reset` if needed, then `bun run db:sync` to re-populate.
+- **Schema changes that drop/rename columns or add required fields** require a database reset. Always tell the user when a reset is needed before proceeding.
+- **GIN index on `searchVector`** is created by `bun run db:sync` (not managed by Prisma). Must re-run sync after a reset.
+
 ## Gotchas
 
 - **Satori (image generation)** — JSX renderer for server-side image gen. Only supports flexbox (no grid), inline `style` objects (no Tailwind/className), `.ttf`/`.woff` fonts (NOT `.woff2`). Returns `null` or `&&` short-circuits crash satori — always use ternaries with `<div style={{ display: "flex" }} />` fallbacks. ESLint `react/jsx-key` must be disabled since satori doesn't support `key` props.

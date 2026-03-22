@@ -13,14 +13,22 @@ export const IMAGE_DIMENSIONS = { width: 1200, height: 630 } as const;
  * Fetch an image and return as base64 data URI for embedding in satori.
  * Returns undefined if fetch fails.
  */
+// Cache fetched image data URIs to avoid re-fetching on repeated renders
+const imageDataUriCache = new Map<string, string>();
+
 async function fetchImageAsDataUri(url: string): Promise<string | undefined> {
+  const cached = imageDataUriCache.get(url);
+  if (cached) return cached;
+
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
     if (!res.ok) return undefined;
     const buffer = await res.arrayBuffer();
     const base64 = Buffer.from(buffer).toString("base64");
     const contentType = res.headers.get("content-type") ?? "image/png";
-    return `data:${contentType};base64,${base64}`;
+    const dataUri = `data:${contentType};base64,${base64}`;
+    imageDataUriCache.set(url, dataUri);
+    return dataUri;
   } catch {
     return undefined;
   }

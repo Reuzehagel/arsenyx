@@ -99,6 +99,7 @@ export function HelminthAbilityDialog({
                                             src={getImageUrl(ability.imageName)}
                                             alt={ability.name}
                                             fill
+                                            unoptimized
                                             sizes="48px"
                                             className="object-cover"
                                         />

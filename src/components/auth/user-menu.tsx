@@ -33,6 +33,7 @@ export function UserMenu() {
               alt={session.user.name ?? "User avatar"}
               width={32}
               height={32}
+              unoptimized
               className="rounded-full"
             />
           ) : (

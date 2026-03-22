@@ -9,6 +9,8 @@ import { getUserByUsername, getUserStats, getUserBuilds } from "@/lib/db/index";
 import { BuildCardLink } from "@/components/build/build-card-link";
 import { Calendar, Hammer } from "lucide-react";
 
+export const revalidate = 3600; // 1 hour
+
 interface ProfilePageProps {
   params: Promise<{ username: string }>;
 }
@@ -65,6 +67,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                   alt={user.name ?? "User avatar"}
                   width={128}
                   height={128}
+                  unoptimized
                   className="rounded-full"
                 />
               ) : (

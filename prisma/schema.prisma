@@ -266,7 +266,8 @@ model Build {
   partneredBy   Build[] @relation("PartnerBuilds")
 
   // Build guide (rich text explanation for this specific build)
-  buildGuide BuildGuide?
+  buildGuide      BuildGuide?
+  generatedImages GeneratedImage[]
 
   @@index([userId])
   @@index([itemId])
@@ -279,6 +280,7 @@ model Build {
   @@index([userId, visibility]) // User profile pages
   @@index([itemId, visibility, voteCount]) // Popular builds for an item
   @@index([hasGuide])
+  @@index([forkedFromId])
   @@map("builds")
 }
 
@@ -321,6 +323,8 @@ model BuildLink {
   createdAt DateTime @default(now())
 
   @@unique([fromBuildId, toBuildId])
+  @@index([fromBuildId])
+  @@index([toBuildId])
   @@map("build_links")
 }
 
@@ -343,6 +347,7 @@ model BuildVote {
   createdAt DateTime @default(now())
 
   @@unique([userId, buildId])
+  @@index([buildId])
   @@map("build_votes")
 }
 
@@ -358,6 +363,7 @@ model BuildFavorite {
   createdAt DateTime @default(now())
 
   @@unique([userId, buildId])
+  @@index([buildId])
   @@map("build_favorites")
 }
 
@@ -406,6 +412,7 @@ model Guide {
   @@index([category])
   @@index([status])
   @@index([userId])
+  @@index([createdAt])
   @@map("guides")
 }
 
@@ -444,6 +451,7 @@ model GuideVote {
   createdAt DateTime @default(now())
 
   @@unique([userId, guideId])
+  @@index([guideId])
   @@map("guide_votes")
 }
 
@@ -459,6 +467,7 @@ model GuideFavorite {
   createdAt DateTime @default(now())
 
   @@unique([userId, guideId])
+  @@index([guideId])
   @@map("guide_favorites")
 }
 
@@ -502,6 +511,7 @@ model GeneratedImage {
 
   // What was rendered
   buildId  String
+  build    Build  @relation(fields: [buildId], references: [id], onDelete: Cascade)
   template String // "full", "compact", "mods-only", etc.
   options  Json? // { showStats: true, showShards: true, ... }
 

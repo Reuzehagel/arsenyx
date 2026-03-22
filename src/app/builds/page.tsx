@@ -87,6 +87,7 @@ function BuildCard({ build }: { build: BuildWithUser }) {
                     src={getImageUrl(build.item.imageName ?? undefined)}
                     alt={build.item.name}
                     fill
+                    unoptimized
                     sizes="(max-width: 768px) 100vw, 300px"
                     className="object-cover"
                 />

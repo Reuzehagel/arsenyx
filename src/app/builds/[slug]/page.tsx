@@ -19,6 +19,8 @@ import { ViewTracker } from "@/components/build/view-tracker";
 import { TemplateButton } from "@/components/build/template-button";
 import { ShareButton } from "@/components/build/share-button";
 
+export const revalidate = 300; // 5 minutes — votes/views change frequently
+
 interface BuildPageProps {
   params: Promise<{
     slug: string;

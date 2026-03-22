@@ -400,6 +400,13 @@ async function main() {
       },
     });
 
+    // Ensure GIN index exists for full-text search
+    await prisma.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS idx_builds_search_vector
+      ON builds USING GIN("searchVector")
+    `);
+    console.log("✓ GIN index on searchVector ensured");
+
     console.log("\nSync completed successfully!");
     console.log(`  Items: ${itemsUpdated}`);
     console.log(`  Mods: ${modsUpdated}`);

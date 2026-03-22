@@ -15,6 +15,8 @@ let cachedAllMods: Mod[] | null = null;
 let cachedAllArcanes: Arcane[] | null = null;
 const cachedModsByCompat = new Map<ModCompatibility, Mod[]>();
 const cachedArcanesBySlot = new Map<string, Arcane[]>();
+let modByUniqueNameMap: Map<string, Mod> | null = null;
+let arcaneByUniqueNameMap: Map<string, Arcane> | null = null;
 
 // =============================================================================
 // POLARITY UTILITIES
@@ -314,7 +316,10 @@ export function getModsForItem(item: {
  * Get a specific mod by unique name
  */
 export function getModByUniqueName(uniqueName: string): Mod | undefined {
-  return getAllMods().find((mod) => mod.uniqueName === uniqueName);
+  if (!modByUniqueNameMap) {
+    modByUniqueNameMap = new Map(getAllMods().map((mod) => [mod.uniqueName, mod]));
+  }
+  return modByUniqueNameMap.get(uniqueName);
 }
 
 /**
@@ -521,7 +526,10 @@ export function getArcanesForSlot(
  * Get a specific arcane by unique name
  */
 export function getArcaneByUniqueName(uniqueName: string): Arcane | undefined {
-  return getAllArcanes().find((arcane) => arcane.uniqueName === uniqueName);
+  if (!arcaneByUniqueNameMap) {
+    arcaneByUniqueNameMap = new Map(getAllArcanes().map((a) => [a.uniqueName, a]));
+  }
+  return arcaneByUniqueNameMap.get(uniqueName);
 }
 
 /**
