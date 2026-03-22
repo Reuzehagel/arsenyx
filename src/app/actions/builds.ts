@@ -69,13 +69,8 @@ export async function saveBuildAction(
         buildData: input.buildData,
       };
 
-      try {
-        const build = await updateBuild(input.buildId, userId, updateData);
-        return ok(build);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Failed to update build";
-        return err(message);
-      }
+      const build = await updateBuild(input.buildId, userId, updateData);
+      return ok(build);
     }
 
     // Create new build

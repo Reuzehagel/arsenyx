@@ -168,7 +168,7 @@ export function BuildGuideSection({
           </div>
           {lastUpdated && (
             <span className="text-xs text-muted-foreground">
-              Last updated {lastUpdated.toLocaleDateString()}
+              Last updated {lastUpdated.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
             </span>
           )}
         </div>
