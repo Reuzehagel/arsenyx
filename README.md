@@ -1,95 +1,148 @@
 # Arsenyx – Warframe Build Planner
 
-Fast, keyboard-first Warframe build planner built with Next.js 16, Tailwind v4, and shadcn/ui. Data is sourced from the community-maintained `@wfcd/items` package.
+Create, share, and discover Warframe equipment builds. Features keyboard-first navigation, mod/arcane management, rich text guides, and social features (voting, favorites, forking).
 
 ## Tech Stack
 
-- Next.js 16 (App Router, React 19)
-- Tailwind CSS v4 + shadcn/ui (New York style)
-- Bun (recommended package manager)
-- Data: `@wfcd/items`
+- **Framework**: Next.js 16 (App Router, React 19, Server Components by default)
+- **Language**: TypeScript (strict mode)
+- **Styling**: Tailwind CSS v4 + shadcn/ui (New York theme)
+- **Database**: PostgreSQL via Prisma ORM
+- **Auth**: Better Auth with GitHub OAuth
+- **Rich Text**: react-markdown with remark-gfm + rehype-highlight
+- **Linting/Formatting**: Oxlint + Oxfmt
+- **Package Manager**: Bun
+- **Data Source**: `@wfcd/items` (Warframe Community Data)
 
 ## Quick Start
 
-```pwsh
+```bash
 # Install dependencies
 bun install
 
+# Start PostgreSQL
+docker compose up -d
+
+# Push database schema
+bun run db:push
+
+# Setup full-text search (after fresh DB or reset)
+psql $DATABASE_URL -f scripts/setup-search.sql
+
 # Start the dev server
 bun dev
-
-# Build for production
-bun build
-
-# Start the production server
-bun start
 ```
 
-Open `http://localhost:3000` in your browser.
+Open http://localhost:3000 in your browser.
 
-## Warframe Data Sync
+## Environment Variables
 
-This project imports JSON data directly to avoid server-only fs usage in Next.js. Sync local copies from `@wfcd/items`:
+Create a `.env` file:
 
-```pwsh
-# Copy data files from node_modules into src/data/warframe
-bun run sync-data
-
-# Update the @wfcd/items package and re-sync
-bun run update-data
+```env
+DATABASE_URL=postgresql://arsenyx:arsenyx_dev@localhost:5432/arsenyx
+GITHUB_ID=...
+GITHUB_SECRET=...
+BETTER_AUTH_SECRET=...
 ```
 
-Data files live in `src/data/warframe/*.json` and are consumed by server-only utilities in `src/lib/warframe/items.ts`.
+## Scripts
+
+```bash
+# Development
+bun dev                  # Dev server (Turbopack)
+bun build                # Production build
+bun start                # Production server
+
+# Code Quality
+bun lint                 # Oxlint
+bun lint:fix             # Oxlint with auto-fix
+bun fmt                  # Format with Oxfmt
+bun fmt:check            # Check formatting
+
+# Testing
+bun test                 # Run tests
+bun test:watch           # Watch mode
+bun test:coverage        # Coverage report
+
+# Database
+bun run db:push          # Push schema to database
+bun run db:migrate       # Run migrations
+bun run db:studio        # Open Prisma Studio
+
+# Warframe Data
+bun run sync-data        # Copy WFCD JSON to src/data/warframe/
+bun run update-data      # Update @wfcd/items + sync
+
+# Overframe Import
+bun run overframe:build-map  # Convert Overframe item mappings
+```
 
 ## Architecture
 
-- `src/app/` – App Router pages; server components by default
-- `src/components/` – UI and feature components
-  - `ui/` – shadcn/ui primitives (Card, Tabs, etc.)
-  - `browse/` – Browse UI (grid, filters, keyboard handler)
-- `src/lib/warframe/` – Domain utilities
-  - `items.ts` – Server-only item loading and mapping (imports JSON)
-  - `index.ts` – Client-safe exports (types, categories, images, slugs)
-  - `images.ts` – `getImageUrl()` helper for CDN and placeholders
-
-### Server vs Client usage
-
-```ts
-// Server-only (uses JSON imports)
-import { getItemsByCategory } from "@/lib/warframe/items";
-
-// Client-safe utilities
-import { getImageUrl, getItemUrl } from "@/lib/warframe";
+```
+src/
+├── app/                    # App Router pages (server components by default)
+│   ├── actions/            # Server actions (builds, social)
+│   ├── api/                # API routes (auth)
+│   ├── auth/               # Auth pages (signin, error)
+│   ├── browse/             # Item browsing (warframes, weapons, etc.)
+│   ├── builds/             # Build viewing and management
+│   ├── create/             # Build creation
+│   ├── favorites/          # User favorites
+│   ├── guides/             # User guides
+│   ├── import/             # Overframe build import
+│   ├── profile/[username]/ # User profiles
+│   └── settings/           # User settings
+├── components/
+│   ├── ui/                 # shadcn/ui primitives (do not modify)
+│   ├── build-editor/       # Build creation/editing
+│   ├── browse/             # Browse page (grid, filters, keyboard nav)
+│   ├── mod-card/           # Mod card rendering
+│   ├── arcane-card/        # Arcane card rendering
+│   └── ...                 # Auth, guides, profile, landing, etc.
+├── lib/
+│   ├── warframe/           # Warframe domain logic
+│   │   ├── items.ts        # SERVER-ONLY: JSON data loading
+│   │   ├── index.ts        # Client-safe re-exports
+│   │   ├── types.ts        # Warframe TypeScript types
+│   │   ├── stats/          # Stat calculation engine
+│   │   └── ...             # Mods, capacity, shards, helminth, etc.
+│   ├── db/                 # Database queries (builds, users, votes, favorites)
+│   ├── image/              # Satori image generation (build cards)
+│   ├── overframe/          # Overframe import/decode logic
+│   ├── auth.ts             # Better Auth server config
+│   ├── build-codec.ts      # Build URL encoding/decoding
+│   └── db.ts               # Prisma client singleton
+├── data/
+│   └── warframe/           # Static JSON from @wfcd/items
+prisma/
+└── schema.prisma           # Database schema
+scripts/
+├── sync-warframe-data.ts   # Copy JSON from node_modules
+├── setup-search.sql        # Full-text search trigger + GIN index
+├── convert-overframe-items.ts
+└── go/                     # Ad-hoc Go helpers (Overframe scraping)
 ```
 
-## Conventions & Patterns
+### Server vs Client Boundary
 
-- Use `cn()` from `src/lib/utils.ts` to merge Tailwind classes
-- shadcn/ui components have default spacing; override with `gap-0`, `py-0` where needed
-- Images: prefer Next Image `fill` + `object-cover` inside `aspect-square` containers
-- Badges: keep consistent sizing with `text-xs px-2 py-0.5`
+```ts
+// Server (default) — can use database, fs, JSON loading
+import { getItemsByCategory } from "@/lib/warframe/items";
+import { prisma } from "@/lib/db";
 
-## Keyboard Navigation
+// Client — must have "use client" directive
+"use client";
+import { getImageUrl, type BrowseItem } from "@/lib/warframe";
+// Never import from "@/lib/warframe/items" or "@/lib/db" in client components
+```
 
-Keyboard-first interactions are handled in `src/components/browse/use-browse-keyboard.ts` and wired via `BrowseKeyboardHandler` (Suspense) on the Browse page.
+### Data Model
 
-## Useful Scripts
-
-Defined in `package.json`:
-
-- `dev` – `next dev`
-- `build` – `next build`
-- `start` – `next start`
-- `sync-data` – `bun run scripts/sync-warframe-data.ts`
-- `update-data` – `bun update @wfcd/items && bun run sync-data`
-
-### Go utilities
-
-Ad-hoc helpers live in `scripts/go/`:
-
-- Scrape Overframe item IDs → `src/data/overframe/items.csv`: `go run ./scripts/go/scraper.go`
-- Find the current max Overframe item ID: `go run ./scripts/go/find_max.go`
+- **Game data** (items, mods, arcanes) lives in static JSON files loaded into in-memory Maps — not in the database.
+- **User data** (builds, guides, votes, favorites) lives in PostgreSQL.
 
 ## Deployment
 
-Standard Next.js deployment (e.g., Vercel). Ensure `@wfcd/items` data is synced into `src/data/warframe` prior to build.
+Hosted on **Vercel** (Next.js) + **Neon** (PostgreSQL). Auto-deploys on push to `main`.
