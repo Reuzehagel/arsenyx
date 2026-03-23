@@ -189,6 +189,7 @@ DATABASE_URL=postgresql://arsenyx:arsenyx_dev@localhost:5432/arsenyx
 GITHUB_ID=...
 GITHUB_SECRET=...
 BETTER_AUTH_SECRET=...
+BETTER_AUTH_URL=...          # Production only (e.g. https://arsenyx.com)
 ```
 
 ## Testing
@@ -218,8 +219,19 @@ Coverage is growing but still partial — be careful with refactoring untested c
 - **User data** (builds, guides, votes, favorites) lives in PostgreSQL.
 - **Schema changes that drop/rename columns or add required fields** require a database reset. Always tell the user when a reset is needed before proceeding.
 
+## Deployment
+
+- **Hosting**: Vercel (Next.js) + Neon (PostgreSQL, eu-central-1)
+- **Branch**: `main` is the production branch
+- **Build**: Vercel auto-deploys on push to `main`
+- **After Neon DB reset**: push schema with `DATABASE_URL=<neon-url> bunx prisma db push`, then run `setup-search.sql` via Neon SQL Editor or `docker exec -i arsenyx-db psql "<neon-url>" < scripts/setup-search.sql`
+
 ## Gotchas
 
+- **`bun dev` hides type errors** — always run `bun build` before pushing to catch strict TS errors that Turbopack dev mode misses
+- **Base UI Slider callbacks** — `onValueChange`/`onValueCommitted` use `(value: number | readonly number[])`, not just `number`
+- **Base UI Select callbacks** — `onValueChange` passes `string | null`, not just `string`
+- **`@types/pg` version mismatch** — `pg` and `@prisma/adapter-pg` bundle different `@types/pg` versions; `pool as any` cast needed in `src/lib/db.ts`
 - **Satori (image generation)** — JSX renderer for server-side image gen. Only supports flexbox (no grid), inline `style` objects (no Tailwind/className), `.ttf`/`.woff` fonts (NOT `.woff2`). Returns `null` or `&&` short-circuits crash satori — always use ternaries with `<div style={{ display: "flex" }} />` fallbacks. ESLint `react/jsx-key` must be disabled since satori doesn't support `key` props.
 - **`pg` and `sharp` must be external** — `serverExternalPackages: ["pg", "sharp"]` in `next.config.ts` prevents Turbopack bundling issues
 - **Keyboard-first UX** — preserve keyboard navigation in browse components
