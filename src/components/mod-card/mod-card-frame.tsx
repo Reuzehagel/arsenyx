@@ -170,7 +170,6 @@ export function DrainBadge({
         width={36}
         height={18}
         className="pointer-events-none"
-        style={{ width: "auto", height: "auto" }}
         priority={false}
       />
 
