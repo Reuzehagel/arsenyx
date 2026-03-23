@@ -1,25 +1,45 @@
-import { z } from "zod";
+import { z } from "zod"
 
 // =============================================================================
 // SHARED ENUMS
 // =============================================================================
 
 const PolaritySchema = z.enum([
-  "madurai", "vazarin", "naramon", "zenurik", "unairu", "penjaga", "umbra", "any", "universal",
-]);
+  "madurai",
+  "vazarin",
+  "naramon",
+  "zenurik",
+  "unairu",
+  "penjaga",
+  "umbra",
+  "any",
+  "universal",
+])
 
-const SlotTypeSchema = z.enum(["aura", "exilus", "normal", "arcane"]);
+const SlotTypeSchema = z.enum(["aura", "exilus", "normal", "arcane"])
 
 const ShardColorSchema = z.enum([
-  "crimson", "amber", "azure", "topaz", "violet", "emerald",
-]);
+  "crimson",
+  "amber",
+  "azure",
+  "topaz",
+  "violet",
+  "emerald",
+])
 
 const BrowseCategorySchema = z.enum([
-  "warframes", "primary", "secondary", "melee", "necramechs",
-  "companions", "companion-weapons", "exalted-weapons", "archwing",
-]);
+  "warframes",
+  "primary",
+  "secondary",
+  "melee",
+  "necramechs",
+  "companions",
+  "companion-weapons",
+  "exalted-weapons",
+  "archwing",
+])
 
-const LevelStatsSchema = z.array(z.object({ stats: z.array(z.string()) }));
+const LevelStatsSchema = z.array(z.object({ stats: z.array(z.string()) }))
 
 // =============================================================================
 // BUILD STATE SCHEMAS — validates user-generated buildData stored in DB
@@ -41,7 +61,7 @@ const PlacedModSchema = z.object({
   modSetStats: z.array(z.string()).optional(),
   isExilus: z.boolean().optional(),
   isUtility: z.boolean().optional(),
-});
+})
 
 const PlacedArcaneSchema = z.object({
   uniqueName: z.string(),
@@ -49,13 +69,13 @@ const PlacedArcaneSchema = z.object({
   imageName: z.string().optional(),
   rank: z.number(),
   rarity: z.string(),
-});
+})
 
 const PlacedShardSchema = z.object({
   color: ShardColorSchema,
   stat: z.string(),
   tauforged: z.boolean(),
-});
+})
 
 const HelminthAbilitySchema = z.object({
   uniqueName: z.string(),
@@ -63,7 +83,7 @@ const HelminthAbilitySchema = z.object({
   imageName: z.string().optional(),
   source: z.string(),
   description: z.string().optional(),
-});
+})
 
 const ModSlotSchema = z.object({
   id: z.string(),
@@ -71,7 +91,7 @@ const ModSlotSchema = z.object({
   innatePolarity: PolaritySchema.optional(),
   formaPolarity: PolaritySchema.optional(),
   mod: PlacedModSchema.optional(),
-});
+})
 
 export const BuildStateSchema = z.object({
   itemUniqueName: z.string(),
@@ -97,43 +117,51 @@ export const BuildStateSchema = z.object({
 
   formaCount: z.number(),
 
-  helminthAbility: z.object({
-    slotIndex: z.number(),
-    ability: HelminthAbilitySchema,
-  }).optional(),
-});
+  helminthAbility: z
+    .object({
+      slotIndex: z.number(),
+      ability: HelminthAbilitySchema,
+    })
+    .optional(),
+})
 
 // =============================================================================
 // ITEM SCHEMA — minimal shape check for WFCD item data (union type is too complex)
 // =============================================================================
 
-export const ItemDataSchema = z.object({
-  uniqueName: z.string(),
-  name: z.string(),
-}).passthrough();
+export const ItemDataSchema = z
+  .object({
+    uniqueName: z.string(),
+    name: z.string(),
+  })
+  .passthrough()
 
 // =============================================================================
 // MOD / ARCANE SCHEMAS — loose validation for WFCD data from trusted source
 // =============================================================================
 
-export const ModDataSchema = z.object({
-  uniqueName: z.string(),
-  name: z.string(),
-  polarity: PolaritySchema,
-  rarity: z.string(),
-  baseDrain: z.number(),
-  fusionLimit: z.number(),
-  type: z.string(),
-  tradable: z.boolean(),
-}).passthrough(); // Allow extra WFCD fields we don't validate
+export const ModDataSchema = z
+  .object({
+    uniqueName: z.string(),
+    name: z.string(),
+    polarity: PolaritySchema,
+    rarity: z.string(),
+    baseDrain: z.number(),
+    fusionLimit: z.number(),
+    type: z.string(),
+    tradable: z.boolean(),
+  })
+  .passthrough() // Allow extra WFCD fields we don't validate
 
-export const ArcaneDataSchema = z.object({
-  uniqueName: z.string(),
-  name: z.string(),
-  rarity: z.string(),
-  type: z.string(),
-  tradable: z.boolean(),
-}).passthrough(); // Allow extra WFCD fields
+export const ArcaneDataSchema = z
+  .object({
+    uniqueName: z.string(),
+    name: z.string(),
+    rarity: z.string(),
+    type: z.string(),
+    tradable: z.boolean(),
+  })
+  .passthrough() // Allow extra WFCD fields
 
 // =============================================================================
 // VALIDATION HELPERS
@@ -146,17 +174,14 @@ export const ArcaneDataSchema = z.object({
 export function safeParse<T>(
   schema: z.ZodType<T>,
   data: unknown,
-  context: string
+  context: string,
 ): T | null {
-  const result = schema.safeParse(data);
+  const result = schema.safeParse(data)
   if (result.success) {
-    return result.data;
+    return result.data
   }
-  console.warn(
-    `[schema] Invalid ${context}:`,
-    result.error.issues.slice(0, 3)
-  );
-  return null;
+  console.warn(`[schema] Invalid ${context}:`, result.error.issues.slice(0, 3))
+  return null
 }
 
 /**
@@ -167,15 +192,15 @@ export function safeParse<T>(
 export function safeParseOrCast<T>(
   schema: z.ZodType<T>,
   data: unknown,
-  context: string
+  context: string,
 ): T {
-  const result = schema.safeParse(data);
+  const result = schema.safeParse(data)
   if (result.success) {
-    return result.data;
+    return result.data
   }
   console.warn(
     `[schema] Invalid ${context}, falling back to cast:`,
-    result.error.issues.slice(0, 3)
-  );
-  return data as T;
+    result.error.issues.slice(0, 3),
+  )
+  return data as T
 }

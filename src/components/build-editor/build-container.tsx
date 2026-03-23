@@ -1,34 +1,30 @@
-"use client";
+"use client"
 
-import { useCallback, useMemo } from "react";
-import {
-  DndContext,
-  DragOverlay,
-} from "@dnd-kit/core";
-import { ItemSidebar } from "./item-sidebar";
-import { ModGrid } from "./mod-grid";
-import { BuildEditorHeader } from "./build-editor-header";
-import { BuildEditorSearchPanel } from "./build-editor-search-panel";
-import { BuildEditorGuideSection } from "./build-editor-guide-section";
-import { CompactModCard, type ModRarity } from "@/components/mod-card/mod-card";
-import { ArcaneDragGhost } from "@/components/arcane-card/arcane-card";
-import { useBuildKeyboard } from "./use-build-keyboard";
-import type {
-  Mod,
-  Arcane,
-} from "@/lib/warframe/types";
-import { isWarframeCategory } from "@/lib/warframe/categories";
+import { DndContext, DragOverlay } from "@dnd-kit/core"
+import { useCallback, useMemo } from "react"
+
+import { ArcaneDragGhost } from "@/components/arcane-card/arcane-card"
+import { CompactModCard, type ModRarity } from "@/components/mod-card/mod-card"
+import { isWarframeCategory } from "@/lib/warframe/categories"
+import type { Mod, Arcane } from "@/lib/warframe/types"
+
+import { BuildEditorGuideSection } from "./build-editor-guide-section"
+import { BuildEditorHeader } from "./build-editor-header"
+import { BuildEditorSearchPanel } from "./build-editor-search-panel"
+import { useBuildDragDrop } from "./hooks/use-build-drag-drop"
+import { useBuildGuide } from "./hooks/use-build-guide"
+import { useBuildPersistence } from "./hooks/use-build-persistence"
 import {
   useBuildState,
   extractItemStats,
   type BuildContainerProps,
-} from "./hooks/use-build-state";
-import { useBuildDragDrop } from "./hooks/use-build-drag-drop";
-import { useBuildPersistence } from "./hooks/use-build-persistence";
-import { useBuildGuide } from "./hooks/use-build-guide";
-import { useBuildUI } from "./hooks/use-build-ui";
+} from "./hooks/use-build-state"
+import { useBuildUI } from "./hooks/use-build-ui"
+import { ItemSidebar } from "./item-sidebar"
+import { ModGrid } from "./mod-grid"
+import { useBuildKeyboard } from "./use-build-keyboard"
 
-export type { BuildContainerProps } from "./hooks/use-build-state";
+export type { BuildContainerProps } from "./hooks/use-build-state"
 
 export function BuildContainer({
   item,
@@ -74,7 +70,7 @@ export function BuildContainer({
     compatibleMods,
     compatibleArcanes,
     importedBuild,
-  });
+  })
 
   const {
     isAuthenticated,
@@ -91,7 +87,7 @@ export function BuildContainer({
     readOnly,
     isOwner,
     buildState,
-  });
+  })
 
   const {
     activeDragItem,
@@ -109,7 +105,7 @@ export function BuildContainer({
     placeArcaneInSlot,
     moveArcane,
     setActiveSlotId,
-  });
+  })
 
   const {
     guideSummary,
@@ -126,14 +122,14 @@ export function BuildContainer({
     canEdit,
     initialGuide,
     initialPartnerBuilds,
-  });
+  })
 
   const hydrateBuildState = useCallback(
     (partial: Partial<import("@/lib/warframe/types").BuildState>) => {
-      dispatch({ type: "HYDRATE", state: partial, item, category });
+      dispatch({ type: "HYDRATE", state: partial, item, category })
     },
-    [dispatch, item, category]
-  );
+    [dispatch, item, category],
+  )
 
   const {
     buildId,
@@ -157,74 +153,74 @@ export function BuildContainer({
     guideDescription,
     partnerBuildIds: partnerBuilds.map((b) => b.id),
     setIsEditMode,
-  });
+  })
 
   // --- Orchestration callbacks (bridge multiple hooks) ---
 
   const handlePlaceMod = useCallback(
     (mod: Mod, rank: number = mod.fusionLimit) => {
-      const isAuraMod = mod.compatName?.toUpperCase() === "AURA";
+      const isAuraMod = mod.compatName?.toUpperCase() === "AURA"
 
-      if (!isAuraMod && !activeSlotId) return;
+      if (!isAuraMod && !activeSlotId) return
 
       if (isAuraMod && buildState.auraSlot) {
-        placeModInSlot(mod, rank, "aura-0");
-        return;
+        placeModInSlot(mod, rank, "aura-0")
+        return
       }
 
       if (activeSlotId) {
-        placeModInSlot(mod, rank, activeSlotId);
+        placeModInSlot(mod, rank, activeSlotId)
       }
 
-      if (isAuraMod) return;
+      if (isAuraMod) return
 
-      const currentIndex = parseInt(activeSlotId?.replace("normal-", "") ?? "");
+      const currentIndex = parseInt(activeSlotId?.replace("normal-", "") ?? "")
       if (!isNaN(currentIndex) && currentIndex < 7) {
-        setActiveSlotId(`normal-${currentIndex + 1}`);
+        setActiveSlotId(`normal-${currentIndex + 1}`)
       } else {
-        setActiveSlotId(null);
+        setActiveSlotId(null)
       }
     },
-    [activeSlotId, placeModInSlot, setActiveSlotId, buildState.auraSlot]
-  );
+    [activeSlotId, placeModInSlot, setActiveSlotId, buildState.auraSlot],
+  )
 
   const handlePlaceArcane = useCallback(
     (arcane: Arcane, rank: number) => {
-      if (!activeSlotId || !activeSlotId.startsWith("arcane-")) return;
+      if (!activeSlotId || !activeSlotId.startsWith("arcane-")) return
 
-      const slotIndex = parseInt(activeSlotId.replace("arcane-", ""));
-      if (isNaN(slotIndex)) return;
+      const slotIndex = parseInt(activeSlotId.replace("arcane-", ""))
+      if (isNaN(slotIndex)) return
 
-      placeArcaneInSlot(arcane, rank, slotIndex);
+      placeArcaneInSlot(arcane, rank, slotIndex)
 
       if (slotIndex === 0) {
-        setActiveSlotId("arcane-1");
+        setActiveSlotId("arcane-1")
       } else {
-        setActiveSlotId(null);
+        setActiveSlotId(null)
       }
     },
-    [activeSlotId, placeArcaneInSlot, setActiveSlotId]
-  );
+    [activeSlotId, placeArcaneInSlot, setActiveSlotId],
+  )
 
   // --- Keyboard navigation ---
 
-  const isWarframeOrNecramech = isWarframeCategory(category);
+  const isWarframeOrNecramech = isWarframeCategory(category)
 
   useBuildKeyboard({
     onSelectSlot: handleSelectSlot,
     onOpenSearch: () => {},
     onCloseSearch: () => {
-      setActiveSlotId(null);
+      setActiveSlotId(null)
     },
     onCopyBuild: handleCopyBuild,
     onClearBuild: handleClearBuild,
     hasAuraSlot: category === "warframes",
     hasExilusSlot: category !== "necramechs",
-  });
+  })
 
   // --- Derived ---
 
-  const itemStats = useMemo(() => extractItemStats(item), [item]);
+  const itemStats = useMemo(() => extractItemStats(item), [item])
 
   // --- Render ---
 
@@ -237,7 +233,7 @@ export function BuildContainer({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="container py-4 md:py-6 px-4">
+      <div className="container px-4 py-4 md:py-6">
         <BuildEditorHeader
           item={item}
           categoryLabel={categoryLabel}
@@ -263,8 +259,8 @@ export function BuildContainer({
 
         <div className="flex flex-col gap-4">
           {/* Top row: Sidebar + Mod Grid */}
-          <div className="flex flex-col lg:block lg:relative gap-4">
-            <div className="w-full lg:absolute lg:left-0 lg:top-0 lg:bottom-0 lg:w-[260px] bg-card border rounded-lg lg:overflow-y-auto">
+          <div className="flex flex-col gap-4 lg:relative lg:block">
+            <div className="bg-card w-full rounded-lg border lg:absolute lg:top-0 lg:bottom-0 lg:left-0 lg:w-[260px] lg:overflow-y-auto">
               <ItemSidebar
                 buildState={buildState}
                 capacityStatus={capacityStatus}
@@ -281,7 +277,7 @@ export function BuildContainer({
               />
             </div>
 
-            <div className="flex-1 lg:ml-[calc(260px+1rem)] bg-card border rounded-lg p-2 sm:p-4 min-w-0">
+            <div className="bg-card min-w-0 flex-1 rounded-lg border p-2 sm:p-4 lg:ml-[calc(260px+1rem)]">
               <ModGrid
                 auraSlot={buildState.auraSlot}
                 exilusSlot={buildState.exilusSlot}
@@ -307,8 +303,8 @@ export function BuildContainer({
                     (activeDragItem?.type === "search-arcane"
                       ? activeDragItem.arcane
                       : activeDragItem?.type === "placed-arcane"
-                      ? activeDragItem.arcane
-                      : undefined)) ||
+                        ? activeDragItem.arcane
+                        : undefined)) ||
                   undefined
                 }
                 arcaneDataMap={arcaneDataMap}
@@ -349,7 +345,7 @@ export function BuildContainer({
         {activeDragItem &&
         (activeDragItem.type === "search-mod" ||
           activeDragItem.type === "placed-mod") ? (
-          <div className="opacity-90 cursor-grabbing shadow-xl rounded-lg">
+          <div className="cursor-grabbing rounded-lg opacity-90 shadow-xl">
             <CompactModCard
               mod={activeDragItem.mod as Mod}
               rarity={(activeDragItem.mod.rarity || "Common") as ModRarity}
@@ -369,11 +365,11 @@ export function BuildContainer({
         ) : activeDragItem &&
           (activeDragItem.type === "search-arcane" ||
             activeDragItem.type === "placed-arcane") ? (
-          <div className="opacity-90 cursor-grabbing shadow-xl rounded-lg">
+          <div className="cursor-grabbing rounded-lg opacity-90 shadow-xl">
             <ArcaneDragGhost arcane={activeDragItem.arcane} />
           </div>
         ) : null}
       </DragOverlay>
     </DndContext>
-  );
+  )
 }

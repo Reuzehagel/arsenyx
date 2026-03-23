@@ -1,18 +1,18 @@
-"use client";
+"use client"
 
-import { cn } from "@/lib/utils";
-import type { StatValue } from "@/lib/warframe/stat-types";
+import { cn } from "@/lib/utils"
 import {
   formatDisplayValue,
   formatContribution,
   formatPercent,
   type StatFormat,
-} from "@/lib/warframe/formatting";
+} from "@/lib/warframe/formatting"
+import type { StatValue } from "@/lib/warframe/stat-types"
 
 interface StatBreakdownTooltipProps {
-  stat: StatValue;
-  format: StatFormat;
-  unit: string;
+  stat: StatValue
+  format: StatFormat
+  unit: string
 }
 
 /**
@@ -24,18 +24,24 @@ export function StatBreakdownTooltip({
   unit,
 }: StatBreakdownTooltipProps) {
   // Group contributions by source type
-  const modContributions = stat.contributions.filter((c) => c.source === "mod");
-  const shardContributions = stat.contributions.filter((c) => c.source === "shard");
-  const setBonusContributions = stat.contributions.filter((c) => c.source === "set_bonus");
-  const auraContributions = stat.contributions.filter((c) => c.source === "aura");
+  const modContributions = stat.contributions.filter((c) => c.source === "mod")
+  const shardContributions = stat.contributions.filter(
+    (c) => c.source === "shard",
+  )
+  const setBonusContributions = stat.contributions.filter(
+    (c) => c.source === "set_bonus",
+  )
+  const auraContributions = stat.contributions.filter(
+    (c) => c.source === "aura",
+  )
 
   // Helper to format values with the current format
-  const formatValue = (value: number) => formatDisplayValue(value, format);
+  const formatValue = (value: number) => formatDisplayValue(value, format)
 
   return (
-    <div className="flex flex-col gap-1.5 text-xs min-w-[180px]">
+    <div className="flex min-w-[180px] flex-col gap-1.5 text-xs">
       {/* Base value */}
-      <div className="font-medium border-b border-border pb-1">
+      <div className="border-border border-b pb-1 font-medium">
         Base: {formatValue(stat.base)}
         {unit}
       </div>
@@ -77,7 +83,9 @@ export function StatBreakdownTooltip({
       {/* Shard contributions */}
       {shardContributions.length > 0 && (
         <div className="flex flex-col gap-0.5">
-          <span className="text-muted-foreground text-[10px]">Archon Shards</span>
+          <span className="text-muted-foreground text-[10px]">
+            Archon Shards
+          </span>
           {shardContributions.map((contrib, i) => (
             <ContributionRow
               key={`shard-${i}`}
@@ -109,7 +117,7 @@ export function StatBreakdownTooltip({
       )}
 
       {/* Final value */}
-      <div className="font-medium border-t border-border pt-1">
+      <div className="border-border border-t pt-1 font-medium">
         Final: {formatValue(stat.modified)}
         {unit}
       </div>
@@ -122,7 +130,7 @@ export function StatBreakdownTooltip({
         </div>
       )}
     </div>
-  );
+  )
 }
 
 /**
@@ -136,21 +144,30 @@ function ContributionRow({
   unit,
   highlight,
 }: {
-  name: string;
-  value: number;
-  percent: number;
-  format: StatFormat;
-  unit: string;
-  highlight?: boolean;
+  name: string
+  value: number
+  percent: number
+  format: StatFormat
+  unit: string
+  highlight?: boolean
 }) {
   return (
-    <div className={cn("flex justify-between gap-4", highlight && "text-amber-400")}>
-      <span className="text-muted-foreground truncate max-w-[120px]">{name}</span>
+    <div
+      className={cn(
+        "flex justify-between gap-4",
+        highlight && "text-amber-400",
+      )}
+    >
+      <span className="text-muted-foreground max-w-[120px] truncate">
+        {name}
+      </span>
       <span className="flex-shrink-0">
         {formatContribution(value, format)}
         {unit}
-        <span className="text-muted-foreground ml-1">({formatPercent(percent)})</span>
+        <span className="text-muted-foreground ml-1">
+          ({formatPercent(percent)})
+        </span>
       </span>
     </div>
-  );
+  )
 }

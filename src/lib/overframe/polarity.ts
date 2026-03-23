@@ -1,4 +1,4 @@
-import type { Polarity } from "@/lib/warframe/types";
+import type { Polarity } from "@/lib/warframe/types"
 
 // Overframe numeric codes observed in pageProps.data.slots[].polarity
 // Based on empirical testing with a build that applied each polarity.
@@ -22,22 +22,22 @@ const OVERFRAME_POLARITY_CODE_MAP: Record<number, Polarity | undefined> = {
   7: "penjaga",
   8: "umbra",
   9: "any",
-};
+}
 
 export function mapOverframePolarityCode(code: number | null | undefined): {
-  code: number | null;
-  polarity?: Polarity;
-  isKnown: boolean;
+  code: number | null
+  polarity?: Polarity
+  isKnown: boolean
 } {
   if (code === null || code === undefined || !Number.isFinite(code)) {
-    return { code: null, isKnown: false };
+    return { code: null, isKnown: false }
   }
 
-  const polarity = OVERFRAME_POLARITY_CODE_MAP[code];
+  const polarity = OVERFRAME_POLARITY_CODE_MAP[code]
   const isKnown = Object.prototype.hasOwnProperty.call(
     OVERFRAME_POLARITY_CODE_MAP,
-    code
-  );
+    code,
+  )
 
-  return { code, polarity, isKnown };
+  return { code, polarity, isKnown }
 }

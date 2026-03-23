@@ -1,20 +1,20 @@
-"use client";
+"use client"
 
-import { Button } from "@/components/ui/button";
-import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
+import { Footer } from "@/components/footer"
+import { Header } from "@/components/header"
+import { Button } from "@/components/ui/button"
 
 export default function BrowseError({
   error,
   reset,
 }: {
-  error: Error & { digest?: string };
-  reset: () => void;
+  error: Error & { digest?: string }
+  reset: () => void
 }) {
   return (
     <>
       <Header />
-      <main className="flex-1 flex items-center justify-center py-20">
+      <main className="flex flex-1 items-center justify-center py-20">
         <div className="flex flex-col items-center gap-4 text-center">
           <h2 className="text-2xl font-bold">Something went wrong</h2>
           <p className="text-muted-foreground max-w-md">
@@ -30,5 +30,5 @@ export default function BrowseError({
       </main>
       <Footer />
     </>
-  );
+  )
 }

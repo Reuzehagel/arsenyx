@@ -1,4 +1,4 @@
-"use server";
+"use server"
 
 /**
  * Build Server Actions
@@ -6,7 +6,10 @@
  * Authenticated actions for build CRUD operations
  */
 
-import { getServerSession } from "@/lib/auth";
+import type { BuildVisibility } from "@prisma/client"
+import { after } from "next/server"
+
+import { getServerSession } from "@/lib/auth"
 import {
   createBuild,
   updateBuild,
@@ -16,30 +19,28 @@ import {
   type UpdateBuildInput,
   type BuildWithUser,
   incrementBuildViewCount,
-} from "@/lib/db/index";
-import { after } from "next/server";
-import { ok, err, getErrorMessage, type Result } from "@/lib/result";
-import type { BuildVisibility } from "@prisma/client";
-import type { BuildState } from "@/lib/warframe/types";
+} from "@/lib/db/index"
+import { ok, err, getErrorMessage, type Result } from "@/lib/result"
+import type { BuildState } from "@/lib/warframe/types"
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
 export interface SaveBuildInput {
-  buildId?: string; // If provided, update existing build
-  itemUniqueName: string;
-  name: string;
-  description?: string;
-  visibility?: BuildVisibility;
-  buildData: BuildState;
-  guideSummary?: string;
-  guideDescription?: string;
-  partnerBuildIds?: string[];
+  buildId?: string // If provided, update existing build
+  itemUniqueName: string
+  name: string
+  description?: string
+  visibility?: BuildVisibility
+  buildData: BuildState
+  guideSummary?: string
+  guideDescription?: string
+  partnerBuildIds?: string[]
 }
 
-export type SaveBuildResult = Result<BuildWithUser>;
-export type DeleteBuildResult = Result<void>;
+export type SaveBuildResult = Result<BuildWithUser>
+export type DeleteBuildResult = Result<void>
 
 // =============================================================================
 // SAVE BUILD (Create or Update)
@@ -49,16 +50,16 @@ export type DeleteBuildResult = Result<void>;
  * Save a build to the database (create or update)
  */
 export async function saveBuildAction(
-  input: SaveBuildInput
+  input: SaveBuildInput,
 ): Promise<SaveBuildResult> {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession()
 
     if (!session?.user?.id) {
-      return err("You must be signed in to save a build");
+      return err("You must be signed in to save a build")
     }
 
-    const userId = session.user.id;
+    const userId = session.user.id
 
     // If buildId is provided, update existing build
     if (input.buildId) {
@@ -67,10 +68,10 @@ export async function saveBuildAction(
         description: input.description,
         visibility: input.visibility,
         buildData: input.buildData,
-      };
+      }
 
-      const build = await updateBuild(input.buildId, userId, updateData);
-      return ok(build);
+      const build = await updateBuild(input.buildId, userId, updateData)
+      return ok(build)
     }
 
     // Create new build
@@ -83,13 +84,13 @@ export async function saveBuildAction(
       guideSummary: input.guideSummary,
       guideDescription: input.guideDescription,
       partnerBuildIds: input.partnerBuildIds,
-    };
+    }
 
-    const build = await createBuild(userId, createData);
-    return ok(build);
+    const build = await createBuild(userId, createData)
+    return ok(build)
   } catch (error) {
-    console.error("Failed to save build:", error);
-    return err(getErrorMessage(error, "Failed to save build"));
+    console.error("Failed to save build:", error)
+    return err(getErrorMessage(error, "Failed to save build"))
   }
 }
 
@@ -101,20 +102,20 @@ export async function saveBuildAction(
  * Delete a build from the database (owner only)
  */
 export async function deleteBuildAction(
-  buildId: string
+  buildId: string,
 ): Promise<DeleteBuildResult> {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession()
 
     if (!session?.user?.id) {
-      return err("You must be signed in to delete a build");
+      return err("You must be signed in to delete a build")
     }
 
-    await deleteBuild(buildId, session.user.id);
-    return ok();
+    await deleteBuild(buildId, session.user.id)
+    return ok()
   } catch (error) {
-    console.error("Failed to delete build:", error);
-    return err(getErrorMessage(error, "Failed to delete build"));
+    console.error("Failed to delete build:", error)
+    return err(getErrorMessage(error, "Failed to delete build"))
   }
 }
 
@@ -124,10 +125,10 @@ export async function deleteBuildAction(
 
 /** Fork (copy) a public build to the current user's account — not yet implemented */
 export async function forkBuildAction(
-  _buildId: string
+  _buildId: string,
 ): Promise<SaveBuildResult> {
-  void _buildId;
-  return err("Fork functionality not yet implemented");
+  void _buildId
+  return err("Fork functionality not yet implemented")
 }
 
 // =============================================================================
@@ -141,11 +142,11 @@ export async function forkBuildAction(
 export async function incrementViewCountAction(buildId: string): Promise<void> {
   after(async () => {
     try {
-      await incrementBuildViewCount(buildId);
+      await incrementBuildViewCount(buildId)
     } catch {
       // Silently fail for analytics
     }
-  });
+  })
 }
 
 // =============================================================================
@@ -153,33 +154,33 @@ export async function incrementViewCountAction(buildId: string): Promise<void> {
 // =============================================================================
 
 export interface UpdateBuildGuideInput {
-  summary?: string;
-  description?: string;
-  partnerBuildIds?: string[];
+  summary?: string
+  description?: string
+  partnerBuildIds?: string[]
 }
 
-const MAX_SUMMARY_LENGTH = 400;
-const MAX_PARTNER_BUILDS = 10;
+const MAX_SUMMARY_LENGTH = 400
+const MAX_PARTNER_BUILDS = 10
 
 /**
  * Update a build's guide content (summary, description, partner builds)
  */
 export async function updateBuildGuideAction(
   buildId: string,
-  input: UpdateBuildGuideInput
+  input: UpdateBuildGuideInput,
 ): Promise<SaveBuildResult> {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession()
 
     if (!session?.user?.id) {
-      return err("You must be signed in to update a guide");
+      return err("You must be signed in to update a guide")
     }
 
-    const userId = session.user.id;
+    const userId = session.user.id
 
     // Validate summary length
     if (input.summary && input.summary.length > MAX_SUMMARY_LENGTH) {
-      return err(`Summary must be ${MAX_SUMMARY_LENGTH} characters or less`);
+      return err(`Summary must be ${MAX_SUMMARY_LENGTH} characters or less`)
     }
 
     // Validate partner builds count
@@ -187,19 +188,19 @@ export async function updateBuildGuideAction(
       input.partnerBuildIds &&
       input.partnerBuildIds.length > MAX_PARTNER_BUILDS
     ) {
-      return err(`Maximum ${MAX_PARTNER_BUILDS} partner builds allowed`);
+      return err(`Maximum ${MAX_PARTNER_BUILDS} partner builds allowed`)
     }
 
     const build = await updateBuild(buildId, userId, {
       guideSummary: input.summary,
       guideDescription: input.description,
       partnerBuildIds: input.partnerBuildIds,
-    });
+    })
 
-    return ok(build);
+    return ok(build)
   } catch (error) {
-    console.error("Failed to update guide:", error);
-    return err(getErrorMessage(error, "Failed to update guide"));
+    console.error("Failed to update guide:", error)
+    return err(getErrorMessage(error, "Failed to update guide"))
   }
 }
 
@@ -210,20 +211,24 @@ export async function updateBuildGuideAction(
 /**
  * Get user's builds for partner build selector
  */
-type PartnerSelectorBuilds = Awaited<ReturnType<typeof getUserBuildsForPartnerSelector>>;
+type PartnerSelectorBuilds = Awaited<
+  ReturnType<typeof getUserBuildsForPartnerSelector>
+>
 
-export async function getUserBuildsForPartnerSelectorAction(): Promise<Result<PartnerSelectorBuilds>> {
+export async function getUserBuildsForPartnerSelectorAction(): Promise<
+  Result<PartnerSelectorBuilds>
+> {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession()
 
     if (!session?.user?.id) {
-      return err("You must be signed in");
+      return err("You must be signed in")
     }
 
-    const builds = await getUserBuildsForPartnerSelector(session.user.id);
-    return ok(builds);
+    const builds = await getUserBuildsForPartnerSelector(session.user.id)
+    return ok(builds)
   } catch (error) {
-    console.error("Failed to get builds for partner selector:", error);
-    return err(getErrorMessage(error, "Failed to get builds"));
+    console.error("Failed to get builds for partner selector:", error)
+    return err(getErrorMessage(error, "Failed to get builds"))
   }
 }

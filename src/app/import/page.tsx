@@ -1,18 +1,19 @@
-import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
-import { ImportOverframeClient } from "./import-overframe-client";
+import { Footer } from "@/components/footer"
+import { Header } from "@/components/header"
+
+import { ImportOverframeClient } from "./import-overframe-client"
 
 export const metadata = {
   title: "Import Test | ARSENYX",
   description: "Temporary page to test Overframe import.",
-};
+}
 
 export default function ImportTestPage() {
   return (
-    <div className="relative min-h-screen flex flex-col">
+    <div className="relative flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        <div className="container py-6 flex flex-col gap-6">
+        <div className="container flex flex-col gap-6 py-6">
           <div className="flex flex-col gap-2">
             <h1 className="text-3xl font-bold tracking-tight">
               Overframe Import Test
@@ -27,5 +28,5 @@ export default function ImportTestPage() {
       </main>
       <Footer />
     </div>
-  );
+  )
 }

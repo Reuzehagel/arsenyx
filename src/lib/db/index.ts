@@ -7,7 +7,7 @@
  * Set USE_DATABASE=true in environment to use database
  */
 
-export { prisma } from "../db";
+export { prisma } from "../db"
 
 // Re-export database query functions
 export {
@@ -16,7 +16,7 @@ export {
   getItemBySlugFromDb,
   getCategoryCountsFromDb,
   searchItemsFromDb,
-} from "./items";
+} from "./items"
 
 export {
   getAllModsFromDb,
@@ -26,7 +26,7 @@ export {
   getAllArcanesFromDb,
   getArcanesForSlotFromDb,
   searchModsFromDb,
-} from "./mods";
+} from "./mods"
 
 export {
   createBuild,
@@ -40,7 +40,7 @@ export {
   incrementBuildViewCount,
   generateSlug,
   getUserBuildsForPartnerSelector,
-} from "./builds";
+} from "./builds"
 
 export type {
   CreateBuildInput,
@@ -48,16 +48,16 @@ export type {
   BuildWithUser,
   BuildListItem,
   GetBuildsOptions,
-} from "./builds";
+} from "./builds"
 
 // Vote operations
 export {
   toggleBuildVote,
   hasUserVotedForBuild,
   getUserVotesForBuilds,
-} from "./votes";
+} from "./votes"
 
-export type { ToggleVoteResult } from "./votes";
+export type { ToggleVoteResult } from "./votes"
 
 // Favorite operations
 export {
@@ -65,12 +65,12 @@ export {
   hasUserFavoritedBuild,
   getUserFavoriteBuilds,
   getUserFavoritesForBuilds,
-} from "./favorites";
+} from "./favorites"
 
 export type {
   ToggleFavoriteResult,
   FavoriteBuildWithDetails,
-} from "./favorites";
+} from "./favorites"
 
 // User operations
 export {
@@ -78,6 +78,6 @@ export {
   getUserById,
   getUserStats,
   getPublicBuildCountForUser,
-} from "./users";
+} from "./users"
 
-export type { UserProfile, UserStats } from "./users";
+export type { UserProfile, UserStats } from "./users"

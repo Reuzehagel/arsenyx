@@ -5,17 +5,19 @@
  * and renders the interactive client components.
  */
 
-import { Eye } from "lucide-react";
-import { getServerSession } from "@/lib/auth";
-import { hasUserVotedForBuild, hasUserFavoritedBuild } from "@/lib/db/index";
-import { VoteButton } from "./vote-button";
-import { FavoriteButton } from "./favorite-button";
+import { Eye } from "lucide-react"
+
+import { getServerSession } from "@/lib/auth"
+import { hasUserVotedForBuild, hasUserFavoritedBuild } from "@/lib/db/index"
+
+import { FavoriteButton } from "./favorite-button"
+import { VoteButton } from "./vote-button"
 
 interface BuildSocialActionsProps {
-  buildId: string;
-  voteCount: number;
-  favoriteCount: number;
-  viewCount: number;
+  buildId: string
+  voteCount: number
+  favoriteCount: number
+  viewCount: number
 }
 
 export async function BuildSocialActions({
@@ -24,18 +26,18 @@ export async function BuildSocialActions({
   favoriteCount,
   viewCount,
 }: BuildSocialActionsProps) {
-  const session = await getServerSession();
-  const userId = session?.user?.id;
+  const session = await getServerSession()
+  const userId = session?.user?.id
 
   // Fetch initial social status
-  let hasVoted = false;
-  let hasFavorited = false;
+  let hasVoted = false
+  let hasFavorited = false
 
   if (userId) {
-    [hasVoted, hasFavorited] = await Promise.all([
+    ;[hasVoted, hasFavorited] = await Promise.all([
       hasUserVotedForBuild(userId, buildId),
       hasUserFavoritedBuild(userId, buildId),
-    ]);
+    ])
   }
 
   return (
@@ -50,10 +52,10 @@ export async function BuildSocialActions({
         initialFavoriteCount={favoriteCount}
         initialHasFavorited={hasFavorited}
       />
-      <div className="flex items-center gap-1.5 text-sm text-muted-foreground px-3 h-8">
+      <div className="text-muted-foreground flex h-8 items-center gap-1.5 px-3 text-sm">
         <Eye className="h-4 w-4" />
         <span className="tabular-nums">{viewCount}</span>
       </div>
     </div>
-  );
+  )
 }

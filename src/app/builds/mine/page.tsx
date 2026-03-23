@@ -1,31 +1,26 @@
-import { redirect } from "next/navigation";
-import type { Metadata } from "next";
-import Link from "next/link";
-import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { getServerSession } from "@/lib/auth";
-import { getUserBuilds } from "@/lib/db/index";
-import { BuildCardLink } from "@/components/build/build-card-link";
-import {
-  Lock,
-  Globe,
-  Link as LinkIcon,
-  Plus,
-  Hammer,
-} from "lucide-react";
+import { Lock, Globe, Link as LinkIcon, Plus, Hammer } from "lucide-react"
+import type { Metadata } from "next"
+import Link from "next/link"
+import { redirect } from "next/navigation"
+
+import { BuildCardLink } from "@/components/build/build-card-link"
+import { Footer } from "@/components/footer"
+import { Header } from "@/components/header"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { getServerSession } from "@/lib/auth"
+import { getUserBuilds } from "@/lib/db/index"
 
 export const metadata: Metadata = {
   title: "My Builds | ARSENYX",
   description: "Manage your saved Warframe builds",
-};
+}
 
 interface MyBuildsPageProps {
   searchParams: Promise<{
-    page?: string;
-    sort?: string;
-  }>;
+    page?: string
+    sort?: string
+  }>
 }
 
 export default async function MyBuildsPage({
@@ -34,51 +29,51 @@ export default async function MyBuildsPage({
   const [session, params] = await Promise.all([
     getServerSession(),
     searchParams,
-  ]);
+  ])
 
   if (!session?.user?.id) {
-    redirect("/auth/signin?callbackUrl=/builds/mine");
+    redirect("/auth/signin?callbackUrl=/builds/mine")
   }
 
-  const page = parseInt(params.page || "1", 10);
+  const page = parseInt(params.page || "1", 10)
   const sortBy =
-    (params.sort as "newest" | "votes" | "updated" | "views") || "newest";
+    (params.sort as "newest" | "votes" | "updated" | "views") || "newest"
 
   const { builds, total } = await getUserBuilds(
     session.user.id,
     session.user.id, // Viewing own builds - shows all including PRIVATE
-    { page, limit: 24, sortBy }
-  );
+    { page, limit: 24, sortBy },
+  )
 
-  const totalPages = Math.ceil(total / 24);
+  const totalPages = Math.ceil(total / 24)
 
   const getVisibilityIcon = (visibility: string) => {
     switch (visibility) {
       case "PRIVATE":
-        return <Lock className="h-3 w-3" />;
+        return <Lock className="h-3 w-3" />
       case "UNLISTED":
-        return <LinkIcon className="h-3 w-3" />;
+        return <LinkIcon className="h-3 w-3" />
       default:
-        return <Globe className="h-3 w-3" />;
+        return <Globe className="h-3 w-3" />
     }
-  };
+  }
 
   const getVisibilityLabel = (visibility: string) => {
     switch (visibility) {
       case "PRIVATE":
-        return "Private";
+        return "Private"
       case "UNLISTED":
-        return "Unlisted";
+        return "Unlisted"
       default:
-        return "Public";
+        return "Public"
     }
-  };
+  }
 
   return (
-    <div className="relative min-h-screen flex flex-col">
+    <div className="relative flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        <div className="container py-6 flex flex-col gap-6">
+        <div className="container flex flex-col gap-6 py-6">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold">My Builds</h1>
@@ -87,8 +82,8 @@ export default async function MyBuildsPage({
               </p>
             </div>
             <Button render={<Link href="/browse" />} nativeButton={false}>
-                <Plus className="h-4 w-4 mr-2" />
-                New Build
+              <Plus className="mr-2 h-4 w-4" />
+              New Build
             </Button>
           </div>
 
@@ -117,16 +112,18 @@ export default async function MyBuildsPage({
           </div>
 
           {builds.length === 0 ? (
-            <div className="text-center py-16">
-              <Hammer className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <div className="py-16 text-center">
+              <Hammer className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
               <p className="text-muted-foreground mb-4">
                 You haven&apos;t created any builds yet.
               </p>
-              <Button render={<Link href="/browse" />} nativeButton={false}>Create your first build</Button>
+              <Button render={<Link href="/browse" />} nativeButton={false}>
+                Create your first build
+              </Button>
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
                 {builds.map((build) => (
                   <BuildCardLink
                     key={build.id}
@@ -140,7 +137,7 @@ export default async function MyBuildsPage({
                       <div className="absolute top-2 right-2">
                         <Badge
                           variant="secondary"
-                          className="gap-1 text-xs px-1.5 py-0.5"
+                          className="gap-1 px-1.5 py-0.5 text-xs"
                         >
                           {getVisibilityIcon(build.visibility)}
                           <span className="hidden sm:inline">
@@ -163,7 +160,7 @@ export default async function MyBuildsPage({
                       </Button>
                     </Link>
                   )}
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-muted-foreground text-sm">
                     Page {page} of {totalPages}
                   </span>
                   {page < totalPages && (
@@ -181,5 +178,5 @@ export default async function MyBuildsPage({
       </main>
       <Footer />
     </div>
-  );
+  )
 }

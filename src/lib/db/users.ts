@@ -4,26 +4,26 @@
  * Profile queries and statistics
  */
 
-import { prisma } from "../db";
+import { prisma } from "../db"
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
 export interface UserProfile {
-  id: string;
-  name: string | null;
-  username: string | null;
-  image: string | null;
-  bio: string | null;
-  createdAt: Date;
-  role: string;
+  id: string
+  name: string | null
+  username: string | null
+  image: string | null
+  bio: string | null
+  createdAt: Date
+  role: string
 }
 
 export interface UserStats {
-  totalBuilds: number;
-  totalVotesReceived: number;
-  totalFavorites: number;
+  totalBuilds: number
+  totalVotesReceived: number
+  totalFavorites: number
 }
 
 // =============================================================================
@@ -37,7 +37,7 @@ export interface UserStats {
  * @returns User profile or null if not found
  */
 export async function getUserByUsername(
-  username: string
+  username: string,
 ): Promise<UserProfile | null> {
   const user = await prisma.user.findFirst({
     where: {
@@ -52,9 +52,9 @@ export async function getUserByUsername(
       createdAt: true,
       role: true,
     },
-  });
+  })
 
-  return user;
+  return user
 }
 
 /**
@@ -75,9 +75,9 @@ export async function getUserById(userId: string): Promise<UserProfile | null> {
       createdAt: true,
       role: true,
     },
-  });
+  })
 
-  return user;
+  return user
 }
 
 /**
@@ -94,13 +94,13 @@ export async function getUserStats(userId: string): Promise<UserStats> {
       _sum: { voteCount: true },
     }),
     prisma.buildFavorite.count({ where: { userId } }),
-  ]);
+  ])
 
   return {
     totalBuilds: buildStats._count.id,
     totalVotesReceived: buildStats._sum.voteCount ?? 0,
     totalFavorites,
-  };
+  }
 }
 
 /**
@@ -110,9 +110,9 @@ export async function getUserStats(userId: string): Promise<UserStats> {
  * @returns Number of public builds
  */
 export async function getPublicBuildCountForUser(
-  userId: string
+  userId: string,
 ): Promise<number> {
   return prisma.build.count({
     where: { userId, visibility: "PUBLIC" },
-  });
+  })
 }

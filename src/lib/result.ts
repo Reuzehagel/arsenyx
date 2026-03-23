@@ -18,22 +18,22 @@
  */
 export type Result<T = void> =
   | { success: true; data: T }
-  | { success: false; error: string };
+  | { success: false; error: string }
 
 /** Create a success result */
-export function ok(): Result<void>;
-export function ok<T>(data: T): Result<T>;
+export function ok(): Result<void>
+export function ok<T>(data: T): Result<T>
 export function ok<T>(data?: T): Result<T> {
-  return { success: true, data: data as T };
+  return { success: true, data: data as T }
 }
 
 /** Create an error result */
 export function err(error: string): Result<never> {
-  return { success: false, error };
+  return { success: false, error }
 }
 
 /** Extract error message from unknown catch value */
 export function getErrorMessage(error: unknown, fallback: string): string {
-  if (error instanceof Error) return error.message;
-  return fallback;
+  if (error instanceof Error) return error.message
+  return fallback
 }

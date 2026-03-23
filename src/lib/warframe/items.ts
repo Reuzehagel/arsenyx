@@ -3,27 +3,27 @@
 // because @wfcd/items uses fs.readdirSync which doesn't work with Next.js bundling
 // Data files are copied from @wfcd/items/data/json/ to src/data/warframe/
 
-import WarframesData from "@/data/warframe/Warframes.json";
-import PrimaryData from "@/data/warframe/Primary.json";
-import SecondaryData from "@/data/warframe/Secondary.json";
-import MeleeData from "@/data/warframe/Melee.json";
-import SentinelsData from "@/data/warframe/Sentinels.json";
-import PetsData from "@/data/warframe/Pets.json";
-import ArchwingData from "@/data/warframe/Archwing.json";
-import ArchGunData from "@/data/warframe/Arch-Gun.json";
-import ArchMeleeData from "@/data/warframe/Arch-Melee.json";
-import SentinelWeaponsData from "@/data/warframe/SentinelWeapons.json";
-import MiscData from "@/data/warframe/Misc.json";
+import ArchGunData from "@/data/warframe/Arch-Gun.json"
+import ArchMeleeData from "@/data/warframe/Arch-Melee.json"
+import ArchwingData from "@/data/warframe/Archwing.json"
+import MeleeData from "@/data/warframe/Melee.json"
+import MiscData from "@/data/warframe/Misc.json"
+import PetsData from "@/data/warframe/Pets.json"
+import PrimaryData from "@/data/warframe/Primary.json"
+import SecondaryData from "@/data/warframe/Secondary.json"
+import SentinelsData from "@/data/warframe/Sentinels.json"
+import SentinelWeaponsData from "@/data/warframe/SentinelWeapons.json"
+import WarframesData from "@/data/warframe/Warframes.json"
 
+import { BROWSE_CATEGORIES } from "./categories"
+import { slugify } from "./slugs"
 import type {
   BrowseCategory,
   BrowseItem,
   BrowseFilters,
   BrowseableItem,
   SortOption,
-} from "./types";
-import { BROWSE_CATEGORIES } from "./categories";
-import { slugify } from "./slugs";
+} from "./types"
 
 // Combined items array from all categories (loaded once at module init)
 const allItems: BrowseableItem[] = [
@@ -38,12 +38,12 @@ const allItems: BrowseableItem[] = [
   ...(ArchMeleeData as BrowseableItem[]),
   ...(SentinelWeaponsData as BrowseableItem[]),
   ...(MiscData as BrowseableItem[]),
-];
+]
 
 // Precomputed caches to avoid repeated expensive work per request
-const itemsByCategory = new Map<BrowseCategory, BrowseItem[]>();
-const slugLookup = new Map<string, BrowseableItem>(); // key: `${category}|${slug}`
-const uniqueNameLookup = new Map<string, BrowseableItem>();
+const itemsByCategory = new Map<BrowseCategory, BrowseItem[]>()
+const slugLookup = new Map<string, BrowseableItem>() // key: `${category}|${slug}`
+const uniqueNameLookup = new Map<string, BrowseableItem>()
 const categoryCounts: Record<BrowseCategory, number> = {
   warframes: 0,
   primary: 0,
@@ -54,7 +54,7 @@ const categoryCounts: Record<BrowseCategory, number> = {
   "companion-weapons": 0,
   "exalted-weapons": 0,
   archwing: 0,
-};
+}
 
 /**
  * Check if an item is a Necramech
@@ -65,7 +65,7 @@ function isNecramech(item: BrowseableItem): boolean {
     (item.name.includes("Necramech") ||
       item.name === "Bonewidow" ||
       item.name === "Voidrig")
-  );
+  )
 }
 
 /**
@@ -73,7 +73,7 @@ function isNecramech(item: BrowseableItem): boolean {
  */
 function toBrowseItem(
   item: BrowseableItem,
-  category: BrowseCategory
+  category: BrowseCategory,
 ): BrowseItem {
   return {
     uniqueName: item.uniqueName,
@@ -86,89 +86,91 @@ function toBrowseItem(
     vaulted: item.vaulted,
     type: (item as { type?: string }).type,
     releaseDate: item.releaseDate,
-  };
+  }
 }
 
 // Determine all browse categories an item belongs to
 function categorizeItem(item: BrowseableItem): BrowseCategory[] {
-  if (!item.name || item.name.includes(" Blueprint")) return [];
+  if (!item.name || item.name.includes(" Blueprint")) return []
 
-  const itemCategory = item.category as string;
-  const categories: BrowseCategory[] = [];
+  const itemCategory = item.category as string
+  const categories: BrowseCategory[] = []
 
   if (itemCategory === "Warframes") {
     // Helminth is included in the Warframes dataset but is not a playable frame
     if (item.name === "Helminth") {
-      return [];
+      return []
     }
 
     if (isNecramech(item)) {
-      categories.push("necramechs");
+      categories.push("necramechs")
     } else {
-      categories.push("warframes");
+      categories.push("warframes")
     }
   }
 
-  const itemType = (item as { type?: string }).type;
-  const isCompanionWeapon = itemType === "Companion Weapon";
+  const itemType = (item as { type?: string }).type
+  const isCompanionWeapon = itemType === "Companion Weapon"
 
   // Exclude companion weapons from primary/secondary/melee categories
-  if (itemCategory === "Primary" && !isCompanionWeapon) categories.push("primary");
-  if (itemCategory === "Secondary" && !isCompanionWeapon) categories.push("secondary");
-  if (itemCategory === "Melee" && !isCompanionWeapon) categories.push("melee");
+  if (itemCategory === "Primary" && !isCompanionWeapon)
+    categories.push("primary")
+  if (itemCategory === "Secondary" && !isCompanionWeapon)
+    categories.push("secondary")
+  if (itemCategory === "Melee" && !isCompanionWeapon) categories.push("melee")
   if (itemCategory === "Sentinels" || itemCategory === "Pets") {
-    categories.push("companions");
+    categories.push("companions")
   }
   if (
     itemCategory === "Archwing" ||
     itemCategory === "Arch-Gun" ||
     itemCategory === "Arch-Melee"
   ) {
-    categories.push("archwing");
+    categories.push("archwing")
   }
 
   // Companion weapons (sentinel weapons and pet weapons)
   if (isCompanionWeapon) {
-    categories.push("companion-weapons");
+    categories.push("companion-weapons")
   }
 
   // Exalted weapons (abilities that summon weapons)
   if (itemType === "Exalted Weapon") {
-    categories.push("exalted-weapons");
+    categories.push("exalted-weapons")
   }
 
-  return categories;
+  return categories
 }
 
 // Build caches once
 for (const config of BROWSE_CATEGORIES) {
-  itemsByCategory.set(config.id, []);
+  itemsByCategory.set(config.id, [])
 }
 
 for (const item of allItems) {
-  uniqueNameLookup.set(item.uniqueName, item);
+  uniqueNameLookup.set(item.uniqueName, item)
 
-  const categories = categorizeItem(item);
+  const categories = categorizeItem(item)
   for (const category of categories) {
-    const list = itemsByCategory.get(category);
-    if (!list) continue;
+    const list = itemsByCategory.get(category)
+    if (!list) continue
 
-    const browseItem = toBrowseItem(item, category);
-    list.push(browseItem);
-    slugLookup.set(`${category}|${browseItem.slug}`, item);
+    const browseItem = toBrowseItem(item, category)
+    list.push(browseItem)
+    slugLookup.set(`${category}|${browseItem.slug}`, item)
   }
 }
 
 // Count items per category (sorting now happens client-side)
 for (const [category, list] of itemsByCategory.entries()) {
-  categoryCounts[category] = list.length;
+  categoryCounts[category] = list.length
 }
 
 /**
  * Get all items for a specific browse category
  */
 export function getItemsByCategory(category: BrowseCategory): BrowseItem[] {
-  return itemsByCategory.get(category) ?? [];
+  return itemsByCategory.get(category) ?? []
 }
 
 /**
@@ -176,38 +178,38 @@ export function getItemsByCategory(category: BrowseCategory): BrowseItem[] {
  */
 export function filterItems(
   items: BrowseItem[],
-  filters: Partial<BrowseFilters>
+  filters: Partial<BrowseFilters>,
 ): BrowseItem[] {
-  let result = [...items];
+  let result = [...items]
 
   // Text search
   if (filters.query) {
-    const query = filters.query.toLowerCase();
+    const query = filters.query.toLowerCase()
     result = result.filter(
       (item) =>
         item.name.toLowerCase().includes(query) ||
-        item.type?.toLowerCase().includes(query)
-    );
+        item.type?.toLowerCase().includes(query),
+    )
   }
 
   // Mastery requirement filter
   if (filters.masteryMax !== undefined) {
     result = result.filter(
-      (item) => (item.masteryReq ?? 0) <= filters.masteryMax!
-    );
+      (item) => (item.masteryReq ?? 0) <= filters.masteryMax!,
+    )
   }
 
   // Prime only filter
   if (filters.primeOnly) {
-    result = result.filter((item) => item.isPrime);
+    result = result.filter((item) => item.isPrime)
   }
 
   // Hide vaulted filter
   if (filters.hideVaulted) {
-    result = result.filter((item) => !item.vaulted);
+    result = result.filter((item) => !item.vaulted)
   }
 
-  return result;
+  return result
 }
 
 /**
@@ -215,33 +217,33 @@ export function filterItems(
  */
 export function sortItems(
   items: BrowseItem[],
-  sortOption: SortOption = "name-asc"
+  sortOption: SortOption = "name-asc",
 ): BrowseItem[] {
-  const result = [...items]; // Don't mutate input
+  const result = [...items] // Don't mutate input
 
   switch (sortOption) {
     case "name-asc":
-      return result.sort((a, b) => a.name.localeCompare(b.name));
+      return result.sort((a, b) => a.name.localeCompare(b.name))
 
     case "name-desc":
-      return result.sort((a, b) => b.name.localeCompare(a.name));
+      return result.sort((a, b) => b.name.localeCompare(a.name))
 
     case "date-desc": // Newest first
       return result.sort((a, b) => {
-        const dateA = a.releaseDate || "9999-12-31"; // No date = sort to end
-        const dateB = b.releaseDate || "9999-12-31";
-        return dateB.localeCompare(dateA); // Descending
-      });
+        const dateA = a.releaseDate || "9999-12-31" // No date = sort to end
+        const dateB = b.releaseDate || "9999-12-31"
+        return dateB.localeCompare(dateA) // Descending
+      })
 
     case "date-asc": // Oldest first
       return result.sort((a, b) => {
-        const dateA = a.releaseDate || "9999-12-31"; // No date = sort to end
-        const dateB = b.releaseDate || "9999-12-31";
-        return dateA.localeCompare(dateB); // Ascending
-      });
+        const dateA = a.releaseDate || "9999-12-31" // No date = sort to end
+        const dateB = b.releaseDate || "9999-12-31"
+        return dateA.localeCompare(dateB) // Ascending
+      })
 
     default:
-      return result.sort((a, b) => a.name.localeCompare(b.name));
+      return result.sort((a, b) => a.name.localeCompare(b.name))
   }
 }
 
@@ -250,48 +252,48 @@ export function sortItems(
  */
 export function getItemBySlug(
   category: BrowseCategory,
-  slug: string
+  slug: string,
 ): BrowseableItem | null {
-  const key = `${category}|${slug}`;
-  return slugLookup.get(key) ?? null;
+  const key = `${category}|${slug}`
+  return slugLookup.get(key) ?? null
 }
 
 /**
  * Get items for static generation (top N items per category)
  */
 export function getStaticItems(limit = 50): Array<{
-  category: BrowseCategory;
-  slug: string;
+  category: BrowseCategory
+  slug: string
 }> {
-  const result: Array<{ category: BrowseCategory; slug: string }> = [];
+  const result: Array<{ category: BrowseCategory; slug: string }> = []
 
   for (const config of BROWSE_CATEGORIES) {
-    const items = getItemsByCategory(config.id);
+    const items = getItemsByCategory(config.id)
     // Prioritize prime items and popular frames
     const sorted = [...items].sort((a, b) => {
       // Primes first
-      if (a.isPrime && !b.isPrime) return -1;
-      if (!a.isPrime && b.isPrime) return 1;
+      if (a.isPrime && !b.isPrime) return -1
+      if (!a.isPrime && b.isPrime) return 1
       // Then alphabetically
-      return a.name.localeCompare(b.name);
-    });
+      return a.name.localeCompare(b.name)
+    })
 
     for (const item of sorted.slice(0, limit)) {
       result.push({
         category: config.id,
         slug: item.slug,
-      });
+      })
     }
   }
 
-  return result;
+  return result
 }
 
 /**
  * Get total count of items per category (for UI display)
  */
 export function getCategoryCounts(): Record<BrowseCategory, number> {
-  return categoryCounts;
+  return categoryCounts
 }
 
 /**
@@ -300,17 +302,17 @@ export function getCategoryCounts(): Record<BrowseCategory, number> {
  */
 export function getFullItem(
   category: BrowseCategory,
-  uniqueName: string
+  uniqueName: string,
 ): BrowseableItem | null {
   // Validate the unique name exists at all
-  const item = uniqueNameLookup.get(uniqueName);
-  if (!item) return null;
+  const item = uniqueNameLookup.get(uniqueName)
+  if (!item) return null
 
   // Ensure the item belongs to the requested category
-  const categories = categorizeItem(item);
+  const categories = categorizeItem(item)
   if (categories.includes(category)) {
-    return item;
+    return item
   }
 
-  return null;
+  return null
 }

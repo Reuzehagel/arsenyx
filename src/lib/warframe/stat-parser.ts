@@ -2,9 +2,9 @@
 // Primary source: structured levelStats array
 // Fallback: regex parsing of description strings
 
-import type { PlacedMod } from "./types";
-import type { ParsedStat, StatType } from "./stat-types";
-import { DAMAGE_TYPE_COLORS } from "./stat-types";
+import type { ParsedStat, StatType } from "./stat-types"
+import { DAMAGE_TYPE_COLORS } from "./stat-types"
+import type { PlacedMod } from "./types"
 
 // Mapping from common stat names in WFCD data to our StatType enum
 const STAT_NAME_MAP: Record<string, StatType> = {
@@ -64,7 +64,7 @@ const STAT_NAME_MAP: Record<string, StatType> = {
   // Special
   "melee damage": "melee_damage",
   "tau resistance": "tau_resistance",
-};
+}
 
 // Patterns for conditional/stacking mods
 const CONDITIONAL_PATTERNS = [
@@ -73,10 +73,10 @@ const CONDITIONAL_PATTERNS = [
   /when damaged/i,
   /stacks up to/i,
   /for \d+s/i,
-];
+]
 
 // Patterns for extracting stack count
-const STACK_PATTERN = /stacks? up to (\d+)/i;
+const STACK_PATTERN = /stacks? up to (\d+)/i
 
 /**
  * Parse stat effects from a placed mod at its current rank
@@ -85,23 +85,23 @@ export function parseModStats(mod: PlacedMod): ParsedStat[] {
   try {
     // Try structured data first (levelStats array)
     if (mod.levelStats && mod.levelStats.length > 0) {
-      const rankIndex = Math.min(mod.rank, mod.levelStats.length - 1);
-      const levelData = mod.levelStats[rankIndex];
+      const rankIndex = Math.min(mod.rank, mod.levelStats.length - 1)
+      const levelData = mod.levelStats[rankIndex]
 
       if (levelData?.stats && levelData.stats.length > 0) {
-        const results: ParsedStat[] = [];
+        const results: ParsedStat[] = []
         for (const statString of levelData.stats) {
-          const parsed = parseStatString(statString);
-          results.push(...parsed);
+          const parsed = parseStatString(statString)
+          results.push(...parsed)
         }
-        return results;
+        return results
       }
     }
 
-    return [];
+    return []
   } catch (error) {
-    console.warn(`Failed to parse mod stats for ${mod.name}:`, error);
-    return [];
+    console.warn(`Failed to parse mod stats for ${mod.name}:`, error)
+    return []
   }
 }
 
@@ -115,45 +115,45 @@ export function parseModStats(mod: PlacedMod): ParsedStat[] {
  * - "On Kill:\n+40% Direct Damage per Status Type affecting the target for 20s. Stacks up to 2x."
  */
 export function parseStatString(statString: string): ParsedStat[] {
-  const results: ParsedStat[] = [];
+  const results: ParsedStat[] = []
 
   // Skip augment descriptions and complex ability effects
   if (statString.includes("Augment:") || statString.includes("augment:")) {
-    return results;
+    return results
   }
 
   // Skip pickup-related effects (e.g., Equilibrium: "Health pickups give +110% Energy")
   // These are gameplay mechanics, not direct stat buffs
   if (statString.toLowerCase().includes("pickups give")) {
-    return results;
+    return results
   }
 
   // Check if this is a conditional stat
-  const isConditional = CONDITIONAL_PATTERNS.some((p) => p.test(statString));
-  const stackMatch = statString.match(STACK_PATTERN);
-  const maxStacks = stackMatch ? parseInt(stackMatch[1], 10) : undefined;
+  const isConditional = CONDITIONAL_PATTERNS.some((p) => p.test(statString))
+  const stackMatch = statString.match(STACK_PATTERN)
+  const maxStacks = stackMatch ? parseInt(stackMatch[1], 10) : undefined
 
   // Extract conditional description if present
-  let conditionDescription: string | undefined;
+  let conditionDescription: string | undefined
   if (isConditional) {
-    const condMatch = statString.match(/^(on kill|when damaged|on hit):/i);
+    const condMatch = statString.match(/^(on kill|when damaged|on hit):/i)
     if (condMatch) {
-      conditionDescription = condMatch[1];
+      conditionDescription = condMatch[1]
     }
   }
 
   // Process percentage with color tags first
   // Pattern: +90% <DT_HEAT_COLOR>Heat
-  const colorTagPattern = /([+-]?\d+(?:\.\d+)?)\s*%\s*<([A-Z_]+)>([A-Za-z]+)/g;
-  let match;
+  const colorTagPattern = /([+-]?\d+(?:\.\d+)?)\s*%\s*<([A-Z_]+)>([A-Za-z]+)/g
+  let match
 
   while ((match = colorTagPattern.exec(statString)) !== null) {
-    const value = parseFloat(match[1]);
-    const colorTag = match[2];
+    const value = parseFloat(match[1])
+    const colorTag = match[2]
     // Note: match[3] is the stat name (e.g., "Heat") but we derive type from color tag
 
     // Get damage type from color tag
-    const damageType = DAMAGE_TYPE_COLORS[colorTag];
+    const damageType = DAMAGE_TYPE_COLORS[colorTag]
 
     if (damageType) {
       results.push({
@@ -164,23 +164,24 @@ export function parseStatString(statString: string): ParsedStat[] {
         isConditional,
         maxStacks,
         conditionDescription,
-      });
+      })
     }
   }
 
   // Process percentage without color tags
-  const percentPattern = /([+-]?\d+(?:\.\d+)?)\s*%\s+([A-Za-z][A-Za-z\s]*?)(?:\.|$|\n|,|<)/g;
+  const percentPattern =
+    /([+-]?\d+(?:\.\d+)?)\s*%\s+([A-Za-z][A-Za-z\s]*?)(?:\.|$|\n|,|<)/g
 
   while ((match = percentPattern.exec(statString)) !== null) {
-    const value = parseFloat(match[1]);
-    const statName = match[2].trim().toLowerCase();
+    const value = parseFloat(match[1])
+    const statName = match[2].trim().toLowerCase()
 
     // Skip if it's a damage type we already processed with color tag
     if (DAMAGE_TYPE_COLORS[`DT_${statName.toUpperCase()}_COLOR`]) {
-      continue;
+      continue
     }
 
-    const statType = STAT_NAME_MAP[statName];
+    const statType = STAT_NAME_MAP[statName]
     if (statType) {
       results.push({
         type: statType,
@@ -189,27 +190,32 @@ export function parseStatString(statString: string): ParsedStat[] {
         isConditional,
         maxStacks,
         conditionDescription,
-      });
+      })
     }
   }
 
   // Process flat additions (rare, e.g., some companion mods)
   // Be careful not to match values that are part of other text
-  const flatPattern = /([+-]\d+(?:\.\d+)?)\s+(?!%|s\b|m\b|x\b)([A-Za-z][A-Za-z\s]*?)(?:\.|$|\n|,)/g;
+  const flatPattern =
+    /([+-]\d+(?:\.\d+)?)\s+(?!%|s\b|m\b|x\b)([A-Za-z][A-Za-z\s]*?)(?:\.|$|\n|,)/g
 
   while ((match = flatPattern.exec(statString)) !== null) {
-    const value = parseFloat(match[1]);
-    const statName = match[2].trim().toLowerCase();
+    const value = parseFloat(match[1])
+    const statName = match[2].trim().toLowerCase()
 
     // Skip common non-stat values
-    if (["damage", "enemies", "seconds", "meters", "radius"].some((s) => statName.includes(s))) {
-      continue;
+    if (
+      ["damage", "enemies", "seconds", "meters", "radius"].some((s) =>
+        statName.includes(s),
+      )
+    ) {
+      continue
     }
 
-    const statType = STAT_NAME_MAP[statName];
+    const statType = STAT_NAME_MAP[statName]
     if (statType) {
       // Check if we already have this stat as a percentage
-      const existing = results.find((r) => r.type === statType);
+      const existing = results.find((r) => r.type === statType)
       if (!existing) {
         results.push({
           type: statType,
@@ -218,19 +224,20 @@ export function parseStatString(statString: string): ParsedStat[] {
           isConditional,
           maxStacks,
           conditionDescription,
-        });
+        })
       }
     }
   }
 
   // Handle multiplier notation (rare): 2.5x Combo Duration
-  const multPattern = /(\d+(?:\.\d+)?)\s*x\s+([A-Za-z][A-Za-z\s]*?)(?:\.|$|\n|,)/g;
+  const multPattern =
+    /(\d+(?:\.\d+)?)\s*x\s+([A-Za-z][A-Za-z\s]*?)(?:\.|$|\n|,)/g
 
   while ((match = multPattern.exec(statString)) !== null) {
-    const value = parseFloat(match[1]);
-    const statName = match[2].trim().toLowerCase();
+    const value = parseFloat(match[1])
+    const statName = match[2].trim().toLowerCase()
 
-    const statType = STAT_NAME_MAP[statName];
+    const statType = STAT_NAME_MAP[statName]
     if (statType) {
       results.push({
         type: statType,
@@ -239,42 +246,42 @@ export function parseStatString(statString: string): ParsedStat[] {
         isConditional,
         maxStacks,
         conditionDescription,
-      });
+      })
     }
   }
 
-  return results;
+  return results
 }
 
 /**
  * Check if a mod affects a specific stat type
  */
 export function modAffectsStat(mod: PlacedMod, statType: StatType): boolean {
-  const stats = parseModStats(mod);
-  return stats.some((s) => s.type === statType);
+  const stats = parseModStats(mod)
+  return stats.some((s) => s.type === statType)
 }
 
 /**
  * Get all stat types affected by a mod
  */
 export function getModAffectedStats(mod: PlacedMod): StatType[] {
-  const stats = parseModStats(mod);
-  return [...new Set(stats.map((s) => s.type))];
+  const stats = parseModStats(mod)
+  return [...new Set(stats.map((s) => s.type))]
 }
 
 /**
  * Check if a mod has any conditional effects
  */
 export function hasConditionalEffects(mod: PlacedMod): boolean {
-  const stats = parseModStats(mod);
-  return stats.some((s) => s.isConditional);
+  const stats = parseModStats(mod)
+  return stats.some((s) => s.isConditional)
 }
 
 /**
  * Get the max stacks for a conditional mod
  */
 export function getMaxStacks(mod: PlacedMod): number | undefined {
-  const stats = parseModStats(mod);
-  const conditional = stats.find((s) => s.maxStacks);
-  return conditional?.maxStacks;
+  const stats = parseModStats(mod)
+  const conditional = stats.find((s) => s.maxStacks)
+  return conditional?.maxStacks
 }

@@ -1,29 +1,30 @@
-"use client";
+"use client"
 
-import type { Mod, Arcane } from "@/lib/warframe/types";
-import type { DragItem } from "./hooks/use-build-state";
-import { ArcaneSearchPanel } from "./arcane-search-panel";
-import { ModSearchGrid } from "./mod-search-grid";
+import type { Mod, Arcane } from "@/lib/warframe/types"
+
+import { ArcaneSearchPanel } from "./arcane-search-panel"
+import type { DragItem } from "./hooks/use-build-state"
+import { ModSearchGrid } from "./mod-search-grid"
 
 export interface BuildEditorSearchPanelProps {
-  activeSlotId: string | null;
-  activeDragItem: DragItem | null;
-  compatibleArcanes: Arcane[];
-  compatibleMods: Mod[];
-  usedArcaneNames: Set<string>;
-  usedModNames: Set<string>;
-  onPlaceArcane: (arcane: Arcane, rank: number) => void;
-  onPlaceMod: (mod: Mod, rank?: number) => void;
+  activeSlotId: string | null
+  activeDragItem: DragItem | null
+  compatibleArcanes: Arcane[]
+  compatibleMods: Mod[]
+  usedArcaneNames: Set<string>
+  usedModNames: Set<string>
+  onPlaceArcane: (arcane: Arcane, rank: number) => void
+  onPlaceMod: (mod: Mod, rank?: number) => void
 }
 
 function getSlotType(
-  slotId: string | null
+  slotId: string | null,
 ): "aura" | "exilus" | "normal" | "arcane" {
-  if (!slotId) return "normal";
-  if (slotId.startsWith("aura")) return "aura";
-  if (slotId.startsWith("exilus")) return "exilus";
-  if (slotId.startsWith("arcane")) return "arcane";
-  return "normal";
+  if (!slotId) return "normal"
+  if (slotId.startsWith("aura")) return "aura"
+  if (slotId.startsWith("exilus")) return "exilus"
+  if (slotId.startsWith("arcane")) return "arcane"
+  return "normal"
 }
 
 export function BuildEditorSearchPanel({
@@ -37,7 +38,7 @@ export function BuildEditorSearchPanel({
   onPlaceMod,
 }: BuildEditorSearchPanelProps) {
   return (
-    <div className="bg-card border rounded-lg p-4">
+    <div className="bg-card rounded-lg border p-4">
       {(getSlotType(activeSlotId) === "arcane" ||
         activeDragItem?.type === "search-arcane" ||
         activeDragItem?.type === "placed-arcane") &&
@@ -56,5 +57,5 @@ export function BuildEditorSearchPanel({
         />
       )}
     </div>
-  );
+  )
 }

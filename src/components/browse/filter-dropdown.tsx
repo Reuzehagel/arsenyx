@@ -1,27 +1,28 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { useState } from "react"
+
+import { Icons } from "@/components/icons"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
-import { Icons } from "@/components/icons";
-import { cn } from "@/lib/utils";
+} from "@/components/ui/popover"
+import { Slider } from "@/components/ui/slider"
+import { cn } from "@/lib/utils"
 
 interface FilterDropdownProps {
-  masteryMax: number;
-  primeOnly: boolean;
-  hideVaulted: boolean;
-  activeFilterCount: number;
-  onMasteryChange: (value: number) => void;
-  onPrimeToggle: () => void;
-  onVaultedToggle: () => void;
-  onClearFilters: () => void;
+  masteryMax: number
+  primeOnly: boolean
+  hideVaulted: boolean
+  activeFilterCount: number
+  onMasteryChange: (value: number) => void
+  onPrimeToggle: () => void
+  onVaultedToggle: () => void
+  onClearFilters: () => void
 }
 
 export function FilterDropdown({
@@ -34,27 +35,31 @@ export function FilterDropdown({
   onVaultedToggle,
   onClearFilters,
 }: FilterDropdownProps) {
-  const [localMastery, setLocalMastery] = useState(masteryMax);
+  const [localMastery, setLocalMastery] = useState(masteryMax)
 
   // Update local state during drag, commit on release
   const handleMasteryDrag = (value: number) => {
-    setLocalMastery(value);
-  };
+    setLocalMastery(value)
+  }
 
   const handleMasteryCommit = (value: number) => {
-    onMasteryChange(value);
-  };
+    onMasteryChange(value)
+  }
 
   return (
     <Popover>
-      <PopoverTrigger render={<Button variant="outline" size="default" className="gap-2 shrink-0" />}>
-          <Icons.filter data-icon="inline-start" />
-          Filters
-          {activeFilterCount > 0 && (
-            <Badge variant="secondary" className="text-xs ml-1">
-              {activeFilterCount}
-            </Badge>
-          )}
+      <PopoverTrigger
+        render={
+          <Button variant="outline" size="default" className="shrink-0 gap-2" />
+        }
+      >
+        <Icons.filter data-icon="inline-start" />
+        Filters
+        {activeFilterCount > 0 && (
+          <Badge variant="secondary" className="ml-1 text-xs">
+            {activeFilterCount}
+          </Badge>
+        )}
       </PopoverTrigger>
       <PopoverContent className="w-80" align="end">
         <div className="flex flex-col gap-4">
@@ -64,7 +69,10 @@ export function FilterDropdown({
               variant="ghost"
               size="sm"
               onClick={onClearFilters}
-              className={cn("h-auto py-1 px-2 text-xs", activeFilterCount === 0 && "invisible")}
+              className={cn(
+                "h-auto px-2 py-1 text-xs",
+                activeFilterCount === 0 && "invisible",
+              )}
             >
               Clear all
             </Button>
@@ -74,7 +82,7 @@ export function FilterDropdown({
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <Label className="text-sm">Max Mastery Rank</Label>
-              <span className="text-sm text-muted-foreground tabular-nums">
+              <span className="text-muted-foreground text-sm tabular-nums">
                 MR {localMastery}
               </span>
             </div>
@@ -87,7 +95,7 @@ export function FilterDropdown({
               step={1}
               className="w-full"
             />
-            <div className="flex justify-between text-xs text-muted-foreground">
+            <div className="text-muted-foreground flex justify-between text-xs">
               <span>MR 0</span>
               <span>MR 30</span>
             </div>
@@ -116,5 +124,5 @@ export function FilterDropdown({
         </div>
       </PopoverContent>
     </Popover>
-  );
+  )
 }

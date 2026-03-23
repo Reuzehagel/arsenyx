@@ -1,26 +1,27 @@
-"use client";
+"use client"
 
-import { useCallback } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { useRouter, useSearchParams } from "next/navigation"
+import { useCallback } from "react"
+
+import { Icons } from "@/components/icons"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet";
-import { Icons } from "@/components/icons";
-import { cn } from "@/lib/utils";
+} from "@/components/ui/sheet"
+import { Slider } from "@/components/ui/slider"
+import { cn } from "@/lib/utils"
 
 interface FilterPanelProps {
-  masteryMax?: number;
-  primeOnly?: boolean;
-  hideVaulted?: boolean;
-  className?: string;
+  masteryMax?: number
+  primeOnly?: boolean
+  hideVaulted?: boolean
+  className?: string
 }
 
 export function FilterPanel({
@@ -29,38 +30,38 @@ export function FilterPanel({
   hideVaulted = false,
   className,
 }: FilterPanelProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const searchParamsString = searchParams.toString();
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const searchParamsString = searchParams.toString()
 
   const updateFilter = useCallback(
     (key: string, value: string | null) => {
-      const params = new URLSearchParams(searchParamsString);
+      const params = new URLSearchParams(searchParamsString)
       if (value === null || value === "") {
-        params.delete(key);
+        params.delete(key)
       } else {
-        params.set(key, value);
+        params.set(key, value)
       }
-      const next = params.toString();
-      if (next === searchParamsString) return;
-      router.push(`?${next}`, { scroll: false });
+      const next = params.toString()
+      if (next === searchParamsString) return
+      router.push(`?${next}`, { scroll: false })
     },
-    [router, searchParamsString]
-  );
+    [router, searchParamsString],
+  )
 
   const clearFilters = useCallback(() => {
-    const params = new URLSearchParams(searchParamsString);
-    params.delete("mastery");
-    params.delete("prime");
-    params.delete("vaulted");
-    const next = params.toString();
-    if (next === searchParamsString) return;
-    router.push(`?${next}`, { scroll: false });
-  }, [router, searchParamsString]);
+    const params = new URLSearchParams(searchParamsString)
+    params.delete("mastery")
+    params.delete("prime")
+    params.delete("vaulted")
+    const next = params.toString()
+    if (next === searchParamsString) return
+    router.push(`?${next}`, { scroll: false })
+  }, [router, searchParamsString])
 
   const activeFilterCount = [masteryMax < 16, primeOnly, hideVaulted].filter(
-    Boolean
-  ).length;
+    Boolean,
+  ).length
 
   const filterContent = (
     <div className="flex flex-col gap-6">
@@ -68,21 +69,21 @@ export function FilterPanel({
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <Label className="text-sm font-medium">Max Mastery Rank</Label>
-          <span className="text-sm text-muted-foreground tabular-nums">
+          <span className="text-muted-foreground text-sm tabular-nums">
             MR {masteryMax}
           </span>
         </div>
         <Slider
           value={masteryMax}
           onValueChange={(value: number) => {
-            updateFilter("mastery", value < 16 ? String(value) : null);
+            updateFilter("mastery", value < 16 ? String(value) : null)
           }}
           min={0}
           max={16}
           step={1}
           className="w-full"
         />
-        <div className="flex justify-between text-xs text-muted-foreground">
+        <div className="text-muted-foreground flex justify-between text-xs">
           <span>MR 0</span>
           <span>MR 16</span>
         </div>
@@ -123,7 +124,7 @@ export function FilterPanel({
         </Button>
       )}
     </div>
-  );
+  )
 
   return (
     <>
@@ -145,14 +146,16 @@ export function FilterPanel({
       {/* Mobile: Sheet */}
       <div className="lg:hidden">
         <Sheet>
-          <SheetTrigger render={<Button variant="outline" size="sm" className="gap-2" />}>
-              <Icons.settings data-icon="inline-start" />
-              Filters
-              {activeFilterCount > 0 && (
-                <Badge variant="secondary" className="text-xs ml-1">
-                  {activeFilterCount}
-                </Badge>
-              )}
+          <SheetTrigger
+            render={<Button variant="outline" size="sm" className="gap-2" />}
+          >
+            <Icons.settings data-icon="inline-start" />
+            Filters
+            {activeFilterCount > 0 && (
+              <Badge variant="secondary" className="ml-1 text-xs">
+                {activeFilterCount}
+              </Badge>
+            )}
           </SheetTrigger>
           <SheetContent side="right" className="w-[300px] sm:w-[400px]">
             <SheetHeader>
@@ -163,5 +166,5 @@ export function FilterPanel({
         </Sheet>
       </div>
     </>
-  );
+  )
 }

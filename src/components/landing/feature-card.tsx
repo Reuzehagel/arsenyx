@@ -1,22 +1,22 @@
+import { Icons } from "@/components/icons"
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Icons } from "@/components/icons";
-import type { Feature } from "@/lib/types";
+} from "@/components/ui/card"
+import type { Feature } from "@/lib/types"
 
 export function FeatureCard({ iconKey, title, description }: Feature) {
-  const Icon = Icons[iconKey];
+  const Icon = Icons[iconKey]
 
   return (
-    <Card className="group relative overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1">
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+    <Card className="group relative overflow-hidden transition-all hover:-translate-y-1 hover:shadow-lg">
+      <div className="from-primary/5 absolute inset-0 bg-gradient-to-br to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
       <CardHeader>
-        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-secondary mb-2">
-          <Icon className="h-6 w-6 text-muted-foreground group-hover:text-foreground transition-colors" />
+        <div className="bg-secondary mb-2 flex h-12 w-12 items-center justify-center rounded-lg">
+          <Icon className="text-muted-foreground group-hover:text-foreground h-6 w-6 transition-colors" />
         </div>
         <CardTitle className="text-lg">{title}</CardTitle>
       </CardHeader>
@@ -26,5 +26,5 @@ export function FeatureCard({ iconKey, title, description }: Feature) {
         </CardDescription>
       </CardContent>
     </Card>
-  );
+  )
 }

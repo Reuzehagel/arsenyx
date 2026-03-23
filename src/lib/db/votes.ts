@@ -4,16 +4,16 @@
  * Toggle votes and query vote status for builds
  */
 
-import { prisma } from "../db";
-import { voteLimiter, RateLimitError } from "../rate-limit";
+import { prisma } from "../db"
+import { voteLimiter, RateLimitError } from "../rate-limit"
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
 export interface ToggleVoteResult {
-  voted: boolean;
-  voteCount: number;
+  voted: boolean
+  voteCount: number
 }
 
 // =============================================================================
@@ -31,16 +31,16 @@ export interface ToggleVoteResult {
  */
 export async function toggleBuildVote(
   userId: string,
-  buildId: string
+  buildId: string,
 ): Promise<ToggleVoteResult> {
   // Rate limit: 10 votes per minute per user
-  await voteLimiter.check(10, `vote_${userId}`);
+  await voteLimiter.check(10, `vote_${userId}`)
 
   const existingVote = await prisma.buildVote.findUnique({
     where: {
       userId_buildId: { userId, buildId },
     },
-  });
+  })
 
   if (existingVote) {
     // Remove vote
@@ -51,8 +51,8 @@ export async function toggleBuildVote(
         data: { voteCount: { decrement: 1 } },
         select: { voteCount: true },
       }),
-    ]);
-    return { voted: false, voteCount: build.voteCount };
+    ])
+    return { voted: false, voteCount: build.voteCount }
   } else {
     // Add vote
     const [, build] = await prisma.$transaction([
@@ -62,8 +62,8 @@ export async function toggleBuildVote(
         data: { voteCount: { increment: 1 } },
         select: { voteCount: true },
       }),
-    ]);
-    return { voted: true, voteCount: build.voteCount };
+    ])
+    return { voted: true, voteCount: build.voteCount }
   }
 }
 
@@ -72,14 +72,14 @@ export async function toggleBuildVote(
  */
 export async function hasUserVotedForBuild(
   userId: string,
-  buildId: string
+  buildId: string,
 ): Promise<boolean> {
   const vote = await prisma.buildVote.findUnique({
     where: {
       userId_buildId: { userId, buildId },
     },
-  });
-  return Boolean(vote);
+  })
+  return Boolean(vote)
 }
 
 /**
@@ -91,9 +91,9 @@ export async function hasUserVotedForBuild(
  */
 export async function getUserVotesForBuilds(
   userId: string,
-  buildIds: string[]
+  buildIds: string[],
 ): Promise<Set<string>> {
-  if (buildIds.length === 0) return new Set();
+  if (buildIds.length === 0) return new Set()
 
   const votes = await prisma.buildVote.findMany({
     where: {
@@ -101,10 +101,10 @@ export async function getUserVotesForBuilds(
       buildId: { in: buildIds },
     },
     select: { buildId: true },
-  });
+  })
 
-  return new Set(votes.map((v) => v.buildId));
+  return new Set(votes.map((v) => v.buildId))
 }
 
 // Re-export for convenience
-export { RateLimitError };
+export { RateLimitError }

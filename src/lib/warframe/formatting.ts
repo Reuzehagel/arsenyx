@@ -5,7 +5,7 @@
  * This prevents duplication and ensures consistent formatting.
  */
 
-export type StatFormat = "number" | "percent" | "decimal" | "multiplier";
+export type StatFormat = "number" | "percent" | "decimal" | "multiplier"
 
 /**
  * Format a stat value for display with smart rounding
@@ -15,17 +15,17 @@ export function formatDisplayValue(value: number, format: StatFormat): string {
   switch (format) {
     case "percent":
       // Show as percentage, no trailing zeros
-      return value.toFixed(1).replace(/\.0$/, "") + "%";
+      return value.toFixed(1).replace(/\.0$/, "") + "%"
     case "multiplier":
       // Show with x suffix
-      return value.toFixed(1).replace(/\.0$/, "") + "x";
+      return value.toFixed(1).replace(/\.0$/, "") + "x"
     case "decimal":
       // Show with 2 decimal places, no trailing zeros
-      return value.toFixed(2).replace(/\.?0+$/, "");
+      return value.toFixed(2).replace(/\.?0+$/, "")
     case "number":
     default:
       // Floor to integer for most stats (Warframe floors stat values)
-      return Math.floor(value).toString();
+      return Math.floor(value).toString()
   }
 }
 
@@ -33,18 +33,18 @@ export function formatDisplayValue(value: number, format: StatFormat): string {
  * Format a contribution value with sign prefix for tooltip display
  */
 export function formatContribution(value: number, format: StatFormat): string {
-  const sign = value >= 0 ? "+" : "";
+  const sign = value >= 0 ? "+" : ""
   switch (format) {
     case "percent":
-      return `${sign}${value.toFixed(1).replace(/\.0$/, "")}%`;
+      return `${sign}${value.toFixed(1).replace(/\.0$/, "")}%`
     case "multiplier":
-      return `${sign}${value.toFixed(1).replace(/\.0$/, "")}x`;
+      return `${sign}${value.toFixed(1).replace(/\.0$/, "")}x`
     case "decimal":
-      return `${sign}${value.toFixed(2).replace(/\.?0+$/, "")}`;
+      return `${sign}${value.toFixed(2).replace(/\.?0+$/, "")}`
     case "number":
     default:
       // Warframe floors stat values
-      return `${sign}${Math.floor(value)}`;
+      return `${sign}${Math.floor(value)}`
   }
 }
 
@@ -52,5 +52,5 @@ export function formatContribution(value: number, format: StatFormat): string {
  * Format a percentage value (used for contribution percentages)
  */
 export function formatPercent(value: number): string {
-  return `${value.toFixed(1).replace(/\.0$/, "")}%`;
+  return `${value.toFixed(1).replace(/\.0$/, "")}%`
 }

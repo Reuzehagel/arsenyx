@@ -1,34 +1,29 @@
 // Warframe-specific stat calculations (health, shields, armor, energy, abilities)
 
-import type {
-  BuildState,
-  PlacedMod,
-  Warframe,
-  PlacedShard,
-} from "../types";
+import { findStat as findShardStat } from "../shards"
+import { applyStatCap } from "../stat-caps"
+import { parseModStats } from "../stat-parser"
 import type {
   WarframeStats,
   StatValue,
   StatContribution,
   StatType,
-} from "../stat-types";
-import { parseModStats } from "../stat-parser";
-import { applyStatCap } from "../stat-caps";
-import { findStat as findShardStat } from "../shards";
+} from "../stat-types"
+import type { BuildState, PlacedMod, Warframe, PlacedShard } from "../types"
 import {
   UMBRAL_MODS,
   UMBRAL_SET_BONUSES,
   getAllPlacedMods,
   countUmbralMods,
   getStatValue,
-} from "./stat-engine";
+} from "./stat-engine"
 
 type WarframeRankUpBonus = {
-  health: number;
-  shield: number;
-  armor: number;
-  energy: number;
-};
+  health: number
+  shield: number
+  armor: number
+  energy: number
+}
 
 // Rank-up bonuses from rank 0 -> rank 30.
 // Default values follow the in-game rank-up rules (health/shields/energy).
@@ -38,7 +33,7 @@ const DEFAULT_WARFRAME_RANKUP_BONUS: WarframeRankUpBonus = {
   shield: 100,
   armor: 0,
   energy: 50,
-};
+}
 
 // Warframe rank-up exceptions (from Module:Warframes/data on the wiki).
 // Values are the total bonus gained by rank 30.
@@ -73,19 +68,19 @@ const WARFRAME_RANKUP_BONUS_BY_NAME: Record<string, WarframeRankUpBonus> = {
   "Xaku Prime": { health: 90, shield: 90, armor: 0, energy: 70 },
   Yareli: { health: 100, shield: 100, armor: 0, energy: 100 },
   "Yareli Prime": { health: 100, shield: 100, armor: 0, energy: 100 },
-};
+}
 
 function getWarframeRank30BaseStats(warframe: Warframe) {
   const bonus =
     WARFRAME_RANKUP_BONUS_BY_NAME[warframe.name] ??
-    DEFAULT_WARFRAME_RANKUP_BONUS;
+    DEFAULT_WARFRAME_RANKUP_BONUS
 
   return {
     health: warframe.health + bonus.health,
     shield: warframe.shield + bonus.shield,
     armor: warframe.armor + bonus.armor,
     energy: warframe.power + bonus.energy,
-  };
+  }
 }
 
 /**
@@ -94,13 +89,13 @@ function getWarframeRank30BaseStats(warframe: Warframe) {
 export function calculateWarframeStats(
   warframe: Warframe,
   buildState: BuildState,
-  showMaxStacks = false
+  showMaxStacks = false,
 ): WarframeStats {
-  const mods = getAllPlacedMods(buildState);
-  const shards = buildState.shardSlots ?? [];
-  const umbralCount = countUmbralMods(mods);
+  const mods = getAllPlacedMods(buildState)
+  const shards = buildState.shardSlots ?? []
+  const umbralCount = countUmbralMods(mods)
 
-  const rank30 = getWarframeRank30BaseStats(warframe);
+  const rank30 = getWarframeRank30BaseStats(warframe)
 
   return {
     health: calculateSingleStat(
@@ -109,7 +104,7 @@ export function calculateWarframeStats(
       mods,
       shards,
       umbralCount,
-      showMaxStacks
+      showMaxStacks,
     ),
     shield: calculateSingleStat(
       "shield",
@@ -117,7 +112,7 @@ export function calculateWarframeStats(
       mods,
       shards,
       umbralCount,
-      showMaxStacks
+      showMaxStacks,
     ),
     armor: calculateSingleStat(
       "armor",
@@ -125,7 +120,7 @@ export function calculateWarframeStats(
       mods,
       shards,
       umbralCount,
-      showMaxStacks
+      showMaxStacks,
     ),
     energy: calculateSingleStat(
       "energy",
@@ -133,7 +128,7 @@ export function calculateWarframeStats(
       mods,
       shards,
       umbralCount,
-      showMaxStacks
+      showMaxStacks,
     ),
     sprintSpeed: calculateSingleStat(
       "sprint_speed",
@@ -141,33 +136,33 @@ export function calculateWarframeStats(
       mods,
       shards,
       umbralCount,
-      showMaxStacks
+      showMaxStacks,
     ),
     abilityStrength: calculateAbilityStat(
       "ability_strength",
       mods,
       shards,
-      showMaxStacks
+      showMaxStacks,
     ),
     abilityDuration: calculateAbilityStat(
       "ability_duration",
       mods,
       shards,
-      showMaxStacks
+      showMaxStacks,
     ),
     abilityEfficiency: calculateAbilityStat(
       "ability_efficiency",
       mods,
       shards,
-      showMaxStacks
+      showMaxStacks,
     ),
     abilityRange: calculateAbilityStat(
       "ability_range",
       mods,
       shards,
-      showMaxStacks
+      showMaxStacks,
     ),
-  };
+  }
 }
 
 /**
@@ -179,42 +174,42 @@ function calculateSingleStat(
   mods: PlacedMod[],
   shards: (PlacedShard | null)[],
   umbralCount: number,
-  showMaxStacks: boolean
+  showMaxStacks: boolean,
 ): StatValue {
-  const contributions: StatContribution[] = [];
-  let flatBonus = 0;
-  let percentBonus = 0;
+  const contributions: StatContribution[] = []
+  let flatBonus = 0
+  let percentBonus = 0
 
   // Collect mod contributions
   for (const mod of mods) {
-    const parsedStats = parseModStats(mod);
+    const parsedStats = parseModStats(mod)
     for (const stat of parsedStats) {
       if (stat.type === statType) {
-        const value = getStatValue(stat, showMaxStacks);
+        const value = getStatValue(stat, showMaxStacks)
 
         if (stat.operation === "flat_add") {
-          flatBonus += value;
+          flatBonus += value
           contributions.push({
             source: "mod",
             name: mod.name,
             absoluteValue: value,
             percentOfBonus: 0, // Calculated later
-          });
+          })
         } else if (stat.operation === "percent_add") {
           // Apply Umbral set bonus if applicable
-          const isUmbral = UMBRAL_MODS.has(mod.name);
+          const isUmbral = UMBRAL_MODS.has(mod.name)
           const setMultiplier = isUmbral
-            ? UMBRAL_SET_BONUSES[umbralCount] ?? 1
-            : 1;
-          const adjustedValue = value * setMultiplier;
+            ? (UMBRAL_SET_BONUSES[umbralCount] ?? 1)
+            : 1
+          const adjustedValue = value * setMultiplier
 
-          percentBonus += adjustedValue;
+          percentBonus += adjustedValue
           contributions.push({
             source: isUmbral && umbralCount > 1 ? "set_bonus" : "mod",
             name: mod.name,
             absoluteValue: (baseValue * adjustedValue) / 100,
             percentOfBonus: 0,
-          });
+          })
         }
       }
     }
@@ -222,10 +217,10 @@ function calculateSingleStat(
 
   // Collect shard contributions
   for (const shard of shards) {
-    if (!shard) continue;
+    if (!shard) continue
 
-    const shardStat = findShardStat(shard.color, shard.stat);
-    if (!shardStat) continue;
+    const shardStat = findShardStat(shard.color, shard.stat)
+    if (!shardStat) continue
 
     // Map shard stat names to our stat types
     const shardStatMap: Record<string, StatType> = {
@@ -234,17 +229,17 @@ function calculateSingleStat(
       Armor: "armor",
       "Energy Max": "energy",
       "Parkour Velocity": "sprint_speed",
-    };
+    }
 
-    const mappedType = shardStatMap[shard.stat];
+    const mappedType = shardStatMap[shard.stat]
     if (mappedType === statType) {
       const value = shard.tauforged
         ? shardStat.tauforgedValue
-        : shardStat.baseValue;
+        : shardStat.baseValue
 
       // Azure shards for health/shield/armor/energy are flat additions
       if (shardStat.unit === "") {
-        flatBonus += value;
+        flatBonus += value
         contributions.push({
           source: "shard",
           name: `${
@@ -252,9 +247,9 @@ function calculateSingleStat(
           } Archon Shard`,
           absoluteValue: value,
           percentOfBonus: 0,
-        });
+        })
       } else if (shardStat.unit === "%") {
-        percentBonus += value;
+        percentBonus += value
         contributions.push({
           source: "shard",
           name: `${
@@ -262,20 +257,20 @@ function calculateSingleStat(
           } Archon Shard`,
           absoluteValue: (baseValue * value) / 100,
           percentOfBonus: 0,
-        });
+        })
       }
     }
   }
 
   // Calculate final value
   // Formula: (Base + FlatBonus) × (1 + ΣPercentBonuses/100)
-  const modified = (baseValue + flatBonus) * (1 + percentBonus / 100);
+  const modified = (baseValue + flatBonus) * (1 + percentBonus / 100)
 
   // Calculate percent of bonus for each contribution
-  const totalBonus = modified - baseValue;
+  const totalBonus = modified - baseValue
   if (totalBonus > 0) {
     for (const contrib of contributions) {
-      contrib.percentOfBonus = (contrib.absoluteValue / totalBonus) * 100;
+      contrib.percentOfBonus = (contrib.absoluteValue / totalBonus) * 100
     }
   }
 
@@ -283,7 +278,7 @@ function calculateSingleStat(
     base: baseValue,
     modified: Math.round(modified * 100) / 100, // Round to 2 decimal places
     contributions,
-  };
+  }
 }
 
 /**
@@ -293,48 +288,48 @@ function calculateAbilityStat(
   statType: StatType,
   mods: PlacedMod[],
   shards: (PlacedShard | null)[],
-  showMaxStacks: boolean
+  showMaxStacks: boolean,
 ): StatValue {
-  const baseValue = 100; // Ability stats start at 100%
-  const contributions: StatContribution[] = [];
-  let totalBonus = 0;
+  const baseValue = 100 // Ability stats start at 100%
+  const contributions: StatContribution[] = []
+  let totalBonus = 0
 
   // Collect mod contributions
   for (const mod of mods) {
-    const parsedStats = parseModStats(mod);
+    const parsedStats = parseModStats(mod)
     for (const stat of parsedStats) {
       if (stat.type === statType) {
-        const value = getStatValue(stat, showMaxStacks);
-        totalBonus += value;
+        const value = getStatValue(stat, showMaxStacks)
+        totalBonus += value
 
         contributions.push({
           source: "mod",
           name: mod.name,
           absoluteValue: value,
           percentOfBonus: 0,
-        });
+        })
       }
     }
   }
 
   // Collect shard contributions for ability stats
   for (const shard of shards) {
-    if (!shard) continue;
+    if (!shard) continue
 
-    const shardStat = findShardStat(shard.color, shard.stat);
-    if (!shardStat) continue;
+    const shardStat = findShardStat(shard.color, shard.stat)
+    if (!shardStat) continue
 
     const shardStatMap: Record<string, StatType> = {
       "Ability Strength": "ability_strength",
       "Ability Duration": "ability_duration",
-    };
+    }
 
-    const mappedType = shardStatMap[shard.stat];
+    const mappedType = shardStatMap[shard.stat]
     if (mappedType === statType && shardStat.unit === "%") {
       const value = shard.tauforged
         ? shardStat.tauforgedValue
-        : shardStat.baseValue;
-      totalBonus += value;
+        : shardStat.baseValue
+      totalBonus += value
 
       contributions.push({
         source: "shard",
@@ -343,21 +338,21 @@ function calculateAbilityStat(
         } Archon Shard`,
         absoluteValue: value,
         percentOfBonus: 0,
-      });
+      })
     }
   }
 
-  const modified = baseValue + totalBonus;
+  const modified = baseValue + totalBonus
 
   // Apply stat cap
-  const capResult = applyStatCap(statType, modified);
+  const capResult = applyStatCap(statType, modified)
 
   // Calculate percent of bonus
-  const actualBonus = Math.abs(totalBonus);
+  const actualBonus = Math.abs(totalBonus)
   if (actualBonus > 0) {
     for (const contrib of contributions) {
       contrib.percentOfBonus =
-        (Math.abs(contrib.absoluteValue) / actualBonus) * 100;
+        (Math.abs(contrib.absoluteValue) / actualBonus) * 100
     }
   }
 
@@ -366,5 +361,5 @@ function calculateAbilityStat(
     modified: capResult.value,
     capped: capResult.uncapped,
     contributions,
-  };
+  }
 }

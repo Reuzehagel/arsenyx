@@ -1,22 +1,23 @@
-import Link from "next/link";
-import Image from "next/image";
-import { ThumbsUp, Eye } from "lucide-react";
-import { getImageUrl } from "@/lib/warframe/images";
-import type { ReactNode } from "react";
+import { ThumbsUp, Eye } from "lucide-react"
+import Image from "next/image"
+import Link from "next/link"
+import type { ReactNode } from "react"
+
+import { getImageUrl } from "@/lib/warframe/images"
 
 interface BuildCardLinkProps {
-  slug: string;
-  name: string;
-  itemName: string;
-  itemImageName: string | null;
-  voteCount: number;
-  viewCount: number;
+  slug: string
+  name: string
+  itemName: string
+  itemImageName: string | null
+  voteCount: number
+  viewCount: number
   /** Optional content rendered over the image (e.g. visibility badge) */
-  imageOverlay?: ReactNode;
+  imageOverlay?: ReactNode
   /** Optional subtitle line (e.g. "by username") */
-  subtitle?: ReactNode;
+  subtitle?: ReactNode
   /** Optional extra content after stats */
-  footer?: ReactNode;
+  footer?: ReactNode
 }
 
 export function BuildCardLink({
@@ -33,9 +34,9 @@ export function BuildCardLink({
   return (
     <Link
       href={`/builds/${slug}`}
-      className="block bg-card border rounded-lg overflow-hidden hover:border-primary transition-colors"
+      className="bg-card hover:border-primary block overflow-hidden rounded-lg border transition-colors"
     >
-      <div className="relative aspect-video bg-muted/20">
+      <div className="bg-muted/20 relative aspect-video">
         <Image
           src={getImageUrl(itemImageName ?? undefined)}
           alt={itemName}
@@ -46,27 +47,27 @@ export function BuildCardLink({
         />
         {imageOverlay}
       </div>
-      <div className="p-2 flex flex-col gap-1">
-        <h3 className="font-medium text-sm line-clamp-1">{name}</h3>
+      <div className="flex flex-col gap-1 p-2">
+        <h3 className="line-clamp-1 text-sm font-medium">{name}</h3>
         {subtitle ?? (
-          <p className="text-xs text-muted-foreground">{itemName}</p>
+          <p className="text-muted-foreground text-xs">{itemName}</p>
         )}
         <BuildStats voteCount={voteCount} viewCount={viewCount} />
         {footer}
       </div>
     </Link>
-  );
+  )
 }
 
 export function BuildStats({
   voteCount,
   viewCount,
 }: {
-  voteCount: number;
-  viewCount: number;
+  voteCount: number
+  viewCount: number
 }) {
   return (
-    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+    <div className="text-muted-foreground flex items-center gap-2 text-xs">
       <span className="flex items-center gap-0.5">
         <ThumbsUp className="size-3" />
         {voteCount}
@@ -76,5 +77,5 @@ export function BuildStats({
         {viewCount}
       </span>
     </div>
-  );
+  )
 }

@@ -13,7 +13,7 @@ export function slugify(name: string): string {
     .replace(/&/g, "and") // Replace & with 'and'
     .replace(/[^a-z0-9]+/g, "-") // Replace non-alphanumeric with hyphens
     .replace(/^-+|-+$/g, "") // Trim leading/trailing hyphens
-    .replace(/-+/g, "-"); // Collapse multiple hyphens
+    .replace(/-+/g, "-") // Collapse multiple hyphens
 }
 
 /**
@@ -22,19 +22,19 @@ export function slugify(name: string): string {
  * @example "excalibur-prime" -> "excalibur prime"
  */
 export function unslugify(slug: string): string {
-  return slug.replace(/-/g, " ");
+  return slug.replace(/-/g, " ")
 }
 
 /**
  * Generate the full browse URL for an item
  */
 export function getItemUrl(category: string, slug: string): string {
-  return `/browse/${category}/${slug}`;
+  return `/browse/${category}/${slug}`
 }
 
 /**
  * Parse category from URL and normalize to our format
  */
 export function normalizeCategory(category: string): string {
-  return category.toLowerCase();
+  return category.toLowerCase()
 }

@@ -1,10 +1,8 @@
-"use client";
+"use client"
 
-import { useState, useEffect, useCallback } from "react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import dynamic from "next/dynamic"
+import { useState, useEffect, useCallback } from "react"
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,39 +12,47 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import dynamic from "next/dynamic";
+} from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { cn } from "@/lib/utils"
 
 const DescriptionEditor = dynamic(
   () => import("./description-editor").then((mod) => mod.DescriptionEditor),
-  { ssr: false, loading: () => <div className="h-[200px] rounded-md border bg-muted/30 animate-pulse" /> }
-);
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-muted/30 h-[200px] animate-pulse rounded-md border" />
+    ),
+  },
+)
+import type { PartnerBuild } from "./partner-build-card"
 import {
   PartnerBuildSelector,
   type PartnerBuildOption,
-} from "./partner-build-selector";
-import type { PartnerBuild } from "./partner-build-card";
+} from "./partner-build-selector"
 
-const SUMMARY_MAX_LENGTH = 400;
-const SUMMARY_WARNING_THRESHOLD = 300;
+const SUMMARY_MAX_LENGTH = 400
+const SUMMARY_WARNING_THRESHOLD = 300
 
 export interface GuideEditorData {
-  summary: string;
-  description: string;
-  partnerBuildIds: string[];
+  summary: string
+  description: string
+  partnerBuildIds: string[]
 }
 
 interface GuideEditorProps {
-  buildId: string;
-  initialSummary?: string | null;
-  initialDescription?: string | null;
-  initialPartnerBuilds?: PartnerBuild[];
-  availableBuilds?: PartnerBuildOption[];
-  onSave?: (data: GuideEditorData) => void | Promise<void>;
-  onSummaryChange?: (summary: string) => void;
-  onDescriptionChange?: (description: string) => void;
-  showPartnerBuilds?: boolean;
-  showSaveButtons?: boolean;
+  buildId: string
+  initialSummary?: string | null
+  initialDescription?: string | null
+  initialPartnerBuilds?: PartnerBuild[]
+  availableBuilds?: PartnerBuildOption[]
+  onSave?: (data: GuideEditorData) => void | Promise<void>
+  onSummaryChange?: (summary: string) => void
+  onDescriptionChange?: (description: string) => void
+  showPartnerBuilds?: boolean
+  showSaveButtons?: boolean
 }
 
 export function GuideEditor({
@@ -61,27 +67,27 @@ export function GuideEditor({
   showPartnerBuilds = true,
   showSaveButtons = true,
 }: GuideEditorProps) {
-  const [summary, setSummary] = useState(initialSummary ?? "");
-  const [description, setDescription] = useState(initialDescription ?? "");
+  const [summary, setSummary] = useState(initialSummary ?? "")
+  const [description, setDescription] = useState(initialDescription ?? "")
   const [partnerBuilds, setPartnerBuilds] =
-    useState<PartnerBuild[]>(initialPartnerBuilds);
-  const [isSaving, setIsSaving] = useState(false);
+    useState<PartnerBuild[]>(initialPartnerBuilds)
+  const [isSaving, setIsSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">(
-    "idle"
-  );
-  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+    "idle",
+  )
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false)
   const [pendingAction, setPendingAction] = useState<"none" | "save" | "reset">(
-    "none"
-  );
+    "none",
+  )
 
   // Track if there are unsaved changes
   const hasChanges = useCallback(() => {
-    const summaryChanged = summary !== (initialSummary ?? "");
-    const descriptionChanged = description !== (initialDescription ?? "");
+    const summaryChanged = summary !== (initialSummary ?? "")
+    const descriptionChanged = description !== (initialDescription ?? "")
     const partnersChanged =
       JSON.stringify(partnerBuilds.map((b) => b.id).sort()) !==
-      JSON.stringify(initialPartnerBuilds.map((b) => b.id).sort());
-    return summaryChanged || descriptionChanged || partnersChanged;
+      JSON.stringify(initialPartnerBuilds.map((b) => b.id).sort())
+    return summaryChanged || descriptionChanged || partnersChanged
   }, [
     summary,
     description,
@@ -89,73 +95,73 @@ export function GuideEditor({
     initialSummary,
     initialDescription,
     initialPartnerBuilds,
-  ]);
+  ])
 
   // Reset state when initial values change
   useEffect(() => {
-    setSummary(initialSummary ?? "");
-    setDescription(initialDescription ?? "");
-    setPartnerBuilds(initialPartnerBuilds);
-    setSaveStatus("idle");
-  }, [initialSummary, initialDescription, initialPartnerBuilds]);
+    setSummary(initialSummary ?? "")
+    setDescription(initialDescription ?? "")
+    setPartnerBuilds(initialPartnerBuilds)
+    setSaveStatus("idle")
+  }, [initialSummary, initialDescription, initialPartnerBuilds])
 
   // Handle save
   const handleSave = useCallback(async () => {
-    setIsSaving(true);
-    setSaveStatus("idle");
+    setIsSaving(true)
+    setSaveStatus("idle")
 
     try {
       const data: GuideEditorData = {
         summary: summary.trim(),
         description: description.trim(),
         partnerBuildIds: partnerBuilds.map((b) => b.id),
-      };
-
-      if (onSave) {
-        await onSave(data);
       }
 
-      setSaveStatus("saved");
-      window.setTimeout(() => setSaveStatus("idle"), 3000);
+      if (onSave) {
+        await onSave(data)
+      }
+
+      setSaveStatus("saved")
+      window.setTimeout(() => setSaveStatus("idle"), 3000)
     } catch (error) {
-      console.error("Failed to save guide:", error);
-      setSaveStatus("error");
+      console.error("Failed to save guide:", error)
+      setSaveStatus("error")
     } finally {
-      setIsSaving(false);
+      setIsSaving(false)
     }
-  }, [summary, description, partnerBuilds, onSave]);
+  }, [summary, description, partnerBuilds, onSave])
 
   // Handle reset with unsaved changes check
   const handleReset = () => {
     if (hasChanges()) {
-      setPendingAction("reset");
-      setShowDiscardDialog(true);
+      setPendingAction("reset")
+      setShowDiscardDialog(true)
     } else {
-      doReset();
+      doReset()
     }
-  };
+  }
 
   const doReset = () => {
-    setSummary(initialSummary ?? "");
-    setDescription(initialDescription ?? "");
-    setPartnerBuilds(initialPartnerBuilds);
-    setSaveStatus("idle");
-    setShowDiscardDialog(false);
-    setPendingAction("none");
-  };
+    setSummary(initialSummary ?? "")
+    setDescription(initialDescription ?? "")
+    setPartnerBuilds(initialPartnerBuilds)
+    setSaveStatus("idle")
+    setShowDiscardDialog(false)
+    setPendingAction("none")
+  }
 
   const handleDiscardConfirm = () => {
     if (pendingAction === "reset") {
-      doReset();
+      doReset()
     } else {
-      setShowDiscardDialog(false);
-      setPendingAction("none");
+      setShowDiscardDialog(false)
+      setPendingAction("none")
     }
-  };
+  }
 
   // Handle partner build add/remove
   const handleAddPartner = (buildId: string) => {
-    const build = availableBuilds.find((b) => b.id === buildId);
+    const build = availableBuilds.find((b) => b.id === buildId)
     if (build) {
       setPartnerBuilds((prev) => [
         ...prev,
@@ -164,15 +170,17 @@ export function GuideEditor({
           slug: build.slug,
           name: build.name,
           item: build.item,
-          buildData: { formaCount: build.buildData.formaCount } as PartnerBuild["buildData"],
+          buildData: {
+            formaCount: build.buildData.formaCount,
+          } as PartnerBuild["buildData"],
         },
-      ]);
+      ])
     }
-  };
+  }
 
   const handleRemovePartner = (buildId: string) => {
-    setPartnerBuilds((prev) => prev.filter((b) => b.id !== buildId));
-  };
+    setPartnerBuilds((prev) => prev.filter((b) => b.id !== buildId))
+  }
 
   return (
     <>
@@ -189,7 +197,7 @@ export function GuideEditor({
                   "text-xs",
                   summary.length > SUMMARY_MAX_LENGTH
                     ? "text-destructive"
-                    : "text-muted-foreground"
+                    : "text-muted-foreground",
                 )}
               >
                 {summary.length}/{SUMMARY_MAX_LENGTH}
@@ -201,9 +209,9 @@ export function GuideEditor({
             placeholder="Brief description of this build (optional)..."
             value={summary}
             onChange={(e) => {
-              const newValue = e.target.value.slice(0, SUMMARY_MAX_LENGTH);
-              setSummary(newValue);
-              onSummaryChange?.(newValue);
+              const newValue = e.target.value.slice(0, SUMMARY_MAX_LENGTH)
+              setSummary(newValue)
+              onSummaryChange?.(newValue)
             }}
             rows={2}
             className="resize-none text-sm"
@@ -217,8 +225,8 @@ export function GuideEditor({
           <DescriptionEditor
             description={description}
             onDescriptionChange={(newValue) => {
-              setDescription(newValue);
-              onDescriptionChange?.(newValue);
+              setDescription(newValue)
+              onDescriptionChange?.(newValue)
             }}
             rows={20}
             toolbarSize="sm"
@@ -244,14 +252,10 @@ export function GuideEditor({
         {showSaveButtons && (
           <div className="flex items-center gap-2 pt-2">
             {saveStatus === "saved" && (
-              <span className="text-sm text-positive">
-                Saved
-              </span>
+              <span className="text-positive text-sm">Saved</span>
             )}
             {saveStatus === "error" && (
-              <span className="text-sm text-destructive">
-                Error saving
-              </span>
+              <span className="text-destructive text-sm">Error saving</span>
             )}
             <Button
               onClick={handleSave}
@@ -282,10 +286,12 @@ export function GuideEditor({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {
-              setShowDiscardDialog(false);
-              setPendingAction("none");
-            }}>
+            <AlertDialogCancel
+              onClick={() => {
+                setShowDiscardDialog(false)
+                setPendingAction("none")
+              }}
+            >
               Keep Changes
             </AlertDialogCancel>
             <AlertDialogAction onClick={handleDiscardConfirm}>
@@ -295,5 +301,5 @@ export function GuideEditor({
         </AlertDialogContent>
       </AlertDialog>
     </>
-  );
+  )
 }

@@ -1,5 +1,6 @@
-import WarframesData from "@/data/warframe/Warframes.json";
-import type { Warframe, HelminthAbility } from "./types";
+import WarframesData from "@/data/warframe/Warframes.json"
+
+import type { Warframe, HelminthAbility } from "./types"
 
 // Manually maintained list of subsumable abilities
 // Mapped from Warframe Name -> Ability Name
@@ -67,17 +68,17 @@ export const SUBSUMABLE_ABILITIES: Record<string, string> = {
   Xaku: "Xata's Whisper",
   Yareli: "Aquablades",
   Zephyr: "Airburst",
-};
+}
 
 /**
  * Get all available Helminth abilities (Native + Subsumable)
  */
 export function getHelminthAbilities(): HelminthAbility[] {
-  const abilities: HelminthAbility[] = [];
-  const warframes = WarframesData as unknown as Warframe[];
+  const abilities: HelminthAbility[] = []
+  const warframes = WarframesData as unknown as Warframe[]
 
   // 1. Get Native Helminth Abilities
-  const helminth = warframes.find((w) => w.name === "Helminth");
+  const helminth = warframes.find((w) => w.name === "Helminth")
   if (helminth && helminth.abilities) {
     helminth.abilities.forEach((ability) => {
       abilities.push({
@@ -86,16 +87,16 @@ export function getHelminthAbilities(): HelminthAbility[] {
         imageName: ability.imageName,
         description: ability.description,
         source: "Helminth",
-      });
-    });
+      })
+    })
   }
 
   // 2. Get Subsumable Abilities from other Warframes
   Object.entries(SUBSUMABLE_ABILITIES).forEach(
     ([warframeName, abilityName]) => {
-      const warframe = warframes.find((w) => w.name === warframeName);
+      const warframe = warframes.find((w) => w.name === warframeName)
       if (warframe && warframe.abilities) {
-        const ability = warframe.abilities.find((a) => a.name === abilityName);
+        const ability = warframe.abilities.find((a) => a.name === abilityName)
         if (ability) {
           abilities.push({
             uniqueName: ability.uniqueName,
@@ -103,11 +104,11 @@ export function getHelminthAbilities(): HelminthAbility[] {
             imageName: ability.imageName,
             description: ability.description,
             source: warframeName,
-          });
+          })
         }
       }
-    }
-  );
+    },
+  )
 
-  return abilities.sort((a, b) => a.name.localeCompare(b.name));
+  return abilities.sort((a, b) => a.name.localeCompare(b.name))
 }

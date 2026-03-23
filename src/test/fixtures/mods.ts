@@ -1,5 +1,5 @@
 // Test fixtures for mods
-import type { PlacedMod, Polarity } from "@/lib/warframe/types";
+import type { PlacedMod, Polarity } from "@/lib/warframe/types"
 
 /**
  * Create a test mod with default values
@@ -14,7 +14,7 @@ export function createTestMod(overrides: Partial<PlacedMod> = {}): PlacedMod {
     rank: 5,
     rarity: "Common",
     ...overrides,
-  };
+  }
 }
 
 // Common warframe mods
@@ -39,7 +39,7 @@ export const VITALITY: PlacedMod = createTestMod({
     { stats: ["+400% Health"] },
     { stats: ["+440% Health"] },
   ],
-});
+})
 
 export const STEEL_FIBER: PlacedMod = createTestMod({
   uniqueName: "/Lotus/Upgrades/Mods/Warframe/AvatarArmorMaxMod",
@@ -62,7 +62,7 @@ export const STEEL_FIBER: PlacedMod = createTestMod({
     { stats: ["+100% Armor"] },
     { stats: ["+110% Armor"] },
   ],
-});
+})
 
 export const INTENSIFY: PlacedMod = createTestMod({
   uniqueName: "/Lotus/Upgrades/Mods/Warframe/AvatarPowerStrengthMod",
@@ -80,7 +80,7 @@ export const INTENSIFY: PlacedMod = createTestMod({
     { stats: ["+25% Ability Strength"] },
     { stats: ["+30% Ability Strength"] },
   ],
-});
+})
 
 export const UMBRAL_VITALITY: PlacedMod = createTestMod({
   uniqueName: "/Lotus/Upgrades/Mods/Warframe/Expert/AvatarUmbralHealthMod",
@@ -104,10 +104,11 @@ export const UMBRAL_VITALITY: PlacedMod = createTestMod({
     { stats: ["+550% Health", "+110% Tau Resistance"] },
     { stats: ["+605% Health", "+121% Tau Resistance"] },
   ],
-});
+})
 
 export const UMBRAL_INTENSIFY: PlacedMod = createTestMod({
-  uniqueName: "/Lotus/Upgrades/Mods/Warframe/Expert/AvatarUmbralPowerStrengthMod",
+  uniqueName:
+    "/Lotus/Upgrades/Mods/Warframe/Expert/AvatarUmbralPowerStrengthMod",
   name: "Umbral Intensify",
   polarity: "umbra",
   baseDrain: 4,
@@ -128,7 +129,7 @@ export const UMBRAL_INTENSIFY: PlacedMod = createTestMod({
     { stats: ["+110% Ability Strength"] },
     { stats: ["+121% Ability Strength"] },
   ],
-});
+})
 
 export const UMBRAL_FIBER: PlacedMod = createTestMod({
   uniqueName: "/Lotus/Upgrades/Mods/Warframe/Expert/AvatarUmbralArmorMod",
@@ -152,7 +153,7 @@ export const UMBRAL_FIBER: PlacedMod = createTestMod({
     { stats: ["+165% Armor", "+110% Tau Resistance"] },
     { stats: ["+181.5% Armor", "+121% Tau Resistance"] },
   ],
-});
+})
 
 // Aura mod
 export const STEEL_CHARGE: PlacedMod = createTestMod({
@@ -172,7 +173,7 @@ export const STEEL_CHARGE: PlacedMod = createTestMod({
     { stats: ["+50% Melee Damage"] },
     { stats: ["+60% Melee Damage"] },
   ],
-});
+})
 
 // Weapon mods
 export const SERRATION: PlacedMod = createTestMod({
@@ -197,7 +198,7 @@ export const SERRATION: PlacedMod = createTestMod({
     { stats: ["+150% Damage"] },
     { stats: ["+165% Damage"] },
   ],
-});
+})
 
 export const POINT_STRIKE: PlacedMod = createTestMod({
   uniqueName: "/Lotus/Upgrades/Mods/Rifle/CritChanceMod",
@@ -216,7 +217,7 @@ export const POINT_STRIKE: PlacedMod = createTestMod({
     { stats: ["+125% Critical Chance"] },
     { stats: ["+150% Critical Chance"] },
   ],
-});
+})
 
 export const VITAL_SENSE: PlacedMod = createTestMod({
   uniqueName: "/Lotus/Upgrades/Mods/Rifle/CritDamageMod",
@@ -235,7 +236,7 @@ export const VITAL_SENSE: PlacedMod = createTestMod({
     { stats: ["+100% Critical Multiplier"] },
     { stats: ["+120% Critical Multiplier"] },
   ],
-});
+})
 
 export const HELLFIRE: PlacedMod = createTestMod({
   uniqueName: "/Lotus/Upgrades/Mods/Rifle/FireDamageMod",
@@ -254,7 +255,7 @@ export const HELLFIRE: PlacedMod = createTestMod({
     { stats: ["+75% <DT_HEAT_COLOR>Heat"] },
     { stats: ["+90% <DT_HEAT_COLOR>Heat"] },
   ],
-});
+})
 
 export const STORMBRINGER: PlacedMod = createTestMod({
   uniqueName: "/Lotus/Upgrades/Mods/Rifle/ElectricDamageMod",
@@ -273,7 +274,7 @@ export const STORMBRINGER: PlacedMod = createTestMod({
     { stats: ["+75% <DT_ELECTRICITY_COLOR>Electricity"] },
     { stats: ["+90% <DT_ELECTRICITY_COLOR>Electricity"] },
   ],
-});
+})
 
 // Galvanized (conditional) mod
 export const GALVANIZED_CHAMBER: PlacedMod = createTestMod({
@@ -286,16 +287,71 @@ export const GALVANIZED_CHAMBER: PlacedMod = createTestMod({
   rarity: "Legendary",
   compatName: "Rifle",
   levelStats: [
-    { stats: ["+20% Multishot", "On Kill:\n+10% Multishot for 20s. Stacks up to 4x."] },
-    { stats: ["+40% Multishot", "On Kill:\n+20% Multishot for 20s. Stacks up to 4x."] },
-    { stats: ["+60% Multishot", "On Kill:\n+30% Multishot for 20s. Stacks up to 4x."] },
-    { stats: ["+80% Multishot", "On Kill:\n+40% Multishot for 20s. Stacks up to 4x."] },
-    { stats: ["+100% Multishot", "On Kill:\n+50% Multishot for 20s. Stacks up to 4x."] },
-    { stats: ["+110% Multishot", "On Kill:\n+55% Multishot for 20s. Stacks up to 4x."] },
-    { stats: ["+120% Multishot", "On Kill:\n+60% Multishot for 20s. Stacks up to 4x."] },
-    { stats: ["+130% Multishot", "On Kill:\n+65% Multishot for 20s. Stacks up to 4x."] },
-    { stats: ["+140% Multishot", "On Kill:\n+70% Multishot for 20s. Stacks up to 4x."] },
-    { stats: ["+150% Multishot", "On Kill:\n+75% Multishot for 20s. Stacks up to 4x."] },
-    { stats: ["+160% Multishot", "On Kill:\n+80% Multishot for 20s. Stacks up to 4x."] },
+    {
+      stats: [
+        "+20% Multishot",
+        "On Kill:\n+10% Multishot for 20s. Stacks up to 4x.",
+      ],
+    },
+    {
+      stats: [
+        "+40% Multishot",
+        "On Kill:\n+20% Multishot for 20s. Stacks up to 4x.",
+      ],
+    },
+    {
+      stats: [
+        "+60% Multishot",
+        "On Kill:\n+30% Multishot for 20s. Stacks up to 4x.",
+      ],
+    },
+    {
+      stats: [
+        "+80% Multishot",
+        "On Kill:\n+40% Multishot for 20s. Stacks up to 4x.",
+      ],
+    },
+    {
+      stats: [
+        "+100% Multishot",
+        "On Kill:\n+50% Multishot for 20s. Stacks up to 4x.",
+      ],
+    },
+    {
+      stats: [
+        "+110% Multishot",
+        "On Kill:\n+55% Multishot for 20s. Stacks up to 4x.",
+      ],
+    },
+    {
+      stats: [
+        "+120% Multishot",
+        "On Kill:\n+60% Multishot for 20s. Stacks up to 4x.",
+      ],
+    },
+    {
+      stats: [
+        "+130% Multishot",
+        "On Kill:\n+65% Multishot for 20s. Stacks up to 4x.",
+      ],
+    },
+    {
+      stats: [
+        "+140% Multishot",
+        "On Kill:\n+70% Multishot for 20s. Stacks up to 4x.",
+      ],
+    },
+    {
+      stats: [
+        "+150% Multishot",
+        "On Kill:\n+75% Multishot for 20s. Stacks up to 4x.",
+      ],
+    },
+    {
+      stats: [
+        "+160% Multishot",
+        "On Kill:\n+80% Multishot for 20s. Stacks up to 4x.",
+      ],
+    },
   ],
-});
+})

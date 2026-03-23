@@ -1,10 +1,10 @@
-import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
-import { HeroSection, FeaturesSection, CTASection } from "@/components/landing";
+import { Footer } from "@/components/footer"
+import { Header } from "@/components/header"
+import { HeroSection, FeaturesSection, CTASection } from "@/components/landing"
 
 export default function Home() {
   return (
-    <div className="relative min-h-screen flex flex-col">
+    <div className="relative flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
         <HeroSection />
@@ -13,5 +13,5 @@ export default function Home() {
       </main>
       <Footer />
     </div>
-  );
+  )
 }

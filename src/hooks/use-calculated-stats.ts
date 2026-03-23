@@ -1,20 +1,21 @@
-"use client";
+"use client"
 
-import { useMemo, useState } from "react";
-import { calculateStats, buildHasConditionalMods } from "@/lib/warframe/stats";
-import type { BrowseableItem, BuildState } from "@/lib/warframe/types";
-import type { CalculatedStats } from "@/lib/warframe/stat-types";
+import { useMemo, useState } from "react"
+
+import type { CalculatedStats } from "@/lib/warframe/stat-types"
+import { calculateStats, buildHasConditionalMods } from "@/lib/warframe/stats"
+import type { BrowseableItem, BuildState } from "@/lib/warframe/types"
 
 interface UseCalculatedStatsOptions {
-  item: BrowseableItem;
-  buildState: BuildState;
+  item: BrowseableItem
+  buildState: BuildState
 }
 
 interface UseCalculatedStatsReturn {
-  stats: CalculatedStats;
-  showMaxStacks: boolean;
-  setShowMaxStacks: (value: boolean) => void;
-  hasConditionalMods: boolean;
+  stats: CalculatedStats
+  showMaxStacks: boolean
+  setShowMaxStacks: (value: boolean) => void
+  hasConditionalMods: boolean
 }
 
 /**
@@ -27,22 +28,22 @@ export function useCalculatedStats({
   item,
   buildState,
 }: UseCalculatedStatsOptions): UseCalculatedStatsReturn {
-  const [showMaxStacks, setShowMaxStacks] = useState(false);
+  const [showMaxStacks, setShowMaxStacks] = useState(false)
 
   const stats = useMemo(
     () => calculateStats(item, buildState, showMaxStacks),
-    [item, buildState, showMaxStacks]
-  );
+    [item, buildState, showMaxStacks],
+  )
 
   const hasConditionalMods = useMemo(
     () => buildHasConditionalMods(buildState),
-    [buildState]
-  );
+    [buildState],
+  )
 
   return {
     stats,
     showMaxStacks,
     setShowMaxStacks,
     hasConditionalMods,
-  };
+  }
 }

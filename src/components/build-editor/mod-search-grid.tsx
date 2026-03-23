@@ -1,12 +1,14 @@
-"use client";
+"use client"
 
-import { useMemo, useCallback, useState } from "react";
-import { Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
-import { SearchableModCard } from "./searchable-mod-card";
-import { FilterDropdown } from "./filter-dropdown";
-import { getModBaseName } from "@/lib/warframe/mod-variants";
+import { Search } from "lucide-react"
+import { useMemo, useCallback, useState } from "react"
+
+import { Input } from "@/components/ui/input"
+import { cn } from "@/lib/utils"
+import { getModBaseName } from "@/lib/warframe/mod-variants"
+import type { Mod, SlotType } from "@/lib/warframe/types"
+
+import { FilterDropdown } from "./filter-dropdown"
 import {
   useSearchPanel,
   useScrollIntoView,
@@ -14,8 +16,8 @@ import {
   handleGridKeyDown,
   RARITY_ORDER,
   RARITY_OPTIONS,
-} from "./hooks/use-search-panel";
-import type { Mod, SlotType } from "@/lib/warframe/types";
+} from "./hooks/use-search-panel"
+import { SearchableModCard } from "./searchable-mod-card"
 
 // =============================================================================
 // MOD-SPECIFIC CONSTANTS & HELPERS
@@ -30,11 +32,11 @@ const POLARITY_OPTIONS = [
   "Unairu",
   "Penjaga",
   "Umbra",
-] as const;
-const SORT_OPTIONS = ["Name", "Drain", "Rarity"] as const;
+] as const
+const SORT_OPTIONS = ["Name", "Drain", "Rarity"] as const
 
-type PolarityFilter = (typeof POLARITY_OPTIONS)[number];
-type SortOption = (typeof SORT_OPTIONS)[number];
+type PolarityFilter = (typeof POLARITY_OPTIONS)[number]
+type SortOption = (typeof SORT_OPTIONS)[number]
 
 const SEARCH_ALIASES: Record<string, string[]> = {
   dur: ["duration"],
@@ -78,26 +80,26 @@ const SEARCH_ALIASES: Record<string, string[]> = {
   ammo: ["ammo", "magazine"],
   punch: ["punch through"],
   dmg: ["damage"],
-};
+}
 
 function getModSearchableStats(mod: Mod): string {
-  if (!mod.levelStats || mod.levelStats.length === 0) return "";
-  const maxRankStats = mod.levelStats[mod.levelStats.length - 1]?.stats ?? [];
+  if (!mod.levelStats || mod.levelStats.length === 0) return ""
+  const maxRankStats = mod.levelStats[mod.levelStats.length - 1]?.stats ?? []
   return maxRankStats
     .map((s) => s.replace(/<[^>]+>/g, ""))
     .join(" ")
-    .toLowerCase();
+    .toLowerCase()
 }
 
 function expandSearchQuery(query: string): string[] {
-  const terms = [query];
-  const queryWords = query.toLowerCase().split(/\s+/);
+  const terms = [query]
+  const queryWords = query.toLowerCase().split(/\s+/)
   for (const [alias, expansions] of Object.entries(SEARCH_ALIASES)) {
     if (queryWords.includes(alias)) {
-      terms.push(...expansions);
+      terms.push(...expansions)
     }
   }
-  return [...new Set(terms)];
+  return [...new Set(terms)]
 }
 
 // =============================================================================
@@ -105,11 +107,11 @@ function expandSearchQuery(query: string): string[] {
 // =============================================================================
 
 interface ModSearchGridProps {
-  availableMods: Mod[];
-  slotType: SlotType;
-  usedModNames: Set<string>;
-  onSelectMod: (mod: Mod, rank: number) => void;
-  className?: string;
+  availableMods: Mod[]
+  slotType: SlotType
+  usedModNames: Set<string>
+  onSelectMod: (mod: Mod, rank: number) => void
+  className?: string
 }
 
 export function ModSearchGrid({
@@ -119,92 +121,111 @@ export function ModSearchGrid({
   onSelectMod,
   className,
 }: ModSearchGridProps) {
-  const [polarityFilter, setPolarityFilter] = useState<PolarityFilter>("All");
+  const [polarityFilter, setPolarityFilter] = useState<PolarityFilter>("All")
 
   const {
-    searchQuery, setSearchQuery, deferredSearchQuery,
-    rarityFilter, setRarityFilter, sortBy, setSortBy,
-    selectedIndex, setSelectedIndex, inputRef, gridRef,
-  } = useSearchPanel({ defaultSort: "Drain" });
+    searchQuery,
+    setSearchQuery,
+    deferredSearchQuery,
+    rarityFilter,
+    setRarityFilter,
+    sortBy,
+    setSortBy,
+    selectedIndex,
+    setSelectedIndex,
+    inputRef,
+    gridRef,
+  } = useSearchPanel({ defaultSort: "Drain" })
 
   // Precompute searchable strings once per mod list change
   const searchIndex = useMemo(() => {
-    const index = new Map<string, string>();
+    const index = new Map<string, string>()
     for (const m of availableMods) {
-      const name = m.name.toLowerCase();
-      const description = m.description?.toLowerCase() ?? "";
-      const stats = getModSearchableStats(m);
-      index.set(m.uniqueName, `${name} ${description} ${stats}`);
+      const name = m.name.toLowerCase()
+      const description = m.description?.toLowerCase() ?? ""
+      const stats = getModSearchableStats(m)
+      index.set(m.uniqueName, `${name} ${description} ${stats}`)
     }
-    return index;
-  }, [availableMods]);
+    return index
+  }, [availableMods])
 
   // Filter and sort mods
   const filteredMods = useMemo(() => {
-    let mods = [...availableMods];
+    let mods = [...availableMods]
 
     if (slotType === "aura") {
-      mods = mods.filter((m) => m.compatName?.toUpperCase() === "AURA");
+      mods = mods.filter((m) => m.compatName?.toUpperCase() === "AURA")
     } else if (slotType === "exilus") {
-      mods = mods.filter((m) => m.isExilus || m.isUtility);
+      mods = mods.filter((m) => m.isExilus || m.isUtility)
     }
 
     if (deferredSearchQuery.trim()) {
-      const query = deferredSearchQuery.toLowerCase();
-      const searchTerms = expandSearchQuery(query);
+      const query = deferredSearchQuery.toLowerCase()
+      const searchTerms = expandSearchQuery(query)
       mods = mods.filter((m) => {
-        const searchable = searchIndex.get(m.uniqueName) ?? "";
-        return searchTerms.some((term) => searchable.includes(term));
-      });
+        const searchable = searchIndex.get(m.uniqueName) ?? ""
+        return searchTerms.some((term) => searchable.includes(term))
+      })
     }
 
     if (rarityFilter !== "All") {
-      mods = mods.filter((m) => m.rarity === rarityFilter);
+      mods = mods.filter((m) => m.rarity === rarityFilter)
     }
 
     if (polarityFilter !== "All") {
       mods = mods.filter(
-        (m) => m.polarity.toLowerCase() === polarityFilter.toLowerCase()
-      );
+        (m) => m.polarity.toLowerCase() === polarityFilter.toLowerCase(),
+      )
     }
 
     switch (sortBy) {
       case "Name":
-        mods.sort((a, b) => a.name.localeCompare(b.name));
-        break;
+        mods.sort((a, b) => a.name.localeCompare(b.name))
+        break
       case "Drain":
-        mods.sort((a, b) => b.baseDrain - a.baseDrain);
-        break;
+        mods.sort((a, b) => b.baseDrain - a.baseDrain)
+        break
       case "Rarity":
         mods.sort((a, b) => {
           const rarityDiff =
-            (RARITY_ORDER[a.rarity] ?? 99) - (RARITY_ORDER[b.rarity] ?? 99);
-          if (rarityDiff !== 0) return rarityDiff;
-          return a.name.localeCompare(b.name);
-        });
-        break;
+            (RARITY_ORDER[a.rarity] ?? 99) - (RARITY_ORDER[b.rarity] ?? 99)
+          if (rarityDiff !== 0) return rarityDiff
+          return a.name.localeCompare(b.name)
+        })
+        break
     }
 
-    return mods;
-  }, [availableMods, deferredSearchQuery, sortBy, rarityFilter, polarityFilter, slotType]);
+    return mods
+  }, [
+    availableMods,
+    deferredSearchQuery,
+    sortBy,
+    rarityFilter,
+    polarityFilter,
+    slotType,
+    searchIndex,
+  ])
 
-  const boundedSelectedIndex = computeBoundedIndex(selectedIndex, filteredMods.length);
+  const boundedSelectedIndex = computeBoundedIndex(
+    selectedIndex,
+    filteredMods.length,
+  )
 
-  useScrollIntoView(gridRef, boundedSelectedIndex);
+  useScrollIntoView(gridRef, boundedSelectedIndex)
 
   const isModUsed = useCallback(
     (mod: Mod) => usedModNames.has(getModBaseName(mod.name)),
-    [usedModNames]
-  );
+    [usedModNames],
+  )
 
   const handleSelectMod = useCallback(
     (mod: Mod, rank: number) => {
       if (!isModUsed(mod)) {
-        onSelectMod(mod, rank);
+        onSelectMod(mod, rank)
       }
     },
-    [isModUsed, onSelectMod]
-  );
+    [isModUsed, onSelectMod],
+  )
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -216,33 +237,42 @@ export function ModSearchGrid({
         selectedIndex,
         setSelectedIndex,
         onEnterSelect: (index) => {
-          const selectedMod = filteredMods[index];
+          const selectedMod = filteredMods[index]
           if (selectedMod && !isModUsed(selectedMod)) {
-            handleSelectMod(selectedMod, selectedMod.fusionLimit ?? 0);
+            handleSelectMod(selectedMod, selectedMod.fusionLimit ?? 0)
           }
         },
-      });
+      })
     },
-    [filteredMods, boundedSelectedIndex, selectedIndex, setSelectedIndex, gridRef, inputRef, isModUsed, handleSelectMod]
-  );
+    [
+      filteredMods,
+      boundedSelectedIndex,
+      selectedIndex,
+      setSelectedIndex,
+      gridRef,
+      inputRef,
+      isModUsed,
+      handleSelectMod,
+    ],
+  )
 
   return (
     <div className={cn("flex flex-col gap-2", className)}>
       {/* Search and Filter Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
             ref={inputRef}
             placeholder="Search mods..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="pl-9 bg-muted/50 border-border/50"
+            className="bg-muted/50 border-border/50 pl-9"
           />
         </div>
 
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex flex-wrap gap-2">
           <FilterDropdown
             label={sortBy}
             options={[...SORT_OPTIONS]}
@@ -253,7 +283,9 @@ export function ModSearchGrid({
             label={rarityFilter === "All" ? "Rarity" : rarityFilter}
             options={[...RARITY_OPTIONS]}
             value={rarityFilter}
-            onChange={(v) => setRarityFilter(v as (typeof RARITY_OPTIONS)[number])}
+            onChange={(v) =>
+              setRarityFilter(v as (typeof RARITY_OPTIONS)[number])
+            }
           />
           <FilterDropdown
             label={polarityFilter === "All" ? "Polarity" : polarityFilter}
@@ -267,7 +299,7 @@ export function ModSearchGrid({
       {/* Mod Grid */}
       <div
         ref={gridRef}
-        className="grid gap-x-2 gap-y-4 overflow-x-auto pt-2 pb-6 px-2 max-w-full content-start"
+        className="grid max-w-full content-start gap-x-2 gap-y-4 overflow-x-auto px-2 pt-2 pb-6"
         style={{
           gridTemplateRows: "repeat(2, min-content)",
           gridAutoFlow: "column",
@@ -277,7 +309,7 @@ export function ModSearchGrid({
         tabIndex={0}
       >
         {filteredMods.length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-muted-foreground text-sm w-[160px]">
+          <div className="text-muted-foreground flex h-32 w-[160px] items-center justify-center text-sm">
             No mods found
           </div>
         ) : (
@@ -294,5 +326,5 @@ export function ModSearchGrid({
         )}
       </div>
     </div>
-  );
+  )
 }

@@ -24,12 +24,13 @@ import {
   Filter,
   ArrowUpDown,
   type LucideIcon,
-} from "lucide-react";
-import Image from "next/image";
-import { cn } from "@/lib/utils";
-import type { Polarity } from "@/lib/warframe/types";
+} from "lucide-react"
+import Image from "next/image"
 
-export type Icon = LucideIcon;
+import { cn } from "@/lib/utils"
+import type { Polarity } from "@/lib/warframe/types"
+
+export type Icon = LucideIcon
 
 // Icon size variants for consistent sizing across the app
 export const iconSizes = {
@@ -38,13 +39,13 @@ export const iconSizes = {
   md: "h-5 w-5",
   lg: "h-6 w-6",
   xl: "h-8 w-8",
-} as const;
+} as const
 
-export type IconSize = keyof typeof iconSizes;
+export type IconSize = keyof typeof iconSizes
 
 // Helper to get icon class with size
 export function getIconClass(size: IconSize = "sm", className?: string) {
-  return cn(iconSizes[size], className);
+  return cn(iconSizes[size], className)
 }
 
 export const Icons = {
@@ -72,7 +73,7 @@ export const Icons = {
   chevronLeft: ChevronLeft,
   filter: Filter,
   arrowUpDown: ArrowUpDown,
-};
+}
 
 // =============================================================================
 // POLARITY ICON COMPONENT
@@ -88,7 +89,7 @@ const polaritySvgMap: Record<Polarity, string> = {
   umbra: "/focus-schools/Umbra_Pol.svg",
   any: "/focus-schools/Any_Pol.svg",
   universal: "/focus-schools/Any_Pol.svg",
-};
+}
 
 const polarityColorMap: Record<Polarity, string> = {
   madurai: "brightness-0 invert sepia saturate-[10] hue-rotate-[350deg]", // Orange
@@ -100,13 +101,13 @@ const polarityColorMap: Record<Polarity, string> = {
   umbra: "brightness-0 invert sepia saturate-[10] hue-rotate-[25deg]", // Amber
   any: "brightness-0 invert opacity-60", // Gray
   universal: "brightness-0 invert opacity-60", // Gray
-};
+}
 
 interface PolarityIconProps {
-  polarity: Polarity;
-  size?: IconSize;
-  className?: string;
-  colored?: boolean;
+  polarity: Polarity
+  size?: IconSize
+  className?: string
+  colored?: boolean
 }
 
 export function PolarityIcon({
@@ -115,8 +116,8 @@ export function PolarityIcon({
   className,
   colored = false,
 }: PolarityIconProps) {
-  const sizeClasses = iconSizes[size];
-  const svgPath = polaritySvgMap[polarity];
+  const sizeClasses = iconSizes[size]
+  const svgPath = polaritySvgMap[polarity]
 
   return (
     <div className={cn("relative", sizeClasses, className)}>
@@ -126,9 +127,9 @@ export function PolarityIcon({
         fill
         className={cn(
           "object-contain",
-          colored ? polarityColorMap[polarity] : "brightness-0 invert"
+          colored ? polarityColorMap[polarity] : "brightness-0 invert",
         )}
       />
     </div>
-  );
+  )
 }

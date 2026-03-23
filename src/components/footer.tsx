@@ -1,8 +1,9 @@
-import Link from "next/link";
-import { Separator } from "@/components/ui/separator";
-import { Icons } from "@/components/icons";
-import { SITE_CONFIG, FOOTER_LINKS } from "@/lib/constants";
-import type { NavLink } from "@/lib/types";
+import Link from "next/link"
+
+import { Icons } from "@/components/icons"
+import { Separator } from "@/components/ui/separator"
+import { SITE_CONFIG, FOOTER_LINKS } from "@/lib/constants"
+import type { NavLink } from "@/lib/types"
 
 // Footer link component
 function FooterLink({ label, href, external }: NavLink) {
@@ -10,7 +11,7 @@ function FooterLink({ label, href, external }: NavLink) {
     <li>
       <Link
         href={href}
-        className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
+        className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm transition-colors"
         {...(external && {
           target: "_blank",
           rel: "noopener noreferrer",
@@ -20,7 +21,7 @@ function FooterLink({ label, href, external }: NavLink) {
         {external && <Icons.externalLink className="h-3 w-3" />}
       </Link>
     </li>
-  );
+  )
 }
 
 // Footer link section component
@@ -28,8 +29,8 @@ function FooterLinkSection({
   title,
   links,
 }: {
-  title: string;
-  links: readonly NavLink[];
+  title: string
+  links: readonly NavLink[]
 }) {
   return (
     <div className="flex flex-col gap-4">
@@ -40,12 +41,12 @@ function FooterLinkSection({
         ))}
       </ul>
     </div>
-  );
+  )
 }
 
 export function Footer() {
   return (
-    <footer className="border-t bg-background">
+    <footer className="bg-background border-t">
       <div className="container py-10">
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}
@@ -53,7 +54,7 @@ export function Footer() {
             <h3 className="text-lg font-semibold tracking-tight">
               {SITE_CONFIG.name}
             </h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">
+            <p className="text-muted-foreground text-sm leading-relaxed">
               {SITE_CONFIG.description}
             </p>
           </div>
@@ -65,18 +66,18 @@ export function Footer() {
 
         <Separator className="my-8" />
 
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-muted-foreground">
+        <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+          <p className="text-muted-foreground text-sm">
             © {SITE_CONFIG.year} {SITE_CONFIG.author}. Not affiliated with
             Digital Extremes.
           </p>
-          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+          <div className="text-muted-foreground flex items-center gap-1 text-sm">
             <span>Made with</span>
-            <Icons.heart className="h-4 w-4 text-destructive fill-destructive" />
+            <Icons.heart className="text-destructive fill-destructive h-4 w-4" />
             <span>for the Warframe community</span>
           </div>
         </div>
       </div>
     </footer>
-  );
+  )
 }

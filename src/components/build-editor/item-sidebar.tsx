@@ -1,57 +1,76 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import Image from "next/image";
-import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
-import { getImageUrl } from "@/lib/warframe/images";
-import type { BuildState, HelminthAbility, PlacedShard, BrowseableItem } from "@/lib/warframe/types";
-import type { CapacityStatus } from "@/lib/warframe/capacity";
-import { isWarframeCategory, isWeaponCategory, isGunCategory, isMeleeCategory } from "@/lib/warframe/categories";
-import { useCalculatedStats } from "@/hooks/use-calculated-stats";
-import { HelminthAbilityDialog } from "./helminth-ability-dialog";
-import { ShardsPanel } from "./shards-panel";
-import { CalculatedStatRow, SimpleStatRow } from "./stat-row";
-import { ConditionalToggle } from "./conditional-toggle";
-import { DamageBreakdownSection } from "./damage-breakdown";
+import Image from "next/image"
+import { useState } from "react"
+
+import { Separator } from "@/components/ui/separator"
+import { Switch } from "@/components/ui/switch"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { useCalculatedStats } from "@/hooks/use-calculated-stats"
+import { cn } from "@/lib/utils"
+import type { CapacityStatus } from "@/lib/warframe/capacity"
+import {
+  isWarframeCategory,
+  isWeaponCategory,
+  isGunCategory,
+  isMeleeCategory,
+} from "@/lib/warframe/categories"
+import { getImageUrl } from "@/lib/warframe/images"
+import type {
+  BuildState,
+  HelminthAbility,
+  PlacedShard,
+  BrowseableItem,
+} from "@/lib/warframe/types"
+
+import { ConditionalToggle } from "./conditional-toggle"
+import { DamageBreakdownSection } from "./damage-breakdown"
+import { HelminthAbilityDialog } from "./helminth-ability-dialog"
+import { ShardsPanel } from "./shards-panel"
+import { CalculatedStatRow, SimpleStatRow } from "./stat-row"
 
 interface ItemStats {
   // Warframe stats
-  health?: number;
-  shield?: number;
-  armor?: number;
-  energy?: number;
-  sprintSpeed?: number;
-  abilities?: Array<{ name: string; imageName?: string; description: string }>;
+  health?: number
+  shield?: number
+  armor?: number
+  energy?: number
+  sprintSpeed?: number
+  abilities?: Array<{ name: string; imageName?: string; description: string }>
   // Weapon stats (all)
-  fireRate?: number;
-  criticalChance?: number;
-  criticalMultiplier?: number;
-  procChance?: number; // status chance
-  totalDamage?: number;
+  fireRate?: number
+  criticalChance?: number
+  criticalMultiplier?: number
+  procChance?: number // status chance
+  totalDamage?: number
   // Gun stats (primary/secondary)
-  magazineSize?: number;
-  reloadTime?: number;
+  magazineSize?: number
+  reloadTime?: number
   // Melee stats
-  range?: number;
-  comboDuration?: number;
+  range?: number
+  comboDuration?: number
 }
 
 interface ItemSidebarProps {
-  buildState: BuildState;
-  capacityStatus: CapacityStatus;
-  onToggleReactor: () => void;
-  onCopyBuild: () => void;
-  onClearBuild: () => void;
-  showCopied: boolean;
-  itemStats?: ItemStats;
-  item?: BrowseableItem; // Full item data for stat calculations
-  readOnly?: boolean;
-  onHelminthAbilityChange?: (slotIndex: number, ability: HelminthAbility | null) => void;
-  onPlaceShard?: (slotIndex: number, shard: PlacedShard) => void;
-  onRemoveShard?: (slotIndex: number) => void;
+  buildState: BuildState
+  capacityStatus: CapacityStatus
+  onToggleReactor: () => void
+  onCopyBuild: () => void
+  onClearBuild: () => void
+  showCopied: boolean
+  itemStats?: ItemStats
+  item?: BrowseableItem // Full item data for stat calculations
+  readOnly?: boolean
+  onHelminthAbilityChange?: (
+    slotIndex: number,
+    ability: HelminthAbility | null,
+  ) => void
+  onPlaceShard?: (slotIndex: number, shard: PlacedShard) => void
+  onRemoveShard?: (slotIndex: number) => void
 }
 
 export function ItemSidebar({
@@ -66,8 +85,10 @@ export function ItemSidebar({
   onRemoveShard,
 }: ItemSidebarProps) {
   // Helminth Selection State
-  const [selectedAbilityIndex, setSelectedAbilityIndex] = useState<number | null>(null);
-  const [isHelminthDialogOpen, setIsHelminthDialogOpen] = useState(false);
+  const [selectedAbilityIndex, setSelectedAbilityIndex] = useState<
+    number | null
+  >(null)
+  const [isHelminthDialogOpen, setIsHelminthDialogOpen] = useState(false)
 
   // Create a fallback item for the hook (required for hooks rules)
   // The actual calculation will only be used if item is provided
@@ -79,49 +100,52 @@ export function ItemSidebar({
     shield: 0,
     armor: 0,
     power: 0,
-  };
+  }
 
   // Always call hook (React rules) but use fallback if no item
   const calculatedStatsResult = useCalculatedStats({
     item: item ?? fallbackItem,
     buildState,
-  });
+  })
 
   // Only use calculated stats if item was provided
-  const calculatedStats = item ? calculatedStatsResult : null;
+  const calculatedStats = item ? calculatedStatsResult : null
 
-  const isWarframeOrNecramech = isWarframeCategory(buildState.itemCategory);
-  const isWeapon = isWeaponCategory(buildState.itemCategory);
-  const isMelee = isMeleeCategory(buildState.itemCategory);
-  const isGun = isGunCategory(buildState.itemCategory);
+  const isWarframeOrNecramech = isWarframeCategory(buildState.itemCategory)
+  const isWeapon = isWeaponCategory(buildState.itemCategory)
+  const isMelee = isMeleeCategory(buildState.itemCategory)
+  const isGun = isGunCategory(buildState.itemCategory)
 
   // Reactor for warframes/necramechs, Catalyst for weapons
-  const capacityBoosterLabel = isWarframeOrNecramech ? "Reactor" : "Catalyst";
+  const capacityBoosterLabel = isWarframeOrNecramech ? "Reactor" : "Catalyst"
 
   // Calculate used and max capacity
-  const usedCapacity = capacityStatus.max - capacityStatus.remaining;
-  const maxCapacity = capacityStatus.max;
+  const usedCapacity = capacityStatus.max - capacityStatus.remaining
+  const maxCapacity = capacityStatus.max
 
   // Get abilities from item stats
-  const abilities = itemStats?.abilities ?? [];
+  const abilities = itemStats?.abilities ?? []
 
-  const isWarframe = buildState.itemCategory === "warframes"; // Specifically warframes, not necramechs
+  const isWarframe = buildState.itemCategory === "warframes" // Specifically warframes, not necramechs
 
   const handleAbilityClick = (index: number) => {
-    if (readOnly || !isWarframe) return;
-    setSelectedAbilityIndex(index);
-    setIsHelminthDialogOpen(true);
-  };
+    if (readOnly || !isWarframe) return
+    setSelectedAbilityIndex(index)
+    setIsHelminthDialogOpen(true)
+  }
 
   const handleHelminthSelect = (ability: HelminthAbility | null) => {
     if (selectedAbilityIndex !== null && onHelminthAbilityChange) {
-      onHelminthAbilityChange(selectedAbilityIndex, ability);
+      onHelminthAbilityChange(selectedAbilityIndex, ability)
     }
-    setIsHelminthDialogOpen(false);
-  };
+    setIsHelminthDialogOpen(false)
+  }
 
   // Helper to get ability to display (replaced or original)
-  const getDisplayAbility = (index: number, originalAbility: { name: string; imageName?: string; description: string }) => {
+  const getDisplayAbility = (
+    index: number,
+    originalAbility: { name: string; imageName?: string; description: string },
+  ) => {
     if (
       buildState.helminthAbility &&
       buildState.helminthAbility.slotIndex === index
@@ -129,62 +153,77 @@ export function ItemSidebar({
       return {
         ...buildState.helminthAbility.ability,
         isHelminth: true,
-      };
+      }
     }
-    return { ...originalAbility, isHelminth: false };
-  };
+    return { ...originalAbility, isHelminth: false }
+  }
 
   // Get warframe stats from calculated or fallback to base
-  const warframeStats = calculatedStats?.stats.warframe;
-  const weaponStats = calculatedStats?.stats.weapon;
+  const warframeStats = calculatedStats?.stats.warframe
+  const weaponStats = calculatedStats?.stats.weapon
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex h-full flex-col">
       {/* Abilities */}
       {isWarframeOrNecramech && abilities.length > 0 && (
-        <div className="p-3 flex justify-around">
+        <div className="flex justify-around p-3">
           {abilities.slice(0, 4).map((originalAbility, i) => {
-            const displayAbility = getDisplayAbility(i, originalAbility);
-            const tooltipDescription = displayAbility.isHelminth && "description" in displayAbility
-              ? displayAbility.description
-              : originalAbility.description;
+            const displayAbility = getDisplayAbility(i, originalAbility)
+            const tooltipDescription =
+              displayAbility.isHelminth && "description" in displayAbility
+                ? displayAbility.description
+                : originalAbility.description
 
             return (
               <Tooltip key={i}>
-                <TooltipTrigger render={<button
-                    className={cn(
-                      "size-10 rounded bg-muted border overflow-hidden relative transition-colors",
-                      displayAbility.isHelminth ? "border-destructive" : "border-border",
-                      !readOnly && isWarframe ? "hover:border-primary hover:cursor-pointer" : "cursor-default"
-                    )}
-                    onClick={!readOnly && isWarframe ? () => handleAbilityClick(i) : undefined}
-                    type="button"
-                  />}>
-                    {displayAbility.imageName ? (
-                      <Image
-                        src={getImageUrl(displayAbility.imageName)}
-                        alt={displayAbility.name}
-                        fill
-                        unoptimized
-                        sizes="40px"
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-                        {i + 1}
-                      </div>
-                    )}
+                <TooltipTrigger
+                  render={
+                    <button
+                      className={cn(
+                        "bg-muted relative size-10 overflow-hidden rounded border transition-colors",
+                        displayAbility.isHelminth
+                          ? "border-destructive"
+                          : "border-border",
+                        !readOnly && isWarframe
+                          ? "hover:border-primary hover:cursor-pointer"
+                          : "cursor-default",
+                      )}
+                      onClick={
+                        !readOnly && isWarframe
+                          ? () => handleAbilityClick(i)
+                          : undefined
+                      }
+                      type="button"
+                    />
+                  }
+                >
+                  {displayAbility.imageName ? (
+                    <Image
+                      src={getImageUrl(displayAbility.imageName)}
+                      alt={displayAbility.name}
+                      fill
+                      unoptimized
+                      sizes="40px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="text-muted-foreground flex h-full w-full items-center justify-center text-xs">
+                      {i + 1}
+                    </div>
+                  )}
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-xs">
                   <p className="font-semibold">{displayAbility.name}</p>
                   {tooltipDescription && (
-                    <p className="text-muted-foreground mt-1">{tooltipDescription}</p>
+                    <p className="text-muted-foreground mt-1">
+                      {tooltipDescription}
+                    </p>
                   )}
                 </TooltipContent>
               </Tooltip>
-            );
+            )
           })}
-      </div>
+        </div>
       )}
 
       <HelminthAbilityDialog
@@ -193,36 +232,43 @@ export function ItemSidebar({
         onSelect={handleHelminthSelect}
         currentAbilityName={
           selectedAbilityIndex !== null
-            ? getDisplayAbility(selectedAbilityIndex, abilities[selectedAbilityIndex]).name
+            ? getDisplayAbility(
+                selectedAbilityIndex,
+                abilities[selectedAbilityIndex],
+              ).name
             : undefined
         }
       />
 
       {/* Archon Shards - Warframes only (not Necramechs) */}
-      {buildState.itemCategory === "warframes" && onPlaceShard && onRemoveShard && (
-        <>
-          <Separator />
-          <ShardsPanel
-            shards={buildState.shardSlots}
-            onPlaceShard={onPlaceShard}
-            onRemoveShard={onRemoveShard}
-            readOnly={readOnly}
-          />
-        </>
-      )}
+      {buildState.itemCategory === "warframes" &&
+        onPlaceShard &&
+        onRemoveShard && (
+          <>
+            <Separator />
+            <ShardsPanel
+              shards={buildState.shardSlots}
+              onPlaceShard={onPlaceShard}
+              onRemoveShard={onRemoveShard}
+              readOnly={readOnly}
+            />
+          </>
+        )}
 
       {/* Separator after abilities/shards, before capacity - only if there's content above */}
       {isWarframeOrNecramech && <Separator />}
 
       {/* Capacity */}
-      <div className="p-3 flex flex-col gap-3">
+      <div className="flex flex-col gap-3 p-3">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">{capacityBoosterLabel}</span>
+          <span className="text-muted-foreground text-sm">
+            {capacityBoosterLabel}
+          </span>
           {!readOnly && (
             <Switch
               checked={buildState.hasReactor}
               onCheckedChange={onToggleReactor}
-              className="scale-75 origin-right"
+              className="origin-right scale-75"
             />
           )}
           {readOnly && (
@@ -233,16 +279,16 @@ export function ItemSidebar({
         </div>
 
         <div className="flex flex-col gap-1">
-          <div className="h-4 bg-muted rounded-full overflow-hidden relative">
+          <div className="bg-muted relative h-4 overflow-hidden rounded-full">
             <div
               className={cn(
-                "h-full transition-all duration-200 rounded-full",
-                capacityStatus.remaining < 0 ? "bg-destructive" : "bg-primary"
+                "h-full rounded-full transition-all duration-200",
+                capacityStatus.remaining < 0 ? "bg-destructive" : "bg-primary",
               )}
               style={{
                 width: `${Math.min(
                   100,
-                  Math.max(0, (usedCapacity / maxCapacity) * 100)
+                  Math.max(0, (usedCapacity / maxCapacity) * 100),
                 )}%`,
               }}
             />
@@ -266,23 +312,11 @@ export function ItemSidebar({
 
       {/* Warframe Base Stats - Calculated */}
       {isWarframeOrNecramech && warframeStats && (
-        <div className="p-3 flex flex-col gap-2">
-          <CalculatedStatRow
-            label="Energy"
-            stat={warframeStats.energy}
-          />
-          <CalculatedStatRow
-            label="Health"
-            stat={warframeStats.health}
-          />
-          <CalculatedStatRow
-            label="Shield"
-            stat={warframeStats.shield}
-          />
-          <CalculatedStatRow
-            label="Armor"
-            stat={warframeStats.armor}
-          />
+        <div className="flex flex-col gap-2 p-3">
+          <CalculatedStatRow label="Energy" stat={warframeStats.energy} />
+          <CalculatedStatRow label="Health" stat={warframeStats.health} />
+          <CalculatedStatRow label="Shield" stat={warframeStats.shield} />
+          <CalculatedStatRow label="Armor" stat={warframeStats.armor} />
           <CalculatedStatRow
             label="Sprint Speed"
             stat={warframeStats.sprintSpeed}
@@ -293,7 +327,7 @@ export function ItemSidebar({
 
       {/* Warframe Base Stats - Fallback to static display */}
       {isWarframeOrNecramech && !warframeStats && (
-        <div className="p-3 flex flex-col gap-2">
+        <div className="flex flex-col gap-2 p-3">
           <SimpleStatRow
             label="Energy"
             value={itemStats?.energy?.toString() ?? "—"}
@@ -319,7 +353,7 @@ export function ItemSidebar({
 
       {/* Weapon Stats - Calculated */}
       {isWeapon && weaponStats && weaponStats.attackModes.length > 0 && (
-        <div className="p-3 flex flex-col gap-2">
+        <div className="flex flex-col gap-2 p-3">
           {/* For multiple attack modes, show shared stats first */}
           {weaponStats.attackModes.length > 1 && (
             <>
@@ -378,16 +412,15 @@ export function ItemSidebar({
           {weaponStats.attackModes.map((mode, i) => (
             <div key={i} className="flex flex-col gap-2">
               {/* Separator between sections */}
-              {(weaponStats.attackModes.length > 1 || i > 0) && <Separator className="my-2" />}
+              {(weaponStats.attackModes.length > 1 || i > 0) && (
+                <Separator className="my-2" />
+              )}
               {weaponStats.attackModes.length > 1 && (
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                <span className="text-muted-foreground text-[10px] tracking-wider uppercase">
                   {mode.name}
                 </span>
               )}
-              <CalculatedStatRow
-                label="Total Damage"
-                stat={mode.totalDamage}
-              />
+              <CalculatedStatRow label="Total Damage" stat={mode.totalDamage} />
               {/* For single attack mode, show all stats inline */}
               {weaponStats.attackModes.length === 1 && (
                 <>
@@ -458,22 +491,34 @@ export function ItemSidebar({
 
       {/* Weapon Stats - Fallback to static display */}
       {isWeapon && !weaponStats && (
-        <div className="p-3 flex flex-col gap-2">
+        <div className="flex flex-col gap-2 p-3">
           <SimpleStatRow
             label="Total Damage"
             value={itemStats?.totalDamage?.toFixed(0) ?? "—"}
           />
           <SimpleStatRow
             label="Critical Chance"
-            value={itemStats?.criticalChance != null ? `${(itemStats.criticalChance * 100).toFixed(1)}%` : "—"}
+            value={
+              itemStats?.criticalChance != null
+                ? `${(itemStats.criticalChance * 100).toFixed(1)}%`
+                : "—"
+            }
           />
           <SimpleStatRow
             label="Critical Multiplier"
-            value={itemStats?.criticalMultiplier != null ? `${itemStats.criticalMultiplier.toFixed(1)}x` : "—"}
+            value={
+              itemStats?.criticalMultiplier != null
+                ? `${itemStats.criticalMultiplier.toFixed(1)}x`
+                : "—"
+            }
           />
           <SimpleStatRow
             label="Status Chance"
-            value={itemStats?.procChance != null ? `${(itemStats.procChance * 100).toFixed(1)}%` : "—"}
+            value={
+              itemStats?.procChance != null
+                ? `${(itemStats.procChance * 100).toFixed(1)}%`
+                : "—"
+            }
           />
           <SimpleStatRow
             label="Fire Rate"
@@ -487,7 +532,11 @@ export function ItemSidebar({
               />
               <SimpleStatRow
                 label="Reload Time"
-                value={itemStats?.reloadTime != null ? `${itemStats.reloadTime.toFixed(1)}s` : "—"}
+                value={
+                  itemStats?.reloadTime != null
+                    ? `${itemStats.reloadTime.toFixed(1)}s`
+                    : "—"
+                }
               />
             </>
           )}
@@ -495,11 +544,19 @@ export function ItemSidebar({
             <>
               <SimpleStatRow
                 label="Range"
-                value={itemStats?.range != null ? `${itemStats.range.toFixed(1)}m` : "—"}
+                value={
+                  itemStats?.range != null
+                    ? `${itemStats.range.toFixed(1)}m`
+                    : "—"
+                }
               />
               <SimpleStatRow
                 label="Combo Duration"
-                value={itemStats?.comboDuration != null ? `${itemStats.comboDuration.toFixed(0)}s` : "—"}
+                value={
+                  itemStats?.comboDuration != null
+                    ? `${itemStats.comboDuration.toFixed(0)}s`
+                    : "—"
+                }
               />
             </>
           )}
@@ -510,7 +567,7 @@ export function ItemSidebar({
       {isWarframeOrNecramech && warframeStats && (
         <>
           <Separator />
-          <div className="p-3 flex flex-col gap-2">
+          <div className="flex flex-col gap-2 p-3">
             <CalculatedStatRow
               label="Duration"
               stat={warframeStats.abilityDuration}
@@ -539,26 +596,14 @@ export function ItemSidebar({
       {isWarframeOrNecramech && !warframeStats && (
         <>
           <Separator />
-          <div className="p-3 flex flex-col gap-2">
-            <SimpleStatRow
-              label="Duration"
-              value="100%"
-            />
-            <SimpleStatRow
-              label="Efficiency"
-              value="100%"
-            />
-            <SimpleStatRow
-              label="Range"
-              value="100%"
-            />
-            <SimpleStatRow
-              label="Strength"
-              value="100%"
-            />
+          <div className="flex flex-col gap-2 p-3">
+            <SimpleStatRow label="Duration" value="100%" />
+            <SimpleStatRow label="Efficiency" value="100%" />
+            <SimpleStatRow label="Range" value="100%" />
+            <SimpleStatRow label="Strength" value="100%" />
           </div>
         </>
       )}
     </div>
-  );
+  )
 }

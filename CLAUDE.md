@@ -12,6 +12,8 @@ Arsenyx is a Warframe build planner — create, share, and discover equipment bu
 - **Database**: PostgreSQL via Prisma ORM with `@prisma/adapter-pg`
 - **Authentication**: Better Auth with GitHub OAuth
 - **Rich Text Editor**: Lexical
+- **Linting**: Oxlint (replaces ESLint)
+- **Formatting**: Oxfmt (with Tailwind class sorting)
 - **Package Manager**: Bun (required)
 - **Data Source**: `@wfcd/items` (Warframe Community Data)
 
@@ -21,7 +23,10 @@ Arsenyx is a Warframe build planner — create, share, and discover equipment bu
 bun install              # Install deps (runs prisma generate via postinstall)
 bun dev                  # Dev server (Next.js + Turbopack)
 bun build                # Production build
-bun lint                 # ESLint
+bun lint                 # Oxlint
+bun lint:fix             # Oxlint with auto-fix
+bun fmt                  # Oxfmt (format src/)
+bun fmt:check            # Oxfmt check mode
 bun test                 # Run tests
 bun test:watch           # Watch mode
 bun test:coverage        # Coverage report

@@ -1,31 +1,32 @@
-"use client";
+"use client"
 
-import { useEffect, useRef } from "react";
-import { incrementViewCountAction } from "@/app/actions/builds";
+import { useEffect, useRef } from "react"
+
+import { incrementViewCountAction } from "@/app/actions/builds"
 
 interface ViewTrackerProps {
-    buildId: string;
+  buildId: string
 }
 
 export function ViewTracker({ buildId }: ViewTrackerProps) {
-    const attemptedRef = useRef(false);
+  const attemptedRef = useRef(false)
 
-    useEffect(() => {
-        // Prevent double-firing in Strict Mode
-        if (attemptedRef.current) return;
-        attemptedRef.current = true;
+  useEffect(() => {
+    // Prevent double-firing in Strict Mode
+    if (attemptedRef.current) return
+    attemptedRef.current = true
 
-        const storageKey = `arsenyx_viewed_${buildId}`;
+    const storageKey = `arsenyx_viewed_${buildId}`
 
-        // Check if already viewed this session
-        if (sessionStorage.getItem(storageKey)) {
-            return;
-        }
+    // Check if already viewed this session
+    if (sessionStorage.getItem(storageKey)) {
+      return
+    }
 
-        // Mark as viewed and increment
-        sessionStorage.setItem(storageKey, "true");
-        incrementViewCountAction(buildId);
-    }, [buildId]);
+    // Mark as viewed and increment
+    sessionStorage.setItem(storageKey, "true")
+    incrementViewCountAction(buildId)
+  }, [buildId])
 
-    return null;
+  return null
 }

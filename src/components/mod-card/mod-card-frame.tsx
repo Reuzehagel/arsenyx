@@ -5,8 +5,9 @@
  * All rarities are normalized to a consistent display width.
  */
 
-import Image from "next/image";
-import { cn } from "@/lib/utils";
+import Image from "next/image"
+
+import { cn } from "@/lib/utils"
 import {
   type ModRarity,
   type CardVariant,
@@ -15,17 +16,17 @@ import {
   getRarityColor,
   ASSET_DIMENSIONS,
   getRarityGroup,
-} from "@/lib/warframe/mod-card-config";
+} from "@/lib/warframe/mod-card-config"
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
 export interface ModCardFrameProps {
-  rarity: ModRarity;
-  variant: CardVariant;
-  children?: React.ReactNode;
-  className?: string;
+  rarity: ModRarity
+  variant: CardVariant
+  children?: React.ReactNode
+  className?: string
 }
 
 // =============================================================================
@@ -33,9 +34,9 @@ export interface ModCardFrameProps {
 // =============================================================================
 
 interface RankCompleteLineProps {
-  rarity: ModRarity;
-  className?: string;
-  disableAnimation?: boolean;
+  rarity: ModRarity
+  className?: string
+  disableAnimation?: boolean
 }
 
 export function RankCompleteLine({
@@ -44,7 +45,7 @@ export function RankCompleteLine({
   disableAnimation = false,
 }: RankCompleteLineProps) {
   return (
-    <div className={cn("overflow-hidden pointer-events-none", className)}>
+    <div className={cn("pointer-events-none overflow-hidden", className)}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={getModAssetUrl(rarity, "RankCompleteLine")}
@@ -79,7 +80,7 @@ export function RankCompleteLine({
         }
       `}</style>
     </div>
-  );
+  )
 }
 
 // =============================================================================
@@ -87,28 +88,34 @@ export function RankCompleteLine({
 // =============================================================================
 
 interface RankDotsProps {
-  rank: number;
-  maxRank: number;
-  variant: CardVariant;
-  className?: string;
+  rank: number
+  maxRank: number
+  variant: CardVariant
+  className?: string
 }
 
 export function RankDots({ rank, maxRank, variant, className }: RankDotsProps) {
-  if (maxRank === 0) return null;
+  if (maxRank === 0) return null
 
   const positionClass =
     variant === "compact"
       ? "absolute -bottom-[27px] left-1/2 -translate-x-1/2"
-      : "absolute bottom-[4px] left-1/2 -translate-x-1/2";
+      : "absolute bottom-[4px] left-1/2 -translate-x-1/2"
 
   return (
-    <div className={cn(positionClass, "z-30 flex gap-0.5 pointer-events-none", className)}>
+    <div
+      className={cn(
+        positionClass,
+        "pointer-events-none z-30 flex gap-0.5",
+        className,
+      )}
+    >
       {Array.from({ length: maxRank }, (_, i) => (
         <div
           key={i}
           className={cn(
-            "w-[5px] h-[5px] rounded-full",
-            i < rank ? "bg-[#a8d4ff]" : "bg-gray-800/60"
+            "h-[5px] w-[5px] rounded-full",
+            i < rank ? "bg-[#a8d4ff]" : "bg-gray-800/60",
           )}
           style={
             i < rank
@@ -118,7 +125,7 @@ export function RankDots({ rank, maxRank, variant, className }: RankDotsProps) {
         />
       ))}
     </div>
-  );
+  )
 }
 
 // =============================================================================
@@ -126,10 +133,10 @@ export function RankDots({ rank, maxRank, variant, className }: RankDotsProps) {
 // =============================================================================
 
 interface DrainBadgeProps {
-  drain: number;
-  polarity: string;
-  rarity: ModRarity;
-  matchState?: "match" | "mismatch" | "neutral";
+  drain: number
+  polarity: string
+  rarity: ModRarity
+  matchState?: "match" | "mismatch" | "neutral"
 }
 
 export function DrainBadge({
@@ -138,21 +145,21 @@ export function DrainBadge({
   rarity,
   matchState = "neutral",
 }: DrainBadgeProps) {
-  const rarityColor = getRarityColor(rarity);
+  const rarityColor = getRarityColor(rarity)
   const badgeColor =
     matchState === "match"
       ? "#4ade80"
       : matchState === "mismatch"
-      ? "#f87171"
-      : rarityColor;
+        ? "#f87171"
+        : rarityColor
   const glow =
     matchState === "match"
       ? "0 0 8px rgba(74, 222, 128, 0.45)"
       : matchState === "mismatch"
-      ? "0 0 8px rgba(248, 113, 113, 0.45)"
-      : undefined;
+        ? "0 0 8px rgba(248, 113, 113, 0.45)"
+        : undefined
 
-  const polarityIconUrl = `/focus-schools/${getPolarityFilename(polarity)}`;
+  const polarityIconUrl = `/focus-schools/${getPolarityFilename(polarity)}`
 
   return (
     <div className="absolute top-[7px] right-[2px] z-30 flex items-center justify-center">
@@ -171,7 +178,7 @@ export function DrainBadge({
       <div className="absolute inset-0 flex items-center justify-center gap-[1px] pt-[0.5px] pl-[3px]">
         {/* Drain Value */}
         <span
-          className="text-[12px] font-bold leading-none tracking-tighter"
+          className="text-[12px] leading-none font-bold tracking-tighter"
           style={{
             fontFamily: "Roboto, sans-serif",
             color: badgeColor,
@@ -183,7 +190,7 @@ export function DrainBadge({
 
         {/* Polarity Icon */}
         <div
-          className="relative w-[13px] h-[13px]"
+          className="relative h-[13px] w-[13px]"
           style={{
             backgroundColor: badgeColor,
             maskImage: `url(${polarityIconUrl})`,
@@ -198,7 +205,7 @@ export function DrainBadge({
         />
       </div>
     </div>
-  );
+  )
 }
 
 function getPolarityFilename(polarity: string): string {
@@ -212,8 +219,8 @@ function getPolarityFilename(polarity: string): string {
     umbra: "Umbra_Pol.svg",
     any: "Any_Pol.svg",
     universal: "Any_Pol.svg",
-  };
-  return map[polarity] || "Any_Pol.svg";
+  }
+  return map[polarity] || "Any_Pol.svg"
 }
 
 // =============================================================================
@@ -226,17 +233,17 @@ export function ModCardFrame({
   children,
   className,
 }: ModCardFrameProps) {
-  const size = DISPLAY_SIZE[variant];
-  const isExpanded = variant === "expanded";
+  const size = DISPLAY_SIZE[variant]
+  const isExpanded = variant === "expanded"
 
   // Frame positioning differs by variant
   const frameBottomPosition = isExpanded
     ? "absolute bottom-0 left-1/2 -translate-x-1/2"
-    : "absolute -bottom-8 left-1/2 -translate-x-1/2";
+    : "absolute -bottom-8 left-1/2 -translate-x-1/2"
 
-  const group = getRarityGroup(rarity);
-  const topFrameDims = ASSET_DIMENSIONS[group].frameTop;
-  const bottomFrameDims = ASSET_DIMENSIONS[group].frameBottom;
+  const group = getRarityGroup(rarity)
+  const topFrameDims = ASSET_DIMENSIONS[group].frameTop
+  const bottomFrameDims = ASSET_DIMENSIONS[group].frameBottom
 
   return (
     <div
@@ -270,10 +277,10 @@ export function ModCardFrame({
         width={topFrameDims.w}
         height={topFrameDims.h}
         className={cn(
-          "absolute left-1/2 -translate-x-1/2 z-20 pointer-events-none",
+          "pointer-events-none absolute left-1/2 z-20 -translate-x-1/2",
           rarity === "Amalgam" || rarity === "Galvanized"
-            ? "-top-2 w-[110%] max-w-none h-auto"
-            : "top-0 w-full"
+            ? "-top-2 h-auto w-[110%] max-w-none"
+            : "top-0 w-full",
         )}
         priority={false}
       />
@@ -289,13 +296,15 @@ export function ModCardFrame({
         height={bottomFrameDims.h}
         className={cn(
           frameBottomPosition,
-          "z-20 pointer-events-none w-full",
-          rarity === "Amalgam" || rarity === "Galvanized" ? "w-[110%] max-w-none h-auto" : "w-full"
+          "pointer-events-none z-20 w-full",
+          rarity === "Amalgam" || rarity === "Galvanized"
+            ? "h-auto w-[110%] max-w-none"
+            : "w-full",
         )}
         priority={false}
       />
     </div>
-  );
+  )
 }
 
 // =============================================================================
@@ -303,16 +312,16 @@ export function ModCardFrame({
 // =============================================================================
 
 interface LowerTabProps {
-  label?: string;
-  rarity: ModRarity;
-  className?: string;
+  label?: string
+  rarity: ModRarity
+  className?: string
 }
 
 export function LowerTab({ label, rarity, className }: LowerTabProps) {
-  if (!label) return null;
+  if (!label) return null
 
   return (
-    <div className={cn("relative w-[80%] h-[22px]", className)}>
+    <div className={cn("relative h-[22px] w-[80%]", className)}>
       <Image
         src={getModAssetUrl(rarity, "LowerTab")}
         alt=""
@@ -321,9 +330,9 @@ export function LowerTab({ label, rarity, className }: LowerTabProps) {
         className="object-contain"
         priority={false}
       />
-      <span className="absolute inset-0 flex items-center justify-center text-[9px] uppercase tracking-wider text-white">
+      <span className="absolute inset-0 flex items-center justify-center text-[9px] tracking-wider text-white uppercase">
         {label}
       </span>
     </div>
-  );
+  )
 }

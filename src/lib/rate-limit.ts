@@ -5,13 +5,13 @@
  * For production scale, consider upgrading to Upstash Redis.
  */
 
-import { LRUCache } from "lru-cache";
+import { LRUCache } from "lru-cache"
 
 interface RateLimitOptions {
   /** Max unique tokens to track (default: 500) */
-  uniqueTokenPerInterval?: number;
+  uniqueTokenPerInterval?: number
   /** Time window in milliseconds (default: 60000 = 1 minute) */
-  interval?: number;
+  interval?: number
 }
 
 /**
@@ -19,8 +19,8 @@ interface RateLimitOptions {
  */
 export class RateLimitError extends Error {
   constructor(message = "Rate limit exceeded") {
-    super(message);
-    this.name = "RateLimitError";
+    super(message)
+    this.name = "RateLimitError"
   }
 }
 
@@ -31,7 +31,7 @@ export function rateLimit(options?: RateLimitOptions) {
   const tokenCache = new LRUCache<string, number[]>({
     max: options?.uniqueTokenPerInterval ?? 500,
     ttl: options?.interval ?? 60000,
-  });
+  })
 
   return {
     /**
@@ -41,16 +41,16 @@ export function rateLimit(options?: RateLimitOptions) {
      * @throws {RateLimitError} If rate limit is exceeded
      */
     check: async (limit: number, token: string): Promise<void> => {
-      const tokenCount = tokenCache.get(token) ?? [0];
+      const tokenCount = tokenCache.get(token) ?? [0]
 
       if (tokenCount[0] >= limit) {
-        throw new RateLimitError();
+        throw new RateLimitError()
       }
 
-      tokenCount[0] += 1;
-      tokenCache.set(token, tokenCount);
+      tokenCount[0] += 1
+      tokenCache.set(token, tokenCount)
     },
-  };
+  }
 }
 
 // =============================================================================
@@ -63,7 +63,7 @@ export function rateLimit(options?: RateLimitOptions) {
 export const voteLimiter = rateLimit({
   interval: 60 * 1000, // 1 minute
   uniqueTokenPerInterval: 500,
-});
+})
 
 /**
  * Favorite rate limiter: 20 favorites per minute per user
@@ -71,7 +71,7 @@ export const voteLimiter = rateLimit({
 export const favoriteLimiter = rateLimit({
   interval: 60 * 1000, // 1 minute
   uniqueTokenPerInterval: 500,
-});
+})
 
 /**
  * Search rate limiter: 30 searches per minute per IP
@@ -79,7 +79,7 @@ export const favoriteLimiter = rateLimit({
 export const searchLimiter = rateLimit({
   interval: 60 * 1000,
   uniqueTokenPerInterval: 500,
-});
+})
 
 /**
  * Image generation rate limiter: 10 images per minute per IP
@@ -87,4 +87,4 @@ export const searchLimiter = rateLimit({
 export const imageLimiter = rateLimit({
   interval: 60 * 1000,
   uniqueTokenPerInterval: 500,
-});
+})

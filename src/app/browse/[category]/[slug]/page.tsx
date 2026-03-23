@@ -1,60 +1,52 @@
-import { Suspense } from "react";
-import { notFound } from "next/navigation";
-import type { Metadata } from "next";
-import Link from "next/link";
-import Image from "next/image";
-import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Icons } from "@/components/icons";
-import { BuildCardLink } from "@/components/build/build-card-link";
+import type { Metadata } from "next"
+import Image from "next/image"
+import Link from "next/link"
+import { notFound } from "next/navigation"
+import { Suspense } from "react"
+
+import { BuildCardLink } from "@/components/build/build-card-link"
+import { Footer } from "@/components/footer"
+import { Header } from "@/components/header"
+import { Icons } from "@/components/icons"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
+import { Skeleton } from "@/components/ui/skeleton"
+import { getPublicBuildsForItem } from "@/lib/db/index"
+import { getCategoryConfig, getImageUrl, isValidCategory } from "@/lib/warframe"
 // Server-only imports (uses Node.js fs via @wfcd/items)
-import { getItemBySlug, getStaticItems } from "@/lib/warframe/items";
-import { getPublicBuildsForItem } from "@/lib/db/index";
-import {
-  getCategoryConfig,
-  getImageUrl,
-  isValidCategory,
-} from "@/lib/warframe";
-import type {
-  BrowseCategory,
-  Warframe,
-  Gun,
-  Melee,
-} from "@/lib/warframe/types";
+import { getItemBySlug, getStaticItems } from "@/lib/warframe/items"
+import type { BrowseCategory, Warframe, Gun, Melee } from "@/lib/warframe/types"
 
 // Generate static params for top items
 export async function generateStaticParams() {
-  const items = getStaticItems(50);
+  const items = getStaticItems(50)
   return items.map(({ category, slug }) => ({
     category,
     slug,
-  }));
+  }))
 }
 
 // Generate metadata for SEO
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ category: string; slug: string }>;
+  params: Promise<{ category: string; slug: string }>
 }): Promise<Metadata> {
-  const { category, slug } = await params;
+  const { category, slug } = await params
 
   if (!isValidCategory(category)) {
-    return { title: "Item Not Found | ARSENYX" };
+    return { title: "Item Not Found | ARSENYX" }
   }
 
-  const item = getItemBySlug(category as BrowseCategory, slug);
+  const item = getItemBySlug(category as BrowseCategory, slug)
 
   if (!item) {
-    return { title: "Item Not Found | ARSENYX" };
+    return { title: "Item Not Found | ARSENYX" }
   }
 
-  const categoryConfig = getCategoryConfig(category as BrowseCategory);
+  const categoryConfig = getCategoryConfig(category as BrowseCategory)
 
   return {
     title: `${item.name} | ARSENYX`,
@@ -70,45 +62,45 @@ export async function generateMetadata({
         ? [{ url: getImageUrl(item.imageName), width: 256, height: 256 }]
         : undefined,
     },
-  };
+  }
 }
 
 interface ItemPageProps {
   params: Promise<{
-    category: string;
-    slug: string;
-  }>;
+    category: string
+    slug: string
+  }>
 }
 
 export default async function ItemPage({ params }: ItemPageProps) {
-  const { category, slug } = await params;
+  const { category, slug } = await params
 
   if (!isValidCategory(category)) {
-    notFound();
+    notFound()
   }
 
-  const item = getItemBySlug(category as BrowseCategory, slug);
+  const item = getItemBySlug(category as BrowseCategory, slug)
 
   if (!item) {
-    notFound();
+    notFound()
   }
 
-  const categoryConfig = getCategoryConfig(category as BrowseCategory);
-  const imageUrl = getImageUrl(item.imageName);
+  const categoryConfig = getCategoryConfig(category as BrowseCategory)
+  const imageUrl = getImageUrl(item.imageName)
 
   // Type guards for specific item types
-  const isWarframe = category === "warframes" || category === "necramechs";
+  const isWarframe = category === "warframes" || category === "necramechs"
   const isWeapon =
-    category === "primary" || category === "secondary" || category === "melee";
-  const isMelee = category === "melee";
+    category === "primary" || category === "secondary" || category === "melee"
+  const isMelee = category === "melee"
 
   return (
-    <div className="relative min-h-screen flex flex-col">
+    <div className="relative flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        <div className="container py-6 flex flex-col gap-8">
+        <div className="container flex flex-col gap-8 py-6">
           {/* Breadcrumb */}
-          <nav className="flex items-center gap-2 text-sm text-muted-foreground">
+          <nav className="text-muted-foreground flex items-center gap-2 text-sm">
             <Link
               href="/browse"
               className="hover:text-foreground transition-colors"
@@ -127,10 +119,10 @@ export default async function ItemPage({ params }: ItemPageProps) {
           </nav>
 
           {/* Item Header */}
-          <div className="flex flex-col md:flex-row gap-8">
+          <div className="flex flex-col gap-8 md:flex-row">
             {/* Image */}
             <div className="shrink-0">
-              <div className="relative size-48 md:w-64 md:h-64 bg-muted/30 rounded-xl flex items-center justify-center border">
+              <div className="bg-muted/30 relative flex size-48 items-center justify-center rounded-xl border md:h-64 md:w-64">
                 <Image
                   src={imageUrl}
                   alt={item.name}
@@ -144,9 +136,9 @@ export default async function ItemPage({ params }: ItemPageProps) {
             </div>
 
             {/* Info */}
-            <div className="flex-1 flex flex-col gap-4">
+            <div className="flex flex-1 flex-col gap-4">
               <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-3xl font-bold tracking-tight">
                     {item.name}
                   </h1>
@@ -182,9 +174,16 @@ export default async function ItemPage({ params }: ItemPageProps) {
 
               {/* CTA Buttons */}
               <div className="flex flex-wrap gap-3 pt-4">
-                <Button size="lg" className="gap-2" render={<Link href={`/create?item=${slug}&category=${category}`} />} nativeButton={false}>
-                    <Icons.plus className="h-4 w-4" />
-                    Create Build
+                <Button
+                  size="lg"
+                  className="gap-2"
+                  render={
+                    <Link href={`/create?item=${slug}&category=${category}`} />
+                  }
+                  nativeButton={false}
+                >
+                  <Icons.plus className="h-4 w-4" />
+                  Create Build
                 </Button>
               </div>
             </div>
@@ -241,7 +240,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
                       <StatItem
                         label="Crit Chance"
                         value={`${((item as Gun).criticalChance! * 100).toFixed(
-                          1
+                          1,
                         )}%`}
                       />
                     )}
@@ -255,7 +254,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
                       <StatItem
                         label="Status"
                         value={`${((item as Gun).procChance! * 100).toFixed(
-                          1
+                          1,
                         )}%`}
                       />
                     )}
@@ -294,14 +293,17 @@ export default async function ItemPage({ params }: ItemPageProps) {
                 <CardContent>
                   <div className="grid gap-4 sm:grid-cols-2">
                     {(item as Warframe).abilities?.map((ability, index) => (
-                      <div key={ability.uniqueName} className="flex flex-col gap-1">
+                      <div
+                        key={ability.uniqueName}
+                        className="flex flex-col gap-1"
+                      >
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-muted-foreground text-xs">
                             {index + 1}
                           </span>
                           <span className="font-medium">{ability.name}</span>
                         </div>
-                        <p className="text-sm text-muted-foreground line-clamp-2">
+                        <p className="text-muted-foreground line-clamp-2 text-sm">
                           {ability.description}
                         </p>
                       </div>
@@ -327,14 +329,14 @@ export default async function ItemPage({ params }: ItemPageProps) {
       </main>
       <Footer />
     </div>
-  );
+  )
 }
 
 function CommunityBuildsSkeleton() {
   return (
     <section className="flex flex-col gap-4">
       <Skeleton className="h-8 w-48" />
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="flex flex-col gap-2">
             <Skeleton className="aspect-video rounded-lg" />
@@ -344,7 +346,7 @@ function CommunityBuildsSkeleton() {
         ))}
       </div>
     </section>
-  );
+  )
 }
 
 async function CommunityBuildsSection({
@@ -353,15 +355,15 @@ async function CommunityBuildsSection({
   category,
   slug,
 }: {
-  itemUniqueName: string;
-  itemName: string;
-  category: string;
-  slug: string;
+  itemUniqueName: string
+  itemName: string
+  category: string
+  slug: string
 }) {
   const { builds, total } = await getPublicBuildsForItem(itemUniqueName, {
     limit: 6,
     sortBy: "votes",
-  });
+  })
 
   return (
     <section className="flex flex-col gap-4">
@@ -369,34 +371,47 @@ async function CommunityBuildsSection({
         <h2 className="text-2xl font-bold tracking-tight">
           Community Builds
           {total > 0 && (
-            <span className="ml-2 text-lg font-normal text-muted-foreground">
+            <span className="text-muted-foreground ml-2 text-lg font-normal">
               ({total})
             </span>
           )}
         </h2>
         {total > 6 && (
-          <Button variant="outline" size="sm" render={<Link href={`/builds?category=${category}`} />} nativeButton={false}>View All</Button>
+          <Button
+            variant="outline"
+            size="sm"
+            render={<Link href={`/builds?category=${category}`} />}
+            nativeButton={false}
+          >
+            View All
+          </Button>
         )}
       </div>
 
       {builds.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="rounded-full bg-muted p-4 mb-4">
-              <Icons.users className="h-8 w-8 text-muted-foreground" />
+            <div className="bg-muted mb-4 rounded-full p-4">
+              <Icons.users className="text-muted-foreground h-8 w-8" />
             </div>
-            <h3 className="font-semibold mb-1">No builds yet</h3>
-            <p className="text-sm text-muted-foreground mb-4">
+            <h3 className="mb-1 font-semibold">No builds yet</h3>
+            <p className="text-muted-foreground mb-4 text-sm">
               Be the first to share a {itemName} build with the community!
             </p>
-            <Button className="gap-2" render={<Link href={`/create?item=${slug}&category=${category}`} />} nativeButton={false}>
-                <Icons.plus className="h-4 w-4" />
-                Create Build
+            <Button
+              className="gap-2"
+              render={
+                <Link href={`/create?item=${slug}&category=${category}`} />
+              }
+              nativeButton={false}
+            >
+              <Icons.plus className="h-4 w-4" />
+              Create Build
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
           {builds.map((build) => (
             <BuildCardLink
               key={build.id}
@@ -407,7 +422,7 @@ async function CommunityBuildsSection({
               voteCount={build.voteCount}
               viewCount={build.viewCount}
               subtitle={
-                <p className="text-xs text-muted-foreground line-clamp-1">
+                <p className="text-muted-foreground line-clamp-1 text-xs">
                   by {build.user.username || build.user.name || "Anonymous"}
                 </p>
               }
@@ -416,22 +431,22 @@ async function CommunityBuildsSection({
         </div>
       )}
     </section>
-  );
+  )
 }
 
 function StatItem({
   label,
   value,
 }: {
-  label: string;
-  value: string | number | undefined;
+  label: string
+  value: string | number | undefined
 }) {
-  if (value === undefined) return null;
+  if (value === undefined) return null
 
   return (
     <div className="flex flex-col">
       <dt className="text-muted-foreground">{label}</dt>
       <dd className="font-medium tabular-nums">{value}</dd>
     </div>
-  );
+  )
 }

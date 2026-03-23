@@ -1,6 +1,7 @@
 // Build encoding/decoding utilities
 // Encodes builds to shareable base64 URLs and decodes them back
 
+import { SHARD_COLORS, getStatIndex, getStatByIndex } from "./warframe/shards"
 import type {
   BuildState,
   ModSlot,
@@ -8,39 +9,38 @@ import type {
   BrowseCategory,
   PlacedShard,
   PlacedArcane,
-} from "./warframe/types";
-import { SHARD_COLORS, getStatIndex, getStatByIndex } from "./warframe/shards";
+} from "./warframe/types"
 
 // =============================================================================
 // BUILD ENCODING
 // =============================================================================
 
 interface EncodedBuild {
-  v: number; // Version for forward compatibility
-  i: string; // Item unique name
-  c: string; // Category
-  r: boolean; // Has reactor/catalyst
-  a?: EncodedSlot; // Aura slot (warframes only)
-  e?: EncodedSlot; // Exilus slot
-  s: EncodedSlot[]; // Normal slots (8)
-  ar?: EncodedArcane[]; // Arcane slots (2)
-  sh?: number[]; // Shard slots (5) - encoded as numbers
-  n?: string; // Build name
+  v: number // Version for forward compatibility
+  i: string // Item unique name
+  c: string // Category
+  r: boolean // Has reactor/catalyst
+  a?: EncodedSlot // Aura slot (warframes only)
+  e?: EncodedSlot // Exilus slot
+  s: EncodedSlot[] // Normal slots (8)
+  ar?: EncodedArcane[] // Arcane slots (2)
+  sh?: number[] // Shard slots (5) - encoded as numbers
+  n?: string // Build name
 }
 
 interface EncodedSlot {
-  p?: string; // Forma polarity (if different from innate)
-  m?: EncodedMod; // Placed mod
+  p?: string // Forma polarity (if different from innate)
+  m?: EncodedMod // Placed mod
 }
 
 interface EncodedMod {
-  u: string; // Unique name
-  r: number; // Rank
+  u: string // Unique name
+  r: number // Rank
 }
 
 interface EncodedArcane {
-  u: string; // Unique name
-  r: number; // Rank
+  u: string // Unique name
+  r: number // Rank
 }
 
 /**
@@ -53,24 +53,24 @@ export function encodeBuild(state: BuildState): string {
     c: state.itemCategory,
     r: state.hasReactor,
     s: state.normalSlots.map(encodeSlot),
-  };
+  }
 
   // Optional fields
   if (state.auraSlot) {
-    encoded.a = encodeSlot(state.auraSlot);
+    encoded.a = encodeSlot(state.auraSlot)
   }
 
   if (state.exilusSlot?.mod || state.exilusSlot?.formaPolarity) {
-    encoded.e = encodeSlot(state.exilusSlot);
+    encoded.e = encodeSlot(state.exilusSlot)
   }
 
   if (state.arcaneSlots?.length > 0) {
     const placedArcanes = state.arcaneSlots.filter(
-      (a): a is PlacedArcane => a !== null
-    );
+      (a): a is PlacedArcane => a !== null,
+    )
 
     if (placedArcanes.length > 0) {
-      encoded.ar = placedArcanes.map((a) => ({ u: a.uniqueName, r: a.rank }));
+      encoded.ar = placedArcanes.map((a) => ({ u: a.uniqueName, r: a.rank }))
     }
   }
 
@@ -79,40 +79,40 @@ export function encodeBuild(state: BuildState): string {
     state.shardSlots?.length > 0 &&
     state.shardSlots.some((s) => s !== null)
   ) {
-    encoded.sh = encodeShards(state.shardSlots);
+    encoded.sh = encodeShards(state.shardSlots)
   }
 
   if (state.buildName) {
-    encoded.n = state.buildName;
+    encoded.n = state.buildName
   }
 
   // Encode to base64
-  const jsonString = JSON.stringify(encoded);
+  const jsonString = JSON.stringify(encoded)
 
   // Use browser-safe base64 encoding
   if (typeof window !== "undefined") {
-    return btoa(encodeURIComponent(jsonString));
+    return btoa(encodeURIComponent(jsonString))
   }
 
   // Node.js environment
-  return Buffer.from(jsonString, "utf-8").toString("base64");
+  return Buffer.from(jsonString, "utf-8").toString("base64")
 }
 
 function encodeSlot(slot: ModSlot): EncodedSlot {
-  const encoded: EncodedSlot = {};
+  const encoded: EncodedSlot = {}
 
   if (slot.formaPolarity) {
-    encoded.p = slot.formaPolarity;
+    encoded.p = slot.formaPolarity
   }
 
   if (slot.mod) {
     encoded.m = {
       u: slot.mod.uniqueName,
       r: slot.mod.rank,
-    };
+    }
   }
 
-  return encoded;
+  return encoded
 }
 
 /**
@@ -121,11 +121,11 @@ function encodeSlot(slot: ModSlot): EncodedSlot {
  */
 function encodeShards(shards: (PlacedShard | null)[]): number[] {
   return shards.map((shard) => {
-    if (!shard) return 0;
-    const colorIndex = SHARD_COLORS.indexOf(shard.color) + 1; // 1-5
-    const statIndex = getStatIndex(shard.color, shard.stat); // 0-3
-    return (colorIndex << 4) | (statIndex << 1) | (shard.tauforged ? 1 : 0);
-  });
+    if (!shard) return 0
+    const colorIndex = SHARD_COLORS.indexOf(shard.color) + 1 // 1-5
+    const statIndex = getStatIndex(shard.color, shard.stat) // 0-3
+    return (colorIndex << 4) | (statIndex << 1) | (shard.tauforged ? 1 : 0)
+  })
 }
 
 /**
@@ -133,22 +133,22 @@ function encodeShards(shards: (PlacedShard | null)[]): number[] {
  */
 function decodeShards(encoded: number[]): (PlacedShard | null)[] {
   return encoded.map((byte) => {
-    if (byte === 0) return null;
-    const colorIndex = (byte >> 4) - 1; // 0-4
-    const statIndex = (byte >> 1) & 0x7; // 0-7 (using 3 bits)
-    const tauforged = (byte & 1) === 1;
+    if (byte === 0) return null
+    const colorIndex = (byte >> 4) - 1 // 0-4
+    const statIndex = (byte >> 1) & 0x7 // 0-7 (using 3 bits)
+    const tauforged = (byte & 1) === 1
 
-    if (colorIndex < 0 || colorIndex >= SHARD_COLORS.length) return null;
+    if (colorIndex < 0 || colorIndex >= SHARD_COLORS.length) return null
 
-    const color = SHARD_COLORS[colorIndex];
-    const stat = getStatByIndex(color, statIndex);
+    const color = SHARD_COLORS[colorIndex]
+    const stat = getStatByIndex(color, statIndex)
 
     return {
       color,
       stat,
       tauforged,
-    };
-  });
+    }
+  })
 }
 
 // =============================================================================
@@ -162,20 +162,20 @@ function decodeShards(encoded: number[]): (PlacedShard | null)[] {
 export function decodeBuild(base64String: string): Partial<BuildState> | null {
   try {
     // Decode from base64
-    let jsonString: string;
+    let jsonString: string
 
     if (typeof window !== "undefined") {
-      jsonString = decodeURIComponent(atob(base64String));
+      jsonString = decodeURIComponent(atob(base64String))
     } else {
-      jsonString = Buffer.from(base64String, "base64").toString("utf-8");
+      jsonString = Buffer.from(base64String, "base64").toString("utf-8")
     }
 
-    const encoded: EncodedBuild = JSON.parse(jsonString);
+    const encoded: EncodedBuild = JSON.parse(jsonString)
 
     // Validate version
     if (encoded.v !== 1) {
-      console.warn(`Unknown build version: ${encoded.v}`);
-      return null;
+      console.warn(`Unknown build version: ${encoded.v}`)
+      return null
     }
 
     // Convert back to BuildState
@@ -184,23 +184,23 @@ export function decodeBuild(base64String: string): Partial<BuildState> | null {
       itemCategory: encoded.c as BrowseCategory,
       hasReactor: encoded.r,
       buildName: encoded.n,
-    };
+    }
 
     // Decode aura slot
     if (encoded.a) {
-      state.auraSlot = decodeSlot(encoded.a, "aura", "aura-0");
+      state.auraSlot = decodeSlot(encoded.a, "aura", "aura-0")
     }
 
     // Decode exilus slot
     if (encoded.e) {
-      state.exilusSlot = decodeSlot(encoded.e, "exilus", "exilus-0");
+      state.exilusSlot = decodeSlot(encoded.e, "exilus", "exilus-0")
     }
 
     // Decode normal slots
     if (encoded.s) {
       state.normalSlots = encoded.s.map((s, i) =>
-        decodeSlot(s, "normal", `normal-${i}`)
-      );
+        decodeSlot(s, "normal", `normal-${i}`),
+      )
     }
 
     // Decode arcanes
@@ -210,33 +210,33 @@ export function decodeBuild(base64String: string): Partial<BuildState> | null {
         name: "", // Will be filled by the loader
         rank: a.r,
         rarity: "",
-      }));
+      }))
     }
 
     // Decode shards
     if (encoded.sh) {
-      state.shardSlots = decodeShards(encoded.sh);
+      state.shardSlots = decodeShards(encoded.sh)
     }
 
-    return state;
+    return state
   } catch (error) {
-    console.error("Failed to decode build:", error);
-    return null;
+    console.error("Failed to decode build:", error)
+    return null
   }
 }
 
 function decodeSlot(
   encoded: EncodedSlot,
   type: "aura" | "exilus" | "normal",
-  id: string
+  id: string,
 ): ModSlot {
   const slot: ModSlot = {
     id,
     type,
-  };
+  }
 
   if (encoded.p) {
-    slot.formaPolarity = encoded.p as Polarity;
+    slot.formaPolarity = encoded.p as Polarity
   }
 
   if (encoded.m) {
@@ -248,10 +248,10 @@ function decodeSlot(
       fusionLimit: 0,
       rank: encoded.m.r,
       rarity: "",
-    };
+    }
   }
 
-  return slot;
+  return slot
 }
 
 // =============================================================================
@@ -262,11 +262,11 @@ function decodeSlot(
  * Generate a shareable URL for a build
  */
 export function generateBuildUrl(state: BuildState, baseUrl?: string): string {
-  const encoded = encodeBuild(state);
+  const encoded = encodeBuild(state)
   const base =
-    baseUrl || (typeof window !== "undefined" ? window.location.origin : "");
+    baseUrl || (typeof window !== "undefined" ? window.location.origin : "")
 
-  return `${base}/create?build=${encodeURIComponent(encoded)}`;
+  return `${base}/create?build=${encodeURIComponent(encoded)}`
 }
 
 /**
@@ -274,14 +274,14 @@ export function generateBuildUrl(state: BuildState, baseUrl?: string): string {
  */
 export function extractBuildFromUrl(url: string): Partial<BuildState> | null {
   try {
-    const urlObj = new URL(url);
-    const buildParam = urlObj.searchParams.get("build");
+    const urlObj = new URL(url)
+    const buildParam = urlObj.searchParams.get("build")
 
-    if (!buildParam) return null;
+    if (!buildParam) return null
 
-    return decodeBuild(decodeURIComponent(buildParam));
+    return decodeBuild(decodeURIComponent(buildParam))
   } catch {
-    return null;
+    return null
   }
 }
 
@@ -289,13 +289,13 @@ export function extractBuildFromUrl(url: string): Partial<BuildState> | null {
  * Copy build URL to clipboard
  */
 export async function copyBuildToClipboard(
-  state: BuildState
+  state: BuildState,
 ): Promise<boolean> {
   try {
-    const url = generateBuildUrl(state);
-    await navigator.clipboard.writeText(url);
-    return true;
+    const url = generateBuildUrl(state)
+    await navigator.clipboard.writeText(url)
+    return true
   } catch {
-    return false;
+    return false
   }
 }

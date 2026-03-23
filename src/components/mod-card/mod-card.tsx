@@ -1,44 +1,46 @@
-"use client";
+"use client"
 
-import { memo, useState, useEffect, useCallback, useRef } from "react";
-import { createPortal } from "react-dom";
-import Image from "next/image";
-import { cn } from "@/lib/utils";
-import { getImageUrl, getPlaceholderUrl } from "@/lib/warframe/images";
-import type { Mod } from "@/lib/warframe/types";
+import Image from "next/image"
+import { memo, useState, useEffect, useCallback, useRef } from "react"
+import { createPortal } from "react-dom"
+
+import { cn } from "@/lib/utils"
+import { getImageUrl, getPlaceholderUrl } from "@/lib/warframe/images"
 import {
   type ModRarity,
   DISPLAY_SIZE,
   getRarityColor,
   getModAssetUrl,
-} from "@/lib/warframe/mod-card-config";
+} from "@/lib/warframe/mod-card-config"
+import type { Mod } from "@/lib/warframe/types"
+
 import {
   ModCardFrame,
   RankCompleteLine,
   RankDots,
   DrainBadge,
   LowerTab,
-} from "./mod-card-frame";
+} from "./mod-card-frame"
 
 // =============================================================================
 // PROPS
 // =============================================================================
 
 export interface ModCardProps {
-  mod: Mod;
-  rank?: number;
-  onRankChange?: (rank: number) => void;
-  isSelected?: boolean;
-  isDisabled?: boolean;
-  onClick?: () => void;
-  className?: string;
-  setCount?: number;
+  mod: Mod
+  rank?: number
+  onRankChange?: (rank: number) => void
+  isSelected?: boolean
+  isDisabled?: boolean
+  onClick?: () => void
+  className?: string
+  setCount?: number
   /** Skip hover expansion (used while dragging) */
-  disableHover?: boolean;
+  disableHover?: boolean
   /** Computed drain from slot (accounts for polarity) */
-  drainOverride?: number;
+  drainOverride?: number
   /** Polarity match state for color feedback */
-  matchState?: "match" | "mismatch" | "neutral";
+  matchState?: "match" | "mismatch" | "neutral"
 }
 
 // =============================================================================
@@ -46,34 +48,34 @@ export interface ModCardProps {
 // =============================================================================
 
 function getModStats(mod: Mod, rank: number, setCount: number = 0): string[] {
-  if (!mod.levelStats || mod.levelStats.length === 0) return [];
-  const levelIndex = Math.min(rank, mod.levelStats.length - 1);
-  const baseStats = mod.levelStats[levelIndex]?.stats ?? [];
+  if (!mod.levelStats || mod.levelStats.length === 0) return []
+  const levelIndex = Math.min(rank, mod.levelStats.length - 1)
+  const baseStats = mod.levelStats[levelIndex]?.stats ?? []
 
   // Handle Umbral Set Bonus Scaling
   if (
     mod.modSet === "/Lotus/Upgrades/Mods/Sets/Umbra/UmbraSetMod" &&
     setCount > 1
   ) {
-    let multiplier = 1.0;
-    const isIntensify = mod.name.includes("Intensify");
+    let multiplier = 1.0
+    const isIntensify = mod.name.includes("Intensify")
 
     if (setCount === 2) {
-      multiplier = isIntensify ? 1.25 : 1.3;
+      multiplier = isIntensify ? 1.25 : 1.3
     } else if (setCount >= 3) {
-      multiplier = isIntensify ? 1.75 : 1.8;
+      multiplier = isIntensify ? 1.75 : 1.8
     }
 
     return baseStats.map((stat) => {
       return stat.replace(/(\d+(\.\d+)?)/g, (match) => {
-        const value = parseFloat(match);
-        const boosted = value * multiplier;
-        return parseFloat(boosted.toFixed(1)).toString();
-      });
-    });
+        const value = parseFloat(match)
+        const boosted = value * multiplier
+        return parseFloat(boosted.toFixed(1)).toString()
+      })
+    })
   }
 
-  return baseStats;
+  return baseStats
 }
 
 function normalizeRarity(rarity: string): ModRarity {
@@ -86,10 +88,10 @@ function normalizeRarity(rarity: string): ModRarity {
     "Riven",
     "Amalgam",
     "Galvanized",
-  ];
+  ]
   return validRarities.includes(rarity as ModRarity)
     ? (rarity as ModRarity)
-    : "Common";
+    : "Common"
 }
 
 // =============================================================================
@@ -97,14 +99,14 @@ function normalizeRarity(rarity: string): ModRarity {
 // =============================================================================
 
 interface ModImageProps {
-  mod: Mod;
-  alt: string;
-  className?: string;
-  style?: React.CSSProperties;
+  mod: Mod
+  alt: string
+  className?: string
+  style?: React.CSSProperties
 }
 
 function ModImage({ mod, alt, className, style }: ModImageProps) {
-  const [src, setSrc] = useState(() => getImageUrl(mod.imageName));
+  const [src, setSrc] = useState(() => getImageUrl(mod.imageName))
 
   return (
     <Image
@@ -117,13 +119,13 @@ function ModImage({ mod, alt, className, style }: ModImageProps) {
       onError={() => {
         // Try wiki thumbnail first, then placeholder
         if (mod.wikiaThumbnail && src !== mod.wikiaThumbnail) {
-          setSrc(mod.wikiaThumbnail);
+          setSrc(mod.wikiaThumbnail)
         } else {
-          setSrc(getPlaceholderUrl());
+          setSrc(getPlaceholderUrl())
         }
       }}
     />
-  );
+  )
 }
 
 // =============================================================================
@@ -131,13 +133,13 @@ function ModImage({ mod, alt, className, style }: ModImageProps) {
 // =============================================================================
 
 interface CompactModCardProps {
-  mod: Mod;
-  rarity: ModRarity;
-  rank: number;
-  isMaxRank: boolean;
-  disableAnimation?: boolean;
-  drainOverride?: number;
-  matchState?: "match" | "mismatch" | "neutral";
+  mod: Mod
+  rarity: ModRarity
+  rank: number
+  isMaxRank: boolean
+  disableAnimation?: boolean
+  drainOverride?: number
+  matchState?: "match" | "mismatch" | "neutral"
 }
 
 function CompactModCard({
@@ -149,8 +151,8 @@ function CompactModCard({
   drainOverride,
   matchState = "neutral",
 }: CompactModCardProps) {
-  const maxRank = mod.fusionLimit ?? 0;
-  const drain = drainOverride ?? mod.baseDrain + rank;
+  const maxRank = mod.fusionLimit ?? 0
+  const drain = drainOverride ?? mod.baseDrain + rank
 
   return (
     <ModCardFrame rarity={rarity} variant="compact">
@@ -163,7 +165,7 @@ function CompactModCard({
       />
 
       {/* Mod Image */}
-      <div className="absolute top-[4px] left-[3px] right-[3px] -bottom-4 z-10 overflow-hidden rounded-b-[5px] pointer-events-none">
+      <div className="pointer-events-none absolute top-[4px] right-[3px] -bottom-4 left-[3px] z-10 overflow-hidden rounded-b-[5px]">
         <ModImage
           mod={mod}
           alt={mod.name}
@@ -173,7 +175,7 @@ function CompactModCard({
           }}
         />
         <div
-          className="absolute inset-0 pointer-events-none opacity-25"
+          className="pointer-events-none absolute inset-0 opacity-25"
           style={{
             backgroundColor: getRarityColor(rarity),
             mixBlendMode: "hard-light",
@@ -183,7 +185,7 @@ function CompactModCard({
 
       {/* Mod Name */}
       <span
-        className="absolute top-[70%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 text-[16px] font-normal text-center w-[170px] leading-tight line-clamp-2"
+        className="absolute top-[70%] left-1/2 z-30 line-clamp-2 w-[170px] -translate-x-1/2 -translate-y-1/2 text-center text-[16px] leading-tight font-normal"
         style={{
           fontFamily: "Roboto, sans-serif",
           color: getRarityColor(rarity),
@@ -198,7 +200,7 @@ function CompactModCard({
       {isMaxRank && (
         <RankCompleteLine
           rarity={rarity}
-          className="absolute -bottom-[28px] left-1/2 -translate-x-1/2 z-25 w-[calc(100%-8px)]"
+          className="absolute -bottom-[28px] left-1/2 z-25 w-[calc(100%-8px)] -translate-x-1/2"
           disableAnimation={disableAnimation}
         />
       )}
@@ -206,7 +208,7 @@ function CompactModCard({
       {/* Rank Dots */}
       <RankDots rank={rank} maxRank={maxRank} variant="compact" />
     </ModCardFrame>
-  );
+  )
 }
 
 // =============================================================================
@@ -214,7 +216,7 @@ function CompactModCard({
 // =============================================================================
 
 interface ExpandedModCardProps extends CompactModCardProps {
-  setCount?: number;
+  setCount?: number
 }
 
 function ExpandedModCard({
@@ -226,30 +228,30 @@ function ExpandedModCard({
   drainOverride,
   matchState = "neutral",
 }: ExpandedModCardProps) {
-  const stats = getModStats(mod, rank, setCount);
-  const maxRank = mod.fusionLimit ?? 0;
-  const drain = drainOverride ?? mod.baseDrain + rank;
+  const stats = getModStats(mod, rank, setCount)
+  const maxRank = mod.fusionLimit ?? 0
+  const drain = drainOverride ?? mod.baseDrain + rank
   const compatLabel =
     mod.compatName ||
-    (mod.type ? mod.type.replace(" Mod", "").toUpperCase() : "");
+    (mod.type ? mod.type.replace(" Mod", "").toUpperCase() : "")
 
   const formattedStats = stats
     .map((s) => s.replace(/\\n/g, "<br/>"))
-    .join("<br/>");
+    .join("<br/>")
 
   // Set Bonus Logic
-  const setStats = mod.modSetStats || [];
-  const maxSetSize = setStats.length;
-  const currentBonusIndex = Math.min(Math.max(0, setCount - 1), maxSetSize - 1);
+  const setStats = mod.modSetStats || []
+  const maxSetSize = setStats.length
+  const currentBonusIndex = Math.min(Math.max(0, setCount - 1), maxSetSize - 1)
   const currentBonus =
     setStats.length > 0
       ? setStats[currentBonusIndex].replace(/\\n/g, "<br/>")
-      : null;
-  const showMax = maxSetSize > 1 && setCount < maxSetSize;
+      : null
+  const showMax = maxSetSize > 1 && setCount < maxSetSize
   const maxBonus =
     setStats.length > 0
       ? setStats[maxSetSize - 1].replace(/\\n/g, "<br/>")
-      : null;
+      : null
 
   return (
     <ModCardFrame rarity={rarity} variant="expanded">
@@ -262,7 +264,7 @@ function ExpandedModCard({
       />
 
       {/* Mod Image - full card height */}
-      <div className="absolute top-[4px] left-[3px] right-[3px] bottom-[4px] z-10 overflow-hidden">
+      <div className="absolute top-[4px] right-[3px] bottom-[4px] left-[3px] z-10 overflow-hidden">
         <ModImage
           mod={mod}
           alt={mod.name}
@@ -271,9 +273,9 @@ function ExpandedModCard({
       </div>
 
       {/* Info Panel */}
-      <div className="absolute bottom-[20px] left-[3px] right-[3px] z-15">
+      <div className="absolute right-[3px] bottom-[20px] left-[3px] z-15">
         {/* Background */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <Image
             src={getModAssetUrl(rarity, "Background")}
             alt=""
@@ -288,7 +290,7 @@ function ExpandedModCard({
         <div className="relative z-20 flex flex-col items-center px-2 pt-1.5 pb-2">
           {/* Mod Name */}
           <span
-            className="text-[14px] font-medium text-center leading-tight"
+            className="text-center text-[14px] leading-tight font-medium"
             style={{
               fontFamily: "Roboto, sans-serif",
               color: getRarityColor(rarity),
@@ -299,18 +301,18 @@ function ExpandedModCard({
 
           {/* Stats */}
           {formattedStats && (
-            <div className="flex flex-col items-center gap-1 mt-1 w-full px-1">
+            <div className="mt-1 flex w-full flex-col items-center gap-1 px-1">
               <span
-                className="text-[12px] font-normal text-gray-300 text-center leading-snug"
+                className="text-center text-[12px] leading-snug font-normal text-gray-300"
                 style={{ fontFamily: "Roboto, sans-serif" }}
                 dangerouslySetInnerHTML={{ __html: formattedStats }}
               />
 
               {/* Set Bonuses */}
               {setStats.length > 0 && (
-                <div className="flex flex-col gap-1 mt-2 w-full border-t border-white/10 pt-1">
+                <div className="mt-2 flex w-full flex-col gap-1 border-t border-white/10 pt-1">
                   <div className="flex items-center justify-center gap-1">
-                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">
+                    <span className="text-[9px] font-bold tracking-wider text-gray-400 uppercase">
                       Set ({setCount || 0}/{maxSetSize})
                     </span>
                     <div className="flex gap-0.5">
@@ -319,7 +321,7 @@ function ExpandedModCard({
                           key={i}
                           className={cn(
                             "size-1 rounded-full border border-white/30",
-                            i < setCount ? "bg-white" : "bg-transparent"
+                            i < setCount ? "bg-white" : "bg-transparent",
                           )}
                         />
                       ))}
@@ -329,14 +331,14 @@ function ExpandedModCard({
                   {/* Current Bonus */}
                   <div className="flex flex-col gap-0.5">
                     {setCount > 0 && setCount < maxSetSize && (
-                      <span className="text-[8px] text-gray-500 text-center uppercase">
+                      <span className="text-center text-[8px] text-gray-500 uppercase">
                         Current
                       </span>
                     )}
                     <span
                       className={cn(
-                        "text-[9px] text-center leading-tight",
-                        setCount > 0 ? "text-gray-300" : "text-gray-500"
+                        "text-center text-[9px] leading-tight",
+                        setCount > 0 ? "text-gray-300" : "text-gray-500",
                       )}
                       dangerouslySetInnerHTML={{ __html: currentBonus! }}
                     />
@@ -344,12 +346,12 @@ function ExpandedModCard({
 
                   {/* Max Bonus Preview */}
                   {showMax && maxBonus && (
-                    <div className="flex flex-col gap-0.5 mt-1 opacity-60">
-                      <span className="text-[8px] text-gray-500 text-center uppercase">
+                    <div className="mt-1 flex flex-col gap-0.5 opacity-60">
+                      <span className="text-center text-[8px] text-gray-500 uppercase">
                         Max ({maxSetSize})
                       </span>
                       <span
-                        className="text-[9px] text-gray-500 text-center leading-tight"
+                        className="text-center text-[9px] leading-tight text-gray-500"
                         dangerouslySetInnerHTML={{ __html: maxBonus }}
                       />
                     </div>
@@ -368,14 +370,14 @@ function ExpandedModCard({
       {isMaxRank && (
         <RankCompleteLine
           rarity={rarity}
-          className="absolute bottom-[3px] left-1/2 -translate-x-1/2 z-25 w-[calc(100%-8px)]"
+          className="absolute bottom-[3px] left-1/2 z-25 w-[calc(100%-8px)] -translate-x-1/2"
         />
       )}
 
       {/* Rank Dots */}
       <RankDots rank={rank} maxRank={maxRank} variant="expanded" />
     </ModCardFrame>
-  );
+  )
 }
 
 // =============================================================================
@@ -393,84 +395,84 @@ function ModCardComponent({
   drainOverride,
   matchState = "neutral",
 }: ModCardProps) {
-  const [isHovered, setIsHovered] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
+  const [isHovered, setIsHovered] = useState(false)
+  const cardRef = useRef<HTMLDivElement>(null)
   const [portalContainer] = useState<HTMLElement | null>(() =>
-    typeof document !== "undefined" ? document.body : null
-  );
-  const [expandedPosition, setExpandedPosition] = useState({ x: 0, y: 0 });
+    typeof document !== "undefined" ? document.body : null,
+  )
+  const [expandedPosition, setExpandedPosition] = useState({ x: 0, y: 0 })
 
-  const maxRank = mod.fusionLimit ?? 0;
-  const [internalRank, setInternalRank] = useState(maxRank);
-  const rarity = normalizeRarity(mod.rarity);
+  const maxRank = mod.fusionLimit ?? 0
+  const [internalRank, setInternalRank] = useState(maxRank)
+  const rarity = normalizeRarity(mod.rarity)
 
-  const currentRank = externalRank ?? internalRank;
-  const isMaxRank = currentRank >= maxRank;
+  const currentRank = externalRank ?? internalRank
+  const isMaxRank = currentRank >= maxRank
 
   const handleRankChange = useCallback(
     (newRank: number) => {
-      const clampedRank = Math.max(0, Math.min(newRank, maxRank));
+      const clampedRank = Math.max(0, Math.min(newRank, maxRank))
       if (onRankChange) {
-        onRankChange(clampedRank);
+        onRankChange(clampedRank)
       } else {
-        setInternalRank(clampedRank);
+        setInternalRank(clampedRank)
       }
     },
-    [maxRank, onRankChange]
-  );
+    [maxRank, onRankChange],
+  )
 
   // Keyboard rank adjustment
   useEffect(() => {
-    if (!isHovered || disableHover) return;
+    if (!isHovered || disableHover) return
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "-" || e.key === "_") {
-        e.preventDefault();
-        handleRankChange(currentRank - 1);
+        e.preventDefault()
+        handleRankChange(currentRank - 1)
       } else if (e.key === "=" || e.key === "+") {
-        e.preventDefault();
-        handleRankChange(currentRank + 1);
+        e.preventDefault()
+        handleRankChange(currentRank + 1)
       }
-    };
+    }
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isHovered, disableHover, currentRank, handleRankChange]);
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [isHovered, disableHover, currentRank, handleRankChange])
 
   // Calculate position for expanded card
   const handleMouseEnter = useCallback(() => {
-    if (disableHover || !cardRef.current) return;
+    if (disableHover || !cardRef.current) return
 
-    const rect = cardRef.current.getBoundingClientRect();
+    const rect = cardRef.current.getBoundingClientRect()
     setExpandedPosition({
       x: rect.left + rect.width / 2,
       y: rect.top + rect.height / 2,
-    });
-    setIsHovered(true);
-  }, [disableHover]);
+    })
+    setIsHovered(true)
+  }, [disableHover])
 
   const handleMouseLeave = useCallback(() => {
-    setIsHovered(false);
-  }, []);
+    setIsHovered(false)
+  }, [])
 
   // Close on scroll
   useEffect(() => {
-    if (!isHovered) return;
+    if (!isHovered) return
 
-    const handleScroll = () => setIsHovered(false);
-    window.addEventListener("scroll", handleScroll, true);
-    return () => window.removeEventListener("scroll", handleScroll, true);
-  }, [isHovered]);
+    const handleScroll = () => setIsHovered(false)
+    window.addEventListener("scroll", handleScroll, true)
+    return () => window.removeEventListener("scroll", handleScroll, true)
+  }, [isHovered])
 
   // Close when disableHover becomes true (during drag)
   useEffect(() => {
     if (disableHover) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: must sync hover state with parent's disableHover prop
-      setIsHovered(false);
+      setIsHovered(false)
     }
-  }, [disableHover]);
+  }, [disableHover])
 
-  const compactSize = DISPLAY_SIZE.compact;
+  const compactSize = DISPLAY_SIZE.compact
 
   return (
     <div
@@ -484,8 +486,8 @@ function ModCardComponent({
       <div
         className={cn(
           "transition-opacity duration-100",
-          isSelected && "filter drop-shadow-[0_0_6px_rgba(255,255,255,0.7)]",
-          isHovered ? "opacity-0" : "opacity-100"
+          isSelected && "drop-shadow-[0_0_6px_rgba(255,255,255,0.7)] filter",
+          isHovered ? "opacity-0" : "opacity-100",
         )}
       >
         <CompactModCard
@@ -503,7 +505,7 @@ function ModCardComponent({
         <>
           {createPortal(
             <div
-              className="fixed z-[9999] pointer-events-none"
+              className="pointer-events-none fixed z-[9999]"
               style={{
                 left: expandedPosition.x,
                 top: expandedPosition.y,
@@ -513,7 +515,8 @@ function ModCardComponent({
               <div
                 className="drop-shadow-[0_0_20px_rgba(0,0,0,0.8)]"
                 style={{
-                  animation: "mod-card-expand 150ms cubic-bezier(0.4, 0, 0.2, 1) forwards",
+                  animation:
+                    "mod-card-expand 150ms cubic-bezier(0.4, 0, 0.2, 1) forwards",
                   transformOrigin: "center center",
                 }}
               >
@@ -528,12 +531,12 @@ function ModCardComponent({
                 />
               </div>
             </div>,
-            portalContainer
+            portalContainer,
           )}
         </>
       )}
     </div>
-  );
+  )
 }
 
 // =============================================================================
@@ -549,7 +552,7 @@ const RARITY_BORDER_MAP: Record<ModRarity, string> = {
   Riven: "border-purple-500",
   Amalgam: "border-cyan-400",
   Galvanized: "border-blue-400",
-};
+}
 
 const RARITY_BG_MAP: Record<ModRarity, string> = {
   Common: "bg-amber-950/90",
@@ -560,39 +563,39 @@ const RARITY_BG_MAP: Record<ModRarity, string> = {
   Riven: "bg-purple-950/90",
   Amalgam: "bg-cyan-950/90",
   Galvanized: "bg-blue-950/90",
-};
+}
 
 export interface DragGhostProps {
-  mod: { name: string; rarity?: string };
-  rarity?: string;
+  mod: { name: string; rarity?: string }
+  rarity?: string
 }
 
 export function DragGhost({ mod, rarity }: DragGhostProps) {
-  const modRarity = normalizeRarity(rarity || mod.rarity || "Common");
+  const modRarity = normalizeRarity(rarity || mod.rarity || "Common")
 
   return (
     <div
       className={cn(
-        "w-[184px] h-[64px] rounded-lg border-2 flex items-center justify-center px-3",
-        "backdrop-blur-sm shadow-xl cursor-grabbing",
+        "flex h-[64px] w-[184px] items-center justify-center rounded-lg border-2 px-3",
+        "cursor-grabbing shadow-xl backdrop-blur-sm",
         RARITY_BORDER_MAP[modRarity],
-        RARITY_BG_MAP[modRarity]
+        RARITY_BG_MAP[modRarity],
       )}
     >
       <span
-        className="text-sm font-medium text-center truncate"
+        className="truncate text-center text-sm font-medium"
         style={{ color: getRarityColor(modRarity) }}
       >
         {mod.name}
       </span>
     </div>
-  );
+  )
 }
 
 // =============================================================================
 // EXPORTS
 // =============================================================================
 
-export const ModCard = memo(ModCardComponent);
-export { CompactModCard };
-export type { ModRarity };
+export const ModCard = memo(ModCardComponent)
+export { CompactModCard }
+export type { ModRarity }

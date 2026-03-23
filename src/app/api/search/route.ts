@@ -1,24 +1,22 @@
-import { NextRequest, NextResponse } from "next/server";
-import { searchItemsFromDb, prisma } from "@/lib/db/index";
-import { searchLimiter, RateLimitError } from "@/lib/rate-limit";
+import { NextRequest, NextResponse } from "next/server"
+
+import { searchItemsFromDb, prisma } from "@/lib/db/index"
+import { searchLimiter, RateLimitError } from "@/lib/rate-limit"
 
 export async function GET(request: NextRequest) {
   try {
-    const ip = request.headers.get("x-forwarded-for") ?? "anonymous";
-    await searchLimiter.check(30, ip);
+    const ip = request.headers.get("x-forwarded-for") ?? "anonymous"
+    await searchLimiter.check(30, ip)
   } catch (e) {
     if (e instanceof RateLimitError) {
-      return NextResponse.json(
-        { error: "Too many requests" },
-        { status: 429 }
-      );
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 })
     }
   }
 
-  const q = request.nextUrl.searchParams.get("q")?.trim();
+  const q = request.nextUrl.searchParams.get("q")?.trim()
 
   if (!q || q.length < 2 || q.length > 100) {
-    return NextResponse.json({ items: [], builds: [] });
+    return NextResponse.json({ items: [], builds: [] })
   }
 
   const [items, buildResults] = await Promise.all([
@@ -27,11 +25,11 @@ export async function GET(request: NextRequest) {
     // Builds: use tsvector search
     prisma.$queryRaw<
       {
-        slug: string;
-        name: string;
-        itemName: string;
-        author: string;
-        voteCount: number;
+        slug: string
+        name: string
+        itemName: string
+        author: string
+        voteCount: number
       }[]
     >`
       SELECT
@@ -48,7 +46,7 @@ export async function GET(request: NextRequest) {
       ORDER BY ts_rank(b."searchVector", plainto_tsquery('english', ${q})) DESC
       LIMIT 5
     `,
-  ]);
+  ])
 
   return NextResponse.json({
     items: items.map((item) => ({
@@ -58,5 +56,5 @@ export async function GET(request: NextRequest) {
       browseCategory: item.category,
     })),
     builds: buildResults,
-  });
+  })
 }

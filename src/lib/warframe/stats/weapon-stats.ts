@@ -1,12 +1,6 @@
 // Weapon-specific stat calculations (guns and melee)
 
-import type {
-  BuildState,
-  PlacedMod,
-  Gun,
-  Melee,
-  DamageTypes,
-} from "../types";
+import { parseModStats } from "../stat-parser"
 import type {
   WeaponStats,
   StatValue,
@@ -17,10 +11,10 @@ import type {
   DamageBreakdown,
   PhysicalDamage,
   ElementalDamage,
-} from "../stat-types";
-import { BASE_ELEMENTS, ELEMENTAL_COMBINATIONS } from "../stat-types";
-import { parseModStats } from "../stat-parser";
-import { getAllPlacedMods, getStatValue, sumDamageTypes } from "./stat-engine";
+} from "../stat-types"
+import { BASE_ELEMENTS, ELEMENTAL_COMBINATIONS } from "../stat-types"
+import type { BuildState, PlacedMod, Gun, Melee, DamageTypes } from "../types"
+import { getAllPlacedMods, getStatValue, sumDamageTypes } from "./stat-engine"
 
 /**
  * Calculate weapon stats for guns and melee
@@ -28,27 +22,27 @@ import { getAllPlacedMods, getStatValue, sumDamageTypes } from "./stat-engine";
 export function calculateWeaponStats(
   weapon: Gun | Melee,
   buildState: BuildState,
-  showMaxStacks = false
+  showMaxStacks = false,
 ): WeaponStats {
-  const mods = getAllPlacedMods(buildState);
+  const mods = getAllPlacedMods(buildState)
 
   // Calculate multishot
-  const multishot = calculateWeaponStat("multishot", 1, mods, showMaxStacks);
+  const multishot = calculateWeaponStat("multishot", 1, mods, showMaxStacks)
 
   // Build attack mode stats
-  const attackModes: AttackModeStats[] = [];
+  const attackModes: AttackModeStats[] = []
 
   // Check if weapon has specific attack modes defined
-  const hasSpecificAttackModes = weapon.attacks && weapon.attacks.length > 0;
+  const hasSpecificAttackModes = weapon.attacks && weapon.attacks.length > 0
 
   // Primary attack mode from base weapon stats
   // Only create "Normal Attack" if there are no specific attack modes defined
   if (!hasSpecificAttackModes && (weapon.totalDamage || weapon.damage)) {
-    const baseDamage = weapon.totalDamage ?? 0;
-    const baseCrit = weapon.criticalChance ?? 0;
-    const baseCritMult = weapon.criticalMultiplier ?? 1;
-    const baseStatus = weapon.procChance ?? 0;
-    const baseFireRate = weapon.fireRate ?? 1;
+    const baseDamage = weapon.totalDamage ?? 0
+    const baseCrit = weapon.criticalChance ?? 0
+    const baseCritMult = weapon.criticalMultiplier ?? 1
+    const baseStatus = weapon.procChance ?? 0
+    const baseFireRate = weapon.fireRate ?? 1
 
     const primaryMode: AttackModeStats = {
       name: "Normal Attack",
@@ -57,32 +51,32 @@ export function calculateWeaponStats(
         "critical_chance",
         baseCrit * 100,
         mods,
-        showMaxStacks
+        showMaxStacks,
       ),
       criticalMultiplier: calculateWeaponStat(
         "critical_multiplier",
         baseCritMult,
         mods,
-        showMaxStacks
+        showMaxStacks,
       ),
       statusChance: calculateWeaponStat(
         "status_chance",
         baseStatus * 100,
         mods,
-        showMaxStacks
+        showMaxStacks,
       ),
       fireRate: calculateWeaponStat(
         "fire_rate",
         baseFireRate,
         mods,
-        showMaxStacks
+        showMaxStacks,
       ),
       damageBreakdown: calculateDamageBreakdown(
         weapon.damage ?? {},
         mods,
-        showMaxStacks
+        showMaxStacks,
       ),
-    };
+    }
 
     // Add gun-specific stats
     if ("magazineSize" in weapon && weapon.magazineSize) {
@@ -90,16 +84,16 @@ export function calculateWeaponStats(
         "magazine_size",
         weapon.magazineSize,
         mods,
-        showMaxStacks
-      );
+        showMaxStacks,
+      )
     }
     if ("reloadTime" in weapon && weapon.reloadTime) {
       primaryMode.reloadTime = calculateWeaponStat(
         "reload_speed",
         weapon.reloadTime,
         mods,
-        showMaxStacks
-      );
+        showMaxStacks,
+      )
     }
 
     // Add melee-specific stats
@@ -108,32 +102,32 @@ export function calculateWeaponStats(
         "range",
         weapon.range,
         mods,
-        showMaxStacks
-      );
+        showMaxStacks,
+      )
     }
 
-    attackModes.push(primaryMode);
+    attackModes.push(primaryMode)
   }
 
   // Add additional attack modes from attacks array
   if (weapon.attacks && weapon.attacks.length > 0) {
     for (const attack of weapon.attacks) {
       // Skip "Normal Attack" only if we already created it from base weapon stats above
-      if (attack.name === "Normal Attack" && attackModes.length > 0) continue;
+      if (attack.name === "Normal Attack" && attackModes.length > 0) continue
 
       const attackDamage =
-        typeof attack.damage === "object" ? sumDamageTypes(attack.damage) : 0;
+        typeof attack.damage === "object" ? sumDamageTypes(attack.damage) : 0
 
       // WFCD attack mode stats may be in percentage form (34) or decimal form (0.34)
       // Values > 1 are already percentages, values <= 1 need to be multiplied by 100
-      const rawCrit = attack.crit_chance ?? weapon.criticalChance ?? 0;
-      const critBase = rawCrit > 1 ? rawCrit : rawCrit * 100;
+      const rawCrit = attack.crit_chance ?? weapon.criticalChance ?? 0
+      const critBase = rawCrit > 1 ? rawCrit : rawCrit * 100
 
       // Critical multiplier is stored as actual multiplier (e.g., 3 for 3x)
-      const critMultBase = attack.crit_mult ?? weapon.criticalMultiplier ?? 1;
+      const critMultBase = attack.crit_mult ?? weapon.criticalMultiplier ?? 1
 
-      const rawStatus = attack.status_chance ?? weapon.procChance ?? 0;
-      const statusBase = rawStatus > 1 ? rawStatus : rawStatus * 100;
+      const rawStatus = attack.status_chance ?? weapon.procChance ?? 0
+      const statusBase = rawStatus > 1 ? rawStatus : rawStatus * 100
 
       const mode: AttackModeStats = {
         name: attack.name,
@@ -142,32 +136,32 @@ export function calculateWeaponStats(
           "critical_chance",
           critBase,
           mods,
-          showMaxStacks
+          showMaxStacks,
         ),
         criticalMultiplier: calculateWeaponStat(
           "critical_multiplier",
           critMultBase,
           mods,
-          showMaxStacks
+          showMaxStacks,
         ),
         statusChance: calculateWeaponStat(
           "status_chance",
           statusBase,
           mods,
-          showMaxStacks
+          showMaxStacks,
         ),
         fireRate: calculateWeaponStat(
           "fire_rate",
           attack.speed ?? weapon.fireRate ?? 1,
           mods,
-          showMaxStacks
+          showMaxStacks,
         ),
         damageBreakdown: calculateDamageBreakdown(
           typeof attack.damage === "object" ? attack.damage : {},
           mods,
-          showMaxStacks
+          showMaxStacks,
         ),
-      };
+      }
 
       // Add gun-specific stats (shared across attack modes)
       if ("magazineSize" in weapon && weapon.magazineSize) {
@@ -175,16 +169,16 @@ export function calculateWeaponStats(
           "magazine_size",
           weapon.magazineSize,
           mods,
-          showMaxStacks
-        );
+          showMaxStacks,
+        )
       }
       if ("reloadTime" in weapon && weapon.reloadTime) {
         mode.reloadTime = calculateWeaponStat(
           "reload_speed",
           weapon.reloadTime,
           mods,
-          showMaxStacks
-        );
+          showMaxStacks,
+        )
       }
 
       // Add melee-specific stats
@@ -193,18 +187,18 @@ export function calculateWeaponStats(
           "range",
           weapon.range,
           mods,
-          showMaxStacks
-        );
+          showMaxStacks,
+        )
       }
 
-      attackModes.push(mode);
+      attackModes.push(mode)
     }
   }
 
   return {
     attackModes,
     multishot,
-  };
+  }
 }
 
 /**
@@ -215,24 +209,24 @@ function calculateWeaponStat(
   baseValue: number,
   mods: PlacedMod[],
   showMaxStacks: boolean,
-  isPercentStat = false
+  isPercentStat = false,
 ): StatValue {
-  const contributions: StatContribution[] = [];
-  let percentBonus = 0;
+  const contributions: StatContribution[] = []
+  let percentBonus = 0
 
   for (const mod of mods) {
-    const parsedStats = parseModStats(mod);
+    const parsedStats = parseModStats(mod)
     for (const stat of parsedStats) {
       if (stat.type === statType && stat.operation === "percent_add") {
-        const value = getStatValue(stat, showMaxStacks);
-        percentBonus += value;
+        const value = getStatValue(stat, showMaxStacks)
+        percentBonus += value
 
         contributions.push({
           source: "mod",
           name: mod.name,
           absoluteValue: isPercentStat ? value : (baseValue * value) / 100,
           percentOfBonus: 0,
-        });
+        })
       }
     }
   }
@@ -241,18 +235,18 @@ function calculateWeaponStat(
   // For other stats (fire rate, magazine), multiply
   const modified = isPercentStat
     ? baseValue + percentBonus
-    : baseValue * (1 + percentBonus / 100);
+    : baseValue * (1 + percentBonus / 100)
 
   // Round both base and modified to avoid floating point comparison issues
-  const roundedBase = Math.round(baseValue * 100) / 100;
-  const roundedModified = Math.round(modified * 100) / 100;
+  const roundedBase = Math.round(baseValue * 100) / 100
+  const roundedModified = Math.round(modified * 100) / 100
 
   // Calculate percent of bonus
-  const totalBonus = roundedModified - roundedBase;
+  const totalBonus = roundedModified - roundedBase
   if (Math.abs(totalBonus) > 0.001) {
     for (const contrib of contributions) {
       contrib.percentOfBonus =
-        (Math.abs(contrib.absoluteValue) / Math.abs(totalBonus)) * 100;
+        (Math.abs(contrib.absoluteValue) / Math.abs(totalBonus)) * 100
     }
   }
 
@@ -260,7 +254,7 @@ function calculateWeaponStat(
     base: roundedBase,
     modified: roundedModified,
     contributions,
-  };
+  }
 }
 
 /**
@@ -269,36 +263,36 @@ function calculateWeaponStat(
 function calculateWeaponDamage(
   baseDamage: number,
   mods: PlacedMod[],
-  showMaxStacks: boolean
+  showMaxStacks: boolean,
 ): StatValue {
-  const contributions: StatContribution[] = [];
-  let percentBonus = 0;
+  const contributions: StatContribution[] = []
+  let percentBonus = 0
 
   for (const mod of mods) {
-    const parsedStats = parseModStats(mod);
+    const parsedStats = parseModStats(mod)
     for (const stat of parsedStats) {
       // "damage" type applies to base damage
       if (stat.type === "damage" && stat.operation === "percent_add") {
-        const value = getStatValue(stat, showMaxStacks);
-        percentBonus += value;
+        const value = getStatValue(stat, showMaxStacks)
+        percentBonus += value
 
         contributions.push({
           source: "mod",
           name: mod.name,
           absoluteValue: (baseDamage * value) / 100,
           percentOfBonus: 0,
-        });
+        })
       }
     }
   }
 
-  const modified = baseDamage * (1 + percentBonus / 100);
+  const modified = baseDamage * (1 + percentBonus / 100)
 
   // Calculate percent of bonus
-  const totalBonus = modified - baseDamage;
+  const totalBonus = modified - baseDamage
   if (totalBonus > 0) {
     for (const contrib of contributions) {
-      contrib.percentOfBonus = (contrib.absoluteValue / totalBonus) * 100;
+      contrib.percentOfBonus = (contrib.absoluteValue / totalBonus) * 100
     }
   }
 
@@ -306,7 +300,7 @@ function calculateWeaponDamage(
     base: baseDamage,
     modified: Math.round(modified * 10) / 10, // Round to 1 decimal
     contributions,
-  };
+  }
 }
 
 /**
@@ -315,53 +309,53 @@ function calculateWeaponDamage(
 function calculateDamageBreakdown(
   baseDamage: DamageTypes,
   mods: PlacedMod[],
-  showMaxStacks: boolean
+  showMaxStacks: boolean,
 ): DamageBreakdown {
   // Get base damage multiplier from damage mods
-  let baseDamageMultiplier = 1;
+  let baseDamageMultiplier = 1
   for (const mod of mods) {
-    const parsedStats = parseModStats(mod);
+    const parsedStats = parseModStats(mod)
     for (const stat of parsedStats) {
       if (stat.type === "damage" && stat.operation === "percent_add") {
-        baseDamageMultiplier += getStatValue(stat, showMaxStacks) / 100;
+        baseDamageMultiplier += getStatValue(stat, showMaxStacks) / 100
       }
     }
   }
 
   // Calculate physical damage (IPS)
-  const physical: PhysicalDamage = {};
+  const physical: PhysicalDamage = {}
   if (baseDamage.impact) {
     physical.impact = Math.round(
       baseDamage.impact *
         baseDamageMultiplier *
-        getPhysicalMultiplier("impact", mods, showMaxStacks)
-    );
+        getPhysicalMultiplier("impact", mods, showMaxStacks),
+    )
   }
   if (baseDamage.puncture) {
     physical.puncture = Math.round(
       baseDamage.puncture *
         baseDamageMultiplier *
-        getPhysicalMultiplier("puncture", mods, showMaxStacks)
-    );
+        getPhysicalMultiplier("puncture", mods, showMaxStacks),
+    )
   }
   if (baseDamage.slash) {
     physical.slash = Math.round(
       baseDamage.slash *
         baseDamageMultiplier *
-        getPhysicalMultiplier("slash", mods, showMaxStacks)
-    );
+        getPhysicalMultiplier("slash", mods, showMaxStacks),
+    )
   }
 
   // Calculate total modded base damage (for elemental calculation)
   const totalModdedBase =
-    (physical.impact ?? 0) + (physical.puncture ?? 0) + (physical.slash ?? 0);
+    (physical.impact ?? 0) + (physical.puncture ?? 0) + (physical.slash ?? 0)
 
   // Collect elemental mods in order
   const elementalMods: { type: DamageType; value: number; modName: string }[] =
-    [];
+    []
 
   for (const mod of mods) {
-    const parsedStats = parseModStats(mod);
+    const parsedStats = parseModStats(mod)
     for (const stat of parsedStats) {
       if (
         BASE_ELEMENTS.includes(stat.type as DamageType) &&
@@ -371,7 +365,7 @@ function calculateDamageBreakdown(
           type: stat.type as DamageType,
           value: getStatValue(stat, showMaxStacks),
           modName: mod.name,
-        });
+        })
       }
     }
   }
@@ -384,14 +378,14 @@ function calculateDamageBreakdown(
         type: type as DamageType,
         value: (value / (totalModdedBase || 1)) * 100, // Convert to percentage
         modName: "Innate",
-      });
+      })
     }
   }
 
   // Combine elements in slot order
-  const elemental = combineElements(elementalMods, totalModdedBase);
+  const elemental = combineElements(elementalMods, totalModdedBase)
 
-  return { physical, elemental };
+  return { physical, elemental }
 }
 
 /**
@@ -400,20 +394,20 @@ function calculateDamageBreakdown(
 function getPhysicalMultiplier(
   type: "impact" | "puncture" | "slash",
   mods: PlacedMod[],
-  showMaxStacks: boolean
+  showMaxStacks: boolean,
 ): number {
-  let multiplier = 1;
+  let multiplier = 1
 
   for (const mod of mods) {
-    const parsedStats = parseModStats(mod);
+    const parsedStats = parseModStats(mod)
     for (const stat of parsedStats) {
       if (stat.type === type && stat.operation === "percent_add") {
-        multiplier += getStatValue(stat, showMaxStacks) / 100;
+        multiplier += getStatValue(stat, showMaxStacks) / 100
       }
     }
   }
 
-  return multiplier;
+  return multiplier
 }
 
 /**
@@ -421,34 +415,34 @@ function getPhysicalMultiplier(
  */
 function combineElements(
   elements: { type: DamageType; value: number; modName: string }[],
-  baseDamage: number
+  baseDamage: number,
 ): ElementalDamage[] {
-  if (elements.length === 0) return [];
+  if (elements.length === 0) return []
 
-  const result: ElementalDamage[] = [];
-  const remaining = [...elements];
+  const result: ElementalDamage[] = []
+  const remaining = [...elements]
 
   while (remaining.length > 0) {
-    const first = remaining.shift()!;
+    const first = remaining.shift()!
 
     // Look for a combinable element
-    let combined = false;
+    let combined = false
     for (let i = 0; i < remaining.length; i++) {
-      const second = remaining[i];
+      const second = remaining[i]
       const combinedType =
-        ELEMENTAL_COMBINATIONS[`${first.type}+${second.type}`];
+        ELEMENTAL_COMBINATIONS[`${first.type}+${second.type}`]
 
       if (combinedType) {
         // Combine these elements
-        const totalValue = (baseDamage * (first.value + second.value)) / 100;
+        const totalValue = (baseDamage * (first.value + second.value)) / 100
         result.push({
           type: combinedType,
           value: Math.round(totalValue),
           sources: [first.modName, second.modName],
-        });
-        remaining.splice(i, 1);
-        combined = true;
-        break;
+        })
+        remaining.splice(i, 1)
+        combined = true
+        break
       }
     }
 
@@ -458,9 +452,9 @@ function combineElements(
         type: first.type,
         value: Math.round((baseDamage * first.value) / 100),
         sources: [first.modName],
-      });
+      })
     }
   }
 
-  return result;
+  return result
 }

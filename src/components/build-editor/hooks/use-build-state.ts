@@ -1,4 +1,13 @@
-import { useReducer, useCallback, useMemo } from "react";
+import { useReducer, useCallback, useMemo } from "react"
+
+import {
+  getCapacityStatus,
+  calculateTotalEndoCost,
+  calculateFormaCount,
+} from "@/lib/warframe/capacity"
+import { isWeaponCategory } from "@/lib/warframe/categories"
+import { getModBaseName } from "@/lib/warframe/mod-variants"
+import { normalizePolarity } from "@/lib/warframe/mods"
 import type {
   BuildState,
   ModSlot,
@@ -11,15 +20,7 @@ import type {
   Mod,
   Arcane,
   HelminthAbility,
-} from "@/lib/warframe/types";
-import { getModBaseName } from "@/lib/warframe/mod-variants";
-import { normalizePolarity } from "@/lib/warframe/mods";
-import { isWeaponCategory } from "@/lib/warframe/categories";
-import {
-  getCapacityStatus,
-  calculateTotalEndoCost,
-  calculateFormaCount,
-} from "@/lib/warframe/capacity";
+} from "@/lib/warframe/types"
 
 // ---------------------------------------------------------------------------
 // Exported types
@@ -29,52 +30,52 @@ export type DragItem =
   | { type: "search-mod"; mod: Mod; rank: number }
   | { type: "placed-mod"; mod: PlacedMod; slotId: string; rank?: number }
   | { type: "search-arcane"; arcane: Arcane; rank: number }
-  | { type: "placed-arcane"; arcane: PlacedArcane; slotIndex: number };
+  | { type: "placed-arcane"; arcane: PlacedArcane; slotIndex: number }
 
 export interface BuildContainerProps {
-  item: BrowseableItem;
-  category: BrowseCategory;
-  categoryLabel: string;
-  compatibleMods: Mod[];
-  compatibleArcanes?: Arcane[];
-  importedBuild?: Partial<BuildState>;
-  savedBuildId?: string;
-  readOnly?: boolean;
-  isOwner?: boolean;
+  item: BrowseableItem
+  category: BrowseCategory
+  categoryLabel: string
+  compatibleMods: Mod[]
+  compatibleArcanes?: Arcane[]
+  importedBuild?: Partial<BuildState>
+  savedBuildId?: string
+  readOnly?: boolean
+  isOwner?: boolean
   initialGuide?: {
-    summary?: string | null;
-    description?: string | null;
-    updatedAt?: Date;
-  };
+    summary?: string | null
+    description?: string | null
+    updatedAt?: Date
+  }
   initialPartnerBuilds?: {
-    id: string;
-    slug: string;
-    name: string;
+    id: string
+    slug: string
+    name: string
     item: {
-      name: string;
-      imageName: string | null;
-      browseCategory: string;
-    };
-    buildData: { formaCount: number };
-  }[];
+      name: string
+      imageName: string | null
+      browseCategory: string
+    }
+    buildData: { formaCount: number }
+  }[]
 }
 
 export interface ItemStats {
-  health?: number;
-  shield?: number;
-  armor?: number;
-  energy?: number;
-  sprintSpeed?: number;
-  abilities?: Array<{ name: string; imageName?: string; description: string }>;
-  fireRate?: number;
-  criticalChance?: number;
-  criticalMultiplier?: number;
-  procChance?: number;
-  totalDamage?: number;
-  magazineSize?: number;
-  reloadTime?: number;
-  range?: number;
-  comboDuration?: number;
+  health?: number
+  shield?: number
+  armor?: number
+  energy?: number
+  sprintSpeed?: number
+  abilities?: Array<{ name: string; imageName?: string; description: string }>
+  fireRate?: number
+  criticalChance?: number
+  criticalMultiplier?: number
+  procChance?: number
+  totalDamage?: number
+  magazineSize?: number
+  reloadTime?: number
+  range?: number
+  comboDuration?: number
 }
 
 // ---------------------------------------------------------------------------
@@ -83,26 +84,26 @@ export interface ItemStats {
 
 export function extractItemStats(item: BrowseableItem): ItemStats {
   const data = item as {
-    health?: number;
-    shield?: number;
-    armor?: number;
-    power?: number;
-    sprintSpeed?: number;
+    health?: number
+    shield?: number
+    armor?: number
+    power?: number
+    sprintSpeed?: number
     abilities?: Array<{
-      name: string;
-      imageName?: string;
-      description: string;
-    }>;
-    fireRate?: number;
-    criticalChance?: number;
-    criticalMultiplier?: number;
-    procChance?: number;
-    totalDamage?: number;
-    magazineSize?: number;
-    reloadTime?: number;
-    range?: number;
-    comboDuration?: number;
-  };
+      name: string
+      imageName?: string
+      description: string
+    }>
+    fireRate?: number
+    criticalChance?: number
+    criticalMultiplier?: number
+    procChance?: number
+    totalDamage?: number
+    magazineSize?: number
+    reloadTime?: number
+    range?: number
+    comboDuration?: number
+  }
   return {
     health: data.health,
     shield: data.shield,
@@ -119,17 +120,20 @@ export function extractItemStats(item: BrowseableItem): ItemStats {
     reloadTime: data.reloadTime,
     range: data.range,
     comboDuration: data.comboDuration,
-  };
+  }
 }
 
-export function createInitialSlots(polarities?: string[], count = 8): ModSlot[] {
+export function createInitialSlots(
+  polarities?: string[],
+  count = 8,
+): ModSlot[] {
   return Array.from({ length: count }, (_, i) => ({
     id: `normal-${i}`,
     type: "normal" as const,
     innatePolarity: polarities?.[i]
       ? normalizePolarity(polarities[i])
       : undefined,
-  }));
+  }))
 }
 
 export function createInitialBuildState(
@@ -137,12 +141,12 @@ export function createInitialBuildState(
   category: BrowseCategory,
   compatibleMods: Mod[],
   importedBuild?: Partial<BuildState>,
-  compatibleArcanes?: Arcane[]
+  compatibleArcanes?: Arcane[],
 ): BuildState {
-  const isNecramech = category === "necramechs";
+  const isNecramech = category === "necramechs"
 
-  const itemPolarities = (item as { polarities?: string[] }).polarities;
-  const auraPolarity = (item as { aura?: string }).aura;
+  const itemPolarities = (item as { polarities?: string[] }).polarities
+  const auraPolarity = (item as { aura?: string }).aura
 
   const baseState: BuildState = {
     itemUniqueName: item.uniqueName,
@@ -157,7 +161,7 @@ export function createInitialBuildState(
     baseCapacity: 60,
     currentCapacity: 60,
     formaCount: 0,
-  };
+  }
 
   if (category === "warframes") {
     baseState.auraSlot = {
@@ -166,38 +170,35 @@ export function createInitialBuildState(
       innatePolarity: auraPolarity
         ? normalizePolarity(auraPolarity)
         : undefined,
-    };
-    baseState.shardSlots = [null, null, null, null, null];
-    baseState.arcaneSlots = [null, null];
+    }
+    baseState.shardSlots = [null, null, null, null, null]
+    baseState.arcaneSlots = [null, null]
   } else if (isWeaponCategory(category)) {
-    baseState.arcaneSlots = [null];
+    baseState.arcaneSlots = [null]
   }
 
   if (importedBuild) {
-    const mergeSlot = (
-      baseSlot: ModSlot,
-      importedSlot?: ModSlot
-    ): ModSlot => {
-      if (!importedSlot) return baseSlot;
+    const mergeSlot = (baseSlot: ModSlot, importedSlot?: ModSlot): ModSlot => {
+      if (!importedSlot) return baseSlot
       return {
         ...baseSlot,
         formaPolarity: importedSlot.formaPolarity,
         mod: importedSlot.mod,
-      };
-    };
+      }
+    }
 
     const mergedNormalSlots = baseState.normalSlots.map(
       (baseSlot: ModSlot, i: number) =>
-        mergeSlot(baseSlot, importedBuild.normalSlots?.[i])
-    );
+        mergeSlot(baseSlot, importedBuild.normalSlots?.[i]),
+    )
 
     const mergedAuraSlot = baseState.auraSlot
       ? mergeSlot(baseState.auraSlot, importedBuild.auraSlot)
-      : importedBuild.auraSlot;
+      : importedBuild.auraSlot
 
     const mergedExilusSlot = baseState.exilusSlot
       ? mergeSlot(baseState.exilusSlot, importedBuild.exilusSlot)
-      : undefined;
+      : undefined
 
     const hydratedState: BuildState = {
       ...baseState,
@@ -209,13 +210,13 @@ export function createInitialBuildState(
       normalSlots: mergedNormalSlots,
       auraSlot: mergedAuraSlot,
       exilusSlot: mergedExilusSlot,
-    };
+    }
 
-    const modMap = new Map(compatibleMods.map((m) => [m.uniqueName, m]));
+    const modMap = new Map(compatibleMods.map((m) => [m.uniqueName, m]))
 
     const hydrateSlot = (slot: ModSlot) => {
       if (slot.mod) {
-        const fullMod = modMap.get(slot.mod.uniqueName);
+        const fullMod = modMap.get(slot.mod.uniqueName)
         if (fullMod) {
           slot.mod = {
             ...slot.mod,
@@ -232,44 +233,44 @@ export function createInitialBuildState(
             modSetStats: fullMod.modSetStats,
             isExilus: fullMod.isExilus,
             isUtility: fullMod.isUtility,
-          };
+          }
         }
       }
-      return slot;
-    };
+      return slot
+    }
 
     if (hydratedState.auraSlot) {
-      hydratedState.auraSlot = hydrateSlot(hydratedState.auraSlot);
+      hydratedState.auraSlot = hydrateSlot(hydratedState.auraSlot)
     }
     if (hydratedState.exilusSlot) {
-      hydratedState.exilusSlot = hydrateSlot(hydratedState.exilusSlot);
+      hydratedState.exilusSlot = hydrateSlot(hydratedState.exilusSlot)
     }
-    hydratedState.normalSlots = hydratedState.normalSlots.map(hydrateSlot);
+    hydratedState.normalSlots = hydratedState.normalSlots.map(hydrateSlot)
 
     // Hydrate arcane slots — the build codec only stores uniqueName + rank,
     // so we need to fill in name, imageName, rarity from the arcane list.
     if (compatibleArcanes && hydratedState.arcaneSlots) {
-      const arcaneMap = new Map(compatibleArcanes.map((a) => [a.uniqueName, a]));
+      const arcaneMap = new Map(compatibleArcanes.map((a) => [a.uniqueName, a]))
       hydratedState.arcaneSlots = hydratedState.arcaneSlots.map((arcane) => {
-        if (!arcane) return null;
-        if (arcane.name && arcane.imageName) return arcane; // Already hydrated
-        const fullArcane = arcaneMap.get(arcane.uniqueName);
+        if (!arcane) return null
+        if (arcane.name && arcane.imageName) return arcane // Already hydrated
+        const fullArcane = arcaneMap.get(arcane.uniqueName)
         if (fullArcane) {
           return {
             ...arcane,
             name: fullArcane.name,
             imageName: fullArcane.imageName,
             rarity: fullArcane.rarity,
-          };
+          }
         }
-        return arcane;
-      });
+        return arcane
+      })
     }
 
-    return hydratedState;
+    return hydratedState
   }
 
-  return baseState;
+  return baseState
 }
 
 // ---------------------------------------------------------------------------
@@ -284,15 +285,15 @@ export type BuildAction =
   | { type: "APPLY_FORMA"; slotId: string; polarity: Polarity }
   | { type: "TOGGLE_REACTOR" }
   | {
-      type: "CLEAR_BUILD";
-      item: BrowseableItem;
-      category: BrowseCategory;
-      compatibleMods: Mod[];
+      type: "CLEAR_BUILD"
+      item: BrowseableItem
+      category: BrowseCategory
+      compatibleMods: Mod[]
     }
   | {
-      type: "SET_HELMINTH";
-      slotIndex: number;
-      ability: HelminthAbility | null;
+      type: "SET_HELMINTH"
+      slotIndex: number
+      ability: HelminthAbility | null
     }
   | { type: "PLACE_ARCANE"; arcane: Arcane; rank: number; slotIndex: number }
   | { type: "MOVE_ARCANE"; sourceIndex: number; targetIndex: number }
@@ -301,54 +302,51 @@ export type BuildAction =
   | { type: "PLACE_SHARD"; slotIndex: number; shard: PlacedShard }
   | { type: "REMOVE_SHARD"; slotIndex: number }
   | {
-      type: "HYDRATE";
-      state: Partial<BuildState>;
-      item: BrowseableItem;
-      category: BrowseCategory;
-    };
+      type: "HYDRATE"
+      state: Partial<BuildState>
+      item: BrowseableItem
+      category: BrowseCategory
+    }
 
 // Slot-level helpers used by multiple actions
-function getModFromSlot(
-  id: string,
-  state: BuildState
-): PlacedMod | undefined {
-  if (id.startsWith("aura")) return state.auraSlot?.mod;
-  if (id.startsWith("exilus")) return state.exilusSlot?.mod;
-  const idx = parseInt(id.replace("normal-", ""));
-  return state.normalSlots[idx]?.mod;
+function getModFromSlot(id: string, state: BuildState): PlacedMod | undefined {
+  if (id.startsWith("aura")) return state.auraSlot?.mod
+  if (id.startsWith("exilus")) return state.exilusSlot?.mod
+  const idx = parseInt(id.replace("normal-", ""))
+  return state.normalSlots[idx]?.mod
 }
 
 function setModInSlot(
   id: string,
   mod: PlacedMod | undefined,
-  state: BuildState
+  state: BuildState,
 ) {
   if (id.startsWith("aura") && state.auraSlot) {
-    state.auraSlot = { ...state.auraSlot, mod };
+    state.auraSlot = { ...state.auraSlot, mod }
   } else if (id.startsWith("exilus") && state.exilusSlot) {
-    state.exilusSlot = { ...state.exilusSlot, mod };
+    state.exilusSlot = { ...state.exilusSlot, mod }
   } else {
-    const idx = parseInt(id.replace("normal-", ""));
+    const idx = parseInt(id.replace("normal-", ""))
     if (!isNaN(idx)) {
-      state.normalSlots = [...state.normalSlots];
-      state.normalSlots[idx] = { ...state.normalSlots[idx], mod };
+      state.normalSlots = [...state.normalSlots]
+      state.normalSlots[idx] = { ...state.normalSlots[idx], mod }
     }
   }
 }
 
 function updateModRankInSlot(
   slot: ModSlot | undefined,
-  newRank: number
+  newRank: number,
 ): ModSlot | undefined {
-  if (!slot?.mod) return slot;
-  const clampedRank = Math.max(0, Math.min(newRank, slot.mod.fusionLimit));
-  return { ...slot, mod: { ...slot.mod, rank: clampedRank } };
+  if (!slot?.mod) return slot
+  const clampedRank = Math.max(0, Math.min(newRank, slot.mod.fusionLimit))
+  return { ...slot, mod: { ...slot.mod, rank: clampedRank } }
 }
 
 function buildReducer(state: BuildState, action: BuildAction): BuildState {
   switch (action.type) {
     case "PLACE_MOD": {
-      const { mod, rank, slotId } = action;
+      const { mod, rank, slotId } = action
       const placedMod: PlacedMod = {
         uniqueName: mod.uniqueName,
         name: mod.name,
@@ -365,148 +363,145 @@ function buildReducer(state: BuildState, action: BuildAction): BuildState {
         modSetStats: mod.modSetStats,
         isExilus: mod.isExilus,
         isUtility: mod.isUtility,
-      };
+      }
 
-      const newState = { ...state };
-      const baseName = getModBaseName(mod.name);
+      const newState = { ...state }
+      const baseName = getModBaseName(mod.name)
 
       // Remove existing instance of this mod or its variants
       if (
         newState.auraSlot?.mod &&
         getModBaseName(newState.auraSlot.mod.name) === baseName
       ) {
-        newState.auraSlot = { ...newState.auraSlot, mod: undefined };
+        newState.auraSlot = { ...newState.auraSlot, mod: undefined }
       }
       if (
         newState.exilusSlot?.mod &&
         getModBaseName(newState.exilusSlot.mod.name) === baseName
       ) {
-        newState.exilusSlot = { ...newState.exilusSlot, mod: undefined };
+        newState.exilusSlot = { ...newState.exilusSlot, mod: undefined }
       }
       newState.normalSlots = newState.normalSlots.map((s: ModSlot) =>
         s.mod && getModBaseName(s.mod.name) === baseName
           ? { ...s, mod: undefined }
-          : s
-      );
+          : s,
+      )
 
       // Place in target slot
       if (slotId.startsWith("aura") && newState.auraSlot) {
-        newState.auraSlot = { ...newState.auraSlot, mod: placedMod };
+        newState.auraSlot = { ...newState.auraSlot, mod: placedMod }
       } else if (slotId.startsWith("exilus") && newState.exilusSlot) {
-        newState.exilusSlot = { ...newState.exilusSlot, mod: placedMod };
+        newState.exilusSlot = { ...newState.exilusSlot, mod: placedMod }
       } else {
-        const slotIndex = parseInt(slotId.replace("normal-", ""));
+        const slotIndex = parseInt(slotId.replace("normal-", ""))
         if (!isNaN(slotIndex)) {
-          newState.normalSlots = [...newState.normalSlots];
+          newState.normalSlots = [...newState.normalSlots]
           newState.normalSlots[slotIndex] = {
             ...newState.normalSlots[slotIndex],
             mod: placedMod,
-          };
+          }
         }
       }
 
-      return newState;
+      return newState
     }
 
     case "MOVE_MOD": {
-      const { sourceSlotId, targetSlotId } = action;
-      const newState = { ...state };
+      const { sourceSlotId, targetSlotId } = action
+      const newState = { ...state }
 
-      if (newState.auraSlot) newState.auraSlot = { ...newState.auraSlot };
-      if (newState.exilusSlot) newState.exilusSlot = { ...newState.exilusSlot };
-      newState.normalSlots = [...newState.normalSlots];
+      if (newState.auraSlot) newState.auraSlot = { ...newState.auraSlot }
+      if (newState.exilusSlot) newState.exilusSlot = { ...newState.exilusSlot }
+      newState.normalSlots = [...newState.normalSlots]
 
-      const sourceMod = getModFromSlot(sourceSlotId, newState);
-      const targetMod = getModFromSlot(targetSlotId, newState);
+      const sourceMod = getModFromSlot(sourceSlotId, newState)
+      const targetMod = getModFromSlot(targetSlotId, newState)
 
-      setModInSlot(sourceSlotId, targetMod, newState);
-      setModInSlot(targetSlotId, sourceMod, newState);
+      setModInSlot(sourceSlotId, targetMod, newState)
+      setModInSlot(targetSlotId, sourceMod, newState)
 
-      return newState;
+      return newState
     }
 
     case "REMOVE_MOD": {
-      const { slotId } = action;
-      const newState = { ...state };
+      const { slotId } = action
+      const newState = { ...state }
 
       if (slotId.startsWith("aura") && newState.auraSlot) {
-        newState.auraSlot = { ...newState.auraSlot, mod: undefined };
+        newState.auraSlot = { ...newState.auraSlot, mod: undefined }
       } else if (slotId.startsWith("exilus") && newState.exilusSlot) {
-        newState.exilusSlot = { ...newState.exilusSlot, mod: undefined };
+        newState.exilusSlot = { ...newState.exilusSlot, mod: undefined }
       } else {
-        const slotIndex = parseInt(slotId.replace("normal-", ""));
+        const slotIndex = parseInt(slotId.replace("normal-", ""))
         if (!isNaN(slotIndex)) {
-          newState.normalSlots = [...newState.normalSlots];
+          newState.normalSlots = [...newState.normalSlots]
           newState.normalSlots[slotIndex] = {
             ...newState.normalSlots[slotIndex],
             mod: undefined,
-          };
+          }
         }
       }
 
-      return newState;
+      return newState
     }
 
     case "CHANGE_RANK": {
-      const { slotId, newRank } = action;
-      const newState = { ...state };
+      const { slotId, newRank } = action
+      const newState = { ...state }
 
       if (slotId.startsWith("aura") && newState.auraSlot) {
-        newState.auraSlot = updateModRankInSlot(newState.auraSlot, newRank);
+        newState.auraSlot = updateModRankInSlot(newState.auraSlot, newRank)
       } else if (slotId.startsWith("exilus") && newState.exilusSlot) {
-        newState.exilusSlot = updateModRankInSlot(
-          newState.exilusSlot,
-          newRank
-        )!;
+        newState.exilusSlot = updateModRankInSlot(newState.exilusSlot, newRank)!
       } else {
-        const slotIndex = parseInt(slotId.replace("normal-", ""));
+        const slotIndex = parseInt(slotId.replace("normal-", ""))
         if (!isNaN(slotIndex)) {
-          newState.normalSlots = [...newState.normalSlots];
+          newState.normalSlots = [...newState.normalSlots]
           newState.normalSlots[slotIndex] = updateModRankInSlot(
             newState.normalSlots[slotIndex],
-            newRank
-          )!;
+            newRank,
+          )!
         }
       }
 
-      return newState;
+      return newState
     }
 
     case "APPLY_FORMA": {
-      const { slotId, polarity } = action;
-      const newState = { ...state };
+      const { slotId, polarity } = action
+      const newState = { ...state }
 
       const getFormaValue = (
-        innate: Polarity | undefined
+        innate: Polarity | undefined,
       ): Polarity | undefined => {
-        if (polarity === innate) return undefined;
-        if (polarity === "universal" && innate === undefined) return undefined;
-        return polarity;
-      };
+        if (polarity === innate) return undefined
+        if (polarity === "universal" && innate === undefined) return undefined
+        return polarity
+      }
 
       if (slotId.startsWith("aura") && newState.auraSlot) {
-        const formaValue = getFormaValue(newState.auraSlot.innatePolarity);
-        newState.auraSlot = { ...newState.auraSlot, formaPolarity: formaValue };
+        const formaValue = getFormaValue(newState.auraSlot.innatePolarity)
+        newState.auraSlot = { ...newState.auraSlot, formaPolarity: formaValue }
       } else if (slotId.startsWith("exilus") && newState.exilusSlot) {
-        const formaValue = getFormaValue(newState.exilusSlot.innatePolarity);
+        const formaValue = getFormaValue(newState.exilusSlot.innatePolarity)
         newState.exilusSlot = {
           ...newState.exilusSlot,
           formaPolarity: formaValue,
-        };
+        }
       } else {
-        const slotIndex = parseInt(slotId.replace("normal-", ""));
+        const slotIndex = parseInt(slotId.replace("normal-", ""))
         if (!isNaN(slotIndex)) {
-          newState.normalSlots = [...newState.normalSlots];
-          const slot = newState.normalSlots[slotIndex];
-          const formaValue = getFormaValue(slot.innatePolarity);
+          newState.normalSlots = [...newState.normalSlots]
+          const slot = newState.normalSlots[slotIndex]
+          const formaValue = getFormaValue(slot.innatePolarity)
           newState.normalSlots[slotIndex] = {
             ...slot,
             formaPolarity: formaValue,
-          };
+          }
         }
       }
 
-      return newState;
+      return newState
     }
 
     case "TOGGLE_REACTOR": {
@@ -514,93 +509,93 @@ function buildReducer(state: BuildState, action: BuildAction): BuildState {
         ...state,
         hasReactor: !state.hasReactor,
         baseCapacity: !state.hasReactor ? 60 : 30,
-      };
+      }
     }
 
     case "CLEAR_BUILD": {
       return createInitialBuildState(
         action.item,
         action.category,
-        action.compatibleMods
-      );
+        action.compatibleMods,
+      )
     }
 
     case "SET_HELMINTH": {
-      const { slotIndex, ability } = action;
+      const { slotIndex, ability } = action
       return {
         ...state,
         helminthAbility: ability ? { slotIndex, ability } : undefined,
-      };
+      }
     }
 
     case "PLACE_ARCANE": {
-      const { arcane, rank, slotIndex } = action;
+      const { arcane, rank, slotIndex } = action
       const placedArcane: PlacedArcane = {
         uniqueName: arcane.uniqueName,
         name: arcane.name,
         imageName: arcane.imageName,
         rank,
         rarity: arcane.rarity,
-      };
-
-      const newArcaneSlots = [...(state.arcaneSlots || [])];
-      const existingIndex = newArcaneSlots.findIndex(
-        (a) => a?.uniqueName === arcane.uniqueName
-      );
-      if (existingIndex !== -1 && existingIndex !== slotIndex) {
-        newArcaneSlots[existingIndex] = null;
       }
-      newArcaneSlots[slotIndex] = placedArcane;
 
-      return { ...state, arcaneSlots: newArcaneSlots };
+      const newArcaneSlots = [...(state.arcaneSlots || [])]
+      const existingIndex = newArcaneSlots.findIndex(
+        (a) => a?.uniqueName === arcane.uniqueName,
+      )
+      if (existingIndex !== -1 && existingIndex !== slotIndex) {
+        newArcaneSlots[existingIndex] = null
+      }
+      newArcaneSlots[slotIndex] = placedArcane
+
+      return { ...state, arcaneSlots: newArcaneSlots }
     }
 
     case "MOVE_ARCANE": {
-      const { sourceIndex, targetIndex } = action;
-      const newArcaneSlots = [...(state.arcaneSlots || [])];
-      const sourceArcane = newArcaneSlots[sourceIndex];
-      const targetArcane = newArcaneSlots[targetIndex];
-      newArcaneSlots[sourceIndex] = targetArcane;
-      newArcaneSlots[targetIndex] = sourceArcane;
-      return { ...state, arcaneSlots: newArcaneSlots };
+      const { sourceIndex, targetIndex } = action
+      const newArcaneSlots = [...(state.arcaneSlots || [])]
+      const sourceArcane = newArcaneSlots[sourceIndex]
+      const targetArcane = newArcaneSlots[targetIndex]
+      newArcaneSlots[sourceIndex] = targetArcane
+      newArcaneSlots[targetIndex] = sourceArcane
+      return { ...state, arcaneSlots: newArcaneSlots }
     }
 
     case "REMOVE_ARCANE": {
-      const newArcaneSlots = [...(state.arcaneSlots || [])];
-      newArcaneSlots[action.slotIndex] = null;
-      return { ...state, arcaneSlots: newArcaneSlots };
+      const newArcaneSlots = [...(state.arcaneSlots || [])]
+      newArcaneSlots[action.slotIndex] = null
+      return { ...state, arcaneSlots: newArcaneSlots }
     }
 
     case "CHANGE_ARCANE_RANK": {
-      const { slotIndex, newRank } = action;
-      const newArcaneSlots = [...(state.arcaneSlots || [])];
-      const arcane = newArcaneSlots[slotIndex];
+      const { slotIndex, newRank } = action
+      const newArcaneSlots = [...(state.arcaneSlots || [])]
+      const arcane = newArcaneSlots[slotIndex]
       if (arcane) {
-        const maxRank = 5;
-        const clampedRank = Math.max(0, Math.min(newRank, maxRank));
-        newArcaneSlots[slotIndex] = { ...arcane, rank: clampedRank };
+        const maxRank = 5
+        const clampedRank = Math.max(0, Math.min(newRank, maxRank))
+        newArcaneSlots[slotIndex] = { ...arcane, rank: clampedRank }
       }
-      return { ...state, arcaneSlots: newArcaneSlots };
+      return { ...state, arcaneSlots: newArcaneSlots }
     }
 
     case "PLACE_SHARD": {
       const newShardSlots = [
         ...(state.shardSlots || [null, null, null, null, null]),
-      ];
-      newShardSlots[action.slotIndex] = action.shard;
-      return { ...state, shardSlots: newShardSlots };
+      ]
+      newShardSlots[action.slotIndex] = action.shard
+      return { ...state, shardSlots: newShardSlots }
     }
 
     case "REMOVE_SHARD": {
       const newShardSlots = [
         ...(state.shardSlots || [null, null, null, null, null]),
-      ];
-      newShardSlots[action.slotIndex] = null;
-      return { ...state, shardSlots: newShardSlots };
+      ]
+      newShardSlots[action.slotIndex] = null
+      return { ...state, shardSlots: newShardSlots }
     }
 
     case "HYDRATE": {
-      const { state: partial, item, category } = action;
+      const { state: partial, item, category } = action
       return {
         ...state,
         ...partial,
@@ -608,11 +603,11 @@ function buildReducer(state: BuildState, action: BuildAction): BuildState {
         itemName: item.name,
         itemCategory: category,
         itemImageName: item.imageName,
-      };
+      }
     }
 
     default:
-      return state;
+      return state
   }
 }
 
@@ -621,11 +616,11 @@ function buildReducer(state: BuildState, action: BuildAction): BuildState {
 // ---------------------------------------------------------------------------
 
 export interface UseBuildStateProps {
-  item: BrowseableItem;
-  category: BrowseCategory;
-  compatibleMods: Mod[];
-  compatibleArcanes: Arcane[];
-  importedBuild?: Partial<BuildState>;
+  item: BrowseableItem
+  category: BrowseCategory
+  compatibleMods: Mod[]
+  compatibleArcanes: Arcane[]
+  importedBuild?: Partial<BuildState>
 }
 
 export function useBuildState({
@@ -644,122 +639,116 @@ export function useBuildState({
         init.category,
         init.compatibleMods,
         init.importedBuild,
-        init.compatibleArcanes
-      )
-  );
+        init.compatibleArcanes,
+      ),
+  )
 
   // --- Mod actions ---
 
   const placeModInSlot = useCallback(
     (mod: Mod, rank: number, slotId: string) => {
-      dispatch({ type: "PLACE_MOD", mod, rank, slotId });
+      dispatch({ type: "PLACE_MOD", mod, rank, slotId })
     },
-    []
-  );
+    [],
+  )
 
-  const moveMod = useCallback(
-    (sourceSlotId: string, targetSlotId: string) => {
-      dispatch({ type: "MOVE_MOD", sourceSlotId, targetSlotId });
-    },
-    []
-  );
+  const moveMod = useCallback((sourceSlotId: string, targetSlotId: string) => {
+    dispatch({ type: "MOVE_MOD", sourceSlotId, targetSlotId })
+  }, [])
 
   const handleRemoveMod = useCallback((slotId: string) => {
-    dispatch({ type: "REMOVE_MOD", slotId });
-  }, []);
+    dispatch({ type: "REMOVE_MOD", slotId })
+  }, [])
 
   const handleChangeRank = useCallback((slotId: string, newRank: number) => {
-    dispatch({ type: "CHANGE_RANK", slotId, newRank });
-  }, []);
+    dispatch({ type: "CHANGE_RANK", slotId, newRank })
+  }, [])
 
   const handleApplyForma = useCallback((slotId: string, polarity: Polarity) => {
-    dispatch({ type: "APPLY_FORMA", slotId, polarity });
-  }, []);
+    dispatch({ type: "APPLY_FORMA", slotId, polarity })
+  }, [])
 
   const handleToggleReactor = useCallback(() => {
-    dispatch({ type: "TOGGLE_REACTOR" });
-  }, []);
+    dispatch({ type: "TOGGLE_REACTOR" })
+  }, [])
 
   const handleClearBuild = useCallback(() => {
-    dispatch({ type: "CLEAR_BUILD", item, category, compatibleMods });
-  }, [item, category, compatibleMods]);
+    dispatch({ type: "CLEAR_BUILD", item, category, compatibleMods })
+  }, [item, category, compatibleMods])
 
   const handleHelminthAbilityChange = useCallback(
     (slotIndex: number, ability: HelminthAbility | null) => {
-      dispatch({ type: "SET_HELMINTH", slotIndex, ability });
+      dispatch({ type: "SET_HELMINTH", slotIndex, ability })
     },
-    []
-  );
+    [],
+  )
 
   // --- Arcane actions ---
 
   const placeArcaneInSlot = useCallback(
     (arcane: Arcane, rank: number, slotIndex: number) => {
-      dispatch({ type: "PLACE_ARCANE", arcane, rank, slotIndex });
+      dispatch({ type: "PLACE_ARCANE", arcane, rank, slotIndex })
     },
-    []
-  );
+    [],
+  )
 
-  const moveArcane = useCallback(
-    (sourceIndex: number, targetIndex: number) => {
-      dispatch({ type: "MOVE_ARCANE", sourceIndex, targetIndex });
-    },
-    []
-  );
+  const moveArcane = useCallback((sourceIndex: number, targetIndex: number) => {
+    dispatch({ type: "MOVE_ARCANE", sourceIndex, targetIndex })
+  }, [])
 
   const handleRemoveArcane = useCallback((slotIndex: number) => {
-    dispatch({ type: "REMOVE_ARCANE", slotIndex });
-  }, []);
+    dispatch({ type: "REMOVE_ARCANE", slotIndex })
+  }, [])
 
   const handleChangeArcaneRank = useCallback(
     (slotIndex: number, newRank: number) => {
-      dispatch({ type: "CHANGE_ARCANE_RANK", slotIndex, newRank });
+      dispatch({ type: "CHANGE_ARCANE_RANK", slotIndex, newRank })
     },
-    []
-  );
+    [],
+  )
 
   // --- Shard actions ---
 
   const handlePlaceShard = useCallback(
     (slotIndex: number, shard: PlacedShard) => {
-      dispatch({ type: "PLACE_SHARD", slotIndex, shard });
+      dispatch({ type: "PLACE_SHARD", slotIndex, shard })
     },
-    []
-  );
+    [],
+  )
 
   const handleRemoveShard = useCallback((slotIndex: number) => {
-    dispatch({ type: "REMOVE_SHARD", slotIndex });
-  }, []);
+    dispatch({ type: "REMOVE_SHARD", slotIndex })
+  }, [])
 
   // --- Derived state ---
 
   const usedModNames = useMemo((): Set<string> => {
-    const names = new Set<string>();
+    const names = new Set<string>()
     if (buildState.auraSlot?.mod)
-      names.add(getModBaseName(buildState.auraSlot.mod.name));
+      names.add(getModBaseName(buildState.auraSlot.mod.name))
     if (buildState.exilusSlot?.mod)
-      names.add(getModBaseName(buildState.exilusSlot.mod.name));
+      names.add(getModBaseName(buildState.exilusSlot.mod.name))
     for (const slot of buildState.normalSlots) {
-      if (slot.mod) names.add(getModBaseName(slot.mod.name));
+      if (slot.mod) names.add(getModBaseName(slot.mod.name))
     }
-    return names;
-  }, [buildState]);
+    return names
+  }, [buildState])
 
   const usedArcaneNames = useMemo((): Set<string> => {
-    const names = new Set<string>();
+    const names = new Set<string>()
     for (const a of buildState.arcaneSlots || []) {
-      if (a !== null) names.add(a.name);
+      if (a !== null) names.add(a.name)
     }
-    return names;
-  }, [buildState.arcaneSlots]);
+    return names
+  }, [buildState.arcaneSlots])
 
   const arcaneDataMap = useMemo(() => {
-    const map = new Map<string, Arcane>();
+    const map = new Map<string, Arcane>()
     for (const arcane of compatibleArcanes) {
-      map.set(arcane.uniqueName, arcane);
+      map.set(arcane.uniqueName, arcane)
     }
-    return map;
-  }, [compatibleArcanes]);
+    return map
+  }, [compatibleArcanes])
 
   const { capacityStatus, totalEndoCost, formaCount } = useMemo(
     () => ({
@@ -768,11 +757,11 @@ export function useBuildState({
       formaCount: calculateFormaCount(
         buildState.normalSlots,
         buildState.auraSlot,
-        buildState.exilusSlot
+        buildState.exilusSlot,
       ),
     }),
-    [buildState]
-  );
+    [buildState],
+  )
 
   return {
     buildState,
@@ -801,5 +790,5 @@ export function useBuildState({
     capacityStatus,
     totalEndoCost,
     formaCount,
-  };
+  }
 }

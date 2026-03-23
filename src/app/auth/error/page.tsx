@@ -1,28 +1,30 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import Link from "next/link"
+
+import { Button } from "@/components/ui/button"
 
 const errorMessages: Record<string, string> = {
   Configuration: "There is a problem with the server configuration.",
   AccessDenied: "You do not have permission to sign in.",
   Verification: "The verification link has expired or has already been used.",
   Default: "An error occurred during authentication.",
-};
+}
 
 export default async function AuthErrorPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string }>
 }) {
-  const { error } = await searchParams;
-  const errorMessage = errorMessages[error ?? "Default"] ?? errorMessages.Default;
+  const { error } = await searchParams
+  const errorMessage =
+    errorMessages[error ?? "Default"] ?? errorMessages.Default
 
   return (
     <div className="flex min-h-[80vh] items-center justify-center">
-      <div className="mx-auto w-full max-w-sm flex flex-col gap-6 px-4 text-center">
+      <div className="mx-auto flex w-full max-w-sm flex-col gap-6 px-4 text-center">
         <div className="flex flex-col gap-2">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-destructive/10">
+          <div className="bg-destructive/10 mx-auto flex size-12 items-center justify-center rounded-full">
             <svg
-              className="size-6 text-destructive"
+              className="text-destructive size-6"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -40,10 +42,18 @@ export default async function AuthErrorPage({
         </div>
 
         <div className="flex flex-col gap-2">
-          <Button render={<Link href="/auth/signin" />} nativeButton={false}>Try Again</Button>
-          <Button variant="outline" render={<Link href="/" />} nativeButton={false}>Go Home</Button>
+          <Button render={<Link href="/auth/signin" />} nativeButton={false}>
+            Try Again
+          </Button>
+          <Button
+            variant="outline"
+            render={<Link href="/" />}
+            nativeButton={false}
+          >
+            Go Home
+          </Button>
         </div>
       </div>
     </div>
-  );
+  )
 }

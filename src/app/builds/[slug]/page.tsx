@@ -1,50 +1,50 @@
-import { Suspense } from "react";
-import Link from "next/link";
-import { ChevronRight } from "lucide-react";
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
-import { BuildContainer } from "@/components/build-editor/build-container";
-import { Skeleton } from "@/components/ui/skeleton";
-import { getServerSession } from "@/lib/auth";
-import { getBuildBySlug } from "@/lib/db/index";
-import { getFullItem } from "@/lib/warframe/items";
-import { getModsForItem, getArcanesForSlot } from "@/lib/warframe/mods";
-import { getCategoryConfig } from "@/lib/warframe";
-import type { BrowseCategory, Arcane } from "@/lib/warframe/types";
-import { BuildSocialActions } from "@/components/build/build-social-actions";
-import { slugify } from "@/lib/warframe/slugs";
-import { ViewTracker } from "@/components/build/view-tracker";
-import { TemplateButton } from "@/components/build/template-button";
-import { ShareButton } from "@/components/build/share-button";
+import { ChevronRight } from "lucide-react"
+import type { Metadata } from "next"
+import Link from "next/link"
+import { notFound } from "next/navigation"
+import { Suspense } from "react"
 
+import { BuildContainer } from "@/components/build-editor/build-container"
+import { BuildSocialActions } from "@/components/build/build-social-actions"
+import { ShareButton } from "@/components/build/share-button"
+import { TemplateButton } from "@/components/build/template-button"
+import { ViewTracker } from "@/components/build/view-tracker"
+import { Footer } from "@/components/footer"
+import { Header } from "@/components/header"
+import { Skeleton } from "@/components/ui/skeleton"
+import { getServerSession } from "@/lib/auth"
+import { getBuildBySlug } from "@/lib/db/index"
+import { getCategoryConfig } from "@/lib/warframe"
+import { getFullItem } from "@/lib/warframe/items"
+import { getModsForItem, getArcanesForSlot } from "@/lib/warframe/mods"
+import { slugify } from "@/lib/warframe/slugs"
+import type { BrowseCategory, Arcane } from "@/lib/warframe/types"
 
 interface BuildPageProps {
   params: Promise<{
-    slug: string;
-  }>;
+    slug: string
+  }>
 }
 
 // Generate metadata for social sharing
 export async function generateMetadata({
   params,
 }: BuildPageProps): Promise<Metadata> {
-  const { slug } = await params;
-  const build = await getBuildBySlug(slug);
+  const { slug } = await params
+  const build = await getBuildBySlug(slug)
 
   if (!build) {
     return {
       title: "Build Not Found | ARSENYX",
-    };
+    }
   }
 
-  const title = `${build.name} - ${build.item.name} Build | ARSENYX`;
+  const title = `${build.name} - ${build.item.name} Build | ARSENYX`
   const description =
     build.description ||
     `${build.item.name} build by ${
       build.user.username || build.user.name || "Anonymous"
-    }`;
+    }`
 
   return {
     title,
@@ -59,25 +59,25 @@ export async function generateMetadata({
       title,
       description,
     },
-  };
+  }
 }
 
 function BuildViewSkeleton() {
   return (
-    <div className="container py-6 flex flex-col gap-6">
+    <div className="container flex flex-col gap-6 py-6">
       <div className="flex items-center gap-4">
         <Skeleton className="h-10 w-48" />
         <Skeleton className="h-6 w-32" />
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Left sidebar skeleton */}
-        <div className="lg:col-span-3 flex flex-col gap-4">
+        <div className="flex flex-col gap-4 lg:col-span-3">
           <Skeleton className="aspect-square w-full rounded-xl" />
           <Skeleton className="h-8 w-full" />
           <Skeleton className="h-24 w-full" />
         </div>
         {/* Center mod grid skeleton */}
-        <div className="lg:col-span-6 flex flex-col gap-4">
+        <div className="flex flex-col gap-4 lg:col-span-6">
           <div className="grid grid-cols-4 gap-2">
             {Array.from({ length: 10 }).map((_, i) => (
               <Skeleton key={i} className="aspect-square rounded-lg" />
@@ -85,90 +85,87 @@ function BuildViewSkeleton() {
           </div>
         </div>
         {/* Right panel skeleton */}
-        <div className="lg:col-span-3 flex flex-col gap-4">
+        <div className="flex flex-col gap-4 lg:col-span-3">
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-64 w-full" />
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 export default async function BuildPage({ params }: BuildPageProps) {
-  const [{ slug }, session] = await Promise.all([
-    params,
-    getServerSession(),
-  ]);
-  const viewerId = session?.user?.id;
+  const [{ slug }, session] = await Promise.all([params, getServerSession()])
+  const viewerId = session?.user?.id
 
   // Fetch the build with visibility check
-  const build = await getBuildBySlug(slug, viewerId);
+  const build = await getBuildBySlug(slug, viewerId)
 
   if (!build) {
-    notFound();
+    notFound()
   }
 
   // Get the category from the build's item
-  const category = build.item.browseCategory as BrowseCategory;
+  const category = build.item.browseCategory as BrowseCategory
 
   // Fetch the full item data
-  const fullItem = getFullItem(category, build.item.uniqueName);
+  const fullItem = getFullItem(category, build.item.uniqueName)
 
   if (!fullItem) {
-    notFound();
+    notFound()
   }
 
   // Get compatible mods and arcanes
-  const categoryConfig = getCategoryConfig(category);
-  const compatibleMods = getModsForItem(fullItem);
+  const categoryConfig = getCategoryConfig(category)
+  const compatibleMods = getModsForItem(fullItem)
   const isWarframeCategory =
-    category === "warframes" || category === "necramechs";
+    category === "warframes" || category === "necramechs"
 
-  let compatibleArcanes: Arcane[] = [];
+  let compatibleArcanes: Arcane[] = []
   if (isWarframeCategory) {
-    compatibleArcanes = getArcanesForSlot("warframe");
+    compatibleArcanes = getArcanesForSlot("warframe")
   } else if (category === "primary") {
-    compatibleArcanes = getArcanesForSlot("primary");
+    compatibleArcanes = getArcanesForSlot("primary")
   } else if (category === "secondary") {
-    compatibleArcanes = getArcanesForSlot("secondary");
+    compatibleArcanes = getArcanesForSlot("secondary")
   } else if (category === "melee") {
-    compatibleArcanes = getArcanesForSlot("melee");
+    compatibleArcanes = getArcanesForSlot("melee")
   }
 
   // Check if the current user is the owner
-  const isOwner = viewerId === build.userId;
+  const isOwner = viewerId === build.userId
 
   return (
-    <div className="relative min-h-screen flex flex-col">
+    <div className="relative flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
         {/* Build Info Banner */}
-        <div className="border-b bg-muted/30">
+        <div className="bg-muted/30 border-b">
           <div className="container py-3">
             {/* Breadcrumbs */}
-            <div className="flex items-center text-sm text-muted-foreground mb-3">
+            <div className="text-muted-foreground mb-3 flex items-center text-sm">
               <Link
                 href="/builds"
                 className="hover:text-primary transition-colors"
               >
                 Builds
               </Link>
-              <ChevronRight className="h-4 w-4 mx-1" />
+              <ChevronRight className="mx-1 h-4 w-4" />
               <Link
                 href={`/browse/${category}`}
-                className="hover:text-primary transition-colors capitalize"
+                className="hover:text-primary capitalize transition-colors"
               >
                 {category}
               </Link>
-              <ChevronRight className="h-4 w-4 mx-1" />
+              <ChevronRight className="mx-1 h-4 w-4" />
               <Link
                 href={`/browse/${category}/${slugify(build.item.name)}`}
                 className="hover:text-primary transition-colors"
               >
                 {build.item.name}
               </Link>
-              <ChevronRight className="h-4 w-4 mx-1" />
-              <span className="text-foreground font-medium truncate max-w-[200px]">
+              <ChevronRight className="mx-1 h-4 w-4" />
+              <span className="text-foreground max-w-[200px] truncate font-medium">
                 {build.name}
               </span>
             </div>
@@ -176,7 +173,7 @@ export default async function BuildPage({ params }: BuildPageProps) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <h1 className="text-xl font-bold">{build.name}</h1>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-muted-foreground text-sm">
                   by {build.user.username || build.user.name || "Anonymous"}
                 </span>
               </div>
@@ -197,7 +194,7 @@ export default async function BuildPage({ params }: BuildPageProps) {
                   itemName={build.item.name}
                   buildSlug={build.slug}
                 />
-                <span className="text-sm text-muted-foreground">
+                <span className="text-muted-foreground text-sm">
                   Updated {new Date(build.updatedAt).toLocaleDateString()}
                 </span>
               </div>
@@ -205,7 +202,7 @@ export default async function BuildPage({ params }: BuildPageProps) {
           </div>
         </div>
 
-<Suspense fallback={<BuildViewSkeleton />}>
+        <Suspense fallback={<BuildViewSkeleton />}>
           <BuildContainer
             item={fullItem}
             category={category}
@@ -234,5 +231,5 @@ export default async function BuildPage({ params }: BuildPageProps) {
       <Footer />
       <ViewTracker buildId={build.id} />
     </div>
-  );
+  )
 }

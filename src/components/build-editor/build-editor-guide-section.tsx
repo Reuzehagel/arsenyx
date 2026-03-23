@@ -1,26 +1,34 @@
-"use client";
+"use client"
 
-import { GuideEditor } from "./guide-editor";
-import dynamic from "next/dynamic";
+import dynamic from "next/dynamic"
+
+import { GuideEditor } from "./guide-editor"
 
 const GuideReader = dynamic(
-  () => import("@/components/guides/guide-reader").then((mod) => mod.GuideReader),
-  { ssr: false, loading: () => <div className="h-[100px] rounded-md border bg-muted/30 animate-pulse" /> }
-);
-import { PartnerBuildsSection } from "@/components/build/partner-builds-section";
-import type { PartnerBuild } from "./partner-build-card";
-import type { PartnerBuildOption } from "./partner-build-selector";
+  () =>
+    import("@/components/guides/guide-reader").then((mod) => mod.GuideReader),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-muted/30 h-[100px] animate-pulse rounded-md border" />
+    ),
+  },
+)
+import { PartnerBuildsSection } from "@/components/build/partner-builds-section"
+
+import type { PartnerBuild } from "./partner-build-card"
+import type { PartnerBuildOption } from "./partner-build-selector"
 
 export interface BuildEditorGuideSectionProps {
-  canEdit: boolean;
-  savedBuildId?: string;
-  isAuthenticated: boolean;
-  guideSummary: string;
-  setGuideSummary: (v: string) => void;
-  guideDescription: string;
-  setGuideDescription: (v: string) => void;
-  partnerBuilds: PartnerBuild[];
-  availableBuilds: PartnerBuildOption[];
+  canEdit: boolean
+  savedBuildId?: string
+  isAuthenticated: boolean
+  guideSummary: string
+  setGuideSummary: (v: string) => void
+  guideDescription: string
+  setGuideDescription: (v: string) => void
+  partnerBuilds: PartnerBuild[]
+  availableBuilds: PartnerBuildOption[]
 }
 
 export function BuildEditorGuideSection({
@@ -38,11 +46,11 @@ export function BuildEditorGuideSection({
     <>
       {/* Build Guide - New builds */}
       {canEdit && !savedBuildId && (
-        <div className="bg-card/50 border rounded-xl overflow-hidden">
-          <div className="border-b bg-muted/30 px-6 py-4">
+        <div className="bg-card/50 overflow-hidden rounded-xl border">
+          <div className="bg-muted/30 border-b px-6 py-4">
             <h2 className="text-lg font-semibold">Build Guide</h2>
           </div>
-          <div className="p-6 flex flex-col gap-6">
+          <div className="flex flex-col gap-6 p-6">
             <GuideEditor
               buildId=""
               initialSummary={guideSummary}
@@ -54,7 +62,7 @@ export function BuildEditorGuideSection({
               showPartnerBuilds={isAuthenticated}
               showSaveButtons={false}
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Your guide will be saved when you publish the build.
             </p>
           </div>
@@ -63,11 +71,11 @@ export function BuildEditorGuideSection({
 
       {/* Build Guide - Existing builds */}
       {savedBuildId && (
-        <div className="bg-card/50 border rounded-xl overflow-hidden">
-          <div className="border-b bg-muted/30 px-6 py-4 flex items-center justify-between">
+        <div className="bg-card/50 overflow-hidden rounded-xl border">
+          <div className="bg-muted/30 flex items-center justify-between border-b px-6 py-4">
             <h2 className="text-lg font-semibold">Build Guide</h2>
           </div>
-          <div className="p-6 flex flex-col gap-6">
+          <div className="flex flex-col gap-6 p-6">
             {canEdit ? (
               <GuideEditor
                 buildId={savedBuildId}
@@ -82,10 +90,14 @@ export function BuildEditorGuideSection({
               />
             ) : (
               <>
-                {guideSummary || guideDescription || partnerBuilds.length > 0 ? (
+                {guideSummary ||
+                guideDescription ||
+                partnerBuilds.length > 0 ? (
                   <>
                     {guideSummary && (
-                      <div className="text-muted-foreground">{guideSummary}</div>
+                      <div className="text-muted-foreground">
+                        {guideSummary}
+                      </div>
                     )}
                     {guideDescription && (
                       <GuideReader content={guideDescription} />
@@ -95,7 +107,7 @@ export function BuildEditorGuideSection({
                     )}
                   </>
                 ) : (
-                  <div className="text-center py-8 text-muted-foreground">
+                  <div className="text-muted-foreground py-8 text-center">
                     <p>No guide written yet.</p>
                   </div>
                 )}
@@ -105,5 +117,5 @@ export function BuildEditorGuideSection({
         </div>
       )}
     </>
-  );
+  )
 }

@@ -17,7 +17,7 @@ export type ModRarity =
   | "Peculiar"
   | "Riven"
   | "Amalgam"
-  | "Galvanized";
+  | "Galvanized"
 
 /**
  * Rarity groups based on asset structure.
@@ -28,7 +28,7 @@ export type RarityGroup =
   | "legendary"
   | "riven"
   | "amalgam"
-  | "galvanized";
+  | "galvanized"
 
 /**
  * Map each rarity to its asset group and folder/prefix for loading images.
@@ -36,10 +36,10 @@ export type RarityGroup =
 export const RARITY_CONFIG: Record<
   ModRarity,
   {
-    group: RarityGroup;
-    folder: string;
-    prefix: string;
-    textColor: string;
+    group: RarityGroup
+    folder: string
+    prefix: string
+    textColor: string
   }
 > = {
   Common: {
@@ -90,7 +90,7 @@ export const RARITY_CONFIG: Record<
     prefix: "Galvanized",
     textColor: "#7CB8E4",
   },
-};
+}
 
 // =============================================================================
 // ASSET DIMENSIONS (Source PNG sizes)
@@ -103,9 +103,9 @@ export const RARITY_CONFIG: Record<
 export const ASSET_DIMENSIONS: Record<
   RarityGroup,
   {
-    background: { w: number; h: number };
-    frameTop: { w: number; h: number };
-    frameBottom: { w: number; h: number };
+    background: { w: number; h: number }
+    frameTop: { w: number; h: number }
+    frameBottom: { w: number; h: number }
   }
 > = {
   standard: {
@@ -133,7 +133,7 @@ export const ASSET_DIMENSIONS: Record<
     frameTop: { w: 512, h: 128 },
     frameBottom: { w: 512, h: 256 },
   },
-};
+}
 
 // =============================================================================
 // DISPLAY SIZES
@@ -146,9 +146,9 @@ export const ASSET_DIMENSIONS: Record<
 export const DISPLAY_SIZE = {
   compact: { width: 184, height: 64 },
   expanded: { width: 184, height: 285 },
-} as const;
+} as const
 
-export type CardVariant = keyof typeof DISPLAY_SIZE;
+export type CardVariant = keyof typeof DISPLAY_SIZE
 
 // =============================================================================
 // ASSET URL HELPERS
@@ -167,60 +167,60 @@ export function getModAssetUrl(
     | "SideLight"
     | "LowerTab"
     | "TopRightBacker"
-    | "RankCompleteLine"
+    | "RankCompleteLine",
 ): string {
-  const config = RARITY_CONFIG[rarity];
+  const config = RARITY_CONFIG[rarity]
 
   // Special case: RankCompleteLine doesn't have a prefix
   if (asset === "RankCompleteLine") {
-    return `/mod-components/${config.folder}/RankCompleteLine.png`;
+    return `/mod-components/${config.folder}/RankCompleteLine.png`
   }
 
   // Special case: Amalgam uses different prefixes for some assets
   if (rarity === "Amalgam") {
     // Amalgam uses Legendary corner lights and Silver lower tab/backer
     if (asset === "CornerLights" || asset === "SideLight") {
-      return `/mod-components/${config.folder}/Legendary${asset}.png`;
+      return `/mod-components/${config.folder}/Legendary${asset}.png`
     }
     if (asset === "LowerTab" || asset === "TopRightBacker") {
-      return `/mod-components/${config.folder}/Silver${asset}.png`;
+      return `/mod-components/${config.folder}/Silver${asset}.png`
     }
   }
 
   // Special case: Galvanized uses Silver for some assets
   if (rarity === "Galvanized") {
     if (asset === "LowerTab" || asset === "TopRightBacker") {
-      return `/mod-components/${config.folder}/Silver${asset}.png`;
+      return `/mod-components/${config.folder}/Silver${asset}.png`
     }
   }
 
   // Special case: Riven uses Silver background
   if (rarity === "Riven" && asset === "Background") {
-    return `/mod-components/${config.folder}/SilverBackground.png`;
+    return `/mod-components/${config.folder}/SilverBackground.png`
   }
 
-  return `/mod-components/${config.folder}/${config.prefix}${asset}.png`;
+  return `/mod-components/${config.folder}/${config.prefix}${asset}.png`
 }
 
 /**
  * Get the text color for a rarity.
  */
 export function getRarityColor(rarity: ModRarity): string {
-  return RARITY_CONFIG[rarity].textColor;
+  return RARITY_CONFIG[rarity].textColor
 }
 
 /**
  * Get the rarity group for a rarity.
  */
 export function getRarityGroup(rarity: ModRarity): RarityGroup {
-  return RARITY_CONFIG[rarity].group;
+  return RARITY_CONFIG[rarity].group
 }
 
 // =============================================================================
 // POLARITY ICONS
 // =============================================================================
 
-import type { Polarity } from "./types";
+import type { Polarity } from "./types"
 
 const POLARITY_ICON_MAP: Record<Polarity, string> = {
   madurai: "Madurai_Pol.svg",
@@ -232,10 +232,9 @@ const POLARITY_ICON_MAP: Record<Polarity, string> = {
   umbra: "Umbra_Pol.svg",
   any: "Any_Pol.svg",
   universal: "Any_Pol.svg",
-};
-
-export function getPolarityIconUrl(polarity: Polarity): string {
-  const filename = POLARITY_ICON_MAP[polarity] || "Any_Pol.svg";
-  return `/focus-schools/${filename}`;
 }
 
+export function getPolarityIconUrl(polarity: Polarity): string {
+  const filename = POLARITY_ICON_MAP[polarity] || "Any_Pol.svg"
+  return `/focus-schools/${filename}`
+}

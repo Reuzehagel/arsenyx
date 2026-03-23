@@ -1,4 +1,4 @@
-"use server";
+"use server"
 
 /**
  * Social Feature Server Actions
@@ -6,27 +6,31 @@
  * Vote and favorite operations with authentication
  */
 
-import { getServerSession } from "@/lib/auth";
+import { revalidatePath } from "next/cache"
+
+import { getServerSession } from "@/lib/auth"
 import {
   toggleBuildVote,
   hasUserVotedForBuild,
   toggleBuildFavorite,
   hasUserFavoritedBuild,
-} from "@/lib/db/index";
-import { ok, err, type Result } from "@/lib/result";
-import { RateLimitError } from "@/lib/rate-limit";
-import { revalidatePath } from "next/cache";
+} from "@/lib/db/index"
+import { RateLimitError } from "@/lib/rate-limit"
+import { ok, err, type Result } from "@/lib/result"
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
-export type VoteResult = Result<{ voted: boolean; voteCount: number }>;
-export type FavoriteResult = Result<{ favorited: boolean; favoriteCount: number }>;
+export type VoteResult = Result<{ voted: boolean; voteCount: number }>
+export type FavoriteResult = Result<{
+  favorited: boolean
+  favoriteCount: number
+}>
 
 export interface SocialStatusResult {
-  hasVoted: boolean;
-  hasFavorited: boolean;
+  hasVoted: boolean
+  hasFavorited: boolean
 }
 
 // =============================================================================
@@ -38,24 +42,24 @@ export interface SocialStatusResult {
  */
 export async function toggleVoteAction(buildId: string): Promise<VoteResult> {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession()
 
     if (!session?.user?.id) {
-      return err("You must be signed in to vote");
+      return err("You must be signed in to vote")
     }
 
-    const result = await toggleBuildVote(session.user.id, buildId);
+    const result = await toggleBuildVote(session.user.id, buildId)
 
     // Revalidate build page to show updated count
-    revalidatePath(`/builds/[slug]`, "page");
+    revalidatePath(`/builds/[slug]`, "page")
 
-    return ok({ voted: result.voted, voteCount: result.voteCount });
+    return ok({ voted: result.voted, voteCount: result.voteCount })
   } catch (error) {
     if (error instanceof RateLimitError) {
-      return err("Too many votes. Please wait a moment.");
+      return err("Too many votes. Please wait a moment.")
     }
-    console.error("Failed to toggle vote:", error);
-    return err("Failed to update vote");
+    console.error("Failed to toggle vote:", error)
+    return err("Failed to update vote")
   }
 }
 
@@ -67,28 +71,31 @@ export async function toggleVoteAction(buildId: string): Promise<VoteResult> {
  * Toggle favorite on a build
  */
 export async function toggleFavoriteAction(
-  buildId: string
+  buildId: string,
 ): Promise<FavoriteResult> {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession()
 
     if (!session?.user?.id) {
-      return err("You must be signed in to save favorites");
+      return err("You must be signed in to save favorites")
     }
 
-    const result = await toggleBuildFavorite(session.user.id, buildId);
+    const result = await toggleBuildFavorite(session.user.id, buildId)
 
     // Revalidate relevant pages
-    revalidatePath(`/builds/[slug]`, "page");
-    revalidatePath("/favorites", "page");
+    revalidatePath(`/builds/[slug]`, "page")
+    revalidatePath("/favorites", "page")
 
-    return ok({ favorited: result.favorited, favoriteCount: result.favoriteCount });
+    return ok({
+      favorited: result.favorited,
+      favoriteCount: result.favoriteCount,
+    })
   } catch (error) {
     if (error instanceof RateLimitError) {
-      return err("Too many favorites. Please wait a moment.");
+      return err("Too many favorites. Please wait a moment.")
     }
-    console.error("Failed to toggle favorite:", error);
-    return err("Failed to update favorite");
+    console.error("Failed to toggle favorite:", error)
+    return err("Failed to update favorite")
   }
 }
 
@@ -100,18 +107,18 @@ export async function toggleFavoriteAction(
  * Get current user's vote and favorite status for a build
  */
 export async function getSocialStatusAction(
-  buildId: string
+  buildId: string,
 ): Promise<SocialStatusResult> {
-  const session = await getServerSession();
+  const session = await getServerSession()
 
   if (!session?.user?.id) {
-    return { hasVoted: false, hasFavorited: false };
+    return { hasVoted: false, hasFavorited: false }
   }
 
   const [hasVoted, hasFavorited] = await Promise.all([
     hasUserVotedForBuild(session.user.id, buildId),
     hasUserFavoritedBuild(session.user.id, buildId),
-  ]);
+  ])
 
-  return { hasVoted, hasFavorited };
+  return { hasVoted, hasFavorited }
 }

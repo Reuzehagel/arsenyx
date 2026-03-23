@@ -1,21 +1,22 @@
-import { redirect } from "next/navigation";
-import type { Metadata } from "next";
-import Link from "next/link";
-import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
-import { Button } from "@/components/ui/button";
-import { getServerSession } from "@/lib/auth";
-import { getUserFavoriteBuilds } from "@/lib/db/index";
-import { BuildCardLink } from "@/components/build/build-card-link";
-import { Heart } from "lucide-react";
+import { Heart } from "lucide-react"
+import type { Metadata } from "next"
+import Link from "next/link"
+import { redirect } from "next/navigation"
+
+import { BuildCardLink } from "@/components/build/build-card-link"
+import { Footer } from "@/components/footer"
+import { Header } from "@/components/header"
+import { Button } from "@/components/ui/button"
+import { getServerSession } from "@/lib/auth"
+import { getUserFavoriteBuilds } from "@/lib/db/index"
 
 export const metadata: Metadata = {
   title: "Favorites | ARSENYX",
   description: "Your favorited Warframe builds",
-};
+}
 
 interface FavoritesPageProps {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string }>
 }
 
 export default async function FavoritesPage({
@@ -24,26 +25,26 @@ export default async function FavoritesPage({
   const [session, params] = await Promise.all([
     getServerSession(),
     searchParams,
-  ]);
+  ])
 
   if (!session?.user?.id) {
-    redirect("/auth/signin?callbackUrl=/favorites");
+    redirect("/auth/signin?callbackUrl=/favorites")
   }
 
-  const page = parseInt(params.page || "1", 10);
+  const page = parseInt(params.page || "1", 10)
 
   const { builds, total } = await getUserFavoriteBuilds(session.user.id, {
     page,
     limit: 24,
-  });
+  })
 
-  const totalPages = Math.ceil(total / 24);
+  const totalPages = Math.ceil(total / 24)
 
   return (
-    <div className="relative min-h-screen flex flex-col">
+    <div className="relative flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        <div className="container py-6 flex flex-col gap-6">
+        <div className="container flex flex-col gap-6 py-6">
           <div>
             <h1 className="text-2xl font-bold">Favorites</h1>
             <p className="text-muted-foreground">
@@ -52,16 +53,18 @@ export default async function FavoritesPage({
           </div>
 
           {builds.length === 0 ? (
-            <div className="text-center py-16">
-              <Heart className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <div className="py-16 text-center">
+              <Heart className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
               <p className="text-muted-foreground mb-4">
                 You haven&apos;t favorited any builds yet.
               </p>
-              <Button render={<Link href="/builds" />} nativeButton={false}>Browse community builds</Button>
+              <Button render={<Link href="/builds" />} nativeButton={false}>
+                Browse community builds
+              </Button>
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
                 {builds.map((build) => (
                   <BuildCardLink
                     key={build.id}
@@ -72,7 +75,7 @@ export default async function FavoritesPage({
                     voteCount={build.voteCount}
                     viewCount={build.viewCount}
                     subtitle={
-                      <p className="text-xs text-muted-foreground line-clamp-1">
+                      <p className="text-muted-foreground line-clamp-1 text-xs">
                         {build.item.name} by{" "}
                         {build.user.username || build.user.name || "Anonymous"}
                       </p>
@@ -91,7 +94,7 @@ export default async function FavoritesPage({
                       </Button>
                     </Link>
                   )}
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-muted-foreground text-sm">
                     Page {page} of {totalPages}
                   </span>
                   {page < totalPages && (
@@ -109,5 +112,5 @@ export default async function FavoritesPage({
       </main>
       <Footer />
     </div>
-  );
+  )
 }

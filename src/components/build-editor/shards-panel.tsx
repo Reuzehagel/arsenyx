@@ -1,15 +1,17 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { ShardSlot } from "./shard-slot";
-import { ShardSelectionDialog } from "./shard-selection-dialog";
-import type { PlacedShard } from "@/lib/warframe/types";
+import { useState } from "react"
+
+import type { PlacedShard } from "@/lib/warframe/types"
+
+import { ShardSelectionDialog } from "./shard-selection-dialog"
+import { ShardSlot } from "./shard-slot"
 
 interface ShardsPanelProps {
-  shards: (PlacedShard | null)[];
-  onPlaceShard: (slotIndex: number, shard: PlacedShard) => void;
-  onRemoveShard: (slotIndex: number) => void;
-  readOnly?: boolean;
+  shards: (PlacedShard | null)[]
+  onPlaceShard: (slotIndex: number, shard: PlacedShard) => void
+  onRemoveShard: (slotIndex: number) => void
+  readOnly?: boolean
 }
 
 export function ShardsPanel({
@@ -18,30 +20,35 @@ export function ShardsPanel({
   onRemoveShard,
   readOnly = false,
 }: ShardsPanelProps) {
-  const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(
+    null,
+  )
+  const [dialogOpen, setDialogOpen] = useState(false)
 
   const handleSlotSelect = (index: number) => {
-    if (readOnly) return;
-    setSelectedSlotIndex(index);
-    setDialogOpen(true);
-  };
+    if (readOnly) return
+    setSelectedSlotIndex(index)
+    setDialogOpen(true)
+  }
 
   const handleSlotRemove = (index: number) => {
-    if (readOnly) return;
-    onRemoveShard(index);
-  };
+    if (readOnly) return
+    onRemoveShard(index)
+  }
 
   const handleShardSelect = (shard: PlacedShard) => {
     if (selectedSlotIndex !== null) {
-      onPlaceShard(selectedSlotIndex, shard);
+      onPlaceShard(selectedSlotIndex, shard)
     }
-    setDialogOpen(false);
-    setSelectedSlotIndex(null);
-  };
+    setDialogOpen(false)
+    setSelectedSlotIndex(null)
+  }
 
   // Ensure we always have 5 slots
-  const normalizedShards = Array.from({ length: 5 }, (_, i) => shards[i] ?? null);
+  const normalizedShards = Array.from(
+    { length: 5 },
+    (_, i) => shards[i] ?? null,
+  )
 
   return (
     <div className="p-3">
@@ -61,9 +68,13 @@ export function ShardsPanel({
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         onSelect={handleShardSelect}
-        currentShard={selectedSlotIndex !== null ? normalizedShards[selectedSlotIndex] : null}
+        currentShard={
+          selectedSlotIndex !== null
+            ? normalizedShards[selectedSlotIndex]
+            : null
+        }
         dialogKey={selectedSlotIndex ?? undefined}
       />
     </div>
-  );
+  )
 }

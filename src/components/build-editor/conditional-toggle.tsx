@@ -1,12 +1,12 @@
-"use client";
+"use client"
 
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 
 interface ConditionalToggleProps {
-  showMaxStacks: boolean;
-  onToggle: (value: boolean) => void;
-  hasConditionalMods: boolean;
+  showMaxStacks: boolean
+  onToggle: (value: boolean) => void
+  hasConditionalMods: boolean
 }
 
 /**
@@ -19,14 +19,14 @@ export function ConditionalToggle({
   hasConditionalMods,
 }: ConditionalToggleProps) {
   if (!hasConditionalMods) {
-    return null;
+    return null
   }
 
   return (
-    <div className="flex items-center justify-between gap-2 px-3 py-2 bg-muted/50 border-t border-b">
+    <div className="bg-muted/50 flex items-center justify-between gap-2 border-t border-b px-3 py-2">
       <Label
         htmlFor="max-stacks-toggle"
-        className="text-xs text-muted-foreground cursor-pointer"
+        className="text-muted-foreground cursor-pointer text-xs"
       >
         Show at max stacks
       </Label>
@@ -34,8 +34,8 @@ export function ConditionalToggle({
         id="max-stacks-toggle"
         checked={showMaxStacks}
         onCheckedChange={onToggle}
-        className="scale-75 origin-right"
+        className="origin-right scale-75"
       />
     </div>
-  );
+  )
 }

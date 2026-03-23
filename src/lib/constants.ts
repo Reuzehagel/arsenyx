@@ -7,7 +7,7 @@ export const SITE_CONFIG = {
   github: "https://github.com/Reuzehagel/arsenyx",
   author: "Arsenyx",
   year: new Date().getFullYear(),
-} as const;
+} as const
 
 // Route definitions for type-safe navigation
 export const ROUTES = {
@@ -24,20 +24,20 @@ export const ROUTES = {
   privacy: "/privacy",
   terms: "/terms",
   about: "/about",
-} as const;
+} as const
 
 // External links
 export const EXTERNAL_LINKS = {
   github: "https://github.com/Reuzehagel/arsenyx",
   wfcd: "https://warframestat.us",
-} as const;
+} as const
 
 // Navigation items for header
 export const NAV_ITEMS = [
   { label: "Browse", href: ROUTES.browse },
   { label: "Builds", href: ROUTES.builds },
   { label: "Guides", href: ROUTES.guides },
-] as const;
+] as const
 
 // Footer link sections
 export const FOOTER_LINKS = {
@@ -57,7 +57,7 @@ export const FOOTER_LINKS = {
     { label: "Terms of Service", href: ROUTES.terms },
     { label: "About", href: ROUTES.about },
   ],
-} as const;
+} as const
 
 // Feature list for landing page
 export const FEATURES = [
@@ -85,7 +85,7 @@ export const FEATURES = [
     description:
       "See your stats update in real-time as you add mods, arcanes, and archon shards.",
   },
-] as const;
+] as const
 
 // Hero section content
 export const HERO_CONTENT = {
@@ -110,14 +110,14 @@ export const HERO_CONTENT = {
     { label: "No ads, ever" },
   ],
   keyboardHint: "to search anywhere",
-} as const;
+} as const
 
 // Features section content
 export const FEATURES_SECTION = {
   headline: "Built for Speed",
   description:
     "Every feature designed to get you from idea to shareable build as fast as possible.",
-} as const;
+} as const
 
 // CTA section content
 export const CTA_CONTENT = {
@@ -126,4 +126,4 @@ export const CTA_CONTENT = {
     "Join thousands of Tenno who use Arsenyx to plan, share, and optimize their builds.",
   primaryCta: { label: "Start Building", href: ROUTES.browse },
   secondaryCta: { label: "Star on GitHub", href: EXTERNAL_LINKS.github },
-} as const;
+} as const

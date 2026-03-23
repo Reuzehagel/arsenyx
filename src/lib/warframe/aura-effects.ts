@@ -1,13 +1,13 @@
 // Aura effects configuration
 // Only self-affecting auras are included (squad/enemy effects excluded from calculation)
 
-import type { StatType } from "./stat-types";
+import type { StatType } from "./stat-types"
 
 // Aura stat definition
 interface AuraStat {
-  type: StatType;
-  value: number; // Value at max rank
-  perRank: number; // Value increase per rank (from rank 0)
+  type: StatType
+  value: number // Value at max rank
+  perRank: number // Value increase per rank (from rank 0)
 }
 
 // Self-affecting auras that should be included in stat calculations
@@ -31,7 +31,7 @@ export const SELF_AFFECTING_AURAS: Record<string, AuraStat[]> = {
   // Sprint/movement auras
   Sprint: [{ type: "sprint_speed", value: 15, perRank: 2.5 }], // +15% sprint speed
   "Sprint Boost": [{ type: "sprint_speed", value: 18, perRank: 3 }], // +18% sprint speed at max
-};
+}
 
 // Auras that affect enemies or only squad members (excluded from self-calculation)
 export const EXCLUDED_AURAS: Set<string> = new Set([
@@ -49,13 +49,13 @@ export const EXCLUDED_AURAS: Set<string> = new Set([
   "Shield Disruption", // Affects enemies
   "Speed Holster", // Holster speed, not a combat stat
   "Brief Respite", // Shield on ability cast, not a direct stat
-]);
+])
 
 /**
  * Check if an aura is self-affecting and should be included in stat calculations
  */
 export function isAuraSelfAffecting(auraName: string): boolean {
-  return auraName in SELF_AFFECTING_AURAS;
+  return auraName in SELF_AFFECTING_AURAS
 }
 
 /**
@@ -63,17 +63,17 @@ export function isAuraSelfAffecting(auraName: string): boolean {
  */
 export function getAuraStats(
   auraName: string,
-  rank: number
+  rank: number,
 ): { type: StatType; value: number }[] {
-  const auraStats = SELF_AFFECTING_AURAS[auraName];
-  if (!auraStats) return [];
+  const auraStats = SELF_AFFECTING_AURAS[auraName]
+  if (!auraStats) return []
 
   return auraStats.map((stat) => ({
     type: stat.type,
     // Calculate value based on rank: base value at rank 0 is (value - perRank * maxRank)
     // For simplicity, assume max rank gives full value
     value: stat.perRank * (rank + 1),
-  }));
+  }))
 }
 
 /**
@@ -81,11 +81,11 @@ export function getAuraStats(
  */
 export function getAuraMaxValue(
   auraName: string,
-  statType: StatType
+  statType: StatType,
 ): number | undefined {
-  const auraStats = SELF_AFFECTING_AURAS[auraName];
-  if (!auraStats) return undefined;
+  const auraStats = SELF_AFFECTING_AURAS[auraName]
+  if (!auraStats) return undefined
 
-  const stat = auraStats.find((s) => s.type === statType);
-  return stat?.value;
+  const stat = auraStats.find((s) => s.type === statType)
+  return stat?.value
 }

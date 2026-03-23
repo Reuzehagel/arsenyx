@@ -1,5 +1,5 @@
 // Test fixtures for Warframe items
-import type { Warframe, Gun, Melee, DamageTypes } from "@/lib/warframe/types";
+import type { Warframe, Gun, Melee, DamageTypes } from "@/lib/warframe/types"
 
 /**
  * Excalibur - default test warframe
@@ -18,12 +18,14 @@ export const EXCALIBUR: Warframe = {
     {
       uniqueName: "/Lotus/Powersuits/Excalibur/SlashDash",
       name: "Slash Dash",
-      description: "Dash between enemies while slashing with the Exalted Blade.",
+      description:
+        "Dash between enemies while slashing with the Exalted Blade.",
     },
     {
       uniqueName: "/Lotus/Powersuits/Excalibur/RadialBlind",
       name: "Radial Blind",
-      description: "Emits a bright flash of light, blinding all enemies in range.",
+      description:
+        "Emits a bright flash of light, blinding all enemies in range.",
     },
     {
       uniqueName: "/Lotus/Powersuits/Excalibur/RadialJavelin",
@@ -36,7 +38,7 @@ export const EXCALIBUR: Warframe = {
       description: "Summon a blade of pure light and immense power.",
     },
   ],
-};
+}
 
 /**
  * Inaros - high health, no shields warframe for testing
@@ -51,7 +53,7 @@ export const INAROS: Warframe = {
   sprintSpeed: 1.0,
   tradable: false,
   polarities: ["naramon", "naramon"],
-};
+}
 
 /**
  * Rhino - high armor warframe
@@ -66,7 +68,7 @@ export const RHINO: Warframe = {
   sprintSpeed: 0.95,
   tradable: false,
   polarities: ["madurai", "vazarin"],
-};
+}
 
 /**
  * Braton - baseline assault rifle
@@ -89,7 +91,7 @@ export const BRATON: Gun = {
     slash: 4.2,
   } as DamageTypes,
   polarities: [],
-};
+}
 
 /**
  * Soma Prime - crit-focused rifle
@@ -113,7 +115,7 @@ export const SOMA_PRIME: Gun = {
     slash: 6,
   } as DamageTypes,
   polarities: ["madurai", "madurai", "vazarin"],
-};
+}
 
 /**
  * Skana - basic melee weapon
@@ -135,4 +137,4 @@ export const SKANA: Melee = {
     slash: 25.2,
   } as DamageTypes,
   polarities: [],
-};
+}

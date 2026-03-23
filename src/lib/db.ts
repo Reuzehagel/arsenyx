@@ -1,17 +1,17 @@
-import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import pg from "pg";
+import { PrismaPg } from "@prisma/adapter-pg"
+import { PrismaClient } from "@prisma/client"
+import pg from "pg"
 
 const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
+  prisma: PrismaClient | undefined
+}
 
 function createPrismaClient() {
   const pool = new pg.Pool({
     connectionString: process.env.DATABASE_URL,
     max: 3, // Limit connections per worker during build
-  });
-  const adapter = new PrismaPg(pool);
+  })
+  const adapter = new PrismaPg(pool)
 
   return new PrismaClient({
     adapter,
@@ -19,10 +19,10 @@ function createPrismaClient() {
       process.env.NODE_ENV === "development"
         ? ["query", "error", "warn"]
         : ["error"],
-  });
+  })
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+export const prisma = globalForPrisma.prisma ?? createPrismaClient()
 
 // Cache in all environments (needed for next build with multiple workers)
-if (!globalForPrisma.prisma) globalForPrisma.prisma = prisma;
+if (!globalForPrisma.prisma) globalForPrisma.prisma = prisma

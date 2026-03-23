@@ -1,49 +1,50 @@
-import { Suspense } from "react";
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import Link from "next/link";
-import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
-import { BuildContainer } from "@/components/build-editor/build-container";
-import { Skeleton } from "@/components/ui/skeleton";
+import type { Metadata } from "next"
+import Link from "next/link"
+import { notFound } from "next/navigation"
+import { Suspense } from "react"
+
+import { BuildContainer } from "@/components/build-editor/build-container"
+import { Footer } from "@/components/footer"
+import { Header } from "@/components/header"
+import { Skeleton } from "@/components/ui/skeleton"
+import { decodeBuild } from "@/lib/build-codec"
+import { isValidCategory, getCategoryConfig } from "@/lib/warframe"
 // Server-only imports
-import { getItemBySlug, getFullItem } from "@/lib/warframe/items";
-import { getModsForItem, getArcanesForSlot } from "@/lib/warframe/mods";
-import { isValidCategory, getCategoryConfig } from "@/lib/warframe";
-import { decodeBuild } from "@/lib/build-codec";
-import type { BrowseCategory, Arcane } from "@/lib/warframe/types";
+import { getItemBySlug, getFullItem } from "@/lib/warframe/items"
+import { getModsForItem, getArcanesForSlot } from "@/lib/warframe/mods"
+import type { BrowseCategory, Arcane } from "@/lib/warframe/types"
 
 export const metadata: Metadata = {
   title: "Build Editor | ARSENYX",
   description:
     "Create and share Warframe builds with an intuitive keyboard-first editor.",
-};
+}
 
 interface CreatePageProps {
   searchParams: Promise<{
-    item?: string;
-    category?: string;
-    build?: string;
-    fork?: string;
-  }>;
+    item?: string
+    category?: string
+    build?: string
+    fork?: string
+  }>
 }
 
 function BuildEditorSkeleton() {
   return (
-    <div className="container py-6 flex flex-col gap-6">
+    <div className="container flex flex-col gap-6 py-6">
       <div className="flex items-center gap-4">
         <Skeleton className="h-10 w-48" />
         <Skeleton className="h-6 w-32" />
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Left sidebar skeleton */}
-        <div className="lg:col-span-3 flex flex-col gap-4">
+        <div className="flex flex-col gap-4 lg:col-span-3">
           <Skeleton className="aspect-square w-full rounded-xl" />
           <Skeleton className="h-8 w-full" />
           <Skeleton className="h-24 w-full" />
         </div>
         {/* Center mod grid skeleton */}
-        <div className="lg:col-span-6 flex flex-col gap-4">
+        <div className="flex flex-col gap-4 lg:col-span-6">
           <div className="grid grid-cols-4 gap-2">
             {Array.from({ length: 10 }).map((_, i) => (
               <Skeleton key={i} className="aspect-square rounded-lg" />
@@ -51,21 +52,21 @@ function BuildEditorSkeleton() {
           </div>
         </div>
         {/* Right panel skeleton */}
-        <div className="lg:col-span-3 flex flex-col gap-4">
+        <div className="flex flex-col gap-4 lg:col-span-3">
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-64 w-full" />
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 export default async function CreatePage({ searchParams }: CreatePageProps) {
-  const params = await searchParams;
+  const params = await searchParams
 
   // Check for imported build
   if (params.build) {
-    const decodedBuild = decodeBuild(decodeURIComponent(params.build));
+    const decodedBuild = decodeBuild(decodeURIComponent(params.build))
 
     if (
       decodedBuild &&
@@ -73,24 +74,24 @@ export default async function CreatePage({ searchParams }: CreatePageProps) {
       decodedBuild.itemCategory
     ) {
       // Load the full item data for the build
-      const category = decodedBuild.itemCategory as BrowseCategory;
-      const fullItem = getFullItem(category, decodedBuild.itemUniqueName);
+      const category = decodedBuild.itemCategory as BrowseCategory
+      const fullItem = getFullItem(category, decodedBuild.itemUniqueName)
 
       if (fullItem) {
-        const categoryConfig = getCategoryConfig(category);
-        const compatibleMods = getModsForItem(fullItem);
+        const categoryConfig = getCategoryConfig(category)
+        const compatibleMods = getModsForItem(fullItem)
         // Fetch arcanes based on category
-        let compatibleArcanes: Arcane[] = [];
+        let compatibleArcanes: Arcane[] = []
         if (["warframes", "necramechs"].includes(category)) {
-          compatibleArcanes = getArcanesForSlot("warframe");
+          compatibleArcanes = getArcanesForSlot("warframe")
         } else if (["primary", "secondary", "melee"].includes(category)) {
           compatibleArcanes = getArcanesForSlot(
-            category as "primary" | "secondary" | "melee"
-          );
+            category as "primary" | "secondary" | "melee",
+          )
         }
 
         return (
-          <div className="relative min-h-screen flex flex-col">
+          <div className="relative flex min-h-screen flex-col">
             <Header />
             <main className="flex-1">
               <Suspense fallback={<BuildEditorSkeleton />}>
@@ -106,7 +107,7 @@ export default async function CreatePage({ searchParams }: CreatePageProps) {
             </main>
             <Footer />
           </div>
-        );
+        )
       }
     }
   }
@@ -114,30 +115,30 @@ export default async function CreatePage({ searchParams }: CreatePageProps) {
   // Check for fork (Use as Template) — copies only mod slots from source build
   if (params.fork && params.item && params.category) {
     if (!isValidCategory(params.category)) {
-      notFound();
+      notFound()
     }
 
-    const category = params.category as BrowseCategory;
-    const item = getItemBySlug(category, params.item);
+    const category = params.category as BrowseCategory
+    const item = getItemBySlug(category, params.item)
 
     if (!item) {
-      notFound();
+      notFound()
     }
 
     // Fetch the source build to copy mods from
-    const { getBuildBySlug } = await import("@/lib/db/index");
-    const sourceBuild = await getBuildBySlug(params.fork);
+    const { getBuildBySlug } = await import("@/lib/db/index")
+    const sourceBuild = await getBuildBySlug(params.fork)
 
-    const fullItem = getFullItem(category, item.uniqueName);
-    const categoryConfig = getCategoryConfig(category);
-    const compatibleMods = fullItem ? getModsForItem(fullItem) : [];
-    let compatibleArcanes: Arcane[] = [];
+    const fullItem = getFullItem(category, item.uniqueName)
+    const categoryConfig = getCategoryConfig(category)
+    const compatibleMods = fullItem ? getModsForItem(fullItem) : []
+    let compatibleArcanes: Arcane[] = []
     if (["warframes", "necramechs"].includes(category)) {
-      compatibleArcanes = getArcanesForSlot("warframe");
+      compatibleArcanes = getArcanesForSlot("warframe")
     } else if (["primary", "secondary", "melee"].includes(category)) {
       compatibleArcanes = getArcanesForSlot(
-        category as "primary" | "secondary" | "melee"
-      );
+        category as "primary" | "secondary" | "melee",
+      )
     }
 
     // Extract only mod configuration from source build
@@ -158,10 +159,10 @@ export default async function CreatePage({ searchParams }: CreatePageProps) {
           baseCapacity: sourceBuild.buildData.hasReactor ? 60 : 30,
           currentCapacity: 0, // Will be recalculated
         }
-      : undefined;
+      : undefined
 
     return (
-      <div className="relative min-h-screen flex flex-col">
+      <div className="relative flex min-h-screen flex-col">
         <Header />
         <main className="flex-1">
           <Suspense fallback={<BuildEditorSkeleton />}>
@@ -177,37 +178,37 @@ export default async function CreatePage({ searchParams }: CreatePageProps) {
         </main>
         <Footer />
       </div>
-    );
+    )
   }
 
   // Check for item + category params
   if (params.item && params.category) {
     if (!isValidCategory(params.category)) {
-      notFound();
+      notFound()
     }
 
-    const category = params.category as BrowseCategory;
-    const item = getItemBySlug(category, params.item);
+    const category = params.category as BrowseCategory
+    const item = getItemBySlug(category, params.item)
 
     if (!item) {
-      notFound();
+      notFound()
     }
 
-    const fullItem = getFullItem(category, item.uniqueName);
-    const categoryConfig = getCategoryConfig(category);
-    const compatibleMods = fullItem ? getModsForItem(fullItem) : [];
+    const fullItem = getFullItem(category, item.uniqueName)
+    const categoryConfig = getCategoryConfig(category)
+    const compatibleMods = fullItem ? getModsForItem(fullItem) : []
     // Fetch arcanes based on category
-    let compatibleArcanes: Arcane[] = [];
+    let compatibleArcanes: Arcane[] = []
     if (["warframes", "necramechs"].includes(category)) {
-      compatibleArcanes = getArcanesForSlot("warframe");
+      compatibleArcanes = getArcanesForSlot("warframe")
     } else if (["primary", "secondary", "melee"].includes(category)) {
       compatibleArcanes = getArcanesForSlot(
-        category as "primary" | "secondary" | "melee"
-      );
+        category as "primary" | "secondary" | "melee",
+      )
     }
 
     return (
-      <div className="relative min-h-screen flex flex-col">
+      <div className="relative flex min-h-screen flex-col">
         <Header />
         <main className="flex-1">
           <Suspense fallback={<BuildEditorSkeleton />}>
@@ -222,18 +223,18 @@ export default async function CreatePage({ searchParams }: CreatePageProps) {
         </main>
         <Footer />
       </div>
-    );
+    )
   }
 
   // No item specified - show lightweight picker guidance
   return (
-    <div className="relative min-h-screen flex flex-col">
+    <div className="relative flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
         <div className="container py-6">
-          <div className="text-center flex flex-col gap-4 py-16">
+          <div className="flex flex-col gap-4 py-16 text-center">
             <h1 className="text-3xl font-bold">Build Editor</h1>
-            <p className="text-muted-foreground max-w-md mx-auto">
+            <p className="text-muted-foreground mx-auto max-w-md">
               Pick an item from the{" "}
               <Link
                 href="/browse"
@@ -248,5 +249,5 @@ export default async function CreatePage({ searchParams }: CreatePageProps) {
       </main>
       <Footer />
     </div>
-  );
+  )
 }

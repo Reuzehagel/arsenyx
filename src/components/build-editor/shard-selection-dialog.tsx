@@ -1,37 +1,38 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import Image from "next/image";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react"
+import Image from "next/image"
+import { useState } from "react"
+
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
-import type { PlacedShard, ShardColor, ShardStat } from "@/lib/warframe/types";
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
+import { cn } from "@/lib/utils"
 import {
   SHARD_COLORS,
   SHARD_COLOR_NAMES,
   SHARD_STATS,
   getShardImageUrl,
   formatStatValue,
-} from "@/lib/warframe/shards";
+} from "@/lib/warframe/shards"
+import type { PlacedShard, ShardColor, ShardStat } from "@/lib/warframe/types"
 
 interface ShardSelectionDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSelect: (shard: PlacedShard) => void;
-  currentShard?: PlacedShard | null;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSelect: (shard: PlacedShard) => void
+  currentShard?: PlacedShard | null
   /** Key to reset dialog state - change this when you want to reset */
-  dialogKey?: string | number;
+  dialogKey?: string | number
 }
 
-type Step = "color" | "stat";
+type Step = "color" | "stat"
 
 export function ShardSelectionDialog({
   open,
@@ -41,42 +42,42 @@ export function ShardSelectionDialog({
   dialogKey,
 }: ShardSelectionDialogProps) {
   // Initialize state from currentShard when dialogKey changes
-  const [step, setStep] = useState<Step>("color");
+  const [step, setStep] = useState<Step>("color")
   const [selectedColor, setSelectedColor] = useState<ShardColor | null>(
-    currentShard?.color ?? null
-  );
-  const [tauforged, setTauforged] = useState(currentShard?.tauforged ?? true);
+    currentShard?.color ?? null,
+  )
+  const [tauforged, setTauforged] = useState(currentShard?.tauforged ?? true)
 
   // Reset state when dialogKey changes (via key prop on parent)
-  const [prevKey, setPrevKey] = useState(dialogKey);
+  const [prevKey, setPrevKey] = useState(dialogKey)
   if (dialogKey !== prevKey) {
-    setPrevKey(dialogKey);
-    setStep("color");
-    setSelectedColor(currentShard?.color ?? null);
-    setTauforged(currentShard?.tauforged ?? true);
+    setPrevKey(dialogKey)
+    setStep("color")
+    setSelectedColor(currentShard?.color ?? null)
+    setTauforged(currentShard?.tauforged ?? true)
   }
 
   const handleColorSelect = (color: ShardColor) => {
-    setSelectedColor(color);
-    setStep("stat");
-  };
+    setSelectedColor(color)
+    setStep("stat")
+  }
 
   const handleStatSelect = (stat: ShardStat) => {
-    if (!selectedColor) return;
+    if (!selectedColor) return
 
     onSelect({
       color: selectedColor,
       stat: stat.name,
       tauforged,
-    });
-    onOpenChange(false);
-  };
+    })
+    onOpenChange(false)
+  }
 
   const handleBack = () => {
-    setStep("color");
-  };
+    setStep("color")
+  }
 
-  const stats = selectedColor ? SHARD_STATS[selectedColor] : [];
+  const stats = selectedColor ? SHARD_STATS[selectedColor] : []
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -87,13 +88,15 @@ export function ShardSelectionDialog({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 mr-1"
+                className="mr-1 h-6 w-6"
                 onClick={handleBack}
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             )}
-            {step === "color" ? "Select Shard Color" : `${SHARD_COLOR_NAMES[selectedColor!]} Shard`}
+            {step === "color"
+              ? "Select Shard Color"
+              : `${SHARD_COLOR_NAMES[selectedColor!]} Shard`}
           </DialogTitle>
         </DialogHeader>
 
@@ -105,14 +108,13 @@ export function ShardSelectionDialog({
                 key={color}
                 onClick={() => handleColorSelect(color)}
                 className={cn(
-                  "flex flex-col items-center gap-2 p-2 rounded-lg transition-all",
+                  "flex flex-col items-center gap-2 rounded-lg p-2 transition-all",
                   "hover:bg-accent border-2 border-transparent",
-                  currentShard?.color === color && "border-primary bg-accent/50"
+                  currentShard?.color === color &&
+                    "border-primary bg-accent/50",
                 )}
               >
-                <div
-                  className="relative size-12 rounded-lg overflow-hidden border border-border"
-                >
+                <div className="border-border relative size-12 overflow-hidden rounded-lg border">
                   <Image
                     src={getShardImageUrl(color, false)}
                     alt={`${SHARD_COLOR_NAMES[color]} Shard`}
@@ -132,7 +134,7 @@ export function ShardSelectionDialog({
           // Step 2: Stat Selection
           <div className="flex flex-col gap-3 py-1">
             {/* Tauforged Toggle */}
-            <div className="flex items-center justify-between px-2 py-1.5 bg-muted/50 rounded">
+            <div className="bg-muted/50 flex items-center justify-between rounded px-2 py-1.5">
               <Label htmlFor="tauforged" className="text-sm">
                 Tauforged
               </Label>
@@ -151,14 +153,15 @@ export function ShardSelectionDialog({
                   key={stat.name}
                   onClick={() => handleStatSelect(stat)}
                   className={cn(
-                    "w-full flex items-center justify-between px-2 py-1.5 rounded transition-all text-sm",
-                    "border border-border hover:border-primary/50 hover:bg-accent/50",
-                    currentShard?.stat === stat.name && currentShard?.color === selectedColor
-                      && "border-primary bg-accent/50"
+                    "flex w-full items-center justify-between rounded px-2 py-1.5 text-sm transition-all",
+                    "border-border hover:border-primary/50 hover:bg-accent/50 border",
+                    currentShard?.stat === stat.name &&
+                      currentShard?.color === selectedColor &&
+                      "border-primary bg-accent/50",
                   )}
                 >
                   <span>{stat.name}</span>
-                  <span className="font-mono text-xs text-muted-foreground">
+                  <span className="text-muted-foreground font-mono text-xs">
                     {formatStatValue(stat, tauforged)}
                   </span>
                 </button>
@@ -168,5 +171,5 @@ export function ShardSelectionDialog({
         )}
       </DialogContent>
     </Dialog>
-  );
+  )
 }

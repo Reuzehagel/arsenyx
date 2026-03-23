@@ -1,15 +1,15 @@
-"use client";
+"use client"
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback } from "react"
 
 interface UseBuildKeyboardOptions {
-  onSelectSlot: (slotId: string) => void;
-  onOpenSearch: () => void;
-  onCloseSearch: () => void;
-  onCopyBuild: () => void;
-  onClearBuild: () => void;
-  hasAuraSlot: boolean;
-  hasExilusSlot: boolean;
+  onSelectSlot: (slotId: string) => void
+  onOpenSearch: () => void
+  onCloseSearch: () => void
+  onCopyBuild: () => void
+  onClearBuild: () => void
+  hasAuraSlot: boolean
+  hasExilusSlot: boolean
 }
 
 /**
@@ -33,68 +33,68 @@ export function useBuildKeyboard({
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       // Ignore if typing in an input, textarea, or contenteditable
-      const target = e.target as HTMLElement;
+      const target = e.target as HTMLElement
       const isEditable =
         target.tagName === "INPUT" ||
         target.tagName === "TEXTAREA" ||
         target.isContentEditable ||
-        target.closest('[contenteditable="true"]') !== null;
+        target.closest('[contenteditable="true"]') !== null
 
       // Also ignore if a dialog is open
-      const dialogOpen = document.querySelector('[role="dialog"]') !== null;
+      const dialogOpen = document.querySelector('[role="dialog"]') !== null
 
       if (isEditable || dialogOpen) {
         // Only handle Escape to close/deselect
         if (e.key === "Escape") {
-          onCloseSearch();
+          onCloseSearch()
         }
-        return;
+        return
       }
 
       // Escape deselects the active slot
       if (e.key === "Escape") {
-        e.preventDefault();
-        onCloseSearch();
-        return;
+        e.preventDefault()
+        onCloseSearch()
+        return
       }
 
       // Number keys 1-8 for normal slots
       if (e.key >= "1" && e.key <= "8") {
-        e.preventDefault();
-        const slotIndex = parseInt(e.key) - 1;
-        onSelectSlot(`normal-${slotIndex}`);
-        onOpenSearch();
-        return;
+        e.preventDefault()
+        const slotIndex = parseInt(e.key) - 1
+        onSelectSlot(`normal-${slotIndex}`)
+        onOpenSearch()
+        return
       }
 
       // Letter shortcuts
       switch (e.key.toLowerCase()) {
         case "a":
           if (hasAuraSlot) {
-            e.preventDefault();
-            onSelectSlot("aura-0");
-            onOpenSearch();
+            e.preventDefault()
+            onSelectSlot("aura-0")
+            onOpenSearch()
           }
-          break;
+          break
         case "e":
           if (hasExilusSlot) {
-            e.preventDefault();
-            onSelectSlot("exilus-0");
-            onOpenSearch();
+            e.preventDefault()
+            onSelectSlot("exilus-0")
+            onOpenSearch()
           }
-          break;
+          break
         case "c":
           if (e.ctrlKey || e.metaKey) {
             // Let default copy behavior through
-            return;
+            return
           }
-          e.preventDefault();
-          onCopyBuild();
-          break;
+          e.preventDefault()
+          onCopyBuild()
+          break
         case "x":
-          e.preventDefault();
-          onClearBuild();
-          break;
+          e.preventDefault()
+          onClearBuild()
+          break
       }
     },
     [
@@ -105,11 +105,11 @@ export function useBuildKeyboard({
       onClearBuild,
       hasAuraSlot,
       hasExilusSlot,
-    ]
-  );
+    ],
+  )
 
   useEffect(() => {
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyDown]);
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [handleKeyDown])
 }

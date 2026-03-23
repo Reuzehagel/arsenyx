@@ -1,6 +1,5 @@
-"use client";
+"use client"
 
-import { useState, useRef, useCallback } from "react";
 import {
   Bold,
   Italic,
@@ -9,30 +8,37 @@ import {
   List,
   Eye,
   Pencil,
-} from "lucide-react";
+} from "lucide-react"
+import dynamic from "next/dynamic"
+import { useState, useRef, useCallback } from "react"
 
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import dynamic from "next/dynamic";
+} from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
 
 const GuideReader = dynamic(
-  () => import("@/components/guides/guide-reader").then((mod) => mod.GuideReader),
-  { ssr: false, loading: () => <div className="h-[200px] rounded-md border bg-muted/30 animate-pulse" /> }
-);
+  () =>
+    import("@/components/guides/guide-reader").then((mod) => mod.GuideReader),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-muted/30 h-[200px] animate-pulse rounded-md border" />
+    ),
+  },
+)
 
 interface DescriptionEditorProps {
-  description: string;
-  onDescriptionChange: (description: string) => void;
-  rows?: number;
-  toolbarSize?: "sm" | "md";
-  previewMinHeight?: string;
+  description: string
+  onDescriptionChange: (description: string) => void
+  rows?: number
+  toolbarSize?: "sm" | "md"
+  previewMinHeight?: string
 }
 
 export function DescriptionEditor({
@@ -42,46 +48,46 @@ export function DescriptionEditor({
   toolbarSize = "md",
   previewMinHeight = "min-h-[300px]",
 }: DescriptionEditorProps) {
-  const [mode, setMode] = useState<"edit" | "preview">("edit");
-  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+  const [mode, setMode] = useState<"edit" | "preview">("edit")
+  const descriptionRef = useRef<HTMLTextAreaElement>(null)
 
   const insertMarkdown = useCallback(
     (before: string, after: string, placeholder: string) => {
-      const textarea = descriptionRef.current;
-      if (!textarea) return;
+      const textarea = descriptionRef.current
+      if (!textarea) return
 
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const text = description;
-      const selectedText = text.substring(start, end);
+      const start = textarea.selectionStart
+      const end = textarea.selectionEnd
+      const text = description
+      const selectedText = text.substring(start, end)
 
-      const insertText = selectedText || placeholder;
+      const insertText = selectedText || placeholder
       const newText =
         text.substring(0, start) +
         before +
         insertText +
         after +
-        text.substring(end);
+        text.substring(end)
 
-      onDescriptionChange(newText);
+      onDescriptionChange(newText)
 
       setTimeout(() => {
-        textarea.focus();
+        textarea.focus()
         if (selectedText) {
           textarea.setSelectionRange(
             start + before.length,
-            start + before.length + selectedText.length
-          );
+            start + before.length + selectedText.length,
+          )
         } else {
           textarea.setSelectionRange(
             start + before.length,
-            start + before.length + placeholder.length
-          );
+            start + before.length + placeholder.length,
+          )
         }
-      }, 0);
+      }, 0)
     },
-    [description, onDescriptionChange]
-  );
+    [description, onDescriptionChange],
+  )
 
   const toolbarButtons = [
     {
@@ -109,36 +115,45 @@ export function DescriptionEditor({
       label: "List",
       action: () => insertMarkdown("\n- ", "\n", "list item"),
     },
-  ];
+  ]
 
-  const toolbarClass =
-    toolbarSize === "sm" ? "h-6 w-6" : "h-7 w-7";
-  const toolbarButtonPaddingClass = toolbarSize === "sm" ? "px-2" : "px-3";
-  const toolbarButtonHeightClass = toolbarSize === "sm" ? "h-6" : "h-7";
-  const buttonTextSizeClass = toolbarSize === "sm" ? "text-xs" : "";
+  const toolbarClass = toolbarSize === "sm" ? "h-6 w-6" : "h-7 w-7"
+  const toolbarButtonPaddingClass = toolbarSize === "sm" ? "px-2" : "px-3"
+  const toolbarButtonHeightClass = toolbarSize === "sm" ? "h-6" : "h-7"
+  const buttonTextSizeClass = toolbarSize === "sm" ? "text-xs" : ""
 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <div className="flex items-center border rounded-md overflow-hidden">
+        <div className="flex items-center overflow-hidden rounded-md border">
           <Button
             type="button"
             variant={mode === "edit" ? "default" : "ghost"}
             size="sm"
-            className={cn("rounded-none", toolbarButtonHeightClass, toolbarButtonPaddingClass, buttonTextSizeClass)}
+            className={cn(
+              "rounded-none",
+              toolbarButtonHeightClass,
+              toolbarButtonPaddingClass,
+              buttonTextSizeClass,
+            )}
             onClick={() => setMode("edit")}
           >
-            <Pencil className="size-3 mr-1" />
+            <Pencil className="mr-1 size-3" />
             Edit
           </Button>
           <Button
             type="button"
             variant={mode === "preview" ? "default" : "ghost"}
             size="sm"
-            className={cn("rounded-none", toolbarButtonHeightClass, toolbarButtonPaddingClass, buttonTextSizeClass)}
+            className={cn(
+              "rounded-none",
+              toolbarButtonHeightClass,
+              toolbarButtonPaddingClass,
+              buttonTextSizeClass,
+            )}
             onClick={() => setMode("preview")}
           >
-            <Eye className="size-3 mr-1" />
+            <Eye className="mr-1 size-3" />
             Preview
           </Button>
         </div>
@@ -148,22 +163,24 @@ export function DescriptionEditor({
         <div className="flex flex-col gap-2">
           {/* Toolbar */}
           <TooltipProvider delay={300}>
-            <div className="flex items-center gap-1 p-1 border rounded-md bg-muted/30">
+            <div className="bg-muted/30 flex items-center gap-1 rounded-md border p-1">
               {/* eslint-disable-next-line react-hooks/refs -- ref accessed only inside click handlers, not during render */}
               {toolbarButtons.map((button) => (
                 <Tooltip key={button.label}>
-                  <TooltipTrigger render={<Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className={toolbarClass}
-                      onClick={button.action}
-                    />}>
-                      <button.icon className="size-4" />
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className={toolbarClass}
+                        onClick={button.action}
+                      />
+                    }
+                  >
+                    <button.icon className="size-4" />
                   </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    {button.label}
-                  </TooltipContent>
+                  <TooltipContent side="bottom">{button.label}</TooltipContent>
                 </Tooltip>
               ))}
             </div>
@@ -175,11 +192,13 @@ export function DescriptionEditor({
             value={description}
             onChange={(e) => onDescriptionChange(e.target.value)}
             rows={rows}
-            className="font-mono text-sm resize-none"
+            className="resize-none font-mono text-sm"
           />
         </div>
       ) : (
-        <div className={cn("p-4 border rounded-md bg-muted/10", previewMinHeight)}>
+        <div
+          className={cn("bg-muted/10 rounded-md border p-4", previewMinHeight)}
+        >
           {description ? (
             <GuideReader content={description} />
           ) : (
@@ -190,5 +209,5 @@ export function DescriptionEditor({
         </div>
       )}
     </div>
-  );
+  )
 }

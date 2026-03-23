@@ -1,56 +1,57 @@
-"use client";
+"use client"
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link"
+import { useMemo, useState } from "react"
 
-type ImportResult = unknown;
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+
+type ImportResult = unknown
 
 export function ImportOverframeClient() {
-  const [url, setUrl] = useState("https://overframe.gg/build/935570/");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<ImportResult | null>(null);
+  const [url, setUrl] = useState("https://overframe.gg/build/935570/")
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [result, setResult] = useState<ImportResult | null>(null)
 
   const createUrl =
     result && typeof result === "object"
       ? (result as { createUrl?: string | null }).createUrl
-      : null;
+      : null
 
   const pretty = useMemo(() => {
-    if (!result) return "";
+    if (!result) return ""
     try {
-      return JSON.stringify(result, null, 2);
+      return JSON.stringify(result, null, 2)
     } catch {
-      return String(result);
+      return String(result)
     }
-  }, [result]);
+  }, [result])
 
   async function runImport() {
-    setIsLoading(true);
-    setError(null);
-    setResult(null);
+    setIsLoading(true)
+    setError(null)
+    setResult(null)
 
     try {
       const res = await fetch("/api/import/overframe", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ url, encodeBuild: true }),
-      });
+      })
 
-      const data = (await res.json()) as ImportResult;
+      const data = (await res.json()) as ImportResult
 
       if (!res.ok) {
-        setError(`HTTP ${res.status}: ${JSON.stringify(data)}`);
+        setError(`HTTP ${res.status}: ${JSON.stringify(data)}`)
       } else {
-        setResult(data);
+        setResult(data)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(err instanceof Error ? err.message : String(err))
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
   }
 
@@ -79,13 +80,20 @@ export function ImportOverframeClient() {
                 {isLoading ? "Importing…" : "Import"}
               </Button>
               {createUrl ? (
-                <Button variant="secondary" disabled={isLoading} render={<Link href={createUrl} />} nativeButton={false}>Open in editor</Button>
+                <Button
+                  variant="secondary"
+                  disabled={isLoading}
+                  render={<Link href={createUrl} />}
+                  nativeButton={false}
+                >
+                  Open in editor
+                </Button>
               ) : null}
             </div>
           </div>
 
           {error ? (
-            <div className="text-sm text-destructive whitespace-pre-wrap">
+            <div className="text-destructive text-sm whitespace-pre-wrap">
               {error}
             </div>
           ) : null}
@@ -97,11 +105,11 @@ export function ImportOverframeClient() {
           <CardTitle>Response</CardTitle>
         </CardHeader>
         <CardContent>
-          <pre className="text-xs whitespace-pre-wrap break-words bg-muted/30 border rounded-md p-3 min-h-[160px]">
+          <pre className="bg-muted/30 min-h-[160px] rounded-md border p-3 text-xs break-words whitespace-pre-wrap">
             {pretty || "(no response yet)"}
           </pre>
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

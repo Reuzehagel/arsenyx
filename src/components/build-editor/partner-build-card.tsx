@@ -1,30 +1,31 @@
-"use client";
+"use client"
 
-import Image from "next/image";
-import Link from "next/link";
-import { X, Gem } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { getImageUrl } from "@/lib/warframe";
-import { Button } from "@/components/ui/button";
+import { X, Gem } from "lucide-react"
+import Image from "next/image"
+import Link from "next/link"
+
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import { getImageUrl } from "@/lib/warframe"
 export interface PartnerBuild {
-  id: string;
-  slug: string;
-  name: string;
+  id: string
+  slug: string
+  name: string
   item: {
-    name: string;
-    imageName: string | null;
-    browseCategory: string;
-  };
+    name: string
+    imageName: string | null
+    browseCategory: string
+  }
   buildData: {
-    formaCount?: number;
-  };
+    formaCount?: number
+  }
 }
 
 interface PartnerBuildCardProps {
-  build: PartnerBuild;
-  onRemove?: () => void;
-  isEditable?: boolean;
-  className?: string;
+  build: PartnerBuild
+  onRemove?: () => void
+  isEditable?: boolean
+  className?: string
 }
 
 export function PartnerBuildCard({
@@ -33,19 +34,19 @@ export function PartnerBuildCard({
   isEditable = false,
   className,
 }: PartnerBuildCardProps) {
-  const imageUrl = getImageUrl(build.item.imageName ?? undefined);
-  const formaCount = build.buildData?.formaCount ?? 0;
+  const imageUrl = getImageUrl(build.item.imageName ?? undefined)
+  const formaCount = build.buildData?.formaCount ?? 0
 
   const content = (
     <div
       className={cn(
-        "relative flex items-center gap-3 p-2 rounded-lg border bg-card transition-colors",
+        "bg-card relative flex items-center gap-3 rounded-lg border p-2 transition-colors",
         !isEditable && "hover:bg-accent/50 cursor-pointer",
-        className
+        className,
       )}
     >
       {/* Item image */}
-      <div className="relative size-10 rounded bg-muted/50 shrink-0 overflow-hidden">
+      <div className="bg-muted/50 relative size-10 shrink-0 overflow-hidden rounded">
         <Image
           src={imageUrl}
           alt={build.item.name}
@@ -57,16 +58,16 @@ export function PartnerBuildCard({
       </div>
 
       {/* Build info */}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">{build.name}</p>
-        <p className="text-xs text-muted-foreground truncate">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">{build.name}</p>
+        <p className="text-muted-foreground truncate text-xs">
           {build.item.name}
         </p>
       </div>
 
       {/* Forma count */}
       {formaCount > 0 && (
-        <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+        <div className="text-muted-foreground flex shrink-0 items-center gap-1 text-xs">
           <Gem className="size-3" />
           <span>{formaCount}</span>
         </div>
@@ -78,11 +79,11 @@ export function PartnerBuildCard({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-6 w-6 shrink-0 hover:bg-destructive/10 hover:text-destructive"
+          className="hover:bg-destructive/10 hover:text-destructive h-6 w-6 shrink-0"
           onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onRemove();
+            e.preventDefault()
+            e.stopPropagation()
+            onRemove()
           }}
         >
           <X className="size-3" />
@@ -90,35 +91,35 @@ export function PartnerBuildCard({
         </Button>
       )}
     </div>
-  );
+  )
 
   if (isEditable) {
-    return content;
+    return content
   }
 
   return (
     <Link href={`/builds/${build.slug}`} className="block">
       {content}
     </Link>
-  );
+  )
 }
 
 interface DeletedPartnerCardProps {
-  className?: string;
+  className?: string
 }
 
 export function DeletedPartnerCard({ className }: DeletedPartnerCardProps) {
   return (
     <div
       className={cn(
-        "flex items-center gap-3 p-2 rounded-lg border bg-muted/30 opacity-60",
-        className
+        "bg-muted/30 flex items-center gap-3 rounded-lg border p-2 opacity-60",
+        className,
       )}
     >
-      <div className="size-10 rounded bg-muted/50 shrink-0 flex items-center justify-center">
-        <X className="size-4 text-muted-foreground" />
+      <div className="bg-muted/50 flex size-10 shrink-0 items-center justify-center rounded">
+        <X className="text-muted-foreground size-4" />
       </div>
-      <p className="text-sm text-muted-foreground">Build no longer available</p>
+      <p className="text-muted-foreground text-sm">Build no longer available</p>
     </div>
-  );
+  )
 }

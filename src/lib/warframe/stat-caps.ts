@@ -1,11 +1,11 @@
 // Stat cap definitions and enforcement for Warframe stats
 
-import type { StatType } from "./stat-types";
+import type { StatType } from "./stat-types"
 
 // Cap definition with optional min and max
 interface StatCap {
-  min?: number;
-  max?: number;
+  min?: number
+  max?: number
 }
 
 // Stat caps based on Warframe game mechanics
@@ -20,13 +20,13 @@ export const STAT_CAPS: Partial<Record<StatType, StatCap>> = {
 
   // Ability Range: Has a minimum of 34%
   ability_range: { min: 34 },
-};
+}
 
 // Result of applying a stat cap
 export interface CappedStatResult {
-  value: number; // The capped value (or original if no cap applies)
-  uncapped?: number; // The uncapped value if it was capped
-  wasCapped: boolean;
+  value: number // The capped value (or original if no cap applies)
+  uncapped?: number // The uncapped value if it was capped
+  wasCapped: boolean
 }
 
 /**
@@ -35,41 +35,44 @@ export interface CappedStatResult {
  * @param value - The calculated value before capping
  * @returns The capped result with information about whether capping occurred
  */
-export function applyStatCap(statType: StatType, value: number): CappedStatResult {
-  const cap = STAT_CAPS[statType];
+export function applyStatCap(
+  statType: StatType,
+  value: number,
+): CappedStatResult {
+  const cap = STAT_CAPS[statType]
 
   if (!cap) {
-    return { value, wasCapped: false };
+    return { value, wasCapped: false }
   }
 
-  let cappedValue = value;
-  let wasCapped = false;
+  let cappedValue = value
+  let wasCapped = false
 
   if (cap.max !== undefined && value > cap.max) {
-    cappedValue = cap.max;
-    wasCapped = true;
+    cappedValue = cap.max
+    wasCapped = true
   }
 
   if (cap.min !== undefined && value < cap.min) {
-    cappedValue = cap.min;
-    wasCapped = true;
+    cappedValue = cap.min
+    wasCapped = true
   }
 
   return wasCapped
     ? { value: cappedValue, uncapped: value, wasCapped: true }
-    : { value, wasCapped: false };
+    : { value, wasCapped: false }
 }
 
 /**
  * Check if a stat type has a cap defined
  */
 export function hasStatCap(statType: StatType): boolean {
-  return statType in STAT_CAPS;
+  return statType in STAT_CAPS
 }
 
 /**
  * Get the cap definition for a stat type
  */
 export function getStatCap(statType: StatType): StatCap | undefined {
-  return STAT_CAPS[statType];
+  return STAT_CAPS[statType]
 }

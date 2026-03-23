@@ -1,11 +1,19 @@
-"use client";
+"use client"
 
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
-import type { DamageBreakdown, DamageType, ElementalDamage } from "@/lib/warframe/stat-types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
+import type {
+  DamageBreakdown,
+  DamageType,
+  ElementalDamage,
+} from "@/lib/warframe/stat-types"
 
 interface DamageBreakdownProps {
-  breakdown: DamageBreakdown;
+  breakdown: DamageBreakdown
 }
 
 // Damage type colors for visual distinction
@@ -29,7 +37,7 @@ const DAMAGE_TYPE_COLORS: Record<DamageType, string> = {
   // Special
   void: "text-white",
   tau: "text-cyan-300",
-};
+}
 
 // Display names for damage types
 const DAMAGE_TYPE_NAMES: Record<DamageType, string> = {
@@ -48,7 +56,7 @@ const DAMAGE_TYPE_NAMES: Record<DamageType, string> = {
   corrosive: "Corrosive",
   void: "Void",
   tau: "Tau",
-};
+}
 
 /**
  * Damage breakdown section showing physical and elemental damage types
@@ -57,11 +65,11 @@ export function DamageBreakdownSection({ breakdown }: DamageBreakdownProps) {
   const hasPhysical =
     breakdown.physical.impact ||
     breakdown.physical.puncture ||
-    breakdown.physical.slash;
-  const hasElemental = breakdown.elemental.length > 0;
+    breakdown.physical.slash
+  const hasElemental = breakdown.elemental.length > 0
 
   if (!hasPhysical && !hasElemental) {
-    return null;
+    return null
   }
 
   return (
@@ -69,14 +77,17 @@ export function DamageBreakdownSection({ breakdown }: DamageBreakdownProps) {
       {/* Physical damage (IPS) first */}
       {hasPhysical && (
         <div className="flex flex-col gap-1">
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+          <span className="text-muted-foreground text-[10px] tracking-wider uppercase">
             Physical
           </span>
           {breakdown.physical.impact && (
             <DamageTypeRow type="impact" value={breakdown.physical.impact} />
           )}
           {breakdown.physical.puncture && (
-            <DamageTypeRow type="puncture" value={breakdown.physical.puncture} />
+            <DamageTypeRow
+              type="puncture"
+              value={breakdown.physical.puncture}
+            />
           )}
           {breakdown.physical.slash && (
             <DamageTypeRow type="slash" value={breakdown.physical.slash} />
@@ -87,7 +98,7 @@ export function DamageBreakdownSection({ breakdown }: DamageBreakdownProps) {
       {/* Elemental damage after physical */}
       {hasElemental && (
         <div className="flex flex-col gap-1">
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+          <span className="text-muted-foreground text-[10px] tracking-wider uppercase">
             Elemental
           </span>
           {breakdown.elemental.map((elem, i) => (
@@ -96,7 +107,7 @@ export function DamageBreakdownSection({ breakdown }: DamageBreakdownProps) {
         </div>
       )}
     </div>
-  );
+  )
 }
 
 /**
@@ -104,39 +115,50 @@ export function DamageBreakdownSection({ breakdown }: DamageBreakdownProps) {
  */
 function DamageTypeRow({ type, value }: { type: DamageType; value: number }) {
   return (
-    <div className="flex justify-between items-center text-xs">
-      <span className={cn("flex items-center gap-1.5", DAMAGE_TYPE_COLORS[type])}>
+    <div className="flex items-center justify-between text-xs">
+      <span
+        className={cn("flex items-center gap-1.5", DAMAGE_TYPE_COLORS[type])}
+      >
         <DamageIcon type={type} />
         <span>{DAMAGE_TYPE_NAMES[type]}</span>
       </span>
       <span className="font-medium tabular-nums">{Math.floor(value)}</span>
     </div>
-  );
+  )
 }
 
 /**
  * Row for elemental damage with combination tooltip
  */
 function ElementalDamageRow({ element }: { element: ElementalDamage }) {
-  const hasSources = element.sources && element.sources.length > 1;
+  const hasSources = element.sources && element.sources.length > 1
 
   const content = (
-    <div className="flex justify-between items-center text-xs">
-      <span className={cn("flex items-center gap-1.5", DAMAGE_TYPE_COLORS[element.type])}>
+    <div className="flex items-center justify-between text-xs">
+      <span
+        className={cn(
+          "flex items-center gap-1.5",
+          DAMAGE_TYPE_COLORS[element.type],
+        )}
+      >
         <DamageIcon type={element.type} />
         <span>{DAMAGE_TYPE_NAMES[element.type]}</span>
       </span>
-      <span className="font-medium tabular-nums">{Math.floor(element.value)}</span>
+      <span className="font-medium tabular-nums">
+        {Math.floor(element.value)}
+      </span>
     </div>
-  );
+  )
 
   if (!hasSources) {
-    return content;
+    return content
   }
 
   return (
     <Tooltip>
-      <TooltipTrigger render={<div className="cursor-help" />}>{content}</TooltipTrigger>
+      <TooltipTrigger render={<div className="cursor-help" />}>
+        {content}
+      </TooltipTrigger>
       <TooltipContent side="left">
         <div className="text-xs">
           <span className="text-muted-foreground">Combined from: </span>
@@ -144,7 +166,7 @@ function ElementalDamageRow({ element }: { element: ElementalDamage }) {
         </div>
       </TooltipContent>
     </Tooltip>
-  );
+  )
 }
 
 /**
@@ -176,5 +198,5 @@ function DamageIcon({ type }: { type: DamageType }) {
         "bg-cyan-300": type === "tau",
       })}
     />
-  );
+  )
 }

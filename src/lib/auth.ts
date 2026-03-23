@@ -1,9 +1,10 @@
-import { betterAuth } from "better-auth";
-import { prismaAdapter } from "better-auth/adapters/prisma";
-import { nextCookies } from "better-auth/next-js";
-import { username } from "better-auth/plugins";
-import { headers } from "next/headers";
-import { prisma } from "@/lib/db";
+import { betterAuth } from "better-auth"
+import { prismaAdapter } from "better-auth/adapters/prisma"
+import { nextCookies } from "better-auth/next-js"
+import { username } from "better-auth/plugins"
+import { headers } from "next/headers"
+
+import { prisma } from "@/lib/db"
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
@@ -33,9 +34,9 @@ export const auth = betterAuth({
       maxAge: 5 * 60, // 5 minutes
     },
   },
-});
+})
 
 /** Get the current session from request headers (server-only) */
 export async function getServerSession() {
-  return auth.api.getSession({ headers: await headers() });
+  return auth.api.getSession({ headers: await headers() })
 }

@@ -1,4 +1,4 @@
-"use client";
+"use client"
 
 import {
   Select,
@@ -7,12 +7,12 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import type { SortOption } from "@/lib/warframe/types";
+} from "@/components/ui/select"
+import type { SortOption } from "@/lib/warframe/types"
 
 interface SortDropdownProps {
-  sortOption: SortOption;
-  onSortChange: (value: SortOption) => void;
+  sortOption: SortOption
+  onSortChange: (value: SortOption) => void
 }
 
 const sortItems = [
@@ -20,12 +20,18 @@ const sortItems = [
   { value: "name-desc", label: "Name Z-A" },
   { value: "date-desc", label: "Newest First" },
   { value: "date-asc", label: "Oldest First" },
-] as const;
+] as const
 
 export function SortDropdown({ sortOption, onSortChange }: SortDropdownProps) {
   return (
     <div className="shrink-0">
-      <Select items={sortItems} value={sortOption} onValueChange={(value) => { if (value) onSortChange(value as SortOption); }}>
+      <Select
+        items={sortItems}
+        value={sortOption}
+        onValueChange={(value) => {
+          if (value) onSortChange(value as SortOption)
+        }}
+      >
         <SelectTrigger className="w-[140px]">
           <SelectValue />
         </SelectTrigger>
@@ -40,5 +46,5 @@ export function SortDropdown({ sortOption, onSortChange }: SortDropdownProps) {
         </SelectContent>
       </Select>
     </div>
-  );
+  )
 }

@@ -1,19 +1,34 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Pen } from "lucide-react";
-import { toast } from "sonner";
-import dynamic from "next/dynamic";
+import { Pen } from "lucide-react"
+import dynamic from "next/dynamic"
+import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { toast } from "sonner"
 
 const GuideReader = dynamic(
-  () => import("@/components/guides/guide-reader").then((mod) => mod.GuideReader),
-  { ssr: false, loading: () => <div className="h-[100px] rounded-md border bg-muted/30 animate-pulse" /> }
-);
+  () =>
+    import("@/components/guides/guide-reader").then((mod) => mod.GuideReader),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-muted/30 h-[100px] animate-pulse rounded-md border" />
+    ),
+  },
+)
+import {
+  updateBuildGuideAction,
+  getUserBuildsForPartnerSelectorAction,
+} from "@/app/actions/builds"
 import {
   GuideEditor,
   type GuideEditorData,
-} from "@/components/build-editor/guide-editor";
+} from "@/components/build-editor/guide-editor"
+import type { PartnerBuild } from "@/components/build-editor/partner-build-card"
+import type { PartnerBuildOption } from "@/components/build-editor/partner-build-selector"
+import { PartnerBuildsSection } from "@/components/build/partner-builds-section"
+import type { VisiblePartnerBuild } from "@/components/build/partner-builds-section"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -21,24 +36,15 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { PartnerBuildsSection } from "@/components/build/partner-builds-section";
-import { Button } from "@/components/ui/button";
-import {
-  updateBuildGuideAction,
-  getUserBuildsForPartnerSelectorAction,
-} from "@/app/actions/builds";
-import type { PartnerBuildOption } from "@/components/build-editor/partner-build-selector";
-import type { PartnerBuild } from "@/components/build-editor/partner-build-card";
-import type { VisiblePartnerBuild } from "@/components/build/partner-builds-section";
+} from "@/components/ui/dialog"
 
 interface BuildGuideSectionProps {
-  buildId: string;
-  initialSummary?: string | null;
-  initialDescription?: string | null;
-  initialPartnerBuilds?: VisiblePartnerBuild[];
-  updatedAt?: Date;
-  isOwner: boolean;
+  buildId: string
+  initialSummary?: string | null
+  initialDescription?: string | null
+  initialPartnerBuilds?: VisiblePartnerBuild[]
+  updatedAt?: Date
+  isOwner: boolean
 }
 
 export function BuildGuideSection({
@@ -49,68 +55,68 @@ export function BuildGuideSection({
   updatedAt,
   isOwner,
 }: BuildGuideSectionProps) {
-  const router = useRouter();
-  const [summary, setSummary] = useState(initialSummary ?? null);
-  const [description, setDescription] = useState(initialDescription ?? null);
+  const router = useRouter()
+  const [summary, setSummary] = useState(initialSummary ?? null)
+  const [description, setDescription] = useState(initialDescription ?? null)
   const [partnerBuilds, setPartnerBuilds] =
-    useState<VisiblePartnerBuild[]>(initialPartnerBuilds);
-  const [lastUpdated, setLastUpdated] = useState<Date | undefined>(updatedAt);
-  const [key, setKey] = useState(0);
+    useState<VisiblePartnerBuild[]>(initialPartnerBuilds)
+  const [lastUpdated, setLastUpdated] = useState<Date | undefined>(updatedAt)
+  const [key, setKey] = useState(0)
   const [availableBuilds, setAvailableBuilds] = useState<PartnerBuildOption[]>(
-    []
-  );
+    [],
+  )
 
   // Load available builds for the editor
   useEffect(() => {
     if (isOwner) {
       getUserBuildsForPartnerSelectorAction().then((result) => {
         if (result.success && result.data) {
-          setAvailableBuilds(result.data);
+          setAvailableBuilds(result.data)
         }
-      });
+      })
     }
-  }, [isOwner]);
+  }, [isOwner])
 
   const handleSave = async (data: GuideEditorData) => {
     // Optimistic update
-    setSummary(data.summary || null);
-    setDescription(data.description || null);
-    setLastUpdated(new Date());
-    setKey((prev) => prev + 1);
+    setSummary(data.summary || null)
+    setDescription(data.description || null)
+    setLastUpdated(new Date())
+    setKey((prev) => prev + 1)
 
     // Update partner builds from available builds
     const newPartnerBuilds = data.partnerBuildIds
       .map((id) => {
-        const build = availableBuilds.find((b) => b.id === id);
-        if (!build) return null;
+        const build = availableBuilds.find((b) => b.id === id)
+        if (!build) return null
         return {
           id: build.id,
           slug: build.slug,
           name: build.name,
           item: build.item,
           buildData: { formaCount: build.buildData.formaCount },
-        } as VisiblePartnerBuild;
+        } as VisiblePartnerBuild
       })
-      .filter((b): b is VisiblePartnerBuild => b !== null);
-    setPartnerBuilds(newPartnerBuilds);
+      .filter((b): b is VisiblePartnerBuild => b !== null)
+    setPartnerBuilds(newPartnerBuilds)
 
     // Background save
     const result = await updateBuildGuideAction(buildId, {
       summary: data.summary,
       description: data.description,
       partnerBuildIds: data.partnerBuildIds,
-    });
+    })
 
     if (result.success) {
-      router.refresh();
+      router.refresh()
     } else {
-      toast.error(result.error || "Failed to save guide");
+      toast.error(result.error || "Failed to save guide")
     }
-  };
+  }
 
-  const hasContent = summary || description || partnerBuilds.length > 0;
+  const hasContent = summary || description || partnerBuilds.length > 0
 
-  if (!hasContent && !isOwner) return null;
+  if (!hasContent && !isOwner) return null
 
   // Convert partner builds to the format expected by editor
   const partnerBuildsForEditor: PartnerBuild[] = partnerBuilds
@@ -121,33 +127,37 @@ export function BuildGuideSection({
       name: b.name,
       item: b.item!,
       buildData: b.buildData!,
-    }));
+    }))
 
   return (
     <div className="container pb-4">
-      <div className="bg-card/50 border rounded-xl overflow-hidden">
-        <div className="border-b bg-muted/30 px-6 py-4 flex items-center justify-between">
+      <div className="bg-card/50 overflow-hidden rounded-xl border">
+        <div className="bg-muted/30 flex items-center justify-between border-b px-6 py-4">
           <div className="flex items-center gap-4">
             <h2 className="text-lg font-semibold">Build Guide</h2>
             {isOwner && (
               <Dialog>
-                <DialogTrigger render={<Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 hover:bg-background"
-                  />}>
-                    <Pen className="size-4" />
-                    <span className="sr-only">Edit Guide</span>
+                <DialogTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="hover:bg-background h-8 w-8"
+                    />
+                  }
+                >
+                  <Pen className="size-4" />
+                  <span className="sr-only">Edit Guide</span>
                 </DialogTrigger>
                 <DialogContent
                   key={`edit-${key}`}
-                  className="sm:max-w-[900px] w-[95vw] max-h-[95vh] flex flex-col"
+                  className="flex max-h-[95vh] w-[95vw] flex-col sm:max-w-[900px]"
                 >
                   <DialogHeader>
                     <DialogTitle>Build Guide</DialogTitle>
                     <DialogDescription>
-                      Write a guide for your build with a summary, linked partner builds,
-                      and detailed description.
+                      Write a guide for your build with a summary, linked
+                      partner builds, and detailed description.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="flex-1 overflow-y-auto pr-2">
@@ -167,12 +177,17 @@ export function BuildGuideSection({
             )}
           </div>
           {lastUpdated && (
-            <span className="text-xs text-muted-foreground">
-              Last updated {lastUpdated.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+            <span className="text-muted-foreground text-xs">
+              Last updated{" "}
+              {lastUpdated.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}
             </span>
           )}
         </div>
-        <div className="p-6 flex flex-col gap-6">
+        <div className="flex flex-col gap-6 p-6">
           {hasContent ? (
             <>
               {/* Summary */}
@@ -182,7 +197,10 @@ export function BuildGuideSection({
 
               {/* Description */}
               {description && (
-                <GuideReader key={lastUpdated?.toISOString()} content={description} />
+                <GuideReader
+                  key={lastUpdated?.toISOString()}
+                  content={description}
+                />
               )}
 
               {/* Partner Builds */}
@@ -191,10 +209,10 @@ export function BuildGuideSection({
               )}
             </>
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-muted-foreground py-8 text-center">
               <p>No guide written yet.</p>
               {isOwner && (
-                <p className="text-sm mt-2">
+                <p className="mt-2 text-sm">
                   Click the edit button above to start writing.
                 </p>
               )}
@@ -203,5 +221,5 @@ export function BuildGuideSection({
         </div>
       </div>
     </div>
-  );
+  )
 }

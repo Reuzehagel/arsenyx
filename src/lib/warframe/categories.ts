@@ -1,13 +1,13 @@
-import type { BrowseCategory, WfcdCategory } from "./types";
+import type { BrowseCategory, WfcdCategory } from "./types"
 
 // Category configuration for the browse page
 export interface CategoryConfig {
-  id: BrowseCategory;
-  label: string;
-  labelPlural: string;
-  wfcdCategories: WfcdCategory[];
-  description: string;
-  iconKey: string;
+  id: BrowseCategory
+  label: string
+  labelPlural: string
+  wfcdCategories: WfcdCategory[]
+  description: string
+  iconKey: string
 }
 
 export const BROWSE_CATEGORIES: CategoryConfig[] = [
@@ -84,40 +84,40 @@ export const BROWSE_CATEGORIES: CategoryConfig[] = [
     description: "Archwings and their weapons for space combat",
     iconKey: "rocket",
   },
-];
+]
 
 /**
  * Get category config by ID
  */
 export function getCategoryConfig(
-  categoryId: BrowseCategory
+  categoryId: BrowseCategory,
 ): CategoryConfig | undefined {
-  return BROWSE_CATEGORIES.find((c) => c.id === categoryId);
+  return BROWSE_CATEGORIES.find((c) => c.id === categoryId)
 }
 
 /**
  * Get category config by WFCD category name
  */
 export function getCategoryByWfcd(
-  wfcdCategory: string
+  wfcdCategory: string,
 ): CategoryConfig | undefined {
   return BROWSE_CATEGORIES.find((c) =>
-    c.wfcdCategories.includes(wfcdCategory as WfcdCategory)
-  );
+    c.wfcdCategories.includes(wfcdCategory as WfcdCategory),
+  )
 }
 
 /**
  * Get default category for browse page
  */
 export function getDefaultCategory(): BrowseCategory {
-  return "warframes";
+  return "warframes"
 }
 
 /**
  * Validate if a string is a valid browse category
  */
 export function isValidCategory(category: string): category is BrowseCategory {
-  return BROWSE_CATEGORIES.some((c) => c.id === category);
+  return BROWSE_CATEGORIES.some((c) => c.id === category)
 }
 
 /**
@@ -125,15 +125,15 @@ export function isValidCategory(category: string): category is BrowseCategory {
  */
 export function mapWfcdCategory(
   wfcdCategory: string,
-  itemType?: string
+  itemType?: string,
 ): BrowseCategory | null {
   // Special handling for Necramechs (they're in Warframes category but have specific type)
   if (wfcdCategory === "Warframes" && itemType?.includes("Mech")) {
-    return "necramechs";
+    return "necramechs"
   }
 
-  const config = getCategoryByWfcd(wfcdCategory);
-  return config?.id ?? null;
+  const config = getCategoryByWfcd(wfcdCategory)
+  return config?.id ?? null
 }
 
 // =============================================================================
@@ -142,45 +142,45 @@ export function mapWfcdCategory(
 // Use these helpers instead of repeating category checks throughout the codebase
 
 /** Categories that represent warframes or warframe-like items */
-const WARFRAME_CATEGORIES: BrowseCategory[] = ["warframes", "necramechs"];
+const WARFRAME_CATEGORIES: BrowseCategory[] = ["warframes", "necramechs"]
 
 /** Categories that represent weapons */
-const WEAPON_CATEGORIES: BrowseCategory[] = ["primary", "secondary", "melee"];
+const WEAPON_CATEGORIES: BrowseCategory[] = ["primary", "secondary", "melee"]
 
 /** Categories that represent gun-type weapons (not melee) */
-const GUN_CATEGORIES: BrowseCategory[] = ["primary", "secondary"];
+const GUN_CATEGORIES: BrowseCategory[] = ["primary", "secondary"]
 
 /**
  * Check if a category represents a warframe or necramech
  */
 export function isWarframeCategory(category: BrowseCategory): boolean {
-  return WARFRAME_CATEGORIES.includes(category);
+  return WARFRAME_CATEGORIES.includes(category)
 }
 
 /**
  * Check if a category represents a weapon (primary, secondary, or melee)
  */
 export function isWeaponCategory(category: BrowseCategory): boolean {
-  return WEAPON_CATEGORIES.includes(category);
+  return WEAPON_CATEGORIES.includes(category)
 }
 
 /**
  * Check if a category represents a gun (primary or secondary, not melee)
  */
 export function isGunCategory(category: BrowseCategory): boolean {
-  return GUN_CATEGORIES.includes(category);
+  return GUN_CATEGORIES.includes(category)
 }
 
 /**
  * Check if a category represents a melee weapon
  */
 export function isMeleeCategory(category: BrowseCategory): boolean {
-  return category === "melee";
+  return category === "melee"
 }
 
 /**
  * Check if a category represents a companion
  */
 export function isCompanionCategory(category: BrowseCategory): boolean {
-  return category === "companions";
+  return category === "companions"
 }

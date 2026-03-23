@@ -1,5 +1,5 @@
-export { ModCard, CompactModCard, DragGhost } from "./mod-card";
-export type { ModCardProps, ModRarity, DragGhostProps } from "./mod-card";
+export { ModCard, CompactModCard, DragGhost } from "./mod-card"
+export type { ModCardProps, ModRarity, DragGhostProps } from "./mod-card"
 
 // Frame components for advanced usage
 export {
@@ -8,4 +8,4 @@ export {
   RankDots,
   DrainBadge,
   LowerTab,
-} from "./mod-card-frame";
+} from "./mod-card-frame"

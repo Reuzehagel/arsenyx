@@ -1,16 +1,16 @@
-"use client";
+"use client"
 
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeHighlight from "rehype-highlight";
+import ReactMarkdown from "react-markdown"
+import rehypeHighlight from "rehype-highlight"
+import remarkGfm from "remark-gfm"
 
 interface GuideReaderProps {
-  content: string;
+  content: string
 }
 
 export function GuideReader({ content }: GuideReaderProps) {
   if (!content) {
-    return null;
+    return null
   }
 
   return (
@@ -21,18 +21,18 @@ export function GuideReader({ content }: GuideReaderProps) {
         components={{
           // Custom link handling to open external links in new tab
           a: ({ href, children, ...props }) => {
-            const isExternal = href?.startsWith("http");
+            const isExternal = href?.startsWith("http")
             return (
               <a
                 href={href}
                 target={isExternal ? "_blank" : undefined}
                 rel={isExternal ? "noopener noreferrer" : undefined}
-                className="text-primary underline underline-offset-2 hover:text-primary/80"
+                className="text-primary hover:text-primary/80 underline underline-offset-2"
                 {...props}
               >
                 {children}
               </a>
-            );
+            )
           },
           // Ensure images from external URLs work
           img: ({ src, alt, ...props }) => (
@@ -40,25 +40,22 @@ export function GuideReader({ content }: GuideReaderProps) {
             <img
               src={src}
               alt={alt || ""}
-              className="max-w-full h-auto rounded-lg"
+              className="h-auto max-w-full rounded-lg"
               loading="lazy"
               {...props}
             />
           ),
           // Style code blocks
           pre: ({ children, ...props }) => (
-            <pre
-              className="bg-muted p-4 rounded-lg overflow-x-auto"
-              {...props}
-            >
+            <pre className="bg-muted overflow-x-auto rounded-lg p-4" {...props}>
               {children}
             </pre>
           ),
           code: ({ className, children, ...props }) => {
-            const isInline = !className;
+            const isInline = !className
             return isInline ? (
               <code
-                className="bg-muted px-1.5 py-0.5 rounded text-sm"
+                className="bg-muted rounded px-1.5 py-0.5 text-sm"
                 {...props}
               >
                 {children}
@@ -67,12 +64,12 @@ export function GuideReader({ content }: GuideReaderProps) {
               <code className={className} {...props}>
                 {children}
               </code>
-            );
+            )
           },
         }}
       >
         {content}
       </ReactMarkdown>
     </div>
-  );
+  )
 }
