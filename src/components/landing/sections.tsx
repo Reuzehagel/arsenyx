@@ -29,7 +29,7 @@ export function HeroSection() {
 
           {/* Headline */}
           <div className="flex flex-col gap-4">
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
+            <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-5xl md:text-6xl lg:text-7xl">
               {headline.prefix}{" "}
               <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">
                 {headline.highlight}
@@ -77,7 +77,7 @@ export function FeaturesSection() {
     <section className="bg-muted/30 border-b">
       <div className="container py-24">
         <div className="mx-auto mb-16 flex max-w-3xl flex-col gap-4 text-center">
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+          <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">
             {FEATURES_SECTION.headline}
           </h2>
           <p className="text-muted-foreground text-lg">
@@ -102,7 +102,7 @@ export function CTASection() {
     <section className="border-b">
       <div className="container py-24">
         <div className="mx-auto flex max-w-3xl flex-col gap-8 text-center">
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+          <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">
             {headline}
           </h2>
           <p className="text-muted-foreground text-lg">{description}</p>

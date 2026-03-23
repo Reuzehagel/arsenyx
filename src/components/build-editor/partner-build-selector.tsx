@@ -149,7 +149,7 @@ export function PartnerBuildSelector({
         <PopoverContent className="w-[400px] p-0" align="start">
           <Command shouldFilter={false}>
             <CommandInput
-              placeholder="Search your builds..."
+              placeholder="Search your builds…"
               value={searchQuery}
               onValueChange={setSearchQuery}
             />

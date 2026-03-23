@@ -282,7 +282,7 @@ export function ItemSidebar({
           <div className="bg-muted relative h-4 overflow-hidden rounded-full">
             <div
               className={cn(
-                "h-full rounded-full transition-all duration-200",
+                "h-full rounded-full transition-[width] duration-200",
                 capacityStatus.remaining < 0 ? "bg-destructive" : "bg-primary",
               )}
               style={{

@@ -208,7 +208,7 @@ export function GuideEditor({
           </div>
           <Textarea
             id="guide-summary"
-            placeholder="Brief description of this build (optional)..."
+            placeholder="Brief description of this build (optional)…"
             value={summary}
             onChange={(e) => {
               const newValue = e.target.value.slice(0, SUMMARY_MAX_LENGTH)

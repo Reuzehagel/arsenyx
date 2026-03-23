@@ -38,7 +38,13 @@ export default function RootLayout({
       lang="en"
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable}`}
+      style={{ colorScheme: "light dark" }}
     >
+      <head>
+        <meta name="theme-color" content="#09090b" />
+        <link rel="preconnect" href="https://cdn.warframestat.us" />
+        <link rel="preconnect" href="https://wiki.warframe.com" />
+      </head>
       <body className="antialiased">
         <ThemeProvider
           attribute="class"

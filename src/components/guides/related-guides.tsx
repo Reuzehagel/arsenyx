@@ -32,7 +32,7 @@ export function RelatedGuides({ guides }: RelatedGuidesProps) {
                     {guide.summary}
                   </p>
                 </div>
-                <ArrowRight className="text-muted-foreground group-hover:text-primary ml-3 h-4 w-4 shrink-0 transition-all group-hover:translate-x-0.5" />
+                <ArrowRight className="text-muted-foreground group-hover:text-primary ml-3 h-4 w-4 shrink-0 transition-[transform,color] group-hover:translate-x-0.5" />
               </Link>
             </li>
           ))}

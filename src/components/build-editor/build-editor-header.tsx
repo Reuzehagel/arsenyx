@@ -127,7 +127,7 @@ export function BuildEditorHeader({
                 <Input
                   value={buildName}
                   onChange={(e) => setBuildName(e.target.value)}
-                  placeholder="Build name..."
+                  placeholder="Build name…"
                   className="h-8 w-full text-sm sm:w-48"
                 />
               )}

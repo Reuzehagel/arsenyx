@@ -59,7 +59,7 @@ export function HelminthAbilityDialog({
             <Search />
           </InputGroupAddon>
           <InputGroupInput
-            placeholder="Search abilities..."
+            placeholder="Search abilities…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />

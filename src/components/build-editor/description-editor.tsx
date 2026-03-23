@@ -188,7 +188,7 @@ export function DescriptionEditor({
 
           <Textarea
             ref={descriptionRef}
-            placeholder="Write your guide in markdown... (optional)"
+            placeholder="Write your guide in markdown… (optional)"
             value={description}
             onChange={(e) => onDescriptionChange(e.target.value)}
             rows={rows}

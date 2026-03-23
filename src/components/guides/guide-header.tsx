@@ -36,7 +36,7 @@ export function GuideHeader({ guide }: GuideHeaderProps) {
       </div>
 
       {/* Title */}
-      <h1 className="mb-4 text-3xl font-bold tracking-tight lg:text-4xl">
+      <h1 className="mb-4 text-3xl font-bold tracking-tight text-balance lg:text-4xl">
         {guide.title}
       </h1>
 

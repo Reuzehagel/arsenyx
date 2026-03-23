@@ -188,7 +188,7 @@ export function BrowseContainer({
       <div className="flex flex-col gap-3 sm:flex-row">
         <SearchBar
           defaultValue={searchQuery}
-          placeholder="Search items..."
+          placeholder="Search items…"
           className="flex-1"
           onSearchChange={handleSearchChange}
         />

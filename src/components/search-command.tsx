@@ -116,7 +116,7 @@ export function SearchCommand() {
       </button>
       <CommandDialog open={open} onOpenChange={setOpen}>
         <CommandInput
-          placeholder="Search items and builds..."
+          placeholder="Search items and builds…"
           value={query}
           onValueChange={setQuery}
         />

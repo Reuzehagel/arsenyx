@@ -160,7 +160,7 @@ export function BuildGuideSection({
                       partner builds, and detailed description.
                     </DialogDescription>
                   </DialogHeader>
-                  <div className="flex-1 overflow-y-auto pr-2">
+                  <div className="flex-1 overflow-y-auto overscroll-y-contain pr-2">
                     <GuideEditor
                       buildId={buildId}
                       initialSummary={summary}

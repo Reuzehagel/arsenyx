@@ -97,7 +97,9 @@ export function SettingsForm({ user }: SettingsFormProps) {
                 id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="your-username"
+                placeholder="your-username…"
+                autoComplete="username"
+                spellCheck={false}
                 minLength={3}
                 maxLength={20}
                 aria-invalid={usernameError ? true : undefined}
@@ -115,7 +117,7 @@ export function SettingsForm({ user }: SettingsFormProps) {
                 id="bio"
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
-                placeholder="Tell others about yourself..."
+                placeholder="Tell others about yourself…"
                 maxLength={300}
                 rows={3}
               />

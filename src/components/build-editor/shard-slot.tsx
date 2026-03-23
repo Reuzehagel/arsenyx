@@ -51,7 +51,7 @@ export function ShardSlot({
         disabled={readOnly}
         className={cn(
           "border-border/60 bg-muted/30 size-10 rounded border border-dashed",
-          "flex items-center justify-center transition-all",
+          "flex items-center justify-center transition-colors",
           !readOnly &&
             "hover:border-primary/50 hover:bg-muted/50 cursor-pointer",
           readOnly && "cursor-default opacity-60",
@@ -83,7 +83,7 @@ export function ShardSlot({
     <div
       className={cn(
         "relative size-10 overflow-hidden rounded",
-        "border-border border transition-all",
+        "border-border border transition-[border-color,transform]",
         !readOnly && "hover:border-primary cursor-pointer hover:scale-105",
         readOnly && "cursor-default",
       )}

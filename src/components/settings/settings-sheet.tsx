@@ -143,7 +143,9 @@ export function SettingsSheet({ open, onOpenChange }: SettingsSheetProps) {
                     id="settings-username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="your-username"
+                    placeholder="your-username…"
+                    autoComplete="username"
+                    spellCheck={false}
                     minLength={3}
                     maxLength={20}
                     aria-invalid={usernameError ? true : undefined}
@@ -161,7 +163,7 @@ export function SettingsSheet({ open, onOpenChange }: SettingsSheetProps) {
                     id="settings-bio"
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
-                    placeholder="Tell others about yourself..."
+                    placeholder="Tell others about yourself…"
                     maxLength={300}
                     rows={3}
                   />

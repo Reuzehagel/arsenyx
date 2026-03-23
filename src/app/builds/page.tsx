@@ -182,7 +182,7 @@ export default async function BuildsPage({ searchParams }: BuildsPageProps) {
             <Suspense>
               <SearchBar
                 defaultValue={q}
-                placeholder="Search builds..."
+                placeholder="Search builds…"
                 className="flex-1"
               />
             </Suspense>

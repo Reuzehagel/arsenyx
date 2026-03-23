@@ -260,7 +260,7 @@ export function BuildContainer({
         <div className="flex flex-col gap-4">
           {/* Top row: Sidebar + Mod Grid */}
           <div className="flex flex-col gap-4 lg:relative lg:block">
-            <div className="bg-card w-full rounded-lg border lg:absolute lg:top-0 lg:bottom-0 lg:left-0 lg:w-[260px] lg:overflow-y-auto">
+            <div className="bg-card w-full rounded-lg border lg:absolute lg:top-0 lg:bottom-0 lg:left-0 lg:w-[260px] lg:overflow-y-auto lg:overscroll-y-contain">
               <ItemSidebar
                 buildState={buildState}
                 capacityStatus={capacityStatus}

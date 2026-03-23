@@ -99,7 +99,7 @@ export const ArcaneSlotCard = memo(function ArcaneSlotCard({
       <div
         ref={setDroppableRef}
         className={cn(
-          "group relative flex items-start justify-center overflow-visible rounded-lg transition-all",
+          "group relative flex items-start justify-center overflow-visible rounded-lg transition-shadow",
           className,
           isOver &&
             "ring-primary ring-offset-background z-10 ring-2 ring-offset-2",
@@ -140,7 +140,7 @@ export const ArcaneSlotCard = memo(function ArcaneSlotCard({
             <div
               ref={setDroppableRef}
               className={cn(
-                "group relative flex cursor-pointer flex-col items-center justify-center overflow-visible rounded-lg transition-all",
+                "group relative flex cursor-pointer flex-col items-center justify-center overflow-visible rounded-lg transition-[box-shadow,background-color]",
                 "bg-card border-border/60 border border-dashed",
                 isActive
                   ? "ring-primary ring-offset-background ring-2 ring-offset-2"

@@ -47,7 +47,7 @@ export function SearchableModCard({
       {...attributes}
       data-index={dataIndex}
       className={cn(
-        "search-grid-item group relative flex cursor-pointer touch-none flex-col items-center rounded-lg px-2 pt-2 pb-8 transition-all select-none",
+        "search-grid-item group relative flex cursor-pointer touch-none flex-col items-center rounded-lg px-2 pt-2 pb-8 transition-opacity select-none",
         "bg-card/30 border border-transparent",
         isDisabled && "cursor-not-allowed opacity-40 grayscale",
         isDragging && "opacity-0",

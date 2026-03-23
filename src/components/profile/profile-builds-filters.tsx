@@ -37,7 +37,7 @@ export function ProfileBuildsFilters({
       <div className="relative flex-1">
         <SearchIcon className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
         <Input
-          placeholder="Search builds..."
+          placeholder="Search builds…"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           className="pl-9"

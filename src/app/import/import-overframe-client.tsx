@@ -63,12 +63,14 @@ export function ImportOverframeClient() {
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium">Overframe URL</label>
+            <label htmlFor="overframe-url" className="text-sm font-medium">Overframe URL</label>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Input
+                id="overframe-url"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://overframe.gg/build/..."
+                placeholder="https://overframe.gg/build/…"
+                autoComplete="url"
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}

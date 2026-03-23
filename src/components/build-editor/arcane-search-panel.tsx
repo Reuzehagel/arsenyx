@@ -152,7 +152,7 @@ export function ArcaneSearchPanel({
           <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
             ref={inputRef}
-            placeholder="Search arcanes..."
+            placeholder="Search arcanes…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleKeyDown}

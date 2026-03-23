@@ -264,7 +264,7 @@ export function ModSearchGrid({
           <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
             ref={inputRef}
-            placeholder="Search mods..."
+            placeholder="Search mods…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleKeyDown}

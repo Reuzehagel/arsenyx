@@ -378,7 +378,7 @@ const ModSlotCard = memo(function ModSlotCard({
             <div
               ref={setDroppableRef}
               className={cn(
-                "group relative flex items-start justify-center overflow-visible rounded-lg transition-all",
+                "group relative flex items-start justify-center overflow-visible rounded-lg transition-shadow",
                 className,
                 isOver &&
                   "ring-primary ring-offset-background z-10 ring-2 ring-offset-2",
@@ -434,7 +434,7 @@ const ModSlotCard = memo(function ModSlotCard({
     <div
       ref={setDroppableRef}
       className={cn(
-        "group relative flex items-center justify-center overflow-visible rounded-lg transition-all",
+        "group relative flex items-center justify-center overflow-visible rounded-lg transition-[box-shadow,background-color]",
         readOnly ? "cursor-default" : "cursor-pointer",
         "bg-card border-border/60 border border-dashed",
         !readOnly && isActive
