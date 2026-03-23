@@ -297,6 +297,40 @@ export function getCategoryCounts(): Record<BrowseCategory, number> {
 }
 
 /**
+ * Get an item by its WFCD unique name (category-agnostic)
+ * Used for build creation validation and denormalization
+ */
+export function getItemByUniqueName(
+  uniqueName: string,
+): BrowseableItem | null {
+  return uniqueNameLookup.get(uniqueName) ?? null
+}
+
+/**
+ * Get denormalized item metadata for storing on builds
+ * Returns the fields needed for Build records without an Item FK
+ */
+export function getItemMetadata(uniqueName: string): {
+  uniqueName: string
+  name: string
+  imageName: string | null
+  browseCategory: string
+} | null {
+  const item = uniqueNameLookup.get(uniqueName)
+  if (!item) return null
+
+  const categories = categorizeItem(item)
+  if (categories.length === 0) return null
+
+  return {
+    uniqueName: item.uniqueName,
+    name: item.name,
+    imageName: (item as { imageName?: string }).imageName ?? null,
+    browseCategory: categories[0],
+  }
+}
+
+/**
  * Get full item data by unique name and category
  * Returns the complete item object with all fields
  */
