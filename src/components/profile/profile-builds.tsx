@@ -32,7 +32,7 @@ export function ProfileBuilds({
   const [hasMore, setHasMore] = useState(initialHasMore)
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
-  const [category, setCategory] = useState("")
+  const [category, setCategory] = useState("all")
   const [isPending, startTransition] = useTransition()
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const hasInteracted = useRef(false)
@@ -50,7 +50,7 @@ export function ProfileBuilds({
       startTransition(async () => {
         const result = await getProfileBuildsAction(userId, {
           query: newSearch || undefined,
-          category: newCategory || undefined,
+          category: newCategory !== "all" ? newCategory : undefined,
           page: newPage,
         })
 
@@ -105,7 +105,7 @@ export function ProfileBuilds({
           <EmptyHeader>
             <EmptyTitle>No builds found</EmptyTitle>
             <EmptyDescription>
-              {search || category
+              {search || category !== "all"
                 ? "Try adjusting your search or filters"
                 : "This user hasn't created any builds yet"}
             </EmptyDescription>

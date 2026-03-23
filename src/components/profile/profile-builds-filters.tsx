@@ -1,5 +1,6 @@
 "use client"
 
+import { useMemo } from "react"
 import { SearchIcon } from "lucide-react"
 
 import { Input } from "@/components/ui/input"
@@ -20,6 +21,11 @@ interface ProfileBuildsFiltersProps {
   onCategoryChange: (value: string) => void
 }
 
+const CATEGORY_ITEMS = [
+  { value: "all", label: "All Categories" },
+  ...BROWSE_CATEGORIES.map((cat) => ({ value: cat.id, label: cat.labelPlural })),
+]
+
 export function ProfileBuildsFilters({
   search,
   onSearchChange,
@@ -37,15 +43,19 @@ export function ProfileBuildsFilters({
           className="pl-9"
         />
       </div>
-      <Select value={category || undefined} onValueChange={onCategoryChange}>
+      <Select
+        value={category}
+        onValueChange={onCategoryChange}
+        items={CATEGORY_ITEMS}
+      >
         <SelectTrigger className="w-full sm:w-[180px]">
           <SelectValue placeholder="All Categories" />
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
-            {BROWSE_CATEGORIES.map((cat) => (
-              <SelectItem key={cat.id} value={cat.id}>
-                {cat.labelPlural}
+            {CATEGORY_ITEMS.map((item) => (
+              <SelectItem key={item.value} value={item.value}>
+                {item.label}
               </SelectItem>
             ))}
           </SelectGroup>
