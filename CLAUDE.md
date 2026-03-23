@@ -11,7 +11,7 @@ Arsenyx is a Warframe build planner — create, share, and discover equipment bu
 - **Styling**: Tailwind CSS v4 + shadcn/ui (New York theme)
 - **Database**: PostgreSQL via Prisma ORM with `@prisma/adapter-pg`
 - **Authentication**: Better Auth with GitHub OAuth
-- **Rich Text Editor**: Lexical
+- **Rich Text**: react-markdown with remark-gfm + rehype-highlight
 - **Linting**: Oxlint (replaces ESLint)
 - **Formatting**: Oxfmt (with Tailwind class sorting)
 - **Package Manager**: Bun (required)
@@ -69,6 +69,7 @@ src/
 │   ├── guides/             # User guides
 │   ├── import/             # Overframe build import
 │   ├── profile/[username]/ # User profiles
+│   ├── settings/              # User settings
 │   ├── about/ privacy/ terms/  # Static pages
 │   ├── layout.tsx          # Root layout
 │   └── page.tsx            # Landing page
@@ -82,6 +83,9 @@ src/
 │   ├── guides/             # Guide components
 │   ├── landing/            # Homepage components
 │   ├── mod-card/           # Mod card rendering
+│   ├── builds/             # Build list components
+│   ├── profile/            # User profile components
+│   ├── settings/           # Settings page components
 │   ├── header.tsx          # Site header
 │   ├── footer.tsx          # Site footer
 │   ├── mobile-nav.tsx      # Mobile navigation
@@ -148,7 +152,7 @@ import { getImageUrl, type BrowseItem } from "@/lib/warframe";
 
 ### Component Barrel Exports
 
-Each component folder has an `index.ts` with named exports. Import from the folder, not individual files:
+Most component folders have an `index.ts` with named exports. Import from the folder, not individual files (exception: `build/` has no barrel export):
 
 ```typescript
 import { ItemCard, ItemGrid } from "@/components/browse";
@@ -163,14 +167,14 @@ import { ItemCard, ItemGrid } from "@/components/browse";
 ### Adding shadcn/ui Components
 
 ```bash
-npx shadcn@latest add <component-name> -y
+bunx shadcn@latest add <component-name> -y
 ```
 
 ## Database Schema (Key Models)
 
 - **User**: Auth + profile, roles (USER, VERIFIED, DEVELOPER, MODERATOR, ADMIN)
 - **Build**: User-created builds with denormalized item fields (`itemUniqueName`, `itemCategory`, `itemName`, `itemImageName`)
-- **BuildGuide**: Rich text (Lexical) attached to builds
+- **BuildGuide**: Markdown guide attached to builds
 - **Guide**: Standalone user guides
 - **BuildVote** / **BuildFavorite**: Social features
 
@@ -191,11 +195,20 @@ BETTER_AUTH_SECRET=...
 
 Tests exist in `__tests__/` directories alongside source code:
 - `src/lib/__tests__/build-codec.test.ts`
+- `src/lib/__tests__/result.test.ts`
+- `src/lib/warframe/__tests__/aura-effects.test.ts`
 - `src/lib/warframe/__tests__/capacity.test.ts`
+- `src/lib/warframe/__tests__/formatting.test.ts`
+- `src/lib/warframe/__tests__/helminth.test.ts`
+- `src/lib/warframe/__tests__/mod-variants.test.ts`
+- `src/lib/warframe/__tests__/mods.test.ts`
+- `src/lib/warframe/__tests__/shards.test.ts`
+- `src/lib/warframe/__tests__/slugs.test.ts`
+- `src/lib/warframe/__tests__/stat-caps.test.ts`
 - `src/lib/warframe/__tests__/stat-parser.test.ts`
 - `src/lib/warframe/__tests__/stats-calculator.test.ts`
 
-Coverage is limited — be careful with refactoring untested code.
+Coverage is growing but still partial — be careful with refactoring untested code.
 
 ## Database Workflow
 

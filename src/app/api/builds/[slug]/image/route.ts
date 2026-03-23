@@ -44,7 +44,7 @@ export async function GET(
       itemImageUrl,
     })
 
-    return new NextResponse(png, {
+    return new NextResponse(new Uint8Array(png), {
       status: 200,
       headers: {
         "Content-Type": "image/png",
