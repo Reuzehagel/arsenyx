@@ -432,9 +432,19 @@ export async function getUserBuilds(
     ? {}
     : { visibility: { in: ["PUBLIC", "UNLISTED"] } }
 
-  const where = {
+  const where: Prisma.BuildWhereInput = {
     userId,
     ...visibilityFilter,
+    ...(options.category && {
+      item: {
+        browseCategory: options.category,
+      },
+    }),
+  }
+
+  // If there's a text query, use raw SQL for tsvector search
+  if (options.query && options.query.trim().length >= 2) {
+    return searchBuildsWithFilters(options.query.trim(), where, sortBy, skip, limit)
   }
 
   const [builds, total] = await Promise.all([
