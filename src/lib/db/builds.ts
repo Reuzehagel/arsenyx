@@ -14,6 +14,7 @@ import {
   safeParse,
 } from "@/lib/warframe/schemas"
 import type { BuildState } from "@/lib/warframe/types"
+import { getItemMetadata } from "@/lib/warframe/items"
 
 import { prisma } from "../db"
 
@@ -63,7 +64,6 @@ export interface BuildWithUser {
     image: string | null
   }
   item: {
-    id: string
     uniqueName: string
     name: string
     imageName: string | null
@@ -191,15 +191,6 @@ const buildInclude = {
       image: true,
     },
   },
-  item: {
-    select: {
-      id: true,
-      uniqueName: true,
-      name: true,
-      imageName: true,
-      browseCategory: true,
-    },
-  },
   buildGuide: {
     select: {
       summary: true,
@@ -215,13 +206,10 @@ const buildInclude = {
       visibility: true,
       userId: true,
       buildData: true,
-      item: {
-        select: {
-          name: true,
-          imageName: true,
-          browseCategory: true,
-        },
-      },
+      itemUniqueName: true,
+      itemName: true,
+      itemImageName: true,
+      itemCategory: true,
     },
   },
 } as const
@@ -242,13 +230,10 @@ const buildListSelect = {
       username: true,
     },
   },
-  item: {
-    select: {
-      name: true,
-      imageName: true,
-      browseCategory: true,
-    },
-  },
+  itemUniqueName: true,
+  itemName: true,
+  itemImageName: true,
+  itemCategory: true,
 } as const
 
 function mapBuildResult(
@@ -266,7 +251,10 @@ function mapBuildResult(
       visibility: BuildVisibility
       userId: string
       buildData: unknown
-      item: { name: string; imageName: string | null; browseCategory: string }
+      itemUniqueName: string
+      itemName: string
+      itemImageName: string | null
+      itemCategory: string
     }[]
     [key: string]: unknown
   },
@@ -279,6 +267,12 @@ function mapBuildResult(
 
   return {
     ...build,
+    item: {
+      uniqueName: build.itemUniqueName as string,
+      name: build.itemName as string,
+      imageName: (build.itemImageName as string | null) ?? null,
+      browseCategory: build.itemCategory as string,
+    },
     buildData: safeParseOrCast(
       BuildStateSchema,
       build.buildData,
@@ -289,7 +283,12 @@ function mapBuildResult(
       id: pb.id,
       slug: pb.slug,
       name: pb.name,
-      item: pb.item,
+      item: {
+        uniqueName: pb.itemUniqueName,
+        name: pb.itemName,
+        imageName: pb.itemImageName,
+        browseCategory: pb.itemCategory,
+      },
       buildData: safeParseOrCast(
         BuildStateSchema,
         pb.buildData,
@@ -297,6 +296,19 @@ function mapBuildResult(
       ),
     })),
   } as BuildWithUser
+}
+
+function mapBuildListItem(
+  build: Record<string, unknown>,
+): BuildListItem {
+  return {
+    ...build,
+    item: {
+      name: build.itemName as string,
+      imageName: (build.itemImageName as string | null) ?? null,
+      browseCategory: build.itemCategory as string,
+    },
+  } as BuildListItem
 }
 
 // =============================================================================
@@ -310,18 +322,12 @@ export async function createBuild(
   userId: string,
   input: CreateBuildInput,
 ): Promise<BuildWithUser> {
-  // Parallelize independent lookups
-  const [item, slug] = await Promise.all([
-    prisma.item.findUnique({
-      where: { uniqueName: input.itemUniqueName },
-      select: { id: true },
-    }),
-    generateUniqueSlug(),
-  ])
-
-  if (!item) {
+  const itemMeta = getItemMetadata(input.itemUniqueName)
+  if (!itemMeta) {
     throw new Error(`Item not found: ${input.itemUniqueName}`)
   }
+
+  const slug = await generateUniqueSlug()
 
   // Prepare guide data if provided
   const hasGuideData = input.guideSummary || input.guideDescription
@@ -344,7 +350,10 @@ export async function createBuild(
     data: {
       slug,
       userId,
-      itemId: item.id,
+      itemUniqueName: itemMeta.uniqueName,
+      itemCategory: itemMeta.browseCategory,
+      itemName: itemMeta.name,
+      itemImageName: itemMeta.imageName,
       name: input.name,
       description: input.description,
       visibility: input.visibility ?? "PUBLIC",
@@ -436,9 +445,7 @@ export async function getUserBuilds(
     userId,
     ...visibilityFilter,
     ...(options.category && {
-      item: {
-        browseCategory: options.category,
-      },
+      itemCategory: options.category,
     }),
   }
 
@@ -464,7 +471,7 @@ export async function getUserBuilds(
     prisma.build.count({ where }),
   ])
 
-  return { builds, total }
+  return { builds: builds.map(mapBuildListItem), total }
 }
 
 /**
@@ -478,18 +485,8 @@ export async function getPublicBuildsForItem(
     const { page = 1, limit = 20, sortBy = "popular" } = options
     const skip = (page - 1) * limit
 
-    // Find the item first
-    const item = await prisma.item.findUnique({
-      where: { uniqueName: itemUniqueName },
-      select: { id: true },
-    })
-
-    if (!item) {
-      return { builds: [], total: 0 }
-    }
-
     const where = {
-      itemId: item.id,
+      itemUniqueName,
       visibility: "PUBLIC" as const,
     }
 
@@ -504,7 +501,7 @@ export async function getPublicBuildsForItem(
       prisma.build.count({ where }),
     ])
 
-    return { builds, total }
+    return { builds: builds.map(mapBuildListItem), total }
   } catch {
     // Return empty during build time when DB is unavailable
     return { builds: [], total: 0 }
@@ -532,9 +529,7 @@ export async function getPublicBuilds(
   const where: Prisma.BuildWhereInput = {
     visibility: "PUBLIC",
     ...(category && {
-      item: {
-        browseCategory: category,
-      },
+      itemCategory: category,
     }),
     ...(author && {
       user: {
@@ -561,7 +556,7 @@ export async function getPublicBuilds(
     prisma.build.count({ where }),
   ])
 
-  return { builds, total }
+  return { builds: builds.map(mapBuildListItem), total }
 }
 
 // =============================================================================
@@ -710,13 +705,9 @@ export async function getUserBuildsForPartnerSelector(userId: string): Promise<
       slug: true,
       name: true,
       buildData: true,
-      item: {
-        select: {
-          name: true,
-          imageName: true,
-          browseCategory: true,
-        },
-      },
+      itemName: true,
+      itemImageName: true,
+      itemCategory: true,
     },
     orderBy: { name: "asc" },
   })
@@ -725,7 +716,11 @@ export async function getUserBuildsForPartnerSelector(userId: string): Promise<
     id: b.id,
     slug: b.slug,
     name: b.name,
-    item: b.item,
+    item: {
+      name: b.itemName,
+      imageName: b.itemImageName,
+      browseCategory: b.itemCategory,
+    },
     buildData: {
       formaCount: (b.buildData as { formaCount?: number })?.formaCount ?? 0,
     },
@@ -812,7 +807,7 @@ async function searchBuildsWithFilters(
     prisma.build.count({ where: fullWhere }),
   ])
 
-  return { builds, total }
+  return { builds: builds.map(mapBuildListItem), total }
 }
 
 // =============================================================================
