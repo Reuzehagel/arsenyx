@@ -37,13 +37,12 @@ export function ProfileBuildsFilters({
           className="pl-9"
         />
       </div>
-      <Select value={category} onValueChange={onCategoryChange}>
+      <Select value={category || undefined} onValueChange={onCategoryChange}>
         <SelectTrigger className="w-full sm:w-[180px]">
-          <SelectValue placeholder="All categories" />
+          <SelectValue placeholder="All Categories" />
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
-            <SelectItem value="all">All Categories</SelectItem>
             {BROWSE_CATEGORIES.map((cat) => (
               <SelectItem key={cat.id} value={cat.id}>
                 {cat.labelPlural}
