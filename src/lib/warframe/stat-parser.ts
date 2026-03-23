@@ -128,6 +128,12 @@ export function parseStatString(statString: string): ParsedStat[] {
     return results
   }
 
+  // Skip lethal damage prevention mechanics (e.g., Quick Thinking: "...Lethal Damage with 240% Efficiency")
+  // The "Efficiency" here is the mod's conversion rate, not Ability Efficiency
+  if (statString.toLowerCase().includes("lethal damage")) {
+    return results
+  }
+
   // Check if this is a conditional stat
   const isConditional = CONDITIONAL_PATTERNS.some((p) => p.test(statString))
   const stackMatch = statString.match(STACK_PATTERN)
