@@ -1,33 +1,6 @@
-/**
- * Data Access Layer
- *
- * Provides unified access to Warframe data with feature flag support
- * to switch between static JSON files and database queries.
- *
- * Set USE_DATABASE=true in environment to use database
- */
-
 export { prisma } from "../db"
 
-// Re-export database query functions
-export {
-  getItemsByCategoryFromDb,
-  getItemByUniqueNameFromDb,
-  getItemBySlugFromDb,
-  getCategoryCountsFromDb,
-  searchItemsFromDb,
-} from "./items"
-
-export {
-  getAllModsFromDb,
-  getModsByCompatibilityFromDb,
-  getModsForCategoryFromDb,
-  getModByUniqueNameFromDb,
-  getAllArcanesFromDb,
-  getArcanesForSlotFromDb,
-  searchModsFromDb,
-} from "./mods"
-
+// Build operations
 export {
   createBuild,
   getBuildBySlug,

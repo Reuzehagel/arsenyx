@@ -16,7 +16,6 @@
     "test:coverage": "bun test --coverage",
     "sync-data": "bun run scripts/sync-warframe-data.ts",
     "update-data": "bun update @wfcd/items && bun run sync-data",
-    "db:sync": "bun run scripts/sync-wfcd-to-db.ts",
     "db:migrate": "bunx prisma migrate dev",
     "db:push": "bunx prisma db push",
     "db:studio": "bunx prisma studio",

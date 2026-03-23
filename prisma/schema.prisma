@@ -99,110 +99,6 @@ model Verification {
 }
 
 // =============================================================================
-// WARFRAME DATA (synced from WFCD)
-// =============================================================================
-
-model Item {
-  id             String  @id @default(cuid())
-  uniqueName     String  @unique // WFCD unique identifier
-  name           String
-  description    String?
-  imageName      String?
-  category       String // "Warframes", "Primary", "Secondary", "Melee", etc.
-  browseCategory String // "warframes", "primary", "secondary", "melee", etc.
-
-  // Common fields
-  tradable    Boolean   @default(false)
-  masteryReq  Int?
-  isPrime     Boolean   @default(false)
-  vaulted     Boolean   @default(false)
-  releaseDate DateTime?
-
-  // Full WFCD data as JSON (stats, abilities, etc.)
-  data Json
-
-  // Warframe-specific: can use archon shards
-  supportsShards Boolean @default(false)
-
-  // Sync metadata
-  wfcdVersion String? // Track which WFCD version this came from
-  syncedAt    DateTime @default(now())
-
-  // Relations
-  builds Build[]
-
-  @@index([browseCategory])
-  @@index([name])
-  @@map("items")
-}
-
-model Mod {
-  id          String  @id @default(cuid())
-  uniqueName  String  @unique
-  name        String
-  description String?
-  imageName   String?
-  polarity    String // "madurai", "vazarin", etc.
-  rarity      String // "Common", "Uncommon", "Rare", "Legendary"
-  baseDrain   Int
-  fusionLimit Int
-  compatName  String? // "Warframe", "Rifle", "Melee", etc.
-  type        String // "Warframe Mod", "Primary Mod", etc.
-  tradable    Boolean @default(false)
-  isAugment   Boolean @default(false)
-  isPrime     Boolean @default(false)
-  isExilus    Boolean @default(false)
-
-  // Full WFCD data as JSON (levelStats, drops, etc.)
-  data Json
-
-  // Sync metadata
-  syncedAt DateTime @default(now())
-
-  @@index([compatName])
-  @@index([type])
-  @@index([name])
-  @@map("mods")
-}
-
-model Arcane {
-  id          String  @id @default(cuid())
-  uniqueName  String  @unique
-  name        String
-  description String?
-  imageName   String?
-  rarity      String
-  type        String // "Warframe", "Operator", "Weapon", etc.
-  tradable    Boolean @default(false)
-
-  // Full WFCD data as JSON
-  data Json
-
-  // Sync metadata
-  syncedAt DateTime @default(now())
-
-  @@index([type])
-  @@index([name])
-  @@map("arcanes")
-}
-
-// Track WFCD sync history
-
-model WfcdSyncLog {
-  id             String    @id @default(cuid())
-  startedAt      DateTime  @default(now())
-  completedAt    DateTime?
-  status         String // "running", "completed", "failed"
-  itemsUpdated   Int       @default(0)
-  modsUpdated    Int       @default(0)
-  arcanesUpdated Int       @default(0)
-  error          String?
-  triggeredBy    String? // "cron", "manual", "webhook"
-
-  @@map("wfcd_sync_logs")
-}
-
-// =============================================================================
 // BUILDS
 // =============================================================================
 
@@ -220,9 +116,11 @@ model Build {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Item reference
-  itemId String
-  item   Item   @relation(fields: [itemId], references: [id])
+  // Item reference (denormalized from in-memory WFCD data)
+  itemUniqueName String  // WFCD unique name, e.g. "/Lotus/Powersuits/Wraith/Wraith"
+  itemCategory   String  // Browse category, e.g. "warframes"
+  itemName       String  // Display name for search and rendering
+  itemImageName  String? // Image filename for rendering
 
   // Build metadata
   name        String
@@ -270,7 +168,7 @@ model Build {
   generatedImages GeneratedImage[]
 
   @@index([userId])
-  @@index([itemId])
+  @@index([itemUniqueName])
   @@index([visibility])
   @@index([voteCount])
   @@index([createdAt])
@@ -278,7 +176,7 @@ model Build {
   @@index([visibility, voteCount]) // Popular public builds
   @@index([visibility, createdAt]) // Newest public builds
   @@index([userId, visibility]) // User profile pages
-  @@index([itemId, visibility, voteCount]) // Popular builds for an item
+  @@index([itemUniqueName, visibility, voteCount]) // Popular builds for an item
   @@index([hasGuide])
   @@index([forkedFromId])
   @@map("builds")
