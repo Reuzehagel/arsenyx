@@ -78,6 +78,9 @@ export {
   getUserById,
   getUserStats,
   getPublicBuildCountForUser,
+  getUserForSettings,
+  updateUserBio,
+  isUsernameTaken,
 } from "./users"
 
-export type { UserProfile, UserStats } from "./users"
+export type { UserProfile, UserProfileFull, UserStats } from "./users"

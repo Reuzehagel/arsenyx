@@ -4,6 +4,8 @@
  * Profile queries and statistics
  */
 
+import "server-only"
+
 import { prisma } from "../db"
 
 // =============================================================================
@@ -14,10 +16,15 @@ export interface UserProfile {
   id: string
   name: string | null
   username: string | null
+  displayUsername: string | null
   image: string | null
   bio: string | null
   createdAt: Date
   role: string
+}
+
+export interface UserProfileFull extends UserProfile {
+  email: string
 }
 
 export interface UserStats {
@@ -47,6 +54,7 @@ export async function getUserByUsername(
       id: true,
       name: true,
       username: true,
+      displayUsername: true,
       image: true,
       bio: true,
       createdAt: true,
@@ -70,6 +78,7 @@ export async function getUserById(userId: string): Promise<UserProfile | null> {
       id: true,
       name: true,
       username: true,
+      displayUsername: true,
       image: true,
       bio: true,
       createdAt: true,
@@ -115,4 +124,67 @@ export async function getPublicBuildCountForUser(
   return prisma.build.count({
     where: { userId, visibility: "PUBLIC" },
   })
+}
+
+/**
+ * Get full user profile for settings page (includes email)
+ *
+ * @param userId - User ID to look up
+ * @returns Full user profile or null if not found
+ */
+export async function getUserForSettings(
+  userId: string,
+): Promise<UserProfileFull | null> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      displayUsername: true,
+      image: true,
+      bio: true,
+      email: true,
+      createdAt: true,
+      role: true,
+    },
+  })
+  return user
+}
+
+/**
+ * Update user bio
+ *
+ * @param userId - User ID to update
+ * @param bio - New bio value (null to clear)
+ */
+export async function updateUserBio(
+  userId: string,
+  bio: string | null,
+): Promise<void> {
+  await prisma.user.update({
+    where: { id: userId },
+    data: { bio },
+  })
+}
+
+/**
+ * Check if a username is already taken (case-insensitive), excluding a specific user
+ *
+ * @param username - Username to check
+ * @param excludeUserId - User ID to exclude from the check
+ * @returns True if the username is taken by another user
+ */
+export async function isUsernameTaken(
+  username: string,
+  excludeUserId: string,
+): Promise<boolean> {
+  const existing = await prisma.user.findFirst({
+    where: {
+      username: { equals: username, mode: "insensitive" },
+      id: { not: excludeUserId },
+    },
+    select: { id: true },
+  })
+  return !!existing
 }
