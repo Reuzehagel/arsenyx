@@ -88,3 +88,11 @@ export const imageLimiter = rateLimit({
   interval: 60 * 1000,
   uniqueTokenPerInterval: 500,
 })
+
+/**
+ * Profile update rate limiter: 10 updates per minute per user
+ */
+export const profileLimiter = rateLimit({
+  interval: 60 * 1000,
+  uniqueTokenPerInterval: 500,
+})
