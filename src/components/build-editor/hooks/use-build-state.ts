@@ -144,9 +144,15 @@ export function createInitialBuildState(
   compatibleArcanes?: Arcane[],
 ): BuildState {
   const isNecramech = category === "necramechs"
+  const isCompanion = category === "companions"
 
   const itemPolarities = (item as { polarities?: string[] }).polarities
   const auraPolarity = (item as { aura?: string }).aura
+
+  // Slot counts: necramechs 12, companions 10 (5x2), everything else 8
+  const normalSlotCount = isNecramech ? 12 : isCompanion ? 10 : 8
+  // Companions and necramechs have no exilus slot
+  const hasExilus = !isNecramech && !isCompanion
 
   const baseState: BuildState = {
     itemUniqueName: item.uniqueName,
@@ -154,8 +160,8 @@ export function createInitialBuildState(
     itemCategory: category,
     itemImageName: item.imageName,
     hasReactor: true,
-    exilusSlot: isNecramech ? undefined : { id: "exilus-0", type: "exilus" },
-    normalSlots: createInitialSlots(itemPolarities, isNecramech ? 12 : 8),
+    exilusSlot: hasExilus ? { id: "exilus-0", type: "exilus" } : undefined,
+    normalSlots: createInitialSlots(itemPolarities, normalSlotCount),
     arcaneSlots: [],
     shardSlots: [],
     baseCapacity: 60,

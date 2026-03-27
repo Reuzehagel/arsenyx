@@ -443,10 +443,15 @@ function StatItem({
 }) {
   if (value === undefined) return null
 
+  const display =
+    typeof value === "number" && !Number.isInteger(value)
+      ? parseFloat(value.toFixed(2))
+      : value
+
   return (
     <div className="flex flex-col">
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className="font-medium tabular-nums">{value}</dd>
+      <dd className="font-medium tabular-nums">{display}</dd>
     </div>
   )
 }

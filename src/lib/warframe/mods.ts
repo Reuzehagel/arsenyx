@@ -300,7 +300,9 @@ export function getModsForItem(item: {
     }
 
     // Companion
-    if (["companion", "sentinel", "beast"].includes(itemTypeLower)) {
+    if (
+      ["companion", "sentinel", "beast", "pets"].includes(itemTypeLower)
+    ) {
       return (
         modType.includes("companion") ||
         modType.includes("sentinel") ||

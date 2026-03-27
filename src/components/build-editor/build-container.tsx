@@ -205,6 +205,7 @@ export function BuildContainer({
   // --- Keyboard navigation ---
 
   const isWarframeOrNecramech = isWarframeCategory(category)
+  const isCompanion = category === "companions"
 
   useBuildKeyboard({
     onSelectSlot: handleSelectSlot,
@@ -288,6 +289,7 @@ export function BuildContainer({
                 onChangeRank={canEdit ? handleChangeRank : () => {}}
                 onApplyForma={canEdit ? handleApplyForma : () => {}}
                 isWarframe={isWarframeOrNecramech}
+                slotsPerRow={isCompanion ? 5 : 4}
                 draggedMod={
                   canEdit &&
                   (activeDragItem?.type === "search-mod" ||

@@ -3,6 +3,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Suspense } from "react"
 
+import { CategoryTabs } from "@/components/browse/category-tabs"
 import { SearchBar } from "@/components/browse/search-bar"
 import { BuildStats } from "@/components/build/build-card-link"
 import { BuildsFilterDropdown, BuildsSortDropdown } from "@/components/builds"
@@ -10,10 +11,9 @@ import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getPublicBuilds, type BuildListItem } from "@/lib/db/index"
-import { BROWSE_CATEGORIES } from "@/lib/warframe/categories"
 import { getImageUrl } from "@/lib/warframe/images"
+import type { BrowseCategory } from "@/lib/warframe/types"
 
 export const metadata: Metadata = {
   title: "Browse Builds | ARSENYX",
@@ -123,11 +123,6 @@ function BuildCard({ build }: { build: BuildListItem }) {
   )
 }
 
-const CATEGORY_OPTIONS = [
-  { value: "", label: "All Categories" },
-  ...BROWSE_CATEGORIES.map((c) => ({ value: c.id, label: c.label })),
-]
-
 export default async function BuildsPage({ searchParams }: BuildsPageProps) {
   const params = await searchParams
   const category = params.category || undefined
@@ -197,28 +192,13 @@ export default async function BuildsPage({ searchParams }: BuildsPageProps) {
           </div>
 
           {/* Category Tabs */}
-          <Tabs value={category || ""}>
-            <TabsList className="bg-muted/50 h-auto flex-wrap justify-start p-1">
-              {CATEGORY_OPTIONS.map((opt) => (
-                <TabsTrigger
-                  key={opt.value}
-                  value={opt.value}
-                  className="data-[state=active]:bg-background gap-2"
-                  render={
-                    <Link
-                      href={buildFilterUrl(
-                        { category: opt.value || undefined },
-                        filterState,
-                      )}
-                    />
-                  }
-                  nativeButton={false}
-                >
-                  {opt.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+          <Suspense>
+            <CategoryTabs
+              activeCategory={(category as BrowseCategory) || ""}
+              showAll
+              linkNavigation
+            />
+          </Suspense>
 
           {/* Results info */}
           <div className="text-muted-foreground text-sm">

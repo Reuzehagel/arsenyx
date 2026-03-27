@@ -72,6 +72,8 @@ interface ModGridProps {
   arcaneDataMap?: Map<string, Arcane>
   /** Read-only mode - disables all interactions */
   readOnly?: boolean
+  /** Number of normal slots per row (default: 4) */
+  slotsPerRow?: number
 }
 
 export function ModGrid({
@@ -91,6 +93,7 @@ export function ModGrid({
   draggedArcane,
   arcaneDataMap,
   readOnly = false,
+  slotsPerRow = 4,
 }: ModGridProps) {
   // Calculate set counts
   const setCounts = useMemo(() => {
@@ -152,15 +155,17 @@ export function ModGrid({
           </div>
         )}
 
-        {/* Normal Slots - rendered in rows of 4 */}
+        {/* Normal Slots - rendered in rows */}
         {Array.from(
-          { length: Math.ceil(normalSlots.length / 4) },
+          { length: Math.ceil(normalSlots.length / slotsPerRow) },
           (_, rowIdx) => (
             <div
               key={rowIdx}
               className="grid w-full grid-cols-2 justify-center gap-2 sm:flex sm:gap-4"
             >
-              {normalSlots.slice(rowIdx * 4, rowIdx * 4 + 4).map((slot) => (
+              {normalSlots
+                .slice(rowIdx * slotsPerRow, rowIdx * slotsPerRow + slotsPerRow)
+                .map((slot) => (
                 <ModSlotCard
                   key={slot.id}
                   slot={slot}
