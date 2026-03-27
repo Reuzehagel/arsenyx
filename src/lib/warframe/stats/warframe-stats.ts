@@ -263,8 +263,9 @@ function calculateSingleStat(
   }
 
   // Calculate final value
-  // Formula: (Base + FlatBonus) × (1 + ΣPercentBonuses/100)
-  const modified = (baseValue + flatBonus) * (1 + percentBonus / 100)
+  // Formula: Base × (1 + ΣPercentBonuses/100) + FlatBonus
+  // Percentage mods apply to base only; flat bonuses (e.g. Archon Shards) are added after
+  const modified = baseValue * (1 + percentBonus / 100) + flatBonus
 
   // Calculate percent of bonus for each contribution
   const totalBonus = modified - baseValue
