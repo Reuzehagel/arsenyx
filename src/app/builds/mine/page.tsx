@@ -82,7 +82,7 @@ export default async function MyBuildsPage({
               </p>
             </div>
             <Button render={<Link href="/browse" />} nativeButton={false}>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus data-icon="inline-start" />
               New Build
             </Button>
           </div>

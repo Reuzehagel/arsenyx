@@ -51,7 +51,7 @@ export default function AboutPage() {
                   }
                   nativeButton={false}
                 >
-                  <Icons.github className="mr-2 h-4 w-4" />
+                  <Icons.github data-icon="inline-start" />
                   View on GitHub
                 </Button>
               </div>

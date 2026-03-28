@@ -182,7 +182,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
                   }
                   nativeButton={false}
                 >
-                  <Icons.plus className="h-4 w-4" />
+                  <Icons.plus data-icon="inline-start" />
                   Create Build
                 </Button>
               </div>

@@ -12,7 +12,7 @@ export default function GuideNotFound() {
       <main className="flex flex-1 items-center justify-center">
         <div className="container max-w-md py-16 text-center">
           <div className="bg-muted mb-6 inline-flex size-16 items-center justify-center rounded-full">
-            <FileQuestion className="text-muted-foreground h-8 w-8" />
+            <FileQuestion className="text-muted-foreground size-8" />
           </div>
           <h1 className="mb-2 text-2xl font-bold">Guide Not Found</h1>
           <p className="text-muted-foreground mb-8">
@@ -26,7 +26,7 @@ export default function GuideNotFound() {
               render={<Link href="/guides" />}
               nativeButton={false}
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft data-icon="inline-start" />
               Back to Guides
             </Button>
             <Button
@@ -34,7 +34,7 @@ export default function GuideNotFound() {
               render={<Link href="/guides" />}
               nativeButton={false}
             >
-              <BookOpen className="h-4 w-4" />
+              <BookOpen data-icon="inline-start" />
               Browse All Guides
             </Button>
           </div>

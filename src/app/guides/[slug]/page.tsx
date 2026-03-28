@@ -105,15 +105,15 @@ export default async function GuidePage({ params }: GuidePageProps) {
                   render={<Link href={`/guides/${slug}/edit`} />}
                   nativeButton={false}
                 >
-                  <Pencil className="mr-2 h-4 w-4" />
+                  <Pencil data-icon="inline-start" />
                   Edit
                 </Button>
                 <Button variant="outline" size="sm">
-                  <Share2 className="mr-2 h-4 w-4" />
+                  <Share2 data-icon="inline-start" />
                   Share
                 </Button>
                 <Button variant="outline" size="icon" title="Copy link">
-                  <Copy className="h-4 w-4" />
+                  <Copy />
                 </Button>
               </div>
             )}

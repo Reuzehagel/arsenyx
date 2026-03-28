@@ -91,7 +91,7 @@ export function ShardSelectionDialog({
                 className="mr-1 h-6 w-6"
                 onClick={handleBack}
               >
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeft />
               </Button>
             )}
             {step === "color"
