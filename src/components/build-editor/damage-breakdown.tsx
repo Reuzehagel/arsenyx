@@ -19,24 +19,24 @@ interface DamageBreakdownProps {
 // Damage type colors for visual distinction
 const DAMAGE_TYPE_COLORS: Record<DamageType, string> = {
   // Physical (IPS)
-  impact: "text-blue-400",
-  puncture: "text-gray-400",
-  slash: "text-red-400",
+  impact: "text-wf-impact",
+  puncture: "text-wf-puncture",
+  slash: "text-wf-slash",
   // Base elemental
-  heat: "text-orange-400",
-  cold: "text-cyan-400",
-  electricity: "text-blue-300",
-  toxin: "text-green-400",
+  heat: "text-wf-heat",
+  cold: "text-wf-cold",
+  electricity: "text-wf-electricity",
+  toxin: "text-wf-toxin",
   // Combined elemental
-  blast: "text-yellow-500",
-  radiation: "text-amber-300",
-  gas: "text-lime-300",
-  magnetic: "text-purple-400",
-  viral: "text-teal-400",
-  corrosive: "text-yellow-400",
+  blast: "text-wf-blast",
+  radiation: "text-wf-radiation",
+  gas: "text-wf-gas",
+  magnetic: "text-wf-magnetic",
+  viral: "text-wf-viral",
+  corrosive: "text-wf-corrosive",
   // Special
-  void: "text-white",
-  tau: "text-cyan-300",
+  void: "text-wf-void",
+  tau: "text-wf-tau",
 }
 
 // Display names for damage types
@@ -178,24 +178,24 @@ function DamageIcon({ type }: { type: DamageType }) {
     <div
       className={cn("size-2 rounded-full", {
         // Physical
-        "bg-blue-400": type === "impact",
-        "bg-gray-400": type === "puncture",
-        "bg-red-400": type === "slash",
+        "bg-wf-impact": type === "impact",
+        "bg-wf-puncture": type === "puncture",
+        "bg-wf-slash": type === "slash",
         // Base elemental
-        "bg-orange-400": type === "heat",
-        "bg-cyan-400": type === "cold",
-        "bg-blue-300": type === "electricity",
-        "bg-green-400": type === "toxin",
+        "bg-wf-heat": type === "heat",
+        "bg-wf-cold": type === "cold",
+        "bg-wf-electricity": type === "electricity",
+        "bg-wf-toxin": type === "toxin",
         // Combined elemental
-        "bg-yellow-500": type === "blast",
-        "bg-amber-300": type === "radiation",
-        "bg-lime-300": type === "gas",
-        "bg-purple-400": type === "magnetic",
-        "bg-teal-400": type === "viral",
-        "bg-yellow-400": type === "corrosive",
+        "bg-wf-blast": type === "blast",
+        "bg-wf-radiation": type === "radiation",
+        "bg-wf-gas": type === "gas",
+        "bg-wf-magnetic": type === "magnetic",
+        "bg-wf-viral": type === "viral",
+        "bg-wf-corrosive": type === "corrosive",
         // Special
-        "bg-white": type === "void",
-        "bg-cyan-300": type === "tau",
+        "bg-wf-void": type === "void",
+        "bg-wf-tau": type === "tau",
       })}
     />
   )
