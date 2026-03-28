@@ -155,7 +155,7 @@ function ContributionRow({
     <div
       className={cn(
         "flex justify-between gap-4",
-        highlight && "text-amber-400",
+        highlight && "text-wf-highlight",
       )}
     >
       <span className="text-muted-foreground max-w-[120px] truncate">

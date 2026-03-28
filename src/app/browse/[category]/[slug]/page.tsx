@@ -143,7 +143,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
                     {item.name}
                   </h1>
                   {item.isPrime && (
-                    <Badge className="bg-amber-500 text-white">Prime</Badge>
+                    <Badge className="bg-wf-prime text-white">Prime</Badge>
                   )}
                   {item.vaulted && <Badge variant="outline">Vaulted</Badge>}
                 </div>
