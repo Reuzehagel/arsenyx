@@ -13,6 +13,7 @@ import dynamic from "next/dynamic"
 import { useState, useRef, useCallback } from "react"
 
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import {
   Tooltip,
@@ -28,7 +29,7 @@ const GuideReader = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="bg-muted/30 h-[200px] animate-pulse rounded-md border" />
+      <Skeleton className="h-[200px] rounded-md" />
     ),
   },
 )

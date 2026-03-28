@@ -2,12 +2,14 @@
 
 import dynamic from "next/dynamic"
 
+import { Skeleton } from "@/components/ui/skeleton"
+
 const GuideEditor = dynamic(
   () => import("./guide-editor").then((mod) => mod.GuideEditor),
   {
     ssr: false,
     loading: () => (
-      <div className="bg-muted/30 h-[200px] animate-pulse rounded-md border" />
+      <Skeleton className="h-[200px] rounded-md" />
     ),
   },
 )
@@ -18,7 +20,7 @@ const GuideReader = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="bg-muted/30 h-[100px] animate-pulse rounded-md border" />
+      <Skeleton className="h-[100px] rounded-md" />
     ),
   },
 )

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 
@@ -23,7 +24,7 @@ const DescriptionEditor = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="bg-muted/30 h-[200px] animate-pulse rounded-md border" />
+      <Skeleton className="h-[200px] rounded-md" />
     ),
   },
 )

@@ -6,13 +6,15 @@ import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
 
+import { Skeleton } from "@/components/ui/skeleton"
+
 const GuideReader = dynamic(
   () =>
     import("@/components/guides/guide-reader").then((mod) => mod.GuideReader),
   {
     ssr: false,
     loading: () => (
-      <div className="bg-muted/30 h-[100px] animate-pulse rounded-md border" />
+      <Skeleton className="h-[100px] rounded-md" />
     ),
   },
 )

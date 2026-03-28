@@ -6,6 +6,7 @@ import { useState } from "react"
 
 import { SettingsSheet } from "@/components/settings"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,7 +23,7 @@ export function UserMenu() {
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   if (isPending) {
-    return <div className="bg-muted size-8 animate-pulse rounded-full" />
+    return <Skeleton className="size-8 rounded-full" />
   }
 
   if (!session?.user) {
