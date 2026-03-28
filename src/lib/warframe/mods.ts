@@ -185,6 +185,7 @@ export function getModsForCategory(category: string): Mod[] {
     primary: ["Rifle", "Shotgun"],
     secondary: ["Pistol"],
     melee: ["Melee"],
+    "exalted-weapons": ["Rifle", "Pistol", "Melee"],
     necramechs: ["Necramech"],
     companions: ["Companion"],
   }
@@ -209,6 +210,7 @@ export function getModsForItem(item: {
   type?: string
   category?: string
   name?: string
+  trigger?: string
 }): Mod[] {
   const itemType = item.type
   const itemName = item.name
@@ -269,6 +271,39 @@ export function getModsForItem(item: {
 
     // Melee weapons
     if (itemTypeLower === "melee") {
+      return compatName === "melee" || modType.includes("melee")
+    }
+
+    // Exalted weapons — determine mod pool from weapon characteristics
+    if (itemTypeLower === "exalted weapon") {
+      const nameCheck = itemName?.toLowerCase() ?? ""
+
+      if (nameCheck.includes("bow")) {
+        // Artemis Bow → primary/rifle mods
+        if (compatName === "rifle" || compatName === "bow") return true
+        if (modType.includes("rifle") || modType.includes("bow")) return true
+        if (
+          modType.includes("primary") &&
+          !compatName &&
+          !modType.includes("shotgun") &&
+          !modType.includes("sniper") &&
+          !modType.includes("launcher")
+        ) {
+          return true
+        }
+        return false
+      }
+
+      if (item.trigger) {
+        // Ranged exalted weapons (Regulators, Dex Pixia, Balefire Charger, etc.) → pistol mods
+        return (
+          compatName === "pistol" ||
+          modType.includes("secondary") ||
+          modType.includes("pistol")
+        )
+      }
+
+      // Melee exalted weapons (Exalted Blade, Desert Wind, Iron Staff, etc.) → melee mods
       return compatName === "melee" || modType.includes("melee")
     }
 
