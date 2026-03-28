@@ -1,6 +1,7 @@
 "use client"
 
 import { Label } from "@/components/ui/label"
+import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 
 interface ConditionalToggleProps {
@@ -23,19 +24,23 @@ export function ConditionalToggle({
   }
 
   return (
-    <div className="bg-muted/50 flex items-center justify-between gap-2 border-t border-b px-3 py-2">
-      <Label
-        htmlFor="max-stacks-toggle"
-        className="text-muted-foreground cursor-pointer text-xs"
-      >
-        Show at max stacks
-      </Label>
-      <Switch
-        id="max-stacks-toggle"
-        checked={showMaxStacks}
-        onCheckedChange={onToggle}
-        className="origin-right scale-75"
-      />
-    </div>
+    <>
+      <Separator />
+      <div className="bg-muted/50 flex items-center justify-between gap-2 px-3 py-2">
+        <Label
+          htmlFor="max-stacks-toggle"
+          className="text-muted-foreground cursor-pointer text-xs"
+        >
+          Show at max stacks
+        </Label>
+        <Switch
+          id="max-stacks-toggle"
+          checked={showMaxStacks}
+          onCheckedChange={onToggle}
+          className="origin-right scale-75"
+        />
+      </div>
+      <Separator />
+    </>
   )
 }
