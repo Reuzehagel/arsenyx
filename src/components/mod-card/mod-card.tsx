@@ -14,6 +14,8 @@ import {
 } from "@/lib/warframe/mod-card-config"
 import type { Mod } from "@/lib/warframe/types"
 
+import { Separator } from "@/components/ui/separator"
+
 import {
   ModCardFrame,
   RankCompleteLine,
@@ -310,7 +312,9 @@ function ExpandedModCard({
 
               {/* Set Bonuses */}
               {setStats.length > 0 && (
-                <div className="mt-2 flex w-full flex-col gap-1 border-t border-white/10 pt-1">
+                <>
+                  <Separator className="mt-2" />
+                  <div className="flex w-full flex-col gap-1 pt-1">
                   <div className="flex items-center justify-center gap-1">
                     <span className="text-[9px] font-bold tracking-wider text-gray-400 uppercase">
                       Set ({setCount || 0}/{maxSetSize})
@@ -356,7 +360,8 @@ function ExpandedModCard({
                       />
                     </div>
                   )}
-                </div>
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -544,25 +549,25 @@ function ModCardComponent({
 // =============================================================================
 
 const RARITY_BORDER_MAP: Record<ModRarity, string> = {
-  Common: "border-amber-700",
-  Uncommon: "border-gray-400",
-  Rare: "border-yellow-500",
-  Legendary: "border-purple-400",
-  Peculiar: "border-purple-400",
-  Riven: "border-purple-500",
-  Amalgam: "border-cyan-400",
-  Galvanized: "border-blue-400",
+  Common: "border-wf-rarity-common",
+  Uncommon: "border-wf-rarity-uncommon",
+  Rare: "border-wf-rarity-rare",
+  Legendary: "border-wf-rarity-legendary",
+  Peculiar: "border-wf-rarity-legendary",
+  Riven: "border-wf-rarity-riven",
+  Amalgam: "border-wf-rarity-amalgam",
+  Galvanized: "border-wf-rarity-galvanized",
 }
 
 const RARITY_BG_MAP: Record<ModRarity, string> = {
-  Common: "bg-amber-950/90",
-  Uncommon: "bg-gray-800/90",
-  Rare: "bg-yellow-950/90",
-  Legendary: "bg-purple-950/90",
-  Peculiar: "bg-purple-950/90",
-  Riven: "bg-purple-950/90",
-  Amalgam: "bg-cyan-950/90",
-  Galvanized: "bg-blue-950/90",
+  Common: "bg-wf-rarity-common-bg/90",
+  Uncommon: "bg-wf-rarity-uncommon-bg/90",
+  Rare: "bg-wf-rarity-rare-bg/90",
+  Legendary: "bg-wf-rarity-legendary-bg/90",
+  Peculiar: "bg-wf-rarity-legendary-bg/90",
+  Riven: "bg-wf-rarity-riven-bg/90",
+  Amalgam: "bg-wf-rarity-amalgam-bg/90",
+  Galvanized: "bg-wf-rarity-galvanized-bg/90",
 }
 
 export interface DragGhostProps {
