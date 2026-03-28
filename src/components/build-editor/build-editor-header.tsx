@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
   Check,
   Diamond,
@@ -66,15 +66,11 @@ export function BuildEditorHeader({
 }: BuildEditorHeaderProps) {
   const [isEditingName, setIsEditingName] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const canEditName = canEdit && isAuthenticated
 
-  function startEditingName() {
-    setIsEditingName(true)
-    setTimeout(() => inputRef.current?.focus(), 0)
-  }
-
-  function confirmName() {
-    setIsEditingName(false)
-  }
+  useEffect(() => {
+    if (isEditingName) inputRef.current?.focus()
+  }, [isEditingName])
 
   return (
     <>
@@ -94,37 +90,39 @@ export function BuildEditorHeader({
             </div>
             <div className="flex min-w-0 flex-col justify-center gap-2">
               <div className="flex items-center gap-2">
-                {canEdit && isAuthenticated && isEditingName ? (
+                {canEditName && isEditingName ? (
                   <>
                     <input
                       ref={inputRef}
                       value={buildName}
                       onChange={(e) => setBuildName(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") confirmName()
+                        if (e.key === "Enter") setIsEditingName(false)
                       }}
                       placeholder="Build name…"
                       className="text-foreground min-w-0 flex-1 border-b border-b-current bg-transparent p-0 text-xl leading-tight font-bold tracking-tight outline-none md:text-2xl"
                     />
-                    <button
-                      onClick={confirmName}
-                      className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => setIsEditingName(false)}
                     >
-                      <Check className="size-5" />
-                    </button>
+                      <Check />
+                    </Button>
                   </>
                 ) : (
                   <>
                     <h1 className="truncate border-b border-b-transparent text-xl leading-tight font-bold tracking-tight md:text-2xl">
                       {buildName || item.name}
                     </h1>
-                    {canEdit && isAuthenticated && (
-                      <button
-                        onClick={startEditingName}
-                        className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
+                    {canEditName && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => setIsEditingName(true)}
                       >
-                        <Pencil className="size-4" />
-                      </button>
+                        <Pencil />
+                      </Button>
                     )}
                   </>
                 )}

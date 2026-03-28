@@ -200,6 +200,39 @@ export function getModsForCategory(category: string): Mod[] {
   return result
 }
 
+// Shared mod-matching helpers used by both standard weapons and exalted weapons
+function isPrimaryMod(compatName: string, modType: string, subtype: string) {
+  if (compatName === subtype) return true
+  if (modType.includes(subtype)) return true
+  // General primary mods (no specific weapon type in compatName)
+  if (
+    modType.includes("primary") &&
+    !compatName &&
+    !modType.includes("rifle") &&
+    !modType.includes("shotgun") &&
+    !modType.includes("sniper") &&
+    !modType.includes("launcher") &&
+    !modType.includes("bow")
+  ) {
+    return true
+  }
+  return false
+}
+
+function isPistolMod(compatName: string, modType: string) {
+  return (
+    compatName === "pistol" ||
+    modType.includes("secondary") ||
+    modType.includes("pistol")
+  )
+}
+
+function isMeleeMod(compatName: string, modType: string) {
+  return compatName === "melee" || modType.includes("melee")
+}
+
+const PRIMARY_SUBTYPES = ["rifle", "shotgun", "sniper", "launcher", "bow"]
+
 /**
  * Get mods compatible with a specific item
  * Matches mods based on the item's type field (e.g., "Rifle", "Shotgun", "Bow", etc.)
@@ -228,83 +261,42 @@ export function getModsForItem(item: {
   }
 
   const itemTypeLower = itemType.toLowerCase()
+  const itemNameLower = itemName?.toLowerCase() ?? ""
   const allModsNormalized = getAllMods()
 
   return allModsNormalized.filter((mod) => {
     const compatName = mod.compatName?.toLowerCase() ?? ""
     const modType = mod.type?.toLowerCase() ?? ""
 
-    // Match mod compatibility to item type
     // Primary weapons: Rifle, Shotgun, Sniper, Launcher, Bow
-    if (
-      ["rifle", "shotgun", "sniper", "launcher", "bow"].includes(itemTypeLower)
-    ) {
-      // Match based on exact compatibility name OR type field
-      if (compatName === itemTypeLower) return true
-      if (modType.includes(itemTypeLower)) return true
-
-      // General primary mods (no specific weapon type in compatName)
-      // These are mods like "Primary" type that work across primary weapons
-      if (
-        modType.includes("primary") &&
-        !compatName &&
-        !modType.includes("rifle") &&
-        !modType.includes("shotgun") &&
-        !modType.includes("sniper") &&
-        !modType.includes("launcher") &&
-        !modType.includes("bow")
-      ) {
-        return true
-      }
-
-      return false
+    if (PRIMARY_SUBTYPES.includes(itemTypeLower)) {
+      return isPrimaryMod(compatName, modType, itemTypeLower)
     }
 
     // Secondary weapons: Pistol
     if (itemTypeLower === "pistol") {
-      return (
-        compatName === "pistol" ||
-        modType.includes("secondary") ||
-        modType.includes("pistol")
-      )
+      return isPistolMod(compatName, modType)
     }
 
     // Melee weapons
     if (itemTypeLower === "melee") {
-      return compatName === "melee" || modType.includes("melee")
+      return isMeleeMod(compatName, modType)
     }
 
-    // Exalted weapons — determine mod pool from weapon characteristics
+    // Exalted weapons — WFCD data uses type "Exalted Weapon" for all.
+    // We infer the mod pool from the weapon's name and trigger field:
+    //   - Name contains "bow" → primary/bow mods (e.g. Artemis Bow)
+    //   - Has a trigger field → ranged/pistol mods (e.g. Regulators, Dex Pixia)
+    //     (WFCD sets `trigger` on ranged weapons only; melee exalted have no trigger)
+    //   - Otherwise → melee mods (e.g. Exalted Blade, Iron Staff)
     if (itemTypeLower === "exalted weapon") {
-      const nameCheck = itemName?.toLowerCase() ?? ""
-
-      if (nameCheck.includes("bow")) {
-        // Artemis Bow → primary/rifle mods
-        if (compatName === "rifle" || compatName === "bow") return true
-        if (modType.includes("rifle") || modType.includes("bow")) return true
-        if (
-          modType.includes("primary") &&
-          !compatName &&
-          !modType.includes("shotgun") &&
-          !modType.includes("sniper") &&
-          !modType.includes("launcher")
-        ) {
-          return true
-        }
-        return false
+      if (itemNameLower.includes("bow")) {
+        return isPrimaryMod(compatName, modType, "bow")
       }
-
       if (item.trigger) {
-        // Ranged exalted weapons (Regulators, Dex Pixia, Balefire Charger, etc.) → pistol mods
-        return (
-          compatName === "pistol" ||
-          modType.includes("secondary") ||
-          modType.includes("pistol")
-        )
+        return isPistolMod(compatName, modType)
       }
-
-      // Melee exalted weapons (Exalted Blade, Desert Wind, Iron Staff, etc.) → melee mods
-      return compatName === "melee" || modType.includes("melee")
+      return isMeleeMod(compatName, modType)
     }
 
     // Warframes
@@ -319,8 +311,6 @@ export function getModsForItem(item: {
       // Include warframe-specific augment mods if we have the warframe name
       // Also handle Prime variants (e.g., "Ash Prime" should match "Ash" augments)
       if (itemName && mod.isAugment && modType.includes("warframe")) {
-        const itemNameLower = itemName.toLowerCase()
-        // Check exact match or base warframe name (remove " Prime" suffix)
         const baseItemName = itemNameLower.replace(" prime", "")
         if (compatName === itemNameLower || compatName === baseItemName) {
           return true
