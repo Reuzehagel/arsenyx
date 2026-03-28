@@ -129,7 +129,7 @@ function VisibilityOption({
             : "bg-muted text-muted-foreground",
         )}
       >
-        <Icon className="h-4 w-4" />
+        <Icon className="size-4" />
       </div>
       <div className="flex flex-1 flex-col gap-1">
         <p className="text-sm leading-none font-medium">{title}</p>

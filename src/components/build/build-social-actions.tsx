@@ -53,7 +53,7 @@ export async function BuildSocialActions({
         initialHasFavorited={hasFavorited}
       />
       <div className="text-muted-foreground flex h-8 items-center gap-1.5 px-3 text-sm">
-        <Eye className="h-4 w-4" />
+        <Eye className="size-4" />
         <span className="tabular-nums">{viewCount}</span>
       </div>
     </div>

@@ -48,15 +48,15 @@ export function GuideHeader({ guide }: GuideHeaderProps) {
       {/* Meta info */}
       <div className="text-muted-foreground flex flex-wrap items-center gap-6 text-sm">
         <div className="flex items-center gap-2">
-          <User className="h-4 w-4" />
+          <User className="size-4" />
           <span>{guide.author.name}</span>
         </div>
         <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4" />
+          <Calendar className="size-4" />
           <span>Updated {formatDate(guide.updatedAt)}</span>
         </div>
         <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4" />
+          <Clock className="size-4" />
           <span>{guide.readingTime} min read</span>
         </div>
       </div>

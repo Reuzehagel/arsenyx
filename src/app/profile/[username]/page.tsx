@@ -104,7 +104,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
               <div className="text-muted-foreground flex items-center gap-4 text-sm">
                 <span className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
+                  <Calendar className="size-4" />
                   Joined {joinDate}
                 </span>
               </div>

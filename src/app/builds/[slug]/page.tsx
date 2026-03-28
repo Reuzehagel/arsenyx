@@ -150,21 +150,21 @@ export default async function BuildPage({ params }: BuildPageProps) {
               >
                 Builds
               </Link>
-              <ChevronRight className="mx-1 h-4 w-4" />
+              <ChevronRight className="mx-1 size-4" />
               <Link
                 href={`/browse/${category}`}
                 className="hover:text-primary capitalize transition-colors"
               >
                 {category}
               </Link>
-              <ChevronRight className="mx-1 h-4 w-4" />
+              <ChevronRight className="mx-1 size-4" />
               <Link
                 href={`/browse/${category}/${slugify(build.item.name)}`}
                 className="hover:text-primary transition-colors"
               >
                 {build.item.name}
               </Link>
-              <ChevronRight className="mx-1 h-4 w-4" />
+              <ChevronRight className="mx-1 size-4" />
               <span className="text-foreground max-w-[200px] truncate font-medium">
                 {build.name}
               </span>

@@ -14,7 +14,7 @@ export function TrustSignalItem({ label, href, iconKey }: TrustSignal) {
         target="_blank"
         rel="noopener noreferrer"
       >
-        {Icon && <Icon className="h-4 w-4" />}
+        {Icon && <Icon className="size-4" />}
         {label}
       </Link>
     )

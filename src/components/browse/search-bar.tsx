@@ -110,7 +110,7 @@ export function SearchBar({
 
   return (
     <div className={cn("relative", className)}>
-      <Icons.search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+      <Icons.search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
       <Input
         ref={inputRef}
         type="search"

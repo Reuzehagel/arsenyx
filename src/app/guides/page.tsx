@@ -54,7 +54,7 @@ export default function GuidesPage() {
                           <CardTitle className="text-lg group-hover:underline">
                             {resource.title}
                           </CardTitle>
-                          <ExternalLink className="text-muted-foreground h-4 w-4 shrink-0" />
+                          <ExternalLink className="text-muted-foreground size-4 shrink-0" />
                         </div>
                         <CardDescription>
                           {resource.description}

@@ -73,7 +73,7 @@ export function Footer() {
           </p>
           <div className="text-muted-foreground flex items-center gap-1 text-sm">
             <span>Made with</span>
-            <Icons.heart className="text-destructive fill-destructive h-4 w-4" />
+            <Icons.heart className="text-destructive fill-destructive size-4" />
             <span>for the Warframe community</span>
           </div>
         </div>

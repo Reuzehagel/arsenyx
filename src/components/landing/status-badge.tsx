@@ -7,7 +7,7 @@ interface StatusBadgeProps {
 export function StatusBadge({ text }: StatusBadgeProps) {
   return (
     <div className="bg-background/80 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm backdrop-blur">
-      <Icons.zap className="text-warning h-4 w-4" />
+      <Icons.zap className="text-warning size-4" />
       <span className="text-muted-foreground">{text}</span>
     </div>
   )
