@@ -315,51 +315,51 @@ function ExpandedModCard({
                 <>
                   <Separator className="mt-2" />
                   <div className="flex w-full flex-col gap-1 pt-1">
-                  <div className="flex items-center justify-center gap-1">
-                    <span className="text-[9px] font-bold tracking-wider text-gray-400 uppercase">
-                      Set ({setCount || 0}/{maxSetSize})
-                    </span>
-                    <div className="flex gap-0.5">
-                      {Array.from({ length: maxSetSize }).map((_, i) => (
-                        <div
-                          key={i}
-                          className={cn(
-                            "size-1 rounded-full border border-white/30",
-                            i < setCount ? "bg-white" : "bg-transparent",
-                          )}
-                        />
-                      ))}
+                    <div className="flex items-center justify-center gap-1">
+                      <span className="text-[9px] font-bold tracking-wider text-gray-400 uppercase">
+                        Set ({setCount || 0}/{maxSetSize})
+                      </span>
+                      <div className="flex gap-0.5">
+                        {Array.from({ length: maxSetSize }).map((_, i) => (
+                          <div
+                            key={i}
+                            className={cn(
+                              "size-1 rounded-full border border-white/30",
+                              i < setCount ? "bg-white" : "bg-transparent",
+                            )}
+                          />
+                        ))}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Current Bonus */}
-                  <div className="flex flex-col gap-0.5">
-                    {setCount > 0 && setCount < maxSetSize && (
-                      <span className="text-center text-[8px] text-gray-500 uppercase">
-                        Current
-                      </span>
-                    )}
-                    <span
-                      className={cn(
-                        "text-center text-[9px] leading-tight",
-                        setCount > 0 ? "text-gray-300" : "text-gray-500",
+                    {/* Current Bonus */}
+                    <div className="flex flex-col gap-0.5">
+                      {setCount > 0 && setCount < maxSetSize && (
+                        <span className="text-center text-[8px] text-gray-500 uppercase">
+                          Current
+                        </span>
                       )}
-                      dangerouslySetInnerHTML={{ __html: currentBonus! }}
-                    />
-                  </div>
-
-                  {/* Max Bonus Preview */}
-                  {showMax && maxBonus && (
-                    <div className="mt-1 flex flex-col gap-0.5 opacity-60">
-                      <span className="text-center text-[8px] text-gray-500 uppercase">
-                        Max ({maxSetSize})
-                      </span>
                       <span
-                        className="text-center text-[9px] leading-tight text-gray-500"
-                        dangerouslySetInnerHTML={{ __html: maxBonus }}
+                        className={cn(
+                          "text-center text-[9px] leading-tight",
+                          setCount > 0 ? "text-gray-300" : "text-gray-500",
+                        )}
+                        dangerouslySetInnerHTML={{ __html: currentBonus! }}
                       />
                     </div>
-                  )}
+
+                    {/* Max Bonus Preview */}
+                    {showMax && maxBonus && (
+                      <div className="mt-1 flex flex-col gap-0.5 opacity-60">
+                        <span className="text-center text-[8px] text-gray-500 uppercase">
+                          Max ({maxSetSize})
+                        </span>
+                        <span
+                          className="text-center text-[9px] leading-tight text-gray-500"
+                          dangerouslySetInnerHTML={{ __html: maxBonus }}
+                        />
+                      </div>
+                    )}
                   </div>
                 </>
               )}
