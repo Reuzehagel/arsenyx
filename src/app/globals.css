@@ -49,6 +49,45 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Warframe damage type colors */
+  --color-wf-impact: oklch(0.707 0.165 254.624);
+  --color-wf-puncture: oklch(0.707 0 0);
+  --color-wf-slash: oklch(0.704 0.191 22.216);
+  --color-wf-heat: oklch(0.75 0.183 55.934);
+  --color-wf-cold: oklch(0.789 0.154 211.527);
+  --color-wf-electricity: oklch(0.809 0.105 251.813);
+  --color-wf-toxin: oklch(0.792 0.209 151.711);
+  --color-wf-blast: oklch(0.795 0.184 86.047);
+  --color-wf-radiation: oklch(0.879 0.169 91.605);
+  --color-wf-gas: oklch(0.897 0.196 126.665);
+  --color-wf-magnetic: oklch(0.714 0.203 305.504);
+  --color-wf-viral: oklch(0.777 0.152 181.912);
+  --color-wf-corrosive: oklch(0.852 0.199 91.936);
+  --color-wf-void: oklch(1 0 0);
+  --color-wf-tau: oklch(0.865 0.127 207.078);
+
+  /* Warframe mod rarity border colors */
+  --color-wf-rarity-common: oklch(0.555 0.163 67.059);
+  --color-wf-rarity-uncommon: oklch(0.707 0 0);
+  --color-wf-rarity-rare: oklch(0.795 0.184 86.047);
+  --color-wf-rarity-legendary: oklch(0.714 0.203 305.504);
+  --color-wf-rarity-riven: oklch(0.627 0.265 303.9);
+  --color-wf-rarity-amalgam: oklch(0.789 0.154 211.527);
+  --color-wf-rarity-galvanized: oklch(0.707 0.165 254.624);
+
+  /* Warframe mod rarity background base colors (use with /90 opacity) */
+  --color-wf-rarity-common-bg: oklch(0.279 0.068 65.03);
+  --color-wf-rarity-uncommon-bg: oklch(0.269 0 0);
+  --color-wf-rarity-rare-bg: oklch(0.249 0.057 83.97);
+  --color-wf-rarity-legendary-bg: oklch(0.197 0.063 313.46);
+  --color-wf-rarity-amalgam-bg: oklch(0.217 0.06 208.18);
+  --color-wf-rarity-galvanized-bg: oklch(0.221 0.097 261.94);
+
+  /* Warframe misc game colors */
+  --color-wf-rank-pip: oklch(0.82 0.09 240);
+  --color-wf-prime: oklch(0.769 0.183 55.934);
+  --color-wf-highlight: oklch(0.828 0.189 84.429);
 }
 
 :root {
