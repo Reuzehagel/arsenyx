@@ -221,6 +221,8 @@ model Build {
   @@index([hasGuide])
   @@index([forkedFromId])
   @@index([organizationId])
+  @@index([userId, visibility, voteCount])
+  @@index([itemCategory, visibility, voteCount])
   @@map("builds")
 }
 
