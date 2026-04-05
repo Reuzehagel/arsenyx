@@ -57,3 +57,26 @@ export {
 } from "./users"
 
 export type { UserProfile, UserProfileFull, UserStats } from "./users"
+
+// Organization operations
+export {
+  getOrganizationBySlug,
+  getOrganizationById,
+  isOrgMember,
+  isOrgAdmin,
+  getUserOrganizations,
+  isOrgSlugTaken,
+  createOrganization,
+  updateOrganization,
+  addOrgMember,
+  removeOrgMember,
+  updateMemberRole,
+  deleteOrganization,
+} from "./organizations"
+
+export type {
+  OrganizationProfile,
+  OrganizationListItem,
+  CreateOrganizationInput,
+  UpdateOrganizationInput,
+} from "./organizations"
