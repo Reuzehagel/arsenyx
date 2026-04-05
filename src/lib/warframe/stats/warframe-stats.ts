@@ -83,6 +83,11 @@ function getWarframeRank30BaseStats(warframe: Warframe) {
   }
 }
 
+interface WarframeStatsOptions {
+  /** Skip rank-up bonus calculation (for Archwings where WFCD data is already rank-30) */
+  skipRankUpBonus?: boolean
+}
+
 /**
  * Calculate warframe stats including health, shields, armor, energy, and ability stats
  */
@@ -90,12 +95,20 @@ export function calculateWarframeStats(
   warframe: Warframe,
   buildState: BuildState,
   showMaxStacks = false,
+  options?: WarframeStatsOptions,
 ): WarframeStats {
   const mods = getAllPlacedMods(buildState)
   const shards = buildState.shardSlots ?? []
   const umbralCount = countUmbralMods(mods)
 
-  const rank30 = getWarframeRank30BaseStats(warframe)
+  const rank30 = options?.skipRankUpBonus
+    ? {
+        health: warframe.health,
+        shield: warframe.shield,
+        armor: warframe.armor,
+        energy: warframe.power,
+      }
+    : getWarframeRank30BaseStats(warframe)
 
   return {
     health: calculateSingleStat(
