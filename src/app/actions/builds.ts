@@ -29,6 +29,7 @@ import type { BuildState } from "@/lib/warframe/types"
 
 export interface SaveBuildInput {
   buildId?: string // If provided, update existing build
+  organizationId?: string
   itemUniqueName: string
   name: string
   description?: string
@@ -61,6 +62,15 @@ export async function saveBuildAction(
 
     const userId = session.user.id
 
+    // Validate org membership if publishing under an org
+    if (input.organizationId) {
+      const { isOrgMember } = await import("@/lib/db/organizations")
+      const isMember = await isOrgMember(input.organizationId, userId)
+      if (!isMember) {
+        return err("You are not a member of this organization")
+      }
+    }
+
     // If buildId is provided, update existing build
     if (input.buildId) {
       const updateData: UpdateBuildInput = {
@@ -76,6 +86,7 @@ export async function saveBuildAction(
 
     // Create new build
     const createData: CreateBuildInput = {
+      organizationId: input.organizationId,
       itemUniqueName: input.itemUniqueName,
       name: input.name,
       description: input.description,
