@@ -21,7 +21,10 @@ export interface UserProfile {
   image: string | null
   bio: string | null
   createdAt: Date
-  role: string
+  isVerified: boolean
+  isCommunityLeader: boolean
+  isModerator: boolean
+  isAdmin: boolean
 }
 
 export interface UserProfileFull extends UserProfile {
@@ -59,7 +62,10 @@ export const getUserByUsername = cache(async function getUserByUsername(
       image: true,
       bio: true,
       createdAt: true,
-      role: true,
+      isVerified: true,
+      isCommunityLeader: true,
+      isModerator: true,
+      isAdmin: true,
     },
   })
 
@@ -83,7 +89,10 @@ export async function getUserById(userId: string): Promise<UserProfile | null> {
       image: true,
       bio: true,
       createdAt: true,
-      role: true,
+      isVerified: true,
+      isCommunityLeader: true,
+      isModerator: true,
+      isAdmin: true,
     },
   })
 
@@ -147,7 +156,10 @@ export async function getUserForSettings(
       bio: true,
       email: true,
       createdAt: true,
-      role: true,
+      isVerified: true,
+      isCommunityLeader: true,
+      isModerator: true,
+      isAdmin: true,
     },
   })
   return user
