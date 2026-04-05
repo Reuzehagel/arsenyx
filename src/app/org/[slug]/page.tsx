@@ -51,28 +51,29 @@ export default async function OrgProfilePage({ params }: OrgProfilePageProps) {
     ? org.members.some((m) => m.userId === viewerUserId)
     : false
 
-  const builds = await prisma.build.findMany({
-    where: { organizationId: org.id, visibility: "PUBLIC" },
-    orderBy: { voteCount: "desc" },
-    take: 12,
-    select: {
-      id: true,
-      slug: true,
-      name: true,
-      itemName: true,
-      itemImageName: true,
-      voteCount: true,
-      viewCount: true,
-    },
-  })
+  const [builds, totalBuilds] = await Promise.all([
+    prisma.build.findMany({
+      where: { organizationId: org.id, visibility: "PUBLIC" },
+      orderBy: { voteCount: "desc" },
+      take: 12,
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        itemName: true,
+        itemImageName: true,
+        voteCount: true,
+        viewCount: true,
+      },
+    }),
+    prisma.build.count({
+      where: { organizationId: org.id, visibility: "PUBLIC" },
+    }),
+  ])
 
   const createdDate = new Date(org.createdAt).toLocaleDateString("en-US", {
     month: "long",
     year: "numeric",
-  })
-
-  const totalBuilds = await prisma.build.count({
-    where: { organizationId: org.id, visibility: "PUBLIC" },
   })
 
   return (
