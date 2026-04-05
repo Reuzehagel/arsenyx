@@ -86,13 +86,26 @@ export const BROWSE_CATEGORIES: CategoryConfig[] = [
   },
 ]
 
+// Static lookup maps built once at module init
+const CATEGORY_BY_ID = new Map(
+  BROWSE_CATEGORIES.map((c) => [c.id, c]),
+)
+
+const VALID_CATEGORY_IDS = new Set<string>(
+  BROWSE_CATEGORIES.map((c) => c.id),
+)
+
+const WARFRAME_CATEGORIES_SET = new Set<BrowseCategory>(["warframes", "necramechs"])
+const WEAPON_CATEGORIES_SET = new Set<BrowseCategory>(["primary", "secondary", "melee"])
+const GUN_CATEGORIES_SET = new Set<BrowseCategory>(["primary", "secondary"])
+
 /**
  * Get category config by ID
  */
 export function getCategoryConfig(
   categoryId: BrowseCategory,
 ): CategoryConfig | undefined {
-  return BROWSE_CATEGORIES.find((c) => c.id === categoryId)
+  return CATEGORY_BY_ID.get(categoryId)
 }
 
 /**
@@ -117,7 +130,7 @@ export function getDefaultCategory(): BrowseCategory {
  * Validate if a string is a valid browse category
  */
 export function isValidCategory(category: string): category is BrowseCategory {
-  return BROWSE_CATEGORIES.some((c) => c.id === category)
+  return VALID_CATEGORY_IDS.has(category)
 }
 
 /**
@@ -141,34 +154,25 @@ export function mapWfcdCategory(
 // =============================================================================
 // Use these helpers instead of repeating category checks throughout the codebase
 
-/** Categories that represent warframes or warframe-like items */
-const WARFRAME_CATEGORIES: BrowseCategory[] = ["warframes", "necramechs"]
-
-/** Categories that represent weapons */
-const WEAPON_CATEGORIES: BrowseCategory[] = ["primary", "secondary", "melee"]
-
-/** Categories that represent gun-type weapons (not melee) */
-const GUN_CATEGORIES: BrowseCategory[] = ["primary", "secondary"]
-
 /**
  * Check if a category represents a warframe or necramech
  */
 export function isWarframeCategory(category: BrowseCategory): boolean {
-  return WARFRAME_CATEGORIES.includes(category)
+  return WARFRAME_CATEGORIES_SET.has(category)
 }
 
 /**
  * Check if a category represents a weapon (primary, secondary, or melee)
  */
 export function isWeaponCategory(category: BrowseCategory): boolean {
-  return WEAPON_CATEGORIES.includes(category)
+  return WEAPON_CATEGORIES_SET.has(category)
 }
 
 /**
  * Check if a category represents a gun (primary or secondary, not melee)
  */
 export function isGunCategory(category: BrowseCategory): boolean {
-  return GUN_CATEGORIES.includes(category)
+  return GUN_CATEGORIES_SET.has(category)
 }
 
 /**

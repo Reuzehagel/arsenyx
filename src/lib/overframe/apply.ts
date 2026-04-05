@@ -136,6 +136,11 @@ export function applyOverframeImportToBuildState(
   }
 
   // 2) Place mods
+  // Build index for O(1) mod lookup by uniqueName
+  const compatibleModsByName = new Map(
+    compatibleMods.map((cm) => [cm.uniqueName, cm]),
+  )
+
   for (const m of importResult.mods) {
     if (!m.matched?.uniqueName) {
       warnings.push({
@@ -150,9 +155,7 @@ export function applyOverframeImportToBuildState(
       continue
     }
 
-    const fullMod = compatibleMods.find(
-      (cm) => cm.uniqueName === m.matched!.uniqueName,
-    )
+    const fullMod = compatibleModsByName.get(m.matched!.uniqueName)
     if (!fullMod) {
       warnings.push({
         type: "mod_not_in_compatible_list",

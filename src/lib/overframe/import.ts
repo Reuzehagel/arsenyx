@@ -307,8 +307,15 @@ export async function importOverframeBuild(
   }
 
   // Split slots into mod slots and arcane slots
-  const modSlots = slotList.filter((s) => s.slotType !== "arcane")
-  const arcaneSlots = slotList.filter((s) => s.slotType === "arcane")
+  const modSlots: typeof slotList = []
+  const arcaneSlots: typeof slotList = []
+  for (const s of slotList) {
+    if (s.slotType === "arcane") {
+      arcaneSlots.push(s)
+    } else {
+      modSlots.push(s)
+    }
+  }
 
   // Resolve Overframe IDs → English names for mod slots
   const modsWithNames: Array<{
@@ -386,6 +393,9 @@ export async function importOverframeBuild(
   // Match arcane slots against WFCD arcane data
   const { getAllArcanes } = await import("@/lib/warframe/mods")
   const allArcanes = getAllArcanes()
+  const arcanesByNameLower = new Map(
+    allArcanes.map((a) => [a.name.toLowerCase(), a]),
+  )
   const matchedArcanes: import("./types").OverframeMatchedArcane[] = []
 
   for (const slot of arcaneSlots) {
@@ -403,7 +413,7 @@ export async function importOverframeBuild(
 
     // Match by name against arcanes
     const lowerName = overframeName.toLowerCase().trim()
-    const arcane = allArcanes.find((a) => a.name.toLowerCase() === lowerName)
+    const arcane = arcanesByNameLower.get(lowerName)
 
     if (!arcane) {
       warnings.push({
