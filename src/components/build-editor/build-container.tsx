@@ -140,6 +140,8 @@ export function BuildContainer({
     setPublishDialogOpen,
     handlePublish,
     handleCancel,
+    organizationId,
+    setOrganizationId,
   } = useBuildPersistence({
     item,
     category,
@@ -279,6 +281,8 @@ export function BuildContainer({
           handleCancel={handleCancel}
           handleCopyBuild={handleCopyBuild}
           showCopied={showCopied}
+          organizationId={organizationId}
+          onOrganizationChange={setOrganizationId}
         />
 
         <div className="flex flex-col gap-4">

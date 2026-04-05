@@ -1,8 +1,9 @@
 "use client"
 
 import { Eye, EyeOff, Lock, Loader2 } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
+import { getUserOrganizationsAction } from "@/app/actions/organizations"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -12,6 +13,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import type { OrganizationListItem } from "@/lib/db/organizations"
 import { cn } from "@/lib/utils"
 
 export type Visibility = "PUBLIC" | "UNLISTED" | "PRIVATE"
@@ -22,6 +31,8 @@ interface PublishDialogProps {
   onPublish: (visibility: Visibility) => Promise<void>
   isPublishing: boolean
   isUpdate?: boolean
+  organizationId?: string
+  onOrganizationChange?: (id: string | undefined) => void
 }
 
 export function PublishDialog({
@@ -30,12 +41,24 @@ export function PublishDialog({
   onPublish,
   isPublishing,
   isUpdate = false,
+  organizationId,
+  onOrganizationChange,
 }: PublishDialogProps) {
   const [visibility, setVisibility] = useState<Visibility>("PUBLIC")
+  const [orgs, setOrgs] = useState<OrganizationListItem[]>([])
+
+  useEffect(() => {
+    if (!open) return
+    getUserOrganizationsAction().then((result) => {
+      if (result.success) setOrgs(result.data)
+    })
+  }, [open])
 
   const handlePublish = async () => {
     await onPublish(visibility)
   }
+
+  const publishAs = organizationId ?? ""
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -48,6 +71,30 @@ export function PublishDialog({
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
+          {orgs.length > 0 && onOrganizationChange && (
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-medium">Publish as</p>
+              <Select
+                value={publishAs}
+                onValueChange={(val: string | null) => {
+                  onOrganizationChange(val || undefined)
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Yourself" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Yourself</SelectItem>
+                  {orgs.map((org) => (
+                    <SelectItem key={org.id} value={org.id}>
+                      {org.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <VisibilityOption
             value="PUBLIC"
             current={visibility}
