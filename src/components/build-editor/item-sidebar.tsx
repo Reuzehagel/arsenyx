@@ -18,6 +18,7 @@ import {
   isWeaponCategory,
   isGunCategory,
   isMeleeCategory,
+  isArchwingCategory,
 } from "@/lib/warframe/categories"
 import { getImageUrl } from "@/lib/warframe/images"
 import type {
@@ -111,10 +112,20 @@ export function ItemSidebar({
   // Only use calculated stats if item was provided
   const calculatedStats = item ? calculatedStatsResult : null
 
+  const isArchwing = isArchwingCategory(buildState.itemCategory)
+  const isArchwingFrame = isArchwing && item?.category === "Archwing"
+  const isArchwingWeapon = isArchwing && !isArchwingFrame
+  const isArchwingGun = isArchwing && item?.category === "Arch-Gun"
+
   const isWarframeOrNecramech = isWarframeCategory(buildState.itemCategory)
   const isWeapon = isWeaponCategory(buildState.itemCategory)
   const isMelee = isMeleeCategory(buildState.itemCategory)
   const isGun = isGunCategory(buildState.itemCategory)
+
+  // Combined flags that include archwing sub-types
+  const showWarframeStats = isWarframeOrNecramech || isArchwingFrame
+  const showWeaponStats = isWeapon || isArchwingWeapon
+  const showGunStats = isGun || isArchwingGun
 
   // Reactor for warframes/necramechs, Catalyst for weapons
   const capacityBoosterLabel = isWarframeOrNecramech ? "Reactor" : "Catalyst"
@@ -165,7 +176,7 @@ export function ItemSidebar({
   return (
     <div className="flex h-full flex-col">
       {/* Abilities */}
-      {isWarframeOrNecramech && abilities.length > 0 && (
+      {showWarframeStats && abilities.length > 0 && (
         <div className="flex justify-around p-3">
           {abilities.slice(0, 4).map((originalAbility, i) => {
             const displayAbility = getDisplayAbility(i, originalAbility)
@@ -256,7 +267,7 @@ export function ItemSidebar({
         )}
 
       {/* Separator after abilities/shards, before capacity - only if there's content above */}
-      {isWarframeOrNecramech && <Separator />}
+      {showWarframeStats && <Separator />}
 
       {/* Capacity */}
       <div className="flex flex-col gap-3 p-3">
@@ -311,7 +322,7 @@ export function ItemSidebar({
       <Separator />
 
       {/* Warframe Base Stats - Calculated */}
-      {isWarframeOrNecramech && warframeStats && (
+      {showWarframeStats && warframeStats && (
         <div className="flex flex-col gap-2 p-3">
           <CalculatedStatRow label="Energy" stat={warframeStats.energy} />
           <CalculatedStatRow label="Health" stat={warframeStats.health} />
@@ -326,7 +337,7 @@ export function ItemSidebar({
       )}
 
       {/* Warframe Base Stats - Fallback to static display */}
-      {isWarframeOrNecramech && !warframeStats && (
+      {showWarframeStats && !warframeStats && (
         <div className="flex flex-col gap-2 p-3">
           <SimpleStatRow
             label="Energy"
@@ -352,7 +363,7 @@ export function ItemSidebar({
       )}
 
       {/* Weapon Stats - Calculated */}
-      {isWeapon && weaponStats && weaponStats.attackModes.length > 0 && (
+      {showWeaponStats && weaponStats && weaponStats.attackModes.length > 0 && (
         <div className="flex flex-col gap-2 p-3">
           {/* For multiple attack modes, show shared stats first */}
           {weaponStats.attackModes.length > 1 && (
@@ -377,13 +388,13 @@ export function ItemSidebar({
                 stat={weaponStats.attackModes[0].fireRate}
                 format="decimal"
               />
-              {weaponStats.attackModes[0].magazineSize && isGun && (
+              {weaponStats.attackModes[0].magazineSize && showGunStats && (
                 <CalculatedStatRow
                   label="Magazine"
                   stat={weaponStats.attackModes[0].magazineSize}
                 />
               )}
-              {weaponStats.attackModes[0].reloadTime && isGun && (
+              {weaponStats.attackModes[0].reloadTime && showGunStats && (
                 <CalculatedStatRow
                   label="Reload Time"
                   stat={weaponStats.attackModes[0].reloadTime}
@@ -444,13 +455,13 @@ export function ItemSidebar({
                     stat={mode.fireRate}
                     format="decimal"
                   />
-                  {mode.magazineSize && isGun && (
+                  {mode.magazineSize && showGunStats && (
                     <CalculatedStatRow
                       label="Magazine"
                       stat={mode.magazineSize}
                     />
                   )}
-                  {mode.reloadTime && isGun && (
+                  {mode.reloadTime && showGunStats && (
                     <CalculatedStatRow
                       label="Reload Time"
                       stat={mode.reloadTime}
@@ -490,7 +501,7 @@ export function ItemSidebar({
       )}
 
       {/* Weapon Stats - Fallback to static display */}
-      {isWeapon && !weaponStats && (
+      {showWeaponStats && !weaponStats && (
         <div className="flex flex-col gap-2 p-3">
           <SimpleStatRow
             label="Total Damage"
@@ -524,7 +535,7 @@ export function ItemSidebar({
             label="Fire Rate"
             value={itemStats?.fireRate?.toFixed(2) ?? "—"}
           />
-          {isGun && (
+          {showGunStats && (
             <>
               <SimpleStatRow
                 label="Magazine"
@@ -564,7 +575,7 @@ export function ItemSidebar({
       )}
 
       {/* Ability Stats - Calculated */}
-      {isWarframeOrNecramech && warframeStats && (
+      {showWarframeStats && warframeStats && (
         <>
           <Separator />
           <div className="flex flex-col gap-2 p-3">
@@ -593,7 +604,7 @@ export function ItemSidebar({
       )}
 
       {/* Ability Stats - Fallback to static display */}
-      {isWarframeOrNecramech && !warframeStats && (
+      {showWarframeStats && !warframeStats && (
         <>
           <Separator />
           <div className="flex flex-col gap-2 p-3">

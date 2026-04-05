@@ -184,3 +184,10 @@ export function isMeleeCategory(category: BrowseCategory): boolean {
 export function isCompanionCategory(category: BrowseCategory): boolean {
   return category === "companions"
 }
+
+/**
+ * Check if a category is the archwing category
+ */
+export function isArchwingCategory(category: BrowseCategory): boolean {
+  return category === "archwing"
+}
