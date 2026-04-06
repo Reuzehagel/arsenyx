@@ -104,6 +104,7 @@ export function parseModStats(mod: PlacedMod): ParsedStat[] {
       }
     }
 
+    parseModStatsCache.set(mod, [])
     return []
   } catch (error) {
     console.warn(`Failed to parse mod stats for ${mod.name}:`, error)
