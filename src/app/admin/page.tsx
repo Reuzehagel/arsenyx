@@ -31,24 +31,19 @@ export default async function AdminPage({
         </TabsList>
 
         <TabsContent value="users">
-          {tab === "users" && (
-            <AdminUsersTab
-              search={q}
-              currentUserId={session.user.id}
-            />
-          )}
+          <AdminUsersTab search={q} currentUserId={session.user.id} />
         </TabsContent>
 
         <TabsContent value="content">
-          {tab === "content" && <AdminContentTab search={q} />}
+          <AdminContentTab search={q} />
         </TabsContent>
 
         <TabsContent value="stats">
-          {tab === "stats" && <AdminStatsTab />}
+          <AdminStatsTab />
         </TabsContent>
 
         <TabsContent value="dev-tools">
-          {tab === "dev-tools" && <AdminDevToolsTab />}
+          <AdminDevToolsTab />
         </TabsContent>
       </Tabs>
     </div>
