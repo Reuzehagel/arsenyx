@@ -8,9 +8,11 @@ import { toast } from "sonner"
 
 import { Skeleton } from "@/components/ui/skeleton"
 
-const GuideReader = dynamic(
+const MarkdownReader = dynamic(
   () =>
-    import("@/components/guides/guide-reader").then((mod) => mod.GuideReader),
+    import("@/components/build/markdown-reader").then(
+      (mod) => mod.MarkdownReader,
+    ),
   {
     ssr: false,
     loading: () => <Skeleton className="h-[100px] rounded-md" />,
@@ -197,7 +199,7 @@ export function BuildGuideSection({
 
               {/* Description */}
               {description && (
-                <GuideReader
+                <MarkdownReader
                   key={lastUpdated?.toISOString()}
                   content={description}
                 />

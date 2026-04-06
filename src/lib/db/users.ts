@@ -25,6 +25,7 @@ export interface UserProfile {
   isCommunityLeader: boolean
   isModerator: boolean
   isAdmin: boolean
+  isBanned: boolean
 }
 
 export interface UserProfileFull extends UserProfile {
@@ -66,6 +67,7 @@ export const getUserByUsername = cache(async function getUserByUsername(
       isCommunityLeader: true,
       isModerator: true,
       isAdmin: true,
+      isBanned: true,
     },
   })
 
@@ -95,6 +97,7 @@ export const getUserById = cache(async function getUserById(
       isCommunityLeader: true,
       isModerator: true,
       isAdmin: true,
+      isBanned: true,
     },
   })
 
@@ -162,6 +165,7 @@ export async function getUserForSettings(
       isCommunityLeader: true,
       isModerator: true,
       isAdmin: true,
+      isBanned: true,
     },
   })
   return user

@@ -80,3 +80,21 @@ export type {
   CreateOrganizationInput,
   UpdateOrganizationInput,
 } from "./organizations"
+
+// Admin operations
+export {
+  getAdminUsers,
+  adminUpdateUserRoles,
+  adminBanUser,
+  adminUnbanUser,
+  adminDeleteUser,
+  getAdminBuilds,
+  adminDeleteBuild,
+  getAdminStats,
+  getTopBuilds,
+  getTopUsers,
+  getRecentUsers,
+  getDbTableCounts,
+} from "./admin"
+
+export type { AdminUser, AdminBuild, AdminStats } from "./admin"

@@ -4,11 +4,11 @@ import ReactMarkdown from "react-markdown"
 import rehypeHighlight from "rehype-highlight"
 import remarkGfm from "remark-gfm"
 
-interface GuideReaderProps {
+interface MarkdownReaderProps {
   content: string
 }
 
-export function GuideReader({ content }: GuideReaderProps) {
+export function MarkdownReader({ content }: MarkdownReaderProps) {
   if (!content) {
     return null
   }

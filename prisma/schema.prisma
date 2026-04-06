@@ -30,6 +30,7 @@ model User {
   isCommunityLeader Boolean @default(false)
   isModerator       Boolean @default(false)
   isAdmin           Boolean @default(false)
+  isBanned          Boolean @default(false)
 
   // Relations
   accounts       Account[]
@@ -37,9 +38,6 @@ model User {
   builds         Build[]
   votes          BuildVote[]
   favorites      BuildFavorite[]
-  guideVotes     GuideVote[]
-  guideFavorites GuideFavorite[]
-  guides         Guide[]
   apiKeys        ApiKey[]
   organizationMemberships OrganizationMember[]
 
@@ -198,8 +196,6 @@ model Build {
   favorites   BuildFavorite[]
   linkedFrom  BuildLink[]     @relation("LinkedFromBuild")
   linkedTo    BuildLink[]     @relation("LinkedToBuild")
-  guideEmbeds GuideEmbed[]
-
   // Partner builds (many-to-many self-relation)
   partnerBuilds Build[] @relation("PartnerBuilds")
   partneredBy   Build[] @relation("PartnerBuilds")
@@ -307,110 +303,6 @@ model BuildFavorite {
   @@unique([userId, buildId])
   @@index([buildId])
   @@map("build_favorites")
-}
-
-// =============================================================================
-// GUIDES (general guides, not build-specific)
-// =============================================================================
-
-model Guide {
-  id   String @id @default(cuid())
-  slug String @unique
-
-  // Ownership
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Content
-  title      String
-  summary    String
-  category   String // "systems", "resources", "modes", "warframes", "gear"
-  tags       String[]
-  coverImage String?
-
-  // Lexical editor serialized state
-  content Json
-
-  // Status
-  status    String  @default("draft") // "draft" | "published"
-  isCurated Boolean @default(false) // Featured/official guides
-
-  // Computed
-  readingTime   Int @default(1) // Minutes
-  viewCount     Int @default(0)
-  voteCount     Int @default(0)
-  favoriteCount Int @default(0)
-
-  // Timestamps
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  publishedAt DateTime?
-
-  // Relations
-  embeds    GuideEmbed[]
-  votes     GuideVote[]
-  favorites GuideFavorite[]
-
-  @@index([category])
-  @@index([status])
-  @@index([userId])
-  @@index([createdAt])
-  @@map("guides")
-}
-
-// Embed builds within guides
-
-model GuideEmbed {
-  id String @id @default(cuid())
-
-  guideId String
-  guide   Guide  @relation(fields: [guideId], references: [id], onDelete: Cascade)
-
-  buildId String
-  build   Build  @relation(fields: [buildId], references: [id], onDelete: Cascade)
-
-  // Position/label within guide
-  label     String?
-  sortOrder Int     @default(0)
-
-  createdAt DateTime @default(now())
-
-  @@unique([guideId, buildId])
-  @@map("guide_embeds")
-}
-
-model GuideVote {
-  id String @id @default(cuid())
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  guideId String
-  guide   Guide  @relation(fields: [guideId], references: [id], onDelete: Cascade)
-
-  value Int @default(1)
-
-  createdAt DateTime @default(now())
-
-  @@unique([userId, guideId])
-  @@index([guideId])
-  @@map("guide_votes")
-}
-
-model GuideFavorite {
-  id String @id @default(cuid())
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  guideId String
-  guide   Guide  @relation(fields: [guideId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-
-  @@unique([userId, guideId])
-  @@index([guideId])
-  @@map("guide_favorites")
 }
 
 // =============================================================================

@@ -23,9 +23,11 @@ import {
 } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
-const GuideReader = dynamic(
+const MarkdownReader = dynamic(
   () =>
-    import("@/components/guides/guide-reader").then((mod) => mod.GuideReader),
+    import("@/components/build/markdown-reader").then(
+      (mod) => mod.MarkdownReader,
+    ),
   {
     ssr: false,
     loading: () => <Skeleton className="h-[200px] rounded-md" />,
@@ -199,7 +201,7 @@ export function DescriptionEditor({
           className={cn("bg-muted/10 rounded-md border p-4", previewMinHeight)}
         >
           {description ? (
-            <GuideReader content={description} />
+            <MarkdownReader content={description} />
           ) : (
             <p className="text-muted-foreground text-sm">
               No content to preview.

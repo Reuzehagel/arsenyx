@@ -12,9 +12,11 @@ const GuideEditor = dynamic(
   },
 )
 
-const GuideReader = dynamic(
+const MarkdownReader = dynamic(
   () =>
-    import("@/components/guides/guide-reader").then((mod) => mod.GuideReader),
+    import("@/components/build/markdown-reader").then(
+      (mod) => mod.MarkdownReader,
+    ),
   {
     ssr: false,
     loading: () => <Skeleton className="h-[100px] rounded-md" />,
@@ -106,7 +108,7 @@ export function BuildEditorGuideSection({
                       </div>
                     )}
                     {guideDescription && (
-                      <GuideReader content={guideDescription} />
+                      <MarkdownReader content={guideDescription} />
                     )}
                     {partnerBuilds.length > 0 && (
                       <PartnerBuildsSection partnerBuilds={partnerBuilds} />
