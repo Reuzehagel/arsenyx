@@ -50,6 +50,7 @@ export const auth = betterAuth({
       },
     },
   },
+  trustedOrigins: ["https://arsenyx.com", "https://www.arsenyx.com"],
   session: {
     cookieCache: {
       enabled: true,
