@@ -5,7 +5,6 @@ import { toast } from "sonner"
 
 import { adminDeleteBuildAction } from "@/app/actions/admin"
 import { AdminDeleteDialog } from "@/components/admin/admin-delete-dialog"
-import { Button } from "@/components/ui/button"
 import type { AdminBuild } from "@/lib/db/admin"
 
 interface AdminContentTableProps {
@@ -69,11 +68,6 @@ export function AdminContentTable({ builds }: AdminContentTableProps) {
                   toast.error(result.error)
                 }
               }}
-              trigger={
-                <Button variant="ghost" size="sm">
-                  Delete
-                </Button>
-              }
             />
           </td>
         </tr>

@@ -109,11 +109,7 @@ export function AdminUserActions({
         title={`Delete ${user.name || user.username || "user"}?`}
         description="This will anonymize the user profile and permanently delete all their builds, votes, and favorites. This cannot be undone."
         onConfirm={handleDelete}
-        trigger={
-          <Button variant="ghost" size="sm" disabled={isSelf}>
-            Delete
-          </Button>
-        }
+        disabled={isSelf}
       />
     </div>
   )
