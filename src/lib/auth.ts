@@ -44,6 +44,10 @@ export const auth = betterAuth({
         type: "boolean",
         defaultValue: false,
       },
+      isBanned: {
+        type: "boolean",
+        defaultValue: false,
+      },
     },
   },
   session: {
