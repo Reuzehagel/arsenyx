@@ -113,7 +113,7 @@ export const getUserById = cache(async function getUserById(
 export async function getUserStats(userId: string): Promise<UserStats> {
   const [buildStats, totalFavorites] = await Promise.all([
     prisma.build.aggregate({
-      where: { userId, visibility: "PUBLIC" },
+      where: { userId, visibility: "PUBLIC", organizationId: null },
       _count: { id: true },
       _sum: { voteCount: true },
     }),
@@ -137,7 +137,7 @@ export async function getPublicBuildCountForUser(
   userId: string,
 ): Promise<number> {
   return prisma.build.count({
-    where: { userId, visibility: "PUBLIC" },
+    where: { userId, visibility: "PUBLIC", organizationId: null },
   })
 }
 

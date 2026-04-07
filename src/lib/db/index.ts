@@ -101,10 +101,11 @@ export type { AdminUser, AdminBuild, AdminStats } from "./admin"
 
 // API Key operations
 export {
-  findApiKeyByHash,
-  touchApiKey,
-  listApiKeys,
   createApiKey,
+  listApiKeysForUser,
+  listAllApiKeys,
+  revokeApiKey,
+  findApiKeyByRawToken,
   setApiKeyActive,
   deleteApiKey,
 } from "./api-keys"

@@ -14,7 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
+import { Field, FieldLabel } from "@/components/ui/field"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
@@ -187,11 +187,11 @@ export function GuideEditor({
     <>
       <div className="flex flex-col gap-4">
         {/* Summary Section */}
-        <div className="flex flex-col gap-2">
+        <Field>
           <div className="flex items-center justify-between">
-            <Label htmlFor="guide-summary" className="text-sm">
+            <FieldLabel htmlFor="guide-summary" className="text-sm">
               Summary
-            </Label>
+            </FieldLabel>
             {summary.length > SUMMARY_WARNING_THRESHOLD && (
               <span
                 className={cn(
@@ -218,11 +218,11 @@ export function GuideEditor({
             className="resize-none text-sm"
             disabled={isSaving}
           />
-        </div>
+        </Field>
 
         {/* Description Section */}
-        <div className="flex flex-col gap-2">
-          <Label className="text-sm">Description</Label>
+        <Field>
+          <FieldLabel className="text-sm">Description</FieldLabel>
           <DescriptionEditor
             description={description}
             onDescriptionChange={(newValue) => {
@@ -233,12 +233,12 @@ export function GuideEditor({
             toolbarSize="sm"
             previewMinHeight="min-h-[200px]"
           />
-        </div>
+        </Field>
 
         {/* Partner Builds Section */}
         {showPartnerBuilds && (
-          <div className="flex flex-col gap-2">
-            <Label className="text-sm">Partner Builds</Label>
+          <Field>
+            <FieldLabel className="text-sm">Partner Builds</FieldLabel>
             <PartnerBuildSelector
               currentBuildId={buildId}
               selectedBuilds={partnerBuilds}
@@ -246,7 +246,7 @@ export function GuideEditor({
               onAdd={handleAddPartner}
               onRemove={handleRemovePartner}
             />
-          </div>
+          </Field>
         )}
 
         {/* Save Buttons */}

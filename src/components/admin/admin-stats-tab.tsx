@@ -22,7 +22,7 @@ export async function AdminStatsTab() {
   ])
 
   return (
-    <div className="space-y-8 pt-4">
+    <div className="flex flex-col gap-8 pt-4">
       {/* Stat Cards */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         <StatCard label="Total Users" value={stats.totalUsers} />

@@ -18,7 +18,7 @@ export async function AdminContentTab({ search }: AdminContentTabProps) {
   const builds = await getAdminBuilds(search)
 
   return (
-    <div className="space-y-4 pt-4">
+    <div className="flex flex-col gap-4 pt-4">
       <form action="/admin" className="flex gap-2">
         <input type="hidden" name="tab" value="content" />
         <Input

@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
+import { Field, FieldLabel } from "@/components/ui/field"
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 import {
@@ -134,17 +134,17 @@ export function ShardSelectionDialog({
           // Step 2: Stat Selection
           <div className="flex flex-col gap-3 py-1">
             {/* Tauforged Toggle */}
-            <div className="bg-muted/50 flex items-center justify-between rounded px-2 py-1.5">
-              <Label htmlFor="tauforged" className="text-sm">
+            <Field orientation="horizontal" className="bg-muted/50 justify-between rounded px-2 py-1.5">
+              <FieldLabel htmlFor="tauforged" className="text-sm">
                 Tauforged
-              </Label>
+              </FieldLabel>
               <Switch
                 id="tauforged"
                 checked={tauforged}
                 onCheckedChange={setTauforged}
                 className="scale-90"
               />
-            </div>
+            </Field>
 
             {/* Stats List */}
             <div className="flex flex-col gap-1">

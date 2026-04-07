@@ -6,7 +6,7 @@ import { useCallback } from "react"
 import { Icons } from "@/components/icons"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
+import { Field, FieldLabel } from "@/components/ui/field"
 import {
   Popover,
   PopoverContent,
@@ -77,8 +77,8 @@ export function BuildsFilterDropdown() {
             </Button>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <Label className="text-sm">Build Content</Label>
+          <Field>
+            <FieldLabel className="text-sm">Build Content</FieldLabel>
             <div className="flex flex-wrap gap-2">
               <Button
                 variant={hasGuide ? "default" : "outline"}
@@ -95,7 +95,7 @@ export function BuildsFilterDropdown() {
                 Has Shards
               </Button>
             </div>
-          </div>
+          </Field>
         </div>
       </PopoverContent>
     </Popover>

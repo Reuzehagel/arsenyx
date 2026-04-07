@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache"
 
-import { generateRawApiKey, hashApiKey } from "@/lib/api-keys"
 import { requireAdmin } from "@/lib/auth-helpers"
 import {
   createApiKey,
@@ -22,7 +21,7 @@ export async function createApiKeyAction(formData: FormData): Promise<
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean)
-  const rateLimit = Number(formData.get("rateLimit")) || 100
+  const rateLimit = Number(formData.get("rateLimit")) || 60
   const expiresIn = formData.get("expiresIn") as string | null
 
   if (!name || name.length < 2) {
@@ -33,10 +32,6 @@ export async function createApiKeyAction(formData: FormData): Promise<
     return err("At least one scope is required")
   }
 
-  const rawKey = generateRawApiKey()
-  const hashedKey = await hashApiKey(rawKey)
-  const keyPrefix = rawKey.slice(0, 12)
-
   let expiresAt: Date | null = null
   if (expiresIn === "30d") {
     expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
@@ -45,13 +40,9 @@ export async function createApiKeyAction(formData: FormData): Promise<
   } else if (expiresIn === "1y") {
     expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
   }
-  // null = never expires
 
-  await createApiKey({
-    userId: auth.data,
+  const result = await createApiKey(auth.data, {
     name,
-    hashedKey,
-    keyPrefix,
     scopes,
     rateLimit,
     expiresAt,
@@ -59,7 +50,7 @@ export async function createApiKeyAction(formData: FormData): Promise<
 
   revalidatePath("/admin")
 
-  return ok({ rawKey, prefix: keyPrefix })
+  return ok({ rawKey: result.token, prefix: result.apiKey.keyPrefix })
 }
 
 export async function toggleApiKeyAction(

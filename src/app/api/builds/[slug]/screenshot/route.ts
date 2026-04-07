@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 
-import { validateApiKey } from "@/lib/api-keys"
+import { requireApiKey } from "@/lib/auth/api-keys"
 import { getBuildBySlug } from "@/lib/db/index"
 import { screenshotLimiter, RateLimitError } from "@/lib/rate-limit"
 import { screenshotBuild } from "@/lib/screenshot"
@@ -36,18 +36,17 @@ export async function GET(
   const refererAllowed = isAllowedReferer(request)
 
   if (!refererAllowed) {
-    const authHeader = request.headers.get("authorization")
-    const authResult = await validateApiKey(authHeader, "image:generate")
+    const authResult = await requireApiKey(request, "image:generate")
 
     if (!authResult.success) {
-      const { status, error, ...rest } = authResult.error
+      const { status, code, message } = authResult.error
       return NextResponse.json(
-        { error, ...("retryAfter" in rest ? { retryAfter: rest.retryAfter } : {}) },
+        { error: code, message },
         {
           status,
           headers:
             status === 429
-              ? { "Retry-After": String((rest as { retryAfter: number }).retryAfter) }
+              ? { "Retry-After": "3600" }
               : {},
         },
       )

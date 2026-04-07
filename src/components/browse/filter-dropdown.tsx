@@ -5,7 +5,7 @@ import { useState } from "react"
 import { Icons } from "@/components/icons"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
+import { Field, FieldLabel } from "@/components/ui/field"
 import {
   Popover,
   PopoverContent,
@@ -79,9 +79,9 @@ export function FilterDropdown({
           </div>
 
           {/* Mastery Rank Slider */}
-          <div className="flex flex-col gap-3">
+          <Field>
             <div className="flex items-center justify-between">
-              <Label className="text-sm">Max Mastery Rank</Label>
+              <FieldLabel className="text-sm">Max Mastery Rank</FieldLabel>
               <span className="text-muted-foreground text-sm tabular-nums">
                 MR {localMastery}
               </span>
@@ -99,11 +99,11 @@ export function FilterDropdown({
               <span>MR 0</span>
               <span>MR 30</span>
             </div>
-          </div>
+          </Field>
 
           {/* Quick Filters */}
-          <div className="flex flex-col gap-2">
-            <Label className="text-sm">Quick Filters</Label>
+          <Field>
+            <FieldLabel className="text-sm">Quick Filters</FieldLabel>
             <div className="flex flex-wrap gap-2">
               <Button
                 variant={primeOnly ? "default" : "outline"}
@@ -120,7 +120,7 @@ export function FilterDropdown({
                 Hide Vaulted
               </Button>
             </div>
-          </div>
+          </Field>
         </div>
       </PopoverContent>
     </Popover>

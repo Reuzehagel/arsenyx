@@ -3,11 +3,12 @@
 import { useActionState, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -16,13 +17,32 @@ import type { Result } from "@/lib/result"
 
 import { createApiKeyAction } from "@/app/admin/api-keys/actions"
 
+const SCOPE_OPTIONS = [
+  { label: "image:generate", value: "image:generate" },
+  { label: "build:read", value: "build:read" },
+  { label: "build:write", value: "build:write" },
+]
+
+const EXPIRY_OPTIONS = [
+  { label: "Never", value: "never" },
+  { label: "30 days", value: "30d" },
+  { label: "90 days", value: "90d" },
+  { label: "1 year", value: "1y" },
+]
+
 export function ApiKeyCreateForm() {
   const [createdKey, setCreatedKey] = useState<string | null>(null)
+  const [selectedScopes, setSelectedScopes] = useState<string[]>([
+    "image:generate",
+  ])
+  const [selectedExpiry, setSelectedExpiry] = useState("never")
 
   async function handleSubmit(
     _prev: Result<{ rawKey: string; prefix: string }> | null,
     formData: FormData,
   ) {
+    formData.set("scopes", selectedScopes.join(","))
+    formData.set("expiresIn", selectedExpiry)
     const result = await createApiKeyAction(formData)
     if (result.success) {
       setCreatedKey(result.data.rawKey)
@@ -33,7 +53,7 @@ export function ApiKeyCreateForm() {
   const [state, action, pending] = useActionState(handleSubmit, null)
 
   return (
-    <section className="space-y-4">
+    <section className="flex flex-col gap-4">
       <h3 className="text-sm font-medium">Create API Key</h3>
 
       {createdKey && (
@@ -62,50 +82,78 @@ export function ApiKeyCreateForm() {
       )}
 
       <form action={action} className="flex flex-wrap items-end gap-3">
-        <div className="space-y-1">
-          <Label htmlFor="key-name">Name</Label>
+        <Field>
+          <FieldLabel htmlFor="key-name">Name</FieldLabel>
           <Input
             id="key-name"
             name="name"
             placeholder="Profit-Taker Wiki"
             required
           />
-        </div>
+        </Field>
 
-        <div className="space-y-1">
-          <Label htmlFor="key-scopes">Scopes</Label>
-          <Input
-            id="key-scopes"
-            name="scopes"
-            defaultValue="image:generate"
-            placeholder="image:generate"
-          />
-        </div>
+        <Field>
+          <FieldLabel>Scopes</FieldLabel>
+          <Select
+            items={SCOPE_OPTIONS}
+            multiple
+            defaultValue={["image:generate"]}
+            onValueChange={(value: string[]) => setSelectedScopes(value)}
+          >
+            <SelectTrigger className="min-w-[160px]">
+              <SelectValue>
+                {(value: string[]) => {
+                  if (value.length === 0) return "Select scopes"
+                  if (value.length === 1) return value[0]
+                  return `${value.length} scopes`
+                }}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent alignItemWithTrigger={false}>
+              <SelectGroup>
+                {SCOPE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </Field>
 
-        <div className="space-y-1">
-          <Label htmlFor="key-rate-limit">Rate Limit (/hr)</Label>
+        <Field>
+          <FieldLabel htmlFor="key-rate-limit">Rate Limit (/hr)</FieldLabel>
           <Input
             id="key-rate-limit"
             name="rateLimit"
             type="number"
-            defaultValue="100"
+            defaultValue="60"
           />
-        </div>
+        </Field>
 
-        <div className="space-y-1">
-          <Label>Expires</Label>
-          <Select name="expiresIn" defaultValue="never">
+        <Field>
+          <FieldLabel>Expires</FieldLabel>
+          <Select
+            items={EXPIRY_OPTIONS}
+            defaultValue="never"
+            onValueChange={(value: string | null) =>
+              setSelectedExpiry(value ?? "never")
+            }
+          >
             <SelectTrigger className="w-[120px]">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="never">Never</SelectItem>
-              <SelectItem value="30d">30 days</SelectItem>
-              <SelectItem value="90d">90 days</SelectItem>
-              <SelectItem value="1y">1 year</SelectItem>
+            <SelectContent alignItemWithTrigger={false}>
+              <SelectGroup>
+                {EXPIRY_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
             </SelectContent>
           </Select>
-        </div>
+        </Field>
 
         <Button type="submit" disabled={pending}>
           {pending ? "Creating..." : "Create Key"}

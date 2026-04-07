@@ -34,7 +34,7 @@ export async function AdminDevToolsTab() {
   const prismaVersion = readPackageVersion("@prisma/client")
 
   return (
-    <div className="space-y-8 pt-4">
+    <div className="flex flex-col gap-8 pt-4">
       {/* Database Info */}
       <section>
         <h3 className="mb-2 text-sm font-medium">Database Table Counts</h3>

@@ -7,16 +7,16 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { listApiKeys } from "@/lib/db/api-keys"
+import { listAllApiKeys } from "@/lib/db/api-keys"
 
 import { ApiKeyCreateForm } from "./api-key-create-form"
 import { ApiKeyActions } from "./api-key-actions"
 
 export async function AdminApiKeysTab() {
-  const apiKeys = await listApiKeys()
+  const apiKeys = await listAllApiKeys()
 
   return (
-    <div className="space-y-6 pt-4">
+    <div className="flex flex-col gap-6 pt-4">
       <ApiKeyCreateForm />
 
       <section>

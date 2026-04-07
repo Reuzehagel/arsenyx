@@ -6,7 +6,7 @@ import { useCallback } from "react"
 import { Icons } from "@/components/icons"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
+import { Field, FieldLabel } from "@/components/ui/field"
 import {
   Sheet,
   SheetContent,
@@ -66,9 +66,9 @@ export function FilterPanel({
   const filterContent = (
     <div className="flex flex-col gap-6">
       {/* Mastery Requirement */}
-      <div className="flex flex-col gap-3">
+      <Field>
         <div className="flex items-center justify-between">
-          <Label className="text-sm font-medium">Max Mastery Rank</Label>
+          <FieldLabel className="text-sm font-medium">Max Mastery Rank</FieldLabel>
           <span className="text-muted-foreground text-sm tabular-nums">
             MR {masteryMax}
           </span>
@@ -88,11 +88,11 @@ export function FilterPanel({
           <span>MR 0</span>
           <span>MR 16</span>
         </div>
-      </div>
+      </Field>
 
       {/* Quick Filters */}
-      <div className="flex flex-col gap-3">
-        <Label className="text-sm font-medium">Quick Filters</Label>
+      <Field>
+        <FieldLabel className="text-sm font-medium">Quick Filters</FieldLabel>
         <div className="flex flex-wrap gap-2">
           <Button
             variant={primeOnly ? "default" : "outline"}
@@ -111,7 +111,7 @@ export function FilterPanel({
             Hide Vaulted
           </Button>
         </div>
-      </div>
+      </Field>
 
       {/* Clear Filters */}
       {activeFilterCount > 0 && (

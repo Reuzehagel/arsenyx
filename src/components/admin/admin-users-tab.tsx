@@ -22,7 +22,7 @@ export async function AdminUsersTab({ search, currentUserId }: AdminUsersTabProp
   const users = await getAdminUsers(search)
 
   return (
-    <div className="space-y-4 pt-4">
+    <div className="flex flex-col gap-4 pt-4">
       <form action="/admin" className="flex gap-2">
         <input type="hidden" name="tab" value="users" />
         <Input
