@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation"
 
+import { AdminApiKeysTab } from "@/components/admin/admin-api-keys-tab"
 import { AdminContentTab } from "@/components/admin/admin-content-tab"
 import { AdminDevToolsTab } from "@/components/admin/admin-dev-tools-tab"
 import { AdminStatsTab } from "@/components/admin/admin-stats-tab"
@@ -28,6 +29,7 @@ export default async function AdminPage({
           <TabsTrigger value="content">Content</TabsTrigger>
           <TabsTrigger value="stats">Stats</TabsTrigger>
           <TabsTrigger value="dev-tools">Dev Tools</TabsTrigger>
+          <TabsTrigger value="api-keys">API Keys</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users">
@@ -44,6 +46,10 @@ export default async function AdminPage({
 
         <TabsContent value="dev-tools">
           <AdminDevToolsTab />
+        </TabsContent>
+
+        <TabsContent value="api-keys">
+          <AdminApiKeysTab />
         </TabsContent>
       </Tabs>
     </div>
