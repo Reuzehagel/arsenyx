@@ -6,30 +6,23 @@ import { screenshotLimiter, RateLimitError } from "@/lib/rate-limit"
 import { screenshotBuild } from "@/lib/screenshot"
 
 export const runtime = "nodejs"
-
-// Chromium needs more time and memory
 export const maxDuration = 30
 
 const HEX_COLOR_RE = /^[0-9a-fA-F]{6}$/
-
 const DEFAULT_BG = "0a0a0a"
 
-/**
- * Allowed referer origins that can access screenshots without an API key.
- * Set ALLOWED_SCREENSHOT_ORIGINS env var as comma-separated origins.
- */
-function getAllowedOrigins(): string[] {
-  const origins = process.env.ALLOWED_SCREENSHOT_ORIGINS
-  if (!origins) return []
-  return origins.split(",").map((o) => o.trim().toLowerCase())
-}
+const ALLOWED_ORIGINS: string[] = (process.env.ALLOWED_SCREENSHOT_ORIGINS ?? "")
+  .split(",")
+  .map((o) => o.trim().toLowerCase())
+  .filter(Boolean)
 
 function isAllowedReferer(request: NextRequest): boolean {
+  if (ALLOWED_ORIGINS.length === 0) return false
   const referer = request.headers.get("referer")
   if (!referer) return false
   try {
     const origin = new URL(referer).origin.toLowerCase()
-    return getAllowedOrigins().some((allowed) => origin === allowed)
+    return ALLOWED_ORIGINS.includes(origin)
   } catch {
     return false
   }

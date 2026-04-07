@@ -51,7 +51,6 @@ export async function validateApiKey(
   | { success: true; key: ValidatedApiKey }
   | { success: false; error: ApiKeyError }
 > {
-  // Extract bearer token
   if (!authHeader?.startsWith("Bearer ")) {
     return {
       success: false,
@@ -62,7 +61,6 @@ export async function validateApiKey(
   const rawKey = authHeader.slice(7)
   const hashedKey = await hashApiKey(rawKey)
 
-  // Look up key
   const apiKey = await findApiKeyByHash(hashedKey)
   if (!apiKey || !apiKey.isActive) {
     return {
@@ -71,7 +69,6 @@ export async function validateApiKey(
     }
   }
 
-  // Check expiry
   if (apiKey.expiresAt && apiKey.expiresAt < new Date()) {
     return {
       success: false,
@@ -79,7 +76,6 @@ export async function validateApiKey(
     }
   }
 
-  // Check scope
   if (!apiKey.scopes.includes(requiredScope)) {
     return {
       success: false,
@@ -87,7 +83,6 @@ export async function validateApiKey(
     }
   }
 
-  // Check rate limit
   try {
     await screenshotLimiter.check(apiKey.rateLimit, apiKey.id)
   } catch (e) {
@@ -100,7 +95,6 @@ export async function validateApiKey(
     throw e
   }
 
-  // Update last used (fire and forget)
   touchApiKey(apiKey.id).catch(() => {})
 
   return {
