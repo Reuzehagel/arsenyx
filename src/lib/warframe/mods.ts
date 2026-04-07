@@ -4,7 +4,13 @@
 import ArcanesData from "@/data/warframe/Arcanes.json"
 import ModsData from "@/data/warframe/Mods.json"
 
-import type { Mod, Arcane, Polarity, ModCompatibility } from "./types"
+import type {
+  Mod,
+  Arcane,
+  Polarity,
+  ModCompatibility,
+  HelminthAbility,
+} from "./types"
 
 // Type assertion for imported data
 const allMods = ModsData as unknown as Mod[]
@@ -357,6 +363,47 @@ export function getModsForItem(item: {
     }
 
     return false
+  })
+}
+
+function normalizeAugmentAbilityName(value: string): string {
+  return value.toLowerCase().replace(/&/g, "and").replace(/\s+/g, " ").trim()
+}
+
+function getAugmentedAbilityName(mod: Mod): string | null {
+  const stats = [
+    ...(mod.stats ?? []),
+    ...(mod.levelStats?.flatMap((level) => level.stats) ?? []),
+  ]
+
+  for (const stat of stats) {
+    const match = stat.match(/^(.+?)\s+Augment:/i)
+    if (match?.[1]) {
+      return normalizeAugmentAbilityName(match[1])
+    }
+  }
+
+  return null
+}
+
+/**
+ * Get source-warframe augment mods that become legal when a Helminth ability is
+ * subsumed onto another Warframe.
+ */
+export function getAugmentModsForHelminthAbility(
+  ability: HelminthAbility,
+): Mod[] {
+  if (ability.source === "Helminth") return []
+
+  const sourceName = ability.source.toLowerCase()
+  const abilityName = normalizeAugmentAbilityName(ability.name)
+
+  return getAllMods().filter((mod) => {
+    if (!mod.isAugment) return false
+    if (!mod.type?.toLowerCase().includes("warframe")) return false
+    if (mod.compatName?.toLowerCase() !== sourceName) return false
+
+    return getAugmentedAbilityName(mod) === abilityName
   })
 }
 

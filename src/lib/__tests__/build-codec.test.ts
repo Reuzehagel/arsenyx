@@ -138,10 +138,10 @@ describe("encodeBuild", () => {
     const decoded = decodeBuild(encoded)
 
     expect(decoded?.arcaneSlots).toHaveLength(2)
-    expect(decoded?.arcaneSlots?.[0].uniqueName).toBe(
+    expect(decoded?.arcaneSlots?.[0]?.uniqueName).toBe(
       "/Lotus/Upgrades/Arcanes/ArcaneEnergize",
     )
-    expect(decoded?.arcaneSlots?.[0].rank).toBe(5)
+    expect(decoded?.arcaneSlots?.[0]?.rank).toBe(5)
   })
 
   it("encodes shards", () => {

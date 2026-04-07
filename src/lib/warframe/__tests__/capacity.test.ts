@@ -276,7 +276,7 @@ describe("calculateTotalDrain", () => {
     const build = createEmptyBuildState()
     const mod = createTestMod({ baseDrain: 2, rank: 3 })
 
-    build.exilusSlot.mod = mod
+    build.exilusSlot!.mod = mod
 
     expect(calculateTotalDrain(build)).toBe(5) // 2 + 3
   })

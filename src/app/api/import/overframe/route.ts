@@ -1,71 +1,15 @@
 import { NextResponse } from "next/server"
 
 import { encodeBuild } from "@/lib/build-codec"
+import { createBaseBuildState } from "@/lib/builds/layout"
 import { importOverframeBuild } from "@/lib/overframe"
 import { applyOverframeImportToBuildState } from "@/lib/overframe/apply"
 import { getCategoryConfig, isValidCategory } from "@/lib/warframe"
 import { getFullItem } from "@/lib/warframe/items"
-import { getModsForItem, normalizePolarity } from "@/lib/warframe/mods"
-import type {
-  BuildState,
-  BrowseCategory,
-  BrowseableItem,
-  ModSlot,
-} from "@/lib/warframe/types"
+import { getModsForItem } from "@/lib/warframe/mods"
+import type { BrowseCategory } from "@/lib/warframe/types"
 
 export const runtime = "nodejs"
-
-function createInitialSlots(polarities?: string[]): ModSlot[] {
-  return Array.from({ length: 8 }, (_, i) => ({
-    id: `normal-${i}`,
-    type: "normal" as const,
-    innatePolarity: polarities?.[i]
-      ? normalizePolarity(polarities[i])
-      : undefined,
-  }))
-}
-
-function createBaseBuildState(
-  item: BrowseableItem,
-  category: BrowseCategory,
-): BuildState {
-  const isWarframe = category === "warframes" || category === "necramechs"
-  const itemPolarities = (item as { polarities?: string[] }).polarities
-  const auraPolarity = (item as { aura?: string }).aura
-
-  const baseState: BuildState = {
-    itemUniqueName: item.uniqueName,
-    itemName: item.name,
-    itemCategory: category,
-    itemImageName: item.imageName,
-    hasReactor: true,
-    exilusSlot: { id: "exilus-0", type: "exilus" },
-    normalSlots: createInitialSlots(itemPolarities),
-    arcaneSlots: [],
-    shardSlots: [],
-    baseCapacity: 60,
-    currentCapacity: 60,
-    formaCount: 0,
-  }
-
-  if (isWarframe) {
-    baseState.auraSlot = {
-      id: "aura-0",
-      type: "aura",
-      innatePolarity: auraPolarity
-        ? normalizePolarity(auraPolarity)
-        : undefined,
-    }
-    baseState.arcaneSlots = [null, null]
-    if (category === "warframes") {
-      baseState.shardSlots = [null, null, null, null, null]
-    }
-  } else if (["primary", "secondary", "melee"].includes(category)) {
-    baseState.arcaneSlots = [null]
-  }
-
-  return baseState
-}
 
 export async function POST(req: Request) {
   try {

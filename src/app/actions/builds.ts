@@ -6,10 +6,15 @@
  * Authenticated actions for build CRUD operations
  */
 
-import type { BuildVisibility } from "@prisma/client"
 import { after } from "next/server"
 
+import { getServerSession } from "@/lib/auth"
 import { requireAuth } from "@/lib/auth-helpers"
+import {
+  BuildDraftError,
+  normalizeBuildDraftForPersistence,
+  type BuildDraftPayload,
+} from "@/lib/builds"
 import {
   createBuild,
   updateBuild,
@@ -21,23 +26,13 @@ import {
   incrementBuildViewCount,
 } from "@/lib/db/index"
 import { ok, err, getErrorMessage, type Result } from "@/lib/result"
-import type { BuildState } from "@/lib/warframe/types"
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
-export interface SaveBuildInput {
+export interface SaveBuildInput extends BuildDraftPayload {
   buildId?: string // If provided, update existing build
-  organizationId?: string
-  itemUniqueName: string
-  name: string
-  description?: string
-  visibility?: BuildVisibility
-  buildData: BuildState
-  guideSummary?: string
-  guideDescription?: string
-  partnerBuildIds?: string[]
 }
 
 export type SaveBuildResult = Result<BuildWithUser>
@@ -57,23 +52,29 @@ export async function saveBuildAction(
     const auth = await requireAuth("save a build")
     if (!auth.success) return auth
     const userId = auth.data
-
-    // Validate org membership if publishing under an org
-    if (input.organizationId) {
-      const { isOrgMember } = await import("@/lib/db/organizations")
-      const isMember = await isOrgMember(input.organizationId, userId)
-      if (!isMember) {
-        return err("You are not a member of this organization")
-      }
-    }
+    const session = await getServerSession()
+    const normalized = await normalizeBuildDraftForPersistence(
+      {
+        userId,
+        isBanned: session?.user?.isBanned ?? false,
+      },
+      input,
+      {
+        existingBuildId: input.buildId,
+      },
+    )
 
     // If buildId is provided, update existing build
     if (input.buildId) {
       const updateData: UpdateBuildInput = {
-        name: input.name,
-        description: input.description,
-        visibility: input.visibility,
-        buildData: input.buildData,
+        name: normalized.name,
+        description: normalized.description,
+        visibility: normalized.visibility,
+        buildData: normalized.buildData,
+        organizationId: normalized.organizationId,
+        guideSummary: normalized.guideSummary,
+        guideDescription: normalized.guideDescription,
+        partnerBuildIds: normalized.partnerBuildIds,
       }
 
       const build = await updateBuild(input.buildId, userId, updateData)
@@ -82,20 +83,24 @@ export async function saveBuildAction(
 
     // Create new build
     const createData: CreateBuildInput = {
-      organizationId: input.organizationId,
-      itemUniqueName: input.itemUniqueName,
-      name: input.name,
-      description: input.description,
-      visibility: input.visibility ?? "PUBLIC",
-      buildData: input.buildData,
-      guideSummary: input.guideSummary,
-      guideDescription: input.guideDescription,
-      partnerBuildIds: input.partnerBuildIds,
+      organizationId: normalized.organizationId ?? undefined,
+      itemUniqueName: normalized.itemUniqueName,
+      itemCategory: normalized.itemCategory,
+      name: normalized.name,
+      description: normalized.description,
+      visibility: normalized.visibility,
+      buildData: normalized.buildData,
+      guideSummary: normalized.guideSummary ?? undefined,
+      guideDescription: normalized.guideDescription ?? undefined,
+      partnerBuildIds: normalized.partnerBuildIds,
     }
 
     const build = await createBuild(userId, createData)
     return ok(build)
   } catch (error) {
+    if (error instanceof BuildDraftError) {
+      return err(error.message)
+    }
     console.error("Failed to save build:", error)
     return err(getErrorMessage(error, "Failed to save build"))
   }

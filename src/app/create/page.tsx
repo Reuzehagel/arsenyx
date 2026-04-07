@@ -8,10 +8,10 @@ import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { decodeBuild } from "@/lib/build-codec"
+import { getCompatibleArcanesForItem } from "@/lib/builds/layout"
 import { isValidCategory, getCategoryConfig } from "@/lib/warframe"
 // Server-only imports
 import { getItemBySlug, getFullItem } from "@/lib/warframe/items"
-import { getArcanesForCategory } from "@/lib/warframe/arcanes"
 import { getModsForItem } from "@/lib/warframe/mods"
 import type { BrowseCategory } from "@/lib/warframe/types"
 
@@ -81,7 +81,10 @@ export default async function CreatePage({ searchParams }: CreatePageProps) {
       if (fullItem) {
         const categoryConfig = getCategoryConfig(category)
         const compatibleMods = getModsForItem(fullItem)
-        const compatibleArcanes = getArcanesForCategory(category)
+        const compatibleArcanes = getCompatibleArcanesForItem(
+          fullItem,
+          category,
+        )
 
         return (
           <div className="relative flex min-h-screen flex-col">
@@ -125,7 +128,9 @@ export default async function CreatePage({ searchParams }: CreatePageProps) {
     const fullItem = getFullItem(category, item.uniqueName)
     const categoryConfig = getCategoryConfig(category)
     const compatibleMods = fullItem ? getModsForItem(fullItem) : []
-    const compatibleArcanes = getArcanesForCategory(category)
+    const compatibleArcanes = fullItem
+      ? getCompatibleArcanesForItem(fullItem, category)
+      : []
 
     // Extract only mod configuration from source build
     const importedBuild = sourceBuild
@@ -183,7 +188,9 @@ export default async function CreatePage({ searchParams }: CreatePageProps) {
     const fullItem = getFullItem(category, item.uniqueName)
     const categoryConfig = getCategoryConfig(category)
     const compatibleMods = fullItem ? getModsForItem(fullItem) : []
-    const compatibleArcanes = getArcanesForCategory(category)
+    const compatibleArcanes = fullItem
+      ? getCompatibleArcanesForItem(fullItem, category)
+      : []
 
     return (
       <div className="relative flex min-h-screen flex-col">

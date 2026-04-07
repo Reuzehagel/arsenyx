@@ -7,6 +7,13 @@ export interface ExtractedOverframeData {
   slots?: unknown
   itemName?: string
   formaCount?: number
+  pageTitle?: string
+  pageDescription?: string
+  guideDescription?: string
+  helminthAbility?: {
+    slotIndex: number
+    uniqueName: string
+  }
   extractedKeys: string[]
 }
 
@@ -137,6 +144,104 @@ function findFirstNumber(
   return walk(obj, "")
 }
 
+function readStringAtPath(obj: unknown, path: string[]): string | undefined {
+  let current = obj
+  for (const segment of path) {
+    if (!current || typeof current !== "object") return undefined
+    current = (current as Record<string, unknown>)[segment]
+  }
+
+  return typeof current === "string" && current.trim()
+    ? current.trim()
+    : undefined
+}
+
+function parseHelminthAbility(
+  value: unknown,
+): { slotIndex: number; uniqueName: string } | null {
+  if (Array.isArray(value)) {
+    const slotIndex = Number(value[0])
+    const uniqueName = typeof value[1] === "string" ? value[1] : undefined
+
+    if (Number.isInteger(slotIndex) && uniqueName) {
+      return { slotIndex, uniqueName }
+    }
+  }
+
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>
+    const slotIndex = Number(
+      record.slotIndex ?? record.slot_index ?? record.slot,
+    )
+    const uniqueName =
+      typeof record.uniqueName === "string"
+        ? record.uniqueName
+        : typeof record.unique_name === "string"
+          ? record.unique_name
+          : typeof record.path === "string"
+            ? record.path
+            : typeof record.ability === "string"
+              ? record.ability
+              : undefined
+
+    if (Number.isInteger(slotIndex) && uniqueName) {
+      return { slotIndex, uniqueName }
+    }
+  }
+
+  return null
+}
+
+function findFirstHelminthAbility(obj: unknown): {
+  keyPath: string
+  value: { slotIndex: number; uniqueName: string }
+} | null {
+  const seen = new Set<unknown>()
+
+  function walk(
+    value: unknown,
+    path: string,
+  ): {
+    keyPath: string
+    value: { slotIndex: number; uniqueName: string }
+  } | null {
+    if (!value || typeof value !== "object") {
+      return null
+    }
+
+    if (seen.has(value)) return null
+    seen.add(value)
+
+    if (Array.isArray(value)) {
+      for (let i = 0; i < value.length; i++) {
+        const res = walk(value[i], `${path}[${i}]`)
+        if (res) return res
+      }
+      return null
+    }
+
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      const lower = k.toLowerCase()
+      if (lower === "helminthability" || lower === "helminth_ability") {
+        const parsed = parseHelminthAbility(v)
+        if (parsed) {
+          return {
+            keyPath: path ? `${path}.${k}` : k,
+            value: parsed,
+          }
+        }
+      }
+
+      const res = walk(v, path ? `${path}.${k}` : k)
+      if (res) return res
+    }
+
+    return null
+  }
+
+  return walk(obj, "")
+}
+
 export function extractOverframeDataFromHtml(
   html: string,
   source: OverframeBuildSource,
@@ -192,6 +297,35 @@ export function extractOverframeDataFromHtml(
   ])
   if (formaRes) extractedKeys.push(formaRes.keyPath)
 
+  const pageTitle = readStringAtPath(nextData, [
+    "props",
+    "pageProps",
+    "data",
+    "title",
+  ])
+  if (pageTitle) extractedKeys.push("props.pageProps.data.title")
+
+  const pageDescription = readStringAtPath(nextData, [
+    "props",
+    "pageProps",
+    "pageDescription",
+  ])
+  if (pageDescription) extractedKeys.push("props.pageProps.pageDescription")
+
+  const guideDescription =
+    readStringAtPath(nextData, ["props", "pageProps", "guideMarkdown"]) ??
+    readStringAtPath(nextData, ["props", "pageProps", "data", "description"])
+  if (guideDescription) {
+    extractedKeys.push(
+      readStringAtPath(nextData, ["props", "pageProps", "guideMarkdown"])
+        ? "props.pageProps.guideMarkdown"
+        : "props.pageProps.data.description",
+    )
+  }
+
+  const helminthAbilityRes = findFirstHelminthAbility(nextData)
+  if (helminthAbilityRes) extractedKeys.push(helminthAbilityRes.keyPath)
+
   return {
     source,
     nextData,
@@ -199,6 +333,10 @@ export function extractOverframeDataFromHtml(
     slots: slotsRes?.value,
     itemName: itemNameRes?.value,
     formaCount: formaRes?.value,
+    pageTitle,
+    pageDescription,
+    guideDescription,
+    helminthAbility: helminthAbilityRes?.value,
     extractedKeys,
   }
 }

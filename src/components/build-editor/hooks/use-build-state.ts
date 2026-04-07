@@ -1,13 +1,12 @@
 import { useReducer, useCallback, useMemo } from "react"
 
+import { createBaseBuildState } from "@/lib/builds/layout"
 import {
   getCapacityStatus,
   calculateTotalEndoCost,
   calculateFormaCount,
 } from "@/lib/warframe/capacity"
-import { isWeaponCategory } from "@/lib/warframe/categories"
 import { getModBaseName } from "@/lib/warframe/mod-variants"
-import { normalizePolarity } from "@/lib/warframe/mods"
 import type {
   BuildState,
   ModSlot,
@@ -59,11 +58,9 @@ export interface BuildContainerProps {
     }
     buildData: { formaCount: number }
   }[]
+  initialOrganizationSlug?: string | null
+  initialVisibility?: "PUBLIC" | "UNLISTED" | "PRIVATE"
 }
-
-// ---------------------------------------------------------------------------
-// Helper functions
-// ---------------------------------------------------------------------------
 
 export function extractItemStats(item: BrowseableItem): ItemStats {
   const data = item as {
@@ -106,19 +103,6 @@ export function extractItemStats(item: BrowseableItem): ItemStats {
   }
 }
 
-export function createInitialSlots(
-  polarities?: string[],
-  count = 8,
-): ModSlot[] {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `normal-${i}`,
-    type: "normal" as const,
-    innatePolarity: polarities?.[i]
-      ? normalizePolarity(polarities[i])
-      : undefined,
-  }))
-}
-
 export function createInitialBuildState(
   item: BrowseableItem,
   category: BrowseCategory,
@@ -126,51 +110,7 @@ export function createInitialBuildState(
   importedBuild?: Partial<BuildState>,
   compatibleArcanes?: Arcane[],
 ): BuildState {
-  const isNecramech = category === "necramechs"
-  const isCompanion = category === "companions"
-
-  const itemPolarities = (item as { polarities?: string[] }).polarities
-  const auraPolarity = (item as { aura?: string }).aura
-
-  // Slot counts: necramechs 12, companions 10 (5x2), everything else 8
-  const normalSlotCount = isNecramech ? 12 : isCompanion ? 10 : 8
-  // Companions and necramechs have no exilus slot
-  const hasExilus = !isNecramech && !isCompanion
-
-  const baseState: BuildState = {
-    itemUniqueName: item.uniqueName,
-    itemName: item.name,
-    itemCategory: category,
-    itemImageName: item.imageName,
-    hasReactor: true,
-    exilusSlot: hasExilus ? { id: "exilus-0", type: "exilus" } : undefined,
-    normalSlots: createInitialSlots(itemPolarities, normalSlotCount),
-    arcaneSlots: [],
-    shardSlots: [],
-    baseCapacity: 60,
-    currentCapacity: 60,
-    formaCount: 0,
-  }
-
-  if (category === "warframes") {
-    baseState.auraSlot = {
-      id: "aura-0",
-      type: "aura",
-      innatePolarity: auraPolarity
-        ? normalizePolarity(auraPolarity)
-        : undefined,
-    }
-    baseState.shardSlots = [null, null, null, null, null]
-    baseState.arcaneSlots = [null, null]
-  } else if (
-    category === "archwing" &&
-    (item as { type?: string }).type === "Arch-Gun"
-  ) {
-    // Archguns get 2 arcane slots: 1 primary + 1 secondary arcane
-    baseState.arcaneSlots = [null, null]
-  } else if (isWeaponCategory(category)) {
-    baseState.arcaneSlots = [null]
-  }
+  const baseState = createBaseBuildState(item, category)
 
   if (importedBuild) {
     const mergeSlot = (baseSlot: ModSlot, importedSlot?: ModSlot): ModSlot => {

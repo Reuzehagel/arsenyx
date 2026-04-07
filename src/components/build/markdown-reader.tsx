@@ -1,11 +1,94 @@
 "use client"
 
+import { Children, isValidElement, type ReactNode } from "react"
 import ReactMarkdown from "react-markdown"
 import rehypeHighlight from "rehype-highlight"
 import remarkGfm from "remark-gfm"
 
 interface MarkdownReaderProps {
   content: string
+}
+
+type LinkElementProps = {
+  children?: ReactNode
+  href?: unknown
+}
+
+function getYouTubeEmbedUrl(href: string | undefined) {
+  if (!href) {
+    return null
+  }
+
+  try {
+    const url = new URL(href)
+    const hostname = url.hostname.replace(/^www\./, "").toLowerCase()
+    const pathParts = url.pathname.split("/").filter(Boolean)
+    let videoId: string | null = null
+
+    if (hostname === "youtu.be") {
+      videoId = pathParts[0] ?? null
+    } else if (
+      hostname === "youtube.com" ||
+      hostname === "m.youtube.com" ||
+      hostname === "youtube-nocookie.com"
+    ) {
+      if (url.pathname === "/watch") {
+        videoId = url.searchParams.get("v")
+      } else if (
+        pathParts[0] === "embed" ||
+        pathParts[0] === "live" ||
+        pathParts[0] === "shorts"
+      ) {
+        videoId = pathParts[1] ?? null
+      }
+    }
+
+    if (!videoId || !/^[\w-]{6,}$/.test(videoId)) {
+      return null
+    }
+
+    return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}`
+  } catch {
+    return null
+  }
+}
+
+function getTextContent(children: ReactNode): string {
+  return Children.toArray(children)
+    .map((child) =>
+      typeof child === "string" || typeof child === "number"
+        ? String(child)
+        : "",
+    )
+    .join("")
+    .trim()
+}
+
+function getStandaloneYouTubeEmbed(children: ReactNode) {
+  const childNodes = Children.toArray(children).filter(
+    (child) => typeof child !== "string" || child.trim(),
+  )
+
+  if (childNodes.length !== 1) {
+    return null
+  }
+
+  const child = childNodes[0]
+  if (!isValidElement<LinkElementProps>(child)) {
+    return null
+  }
+
+  const href =
+    typeof child.props.href === "string" ? child.props.href : undefined
+  const embedUrl = getYouTubeEmbedUrl(href)
+  if (!embedUrl) {
+    return null
+  }
+
+  return {
+    embedUrl,
+    title: getTextContent(child.props.children) || "YouTube video",
+  }
 }
 
 export function MarkdownReader({ content }: MarkdownReaderProps) {
@@ -19,6 +102,26 @@ export function MarkdownReader({ content }: MarkdownReaderProps) {
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeHighlight]}
         components={{
+          p: ({ children, ...props }) => {
+            const embed = getStandaloneYouTubeEmbed(children)
+            if (embed) {
+              return (
+                <div className="not-prose bg-muted/30 my-4 overflow-hidden rounded-xl border">
+                  <iframe
+                    className="aspect-video w-full"
+                    src={embed.embedUrl}
+                    title={embed.title}
+                    loading="lazy"
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                  />
+                </div>
+              )
+            }
+
+            return <p {...props}>{children}</p>
+          },
           // Custom link handling to open external links in new tab
           a: ({ href, children, ...props }) => {
             const isExternal = href?.startsWith("http")

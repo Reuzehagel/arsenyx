@@ -1,4 +1,5 @@
 import { calculateFormaCount } from "@/lib/warframe/capacity"
+import { getAugmentModsForHelminthAbility } from "@/lib/warframe/mods"
 import type {
   BuildState,
   Mod,
@@ -140,6 +141,17 @@ export function applyOverframeImportToBuildState(
   const compatibleModsByName = new Map(
     compatibleMods.map((cm) => [cm.uniqueName, cm]),
   )
+  if (importResult.helminthAbility?.matched) {
+    const ability = importResult.helminthAbility.matched
+    next.helminthAbility = {
+      slotIndex: importResult.helminthAbility.slotIndex,
+      ability,
+    }
+
+    for (const mod of getAugmentModsForHelminthAbility(ability)) {
+      compatibleModsByName.set(mod.uniqueName, mod)
+    }
+  }
 
   for (const m of importResult.mods) {
     if (!m.matched?.uniqueName) {

@@ -1,5 +1,6 @@
 "use client"
 
+import type { BuildVisibility } from "@prisma/client"
 import {
   Check,
   Diamond,
@@ -40,8 +41,9 @@ export interface BuildEditorHeaderProps {
   handleCancel: () => void
   handleCopyBuild: () => Promise<void>
   showCopied: boolean
-  organizationId?: string
-  onOrganizationChange?: (id: string | undefined) => void
+  organizationSlug?: string
+  onOrganizationChange?: (slug: string | undefined) => void
+  currentVisibility?: BuildVisibility
 }
 
 export function BuildEditorHeader({
@@ -65,8 +67,9 @@ export function BuildEditorHeader({
   handleCancel,
   handleCopyBuild,
   showCopied,
-  organizationId,
+  organizationSlug,
   onOrganizationChange,
+  currentVisibility,
 }: BuildEditorHeaderProps) {
   const [isEditingName, setIsEditingName] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -140,7 +143,7 @@ export function BuildEditorHeader({
                   className="bg-muted/50 hover:bg-muted gap-1.5 px-2 py-0.5 text-xs font-semibold"
                 >
                   <Diamond className="size-3 fill-current" />
-                  {totalEndoCost.toLocaleString()}
+                  {totalEndoCost.toLocaleString("en-US")}
                 </Badge>
                 {formaCount > 0 && (
                   <Badge
@@ -178,7 +181,10 @@ export function BuildEditorHeader({
                   disabled={saveStatus === "saving"}
                 >
                   {saveStatus === "saving" ? (
-                    <Loader2 data-icon="inline-start" className="animate-spin" />
+                    <Loader2
+                      data-icon="inline-start"
+                      className="animate-spin"
+                    />
                   ) : buildId ? (
                     <Save data-icon="inline-start" />
                   ) : (
@@ -197,22 +203,14 @@ export function BuildEditorHeader({
                   </span>
                 </Button>
               ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCopyBuild}
-                >
+                <Button variant="outline" size="sm" onClick={handleCopyBuild}>
                   <Save data-icon="inline-start" />
                   <span className="hidden sm:inline">
                     {showCopied ? "Copied!" : "Copy Link"}
                   </span>
                 </Button>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCancel}
-              >
+              <Button variant="outline" size="sm" onClick={handleCancel}>
                 <X data-icon="inline-start" />
                 <span className="hidden sm:inline">Cancel</span>
               </Button>
@@ -227,8 +225,9 @@ export function BuildEditorHeader({
         onPublish={handlePublish}
         isPublishing={saveStatus === "saving"}
         isUpdate={!!buildId}
-        organizationId={organizationId}
+        organizationSlug={organizationSlug}
         onOrganizationChange={onOrganizationChange}
+        currentVisibility={currentVisibility}
       />
     </>
   )

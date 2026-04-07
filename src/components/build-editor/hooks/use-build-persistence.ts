@@ -1,8 +1,10 @@
+import type { BuildVisibility } from "@prisma/client"
 import { useRouter } from "next/navigation"
 import { useState, useCallback, useEffect } from "react"
 
 import { saveBuildAction } from "@/app/actions/builds"
 import { copyBuildToClipboard } from "@/lib/build-codec"
+import { buildStateToDraftPayload } from "@/lib/builds/draft"
 import type { BrowseCategory } from "@/lib/warframe/types"
 import type { BuildState } from "@/lib/warframe/types"
 import type { BrowseableItem } from "@/lib/warframe/types"
@@ -27,6 +29,8 @@ interface UseBuildPersistenceProps {
   guideDescription: string
   partnerBuildIds: string[]
   setIsEditMode: (v: boolean) => void
+  initialOrganizationSlug?: string | null
+  initialVisibility?: BuildVisibility
 }
 
 interface UseBuildPersistenceReturn {
@@ -38,8 +42,9 @@ interface UseBuildPersistenceReturn {
   setPublishDialogOpen: (open: boolean) => void
   handlePublish: (visibility: Visibility) => Promise<void>
   handleCancel: () => void
-  organizationId: string | undefined
-  setOrganizationId: (id: string | undefined) => void
+  organizationSlug: string | undefined
+  setOrganizationSlug: (slug: string | undefined) => void
+  currentVisibility: BuildVisibility
 }
 
 export function useBuildPersistence({
@@ -55,6 +60,8 @@ export function useBuildPersistence({
   guideDescription,
   partnerBuildIds,
   setIsEditMode,
+  initialOrganizationSlug,
+  initialVisibility = "PUBLIC",
 }: UseBuildPersistenceProps): UseBuildPersistenceReturn {
   const router = useRouter()
 
@@ -64,9 +71,11 @@ export function useBuildPersistence({
   )
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle")
   const [publishDialogOpen, setPublishDialogOpen] = useState(false)
-  const [organizationId, setOrganizationId] = useState<string | undefined>(
-    undefined,
+  const [organizationSlug, setOrganizationSlug] = useState<string | undefined>(
+    initialOrganizationSlug ?? undefined,
   )
+  const [currentVisibility, setCurrentVisibility] =
+    useState<BuildVisibility>(initialVisibility)
 
   // Auto-save buildState to localStorage (debounced 300ms)
   useEffect(() => {
@@ -122,15 +131,18 @@ export function useBuildPersistence({
 
         try {
           const result = await saveBuildAction({
-            buildId: buildId,
-            organizationId: organizationId,
-            itemUniqueName: item.uniqueName,
-            name: buildName,
-            visibility: visibility,
-            buildData: { ...buildState, buildName },
-            guideSummary: guideSummary.trim() || undefined,
-            guideDescription: guideDescription.trim() || undefined,
-            partnerBuildIds,
+            buildId,
+            ...buildStateToDraftPayload({
+              name: buildName,
+              visibility: visibility as BuildVisibility,
+              organizationSlug,
+              guide: {
+                summary: guideSummary.trim() || null,
+                description: guideDescription.trim() || null,
+              },
+              partnerBuildSlugs: partnerBuildIds,
+              buildState: { ...buildState, buildName },
+            }),
           })
 
           if (!result.success) {
@@ -138,6 +150,7 @@ export function useBuildPersistence({
             window.setTimeout(() => setSaveStatus("idle"), 3000)
           } else {
             setBuildId(result.data.id)
+            setCurrentVisibility(visibility)
             setSaveStatus("saved")
             setPublishDialogOpen(false)
 
@@ -172,10 +185,10 @@ export function useBuildPersistence({
     [
       isAuthenticated,
       buildId,
-      organizationId,
-      item.uniqueName,
+      organizationSlug,
       buildName,
       buildState,
+      item.uniqueName,
       router,
       guideSummary,
       guideDescription,
@@ -210,7 +223,8 @@ export function useBuildPersistence({
     setPublishDialogOpen,
     handlePublish,
     handleCancel,
-    organizationId,
-    setOrganizationId,
+    organizationSlug,
+    setOrganizationSlug,
+    currentVisibility,
   }
 }

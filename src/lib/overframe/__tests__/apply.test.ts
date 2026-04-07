@@ -1,11 +1,9 @@
 import { describe, it, expect } from "bun:test"
 
-import {
-  applyOverframeImportToBuildState,
-  type ApplyOverframeImportWarning,
-} from "../apply"
-import type { OverframeImportResponse } from "../types"
 import type { BuildState, Mod, ModSlot, Polarity } from "@/lib/warframe/types"
+
+import { applyOverframeImportToBuildState } from "../apply"
+import type { OverframeImportResponse } from "../types"
 
 // =============================================================================
 // Test helpers
@@ -78,7 +76,11 @@ describe("applyOverframeImportToBuildState — polarity", () => {
       ],
     })
 
-    const { nextState } = applyOverframeImportToBuildState(state, importResult, [])
+    const { nextState } = applyOverframeImportToBuildState(
+      state,
+      importResult,
+      [],
+    )
 
     expect(nextState.normalSlots[0].formaPolarity).toBe("universal")
   })
@@ -91,7 +93,11 @@ describe("applyOverframeImportToBuildState — polarity", () => {
       ],
     })
 
-    const { nextState } = applyOverframeImportToBuildState(state, importResult, [])
+    const { nextState } = applyOverframeImportToBuildState(
+      state,
+      importResult,
+      [],
+    )
 
     // normal-5 has no innate polarity, so no forma applied
     expect(nextState.normalSlots[5].formaPolarity).toBeUndefined()
@@ -105,7 +111,11 @@ describe("applyOverframeImportToBuildState — polarity", () => {
       ],
     })
 
-    const { nextState } = applyOverframeImportToBuildState(state, importResult, [])
+    const { nextState } = applyOverframeImportToBuildState(
+      state,
+      importResult,
+      [],
+    )
 
     // normal-0 has innate madurai, import says madurai → no forma
     expect(nextState.normalSlots[0].formaPolarity).toBeUndefined()
@@ -119,7 +129,11 @@ describe("applyOverframeImportToBuildState — polarity", () => {
       ],
     })
 
-    const { nextState } = applyOverframeImportToBuildState(state, importResult, [])
+    const { nextState } = applyOverframeImportToBuildState(
+      state,
+      importResult,
+      [],
+    )
 
     // normal-0 has innate madurai, import says naramon → forma applied
     expect(nextState.normalSlots[0].formaPolarity).toBe("naramon")
@@ -133,7 +147,11 @@ describe("applyOverframeImportToBuildState — polarity", () => {
       ],
     })
 
-    const { warnings } = applyOverframeImportToBuildState(state, importResult, [])
+    const { warnings } = applyOverframeImportToBuildState(
+      state,
+      importResult,
+      [],
+    )
 
     expect(warnings.some((w) => w.type === "slot_unknown")).toBe(true)
   })
@@ -145,7 +163,6 @@ describe("applyOverframeImportToBuildState — polarity", () => {
 
 describe("applyOverframeImportToBuildState — mod placement", () => {
   const serration = makeMod("Serration", "/Lotus/Mods/Serration")
-  const splitChamber = makeMod("Split Chamber", "/Lotus/Mods/SplitChamber")
 
   it("places a matched mod in the correct slot", () => {
     const state = makeBaseBuildState()
@@ -155,7 +172,11 @@ describe("applyOverframeImportToBuildState — mod placement", () => {
           overframeId: "5924",
           rank: 5,
           slotId: "normal-0",
-          matched: { uniqueName: "/Lotus/Mods/Serration", name: "Serration", score: 1 },
+          matched: {
+            uniqueName: "/Lotus/Mods/Serration",
+            name: "Serration",
+            score: 1,
+          },
         },
       ],
     })
@@ -178,7 +199,11 @@ describe("applyOverframeImportToBuildState — mod placement", () => {
           overframeId: "5924",
           rank: 99, // way above fusionLimit of 5
           slotId: "normal-0",
-          matched: { uniqueName: "/Lotus/Mods/Serration", name: "Serration", score: 1 },
+          matched: {
+            uniqueName: "/Lotus/Mods/Serration",
+            name: "Serration",
+            score: 1,
+          },
         },
       ],
     })
@@ -202,13 +227,21 @@ describe("applyOverframeImportToBuildState — mod placement", () => {
           overframeId: "1",
           rank: 5,
           slotId: "aura-0",
-          matched: { uniqueName: "/Lotus/Mods/SteelCharge", name: "Steel Charge", score: 1 },
+          matched: {
+            uniqueName: "/Lotus/Mods/SteelCharge",
+            name: "Steel Charge",
+            score: 1,
+          },
         },
         {
           overframeId: "2",
           rank: 5,
           slotId: "exilus-0",
-          matched: { uniqueName: "/Lotus/Mods/CunningDrift", name: "Cunning Drift", score: 1 },
+          matched: {
+            uniqueName: "/Lotus/Mods/CunningDrift",
+            name: "Cunning Drift",
+            score: 1,
+          },
         },
       ],
     })
@@ -236,7 +269,11 @@ describe("applyOverframeImportToBuildState — mod placement", () => {
       ],
     })
 
-    const { warnings } = applyOverframeImportToBuildState(state, importResult, [])
+    const { warnings } = applyOverframeImportToBuildState(
+      state,
+      importResult,
+      [],
+    )
 
     expect(warnings.some((w) => w.type === "mod_missing_match")).toBe(true)
   })
@@ -249,7 +286,11 @@ describe("applyOverframeImportToBuildState — mod placement", () => {
           overframeId: "5924",
           rank: 5,
           slotId: "normal-0",
-          matched: { uniqueName: "/Lotus/Mods/Unknown", name: "Unknown", score: 0.9 },
+          matched: {
+            uniqueName: "/Lotus/Mods/Unknown",
+            name: "Unknown",
+            score: 0.9,
+          },
         },
       ],
     })
@@ -260,7 +301,53 @@ describe("applyOverframeImportToBuildState — mod placement", () => {
       [serration], // doesn't contain the matched uniqueName
     )
 
-    expect(warnings.some((w) => w.type === "mod_not_in_compatible_list")).toBe(true)
+    expect(warnings.some((w) => w.type === "mod_not_in_compatible_list")).toBe(
+      true,
+    )
+  })
+
+  it("places augment mods made compatible by the imported Helminth ability", () => {
+    const state = makeBaseBuildState({
+      itemName: "Volt",
+      itemUniqueName: "/Lotus/Powersuits/Volt/Volt",
+    })
+    const importResult = makeImportResponse({
+      helminthAbility: {
+        slotIndex: 3,
+        overframeUniqueName:
+          "/Lotus/Powersuits/PowersuitAbilities/LightAbility",
+        matched: {
+          uniqueName: "/Lotus/Powersuits/Harlequin/Abilities/LightAbility",
+          name: "Eclipse",
+          source: "Mirage",
+        },
+      },
+      mods: [
+        {
+          overframeId: "118",
+          overframeName: "Total Eclipse",
+          rank: 3,
+          slotId: "normal-1",
+          matched: {
+            uniqueName: "/Lotus/Powersuits/Harlequin/LightAugmentCard",
+            name: "Total Eclipse",
+            score: 1,
+          },
+        },
+      ],
+    })
+
+    const { nextState, warnings } = applyOverframeImportToBuildState(
+      state,
+      importResult,
+      [],
+    )
+
+    expect(nextState.helminthAbility?.ability.name).toBe("Eclipse")
+    expect(nextState.normalSlots[1].mod?.name).toBe("Total Eclipse")
+    expect(warnings.some((w) => w.type === "mod_not_in_compatible_list")).toBe(
+      false,
+    )
   })
 })
 
@@ -288,7 +375,11 @@ describe("applyOverframeImportToBuildState — arcanes", () => {
       ],
     })
 
-    const { nextState } = applyOverframeImportToBuildState(state, importResult, [])
+    const { nextState } = applyOverframeImportToBuildState(
+      state,
+      importResult,
+      [],
+    )
 
     expect(nextState.arcaneSlots[0]?.name).toBe("Arcane Energize")
     expect(nextState.arcaneSlots[0]?.rank).toBe(5)
@@ -312,7 +403,11 @@ describe("applyOverframeImportToBuildState — arcanes", () => {
       ],
     })
 
-    const { warnings } = applyOverframeImportToBuildState(state, importResult, [])
+    const { warnings } = applyOverframeImportToBuildState(
+      state,
+      importResult,
+      [],
+    )
 
     expect(warnings.some((w) => w.type === "slot_unknown")).toBe(true)
   })
@@ -330,7 +425,11 @@ describe("applyOverframeImportToBuildState — arcanes", () => {
       ],
     })
 
-    const { nextState } = applyOverframeImportToBuildState(state, importResult, [])
+    const { nextState } = applyOverframeImportToBuildState(
+      state,
+      importResult,
+      [],
+    )
 
     expect(nextState.arcaneSlots[0]).toBeNull()
   })
@@ -345,7 +444,11 @@ describe("applyOverframeImportToBuildState — formaCount", () => {
     const state = makeBaseBuildState()
     const importResult = makeImportResponse({ formaCount: 7 })
 
-    const { nextState } = applyOverframeImportToBuildState(state, importResult, [])
+    const { nextState } = applyOverframeImportToBuildState(
+      state,
+      importResult,
+      [],
+    )
 
     expect(nextState.formaCount).toBe(7)
   })
@@ -360,7 +463,11 @@ describe("applyOverframeImportToBuildState — formaCount", () => {
       ],
     })
 
-    const { nextState } = applyOverframeImportToBuildState(state, importResult, [])
+    const { nextState } = applyOverframeImportToBuildState(
+      state,
+      importResult,
+      [],
+    )
 
     // Should be computed from slot polarity changes
     expect(nextState.formaCount).toBeGreaterThanOrEqual(0)

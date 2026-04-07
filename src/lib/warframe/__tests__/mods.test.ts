@@ -14,6 +14,7 @@ import {
   getArcanesForSlot,
   getArcaneByUniqueName,
   getArcaneByName,
+  getAugmentModsForHelminthAbility,
 } from "../mods"
 import type { Polarity } from "../types"
 
@@ -315,6 +316,17 @@ describe("getModsForItem", () => {
     const primeAugments = primeMods.filter((m) => m.isAugment)
     const baseAugments = baseMods.filter((m) => m.isAugment)
     expect(primeAugments.length).toBe(baseAugments.length)
+  })
+
+  it("finds augment mods for a subsumed Helminth ability", () => {
+    const mods = getAugmentModsForHelminthAbility({
+      uniqueName: "/Lotus/Powersuits/Harlequin/Abilities/LightAbility",
+      name: "Eclipse",
+      source: "Mirage",
+    })
+
+    expect(mods.map((mod) => mod.name)).toContain("Total Eclipse")
+    expect(mods.map((mod) => mod.name)).not.toContain("Hall Of Malevolence")
   })
 
   it("falls back to category when no type", () => {

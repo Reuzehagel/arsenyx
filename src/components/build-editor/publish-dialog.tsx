@@ -32,8 +32,9 @@ interface PublishDialogProps {
   onPublish: (visibility: Visibility) => Promise<void>
   isPublishing: boolean
   isUpdate?: boolean
-  organizationId?: string
-  onOrganizationChange?: (id: string | undefined) => void
+  organizationSlug?: string
+  onOrganizationChange?: (slug: string | undefined) => void
+  currentVisibility?: Visibility
 }
 
 export function PublishDialog({
@@ -42,29 +43,35 @@ export function PublishDialog({
   onPublish,
   isPublishing,
   isUpdate = false,
-  organizationId,
+  organizationSlug,
   onOrganizationChange,
+  currentVisibility = "PUBLIC",
 }: PublishDialogProps) {
-  const [visibility, setVisibility] = useState<Visibility>("PUBLIC")
+  const [visibility, setVisibility] = useState<Visibility>(currentVisibility)
   const [orgs, setOrgs] = useState<OrganizationListItem[]>([])
 
   useEffect(() => {
     if (!open) return
+    setVisibility(currentVisibility)
     getUserOrganizationsAction().then((result) => {
       if (result.success) setOrgs(result.data)
     })
-  }, [open])
+  }, [open, currentVisibility])
 
   const handlePublish = async () => {
     await onPublish(visibility)
   }
 
-  const publishAs = organizationId ?? "__personal"
+  const publishAs = organizationSlug ?? "__personal"
+  const privateDescription =
+    publishAs === "__personal"
+      ? "Only visible to you."
+      : "Only visible to members of the selected organization."
 
   const publishAsItems = useMemo(
     () => [
       { value: "__personal", label: "Yourself" },
-      ...orgs.map((org) => ({ value: org.id, label: org.name })),
+      ...orgs.map((org) => ({ value: org.slug, label: org.name })),
     ],
     [orgs],
   )
@@ -99,7 +106,7 @@ export function PublishDialog({
                   <SelectGroup>
                     <SelectItem value="__personal">Yourself</SelectItem>
                     {orgs.map((org) => (
-                      <SelectItem key={org.id} value={org.id}>
+                      <SelectItem key={org.id} value={org.slug}>
                         {org.name}
                       </SelectItem>
                     ))}
@@ -131,7 +138,7 @@ export function PublishDialog({
             onSelect={setVisibility}
             icon={Lock}
             title="Private"
-            description="Only visible to you."
+            description={privateDescription}
           />
         </div>
 

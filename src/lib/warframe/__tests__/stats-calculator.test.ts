@@ -209,7 +209,7 @@ describe("calculateWarframeStats", () => {
   describe("aura mods", () => {
     it("does not apply Corrosive Projection as negative armor on the player", () => {
       const build = createEmptyBuildState()
-      build.auraSlot.mod = {
+      build.auraSlot!.mod = {
         uniqueName: "/Lotus/Upgrades/Mods/Aura/EnemyArmorReductionAuraMod",
         name: "Corrosive Projection",
         polarity: "madurai",

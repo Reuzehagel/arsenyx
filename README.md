@@ -78,6 +78,78 @@ bun run update-data      # Update @wfcd/items + sync
 bun run overframe:build-map  # Convert Overframe item mappings
 ```
 
+## Build Upload API
+
+Arsenyx now supports bearer-token build publishing for automation.
+
+1. Sign in to the site.
+2. Open the user menu and go to `Settings`.
+3. Create a personal access token with the `build:write` scope.
+4. Send it as `Authorization: Bearer <token>`.
+
+### Endpoints
+
+- `POST /api/v1/builds`
+- `PUT /api/v1/builds/:slug`
+- `POST /api/v1/imports/overframe`
+
+### Request Format
+
+`POST /api/v1/builds` and `PUT /api/v1/builds/:slug` accept a thin JSON payload:
+
+```json
+{
+  "name": "Rhino Tank",
+  "visibility": "PUBLIC",
+  "itemUniqueName": "/Lotus/Powersuits/Rhino/Rhino",
+  "itemCategory": "warframes",
+  "organizationSlug": null,
+  "guide": {
+    "summary": "Optional short summary",
+    "description": "Optional markdown guide"
+  },
+  "partnerBuildSlugs": [],
+  "build": {
+    "hasReactor": true,
+    "slots": [
+      {
+        "slotId": "aura-0",
+        "mod": {
+          "uniqueName": "/Lotus/Upgrades/Mods/Aura/SteelCharge",
+          "rank": 5
+        }
+      }
+    ],
+    "arcanes": [],
+    "shards": [],
+    "helminthAbility": null
+  }
+}
+```
+
+The server resolves canonical item/mod/arcane/shard data, recomputes derived capacity and forma fields, and rejects invalid writes with structured `4xx` JSON errors.
+
+### Overframe Save Endpoint
+
+`POST /api/v1/imports/overframe` accepts:
+
+```json
+{
+  "url": "https://overframe.gg/build/935570/",
+  "visibility": "PUBLIC",
+  "organizationSlug": null,
+  "nameOverride": "Optional custom title",
+  "description": "Optional build description",
+  "guide": {
+    "summary": "Optional short summary",
+    "description": "Optional markdown guide"
+  },
+  "partnerBuildSlugs": []
+}
+```
+
+If `nameOverride`, `description`, or `guide` fields are omitted, the importer preserves Overframe metadata when available: the Overframe title becomes the build name, the page description becomes the build description/guide summary, and the Overframe guide markdown becomes the Arsenyx guide body. Imported Overframe guide newlines are stored as Markdown hard breaks so line-oriented text keeps its layout. Explicit `null` overrides still clear nullable fields. The response returns the created build plus any import warnings.
+
 ## Architecture
 
 ```

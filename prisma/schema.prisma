@@ -306,26 +306,26 @@ model BuildFavorite {
 }
 
 // =============================================================================
-// IMAGE GENERATION API
+// USER API KEYS
 // =============================================================================
 
 model ApiKey {
   id String @id @default(cuid())
 
-  // Owner (admin who created the key)
+  // Owner
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Key details
-  name      String // "Profit-Taker Discord Bot", etc.
-  key       String @unique // The actual API key (hashed)
-  keyPrefix String // First 8 chars for identification (e.g., "ask_abc1...")
+  name      String // "Discord bot", "CI uploader", etc.
+  key       String @unique // The hashed API key
+  keyPrefix String // Visible prefix for identification (e.g. "ars_live_abcd")
 
   // Permissions
-  scopes String[] // ["image:generate", "build:read"]
+  scopes String[] // ["build:write"]
 
   // Rate limiting
-  rateLimit Int @default(100) // Requests per hour
+  rateLimit Int @default(60) // Requests per hour
 
   // Status
   isActive   Boolean   @default(true)
@@ -335,7 +335,22 @@ model ApiKey {
   createdAt DateTime  @default(now())
   expiresAt DateTime?
 
+  rateLimitWindows ApiKeyRateLimitWindow[]
+
+  @@index([userId])
   @@map("api_keys")
+}
+
+model ApiKeyRateLimitWindow {
+  apiKeyId String
+  apiKey   ApiKey   @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+
+  windowStart  DateTime
+  requestCount Int      @default(0)
+
+  @@id([apiKeyId, windowStart])
+  @@index([windowStart])
+  @@map("api_key_rate_limit_windows")
 }
 
 // Track generated images (optional, for caching)

@@ -14,11 +14,11 @@ import { Header } from "@/components/header"
 import { OrgBadge } from "@/components/org"
 import { Skeleton } from "@/components/ui/skeleton"
 import { getServerSession } from "@/lib/auth"
+import { getCompatibleArcanesForItem } from "@/lib/builds/layout"
 import { getBuildBySlug } from "@/lib/db/index"
 import { isOrgMember } from "@/lib/db/organizations"
 import { getCategoryConfig } from "@/lib/warframe"
 import { getFullItem } from "@/lib/warframe/items"
-import { getArcanesForCategory } from "@/lib/warframe/arcanes"
 import { getModsForItem } from "@/lib/warframe/mods"
 import { slugify } from "@/lib/warframe/slugs"
 import type { BrowseCategory } from "@/lib/warframe/types"
@@ -121,7 +121,7 @@ export default async function BuildPage({ params }: BuildPageProps) {
   // Get compatible mods and arcanes
   const categoryConfig = getCategoryConfig(category)
   const compatibleMods = getModsForItem(fullItem)
-  const compatibleArcanes = getArcanesForCategory(category)
+  const compatibleArcanes = getCompatibleArcanesForItem(fullItem, category)
 
   // Check if the current user is the owner or an org member who can edit
   const isOwner = viewerId === build.userId
@@ -243,6 +243,8 @@ export default async function BuildPage({ params }: BuildPageProps) {
                   (pb.buildData as { formaCount?: number })?.formaCount ?? 0,
               },
             }))}
+            initialOrganizationSlug={build.organization?.slug}
+            initialVisibility={build.visibility}
           />
         </Suspense>
       </main>

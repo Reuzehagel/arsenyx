@@ -1,8 +1,14 @@
+import { getHelminthAbilities } from "@/lib/warframe/helminth"
 import { getCategoryCounts, getItemsByCategory } from "@/lib/warframe/items"
 // NOTE: Importer intentionally bypasses DB-backed unstable_cache paths.
 // We only need a read-only name->uniqueName index for matching.
 import { getAllMods as getAllModsJson } from "@/lib/warframe/mods"
-import type { BrowseCategory, BrowseItem, Mod } from "@/lib/warframe/types"
+import type {
+  BrowseCategory,
+  BrowseItem,
+  HelminthAbility,
+  Mod,
+} from "@/lib/warframe/types"
 
 import { decodeOverframeBuildString } from "./decode"
 import { getOverframeNameById, getOverframeItemsMap } from "./items-map"
@@ -13,6 +19,7 @@ import type {
   OverframeImportResponse,
   OverframeMatchedMod,
   OverframeImportWarning,
+  OverframeMatchedHelminthAbility,
 } from "./types"
 
 export function isValidOverframeBuildUrl(value: string): boolean {
@@ -55,6 +62,29 @@ function getAllBrowseItems(): BrowseItem[] {
     items.push(...getItemsByCategory(category))
   }
   return items
+}
+
+function abilityPathLeaf(value: string): string {
+  return value.split("/").filter(Boolean).at(-1)?.toLowerCase() ?? value
+}
+
+function resolveHelminthAbility(
+  overframeUniqueName: string,
+): HelminthAbility | null {
+  const abilities = getHelminthAbilities()
+  const byUniqueName = new Map(
+    abilities.map((ability) => [ability.uniqueName, ability]),
+  )
+
+  const exact = byUniqueName.get(overframeUniqueName)
+  if (exact) return exact
+
+  const overframeLeaf = abilityPathLeaf(overframeUniqueName)
+  return (
+    abilities.find(
+      (ability) => abilityPathLeaf(ability.uniqueName) === overframeLeaf,
+    ) ?? null
+  )
 }
 
 type OverframeSlotLike = {
@@ -242,6 +272,38 @@ export async function importOverframeBuild(
   const matchedCategory = matchedItem?.category
   const isWarframe =
     matchedCategory === "warframes" || matchedCategory === "necramechs"
+
+  let helminthAbility: OverframeMatchedHelminthAbility | undefined
+  if (extracted.helminthAbility) {
+    const matchedAbility = resolveHelminthAbility(
+      extracted.helminthAbility.uniqueName,
+    )
+
+    helminthAbility = {
+      slotIndex: extracted.helminthAbility.slotIndex,
+      overframeUniqueName: extracted.helminthAbility.uniqueName,
+      matched: matchedAbility
+        ? {
+            uniqueName: matchedAbility.uniqueName,
+            name: matchedAbility.name,
+            imageName: matchedAbility.imageName,
+            source: matchedAbility.source,
+            description: matchedAbility.description,
+          }
+        : undefined,
+    }
+
+    if (!matchedAbility) {
+      warnings.push({
+        type: "helminth_ability_not_found",
+        message: `No Helminth ability match for "${extracted.helminthAbility.uniqueName}"`,
+        details: {
+          slotIndex: extracted.helminthAbility.slotIndex,
+          overframeUniqueName: extracted.helminthAbility.uniqueName,
+        },
+      })
+    }
+  }
 
   // Prefer canonical slots[] (it includes explicit slot positions).
   const canonicalSlots = parseOverframeSlots(extracted.slots, isWarframe)
@@ -452,6 +514,9 @@ export async function importOverframeBuild(
   return {
     source: {
       url,
+      pageTitle: extracted.pageTitle,
+      pageDescription: extracted.pageDescription,
+      guideDescription: extracted.guideDescription,
       buildId,
       buildString: extracted.buildString,
     },
@@ -470,6 +535,7 @@ export async function importOverframeBuild(
       typeof extracted.formaCount === "number" ? extracted.formaCount : null,
     mods: matchedMods,
     arcanes: matchedArcanes.length > 0 ? matchedArcanes : undefined,
+    helminthAbility,
     slotPolarities,
     warnings,
     debug: {

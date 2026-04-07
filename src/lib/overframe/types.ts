@@ -10,6 +10,8 @@ export interface OverframeDecodedSlot {
 export interface OverframeBuildSource {
   url: string
   pageTitle?: string
+  pageDescription?: string
+  guideDescription?: string
   buildId?: string
   buildString?: string
 }
@@ -24,6 +26,7 @@ export interface OverframeImportWarning {
     | "buildstring_decode_failed"
     | "item_not_found"
     | "mod_not_found"
+    | "helminth_ability_not_found"
   message: string
   details?: Record<string, unknown>
 }
@@ -72,12 +75,25 @@ export interface OverframeMatchedArcane {
   }
 }
 
+export interface OverframeMatchedHelminthAbility {
+  slotIndex: number
+  overframeUniqueName: string
+  matched?: {
+    uniqueName: string
+    name: string
+    imageName?: string
+    source: string
+    description?: string
+  }
+}
+
 export interface OverframeImportResponse {
   source: OverframeBuildSource
   item: OverframeMatchedItem
   formaCount: number | null
   mods: OverframeMatchedMod[]
   arcanes?: OverframeMatchedArcane[]
+  helminthAbility?: OverframeMatchedHelminthAbility
   slotPolarities?: OverframeSlotPolarity[]
   warnings: OverframeImportWarning[]
   debug?: {

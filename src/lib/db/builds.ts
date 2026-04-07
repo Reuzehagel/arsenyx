@@ -8,12 +8,8 @@ import type { BuildVisibility, Prisma } from "@prisma/client"
 import { nanoid } from "nanoid"
 import { cache } from "react"
 
-import { getItemMetadata } from "@/lib/warframe/items"
-import {
-  BuildStateSchema,
-  safeParseOrCast,
-  safeParse,
-} from "@/lib/warframe/schemas"
+import { getFullItem } from "@/lib/warframe/items"
+import { BuildStateSchema, safeParseOrCast } from "@/lib/warframe/schemas"
 import type { BuildState } from "@/lib/warframe/types"
 
 import { prisma } from "../db"
@@ -24,8 +20,9 @@ import { prisma } from "../db"
 
 export interface CreateBuildInput {
   itemUniqueName: string
+  itemCategory: string
   name: string
-  description?: string
+  description?: string | null
   visibility?: BuildVisibility
   buildData: BuildState
   guideSummary?: string
@@ -36,9 +33,10 @@ export interface CreateBuildInput {
 
 export interface UpdateBuildInput {
   name?: string
-  description?: string
+  description?: string | null
   visibility?: BuildVisibility
   buildData?: BuildState
+  organizationId?: string | null
   // Guide fields
   guideSummary?: string | null
   guideDescription?: string | null
@@ -133,18 +131,41 @@ export interface BuildListItem {
   }
 }
 
-function sanitizeBuildDataForDb(buildData: BuildState): Prisma.JsonObject {
-  // Validate before writing — log warning if schema doesn't match
-  safeParse(BuildStateSchema, buildData, "buildData write")
+function serializeBuildDataForDb(buildData: BuildState): Prisma.JsonObject {
+  function cleanJsonValue(value: unknown): unknown {
+    if (Array.isArray(value)) {
+      return value.map((item) =>
+        item === undefined ? null : cleanJsonValue(item),
+      )
+    }
 
-  // Prisma JSON fields cannot contain `undefined` values anywhere inside arrays.
-  // Use `null` for empty slots.
-  const sanitized = {
+    if (value && typeof value === "object") {
+      const cleaned: Record<string, unknown> = {}
+      for (const [key, nestedValue] of Object.entries(value)) {
+        if (nestedValue !== undefined) {
+          cleaned[key] = cleanJsonValue(nestedValue)
+        }
+      }
+      return cleaned
+    }
+
+    return value
+  }
+
+  // Prisma JSON fields cannot contain `undefined`; remove optional object fields
+  // and use `null` for empty array slots.
+  const sanitized = cleanJsonValue({
     ...buildData,
     arcaneSlots: (buildData.arcaneSlots ?? []).map((a) => a ?? null),
     shardSlots: (buildData.shardSlots ?? []).map((s) => s ?? null),
+  })
+  const parsed = BuildStateSchema.safeParse(sanitized)
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0]
+    throw new Error(issue?.message ?? "Invalid buildData")
   }
-  return sanitized as unknown as Prisma.JsonObject
+
+  return cleanJsonValue(parsed.data) as Prisma.JsonObject
 }
 
 function detectHasShards(buildData: BuildState): boolean {
@@ -225,6 +246,7 @@ const buildInclude = {
       itemName: true,
       itemImageName: true,
       itemCategory: true,
+      organizationId: true,
     },
   },
 } as const
@@ -255,7 +277,7 @@ const buildListSelect = {
   },
 } as const
 
-function mapBuildResult(
+async function mapBuildResult(
   build: {
     buildData: unknown
     buildGuide: {
@@ -274,14 +296,16 @@ function mapBuildResult(
       itemName: string
       itemImageName: string | null
       itemCategory: string
+      organizationId: string | null
     }[]
     [key: string]: unknown
   },
   viewerId?: string,
-): BuildWithUser {
+): Promise<BuildWithUser> {
   // Filter partner builds based on visibility
-  const filteredPartners = build.partnerBuilds.filter((partner) =>
-    canViewBuild(partner, viewerId),
+  const filteredPartners = await filterVisiblePartnerBuilds(
+    build.partnerBuilds,
+    viewerId,
   )
 
   return {
@@ -339,9 +363,14 @@ export async function createBuild(
   userId: string,
   input: CreateBuildInput,
 ): Promise<BuildWithUser> {
-  const itemMeta = getItemMetadata(input.itemUniqueName)
-  if (!itemMeta) {
-    throw new Error(`Item not found: ${input.itemUniqueName}`)
+  const item = getFullItem(
+    input.itemCategory as Parameters<typeof getFullItem>[0],
+    input.itemUniqueName,
+  )
+  if (!item) {
+    throw new Error(
+      `Item not found for category '${input.itemCategory}': ${input.itemUniqueName}`,
+    )
   }
 
   const slug = await generateUniqueSlug()
@@ -367,14 +396,14 @@ export async function createBuild(
     data: {
       slug,
       userId,
-      itemUniqueName: itemMeta.uniqueName,
-      itemCategory: itemMeta.browseCategory,
-      itemName: itemMeta.name,
-      itemImageName: itemMeta.imageName,
+      itemUniqueName: item.uniqueName,
+      itemCategory: input.itemCategory,
+      itemName: item.name,
+      itemImageName: item.imageName ?? null,
       name: input.name,
       description: input.description,
       visibility: input.visibility ?? "PUBLIC",
-      buildData: sanitizeBuildDataForDb(input.buildData),
+      buildData: serializeBuildDataForDb(input.buildData),
       organizationId: input.organizationId ?? null,
       hasShards: detectHasShards(input.buildData),
       hasGuide: !!(input.guideSummary || input.guideDescription),
@@ -410,7 +439,7 @@ export const getBuildBySlug = cache(async function getBuildBySlug(
   }
 
   // Visibility check
-  if (!canViewBuild(build, viewerId)) {
+  if (!(await canViewBuild(build, viewerId))) {
     return null
   }
 
@@ -434,7 +463,7 @@ export async function getBuildById(
   }
 
   // Visibility check
-  if (!canViewBuild(build, viewerId)) {
+  if (!(await canViewBuild(build, viewerId))) {
     return null
   }
 
@@ -590,7 +619,7 @@ export async function updateBuild(
   userId: string,
   input: UpdateBuildInput,
 ): Promise<BuildWithUser> {
-  await assertBuildAccess(buildId, userId)
+  const existingBuild = await assertBuildAccess(buildId, userId)
 
   const updateData: Prisma.BuildUpdateInput = {}
 
@@ -604,8 +633,32 @@ export async function updateBuild(
     updateData.visibility = input.visibility
   }
   if (input.buildData !== undefined) {
-    updateData.buildData = sanitizeBuildDataForDb(input.buildData)
+    updateData.buildData = serializeBuildDataForDb(input.buildData)
     updateData.hasShards = detectHasShards(input.buildData)
+  }
+  if (input.organizationId !== undefined) {
+    if (
+      input.organizationId !== existingBuild.organizationId &&
+      existingBuild.userId !== userId
+    ) {
+      throw new Error(
+        "Only the build owner can move a build between personal and organization ownership",
+      )
+    }
+
+    if (
+      input.organizationId &&
+      input.organizationId !== existingBuild.organizationId
+    ) {
+      const { isOrgMember } = await import("./organizations")
+      if (!(await isOrgMember(input.organizationId, userId))) {
+        throw new Error("You are not allowed to publish into this organization")
+      }
+    }
+
+    updateData.organization = input.organizationId
+      ? { connect: { id: input.organizationId } }
+      : { disconnect: true }
   }
 
   // Handle guide summary and description
@@ -642,23 +695,7 @@ export async function updateBuild(
 
   // Handle partner builds update
   if (input.partnerBuildIds !== undefined) {
-    // Verify all partner builds belong to the same user
-    if (input.partnerBuildIds.length > 0) {
-      const partnerBuilds = await prisma.build.findMany({
-        where: {
-          id: { in: input.partnerBuildIds },
-          userId: userId, // Must be own builds
-        },
-        select: { id: true },
-      })
-
-      const validIds = new Set(partnerBuilds.map((b) => b.id))
-      const invalidIds = input.partnerBuildIds.filter((id) => !validIds.has(id))
-
-      if (invalidIds.length > 0) {
-        throw new Error("Can only link to your own builds")
-      }
-    }
+    await assertPartnerBuildAccess(input.partnerBuildIds, userId, buildId)
 
     updateData.partnerBuilds = {
       set: input.partnerBuildIds.map((id) => ({ id })),
@@ -705,8 +742,23 @@ export async function getUserBuildsForPartnerSelector(userId: string): Promise<
     }
   }[]
 > {
-  const builds = await prisma.build.findMany({
+  const memberships = await prisma.organizationMember.findMany({
     where: { userId },
+    select: { organizationId: true },
+  })
+  const organizationIds = memberships.map(
+    (membership) => membership.organizationId,
+  )
+
+  const builds = await prisma.build.findMany({
+    where: {
+      OR: [
+        { userId },
+        ...(organizationIds.length > 0
+          ? [{ organizationId: { in: organizationIds } }]
+          : []),
+      ],
+    },
     select: {
       id: true,
       slug: true,
@@ -816,7 +868,7 @@ async function searchBuildsWithFilters(
 async function assertBuildAccess(
   buildId: string,
   userId: string,
-): Promise<void> {
+): Promise<{ userId: string; organizationId: string | null }> {
   const existing = await prisma.build.findUnique({
     where: { id: buildId },
     select: { userId: true, organizationId: true },
@@ -824,11 +876,11 @@ async function assertBuildAccess(
   if (!existing) throw new Error("Build not found")
 
   const isOwner = existing.userId === userId
-  if (isOwner) return
+  if (isOwner) return existing
 
   if (existing.organizationId) {
     const { isOrgMember } = await import("./organizations")
-    if (await isOrgMember(existing.organizationId, userId)) return
+    if (await isOrgMember(existing.organizationId, userId)) return existing
   }
 
   throw new Error("Not authorized")
@@ -838,21 +890,97 @@ async function assertBuildAccess(
  * Check if a user can view a build based on visibility
  */
 function canViewBuild(
-  build: { visibility: BuildVisibility; userId: string },
+  build: {
+    visibility: BuildVisibility
+    userId: string
+    organizationId?: string | null
+  },
   viewerId?: string,
-): boolean {
+): Promise<boolean> {
   // Owner can always view
   if (viewerId && build.userId === viewerId) {
-    return true
+    return Promise.resolve(true)
   }
 
   // Public and unlisted builds are viewable by anyone
   if (build.visibility === "PUBLIC" || build.visibility === "UNLISTED") {
-    return true
+    return Promise.resolve(true)
   }
 
-  // Private builds are only viewable by owner
-  return false
+  if (viewerId && build.organizationId) {
+    return import("./organizations").then(({ isOrgMember }) =>
+      isOrgMember(build.organizationId!, viewerId),
+    )
+  }
+
+  return Promise.resolve(false)
+}
+
+async function filterVisiblePartnerBuilds<
+  T extends {
+    visibility: BuildVisibility
+    userId: string
+    organizationId?: string | null
+  },
+>(partnerBuilds: T[], viewerId?: string): Promise<T[]> {
+  const visiblePartnerBuilds: T[] = []
+
+  for (const partnerBuild of partnerBuilds) {
+    if (await canViewBuild(partnerBuild, viewerId)) {
+      visiblePartnerBuilds.push(partnerBuild)
+    }
+  }
+
+  return visiblePartnerBuilds
+}
+
+async function assertPartnerBuildAccess(
+  partnerBuildIds: string[],
+  userId: string,
+  currentBuildId?: string,
+): Promise<void> {
+  if (partnerBuildIds.length === 0) {
+    return
+  }
+
+  const partnerBuilds = await prisma.build.findMany({
+    where: {
+      id: { in: partnerBuildIds },
+    },
+    select: {
+      id: true,
+      userId: true,
+      organizationId: true,
+    },
+  })
+
+  const partnerBuildsById = new Map(
+    partnerBuilds.map((build) => [build.id, build]),
+  )
+
+  for (const partnerBuildId of partnerBuildIds) {
+    const build = partnerBuildsById.get(partnerBuildId)
+    if (!build) {
+      throw new Error("Partner build not found")
+    }
+
+    if (build.id === currentBuildId) {
+      throw new Error("A build cannot link to itself")
+    }
+
+    if (build.userId === userId) {
+      continue
+    }
+
+    if (build.organizationId) {
+      const { isOrgMember } = await import("./organizations")
+      if (await isOrgMember(build.organizationId, userId)) {
+        continue
+      }
+    }
+
+    throw new Error("Can only link builds you can edit")
+  }
 }
 
 /**

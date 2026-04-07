@@ -5,6 +5,7 @@ import { useCallback, useMemo } from "react"
 
 import { ArcaneDragGhost } from "@/components/arcane-card/arcane-card"
 import { CompactModCard, type ModRarity } from "@/components/mod-card/mod-card"
+import { getBuildLayout } from "@/lib/builds/layout"
 import { isWarframeCategory } from "@/lib/warframe/categories"
 import type { Mod, Arcane } from "@/lib/warframe/types"
 
@@ -38,6 +39,8 @@ export function BuildContainer({
   isOwner = false,
   initialGuide,
   initialPartnerBuilds = [],
+  initialOrganizationSlug,
+  initialVisibility,
 }: BuildContainerProps) {
   // --- Hooks ---
 
@@ -140,8 +143,9 @@ export function BuildContainer({
     setPublishDialogOpen,
     handlePublish,
     handleCancel,
-    organizationId,
-    setOrganizationId,
+    organizationSlug,
+    setOrganizationSlug,
+    currentVisibility,
   } = useBuildPersistence({
     item,
     category,
@@ -153,8 +157,10 @@ export function BuildContainer({
     canEdit,
     guideSummary,
     guideDescription,
-    partnerBuildIds: partnerBuilds.map((b) => b.id),
+    partnerBuildIds: partnerBuilds.map((b) => b.slug),
     setIsEditMode,
+    initialOrganizationSlug,
+    initialVisibility,
   })
 
   // --- Orchestration callbacks (bridge multiple hooks) ---
@@ -231,6 +237,7 @@ export function BuildContainer({
 
   const isWarframeOrNecramech = isWarframeCategory(category)
   const isCompanion = category === "companions"
+  const layout = getBuildLayout(item, category)
 
   useBuildKeyboard({
     onSelectSlot: handleSelectSlot,
@@ -240,8 +247,8 @@ export function BuildContainer({
     },
     onCopyBuild: handleCopyBuild,
     onClearBuild: handleClearBuild,
-    hasAuraSlot: category === "warframes",
-    hasExilusSlot: category !== "necramechs",
+    hasAuraSlot: layout.hasAuraSlot,
+    hasExilusSlot: layout.hasExilusSlot,
   })
 
   // --- Derived ---
@@ -281,8 +288,9 @@ export function BuildContainer({
           handleCancel={handleCancel}
           handleCopyBuild={handleCopyBuild}
           showCopied={showCopied}
-          organizationId={organizationId}
-          onOrganizationChange={setOrganizationId}
+          organizationSlug={organizationSlug}
+          onOrganizationChange={setOrganizationSlug}
+          currentVisibility={currentVisibility}
         />
 
         <div className="flex flex-col gap-4">

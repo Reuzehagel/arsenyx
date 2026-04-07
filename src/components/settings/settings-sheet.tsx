@@ -38,6 +38,8 @@ import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 import type { OrganizationListItem } from "@/lib/db/organizations"
 
+import { ApiKeysSection } from "./api-keys-section"
+
 interface SettingsSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -146,14 +148,14 @@ export function SettingsSheet({ open, onOpenChange }: SettingsSheetProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right">
-        <SheetHeader>
+      <SheetContent side="right" className="overflow-hidden sm:max-w-md">
+        <SheetHeader className="shrink-0">
           <SheetTitle>Profile Settings</SheetTitle>
           <SheetDescription>
             Update your public profile information
           </SheetDescription>
         </SheetHeader>
-        <ScrollArea className="flex-1 px-4">
+        <ScrollArea className="min-h-0 flex-1 px-4 pb-3">
           {isLoading || !userData ? (
             <div className="flex flex-col gap-5">
               <Skeleton className="h-14 w-full rounded-lg" />
@@ -162,159 +164,175 @@ export function SettingsSheet({ open, onOpenChange }: SettingsSheetProps) {
               <Skeleton className="h-10 w-full rounded-lg" />
             </div>
           ) : (
-            <form id="settings-form" onSubmit={handleSubmit}>
-              <FieldGroup>
-                <Field>
-                  <FieldLabel>Avatar</FieldLabel>
-                  <div className="flex items-center gap-4">
-                    <Avatar className="size-14">
-                      <AvatarImage
-                        src={userData.image ?? undefined}
-                        alt={userData.username ?? "Avatar"}
-                      />
-                      <AvatarFallback>
-                        {(userData.displayUsername ??
-                          userData.username ??
-                          "?")[0]?.toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+            <div className="flex flex-col gap-6">
+              <form id="settings-form" onSubmit={handleSubmit}>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel>Avatar</FieldLabel>
+                    <div className="flex items-center gap-4">
+                      <Avatar className="size-14">
+                        <AvatarImage
+                          src={userData.image ?? undefined}
+                          alt={userData.username ?? "Avatar"}
+                        />
+                        <AvatarFallback>
+                          {(userData.displayUsername ??
+                            userData.username ??
+                            "?")[0]?.toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <FieldDescription>
+                        Synced from your GitHub account
+                      </FieldDescription>
+                    </div>
+                  </Field>
+
+                  <Field data-invalid={usernameError ? true : undefined}>
+                    <FieldLabel htmlFor="settings-username">
+                      Username
+                    </FieldLabel>
+                    <Input
+                      id="settings-username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="your-username…"
+                      autoComplete="username"
+                      spellCheck={false}
+                      minLength={3}
+                      maxLength={20}
+                      aria-invalid={usernameError ? true : undefined}
+                    />
                     <FieldDescription>
-                      Synced from your GitHub account
+                      3-20 characters. Letters, numbers, hyphens, and
+                      underscores only.
                     </FieldDescription>
+                    {usernameError && <FieldError>{usernameError}</FieldError>}
+                  </Field>
+
+                  <Field>
+                    <FieldLabel htmlFor="settings-bio">Bio</FieldLabel>
+                    <Textarea
+                      id="settings-bio"
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
+                      placeholder="Tell others about yourself…"
+                      maxLength={300}
+                      rows={3}
+                    />
+                    <FieldDescription>{bio.length}/300</FieldDescription>
+                  </Field>
+
+                  <Field data-disabled>
+                    <FieldLabel htmlFor="settings-email">Email</FieldLabel>
+                    <Input
+                      id="settings-email"
+                      value={userData.email}
+                      disabled
+                    />
+                    <FieldDescription>
+                      Managed by your GitHub account
+                    </FieldDescription>
+                  </Field>
+                </FieldGroup>
+
+                {/* Organizations section */}
+                <div className="mt-6 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Organizations</span>
+                    {canCreateOrg && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowCreateOrg((v) => !v)}
+                      >
+                        {showCreateOrg ? "Cancel" : "Create Organization"}
+                      </Button>
+                    )}
                   </div>
-                </Field>
 
-                <Field data-invalid={usernameError ? true : undefined}>
-                  <FieldLabel htmlFor="settings-username">Username</FieldLabel>
-                  <Input
-                    id="settings-username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="your-username…"
-                    autoComplete="username"
-                    spellCheck={false}
-                    minLength={3}
-                    maxLength={20}
-                    aria-invalid={usernameError ? true : undefined}
-                  />
-                  <FieldDescription>
-                    3-20 characters. Letters, numbers, hyphens, and underscores
-                    only.
-                  </FieldDescription>
-                  {usernameError && <FieldError>{usernameError}</FieldError>}
-                </Field>
+                  {orgs.length === 0 && !showCreateOrg && (
+                    <div className="text-muted-foreground rounded-md border border-dashed p-3 text-sm">
+                      <p>You are not a member of any organization.</p>
+                      {!canCreateOrg && (
+                        <p className="mt-1 text-xs">
+                          Creating organizations is limited to community leaders
+                          and admins.
+                        </p>
+                      )}
+                    </div>
+                  )}
 
-                <Field>
-                  <FieldLabel htmlFor="settings-bio">Bio</FieldLabel>
-                  <Textarea
-                    id="settings-bio"
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    placeholder="Tell others about yourself…"
-                    maxLength={300}
-                    rows={3}
-                  />
-                  <FieldDescription>{bio.length}/300</FieldDescription>
-                </Field>
+                  {orgs.length > 0 && (
+                    <ul className="flex flex-col gap-2">
+                      {orgs.map((org) => (
+                        <li
+                          key={org.id}
+                          className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
+                        >
+                          <Link
+                            href={`/org/${org.slug}`}
+                            className="font-medium hover:underline"
+                          >
+                            {org.name}
+                          </Link>
+                          <Badge
+                            variant="secondary"
+                            className="text-xs capitalize"
+                          >
+                            {org.role.toLowerCase()}
+                          </Badge>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
 
-                <Field data-disabled>
-                  <FieldLabel htmlFor="settings-email">Email</FieldLabel>
-                  <Input id="settings-email" value={userData.email} disabled />
-                  <FieldDescription>
-                    Managed by your GitHub account
-                  </FieldDescription>
-                </Field>
-              </FieldGroup>
-
-              {/* Organizations section */}
-              <div className="mt-6 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Organizations</span>
-                  {canCreateOrg && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowCreateOrg((v) => !v)}
-                    >
-                      {showCreateOrg ? "Cancel" : "Create Organization"}
-                    </Button>
+                  {showCreateOrg && (
+                    <div className="flex flex-col gap-3 rounded-md border p-3">
+                      <FieldGroup>
+                        <Field>
+                          <FieldLabel htmlFor="new-org-name">Name</FieldLabel>
+                          <Input
+                            id="new-org-name"
+                            value={newOrgName}
+                            onChange={(e) => setNewOrgName(e.target.value)}
+                            placeholder="My Organization"
+                            maxLength={50}
+                          />
+                        </Field>
+                        <Field>
+                          <FieldLabel htmlFor="new-org-slug">Slug</FieldLabel>
+                          <Input
+                            id="new-org-slug"
+                            value={newOrgSlug}
+                            onChange={(e) => setNewOrgSlug(e.target.value)}
+                            placeholder="my-organization"
+                            maxLength={30}
+                          />
+                          <FieldDescription>
+                            Lowercase letters, numbers, hyphens only.
+                          </FieldDescription>
+                        </Field>
+                      </FieldGroup>
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={isCreatingOrg || !newOrgName.trim()}
+                        onClick={handleCreateOrg}
+                      >
+                        {isCreatingOrg && <Spinner />}
+                        Create
+                      </Button>
+                    </div>
                   )}
                 </div>
+              </form>
 
-                {orgs.length === 0 && !showCreateOrg && (
-                  <p className="text-muted-foreground text-sm">
-                    You are not a member of any organization.
-                  </p>
-                )}
-
-                {orgs.length > 0 && (
-                  <ul className="flex flex-col gap-2">
-                    {orgs.map((org) => (
-                      <li
-                        key={org.id}
-                        className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
-                      >
-                        <Link
-                          href={`/org/${org.slug}`}
-                          className="font-medium hover:underline"
-                        >
-                          {org.name}
-                        </Link>
-                        <Badge
-                          variant="secondary"
-                          className="text-xs capitalize"
-                        >
-                          {org.role.toLowerCase()}
-                        </Badge>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                {showCreateOrg && (
-                  <div className="flex flex-col gap-3 rounded-md border p-3">
-                    <FieldGroup>
-                      <Field>
-                        <FieldLabel htmlFor="new-org-name">Name</FieldLabel>
-                        <Input
-                          id="new-org-name"
-                          value={newOrgName}
-                          onChange={(e) => setNewOrgName(e.target.value)}
-                          placeholder="My Organization"
-                          maxLength={50}
-                        />
-                      </Field>
-                      <Field>
-                        <FieldLabel htmlFor="new-org-slug">Slug</FieldLabel>
-                        <Input
-                          id="new-org-slug"
-                          value={newOrgSlug}
-                          onChange={(e) => setNewOrgSlug(e.target.value)}
-                          placeholder="my-organization"
-                          maxLength={30}
-                        />
-                        <FieldDescription>
-                          Lowercase letters, numbers, hyphens only.
-                        </FieldDescription>
-                      </Field>
-                    </FieldGroup>
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={isCreatingOrg || !newOrgName.trim()}
-                      onClick={handleCreateOrg}
-                    >
-                      {isCreatingOrg && <Spinner />}
-                      Create
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </form>
+              <ApiKeysSection open={open} />
+            </div>
           )}
         </ScrollArea>
-        <SheetFooter>
+        <SheetFooter className="shrink-0 gap-1 border-t py-2">
           <Button
             type="submit"
             form="settings-form"
