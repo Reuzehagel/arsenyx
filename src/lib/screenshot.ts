@@ -1,10 +1,16 @@
 import "server-only"
 
+import sharp from "sharp"
+
+export type ImageFormat = "webp" | "png" | "jpeg"
+
 export interface ScreenshotOptions {
   /** Full URL of the build page to screenshot */
   url: string
   /** Hex background color without '#' (e.g. "111111") */
   bgColor: string
+  /** Output format (default: webp) */
+  format?: ImageFormat
 }
 
 export async function screenshotBuild(
@@ -86,8 +92,11 @@ export async function screenshotBuild(
     }, color)
 
     const png = await target!.screenshot({ type: "png" })
+    const format = options.format ?? "webp"
 
-    return Buffer.from(png)
+    if (format === "png") return Buffer.from(png)
+
+    return sharp(png)[format]({ quality: 95 }).toBuffer()
   } finally {
     await browser.close()
   }
