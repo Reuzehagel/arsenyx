@@ -72,6 +72,7 @@ bun run update-data      # Update @wfcd/items package + sync
 - Modify `src/components/ui/` — these are shadcn/ui primitives, override via className
 - Import from `@/lib/warframe/items` or `@/lib/db` in client components (server-only modules)
 - Use npm/npx — always use bun/bunx
+- Use `python` directly — always use `uv` instead
 
 ## Key Patterns
 

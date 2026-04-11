@@ -10,9 +10,13 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { decodeBuild } from "@/lib/build-codec"
 import { getCompatibleArcanesForItem } from "@/lib/builds/layout"
 import { isValidCategory, getCategoryConfig } from "@/lib/warframe"
+import { isWarframeCategory } from "@/lib/warframe/categories"
 // Server-only imports
 import { getItemBySlug, getFullItem } from "@/lib/warframe/items"
-import { getModsForItem } from "@/lib/warframe/mods"
+import {
+  getModsForItem,
+  getAllHelminthAugmentMods,
+} from "@/lib/warframe/mods"
 import type { BrowseCategory } from "@/lib/warframe/types"
 
 export const metadata: Metadata = {
@@ -96,6 +100,11 @@ export default async function CreatePage({ searchParams }: CreatePageProps) {
                   category={category}
                   categoryLabel={categoryConfig?.label ?? "Item"}
                   compatibleMods={compatibleMods}
+                  helminthAugmentMods={
+                    isWarframeCategory(category)
+                      ? getAllHelminthAugmentMods()
+                      : undefined
+                  }
                   compatibleArcanes={compatibleArcanes}
                   importedBuild={decodedBuild}
                 />
@@ -162,6 +171,11 @@ export default async function CreatePage({ searchParams }: CreatePageProps) {
               category={category}
               categoryLabel={categoryConfig?.label ?? "Item"}
               compatibleMods={compatibleMods}
+              helminthAugmentMods={
+                isWarframeCategory(category)
+                  ? getAllHelminthAugmentMods()
+                  : undefined
+              }
               compatibleArcanes={compatibleArcanes}
               importedBuild={importedBuild}
             />
@@ -202,6 +216,11 @@ export default async function CreatePage({ searchParams }: CreatePageProps) {
               category={category}
               categoryLabel={categoryConfig?.label ?? "Item"}
               compatibleMods={compatibleMods}
+              helminthAugmentMods={
+                isWarframeCategory(category)
+                  ? getAllHelminthAugmentMods()
+                  : undefined
+              }
               compatibleArcanes={compatibleArcanes}
             />
           </Suspense>

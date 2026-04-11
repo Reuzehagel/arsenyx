@@ -18,8 +18,12 @@ import { getCompatibleArcanesForItem } from "@/lib/builds/layout"
 import { getBuildBySlug } from "@/lib/db/index"
 import { isOrgMember } from "@/lib/db/organizations"
 import { getCategoryConfig } from "@/lib/warframe"
+import { isWarframeCategory } from "@/lib/warframe/categories"
 import { getFullItem } from "@/lib/warframe/items"
-import { getModsForItem } from "@/lib/warframe/mods"
+import {
+  getModsForItem,
+  getAllHelminthAugmentMods,
+} from "@/lib/warframe/mods"
 import { slugify } from "@/lib/warframe/slugs"
 import type { BrowseCategory } from "@/lib/warframe/types"
 
@@ -223,6 +227,11 @@ export default async function BuildPage({ params }: BuildPageProps) {
             category={category}
             categoryLabel={categoryConfig?.label ?? "Item"}
             compatibleMods={compatibleMods}
+            helminthAugmentMods={
+              isWarframeCategory(category)
+                ? getAllHelminthAugmentMods()
+                : undefined
+            }
             compatibleArcanes={compatibleArcanes}
             importedBuild={build.buildData}
             savedBuildId={build.id}

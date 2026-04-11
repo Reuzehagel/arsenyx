@@ -4,6 +4,7 @@
 import ArcanesData from "@/data/warframe/Arcanes.json"
 import ModsData from "@/data/warframe/Mods.json"
 
+import { getHelminthAbilities } from "./helminth"
 import type {
   Mod,
   Arcane,
@@ -405,6 +406,22 @@ export function getAugmentModsForHelminthAbility(
 
     return getAugmentedAbilityName(mod) === abilityName
   })
+}
+
+/**
+ * Pre-compute augment mods for every subsumable Helminth ability.
+ * Returns a plain object keyed by ability uniqueName → Mod[] so it can be
+ * serialised as a React Server Component prop.
+ */
+export function getAllHelminthAugmentMods(): Record<string, Mod[]> {
+  const result: Record<string, Mod[]> = {}
+  for (const ability of getHelminthAbilities()) {
+    const mods = getAugmentModsForHelminthAbility(ability)
+    if (mods.length > 0) {
+      result[ability.uniqueName] = mods
+    }
+  }
+  return result
 }
 
 /**

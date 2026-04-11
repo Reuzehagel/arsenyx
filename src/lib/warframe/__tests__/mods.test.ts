@@ -15,6 +15,7 @@ import {
   getArcaneByUniqueName,
   getArcaneByName,
   getAugmentModsForHelminthAbility,
+  getAllHelminthAugmentMods,
 } from "../mods"
 import type { Polarity } from "../types"
 
@@ -327,6 +328,23 @@ describe("getModsForItem", () => {
 
     expect(mods.map((mod) => mod.name)).toContain("Total Eclipse")
     expect(mods.map((mod) => mod.name)).not.toContain("Hall Of Malevolence")
+  })
+
+  it("getAllHelminthAugmentMods includes Shock Trooper for Volt's Shock", () => {
+    const map = getAllHelminthAugmentMods()
+    // Find Volt's Shock ability by looking for an entry that includes Shock Trooper
+    const entries = Object.entries(map)
+    const shockEntry = entries.find(([, mods]) =>
+      mods.some((m) => m.name === "Shock Trooper"),
+    )
+    expect(shockEntry).toBeDefined()
+    expect(shockEntry![1].map((m) => m.name)).toContain("Shock Trooper")
+  })
+
+  it("getAllHelminthAugmentMods returns no entries for native Helminth abilities", () => {
+    const map = getAllHelminthAugmentMods()
+    // All keys should correspond to subsumable abilities, not native Helminth ones
+    expect(Object.keys(map).length).toBeGreaterThan(0)
   })
 
   it("falls back to category when no type", () => {

@@ -37,6 +37,7 @@ export interface BuildContainerProps {
   category: BrowseCategory
   categoryLabel: string
   compatibleMods: Mod[]
+  helminthAugmentMods?: Record<string, Mod[]>
   compatibleArcanes?: Arcane[]
   importedBuild?: Partial<BuildState>
   savedBuildId?: string

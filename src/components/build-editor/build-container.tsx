@@ -32,6 +32,7 @@ export function BuildContainer({
   category,
   categoryLabel,
   compatibleMods,
+  helminthAugmentMods,
   compatibleArcanes = [],
   importedBuild,
   savedBuildId,
@@ -75,6 +76,22 @@ export function BuildContainer({
     importedBuild,
   })
 
+  // Merge helminth augment mods into the compatible mods list when a
+  // helminth ability is subsumed (e.g. Shock Trooper when Shock is subsumed)
+  const effectiveMods = useMemo(() => {
+    if (!helminthAugmentMods || !buildState.helminthAbility) {
+      return compatibleMods
+    }
+    const augments =
+      helminthAugmentMods[buildState.helminthAbility.ability.uniqueName]
+    if (!augments?.length) return compatibleMods
+
+    // Deduplicate by uniqueName
+    const existing = new Set(compatibleMods.map((m) => m.uniqueName))
+    const newMods = augments.filter((m) => !existing.has(m.uniqueName))
+    return [...compatibleMods, ...newMods]
+  }, [compatibleMods, helminthAugmentMods, buildState.helminthAbility])
+
   const {
     isAuthenticated,
     isEditMode,
@@ -102,7 +119,7 @@ export function BuildContainer({
     handleDragCancel,
   } = useBuildDragDrop({
     canEdit,
-    compatibleMods,
+    compatibleMods: effectiveMods,
     placeModInSlot,
     moveMod,
     placeArcaneInSlot,
@@ -356,7 +373,7 @@ export function BuildContainer({
               activeSlotId={activeSlotId}
               activeDragItem={activeDragItem}
               compatibleArcanes={filteredArcanes}
-              compatibleMods={compatibleMods}
+              compatibleMods={effectiveMods}
               usedArcaneNames={usedArcaneNames}
               usedModNames={usedModNames}
               onPlaceArcane={handlePlaceArcane}
