@@ -9,6 +9,7 @@ import {
   adminUnbanUser,
   adminDeleteUser,
   adminDeleteBuild,
+  adminDeleteOrganization,
 } from "@/lib/db/index"
 import { ok, err, getErrorMessage, type Result } from "@/lib/result"
 
@@ -103,5 +104,24 @@ export async function adminDeleteBuildAction(buildId: string): Promise<Result> {
     return ok()
   } catch (error) {
     return err(getErrorMessage(error, "Failed to delete build"))
+  }
+}
+
+// =============================================================================
+// ORGANIZATION ACTIONS
+// =============================================================================
+
+export async function adminDeleteOrganizationAction(
+  orgId: string,
+): Promise<Result> {
+  try {
+    const auth = await requireAdmin("delete organization")
+    if (!auth.success) return auth
+
+    await adminDeleteOrganization(orgId)
+    revalidatePath("/admin")
+    return ok()
+  } catch (error) {
+    return err(getErrorMessage(error, "Failed to delete organization"))
   }
 }
