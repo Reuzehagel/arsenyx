@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireApiKey } from "@/lib/auth/api-keys"
 import { getBuildBySlug } from "@/lib/db/index"
 import { screenshotLimiter, RateLimitError } from "@/lib/rate-limit"
-import { screenshotBuild } from "@/lib/screenshot"
+import { screenshotBuild, type ImageFormat } from "@/lib/screenshot"
 
 export const runtime = "nodejs"
 export const maxDuration = 30
@@ -71,10 +71,15 @@ export async function GET(
   // 2. Validate query params
   const { searchParams } = request.nextUrl
   const bg = searchParams.get("bg") ?? DEFAULT_BG
+  const format = (searchParams.get("format") ?? "webp") as ImageFormat
   const refresh = searchParams.get("refresh") === "true"
 
   if (!HEX_COLOR_RE.test(bg)) {
     return NextResponse.json({ error: "Invalid bg color" }, { status: 400 })
+  }
+
+  if (!["webp", "png", "jpeg"].includes(format)) {
+    return NextResponse.json({ error: "Invalid format. Use: webp, png, jpeg" }, { status: 400 })
   }
 
   // 3. Fetch build
@@ -100,21 +105,23 @@ export async function GET(
       : "http://localhost:3000")
 
   try {
-    const png = await screenshotBuild({
+    const image = await screenshotBuild({
       url: `${baseUrl}/builds/${slug}`,
       bgColor: bg,
+      format,
     })
 
+    const contentType = format === "jpeg" ? "image/jpeg" : `image/${format}`
     const cacheControl = refresh
       ? "no-store"
       : "public, max-age=3600, stale-while-revalidate=86400"
 
-    return new NextResponse(new Uint8Array(png), {
+    return new NextResponse(new Uint8Array(image), {
       status: 200,
       headers: {
-        "Content-Type": "image/png",
+        "Content-Type": contentType,
         "Cache-Control": cacheControl,
-        "Content-Disposition": `inline; filename="${slug}-screenshot.png"`,
+        "Content-Disposition": `inline; filename="${slug}-screenshot.${format === "jpeg" ? "jpg" : format}"`,
       },
     })
   } catch (err) {
