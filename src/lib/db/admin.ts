@@ -268,6 +268,59 @@ export async function getRecentUsers(limit = 10) {
 }
 
 // =============================================================================
+// ORGANIZATION QUERIES
+// =============================================================================
+
+export interface AdminOrganization {
+  id: string
+  name: string
+  slug: string
+  image: string | null
+  description: string | null
+  createdAt: Date
+  _count: { members: number; builds: number }
+}
+
+export async function getAdminOrganizations(
+  search?: string,
+): Promise<AdminOrganization[]> {
+  return prisma.organization.findMany({
+    where: search
+      ? {
+          OR: [
+            { name: { contains: search, mode: "insensitive" } },
+            { slug: { contains: search, mode: "insensitive" } },
+          ],
+        }
+      : undefined,
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      image: true,
+      description: true,
+      createdAt: true,
+      _count: { select: { members: true, builds: true } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 200,
+  })
+}
+
+export async function adminDeleteOrganization(orgId: string): Promise<void> {
+  await prisma.$transaction([
+    prisma.build.updateMany({
+      where: { organizationId: orgId },
+      data: { organizationId: null },
+    }),
+    prisma.organizationMember.deleteMany({
+      where: { organizationId: orgId },
+    }),
+    prisma.organization.delete({ where: { id: orgId } }),
+  ])
+}
+
+// =============================================================================
 // DEV TOOLS QUERIES
 // =============================================================================
 

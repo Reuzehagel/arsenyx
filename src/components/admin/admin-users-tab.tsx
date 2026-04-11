@@ -1,4 +1,5 @@
 import Image from "next/image"
+import Link from "next/link"
 
 import { AdminUserActions } from "@/components/admin/admin-user-actions"
 import { Badge } from "@/components/ui/badge"
@@ -61,9 +62,18 @@ export async function AdminUsersTab({ search, currentUserId }: AdminUsersTabProp
                   ) : (
                     <div className="bg-muted size-6 rounded-full" />
                   )}
-                  <span className="font-medium">
-                    {user.displayUsername || user.name || "—"}
-                  </span>
+                  {user.username ? (
+                    <Link
+                      href={`/profile/${user.username}`}
+                      className="font-medium hover:underline"
+                    >
+                      {user.displayUsername || user.name || "—"}
+                    </Link>
+                  ) : (
+                    <span className="font-medium">
+                      {user.name || "—"}
+                    </span>
+                  )}
                 </div>
               </TableCell>
               <TableCell className="text-muted-foreground">

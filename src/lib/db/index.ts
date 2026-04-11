@@ -90,6 +90,8 @@ export {
   adminDeleteUser,
   getAdminBuilds,
   adminDeleteBuild,
+  getAdminOrganizations,
+  adminDeleteOrganization,
   getAdminStats,
   getTopBuilds,
   getTopUsers,
@@ -97,7 +99,7 @@ export {
   getDbTableCounts,
 } from "./admin"
 
-export type { AdminUser, AdminBuild, AdminStats } from "./admin"
+export type { AdminUser, AdminBuild, AdminStats, AdminOrganization } from "./admin"
 
 // API Key operations
 export {
