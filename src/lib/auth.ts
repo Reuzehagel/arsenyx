@@ -19,6 +19,10 @@ export const auth = betterAuth({
           github: {
             clientId: githubId,
             clientSecret: githubSecret,
+            mapProfileToUser: (profile) => ({
+              username: profile.login.toLowerCase(),
+              displayUsername: profile.login,
+            }),
           },
         }
       : {},
