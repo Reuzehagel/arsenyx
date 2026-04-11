@@ -98,6 +98,8 @@ const VALID_CATEGORY_IDS = new Set<string>(
 const WARFRAME_CATEGORIES_SET = new Set<BrowseCategory>(["warframes", "necramechs"])
 const WEAPON_CATEGORIES_SET = new Set<BrowseCategory>(["primary", "secondary", "melee"])
 const GUN_CATEGORIES_SET = new Set<BrowseCategory>(["primary", "secondary"])
+const EXALTED_WEAPON_CATEGORIES_SET = new Set<BrowseCategory>(["exalted-weapons"])
+const COMPANION_WEAPON_CATEGORIES_SET = new Set<BrowseCategory>(["companion-weapons"])
 
 /**
  * Get category config by ID
@@ -187,6 +189,20 @@ export function isMeleeCategory(category: BrowseCategory): boolean {
  */
 export function isCompanionCategory(category: BrowseCategory): boolean {
   return category === "companions"
+}
+
+/**
+ * Check if a category represents an exalted weapon
+ */
+export function isExaltedWeaponCategory(category: BrowseCategory): boolean {
+  return EXALTED_WEAPON_CATEGORIES_SET.has(category)
+}
+
+/**
+ * Check if a category represents a companion weapon
+ */
+export function isCompanionWeaponCategory(category: BrowseCategory): boolean {
+  return COMPANION_WEAPON_CATEGORIES_SET.has(category)
 }
 
 /**

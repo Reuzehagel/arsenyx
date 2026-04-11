@@ -18,6 +18,9 @@ import {
   isWeaponCategory,
   isGunCategory,
   isMeleeCategory,
+  isCompanionCategory,
+  isExaltedWeaponCategory,
+  isCompanionWeaponCategory,
   isArchwingCategory,
 } from "@/lib/warframe/categories"
 import { getImageUrl } from "@/lib/warframe/images"
@@ -97,14 +100,22 @@ export function ItemSidebar({
   const isArchwingGun = isArchwing && item?.category === "Arch-Gun"
 
   const isWarframeOrNecramech = isWarframeCategory(buildState.itemCategory)
+  const isCompanion = isCompanionCategory(buildState.itemCategory)
+  const isExaltedWeapon = isExaltedWeaponCategory(buildState.itemCategory)
+  const isCompanionWeapon = isCompanionWeaponCategory(buildState.itemCategory)
   const isWeapon = isWeaponCategory(buildState.itemCategory)
   const isMelee = isMeleeCategory(buildState.itemCategory)
   const isGun = isGunCategory(buildState.itemCategory)
 
-  // Combined flags that include archwing sub-types
-  const showWarframeStats = isWarframeOrNecramech || isArchwingFrame
-  const showWeaponStats = isWeapon || isArchwingWeapon
-  const showGunStats = isGun || isArchwingGun
+  // Exalted weapons can be ranged (has trigger field) or melee
+  const isExaltedGun = isExaltedWeapon && !!(item as { trigger?: string })?.trigger
+  const isExaltedMelee = isExaltedWeapon && !isExaltedGun
+
+  // Combined flags that include archwing sub-types and new categories
+  const showWarframeStats = isWarframeOrNecramech || isArchwingFrame || isCompanion
+  const showWeaponStats = isWeapon || isArchwingWeapon || isExaltedWeapon || isCompanionWeapon
+  const showGunStats = isGun || isArchwingGun || isCompanionWeapon || isExaltedGun
+  const showMeleeStats = isMelee || isExaltedMelee
 
   // Reactor for warframes/necramechs, Catalyst for weapons
   const capacityBoosterLabel = isWarframeOrNecramech ? "Reactor" : "Catalyst"
@@ -381,7 +392,7 @@ export function ItemSidebar({
                   unit="s"
                 />
               )}
-              {weaponStats.attackModes[0].range && isMelee && (
+              {weaponStats.attackModes[0].range && showMeleeStats && (
                 <CalculatedStatRow
                   label="Range"
                   stat={weaponStats.attackModes[0].range}
@@ -448,7 +459,7 @@ export function ItemSidebar({
                       unit="s"
                     />
                   )}
-                  {mode.range && isMelee && (
+                  {mode.range && showMeleeStats && (
                     <CalculatedStatRow
                       label="Range"
                       stat={mode.range}
@@ -530,7 +541,7 @@ export function ItemSidebar({
               />
             </>
           )}
-          {isMelee && (
+          {showMeleeStats && (
             <>
               <SimpleStatRow
                 label="Range"
@@ -553,8 +564,8 @@ export function ItemSidebar({
         </div>
       )}
 
-      {/* Ability Stats - Calculated */}
-      {showWarframeStats && warframeStats && (
+      {/* Ability Stats - Calculated (not shown for companions) */}
+      {showWarframeStats && !isCompanion && warframeStats && (
         <>
           <Separator />
           <div className="flex flex-col gap-2 p-3">
@@ -582,8 +593,8 @@ export function ItemSidebar({
         </>
       )}
 
-      {/* Ability Stats - Fallback to static display */}
-      {showWarframeStats && !warframeStats && (
+      {/* Ability Stats - Fallback to static display (not shown for companions) */}
+      {showWarframeStats && !isCompanion && !warframeStats && (
         <>
           <Separator />
           <div className="flex flex-col gap-2 p-3">

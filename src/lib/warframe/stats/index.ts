@@ -1,7 +1,7 @@
 // Stats calculation module — entry point and re-exports
 
 import type { CalculatedStats } from "../stat-types"
-import type { BrowseableItem, BuildState, Warframe, Gun, Melee } from "../types"
+import type { BrowseableItem, BuildState, Warframe, Companion, Gun, Melee } from "../types"
 import { calculateWarframeStats } from "./warframe-stats"
 import { calculateWeaponStats } from "./weapon-stats"
 
@@ -66,6 +66,29 @@ export function calculateStats(
       }
     }
     // Arch-Gun and Arch-Melee have weapon-like stats
+    return {
+      weapon: calculateWeaponStats(
+        item as Gun | Melee,
+        buildState,
+        showMaxStacks,
+      ),
+    }
+  }
+
+  // Companions (Kubrows, Kavats, Sentinels) have warframe-like survivability stats
+  if (category === "companions") {
+    return {
+      warframe: calculateWarframeStats(
+        item as Companion as Warframe,
+        buildState,
+        showMaxStacks,
+        { skipRankUpBonus: true },
+      ),
+    }
+  }
+
+  // Exalted weapons and companion weapons have weapon-like stats
+  if (category === "exalted-weapons" || category === "companion-weapons") {
     return {
       weapon: calculateWeaponStats(
         item as Gun | Melee,
