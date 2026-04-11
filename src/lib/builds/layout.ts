@@ -112,12 +112,18 @@ export function createBaseBuildState(
   const itemPolarities = (item as { polarities?: string[] }).polarities
   const auraPolarity = (item as { aura?: string }).aura
 
+  // Kuva/Tenet/Coda weapons have maxLevelCap: 40 → capacity 80 with catalyst
+  const maxLevelCap =
+    (item as { maxLevelCap?: number }).maxLevelCap ?? 30
+  const baseCapacity = maxLevelCap * 2 // doubled by reactor/catalyst (always assumed on)
+
   const buildState: BuildState = {
     itemUniqueName: item.uniqueName,
     itemName: item.name,
     itemCategory: category,
     itemImageName: item.imageName,
     hasReactor: true,
+    maxLevelCap,
     auraSlot: layout.hasAuraSlot
       ? {
           id: "aura-0",
@@ -136,8 +142,8 @@ export function createBaseBuildState(
     normalSlots: createInitialModSlots(layout.normalSlotCount, itemPolarities),
     arcaneSlots: Array.from({ length: layout.arcaneSlotCount }, () => null),
     shardSlots: Array.from({ length: layout.shardSlotCount }, () => null),
-    baseCapacity: 60,
-    currentCapacity: 60,
+    baseCapacity,
+    currentCapacity: baseCapacity,
     formaCount: 0,
   }
 

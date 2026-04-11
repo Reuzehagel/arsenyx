@@ -75,10 +75,16 @@ describe("getAllMods", () => {
     expect(rivens).toHaveLength(0)
   })
 
-  it("filters out PvP mods", () => {
+  it("filters out Conclave-only mods", () => {
     const mods = getAllMods()
-    const pvp = mods.filter((m) => m.uniqueName.includes("/PvPMods/"))
-    expect(pvp).toHaveLength(0)
+    const conclave = mods.filter((m) => m.description?.includes("Conclave"))
+    expect(conclave).toHaveLength(0)
+  })
+
+  it("includes PvE mods from /PvPMods/ path", () => {
+    const mods = getAllMods()
+    const reflexDraw = mods.find((m) => m.name === "Reflex Draw")
+    expect(reflexDraw).toBeDefined()
   })
 
   it("filters out Beginner mods", () => {

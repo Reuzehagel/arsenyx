@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 type ImportResult = unknown
 
 export function ImportOverframeClient() {
-  const [url, setUrl] = useState("https://overframe.gg/build/935570/")
+  const [url, setUrl] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<ImportResult | null>(null)

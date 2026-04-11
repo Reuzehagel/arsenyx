@@ -81,9 +81,10 @@ export function getAllMods(): Mod[] {
       if (mod.name.includes("Riven Mod")) return false
       if (!mod.compatName && !mod.type) return false
 
-      // Filter out Conclave/PvP mods
+      // Filter out Conclave-only mods (stances "devised for Conclave")
+      // Note: most /PvPMods/ path mods are regular PvE mods (Reflex Draw, Anticipation, etc.)
       const uniqueName = mod.uniqueName ?? ""
-      if (uniqueName.includes("/PvPMods/")) return false
+      if (mod.description?.includes("Conclave")) return false
 
       // Filter out variant mods (duplicates with different stats)
       // - Beginner: Tutorial versions with lower ranks (in /Beginner/ path)
@@ -218,6 +219,15 @@ export function getModsForCategory(category: string): Mod[] {
 function isPrimaryMod(compatName: string, modType: string, subtype: string) {
   if (compatName === subtype) return true
   if (modType.includes(subtype)) return true
+  // In Warframe, "Rifle" mods work on all non-shotgun primaries
+  // (rifles, launchers, bows, snipers). Accept rifle-compatible mods
+  // for any non-shotgun subtype, and shotgun mods only for shotguns.
+  if (subtype !== "shotgun" && compatName === "rifle") return true
+  if (subtype !== "shotgun" && compatName === "rifle (no aoe)") return true
+  // "Assault Rifle" mods (e.g. Tainted Mag) work on all non-shotgun primaries
+  if (subtype !== "shotgun" && compatName === "assault rifle") return true
+  // "PRIMARY" mods (e.g. Vigilante set) work on ALL primaries including shotguns
+  if (compatName === "primary") return true
   // General primary mods (no specific weapon type in compatName)
   if (
     modType.includes("primary") &&
@@ -285,16 +295,38 @@ export function getModsForItem(item: {
 
     // Primary weapons: Rifle, Shotgun, Sniper, Launcher, Bow
     if (PRIMARY_SUBTYPES.includes(itemTypeLower)) {
+      // Weapon-specific mods (e.g. "Ogris" mods for Kuva Ogris)
+      if (
+        modType.includes("primary") &&
+        compatName &&
+        itemNameLower.includes(compatName)
+      ) {
+        return true
+      }
       return isPrimaryMod(compatName, modType, itemTypeLower)
     }
 
     // Secondary weapons: Pistol
     if (itemTypeLower === "pistol") {
+      if (
+        modType.includes("secondary") &&
+        compatName &&
+        itemNameLower.includes(compatName)
+      ) {
+        return true
+      }
       return isPistolMod(compatName, modType)
     }
 
     // Melee weapons
     if (itemTypeLower === "melee") {
+      if (
+        modType.includes("melee") &&
+        compatName &&
+        itemNameLower.includes(compatName)
+      ) {
+        return true
+      }
       return isMeleeMod(compatName, modType)
     }
 

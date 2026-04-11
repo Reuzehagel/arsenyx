@@ -441,10 +441,11 @@ function buildReducer(state: BuildState, action: BuildAction): BuildState {
     }
 
     case "TOGGLE_REACTOR": {
+      const maxLevel = state.maxLevelCap ?? 30
       return {
         ...state,
         hasReactor: !state.hasReactor,
-        baseCapacity: !state.hasReactor ? 60 : 30,
+        baseCapacity: !state.hasReactor ? maxLevel * 2 : maxLevel,
       }
     }
 

@@ -34,10 +34,12 @@ bun test:coverage        # Coverage report
 bunx shadcn@latest add <component> -y  # Add shadcn/ui component
 
 # Database
-bun run db:push          # Push schema to database
+bun run db:push          # Push schema to local database (dev only)
 bun run db:studio        # Open Prisma Studio
+bunx prisma migrate dev --name <name>  # Create a new migration
+bunx prisma migrate deploy             # Apply migrations (production)
 
-# After DB reset (psql not installed locally — must use Docker)
+# After local DB reset (psql not installed locally — must use Docker)
 bash -c 'docker exec -i arsenyx-db psql "postgresql://arsenyx:arsenyx_dev@localhost:5432/arsenyx" < scripts/setup-search.sql'
 
 # Warframe Data
@@ -64,7 +66,7 @@ bun run update-data      # Update @wfcd/items package + sync
 
 ### Ask First
 
-- Schema changes that drop/rename columns or add required fields (requires DB reset)
+- Schema changes that drop/rename columns or add required fields (requires migration)
 - Adding new dependencies
 
 ### Never
@@ -84,7 +86,7 @@ import { getItemsByCategory } from "@/lib/warframe/items";
 import { prisma } from "@/lib/db";
 
 // CLIENT - must have "use client" directive
-"use client";
+("use client");
 import { getImageUrl, type BrowseItem } from "@/lib/warframe";
 // NEVER import from "@/lib/warframe/items" or "@/lib/db" in client components
 ```
@@ -115,9 +117,10 @@ import { getImageUrl, type BrowseItem } from "@/lib/warframe";
 
 ## Database Workflow
 
-- **No migrations in dev** — use `bun run db:push` to sync schema. Reset with `bun run db:push --force-reset`.
-- **After any reset** — re-run `setup-search.sql` via Docker (see Commands).
-- **Prod (Vercel + Neon)** — `main` branch auto-deploys. After Neon DB reset: `DATABASE_URL=<neon-url> bunx prisma db push`, then run `setup-search.sql` via Neon SQL Editor.
+- **Local dev** — use `bun run db:push` to sync schema quickly. Reset with `bun run db:push --force-reset`.
+- **After local reset** — re-run `setup-search.sql` via Docker (see Commands).
+- **New schema changes** — create a migration with `bunx prisma migrate dev --name descriptive_name`. This generates a migration file in `prisma/migrations/` that must be committed.
+- **Prod (Vercel + Neon)** — `main` branch auto-deploys. Deploy migrations: `$env:DATABASE_URL = "<neon-url>"; bunx prisma migrate deploy` (PowerShell). Search infrastructure is now handled by migration `202604071430_build_search_infrastructure` — no need to run `setup-search.sql` manually on new deployments.
 
 ## Testing
 

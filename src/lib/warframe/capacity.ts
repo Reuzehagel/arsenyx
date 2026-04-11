@@ -141,8 +141,9 @@ export function calculateBuildAuraBonus(build: BuildState): number {
  * Calculate the total available capacity for a build
  */
 export function calculateMaxCapacity(build: BuildState): number {
-  // Base capacity: 30, or 60 with reactor/catalyst
-  const baseCapacity = build.hasReactor ? 60 : 30
+  // Kuva/Tenet/Coda weapons have maxLevelCap 40 → base capacity 40/80
+  const maxLevel = build.maxLevelCap ?? 30
+  const baseCapacity = build.hasReactor ? maxLevel * 2 : maxLevel
 
   // Add aura bonus for warframes
   const auraBonus = calculateBuildAuraBonus(build)

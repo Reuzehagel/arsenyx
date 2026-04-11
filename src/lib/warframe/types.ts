@@ -320,7 +320,8 @@ export interface BuildState {
   shardSlots: (PlacedShard | null)[]
 
   // Capacity tracking
-  baseCapacity: number // 30 base, 60 with reactor
+  maxLevelCap?: number // 30 default, 40 for Kuva/Tenet/Coda weapons
+  baseCapacity: number // 30 base, 60 with reactor (80 for maxLevelCap 40)
   currentCapacity: number // Remaining after mods
 
   // Metadata

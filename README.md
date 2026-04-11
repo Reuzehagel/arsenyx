@@ -33,7 +33,7 @@ psql $DATABASE_URL -f scripts/setup-search.sql
 bun dev
 ```
 
-Open http://localhost:3000 in your browser.
+Open http://localhost:3000 in your browser
 
 ## Environment Variables
 
