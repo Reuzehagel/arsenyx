@@ -95,9 +95,9 @@ export function ProfileBuilds({
       />
 
       {isPending && !isLoadingMore ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+        <div className="flex flex-col gap-2.5">
           {Array.from({ length: 8 }).map((_, i) => (
-            <Skeleton key={i} className="aspect-video rounded-lg" />
+            <Skeleton key={i} className="h-24 rounded-lg" />
           ))}
         </div>
       ) : builds.length === 0 ? (
@@ -113,7 +113,7 @@ export function ProfileBuilds({
         </Empty>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+          <div className="flex flex-col gap-2.5">
             {builds.map((build) => (
               <BuildCardLink
                 key={build.id}

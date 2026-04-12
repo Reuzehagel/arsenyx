@@ -34,26 +34,28 @@ export function BuildCardLink({
   return (
     <Link
       href={`/builds/${slug}`}
-      className="bg-card hover:border-primary block overflow-hidden rounded-lg border transition-colors"
+      className="bg-card hover:bg-card/80 flex items-center gap-4 rounded-lg border p-4 transition-colors"
     >
-      <div className="bg-muted/20 relative aspect-video">
+      <div className="bg-muted/20 relative size-20 shrink-0 overflow-hidden rounded-lg">
         <Image
           src={getImageUrl(itemImageName ?? undefined)}
           alt={itemName}
           fill
           unoptimized
-          sizes="(max-width: 768px) 100vw, 300px"
+          sizes="80px"
           className="object-cover"
         />
         {imageOverlay}
       </div>
-      <div className="flex flex-col gap-1 p-2">
-        <h3 className="line-clamp-1 text-sm font-medium">{name}</h3>
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <h3 className="truncate text-base font-semibold">{name}</h3>
         {subtitle ?? (
-          <p className="text-muted-foreground text-xs">{itemName}</p>
+          <p className="text-muted-foreground text-sm">{itemName}</p>
         )}
-        <BuildStats voteCount={voteCount} viewCount={viewCount} />
         {footer}
+      </div>
+      <div className="shrink-0 pl-4">
+        <BuildStats voteCount={voteCount} viewCount={viewCount} />
       </div>
     </Link>
   )
