@@ -34,6 +34,8 @@ interface EncodedHelminth {
   u: string // Ability unique name
   n: string // Ability name
   s: string // Source warframe name
+  im?: string // Ability image name
+  d?: string // Ability description
 }
 
 interface EncodedSlot {
@@ -96,6 +98,8 @@ export function encodeBuild(state: BuildState): string {
       u: state.helminthAbility.ability.uniqueName,
       n: state.helminthAbility.ability.name,
       s: state.helminthAbility.ability.source,
+      im: state.helminthAbility.ability.imageName,
+      d: state.helminthAbility.ability.description,
     }
   }
 
@@ -243,6 +247,8 @@ export function decodeBuild(base64String: string): Partial<BuildState> | null {
           uniqueName: encoded.h.u,
           name: encoded.h.n,
           source: encoded.h.s,
+          imageName: encoded.h.im,
+          description: encoded.h.d,
         },
       }
     }
