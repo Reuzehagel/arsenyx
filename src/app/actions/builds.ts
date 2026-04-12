@@ -99,6 +99,7 @@ export async function saveBuildAction(
     return ok(build)
   } catch (error) {
     if (error instanceof BuildDraftError) {
+      console.error("Build draft validation failed:", error.code, error.message)
       return err(error.message)
     }
     console.error("Failed to save build:", error)

@@ -144,6 +144,7 @@ export function useBuildPersistence({
           })
 
           if (!result.success) {
+            console.error("Save build failed:", result.error)
             setSaveStatus("error")
             window.setTimeout(() => setSaveStatus("idle"), 3000)
           } else {
