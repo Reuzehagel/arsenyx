@@ -4,12 +4,10 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
 
-import { BuildCardLink } from "@/components/build/build-card-link"
-import { BuildsResults } from "@/components/builds/builds-results"
+import { BrowseItemBuilds } from "@/components/build/browse-item-builds"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { Icons } from "@/components/icons"
-import { OrgBadge } from "@/components/org"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -413,39 +411,7 @@ async function CommunityBuildsSection({
           </CardContent>
         </Card>
       ) : (
-        <BuildsResults
-          renderCard={(layout) =>
-            builds.map((build) => (
-              <BuildCardLink
-                key={build.id}
-                slug={build.slug}
-                name={build.name}
-                itemName={build.item.name}
-                itemImageName={build.item.imageName}
-                voteCount={build.voteCount}
-                viewCount={build.viewCount}
-                layout={layout}
-                subtitle={
-                  layout === "list"
-                    ? build.organization ? (
-                        <p className="line-clamp-1 text-sm">
-                          <OrgBadge
-                            name={build.organization.name}
-                            slug={build.organization.slug}
-                            linked={false}
-                          />
-                        </p>
-                      ) : (
-                        <p className="text-muted-foreground line-clamp-1 text-sm">
-                          by {build.user.displayUsername || build.user.username || build.user.name || "Anonymous"}
-                        </p>
-                      )
-                    : undefined
-                }
-              />
-            ))
-          }
-        />
+        <BrowseItemBuilds builds={builds} />
       )}
     </section>
   )
