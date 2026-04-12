@@ -84,10 +84,14 @@ function BuildCard({ build }: { build: BuildListItem }) {
     build.user.username || build.user.name || "Anonymous"
 
   return (
-    <Link
-      href={`/builds/${build.slug}`}
-      className="bg-card hover:bg-card/80 flex items-center gap-4 rounded-lg border p-4 transition-colors"
-    >
+    <div className="bg-card hover:bg-card/80 relative flex items-center gap-4 rounded-lg border p-4 transition-colors">
+      {/* Full-card link */}
+      <Link
+        href={`/builds/${build.slug}`}
+        className="absolute inset-0 rounded-lg"
+        aria-label={build.name}
+      />
+
       {/* Item Image */}
       <div className="bg-muted/20 relative size-20 shrink-0 overflow-hidden rounded-lg">
         <Image
@@ -106,9 +110,19 @@ function BuildCard({ build }: { build: BuildListItem }) {
         <p className="text-muted-foreground text-sm">
           {build.item.name} build by{" "}
           {build.organization ? (
-            <span className="text-[#a78bfa]">{build.organization.name}</span>
+            <Link
+              href={`/org/${build.organization.slug}`}
+              className="relative z-10 text-[#a78bfa] underline decoration-[#a78bfa]/40 hover:decoration-[#a78bfa]"
+            >
+              {build.organization.name}
+            </Link>
           ) : (
-            <span>{authorName}</span>
+            <Link
+              href={`/profile/${build.user.username || ""}`}
+              className="relative z-10 underline decoration-current/40 hover:decoration-current"
+            >
+              {authorName}
+            </Link>
           )}
         </p>
         <div className="flex gap-2 pt-1">
@@ -125,7 +139,7 @@ function BuildCard({ build }: { build: BuildListItem }) {
       <div className="shrink-0 pl-4">
         <BuildStats voteCount={build.voteCount} viewCount={build.viewCount} />
       </div>
-    </Link>
+    </div>
   )
 }
 
