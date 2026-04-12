@@ -74,6 +74,7 @@ export function BuildContainer({
     compatibleMods,
     compatibleArcanes,
     importedBuild,
+    helminthAugmentMods,
   })
 
   // Merge helminth augment mods into the compatible mods list when a
