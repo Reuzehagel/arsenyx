@@ -9,6 +9,7 @@ import type { BuildState } from "@/lib/warframe/types"
 
 import { prisma } from "../db"
 import { favoriteLimiter, RateLimitError } from "../rate-limit"
+import { USER_SUMMARY_SELECT } from "./selects"
 import {
   toggleBuildSocialAction,
   getUserSocialStatusesForBuilds,
@@ -126,13 +127,7 @@ export async function getUserFavoriteBuilds(
             itemImageName: true,
             itemCategory: true,
             user: {
-              select: {
-                id: true,
-                name: true,
-                username: true,
-                displayUsername: true,
-                image: true,
-              },
+              select: USER_SUMMARY_SELECT,
             },
           },
         },
@@ -163,7 +158,7 @@ export async function getUserFavoriteBuilds(
     item: {
       uniqueName: f.build.itemUniqueName,
       name: f.build.itemName,
-      imageName: f.build.itemImageName,
+      imageName: f.build.itemImageName ?? null,
       browseCategory: f.build.itemCategory,
     },
   }))

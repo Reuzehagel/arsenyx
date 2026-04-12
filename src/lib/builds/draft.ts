@@ -1,4 +1,4 @@
-import type { BuildVisibility } from "@prisma/client"
+import type { BuildVisibility } from "@/generated/prisma/client"
 import { z } from "zod"
 
 import type {

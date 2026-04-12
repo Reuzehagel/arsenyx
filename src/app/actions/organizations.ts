@@ -1,6 +1,6 @@
 "use server"
 
-import type { OrgRole } from "@prisma/client"
+import type { OrgRole } from "@/generated/prisma/client"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 

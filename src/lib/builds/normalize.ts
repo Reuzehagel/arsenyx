@@ -1,5 +1,5 @@
 import "server-only"
-import type { BuildVisibility } from "@prisma/client"
+import type { BuildVisibility } from "@/generated/prisma/client"
 
 import { prisma } from "@/lib/db"
 import { isOrgMember } from "@/lib/db/organizations"
@@ -17,13 +17,13 @@ import {
 } from "@/lib/warframe/mods"
 import { BuildStateSchema } from "@/lib/warframe/schemas"
 import { findStat } from "@/lib/warframe/shards"
+import { toPlacedMod } from "@/lib/warframe/mod-utils"
 import type {
   BrowseCategory,
   BuildState,
   HelminthAbility,
   Mod,
   PlacedArcane,
-  PlacedMod,
   PlacedShard,
 } from "@/lib/warframe/types"
 
@@ -108,26 +108,6 @@ function parseDraftPayload(input: unknown): BuildDraftPayload {
   )
 }
 
-function toPlacedMod(mod: Mod, rank: number): PlacedMod {
-  return {
-    uniqueName: mod.uniqueName,
-    name: mod.name,
-    imageName: mod.imageName,
-    polarity: mod.polarity,
-    baseDrain: mod.baseDrain,
-    fusionLimit: mod.fusionLimit,
-    rank,
-    rarity: mod.rarity,
-    compatName: mod.compatName,
-    type: mod.type,
-    levelStats: mod.levelStats,
-    modSet: mod.modSet,
-    modSetStats: mod.modSetStats,
-    isExilus: mod.isExilus,
-    isUtility: mod.isUtility,
-  }
-}
-
 function isAuraMod(mod: Mod): boolean {
   const compatName = mod.compatName?.toLowerCase() ?? ""
   const type = mod.type?.toLowerCase() ?? ""
@@ -182,12 +162,9 @@ function validateModForSlot(
   }
 }
 
-function normalizeDescription(value: string | null | undefined): string | null {
-  const trimmed = value?.trim()
-  return trimmed ? trimmed : null
-}
-
-function normalizeGuideField(value: string | null | undefined): string | null {
+function normalizeOptionalString(
+  value: string | null | undefined,
+): string | null {
   const trimmed = value?.trim()
   return trimmed ? trimmed : null
 }
@@ -644,12 +621,12 @@ export async function normalizeBuildDraftForPersistence(
     options?.existingBuildId,
   )
 
-  const guideSummary = normalizeGuideField(draft.guide?.summary)
-  const guideDescription = normalizeGuideField(draft.guide?.description)
+  const guideSummary = normalizeOptionalString(draft.guide?.summary)
+  const guideDescription = normalizeOptionalString(draft.guide?.description)
 
   return {
     name: draft.name.trim(),
-    description: normalizeDescription(draft.description),
+    description: normalizeOptionalString(draft.description),
     visibility: (draft.visibility ?? "PUBLIC") as BuildVisibility,
     itemUniqueName: item.uniqueName,
     itemCategory: draft.itemCategory,

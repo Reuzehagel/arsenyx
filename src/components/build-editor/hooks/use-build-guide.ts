@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 
 import { getUserBuildsForPartnerSelectorAction } from "@/app/actions/builds"
 
@@ -49,32 +49,24 @@ export function useBuildGuide({
   initialPartnerBuilds = [],
 }: UseBuildGuideProps): UseBuildGuideReturn {
   // Load guide from localStorage on init (for new builds only)
-  const [guideSummary, setGuideSummary] = useState<string>(() => {
-    if (initialGuide?.summary) return initialGuide.summary
-    if (savedBuildId) return ""
+  const savedGuide = useMemo(() => {
+    if (initialGuide || savedBuildId) return null
     try {
-      const saved = localStorage.getItem(
+      const raw = localStorage.getItem(
         `${GUIDE_STORAGE_KEY_PREFIX}${itemUniqueName}`,
       )
-      if (saved) return JSON.parse(saved).summary || ""
+      return raw ? JSON.parse(raw) : null
     } catch {
-      /* ignore */
+      return null
     }
-    return ""
-  })
-  const [guideDescription, setGuideDescription] = useState<string>(() => {
-    if (initialGuide?.description) return initialGuide.description
-    if (savedBuildId) return ""
-    try {
-      const saved = localStorage.getItem(
-        `${GUIDE_STORAGE_KEY_PREFIX}${itemUniqueName}`,
-      )
-      if (saved) return JSON.parse(saved).description || ""
-    } catch {
-      /* ignore */
-    }
-    return ""
-  })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const [guideSummary, setGuideSummary] = useState<string>(
+    initialGuide?.summary ?? savedGuide?.summary ?? "",
+  )
+  const [guideDescription, setGuideDescription] = useState<string>(
+    initialGuide?.description ?? savedGuide?.description ?? "",
+  )
   const [partnerBuilds, setPartnerBuilds] =
     useState<PartnerBuild[]>(initialPartnerBuilds)
   const [availableBuilds, setAvailableBuilds] = useState<PartnerBuild[]>([])

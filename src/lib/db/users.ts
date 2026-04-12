@@ -8,6 +8,7 @@ import "server-only"
 import { cache } from "react"
 
 import { prisma } from "../db"
+import { USER_SUMMARY_SELECT } from "./selects"
 
 // =============================================================================
 // TYPES
@@ -42,36 +43,32 @@ export interface UserStats {
 // USER QUERIES
 // =============================================================================
 
+const USER_PROFILE_SELECT = {
+  ...USER_SUMMARY_SELECT,
+  bio: true,
+  createdAt: true,
+  isVerified: true,
+  isCommunityLeader: true,
+  isModerator: true,
+  isAdmin: true,
+  isBanned: true,
+} as const
+
 /**
  * Get user profile by username (case-insensitive)
  *
  * @param username - Username to look up
  * @returns User profile or null if not found
  */
-export const getUserByUsername = cache(async function getUserByUsername(
+export const getUserByUsername = cache(function getUserByUsername(
   username: string,
 ): Promise<UserProfile | null> {
-  const user = await prisma.user.findFirst({
+  return prisma.user.findFirst({
     where: {
       username: { equals: username, mode: "insensitive" },
     },
-    select: {
-      id: true,
-      name: true,
-      username: true,
-      displayUsername: true,
-      image: true,
-      bio: true,
-      createdAt: true,
-      isVerified: true,
-      isCommunityLeader: true,
-      isModerator: true,
-      isAdmin: true,
-      isBanned: true,
-    },
+    select: USER_PROFILE_SELECT,
   })
-
-  return user
 })
 
 /**
@@ -80,28 +77,13 @@ export const getUserByUsername = cache(async function getUserByUsername(
  * @param userId - User ID to look up
  * @returns User profile or null if not found
  */
-export const getUserById = cache(async function getUserById(
+export const getUserById = cache(function getUserById(
   userId: string,
 ): Promise<UserProfile | null> {
-  const user = await prisma.user.findUnique({
+  return prisma.user.findUnique({
     where: { id: userId },
-    select: {
-      id: true,
-      name: true,
-      username: true,
-      displayUsername: true,
-      image: true,
-      bio: true,
-      createdAt: true,
-      isVerified: true,
-      isCommunityLeader: true,
-      isModerator: true,
-      isAdmin: true,
-      isBanned: true,
-    },
+    select: USER_PROFILE_SELECT,
   })
-
-  return user
 })
 
 /**
@@ -152,21 +134,7 @@ export async function getUserForSettings(
 ): Promise<UserProfileFull | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: {
-      id: true,
-      name: true,
-      username: true,
-      displayUsername: true,
-      image: true,
-      bio: true,
-      email: true,
-      createdAt: true,
-      isVerified: true,
-      isCommunityLeader: true,
-      isModerator: true,
-      isAdmin: true,
-      isBanned: true,
-    },
+    select: { ...USER_PROFILE_SELECT, email: true },
   })
   return user
 }

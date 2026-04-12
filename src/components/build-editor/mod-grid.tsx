@@ -507,6 +507,3 @@ const ModSlotCard = memo(function ModSlotCard({
     </Popover>
   )
 })
-
-// Re-export PolarityIcon from icons for backwards compatibility
-export { PolarityIcon } from "@/components/icons"

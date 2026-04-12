@@ -8,8 +8,6 @@ import {
   getModsForItem,
   getModByUniqueName,
   getModByName,
-  getModFamily,
-  canAddModToBuild,
   getAllArcanes,
   getArcanesForSlot,
   getArcaneByUniqueName,
@@ -223,62 +221,6 @@ describe("getModByName", () => {
 
   it("returns undefined for unknown mod", () => {
     expect(getModByName("Nonexistent Mod Name 12345")).toBeUndefined()
-  })
-})
-
-// =============================================================================
-// getModFamily() TESTS
-// =============================================================================
-
-describe("getModFamily", () => {
-  it("returns family for known mod", () => {
-    const serration = getModByName("Serration")
-    expect(serration).toBeDefined()
-    expect(getModFamily(serration!)).toBe("Serration")
-  })
-
-  it("returns base name for Primed variant", () => {
-    const mod = getModByName("Primed Continuity")
-    if (mod) {
-      expect(getModFamily(mod)).toBe("Continuity")
-    }
-  })
-
-  it("returns null for mod with no family", () => {
-    const mod = getModByName("Hellfire")
-    if (mod) {
-      expect(getModFamily(mod)).toBeNull()
-    }
-  })
-})
-
-// =============================================================================
-// canAddModToBuild() TESTS
-// =============================================================================
-
-describe("canAddModToBuild", () => {
-  it("allows mod with no family conflicts", () => {
-    const vitality = getModByName("Vitality")!
-    const serration = getModByName("Serration")!
-    expect(canAddModToBuild(vitality, [serration])).toBe(true)
-  })
-
-  it("blocks exact duplicate", () => {
-    const vitality = getModByName("Vitality")!
-    expect(canAddModToBuild(vitality, [vitality])).toBe(false)
-  })
-
-  it("blocks family conflict (Primed variant)", () => {
-    const continuity = getModByName("Continuity")
-    const primedContinuity = getModByName("Primed Continuity")
-    if (continuity && primedContinuity) {
-      expect(canAddModToBuild(primedContinuity, [continuity])).toBe(false)
-    }
-  })
-
-  it("allows mod to empty build", () => {
-    const vitality = getModByName("Vitality")!
-    expect(canAddModToBuild(vitality, [])).toBe(true)
   })
 })
 

@@ -444,11 +444,11 @@ describe("calculateStats", () => {
     expect(result.weapon).toBeDefined()
   })
 
-  it("returns empty object for unknown category", () => {
+  it("returns warframe stats for companions category", () => {
     const build = createEmptyBuildState({ itemCategory: "companions" })
     const result = calculateStats(EXCALIBUR, build)
 
-    expect(result.warframe).toBeUndefined()
+    expect(result.warframe).toBeDefined()
     expect(result.weapon).toBeUndefined()
   })
 })

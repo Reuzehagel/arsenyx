@@ -101,7 +101,7 @@ export async function updateProfileAction(
 }
 
 // =============================================================================
-// PROFILE BUILDS
+// PROFILE / ORGANIZATION BUILDS
 // =============================================================================
 
 interface ProfileBuildsResult {
@@ -109,30 +109,25 @@ interface ProfileBuildsResult {
   hasMore: boolean
 }
 
-export async function getProfileBuildsAction(
-  userId: string,
+async function fetchPaginatedBuilds(
+  fetcher: (opts: GetBuildsOptions) => Promise<{ builds: BuildListItem[]; total: number }>,
   options: { query?: string; category?: string; page?: number },
+  extraOptions?: Partial<GetBuildsOptions>,
 ): Promise<Result<ProfileBuildsResult>> {
   try {
-    const session = await getServerSession()
-    const viewerId = session?.user?.id
-
     const limit = 12
     const page = options.page ?? 1
     const buildOptions: GetBuildsOptions = {
       page,
       limit,
       sortBy: "votes",
+      ...extraOptions,
       ...(options.query && { query: options.query }),
       ...(options.category &&
         options.category !== "all" && { category: options.category }),
     }
 
-    const { builds, total } = await getUserBuilds(
-      userId,
-      viewerId,
-      buildOptions,
-    )
+    const { builds, total } = await fetcher(buildOptions)
     const hasMore = total > page * limit
 
     return ok({ builds, hasMore })
@@ -141,34 +136,28 @@ export async function getProfileBuildsAction(
   }
 }
 
-// =============================================================================
-// ORGANIZATION BUILDS
-// =============================================================================
+export async function getProfileBuildsAction(
+  userId: string,
+  options: { query?: string; category?: string; page?: number },
+): Promise<Result<ProfileBuildsResult>> {
+  const session = await getServerSession()
+  const viewerId = session?.user?.id
+
+  return fetchPaginatedBuilds(
+    (opts) => getUserBuilds(userId, viewerId, opts),
+    options,
+  )
+}
 
 export async function getOrgBuildsAction(
   orgId: string,
   options: { query?: string; category?: string; page?: number },
 ): Promise<Result<ProfileBuildsResult>> {
-  try {
-    const limit = 12
-    const page = options.page ?? 1
-    const buildOptions: GetBuildsOptions = {
-      page,
-      limit,
-      sortBy: "votes",
-      organizationId: orgId,
-      ...(options.query && { query: options.query }),
-      ...(options.category &&
-        options.category !== "all" && { category: options.category }),
-    }
-
-    const { builds, total } = await getPublicBuilds(buildOptions)
-    const hasMore = total > page * limit
-
-    return ok({ builds, hasMore })
-  } catch (error) {
-    return err(getErrorMessage(error, "Failed to load builds"))
-  }
+  return fetchPaginatedBuilds(
+    (opts) => getPublicBuilds(opts),
+    options,
+    { organizationId: orgId },
+  )
 }
 
 // =============================================================================
