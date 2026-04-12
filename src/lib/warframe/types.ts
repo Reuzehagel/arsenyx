@@ -297,7 +297,7 @@ export interface PlacedArcane {
   name: string
   imageName?: string
   rank: number
-  rarity: string
+  rarity?: string
 }
 
 export interface BuildState {

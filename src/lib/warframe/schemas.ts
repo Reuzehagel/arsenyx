@@ -68,7 +68,7 @@ const PlacedArcaneSchema = z.object({
   name: z.string(),
   imageName: z.string().optional(),
   rank: z.number(),
-  rarity: z.string(),
+  rarity: z.string().optional(),
 })
 
 const PlacedShardSchema = z.object({
