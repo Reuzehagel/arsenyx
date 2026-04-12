@@ -111,6 +111,7 @@ export function createInitialBuildState(
   compatibleMods: Mod[],
   importedBuild?: Partial<BuildState>,
   compatibleArcanes?: Arcane[],
+  helminthAugmentMods?: Record<string, Mod[]>,
 ): BuildState {
   const baseState = createBaseBuildState(item, category)
 
@@ -150,6 +151,19 @@ export function createInitialBuildState(
     }
 
     const modMap = new Map(compatibleMods.map((m) => [m.uniqueName, m]))
+
+    // Include helminth augment mods in the lookup map so they hydrate correctly
+    if (helminthAugmentMods && importedBuild.helminthAbility) {
+      const augments =
+        helminthAugmentMods[importedBuild.helminthAbility.ability.uniqueName]
+      if (augments) {
+        for (const mod of augments) {
+          if (!modMap.has(mod.uniqueName)) {
+            modMap.set(mod.uniqueName, mod)
+          }
+        }
+      }
+    }
 
     const hydrateSlot = (slot: ModSlot) => {
       if (slot.mod) {
@@ -543,6 +557,7 @@ export interface UseBuildStateProps {
   compatibleMods: Mod[]
   compatibleArcanes: Arcane[]
   importedBuild?: Partial<BuildState>
+  helminthAugmentMods?: Record<string, Mod[]>
 }
 
 export function useBuildState({
@@ -551,10 +566,11 @@ export function useBuildState({
   compatibleMods,
   compatibleArcanes,
   importedBuild,
+  helminthAugmentMods,
 }: UseBuildStateProps) {
   const [buildState, dispatch] = useReducer(
     buildReducer,
-    { item, category, compatibleMods, compatibleArcanes, importedBuild },
+    { item, category, compatibleMods, compatibleArcanes, importedBuild, helminthAugmentMods },
     (init) =>
       createInitialBuildState(
         init.item,
@@ -562,6 +578,7 @@ export function useBuildState({
         init.compatibleMods,
         init.importedBuild,
         init.compatibleArcanes,
+        init.helminthAugmentMods,
       ),
   )
 
