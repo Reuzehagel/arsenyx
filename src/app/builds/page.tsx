@@ -9,11 +9,11 @@ import { BuildStats } from "@/components/build/build-card-link"
 import { BuildsFilterDropdown, BuildsSortDropdown } from "@/components/builds"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
-import { OrgBadge } from "@/components/org"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { getPublicBuilds, type BuildListItem } from "@/lib/db/index"
 import { getImageUrl } from "@/lib/warframe/images"
+import { getCategoryConfig } from "@/lib/warframe/categories"
 import type { BrowseCategory } from "@/lib/warframe/types"
 
 export const metadata: Metadata = {
@@ -77,56 +77,53 @@ function buildFilterUrl(
 
 function BuildCard({ build }: { build: BuildListItem }) {
   const timeAgo = getRelativeTime(new Date(build.createdAt))
+  const categoryLabel =
+    getCategoryConfig(build.item.browseCategory as BrowseCategory)?.label ??
+    build.item.browseCategory
+  const authorName =
+    build.user.username || build.user.name || "Anonymous"
 
   return (
     <Link
       href={`/builds/${build.slug}`}
-      className="bg-card block overflow-hidden rounded-lg border"
+      className="bg-card hover:bg-card/80 flex items-center gap-4 rounded-lg border p-4 transition-colors"
     >
       {/* Item Image */}
-      <div className="bg-muted/20 relative aspect-video">
+      <div className="bg-muted/20 relative size-20 shrink-0 overflow-hidden rounded-lg">
         <Image
           src={getImageUrl(build.item.imageName ?? undefined)}
           alt={build.item.name}
           fill
           unoptimized
-          sizes="(max-width: 768px) 100vw, 300px"
+          sizes="80px"
           className="object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-        <div className="absolute right-2 bottom-2 left-2">
+      </div>
+
+      {/* Build Info */}
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <h3 className="truncate text-base font-semibold">{build.name}</h3>
+        <p className="text-muted-foreground text-sm">
+          {build.item.name} build by{" "}
+          {build.organization ? (
+            <span className="text-[#a78bfa]">{build.organization.name}</span>
+          ) : (
+            <span>{authorName}</span>
+          )}
+        </p>
+        <div className="flex gap-2 pt-1">
           <Badge variant="secondary" className="text-xs">
-            {build.item.browseCategory}
+            {timeAgo}
+          </Badge>
+          <Badge variant="secondary" className="text-xs">
+            {categoryLabel}
           </Badge>
         </div>
       </div>
 
-      {/* Build Info */}
-      <div className="flex flex-col gap-2 p-3">
-        <div>
-          <h3 className="line-clamp-1 text-sm font-semibold">{build.name}</h3>
-          <p className="text-muted-foreground line-clamp-1 text-xs">
-            {build.item.name}
-          </p>
-        </div>
-
-        {/* Author and Stats */}
-        <div className="text-muted-foreground flex items-center justify-between text-xs">
-          <span className="line-clamp-1">
-            {build.organization ? (
-              <OrgBadge
-                name={build.organization.name}
-                slug={build.organization.slug}
-                linked={false}
-              />
-            ) : (
-              <>by {build.user.username || build.user.name || "Anonymous"}</>
-            )}
-          </span>
-          <BuildStats voteCount={build.voteCount} viewCount={build.viewCount} />
-        </div>
-
-        <p className="text-muted-foreground text-xs">{timeAgo}</p>
+      {/* Stats */}
+      <div className="shrink-0 pl-4">
+        <BuildStats voteCount={build.voteCount} viewCount={build.viewCount} />
       </div>
     </Link>
   )
@@ -228,7 +225,7 @@ export default async function BuildsPage({ searchParams }: BuildsPageProps) {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+              <div className="flex flex-col gap-2.5">
                 {builds.map((build) => (
                   <BuildCard key={build.id} build={build} />
                 ))}

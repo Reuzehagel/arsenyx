@@ -8,11 +8,11 @@ interface OrgBadgeProps {
 
 export function OrgBadge({ name, slug, linked = true }: OrgBadgeProps) {
   const content = (
-    <span className="inline-flex items-center gap-1">
-      <span className="rounded bg-[#7c3aed] px-[5px] py-[1px] text-[9px] font-semibold text-white">
+    <span className="inline-flex min-w-0 items-center gap-1">
+      <span className="shrink-0 rounded bg-[#7c3aed] px-[5px] py-[1px] text-[9px] font-semibold text-white">
         ORG
       </span>
-      <span className="text-[#a78bfa]">{name}</span>
+      <span className="truncate text-[#a78bfa]">{name}</span>
     </span>
   )
 
