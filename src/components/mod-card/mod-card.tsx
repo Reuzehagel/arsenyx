@@ -177,7 +177,7 @@ function CompactModCard({
           }}
         />
         <div
-          className="pointer-events-none absolute inset-0 opacity-25"
+          className="pointer-events-none absolute inset-0 opacity-15"
           style={{
             backgroundColor: getRarityColor(rarity),
             mixBlendMode: "hard-light",
