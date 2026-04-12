@@ -8,12 +8,26 @@ import {
   Loader2,
   Pencil,
   Save,
+  Trash2,
   UploadCloud,
   X,
 } from "lucide-react"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
+import { toast } from "sonner"
 
+import { deleteBuildAction } from "@/app/actions/builds"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { getImageUrl } from "@/lib/warframe/images"
@@ -71,7 +85,10 @@ export function BuildEditorHeader({
   onOrganizationChange,
   currentVisibility,
 }: BuildEditorHeaderProps) {
+  const router = useRouter()
   const [isEditingName, setIsEditingName] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const canEditName = canEdit && isAuthenticated
 
@@ -214,6 +231,17 @@ export function BuildEditorHeader({
                 <X data-icon="inline-start" />
                 <span className="hidden sm:inline">Cancel</span>
               </Button>
+              {isOwner && buildId && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:bg-destructive/10"
+                  onClick={() => setDeleteDialogOpen(true)}
+                >
+                  <Trash2 data-icon="inline-start" />
+                  <span className="hidden sm:inline">Delete</span>
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -229,6 +257,48 @@ export function BuildEditorHeader({
         onOrganizationChange={onOrganizationChange}
         currentVisibility={currentVisibility}
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete build?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete &ldquo;{buildName || item.name}
+              &rdquo;. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={isDeleting}
+              onClick={async (e) => {
+                e.preventDefault()
+                if (!buildId) return
+                setIsDeleting(true)
+                const result = await deleteBuildAction(buildId)
+                if (result.success) {
+                  toast.success("Build deleted")
+                  router.push("/")
+                } else {
+                  toast.error(result.error)
+                  setIsDeleting(false)
+                }
+              }}
+            >
+              {isDeleting ? (
+                <Loader2
+                  data-icon="inline-start"
+                  className="animate-spin"
+                />
+              ) : (
+                <Trash2 data-icon="inline-start" />
+              )}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }
