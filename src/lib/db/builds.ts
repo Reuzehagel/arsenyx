@@ -4,7 +4,7 @@ import "server-only"
  *
  * CRUD operations for builds with visibility checks
  */
-import type { BuildVisibility, Prisma } from "@prisma/client"
+import type { BuildVisibility, Prisma } from "@/generated/prisma/client"
 import { nanoid } from "nanoid"
 import { cache } from "react"
 
@@ -13,6 +13,8 @@ import { BuildStateSchema, safeParseOrCast } from "@/lib/warframe/schemas"
 import type { BuildState } from "@/lib/warframe/types"
 
 import { prisma } from "../db"
+import { isOrgMember } from "./org-membership"
+import { USER_SUMMARY_SELECT } from "./selects"
 
 // =============================================================================
 // TYPES
@@ -134,6 +136,22 @@ export interface BuildListItem {
   }
 }
 
+function mapBuildItem(build: {
+  itemUniqueName?: string
+  itemName: string
+  itemImageName: string | null
+  itemCategory: string
+}) {
+  return {
+    ...(build.itemUniqueName !== undefined
+      ? { uniqueName: build.itemUniqueName }
+      : {}),
+    name: build.itemName,
+    imageName: build.itemImageName,
+    browseCategory: build.itemCategory,
+  }
+}
+
 function serializeBuildDataForDb(buildData: BuildState): Prisma.JsonObject {
   function cleanJsonValue(value: unknown): unknown {
     if (Array.isArray(value)) {
@@ -168,7 +186,7 @@ function serializeBuildDataForDb(buildData: BuildState): Prisma.JsonObject {
     throw new Error(issue?.message ?? "Invalid buildData")
   }
 
-  return cleanJsonValue(parsed.data) as Prisma.JsonObject
+  return parsed.data as unknown as Prisma.JsonObject
 }
 
 function detectHasShards(buildData: BuildState): boolean {
@@ -220,13 +238,7 @@ async function generateUniqueSlug(): Promise<string> {
 
 const buildInclude = {
   user: {
-    select: {
-      id: true,
-      name: true,
-      username: true,
-      displayUsername: true,
-      image: true,
-    },
+    select: USER_SUMMARY_SELECT,
   },
   organization: {
     select: { id: true, name: true, slug: true, image: true },
@@ -315,12 +327,12 @@ async function mapBuildResult(
 
   return {
     ...build,
-    item: {
-      uniqueName: build.itemUniqueName as string,
-      name: build.itemName as string,
-      imageName: (build.itemImageName as string | null) ?? null,
-      browseCategory: build.itemCategory as string,
-    },
+    item: mapBuildItem({
+      itemUniqueName: build.itemUniqueName as string,
+      itemName: build.itemName as string,
+      itemImageName: (build.itemImageName as string | null) ?? null,
+      itemCategory: build.itemCategory as string,
+    }),
     buildData: safeParseOrCast(
       BuildStateSchema,
       build.buildData,
@@ -331,12 +343,7 @@ async function mapBuildResult(
       id: pb.id,
       slug: pb.slug,
       name: pb.name,
-      item: {
-        uniqueName: pb.itemUniqueName,
-        name: pb.itemName,
-        imageName: pb.itemImageName,
-        browseCategory: pb.itemCategory,
-      },
+      item: mapBuildItem(pb),
       buildData: safeParseOrCast(
         BuildStateSchema,
         pb.buildData,
@@ -349,11 +356,11 @@ async function mapBuildResult(
 function mapBuildListItem(build: Record<string, unknown>): BuildListItem {
   return {
     ...build,
-    item: {
-      name: build.itemName as string,
-      imageName: (build.itemImageName as string | null) ?? null,
-      browseCategory: build.itemCategory as string,
-    },
+    item: mapBuildItem({
+      itemName: build.itemName as string,
+      itemImageName: (build.itemImageName as string | null) ?? null,
+      itemCategory: build.itemCategory as string,
+    }),
   } as BuildListItem
 }
 
@@ -425,54 +432,46 @@ export async function createBuild(
 // READ
 // =============================================================================
 
+async function getBuildByField(
+  where: { slug: string } | { id: string },
+  viewerId?: string,
+): Promise<BuildWithUser | null> {
+  const build = await prisma.build.findUnique({
+    where,
+    include: buildInclude,
+  })
+
+  if (!build) {
+    return null
+  }
+
+  if (!(await canViewBuild(build, viewerId))) {
+    return null
+  }
+
+  return mapBuildResult(build, viewerId)
+}
+
 /**
  * Get a build by its slug with visibility checks
  * @param slug - The build's URL slug
  * @param viewerId - Optional ID of the user viewing (for visibility checks)
  */
-export const getBuildBySlug = cache(async function getBuildBySlug(
+export const getBuildBySlug = cache(function getBuildBySlug(
   slug: string,
   viewerId?: string,
 ): Promise<BuildWithUser | null> {
-  const build = await prisma.build.findUnique({
-    where: { slug },
-    include: buildInclude,
-  })
-
-  if (!build) {
-    return null
-  }
-
-  // Visibility check
-  if (!(await canViewBuild(build, viewerId))) {
-    return null
-  }
-
-  return mapBuildResult(build, viewerId)
+  return getBuildByField({ slug }, viewerId)
 })
 
 /**
  * Get a build by its ID with visibility checks
  */
-export async function getBuildById(
+export function getBuildById(
   id: string,
   viewerId?: string,
 ): Promise<BuildWithUser | null> {
-  const build = await prisma.build.findUnique({
-    where: { id },
-    include: buildInclude,
-  })
-
-  if (!build) {
-    return null
-  }
-
-  // Visibility check
-  if (!(await canViewBuild(build, viewerId))) {
-    return null
-  }
-
-  return mapBuildResult(build, viewerId)
+  return getBuildByField({ id }, viewerId)
 }
 
 /**
@@ -657,7 +656,6 @@ export async function updateBuild(
       input.organizationId &&
       input.organizationId !== existingBuild.organizationId
     ) {
-      const { isOrgMember } = await import("./organizations")
       if (!(await isOrgMember(input.organizationId, userId))) {
         throw new Error("You are not allowed to publish into this organization")
       }
@@ -782,11 +780,7 @@ export async function getUserBuildsForPartnerSelector(userId: string): Promise<
     id: b.id,
     slug: b.slug,
     name: b.name,
-    item: {
-      name: b.itemName,
-      imageName: b.itemImageName,
-      browseCategory: b.itemCategory,
-    },
+    item: mapBuildItem(b),
     buildData: {
       formaCount: (b.buildData as { formaCount?: number })?.formaCount ?? 0,
     },
@@ -886,7 +880,6 @@ async function assertBuildAccess(
   if (isOwner) return existing
 
   if (existing.organizationId) {
-    const { isOrgMember } = await import("./organizations")
     if (await isOrgMember(existing.organizationId, userId)) return existing
   }
 
@@ -896,7 +889,7 @@ async function assertBuildAccess(
 /**
  * Check if a user can view a build based on visibility
  */
-function canViewBuild(
+async function canViewBuild(
   build: {
     visibility: BuildVisibility
     userId: string
@@ -904,23 +897,19 @@ function canViewBuild(
   },
   viewerId?: string,
 ): Promise<boolean> {
-  // Owner can always view
   if (viewerId && build.userId === viewerId) {
-    return Promise.resolve(true)
+    return true
   }
 
-  // Public and unlisted builds are viewable by anyone
   if (build.visibility === "PUBLIC" || build.visibility === "UNLISTED") {
-    return Promise.resolve(true)
+    return true
   }
 
   if (viewerId && build.organizationId) {
-    return import("./organizations").then(({ isOrgMember }) =>
-      isOrgMember(build.organizationId!, viewerId),
-    )
+    return isOrgMember(build.organizationId, viewerId)
   }
 
-  return Promise.resolve(false)
+  return false
 }
 
 async function filterVisiblePartnerBuilds<
@@ -930,15 +919,10 @@ async function filterVisiblePartnerBuilds<
     organizationId?: string | null
   },
 >(partnerBuilds: T[], viewerId?: string): Promise<T[]> {
-  const visiblePartnerBuilds: T[] = []
-
-  for (const partnerBuild of partnerBuilds) {
-    if (await canViewBuild(partnerBuild, viewerId)) {
-      visiblePartnerBuilds.push(partnerBuild)
-    }
-  }
-
-  return visiblePartnerBuilds
+  const visibility = await Promise.all(
+    partnerBuilds.map((pb) => canViewBuild(pb, viewerId)),
+  )
+  return partnerBuilds.filter((_, i) => visibility[i])
 }
 
 async function assertPartnerBuildAccess(
@@ -980,7 +964,6 @@ async function assertPartnerBuildAccess(
     }
 
     if (build.organizationId) {
-      const { isOrgMember } = await import("./organizations")
       if (await isOrgMember(build.organizationId, userId)) {
         continue
       }

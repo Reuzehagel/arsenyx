@@ -11,9 +11,6 @@ import type { StatValue } from "@/lib/warframe/stat-types"
 
 import { StatBreakdownTooltip } from "./stat-breakdown"
 
-// Re-export StatFormat for backwards compatibility
-export type { StatFormat }
-
 interface CalculatedStatRowProps {
   label: string
   stat: StatValue

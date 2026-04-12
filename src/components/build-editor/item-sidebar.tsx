@@ -38,13 +38,20 @@ import { HelminthAbilityDialog } from "./helminth-ability-dialog"
 import { ShardsPanel } from "./shards-panel"
 import { CalculatedStatRow, SimpleStatRow } from "./stat-row"
 
+const fallbackItem = {
+  uniqueName: "",
+  name: "",
+  tradable: false,
+  health: 0,
+  shield: 0,
+  armor: 0,
+  power: 0,
+} as const
+
 interface ItemSidebarProps {
   buildState: BuildState
   capacityStatus: CapacityStatus
   onToggleReactor: () => void
-  onCopyBuild: () => void
-  onClearBuild: () => void
-  showCopied: boolean
   itemStats?: ItemStats
   item?: BrowseableItem // Full item data for stat calculations
   readOnly?: boolean
@@ -72,18 +79,6 @@ export function ItemSidebar({
     number | null
   >(null)
   const [isHelminthDialogOpen, setIsHelminthDialogOpen] = useState(false)
-
-  // Create a fallback item for the hook (required for hooks rules)
-  // The actual calculation will only be used if item is provided
-  const fallbackItem = {
-    uniqueName: "",
-    name: "",
-    tradable: false,
-    health: 0,
-    shield: 0,
-    armor: 0,
-    power: 0,
-  }
 
   // Always call hook (React rules) but use fallback if no item
   const calculatedStatsResult = useCalculatedStats({

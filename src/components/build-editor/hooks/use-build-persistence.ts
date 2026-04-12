@@ -1,13 +1,11 @@
-import type { BuildVisibility } from "@prisma/client"
+import type { BuildVisibility } from "@/generated/prisma/client"
 import { useRouter } from "next/navigation"
 import { useState, useCallback, useEffect } from "react"
 
 import { saveBuildAction } from "@/app/actions/builds"
 import { copyBuildToClipboard } from "@/lib/build-codec"
 import { buildStateToDraftPayload } from "@/lib/builds/draft"
-import type { BrowseCategory } from "@/lib/warframe/types"
-import type { BuildState } from "@/lib/warframe/types"
-import type { BrowseableItem } from "@/lib/warframe/types"
+import type { BrowseCategory, BuildState, BrowseableItem } from "@/lib/warframe/types"
 
 import type { Visibility } from "../publish-dialog"
 

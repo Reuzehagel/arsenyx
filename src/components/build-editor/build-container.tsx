@@ -318,9 +318,6 @@ export function BuildContainer({
                 buildState={buildState}
                 capacityStatus={capacityStatus}
                 onToggleReactor={handleToggleReactor}
-                onCopyBuild={handleCopyBuild}
-                onClearBuild={handleClearBuild}
-                showCopied={showCopied}
                 itemStats={itemStats}
                 item={item}
                 readOnly={!canEdit}

@@ -6,6 +6,7 @@ import {
   calculateTotalEndoCost,
   calculateFormaCount,
 } from "@/lib/warframe/capacity"
+import { toPlacedMod } from "@/lib/warframe/mod-utils"
 import { getModBaseName } from "@/lib/warframe/mod-variants"
 import type {
   BuildState,
@@ -283,23 +284,7 @@ function buildReducer(state: BuildState, action: BuildAction): BuildState {
   switch (action.type) {
     case "PLACE_MOD": {
       const { mod, rank, slotId } = action
-      const placedMod: PlacedMod = {
-        uniqueName: mod.uniqueName,
-        name: mod.name,
-        imageName: mod.imageName,
-        polarity: mod.polarity,
-        baseDrain: mod.baseDrain,
-        fusionLimit: mod.fusionLimit,
-        rank,
-        rarity: mod.rarity,
-        compatName: mod.compatName,
-        type: mod.type,
-        levelStats: mod.levelStats,
-        modSet: mod.modSet,
-        modSetStats: mod.modSetStats,
-        isExilus: mod.isExilus,
-        isUtility: mod.isUtility,
-      }
+      const placedMod = toPlacedMod(mod, rank)
 
       const newState = { ...state }
       const baseName = getModBaseName(mod.name)

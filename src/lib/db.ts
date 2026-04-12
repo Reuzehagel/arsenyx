@@ -1,18 +1,15 @@
 import { PrismaPg } from "@prisma/adapter-pg"
-import { PrismaClient } from "@prisma/client"
-import pg from "pg"
+import { PrismaClient } from "@/generated/prisma/client"
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
 function createPrismaClient() {
-  const pool = new pg.Pool({
-    connectionString: process.env.DATABASE_URL,
+  const adapter = new PrismaPg({
+    connectionString: process.env.DATABASE_URL!,
     max: 3, // Limit connections per worker during build
   })
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- @types/pg version mismatch between pg and @prisma/adapter-pg
-  const adapter = new PrismaPg(pool as any)
 
   return new PrismaClient({
     adapter,

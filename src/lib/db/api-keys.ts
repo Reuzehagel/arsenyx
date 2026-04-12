@@ -1,7 +1,7 @@
 import "server-only"
 import { createHash, randomBytes } from "node:crypto"
 
-import type { Prisma } from "@prisma/client"
+import type { Prisma } from "@/generated/prisma/client"
 
 import { prisma } from "@/lib/db"
 

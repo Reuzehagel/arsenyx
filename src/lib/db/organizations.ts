@@ -1,8 +1,9 @@
 import "server-only"
-import type { OrgRole } from "@prisma/client"
+import type { OrgRole } from "@/generated/prisma/client"
 import { cache } from "react"
 
 import { prisma } from "../db"
+import { USER_SUMMARY_SELECT } from "./selects"
 
 // =============================================================================
 // TYPES
@@ -55,66 +56,36 @@ export interface UpdateOrganizationInput {
 // READ
 // =============================================================================
 
-export const getOrganizationBySlug = cache(async function getOrganizationBySlug(
+const membersInclude = {
+  include: {
+    user: { select: USER_SUMMARY_SELECT },
+  },
+  orderBy: [{ role: "asc" as const }, { joinedAt: "asc" as const }],
+}
+
+async function getOrganizationByWhere(
+  where: { slug: string } | { id: string },
+): Promise<OrganizationProfile | null> {
+  const org = await prisma.organization.findUnique({
+    where,
+    include: { members: membersInclude },
+  })
+  return org
+}
+
+export const getOrganizationBySlug = cache(function getOrganizationBySlug(
   slug: string,
 ): Promise<OrganizationProfile | null> {
-  const org = await prisma.organization.findUnique({
-    where: { slug },
-    include: {
-      members: {
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              username: true,
-              displayUsername: true,
-              image: true,
-            },
-          },
-        },
-        orderBy: [{ role: "asc" }, { joinedAt: "asc" }],
-      },
-    },
-  })
-  return org
+  return getOrganizationByWhere({ slug })
 })
 
-export const getOrganizationById = cache(async function getOrganizationById(
+export const getOrganizationById = cache(function getOrganizationById(
   id: string,
 ): Promise<OrganizationProfile | null> {
-  const org = await prisma.organization.findUnique({
-    where: { id },
-    include: {
-      members: {
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              username: true,
-              displayUsername: true,
-              image: true,
-            },
-          },
-        },
-        orderBy: [{ role: "asc" }, { joinedAt: "asc" }],
-      },
-    },
-  })
-  return org
+  return getOrganizationByWhere({ id })
 })
 
-export const isOrgMember = cache(async function isOrgMember(
-  organizationId: string,
-  userId: string,
-): Promise<boolean> {
-  const member = await prisma.organizationMember.findUnique({
-    where: { organizationId_userId: { organizationId, userId } },
-    select: { userId: true },
-  })
-  return !!member
-})
+export { isOrgMember } from "./org-membership"
 
 export const isOrgAdmin = cache(async function isOrgAdmin(
   organizationId: string,
@@ -174,17 +145,7 @@ export async function createOrganization(
     },
     include: {
       members: {
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              username: true,
-              displayUsername: true,
-              image: true,
-            },
-          },
-        },
+        include: { user: { select: USER_SUMMARY_SELECT } },
       },
     },
   })
@@ -211,17 +172,7 @@ export async function updateOrganization(
     },
     include: {
       members: {
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              username: true,
-              displayUsername: true,
-              image: true,
-            },
-          },
-        },
+        include: { user: { select: USER_SUMMARY_SELECT } },
       },
     },
   })

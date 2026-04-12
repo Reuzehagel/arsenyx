@@ -10,6 +10,7 @@ const githubId = process.env.GITHUB_ID?.trim()
 const githubSecret = process.env.GITHUB_SECRET?.trim()
 
 export const auth = betterAuth({
+  appName: "Arsenyx",
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),

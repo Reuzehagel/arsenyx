@@ -28,12 +28,15 @@ export async function requireAuth(action: string): Promise<Result<string>> {
  * or a standard error Result on failure.
  */
 export async function requireAdmin(action: string): Promise<Result<string>> {
-  const auth = await requireAuth(action)
-  if (!auth.success) return auth
-
   const session = await getServerSession()
-  if (!session?.user?.isAdmin) {
+  if (!session?.user?.id) {
+    return err(`You must be signed in to ${action}`)
+  }
+  if (session.user.isBanned) {
+    return err("Your account has been suspended")
+  }
+  if (!session.user.isAdmin) {
     return err("Admin access required")
   }
-  return ok(auth.data)
+  return ok(session.user.id)
 }

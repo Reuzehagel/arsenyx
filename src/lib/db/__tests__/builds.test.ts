@@ -26,6 +26,14 @@ mock.module("../organizations", () => ({
   isOrgMember: mockIsOrgMember,
 }))
 
+mock.module("./org-membership", () => ({
+  isOrgMember: mockIsOrgMember,
+}))
+
+mock.module("../org-membership", () => ({
+  isOrgMember: mockIsOrgMember,
+}))
+
 mock.module("@/lib/warframe/items", () => ({
   getFullItem: mockGetFullItem,
 }))
