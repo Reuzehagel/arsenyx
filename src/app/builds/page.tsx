@@ -81,7 +81,7 @@ function BuildCard({ build }: { build: BuildListItem }) {
     getCategoryConfig(build.item.browseCategory as BrowseCategory)?.label ??
     build.item.browseCategory
   const authorName =
-    build.user.username || build.user.name || "Anonymous"
+    build.user.displayUsername || build.user.username || build.user.name || "Anonymous"
 
   return (
     <div className="bg-card hover:bg-card/80 relative flex items-center gap-4 rounded-lg border p-4 transition-colors">

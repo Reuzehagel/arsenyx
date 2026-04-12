@@ -37,6 +37,7 @@ export interface FavoriteBuildWithDetails {
     id: string
     name: string | null
     username: string | null
+    displayUsername: string | null
     image: string | null
   }
   item: {
@@ -129,6 +130,7 @@ export async function getUserFavoriteBuilds(
                 id: true,
                 name: true,
                 username: true,
+                displayUsername: true,
                 image: true,
               },
             },

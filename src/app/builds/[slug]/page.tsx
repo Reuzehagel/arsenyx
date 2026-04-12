@@ -50,7 +50,7 @@ export async function generateMetadata({
   const description =
     build.description ||
     `${build.item.name} build by ${
-      build.user.username || build.user.name || "Anonymous"
+      build.user.displayUsername || build.user.username || build.user.name || "Anonymous"
     }`
 
   return {
@@ -188,10 +188,10 @@ export default async function BuildPage({ params }: BuildPageProps) {
                         href={`/profile/${build.user.username}`}
                         className="hover:text-foreground transition-colors hover:underline"
                       >
-                        {build.user.username}
+                        {build.user.displayUsername || build.user.username}
                       </Link>
                     ) : (
-                      build.user.name || "Anonymous"
+                      build.user.displayUsername || build.user.name || "Anonymous"
                     )}
                   </span>
                 )}

@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react"
 
-import { getProfileBuildsAction } from "@/app/actions/profile"
+import {
+  getOrgBuildsAction,
+  getProfileBuildsAction,
+} from "@/app/actions/profile"
 import { BuildCardLink } from "@/components/build/build-card-link"
 import { Button } from "@/components/ui/button"
 import {
@@ -18,15 +21,19 @@ import type { BuildListItem } from "@/lib/db/index"
 import { ProfileBuildsFilters } from "./profile-builds-filters"
 
 interface ProfileBuildsProps {
-  userId: string
+  userId?: string
+  orgId?: string
   initialBuilds: BuildListItem[]
   initialHasMore: boolean
+  emptyMessage?: string
 }
 
 export function ProfileBuilds({
   userId,
+  orgId,
   initialBuilds,
   initialHasMore,
+  emptyMessage = "This user hasn't created any builds yet",
 }: ProfileBuildsProps) {
   const [builds, setBuilds] = useState(initialBuilds)
   const [hasMore, setHasMore] = useState(initialHasMore)
@@ -48,11 +55,14 @@ export function ProfileBuilds({
         setIsLoadingMore(true)
       }
       startTransition(async () => {
-        const result = await getProfileBuildsAction(userId, {
+        const fetchOptions = {
           query: newSearch || undefined,
           category: newCategory !== "all" ? newCategory : undefined,
           page: newPage,
-        })
+        }
+        const result = orgId
+          ? await getOrgBuildsAction(orgId, fetchOptions)
+          : await getProfileBuildsAction(userId!, fetchOptions)
 
         if (result.success) {
           if (append) {
@@ -66,7 +76,7 @@ export function ProfileBuilds({
         setIsLoadingMore(false)
       })
     },
-    [userId],
+    [userId, orgId],
   )
 
   // Debounced search — skip initial mount
@@ -107,7 +117,7 @@ export function ProfileBuilds({
             <EmptyDescription>
               {search || category !== "all"
                 ? "Try adjusting your search or filters"
-                : "This user hasn't created any builds yet"}
+                : emptyMessage}
             </EmptyDescription>
           </EmptyHeader>
         </Empty>

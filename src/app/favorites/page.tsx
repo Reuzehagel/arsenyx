@@ -77,7 +77,7 @@ export default async function FavoritesPage({
                     subtitle={
                       <p className="text-muted-foreground line-clamp-1 text-xs">
                         {build.item.name} by{" "}
-                        {build.user.username || build.user.name || "Anonymous"}
+                        {build.user.displayUsername || build.user.username || build.user.name || "Anonymous"}
                       </p>
                     }
                   />

@@ -60,6 +60,7 @@ export interface BuildWithUser {
     id: string
     name: string | null
     username: string | null
+    displayUsername: string | null
     image: string | null
   }
   organization: {
@@ -101,6 +102,7 @@ export interface GetBuildsOptions {
   category?: string
   query?: string
   author?: string
+  organizationId?: string
   hasGuide?: boolean
   hasShards?: boolean
 }
@@ -118,6 +120,7 @@ export interface BuildListItem {
   user: {
     name: string | null
     username: string | null
+    displayUsername: string | null
   }
   organization: {
     id: string
@@ -221,6 +224,7 @@ const buildInclude = {
       id: true,
       name: true,
       username: true,
+      displayUsername: true,
       image: true,
     },
   },
@@ -265,6 +269,7 @@ const buildListSelect = {
     select: {
       name: true,
       username: true,
+      displayUsername: true,
     },
   },
   itemUniqueName: true,
@@ -569,6 +574,7 @@ export async function getPublicBuilds(
     category,
     query,
     author,
+    organizationId,
     hasGuide,
     hasShards,
   } = options
@@ -584,6 +590,7 @@ export async function getPublicBuilds(
         username: { equals: author, mode: "insensitive" },
       },
     }),
+    ...(organizationId && { organizationId }),
     ...(hasGuide === true && { hasGuide: true }),
     ...(hasShards === true && { hasShards: true }),
   }

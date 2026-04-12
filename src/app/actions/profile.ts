@@ -7,6 +7,7 @@ import { z } from "zod"
 import { auth, getServerSession } from "@/lib/auth"
 import { requireAuth } from "@/lib/auth-helpers"
 import {
+  getPublicBuilds,
   getUserBuilds,
   getUserForSettings,
   isUsernameTaken,
@@ -132,6 +133,36 @@ export async function getProfileBuildsAction(
       viewerId,
       buildOptions,
     )
+    const hasMore = total > page * limit
+
+    return ok({ builds, hasMore })
+  } catch (error) {
+    return err(getErrorMessage(error, "Failed to load builds"))
+  }
+}
+
+// =============================================================================
+// ORGANIZATION BUILDS
+// =============================================================================
+
+export async function getOrgBuildsAction(
+  orgId: string,
+  options: { query?: string; category?: string; page?: number },
+): Promise<Result<ProfileBuildsResult>> {
+  try {
+    const limit = 12
+    const page = options.page ?? 1
+    const buildOptions: GetBuildsOptions = {
+      page,
+      limit,
+      sortBy: "votes",
+      organizationId: orgId,
+      ...(options.query && { query: options.query }),
+      ...(options.category &&
+        options.category !== "all" && { category: options.category }),
+    }
+
+    const { builds, total } = await getPublicBuilds(buildOptions)
     const hasMore = total > page * limit
 
     return ok({ builds, hasMore })

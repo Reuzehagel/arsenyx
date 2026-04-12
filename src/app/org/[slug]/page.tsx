@@ -3,13 +3,13 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
-import { BuildCardLink } from "@/components/build/build-card-link"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
+import { ProfileBuilds } from "@/components/profile"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { getServerSession } from "@/lib/auth"
-import { prisma } from "@/lib/db"
+import { getPublicBuilds } from "@/lib/db/index"
 import { getOrganizationBySlug } from "@/lib/db/organizations"
 
 export const revalidate = 3600 // 1 hour
@@ -51,25 +51,12 @@ export default async function OrgProfilePage({ params }: OrgProfilePageProps) {
     ? org.members.some((m) => m.userId === viewerUserId)
     : false
 
-  const [builds, totalBuilds] = await Promise.all([
-    prisma.build.findMany({
-      where: { organizationId: org.id, visibility: "PUBLIC" },
-      orderBy: { voteCount: "desc" },
-      take: 12,
-      select: {
-        id: true,
-        slug: true,
-        name: true,
-        itemName: true,
-        itemImageName: true,
-        voteCount: true,
-        viewCount: true,
-      },
-    }),
-    prisma.build.count({
-      where: { organizationId: org.id, visibility: "PUBLIC" },
-    }),
-  ])
+  const { builds, total: totalBuilds } = await getPublicBuilds({
+    organizationId: org.id,
+    sortBy: "votes",
+    limit: 12,
+  })
+  const hasMore = totalBuilds > 12
 
   const createdDate = new Date(org.createdAt).toLocaleDateString("en-US", {
     month: "long",
@@ -182,23 +169,12 @@ export default async function OrgProfilePage({ params }: OrgProfilePageProps) {
           {/* Builds */}
           <section className="flex flex-col gap-4">
             <h2 className="text-xl font-semibold">Builds</h2>
-            {builds.length === 0 ? (
-              <p className="text-muted-foreground">No builds published yet.</p>
-            ) : (
-              <div className="flex flex-col gap-2.5">
-                {builds.map((build) => (
-                  <BuildCardLink
-                    key={build.id}
-                    slug={build.slug}
-                    name={build.name}
-                    itemName={build.itemName}
-                    itemImageName={build.itemImageName}
-                    voteCount={build.voteCount}
-                    viewCount={build.viewCount}
-                  />
-                ))}
-              </div>
-            )}
+            <ProfileBuilds
+              orgId={org.id}
+              initialBuilds={builds}
+              initialHasMore={hasMore}
+              emptyMessage="No builds published yet"
+            />
           </section>
         </div>
       </main>

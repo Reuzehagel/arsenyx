@@ -433,7 +433,7 @@ async function CommunityBuildsSection({
                   </p>
                 ) : (
                   <p className="text-muted-foreground line-clamp-1 text-xs">
-                    by {build.user.username || build.user.name || "Anonymous"}
+                    by {build.user.displayUsername || build.user.username || build.user.name || "Anonymous"}
                   </p>
                 )
               }
