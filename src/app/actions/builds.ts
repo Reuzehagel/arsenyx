@@ -6,6 +6,7 @@
  * Authenticated actions for build CRUD operations
  */
 
+import { revalidatePath } from "next/cache"
 import { after } from "next/server"
 
 import { getServerSession } from "@/lib/auth"
@@ -125,6 +126,8 @@ export async function deleteBuildAction(
     if (!auth.success) return auth
 
     await deleteBuild(buildId, auth.data)
+    revalidatePath("/browse/[category]/[slug]", "page")
+    revalidatePath("/builds", "page")
     return ok()
   } catch (error) {
     console.error("Failed to delete build:", error)
