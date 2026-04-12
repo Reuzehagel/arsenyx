@@ -5,6 +5,7 @@ import { notFound } from "next/navigation"
 import { Suspense } from "react"
 
 import { BuildCardLink } from "@/components/build/build-card-link"
+import { BuildsResults } from "@/components/builds/builds-results"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { Icons } from "@/components/icons"
@@ -412,34 +413,39 @@ async function CommunityBuildsSection({
           </CardContent>
         </Card>
       ) : (
-        <div className="flex flex-col gap-2.5">
-          {builds.map((build) => (
-            <BuildCardLink
-              key={build.id}
-              slug={build.slug}
-              name={build.name}
-              itemName={build.item.name}
-              itemImageName={build.item.imageName}
-              voteCount={build.voteCount}
-              viewCount={build.viewCount}
-              subtitle={
-                build.organization ? (
-                  <p className="line-clamp-1 text-xs">
-                    <OrgBadge
-                      name={build.organization.name}
-                      slug={build.organization.slug}
-                      linked={false}
-                    />
-                  </p>
-                ) : (
-                  <p className="text-muted-foreground line-clamp-1 text-xs">
-                    by {build.user.displayUsername || build.user.username || build.user.name || "Anonymous"}
-                  </p>
-                )
-              }
-            />
-          ))}
-        </div>
+        <BuildsResults
+          renderCard={(layout) =>
+            builds.map((build) => (
+              <BuildCardLink
+                key={build.id}
+                slug={build.slug}
+                name={build.name}
+                itemName={build.item.name}
+                itemImageName={build.item.imageName}
+                voteCount={build.voteCount}
+                viewCount={build.viewCount}
+                layout={layout}
+                subtitle={
+                  layout === "list"
+                    ? build.organization ? (
+                        <p className="line-clamp-1 text-sm">
+                          <OrgBadge
+                            name={build.organization.name}
+                            slug={build.organization.slug}
+                            linked={false}
+                          />
+                        </p>
+                      ) : (
+                        <p className="text-muted-foreground line-clamp-1 text-sm">
+                          by {build.user.displayUsername || build.user.username || build.user.name || "Anonymous"}
+                        </p>
+                      )
+                    : undefined
+                }
+              />
+            ))
+          }
+        />
       )}
     </section>
   )

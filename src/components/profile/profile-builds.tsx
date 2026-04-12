@@ -7,6 +7,7 @@ import {
   getProfileBuildsAction,
 } from "@/app/actions/profile"
 import { BuildCardLink } from "@/components/build/build-card-link"
+import { BuildList, useBuildLayout } from "@/components/build/build-list"
 import { Button } from "@/components/ui/button"
 import {
   Empty,
@@ -35,6 +36,7 @@ export function ProfileBuilds({
   initialHasMore,
   emptyMessage = "This user hasn't created any builds yet",
 }: ProfileBuildsProps) {
+  const layout = useBuildLayout()
   const [builds, setBuilds] = useState(initialBuilds)
   const [hasMore, setHasMore] = useState(initialHasMore)
   const [page, setPage] = useState(1)
@@ -123,7 +125,7 @@ export function ProfileBuilds({
         </Empty>
       ) : (
         <>
-          <div className="flex flex-col gap-2.5">
+          <BuildList>
             {builds.map((build) => (
               <BuildCardLink
                 key={build.id}
@@ -133,9 +135,10 @@ export function ProfileBuilds({
                 itemImageName={build.item.imageName}
                 voteCount={build.voteCount}
                 viewCount={build.viewCount}
+                layout={layout}
               />
             ))}
-          </div>
+          </BuildList>
           {hasMore && (
             <div className="flex justify-center">
               <Button

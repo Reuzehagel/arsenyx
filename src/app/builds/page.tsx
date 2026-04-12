@@ -7,6 +7,7 @@ import { CategoryTabs } from "@/components/browse/category-tabs"
 import { SearchBar } from "@/components/browse/search-bar"
 import { BuildStats } from "@/components/build/build-card-link"
 import { BuildsFilterDropdown, BuildsSortDropdown } from "@/components/builds"
+import { BuildsResults } from "@/components/builds/builds-results"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { Badge } from "@/components/ui/badge"
@@ -75,13 +76,38 @@ function buildFilterUrl(
   return `/builds${str ? `?${str}` : ""}`
 }
 
-function BuildCard({ build }: { build: BuildListItem }) {
+function BuildCard({ build, layout = "list" }: { build: BuildListItem; layout?: "grid" | "list" }) {
   const timeAgo = getRelativeTime(new Date(build.createdAt))
   const categoryLabel =
     getCategoryConfig(build.item.browseCategory as BrowseCategory)?.label ??
     build.item.browseCategory
   const authorName =
     build.user.displayUsername || build.user.username || build.user.name || "Anonymous"
+
+  if (layout === "grid") {
+    return (
+      <Link
+        href={`/builds/${build.slug}`}
+        className="bg-card hover:bg-card/80 block overflow-hidden rounded-lg border transition-colors"
+      >
+        <div className="bg-muted/20 relative aspect-video">
+          <Image
+            src={getImageUrl(build.item.imageName ?? undefined)}
+            alt={build.item.name}
+            fill
+            unoptimized
+            sizes="(max-width: 768px) 50vw, 300px"
+            className="object-cover"
+          />
+        </div>
+        <div className="flex flex-col gap-1 p-3">
+          <h3 className="line-clamp-1 text-sm font-semibold">{build.name}</h3>
+          <p className="text-muted-foreground text-xs">{build.item.name}</p>
+          <BuildStats voteCount={build.voteCount} viewCount={build.viewCount} />
+        </div>
+      </Link>
+    )
+  }
 
   return (
     <div className="bg-card hover:bg-card/80 relative flex items-center gap-4 rounded-lg border p-4 transition-colors">
@@ -219,12 +245,6 @@ export default async function BuildsPage({ searchParams }: BuildsPageProps) {
             />
           </Suspense>
 
-          {/* Results info */}
-          <div className="text-muted-foreground text-sm">
-            {total} {total === 1 ? "build" : "builds"}
-            {q && ` matching "${q}"`}
-          </div>
-
           {/* Results */}
           {builds.length === 0 ? (
             <div className="py-16 text-center">
@@ -239,11 +259,14 @@ export default async function BuildsPage({ searchParams }: BuildsPageProps) {
             </div>
           ) : (
             <>
-              <div className="flex flex-col gap-2.5">
-                {builds.map((build) => (
-                  <BuildCard key={build.id} build={build} />
-                ))}
-              </div>
+              <BuildsResults
+                count={total}
+                renderCard={(layout) =>
+                  builds.map((build) => (
+                    <BuildCard key={build.id} build={build} layout={layout} />
+                  ))
+                }
+              />
 
               {/* Pagination */}
               {totalPages > 1 && (

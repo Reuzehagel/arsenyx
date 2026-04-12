@@ -4,6 +4,7 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 
 import { BuildCardLink } from "@/components/build/build-card-link"
+import { BuildsResults } from "@/components/builds/builds-results"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { Badge } from "@/components/ui/badge"
@@ -123,32 +124,35 @@ export default async function MyBuildsPage({
             </div>
           ) : (
             <>
-              <div className="flex flex-col gap-2.5">
-                {builds.map((build) => (
-                  <BuildCardLink
-                    key={build.id}
-                    slug={build.slug}
-                    name={build.name}
-                    itemName={build.item.name}
-                    itemImageName={build.item.imageName}
-                    voteCount={build.voteCount}
-                    viewCount={build.viewCount}
-                    imageOverlay={
-                      <div className="absolute top-2 right-2">
-                        <Badge
-                          variant="secondary"
-                          className="gap-1 px-1.5 py-0.5 text-xs"
-                        >
-                          {getVisibilityIcon(build.visibility)}
-                          <span className="hidden sm:inline">
-                            {getVisibilityLabel(build.visibility)}
-                          </span>
-                        </Badge>
-                      </div>
-                    }
-                  />
-                ))}
-              </div>
+              <BuildsResults
+                renderCard={(layout) =>
+                  builds.map((build) => (
+                    <BuildCardLink
+                      key={build.id}
+                      slug={build.slug}
+                      name={build.name}
+                      itemName={build.item.name}
+                      itemImageName={build.item.imageName}
+                      voteCount={build.voteCount}
+                      viewCount={build.viewCount}
+                      layout={layout}
+                      imageOverlay={
+                        <div className="absolute top-2 right-2">
+                          <Badge
+                            variant="secondary"
+                            className="gap-1 px-1.5 py-0.5 text-xs"
+                          >
+                            {getVisibilityIcon(build.visibility)}
+                            <span className="hidden sm:inline">
+                              {getVisibilityLabel(build.visibility)}
+                            </span>
+                          </Badge>
+                        </div>
+                      }
+                    />
+                  ))
+                }
+              />
 
               {/* Pagination */}
               {totalPages > 1 && (

@@ -5,6 +5,8 @@ import type { ReactNode } from "react"
 
 import { getImageUrl } from "@/lib/warframe/images"
 
+import type { ViewMode } from "./view-preference"
+
 interface BuildCardLinkProps {
   slug: string
   name: string
@@ -12,6 +14,7 @@ interface BuildCardLinkProps {
   itemImageName: string | null
   voteCount: number
   viewCount: number
+  layout?: ViewMode
   /** Optional content rendered over the image (e.g. visibility badge) */
   imageOverlay?: ReactNode
   /** Optional subtitle line (e.g. "by username") */
@@ -27,10 +30,40 @@ export function BuildCardLink({
   itemImageName,
   voteCount,
   viewCount,
+  layout = "list",
   imageOverlay,
   subtitle,
   footer,
 }: BuildCardLinkProps) {
+  if (layout === "grid") {
+    return (
+      <Link
+        href={`/builds/${slug}`}
+        className="bg-card hover:bg-card/80 block overflow-hidden rounded-lg border transition-colors"
+      >
+        <div className="bg-muted/20 relative aspect-video">
+          <Image
+            src={getImageUrl(itemImageName ?? undefined)}
+            alt={itemName}
+            fill
+            unoptimized
+            sizes="(max-width: 768px) 50vw, 300px"
+            className="object-cover"
+          />
+          {imageOverlay}
+        </div>
+        <div className="flex flex-col gap-1 p-3">
+          <h3 className="line-clamp-1 text-sm font-semibold">{name}</h3>
+          {subtitle ?? (
+            <p className="text-muted-foreground text-xs">{itemName}</p>
+          )}
+          <BuildStats voteCount={voteCount} viewCount={viewCount} />
+          {footer}
+        </div>
+      </Link>
+    )
+  }
+
   return (
     <Link
       href={`/builds/${slug}`}

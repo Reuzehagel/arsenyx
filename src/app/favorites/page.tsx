@@ -4,6 +4,7 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 
 import { BuildCardLink } from "@/components/build/build-card-link"
+import { BuildsResults } from "@/components/builds/builds-results"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
@@ -64,25 +65,30 @@ export default async function FavoritesPage({
             </div>
           ) : (
             <>
-              <div className="flex flex-col gap-2.5">
-                {builds.map((build) => (
-                  <BuildCardLink
-                    key={build.id}
-                    slug={build.slug}
-                    name={build.name}
-                    itemName={build.item.name}
-                    itemImageName={build.item.imageName}
-                    voteCount={build.voteCount}
-                    viewCount={build.viewCount}
-                    subtitle={
-                      <p className="text-muted-foreground line-clamp-1 text-xs">
-                        {build.item.name} by{" "}
-                        {build.user.displayUsername || build.user.username || build.user.name || "Anonymous"}
-                      </p>
-                    }
-                  />
-                ))}
-              </div>
+              <BuildsResults
+                renderCard={(layout) =>
+                  builds.map((build) => (
+                    <BuildCardLink
+                      key={build.id}
+                      slug={build.slug}
+                      name={build.name}
+                      itemName={build.item.name}
+                      itemImageName={build.item.imageName}
+                      voteCount={build.voteCount}
+                      viewCount={build.viewCount}
+                      layout={layout}
+                      subtitle={
+                        layout === "list" ? (
+                          <p className="text-muted-foreground line-clamp-1 text-sm">
+                            {build.item.name} by{" "}
+                            {build.user.displayUsername || build.user.username || build.user.name || "Anonymous"}
+                          </p>
+                        ) : undefined
+                      }
+                    />
+                  ))
+                }
+              />
 
               {/* Pagination */}
               {totalPages > 1 && (

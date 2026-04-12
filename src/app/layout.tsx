@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { Toaster } from "sonner"
 
+import { ViewPreferenceProvider } from "@/components/build/view-preference"
 import { ThemeProvider } from "@/components/theme-provider"
 
 import "./globals.css"
@@ -52,7 +53,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <ViewPreferenceProvider>
+            {children}
+          </ViewPreferenceProvider>
           <Toaster
             richColors
             position="bottom-right"
