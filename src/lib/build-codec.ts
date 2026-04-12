@@ -30,12 +30,12 @@ interface EncodedBuild {
 }
 
 interface EncodedHelminth {
-  si: number // Slot index (which ability was replaced)
-  u: string // Ability unique name
-  n: string // Ability name
-  s: string // Source warframe name
-  im?: string // Ability image name
-  d?: string // Ability description
+  si: number // Replaced ability slot
+  u: string // Unique name
+  n: string // Name
+  s: string // Source warframe
+  im?: string // Image name
+  d?: string // Description
 }
 
 interface EncodedSlot {

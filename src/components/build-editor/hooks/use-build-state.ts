@@ -152,15 +152,11 @@ export function createInitialBuildState(
 
     const modMap = new Map(compatibleMods.map((m) => [m.uniqueName, m]))
 
-    // Include helminth augment mods in the lookup map so they hydrate correctly.
-    // Add ALL helminth augments (not just for the current ability) to handle builds
-    // saved before helminthAbility tracking was added.
+    // Add all helminth augments so they hydrate even without helminthAbility data
     if (helminthAugmentMods) {
       for (const augments of Object.values(helminthAugmentMods)) {
         for (const mod of augments) {
-          if (!modMap.has(mod.uniqueName)) {
-            modMap.set(mod.uniqueName, mod)
-          }
+          modMap.set(mod.uniqueName, mod)
         }
       }
     }
