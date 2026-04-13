@@ -207,29 +207,25 @@ export function BuildEditorHeader({
                   ) : (
                     <UploadCloud data-icon="inline-start" />
                   )}
-                  <span className="hidden sm:inline">
-                    {saveStatus === "saving"
-                      ? "Saving..."
-                      : saveStatus === "saved"
-                        ? "Saved!"
-                        : saveStatus === "error"
-                          ? "Error"
-                          : buildId
-                            ? "Update"
-                            : "Publish"}
-                  </span>
+                  {saveStatus === "saving"
+                    ? "Saving..."
+                    : saveStatus === "saved"
+                      ? "Saved!"
+                      : saveStatus === "error"
+                        ? "Error"
+                        : buildId
+                          ? "Update"
+                          : "Publish"}
                 </Button>
               ) : (
                 <Button variant="outline" size="sm" onClick={handleCopyBuild}>
                   <Save data-icon="inline-start" />
-                  <span className="hidden sm:inline">
-                    {showCopied ? "Copied!" : "Copy Link"}
-                  </span>
+                  {showCopied ? "Copied!" : "Copy Link"}
                 </Button>
               )}
               <Button variant="outline" size="sm" onClick={handleCancel}>
                 <X data-icon="inline-start" />
-                <span className="hidden sm:inline">Cancel</span>
+                Cancel
               </Button>
               {isOwner && buildId && (
                 <Button
@@ -239,7 +235,7 @@ export function BuildEditorHeader({
                   onClick={() => setDeleteDialogOpen(true)}
                 >
                   <Trash2 data-icon="inline-start" />
-                  <span className="hidden sm:inline">Delete</span>
+                  Delete
                 </Button>
               )}
             </div>

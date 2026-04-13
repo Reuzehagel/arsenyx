@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator"
 import {
   Sheet,
   SheetContent,
+  SheetFooter,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
@@ -33,32 +34,29 @@ export function MobileNav() {
       >
         <Menu />
       </SheetTrigger>
-      <SheetContent side="left" className="w-[300px] sm:w-[400px]">
+      <SheetContent side="left" className="w-[280px] sm:w-[320px]">
         <SheetHeader>
           <SheetTitle className="text-left">{SITE_CONFIG.name}</SheetTitle>
         </SheetHeader>
-        <div className="mt-8 flex flex-col gap-4">
-          {/* Navigation Links */}
-          <nav className="flex flex-col gap-2">
-            {NAV_ITEMS.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setOpen(false)}
-                className="hover:bg-accent flex items-center gap-2 rounded-md px-2 py-3 text-base font-medium transition-colors"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
+        <nav className="mt-6 flex flex-col gap-1 px-2">
+          {NAV_ITEMS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setOpen(false)}
+              className="hover:bg-accent rounded-md px-3 py-2.5 text-sm font-medium transition-colors"
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
 
-          <Separator />
-
-          {/* User Menu Section */}
-          <div className="flex items-center gap-2 px-2">
+        <SheetFooter>
+          <Separator className="mb-2" />
+          <div className="flex items-center gap-2">
             <UserMenu />
           </div>
-        </div>
+        </SheetFooter>
       </SheetContent>
     </Sheet>
   )

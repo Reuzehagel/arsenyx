@@ -126,7 +126,15 @@ export function PartnerBuildSelector({
   return (
     <div className="flex flex-col gap-3">
       {/* Search Combobox */}
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover
+        open={open}
+        onOpenChange={(next) => {
+          // Preserve scroll position — portal focus can jump to top on mobile
+          const y = window.scrollY
+          setOpen(next)
+          if (next) requestAnimationFrame(() => window.scrollTo(0, y))
+        }}
+      >
         <PopoverTrigger
           render={
             <Button
@@ -146,7 +154,7 @@ export function PartnerBuildSelector({
           </span>
           <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
         </PopoverTrigger>
-        <PopoverContent className="w-[400px] p-0" align="start">
+        <PopoverContent className="w-[var(--anchor-width)] min-w-[240px] max-w-[400px] p-0" align="start">
           <Command shouldFilter={false}>
             <CommandInput
               placeholder="Search your builds…"

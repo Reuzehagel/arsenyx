@@ -40,9 +40,7 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-1">
-          <div className="hidden sm:flex">
-            <SearchCommand />
-          </div>
+          <SearchCommand />
           <Button variant="ghost" size="icon" className="hidden sm:flex">
             <Icons.bell />
             <span className="sr-only">Notifications</span>

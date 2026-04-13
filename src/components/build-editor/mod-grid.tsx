@@ -2,7 +2,7 @@
 
 import { useDroppable, useDraggable } from "@dnd-kit/core"
 import { CSS } from "@dnd-kit/utilities"
-import { Plus } from "lucide-react"
+import { Plus, X } from "lucide-react"
 import { useState, useMemo, memo } from "react"
 
 import { PolarityIcon } from "@/components/icons"
@@ -112,7 +112,7 @@ export function ModGrid({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex flex-col items-center gap-2 sm:gap-4">
+      <div className="flex flex-col items-center gap-6 sm:gap-4">
         {/* Row 1: Aura & Exilus (not shown for Necramechs) */}
         {(auraSlots.length > 0 || exilusSlot) && (
           <div className="flex w-full justify-center gap-2 sm:gap-4">
@@ -126,7 +126,7 @@ export function ModGrid({
                 onChangeRank={(rank) => onChangeRank(auraSlot.id, rank)}
                 onApplyForma={(polarity) => onApplyForma(auraSlot.id, polarity)}
                 label="Aura"
-                className="h-[80px] w-[120px] sm:h-[90px] sm:w-[150px] md:h-[100px] md:w-[184px]"
+                className="h-[80px] min-w-0 flex-1 sm:h-[90px] sm:w-[150px] sm:flex-none md:h-[100px] md:w-[184px]"
                 setCount={
                   auraSlot.mod?.modSet ? setCounts[auraSlot.mod.modSet] : 0
                 }
@@ -145,7 +145,7 @@ export function ModGrid({
                   onApplyForma(exilusSlot.id, polarity)
                 }
                 label="Exilus"
-                className="h-[80px] w-[120px] sm:h-[90px] sm:w-[150px] md:h-[100px] md:w-[184px]"
+                className="h-[80px] min-w-0 flex-1 sm:h-[90px] sm:w-[150px] sm:flex-none md:h-[100px] md:w-[184px]"
                 setCount={
                   exilusSlot.mod?.modSet ? setCounts[exilusSlot.mod.modSet] : 0
                 }
@@ -162,7 +162,7 @@ export function ModGrid({
           (_, rowIdx) => (
             <div
               key={rowIdx}
-              className="grid w-full grid-cols-2 justify-center gap-2 sm:flex sm:gap-4"
+              className="grid w-full grid-cols-2 justify-center gap-x-2 gap-y-6 sm:flex sm:gap-4"
             >
               {normalSlots
                 .slice(rowIdx * slotsPerRow, rowIdx * slotsPerRow + slotsPerRow)
@@ -197,7 +197,7 @@ export function ModGrid({
                 onSelect={() => onSelectSlot(`arcane-${index}`)}
                 onRemove={() => onRemoveArcane?.(index)}
                 onChangeRank={(rank) => onChangeArcaneRank?.(index, rank)}
-                className="h-[80px] w-[100px] sm:h-[90px] sm:w-[120px] md:h-[100px] md:w-[140px]"
+                className="h-[80px] min-w-0 flex-1 sm:h-[90px] sm:w-[120px] sm:flex-none md:h-[100px] md:w-[140px]"
                 draggedArcane={draggedArcane}
                 fullArcaneData={
                   arcane ? arcaneDataMap?.get(arcane.uniqueName) : undefined
@@ -429,6 +429,19 @@ const ModSlotCard = memo(function ModSlotCard({
               matchState={matchState}
             />
           </div>
+          {!readOnly && !isDragging && (
+            <button
+              type="button"
+              className="bg-background/80 text-muted-foreground hover:bg-destructive hover:text-destructive-foreground absolute -top-1.5 -right-1.5 z-10 flex size-5 items-center justify-center rounded-full border transition-opacity group-hover:opacity-100 max-md:opacity-100 md:opacity-0"
+              onClick={(e) => {
+                e.stopPropagation()
+                onRemove()
+              }}
+              aria-label="Remove mod"
+            >
+              <X className="size-3" />
+            </button>
+          )}
         </PopoverTrigger>
         {!readOnly && polaritySelectorContent}
       </Popover>

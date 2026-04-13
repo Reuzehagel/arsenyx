@@ -334,7 +334,7 @@ export function BuildContainer({
               />
             </div>
 
-            <div className="bg-card min-w-0 flex-1 rounded-lg border p-2 sm:p-4 lg:ml-[calc(260px+1rem)]">
+            <div className="bg-card min-w-0 flex-1 overflow-hidden rounded-lg border p-2 sm:p-4 lg:ml-[calc(260px+1rem)]">
               <ModGrid
                 auraSlots={buildState.auraSlots}
                 exilusSlot={buildState.exilusSlot}
