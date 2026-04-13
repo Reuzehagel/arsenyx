@@ -153,7 +153,7 @@ export default async function CreatePage({ searchParams }: CreatePageProps) {
           exilusSlot: sourceBuild.buildData.exilusSlot,
           hasReactor: sourceBuild.buildData.hasReactor,
           formaCount: sourceBuild.buildData.formaCount,
-          // Everything else uses defaults from BuildContainer
+          helminthAbility: sourceBuild.buildData.helminthAbility,
           arcaneSlots: [],
           shardSlots: [],
           baseCapacity: sourceBuild.buildData.hasReactor ? 60 : 30,
