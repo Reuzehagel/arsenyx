@@ -602,7 +602,7 @@ export async function normalizeBuildDraftForPersistence(
   buildState.currentCapacity = calculateRemainingCapacity(buildState)
   buildState.formaCount = calculateFormaCount(
     buildState.normalSlots,
-    buildState.auraSlot,
+    buildState.auraSlots,
     buildState.exilusSlot,
   )
 

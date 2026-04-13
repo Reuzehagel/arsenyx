@@ -82,7 +82,7 @@ describe("encodeBuild", () => {
 
   it("encodes aura slot", () => {
     const build = createEmptyBuildState()
-    build.auraSlot = {
+    build.auraSlots = [{
       id: "aura-0",
       type: "aura",
       innatePolarity: "madurai",
@@ -91,12 +91,12 @@ describe("encodeBuild", () => {
         name: "Steel Charge",
         rank: 5,
       }),
-    }
+    }]
 
     const encoded = encodeBuild(build)
     const decoded = decodeBuild(encoded)
 
-    expect(decoded?.auraSlot?.mod?.uniqueName).toBe(
+    expect(decoded?.auraSlots?.[0]?.mod?.uniqueName).toBe(
       "/Lotus/Upgrades/Mods/Aura/SteelCharge",
     )
   })

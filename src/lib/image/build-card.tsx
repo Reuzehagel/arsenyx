@@ -313,7 +313,7 @@ export function BuildCardTemplate({
   imageMap,
   polarityIcons,
 }: BuildCardProps) {
-  const { normalSlots, auraSlot, exilusSlot, arcaneSlots, formaCount } =
+  const { normalSlots, auraSlots, exilusSlot, arcaneSlots, formaCount } =
     buildState
 
   const arcanes = (arcaneSlots ?? []).filter(
@@ -412,13 +412,16 @@ export function BuildCardTemplate({
           paddingLeft: CENTER_PADDING,
         }}
       >
-        {auraSlot ? (
-          <SlotCard
-            slot={auraSlot}
-            imageMap={imageMap}
-            polarityIcons={polarityIcons}
-            label="Aura"
-          />
+        {auraSlots.length > 0 ? (
+          auraSlots.map((auraSlot, i) => (
+            <SlotCard
+              key={`aura-${i}`}
+              slot={auraSlot}
+              imageMap={imageMap}
+              polarityIcons={polarityIcons}
+              label="Aura"
+            />
+          ))
         ) : (
           <div style={{ display: "flex" }} />
         )}

@@ -283,7 +283,7 @@ describe("calculateTotalDrain", () => {
 
   it("does NOT include aura slot (auras add capacity)", () => {
     const build = createEmptyBuildState()
-    build.auraSlot!.mod = { ...STEEL_CHARGE }
+    build.auraSlots[0].mod = { ...STEEL_CHARGE }
 
     // Aura should not be counted in drain
     expect(calculateTotalDrain(build)).toBe(0)
@@ -303,8 +303,8 @@ describe("calculateMaxCapacity", () => {
 
   it("adds aura bonus to capacity", () => {
     const build = createEmptyBuildState({ hasReactor: true })
-    build.auraSlot!.innatePolarity = "madurai"
-    build.auraSlot!.mod = {
+    build.auraSlots[0].innatePolarity = "madurai"
+    build.auraSlots[0].mod = {
       ...STEEL_CHARGE,
       polarity: "madurai" as Polarity,
     }
@@ -458,7 +458,7 @@ describe("calculateFormaCount", () => {
     const slots = Array.from({ length: 8 }, (_, i) =>
       createModSlot(`normal-${i}`, "normal"),
     )
-    expect(calculateFormaCount(slots)).toBe(0)
+    expect(calculateFormaCount(slots, [])).toBe(0)
   })
 
   it("counts added polarities", () => {
@@ -466,7 +466,7 @@ describe("calculateFormaCount", () => {
       { ...createModSlot("0", "normal"), formaPolarity: "madurai" as Polarity },
       createModSlot("1", "normal"),
     ]
-    expect(calculateFormaCount(slots)).toBe(1)
+    expect(calculateFormaCount(slots, [])).toBe(1)
   })
 
   it("counts cleared polarities", () => {
@@ -476,7 +476,7 @@ describe("calculateFormaCount", () => {
         formaPolarity: "universal" as Polarity,
       },
     ]
-    expect(calculateFormaCount(slots)).toBe(1)
+    expect(calculateFormaCount(slots, [])).toBe(1)
   })
 
   it("counts swapped polarities as free (net 0)", () => {
@@ -491,7 +491,7 @@ describe("calculateFormaCount", () => {
         formaPolarity: "madurai" as Polarity,
       },
     ]
-    expect(calculateFormaCount(slots)).toBe(0)
+    expect(calculateFormaCount(slots, [])).toBe(0)
   })
 
   it("counts moved polarity as free (net 0)", () => {
@@ -507,7 +507,7 @@ describe("calculateFormaCount", () => {
         formaPolarity: "naramon" as Polarity, // add naramon here
       },
     ]
-    expect(calculateFormaCount(slots)).toBe(0)
+    expect(calculateFormaCount(slots, [])).toBe(0)
   })
 
   it("handles complex forma scenarios", () => {
@@ -522,20 +522,20 @@ describe("calculateFormaCount", () => {
         formaPolarity: "universal" as Polarity,
       },
     ]
-    expect(calculateFormaCount(slots)).toBe(2)
+    expect(calculateFormaCount(slots, [])).toBe(2)
   })
 
   it("includes aura and exilus slots", () => {
-    const auraSlot: ModSlot = {
+    const auraSlots: ModSlot[] = [{
       ...createModSlot("aura", "aura", "madurai"),
       formaPolarity: "vazarin" as Polarity,
-    }
+    }]
     const exilusSlot: ModSlot = {
       ...createModSlot("exilus", "exilus"),
       formaPolarity: "naramon" as Polarity,
     }
     // Aura changed + Exilus gained polarity = 2
-    expect(calculateFormaCount([], auraSlot, exilusSlot)).toBe(2)
+    expect(calculateFormaCount([], auraSlots, exilusSlot)).toBe(2)
   })
 })
 

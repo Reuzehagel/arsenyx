@@ -8,7 +8,7 @@ interface UseBuildKeyboardOptions {
   onCloseSearch: () => void
   onCopyBuild: () => void
   onClearBuild: () => void
-  hasAuraSlot: boolean
+  auraSlotCount: number
   hasExilusSlot: boolean
 }
 
@@ -27,7 +27,7 @@ export function useBuildKeyboard({
   onCloseSearch,
   onCopyBuild,
   onClearBuild,
-  hasAuraSlot,
+  auraSlotCount,
   hasExilusSlot,
 }: UseBuildKeyboardOptions) {
   const handleKeyDown = useCallback(
@@ -70,7 +70,7 @@ export function useBuildKeyboard({
       // Letter shortcuts
       switch (e.key.toLowerCase()) {
         case "a":
-          if (hasAuraSlot) {
+          if (auraSlotCount > 0) {
             e.preventDefault()
             onSelectSlot("aura-0")
             onOpenSearch()
@@ -103,7 +103,7 @@ export function useBuildKeyboard({
       onCloseSearch,
       onCopyBuild,
       onClearBuild,
-      hasAuraSlot,
+      auraSlotCount,
       hasExilusSlot,
     ],
   )

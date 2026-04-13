@@ -27,7 +27,10 @@ function cloneSlot(slot: ModSlot): ModSlot {
 }
 
 function resolveSlot(state: BuildState, slotId: string): ModSlot | null {
-  if (slotId.startsWith("aura-")) return state.auraSlot ?? null
+  if (slotId.startsWith("aura-")) {
+    const idx = Number(slotId.slice("aura-".length))
+    return state.auraSlots[idx] ?? null
+  }
   if (slotId.startsWith("exilus-")) return state.exilusSlot ?? null
   if (slotId.startsWith("normal-")) {
     const idx = Number(slotId.slice("normal-".length))
@@ -40,7 +43,10 @@ function resolveSlot(state: BuildState, slotId: string): ModSlot | null {
 
 function writeSlot(state: BuildState, slotId: string, slot: ModSlot): void {
   if (slotId.startsWith("aura-")) {
-    state.auraSlot = slot
+    const idx = Number(slotId.slice("aura-".length))
+    if (idx >= 0 && idx < state.auraSlots.length) {
+      state.auraSlots[idx] = slot
+    }
     return
   }
   if (slotId.startsWith("exilus-")) {
@@ -64,7 +70,7 @@ export function applyOverframeImportToBuildState(
 
   const next: BuildState = {
     ...prev,
-    auraSlot: prev.auraSlot ? cloneSlot(prev.auraSlot) : undefined,
+    auraSlots: prev.auraSlots.map(cloneSlot),
     exilusSlot: prev.exilusSlot ? cloneSlot(prev.exilusSlot) : undefined,
     normalSlots: prev.normalSlots.map(cloneSlot),
     arcaneSlots: prev.arcaneSlots ? [...prev.arcaneSlots] : [],
@@ -202,7 +208,7 @@ export function applyOverframeImportToBuildState(
   // 4) Compute formaCount if not provided
   const computedFormaCount = calculateFormaCount(
     next.normalSlots,
-    next.auraSlot,
+    next.auraSlots,
     next.exilusSlot,
   )
   next.formaCount = importResult.formaCount ?? computedFormaCount

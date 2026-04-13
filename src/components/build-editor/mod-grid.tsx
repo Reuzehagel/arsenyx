@@ -53,7 +53,7 @@ const ALL_POLARITIES: Polarity[] = [
 const EMPTY_ARCANE_SLOTS: (PlacedArcane | null)[] = []
 
 interface ModGridProps {
-  auraSlot?: ModSlot
+  auraSlots: ModSlot[]
   exilusSlot?: ModSlot
   normalSlots: ModSlot[]
   activeSlotId: string | null
@@ -77,7 +77,7 @@ interface ModGridProps {
 }
 
 export function ModGrid({
-  auraSlot,
+  auraSlots,
   exilusSlot,
   normalSlots,
   activeSlotId,
@@ -98,7 +98,7 @@ export function ModGrid({
   // Calculate set counts
   const setCounts = useMemo(() => {
     const counts: Record<string, number> = {}
-    const allSlots = [auraSlot, exilusSlot, ...normalSlots].filter(
+    const allSlots = [...auraSlots, exilusSlot, ...normalSlots].filter(
       Boolean,
     ) as ModSlot[]
 
@@ -108,16 +108,17 @@ export function ModGrid({
       }
     }
     return counts
-  }, [auraSlot, exilusSlot, normalSlots])
+  }, [auraSlots, exilusSlot, normalSlots])
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex flex-col items-center gap-2 sm:gap-4">
         {/* Row 1: Aura & Exilus (not shown for Necramechs) */}
-        {(auraSlot || exilusSlot) && (
+        {(auraSlots.length > 0 || exilusSlot) && (
           <div className="flex w-full justify-center gap-2 sm:gap-4">
-            {isWarframe && auraSlot && (
+            {isWarframe && auraSlots.map((auraSlot) => (
               <ModSlotCard
+                key={auraSlot.id}
                 slot={auraSlot}
                 isActive={activeSlotId === auraSlot.id}
                 onSelect={() => onSelectSlot(auraSlot.id)}
@@ -132,7 +133,7 @@ export function ModGrid({
                 draggedMod={draggedMod}
                 readOnly={readOnly}
               />
-            )}
+            ))}
             {exilusSlot && (
               <ModSlotCard
                 slot={exilusSlot}

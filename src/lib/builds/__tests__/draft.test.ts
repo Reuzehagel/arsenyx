@@ -19,7 +19,7 @@ describe("buildStateToDraftPayload", () => {
         itemCategory: "warframes",
         itemImageName: "rhino.png",
         hasReactor: true,
-        auraSlot: {
+        auraSlots: [{
           id: "aura-0",
           type: "aura",
           mod: {
@@ -31,7 +31,7 @@ describe("buildStateToDraftPayload", () => {
             rank: 5,
             rarity: "Rare",
           },
-        },
+        }],
         exilusSlot: {
           id: "exilus-0",
           type: "exilus",

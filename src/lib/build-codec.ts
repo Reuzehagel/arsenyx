@@ -20,7 +20,8 @@ interface EncodedBuild {
   i: string // Item unique name
   c: string // Category
   r: boolean // Has reactor/catalyst
-  a?: EncodedSlot // Aura slot (warframes only)
+  a?: EncodedSlot // Legacy: single aura slot
+  A?: EncodedSlot[] // Aura slots array (v1 extension)
   e?: EncodedSlot // Exilus slot
   s: EncodedSlot[] // Normal slots (8)
   ar?: EncodedArcane[] // Arcane slots (2)
@@ -65,9 +66,12 @@ export function encodeBuild(state: BuildState): string {
     s: state.normalSlots.map(encodeSlot),
   }
 
-  // Optional fields
-  if (state.auraSlot) {
-    encoded.a = encodeSlot(state.auraSlot)
+  // Aura slots
+  if (state.auraSlots.length === 1) {
+    // Single aura slot: use legacy field for backward compat
+    encoded.a = encodeSlot(state.auraSlots[0])
+  } else if (state.auraSlots.length > 1) {
+    encoded.A = state.auraSlots.map(encodeSlot)
   }
 
   if (state.exilusSlot?.mod || state.exilusSlot?.formaPolarity) {
@@ -207,9 +211,13 @@ export function decodeBuild(base64String: string): Partial<BuildState> | null {
       buildName: encoded.n,
     }
 
-    // Decode aura slot
-    if (encoded.a) {
-      state.auraSlot = decodeSlot(encoded.a, "aura", "aura-0")
+    // Decode aura slots
+    if (encoded.A) {
+      state.auraSlots = encoded.A.map((s, i) =>
+        decodeSlot(s, "aura", `aura-${i}`),
+      )
+    } else if (encoded.a) {
+      state.auraSlots = [decodeSlot(encoded.a, "aura", "aura-0")]
     }
 
     // Decode exilus slot

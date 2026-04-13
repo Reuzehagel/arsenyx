@@ -9,13 +9,19 @@ import type {
 } from "@/lib/warframe/types"
 
 export interface BuildLayout {
-  hasAuraSlot: boolean
+  auraSlotCount: number
   hasExilusSlot: boolean
   normalSlotCount: number
   arcaneSlotCount: number
   shardSlotCount: number
   helminthAllowed: boolean
   archgunDualArcaneMode: boolean
+}
+
+function getAuraSlotCount(item: BrowseableItem): number {
+  const rawAura = (item as { aura?: string | string[] }).aura
+  if (Array.isArray(rawAura)) return rawAura.length
+  return rawAura ? 1 : 1 // Warframes always have at least 1 aura slot
 }
 
 export function getBuildLayout(
@@ -25,7 +31,7 @@ export function getBuildLayout(
   switch (category) {
     case "warframes":
       return {
-        hasAuraSlot: true,
+        auraSlotCount: getAuraSlotCount(item),
         hasExilusSlot: true,
         normalSlotCount: 8,
         arcaneSlotCount: 2,
@@ -37,7 +43,7 @@ export function getBuildLayout(
     case "secondary":
     case "melee":
       return {
-        hasAuraSlot: false,
+        auraSlotCount: 0,
         hasExilusSlot: true,
         normalSlotCount: 8,
         arcaneSlotCount: 1,
@@ -47,7 +53,7 @@ export function getBuildLayout(
       }
     case "necramechs":
       return {
-        hasAuraSlot: false,
+        auraSlotCount: 0,
         hasExilusSlot: false,
         normalSlotCount: 12,
         arcaneSlotCount: 2,
@@ -57,7 +63,7 @@ export function getBuildLayout(
       }
     case "companions":
       return {
-        hasAuraSlot: false,
+        auraSlotCount: 0,
         hasExilusSlot: false,
         normalSlotCount: 10,
         arcaneSlotCount: 0,
@@ -66,10 +72,13 @@ export function getBuildLayout(
         archgunDualArcaneMode: false,
       }
     case "archwing": {
-      const isArchGun = (item as { type?: string }).type === "Arch-Gun"
+      const itemType = (item as { type?: string }).type
+      const isArchGun = itemType === "Arch-Gun"
+      const isArchMelee = itemType === "Arch-Melee"
+      const isWeapon = isArchGun || isArchMelee
       return {
-        hasAuraSlot: false,
-        hasExilusSlot: true,
+        auraSlotCount: 0,
+        hasExilusSlot: !isWeapon,
         normalSlotCount: 8,
         arcaneSlotCount: isArchGun ? 2 : 0,
         shardSlotCount: 0,
@@ -80,7 +89,7 @@ export function getBuildLayout(
     case "companion-weapons":
     case "exalted-weapons":
       return {
-        hasAuraSlot: false,
+        auraSlotCount: 0,
         hasExilusSlot: true,
         normalSlotCount: 8,
         arcaneSlotCount: 0,
@@ -104,13 +113,27 @@ export function createInitialModSlots(
   }))
 }
 
+function getAuraPolarities(item: BrowseableItem): (string | undefined)[] {
+  const rawAura = (item as { aura?: string | string[] }).aura
+  if (!rawAura) return [undefined]
+  if (Array.isArray(rawAura)) {
+    // WFCD format: array of polarity strings per aura slot
+    // e.g. Jade: ["aura", "vazarin"] — "aura" is not a real polarity
+    return rawAura.map((p) => {
+      const normalized = normalizePolarity(p)
+      return normalized === "universal" && p !== "universal" ? undefined : normalized
+    })
+  }
+  return [rawAura]
+}
+
 export function createBaseBuildState(
   item: BrowseableItem,
   category: BrowseCategory,
 ): BuildState {
   const layout = getBuildLayout(item, category)
   const itemPolarities = (item as { polarities?: string[] }).polarities
-  const auraPolarity = (item as { aura?: string }).aura
+  const auraPolarities = getAuraPolarities(item)
 
   // Kuva/Tenet/Coda weapons have maxLevelCap: 40 → capacity 80 with catalyst
   const maxLevelCap =
@@ -124,15 +147,13 @@ export function createBaseBuildState(
     itemImageName: item.imageName,
     hasReactor: true,
     maxLevelCap,
-    auraSlot: layout.hasAuraSlot
-      ? {
-          id: "aura-0",
-          type: "aura",
-          innatePolarity: auraPolarity
-            ? normalizePolarity(auraPolarity)
-            : undefined,
-        }
-      : undefined,
+    auraSlots: Array.from({ length: layout.auraSlotCount }, (_, i) => ({
+      id: `aura-${i}`,
+      type: "aura" as const,
+      innatePolarity: auraPolarities[i]
+        ? normalizePolarity(auraPolarities[i])
+        : undefined,
+    })),
     exilusSlot: layout.hasExilusSlot
       ? {
           id: "exilus-0",
@@ -154,7 +175,10 @@ export function getBuildSlot(
   buildState: BuildState,
   slotId: string,
 ): ModSlot | undefined {
-  if (slotId === "aura-0") return buildState.auraSlot
+  if (slotId.startsWith("aura-")) {
+    const idx = Number(slotId.slice("aura-".length))
+    return buildState.auraSlots[idx]
+  }
   if (slotId === "exilus-0") return buildState.exilusSlot
 
   if (slotId.startsWith("normal-")) {
@@ -176,8 +200,11 @@ export function setBuildSlot(
   slotId: string,
   slot: ModSlot,
 ): void {
-  if (slotId === "aura-0") {
-    buildState.auraSlot = slot
+  if (slotId.startsWith("aura-")) {
+    const idx = Number(slotId.slice("aura-".length))
+    if (idx >= 0 && idx < buildState.auraSlots.length) {
+      buildState.auraSlots[idx] = slot
+    }
     return
   }
 

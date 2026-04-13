@@ -36,7 +36,7 @@ function makeBaseBuildState(overrides?: Partial<BuildState>): BuildState {
     itemName: "Excalibur",
     itemCategory: "warframes",
     hasReactor: true,
-    auraSlot: makeSlot("aura-0", "aura", "madurai"),
+    auraSlots: [makeSlot("aura-0", "aura", "madurai")],
     exilusSlot: makeSlot("exilus-0", "exilus"),
     normalSlots: Array.from({ length: 8 }, (_, i) =>
       makeSlot(`normal-${i}`, "normal", i < 2 ? "madurai" : undefined),
@@ -252,7 +252,7 @@ describe("applyOverframeImportToBuildState — mod placement", () => {
       [auraMod, exilusMod],
     )
 
-    expect(nextState.auraSlot?.mod?.name).toBe("Steel Charge")
+    expect(nextState.auraSlots[0]?.mod?.name).toBe("Steel Charge")
     expect(nextState.exilusSlot?.mod?.name).toBe("Cunning Drift")
   })
 

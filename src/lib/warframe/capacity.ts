@@ -131,10 +131,14 @@ export function calculateTotalDrain(build: BuildState): number {
  * Calculate the aura bonus for a warframe build
  */
 export function calculateBuildAuraBonus(build: BuildState): number {
-  if (!build.auraSlot?.mod) return 0
-
-  const auraPolarity = getSlotPolarity(build.auraSlot)
-  return calculateAuraBonus(build.auraSlot.mod, auraPolarity)
+  let totalBonus = 0
+  for (const slot of build.auraSlots) {
+    if (slot.mod) {
+      const auraPolarity = getSlotPolarity(slot)
+      totalBonus += calculateAuraBonus(slot.mod, auraPolarity)
+    }
+  }
+  return totalBonus
 }
 
 /**
@@ -345,13 +349,13 @@ function calculateSingleSlotForma(slot: ModSlot): number {
  */
 export function calculateFormaCount(
   normalSlots: ModSlot[],
-  auraSlot?: ModSlot,
+  auraSlots: ModSlot[],
   exilusSlot?: ModSlot,
 ): number {
   let total = 0
 
-  // Aura slot (single slot - just check if changed)
-  if (auraSlot) {
+  // Aura slots
+  for (const auraSlot of auraSlots) {
     total += calculateSingleSlotForma(auraSlot)
   }
 
@@ -403,9 +407,11 @@ export function calculateModEndoCost(mod: PlacedMod): number {
 export function calculateTotalEndoCost(build: BuildState): number {
   let totalEndo = 0
 
-  // Aura slot
-  if (build.auraSlot?.mod) {
-    totalEndo += calculateModEndoCost(build.auraSlot.mod)
+  // Aura slots
+  for (const slot of build.auraSlots) {
+    if (slot.mod) {
+      totalEndo += calculateModEndoCost(slot.mod)
+    }
   }
 
   // Exilus slot

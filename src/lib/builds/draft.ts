@@ -160,7 +160,7 @@ export interface BuildStateToDraftInput {
   buildState: BuildState
 }
 
-function slotToDraft(slot: BuildState["auraSlot"] | BuildState["exilusSlot"]) {
+function slotToDraft(slot: BuildState["exilusSlot"] | BuildState["auraSlots"][number]) {
   if (!slot) return null
   if (slot.formaPolarity === undefined && !slot.mod) return null
 
@@ -203,7 +203,7 @@ export function buildStateToDraftPayload(
   input: BuildStateToDraftInput,
 ): BuildDraftPayload {
   const slots = [
-    slotToDraft(input.buildState.auraSlot),
+    ...input.buildState.auraSlots.map(slotToDraft),
     slotToDraft(input.buildState.exilusSlot),
     ...input.buildState.normalSlots.map(normalSlotToDraft),
   ].filter((slot): slot is NonNullable<typeof slot> => slot !== null)

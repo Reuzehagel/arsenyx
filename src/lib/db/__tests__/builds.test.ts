@@ -94,7 +94,7 @@ describe("build persistence helpers", () => {
         itemCategory: "warframes",
         itemImageName: undefined,
         hasReactor: true,
-        auraSlot: undefined,
+        auraSlots: [],
         exilusSlot: {
           id: "exilus-0",
           type: "exilus",
@@ -118,7 +118,7 @@ describe("build persistence helpers", () => {
     const storedBuildData = mockBuildCreate.mock.calls[0]?.[0]?.data?.buildData
 
     expect(Object.hasOwn(storedBuildData, "itemImageName")).toBe(false)
-    expect(Object.hasOwn(storedBuildData, "auraSlot")).toBe(false)
+    expect(storedBuildData.auraSlots).toEqual([])
     expect(Object.hasOwn(storedBuildData.exilusSlot, "innatePolarity")).toBe(
       false,
     )

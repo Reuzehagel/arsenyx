@@ -311,7 +311,7 @@ export interface BuildState {
   hasReactor: boolean // Orokin Reactor (Warframe) or Catalyst (Weapon)
 
   // Mod slots
-  auraSlot?: ModSlot // Warframes only
+  auraSlots: ModSlot[] // Warframes: 1 slot (2 for Jade)
   exilusSlot?: ModSlot
   normalSlots: ModSlot[] // 8 slots (12 for Necramechs)
   arcaneSlots: (PlacedArcane | null)[] // Warframes: 2 slots, Weapons: 1 slot

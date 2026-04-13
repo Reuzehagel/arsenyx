@@ -33,7 +33,7 @@ let arcaneByUniqueNameMap: Map<string, Arcane> | null = null
  * Normalize polarity string from WFCD data to our Polarity type
  */
 export function normalizePolarity(polarity?: string): Polarity {
-  if (!polarity) return "universal"
+  if (!polarity || typeof polarity !== "string") return "universal"
   const lower = polarity.toLowerCase()
 
   const polarityMap: Record<string, Polarity> = {

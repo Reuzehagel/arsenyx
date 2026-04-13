@@ -149,7 +149,7 @@ export default async function CreatePage({ searchParams }: CreatePageProps) {
           itemCategory: category,
           itemImageName: item.imageName,
           normalSlots: sourceBuild.buildData.normalSlots,
-          auraSlot: sourceBuild.buildData.auraSlot,
+          auraSlots: sourceBuild.buildData.auraSlots,
           exilusSlot: sourceBuild.buildData.exilusSlot,
           hasReactor: sourceBuild.buildData.hasReactor,
           formaCount: sourceBuild.buildData.formaCount,

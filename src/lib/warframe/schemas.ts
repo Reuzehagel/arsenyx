@@ -93,37 +93,47 @@ const ModSlotSchema = z.object({
   mod: PlacedModSchema.optional(),
 })
 
-export const BuildStateSchema = z.object({
-  itemUniqueName: z.string(),
-  itemName: z.string(),
-  itemCategory: BrowseCategorySchema,
-  itemImageName: z.string().optional(),
+export const BuildStateSchema = z
+  .object({
+    itemUniqueName: z.string(),
+    itemName: z.string(),
+    itemCategory: BrowseCategorySchema,
+    itemImageName: z.string().optional(),
 
-  hasReactor: z.boolean(),
+    hasReactor: z.boolean(),
 
-  auraSlot: ModSlotSchema.optional(),
-  exilusSlot: ModSlotSchema.optional(),
-  normalSlots: z.array(ModSlotSchema),
-  arcaneSlots: z.array(PlacedArcaneSchema.nullable()),
+    auraSlots: z.array(ModSlotSchema).optional(),
+    // Backward compat: old builds stored a single auraSlot object
+    auraSlot: ModSlotSchema.optional(),
+    exilusSlot: ModSlotSchema.optional(),
+    normalSlots: z.array(ModSlotSchema),
+    arcaneSlots: z.array(PlacedArcaneSchema.nullable()),
 
-  shardSlots: z.array(PlacedShardSchema.nullable()),
+    shardSlots: z.array(PlacedShardSchema.nullable()),
 
-  baseCapacity: z.number(),
-  currentCapacity: z.number(),
+    baseCapacity: z.number(),
+    currentCapacity: z.number(),
 
-  buildName: z.string().optional(),
-  createdAt: z.string().optional(),
-  updatedAt: z.string().optional(),
+    buildName: z.string().optional(),
+    createdAt: z.string().optional(),
+    updatedAt: z.string().optional(),
 
-  formaCount: z.number(),
+    formaCount: z.number(),
 
-  helminthAbility: z
-    .object({
-      slotIndex: z.number(),
-      ability: HelminthAbilitySchema,
-    })
-    .optional(),
-})
+    helminthAbility: z
+      .object({
+        slotIndex: z.number(),
+        ability: HelminthAbilitySchema,
+      })
+      .optional(),
+  })
+  .transform((data) => {
+    // Migrate old auraSlot to auraSlots array
+    const { auraSlot, ...rest } = data
+    const auraSlots =
+      rest.auraSlots ?? (auraSlot ? [auraSlot] : [])
+    return { ...rest, auraSlots }
+  })
 
 // =============================================================================
 // ITEM SCHEMA — minimal shape check for WFCD item data (union type is too complex)

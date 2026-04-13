@@ -33,6 +33,7 @@ function makeEmptyBuildState(overrides?: Partial<BuildState>): BuildState {
     itemName: "Test Weapon",
     itemCategory: "primary",
     hasReactor: false,
+    auraSlots: [],
     normalSlots: Array.from({ length: 8 }, (_, i) => makeSlot(`normal-${i}`)),
     arcaneSlots: [null],
     shardSlots: [],

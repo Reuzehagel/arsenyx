@@ -33,7 +33,7 @@ function makeEmptyBuildState(overrides?: Partial<BuildState>): BuildState {
     itemName: "Test Frame",
     itemCategory: "warframes",
     hasReactor: true,
-    auraSlot: { id: "aura-0", type: "aura" },
+    auraSlots: [{ id: "aura-0", type: "aura" }],
     exilusSlot: { id: "exilus-0", type: "exilus" },
     normalSlots: Array.from({ length: 8 }, (_, i) => makeSlot(`normal-${i}`)),
     arcaneSlots: [null, null],

@@ -189,8 +189,14 @@ export function BuildContainer({
 
       if (!isAuraMod && !activeSlotId) return
 
-      if (isAuraMod && buildState.auraSlot) {
-        placeModInSlot(mod, rank, "aura-0")
+      if (isAuraMod && buildState.auraSlots.length > 0) {
+        // Place in activeSlotId if it's an aura slot, otherwise first empty aura slot
+        if (activeSlotId?.startsWith("aura-")) {
+          placeModInSlot(mod, rank, activeSlotId)
+        } else {
+          const emptyAura = buildState.auraSlots.find((s) => !s.mod)
+          placeModInSlot(mod, rank, emptyAura?.id ?? "aura-0")
+        }
         return
       }
 
@@ -207,7 +213,7 @@ export function BuildContainer({
         setActiveSlotId(null)
       }
     },
-    [activeSlotId, placeModInSlot, setActiveSlotId, buildState.auraSlot],
+    [activeSlotId, placeModInSlot, setActiveSlotId, buildState.auraSlots],
   )
 
   const handlePlaceArcane = useCallback(
@@ -265,7 +271,7 @@ export function BuildContainer({
     },
     onCopyBuild: handleCopyBuild,
     onClearBuild: handleClearBuild,
-    hasAuraSlot: layout.hasAuraSlot,
+    auraSlotCount: layout.auraSlotCount,
     hasExilusSlot: layout.hasExilusSlot,
   })
 
@@ -330,7 +336,7 @@ export function BuildContainer({
 
             <div className="bg-card min-w-0 flex-1 rounded-lg border p-2 sm:p-4 lg:ml-[calc(260px+1rem)]">
               <ModGrid
-                auraSlot={buildState.auraSlot}
+                auraSlots={buildState.auraSlots}
                 exilusSlot={buildState.exilusSlot}
                 normalSlots={buildState.normalSlots}
                 activeSlotId={canEdit ? activeSlotId : null}

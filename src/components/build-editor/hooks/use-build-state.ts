@@ -130,9 +130,10 @@ export function createInitialBuildState(
         mergeSlot(baseSlot, importedBuild.normalSlots?.[i]),
     )
 
-    const mergedAuraSlot = baseState.auraSlot
-      ? mergeSlot(baseState.auraSlot, importedBuild.auraSlot)
-      : importedBuild.auraSlot
+    const mergedAuraSlots = baseState.auraSlots.map(
+      (baseSlot: ModSlot, i: number) =>
+        mergeSlot(baseSlot, importedBuild.auraSlots?.[i]),
+    )
 
     const mergedExilusSlot = baseState.exilusSlot
       ? mergeSlot(baseState.exilusSlot, importedBuild.exilusSlot)
@@ -146,7 +147,7 @@ export function createInitialBuildState(
       itemCategory: category,
       itemImageName: item.imageName,
       normalSlots: mergedNormalSlots,
-      auraSlot: mergedAuraSlot,
+      auraSlots: mergedAuraSlots,
       exilusSlot: mergedExilusSlot,
     }
 
@@ -186,9 +187,7 @@ export function createInitialBuildState(
       return slot
     }
 
-    if (hydratedState.auraSlot) {
-      hydratedState.auraSlot = hydrateSlot(hydratedState.auraSlot)
-    }
+    hydratedState.auraSlots = hydratedState.auraSlots.map(hydrateSlot)
     if (hydratedState.exilusSlot) {
       hydratedState.exilusSlot = hydrateSlot(hydratedState.exilusSlot)
     }
@@ -257,7 +256,10 @@ export type BuildAction =
 
 // Slot-level helpers used by multiple actions
 function getModFromSlot(id: string, state: BuildState): PlacedMod | undefined {
-  if (id.startsWith("aura")) return state.auraSlot?.mod
+  if (id.startsWith("aura-")) {
+    const idx = parseInt(id.slice("aura-".length))
+    return state.auraSlots[idx]?.mod
+  }
   if (id.startsWith("exilus")) return state.exilusSlot?.mod
   const idx = parseInt(id.replace("normal-", ""))
   return state.normalSlots[idx]?.mod
@@ -268,8 +270,12 @@ function setModInSlot(
   mod: PlacedMod | undefined,
   state: BuildState,
 ) {
-  if (id.startsWith("aura") && state.auraSlot) {
-    state.auraSlot = { ...state.auraSlot, mod }
+  if (id.startsWith("aura-")) {
+    const idx = parseInt(id.slice("aura-".length))
+    if (idx >= 0 && idx < state.auraSlots.length) {
+      state.auraSlots = [...state.auraSlots]
+      state.auraSlots[idx] = { ...state.auraSlots[idx], mod }
+    }
   } else if (id.startsWith("exilus") && state.exilusSlot) {
     state.exilusSlot = { ...state.exilusSlot, mod }
   } else {
@@ -300,12 +306,11 @@ function buildReducer(state: BuildState, action: BuildAction): BuildState {
       const baseName = getModBaseName(mod.name)
 
       // Remove existing instance of this mod or its variants
-      if (
-        newState.auraSlot?.mod &&
-        getModBaseName(newState.auraSlot.mod.name) === baseName
-      ) {
-        newState.auraSlot = { ...newState.auraSlot, mod: undefined }
-      }
+      newState.auraSlots = newState.auraSlots.map((s: ModSlot) =>
+        s.mod && getModBaseName(s.mod.name) === baseName
+          ? { ...s, mod: undefined }
+          : s,
+      )
       if (
         newState.exilusSlot?.mod &&
         getModBaseName(newState.exilusSlot.mod.name) === baseName
@@ -319,20 +324,7 @@ function buildReducer(state: BuildState, action: BuildAction): BuildState {
       )
 
       // Place in target slot
-      if (slotId.startsWith("aura") && newState.auraSlot) {
-        newState.auraSlot = { ...newState.auraSlot, mod: placedMod }
-      } else if (slotId.startsWith("exilus") && newState.exilusSlot) {
-        newState.exilusSlot = { ...newState.exilusSlot, mod: placedMod }
-      } else {
-        const slotIndex = parseInt(slotId.replace("normal-", ""))
-        if (!isNaN(slotIndex)) {
-          newState.normalSlots = [...newState.normalSlots]
-          newState.normalSlots[slotIndex] = {
-            ...newState.normalSlots[slotIndex],
-            mod: placedMod,
-          }
-        }
-      }
+      setModInSlot(slotId, placedMod, newState)
 
       return newState
     }
@@ -341,7 +333,7 @@ function buildReducer(state: BuildState, action: BuildAction): BuildState {
       const { sourceSlotId, targetSlotId } = action
       const newState = { ...state }
 
-      if (newState.auraSlot) newState.auraSlot = { ...newState.auraSlot }
+      newState.auraSlots = newState.auraSlots.map((s) => ({ ...s }))
       if (newState.exilusSlot) newState.exilusSlot = { ...newState.exilusSlot }
       newState.normalSlots = [...newState.normalSlots]
 
@@ -357,22 +349,7 @@ function buildReducer(state: BuildState, action: BuildAction): BuildState {
     case "REMOVE_MOD": {
       const { slotId } = action
       const newState = { ...state }
-
-      if (slotId.startsWith("aura") && newState.auraSlot) {
-        newState.auraSlot = { ...newState.auraSlot, mod: undefined }
-      } else if (slotId.startsWith("exilus") && newState.exilusSlot) {
-        newState.exilusSlot = { ...newState.exilusSlot, mod: undefined }
-      } else {
-        const slotIndex = parseInt(slotId.replace("normal-", ""))
-        if (!isNaN(slotIndex)) {
-          newState.normalSlots = [...newState.normalSlots]
-          newState.normalSlots[slotIndex] = {
-            ...newState.normalSlots[slotIndex],
-            mod: undefined,
-          }
-        }
-      }
-
+      setModInSlot(slotId, undefined, newState)
       return newState
     }
 
@@ -380,8 +357,12 @@ function buildReducer(state: BuildState, action: BuildAction): BuildState {
       const { slotId, newRank } = action
       const newState = { ...state }
 
-      if (slotId.startsWith("aura") && newState.auraSlot) {
-        newState.auraSlot = updateModRankInSlot(newState.auraSlot, newRank)
+      if (slotId.startsWith("aura-")) {
+        const idx = parseInt(slotId.slice("aura-".length))
+        if (idx >= 0 && idx < newState.auraSlots.length) {
+          newState.auraSlots = [...newState.auraSlots]
+          newState.auraSlots[idx] = updateModRankInSlot(newState.auraSlots[idx], newRank)!
+        }
       } else if (slotId.startsWith("exilus") && newState.exilusSlot) {
         newState.exilusSlot = updateModRankInSlot(newState.exilusSlot, newRank)!
       } else {
@@ -410,9 +391,13 @@ function buildReducer(state: BuildState, action: BuildAction): BuildState {
         return polarity
       }
 
-      if (slotId.startsWith("aura") && newState.auraSlot) {
-        const formaValue = getFormaValue(newState.auraSlot.innatePolarity)
-        newState.auraSlot = { ...newState.auraSlot, formaPolarity: formaValue }
+      if (slotId.startsWith("aura-")) {
+        const idx = parseInt(slotId.slice("aura-".length))
+        if (idx >= 0 && idx < newState.auraSlots.length) {
+          const formaValue = getFormaValue(newState.auraSlots[idx].innatePolarity)
+          newState.auraSlots = [...newState.auraSlots]
+          newState.auraSlots[idx] = { ...newState.auraSlots[idx], formaPolarity: formaValue }
+        }
       } else if (slotId.startsWith("exilus") && newState.exilusSlot) {
         const formaValue = getFormaValue(newState.exilusSlot.innatePolarity)
         newState.exilusSlot = {
@@ -659,8 +644,9 @@ export function useBuildState({
 
   const usedModNames = useMemo((): Set<string> => {
     const names = new Set<string>()
-    if (buildState.auraSlot?.mod)
-      names.add(getModBaseName(buildState.auraSlot.mod.name))
+    for (const slot of buildState.auraSlots) {
+      if (slot.mod) names.add(getModBaseName(slot.mod.name))
+    }
     if (buildState.exilusSlot?.mod)
       names.add(getModBaseName(buildState.exilusSlot.mod.name))
     for (const slot of buildState.normalSlots) {
@@ -691,7 +677,7 @@ export function useBuildState({
       totalEndoCost: calculateTotalEndoCost(buildState),
       formaCount: calculateFormaCount(
         buildState.normalSlots,
-        buildState.auraSlot,
+        buildState.auraSlots,
         buildState.exilusSlot,
       ),
     }),

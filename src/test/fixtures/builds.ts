@@ -27,7 +27,7 @@ export function createEmptyBuildState(
     itemName: "Excalibur",
     itemCategory: "warframes",
     hasReactor: false,
-    auraSlot: createModSlot("aura-0", "aura", "madurai"),
+    auraSlots: [createModSlot("aura-0", "aura", "madurai")],
     exilusSlot: createModSlot("exilus-0", "exilus"),
     normalSlots: Array.from({ length: 8 }, (_, i) =>
       createModSlot(`normal-${i}`, "normal"),
@@ -52,7 +52,7 @@ export function createWarframeBuildWithPolarities(
     itemName: "Excalibur",
     itemCategory: "warframes",
     hasReactor: true,
-    auraSlot: createModSlot("aura-0", "aura", "madurai"),
+    auraSlots: [createModSlot("aura-0", "aura", "madurai")],
     exilusSlot: createModSlot("exilus-0", "exilus"),
     normalSlots: normalPolarities.map((polarity, i) =>
       createModSlot(`normal-${i}`, "normal", polarity),
@@ -77,6 +77,7 @@ export function createWeaponBuildState(
     itemName: "Braton",
     itemCategory: category,
     hasReactor: false,
+    auraSlots: [],
     exilusSlot: createModSlot("exilus-0", "exilus"),
     normalSlots: Array.from({ length: 8 }, (_, i) =>
       createModSlot(`normal-${i}`, "normal"),

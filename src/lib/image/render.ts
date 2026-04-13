@@ -118,7 +118,7 @@ async function fetchAllImages(
   if (itemImageUrl) urls.add(itemImageUrl)
 
   const allSlots = [
-    buildState.auraSlot,
+    ...buildState.auraSlots,
     buildState.exilusSlot,
     ...buildState.normalSlots,
   ]

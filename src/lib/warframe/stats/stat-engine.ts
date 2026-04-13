@@ -31,12 +31,10 @@ export const UMBRAL_SET_BONUSES: Record<number, number> = {
 export function getAllPlacedMods(buildState: BuildState): PlacedMod[] {
   const mods: PlacedMod[] = []
 
-  // Aura slot
-  if (buildState.auraSlot?.mod) {
-    if (
-      !AURA_MODS_IGNORE_FOR_PLAYER_STATS.has(buildState.auraSlot.mod.uniqueName)
-    ) {
-      mods.push(buildState.auraSlot.mod)
+  // Aura slots
+  for (const slot of buildState.auraSlots) {
+    if (slot.mod && !AURA_MODS_IGNORE_FOR_PLAYER_STATS.has(slot.mod.uniqueName)) {
+      mods.push(slot.mod)
     }
   }
 
