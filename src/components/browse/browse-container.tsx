@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter, useSearchParams } from "next/navigation"
-import { useState, useMemo, useCallback, useEffect, useRef } from "react"
+import { useState, useMemo, useCallback, useEffect, useRef, useDeferredValue } from "react"
 
 import { sortItems } from "@/lib/warframe/items"
 import type {
@@ -58,13 +58,15 @@ export function BrowseContainer({
       : "name-asc"
   })
 
+  const deferredSearchQuery = useDeferredValue(searchQuery)
+
   // Filter and sort items client-side for instant feedback
   const filteredAndSortedItems = useMemo(() => {
     // First filter
     const result = initialItems.filter((item) => {
       // Search filter
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase()
+      if (deferredSearchQuery) {
+        const query = deferredSearchQuery.toLowerCase()
         const nameMatch = item.name.toLowerCase().includes(query)
         const categoryMatch = item.category?.toLowerCase().includes(query)
         if (!nameMatch && !categoryMatch) return false
@@ -92,7 +94,7 @@ export function BrowseContainer({
     return sortItems(result, sortOption)
   }, [
     initialItems,
-    searchQuery,
+    deferredSearchQuery,
     masteryMax,
     primeOnly,
     hideVaulted,
@@ -128,16 +130,20 @@ export function BrowseContainer({
   )
 
   const handlePrimeToggle = useCallback(() => {
-    const newValue = !primeOnly
-    setPrimeOnly(newValue)
-    syncToUrl({ prime: newValue ? "true" : null })
-  }, [primeOnly, syncToUrl])
+    setPrimeOnly((prev) => {
+      const newValue = !prev
+      syncToUrl({ prime: newValue ? "true" : null })
+      return newValue
+    })
+  }, [syncToUrl])
 
   const handleVaultedToggle = useCallback(() => {
-    const newValue = !hideVaulted
-    setHideVaulted(newValue)
-    syncToUrl({ vaulted: newValue ? "hide" : null })
-  }, [hideVaulted, syncToUrl])
+    setHideVaulted((prev) => {
+      const newValue = !prev
+      syncToUrl({ vaulted: newValue ? "hide" : null })
+      return newValue
+    })
+  }, [syncToUrl])
 
   const handleSortChange = useCallback(
     (value: SortOption) => {

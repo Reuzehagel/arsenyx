@@ -9,8 +9,8 @@ import type { BrowseCategory, BuildState, BrowseableItem } from "@/lib/warframe/
 
 import type { Visibility } from "../publish-dialog"
 
-export const STORAGE_KEY_PREFIX = "arsenyx_build_"
-export const GUIDE_STORAGE_KEY_PREFIX = "arsenyx_build_guide_"
+export const STORAGE_KEY_PREFIX = "arsenyx_build_v1_"
+export const GUIDE_STORAGE_KEY_PREFIX = "arsenyx_build_guide_v1_"
 
 type SaveStatus = "idle" | "saving" | "saved" | "error"
 

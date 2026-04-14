@@ -23,6 +23,7 @@ let cachedAllArcanes: Arcane[] | null = null
 const cachedModsByCompat = new Map<ModCompatibility, Mod[]>()
 const cachedArcanesBySlot = new Map<string, Arcane[]>()
 let modByUniqueNameMap: Map<string, Mod> | null = null
+let modByNameMap: Map<string, Mod> | null = null
 let arcaneByUniqueNameMap: Map<string, Arcane> | null = null
 
 // =============================================================================
@@ -472,8 +473,12 @@ export function getModByUniqueName(uniqueName: string): Mod | undefined {
  * Get a specific mod by name
  */
 export function getModByName(name: string): Mod | undefined {
-  const lowerName = name.toLowerCase()
-  return getAllMods().find((mod) => mod.name.toLowerCase() === lowerName)
+  if (!modByNameMap) {
+    modByNameMap = new Map(
+      getAllMods().map((mod) => [mod.name.toLowerCase(), mod]),
+    )
+  }
+  return modByNameMap.get(name.toLowerCase())
 }
 
 // =============================================================================

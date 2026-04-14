@@ -81,47 +81,47 @@
 
 #### Unstable identities breaking memoization
 
-- [ ] `src/components/build-editor/build-container.tsx:36` — `compatibleArcanes = []` default creates new array identity every render, flows into useMemo deps
-- [ ] `src/components/build-editor/build-container.tsx:42` — `initialPartnerBuilds = []` — same pattern
-- [ ] `src/components/build-editor/build-container.tsx:178` — `partnerBuilds.map(b => b.slug)` inline creates unstable array in hook deps
+- [x] `src/components/build-editor/build-container.tsx:36` — `compatibleArcanes = []` default creates new array identity every render, flows into useMemo deps
+- [x] `src/components/build-editor/build-container.tsx:42` — `initialPartnerBuilds = []` — same pattern
+- [x] `src/components/build-editor/build-container.tsx:178` — `partnerBuilds.map(b => b.slug)` inline creates unstable array in hook deps
 
 #### Derived state in effects
 
-- [ ] `src/components/mod-card/mod-card.tsx:475-480` — `useEffect` sets `isHovered(false)` when `disableHover` changes; should derive: `isHovered && !disableHover`
+- [x] `src/components/mod-card/mod-card.tsx:475-480` — `useEffect` sets `isHovered(false)` when `disableHover` changes; should derive: `isHovered && !disableHover`
 
 #### Non-functional setState
 
-- [ ] `src/components/browse/browse-container.tsx:130-140` — `handlePrimeToggle` / `handleVaultedToggle` read state in closure instead of functional form
+- [x] `src/components/browse/browse-container.tsx:130-140` — `handlePrimeToggle` / `handleVaultedToggle` read state in closure instead of functional form
 
 #### Missing transitions / deferred values
 
-- [ ] `src/components/browse/browse-container.tsx:158-161` — Search filtering full item list without `useDeferredValue` (already used in mod/arcane panels but not here)
+- [x] `src/components/browse/browse-container.tsx:158-161` — Search filtering full item list without `useDeferredValue` (already used in mod/arcane panels but not here)
 
 #### Unversioned localStorage
 
-- [ ] `src/components/build-editor/hooks/use-build-persistence.ts:12-13` — `arsenyx_build_` keys store full `BuildState` with no version prefix; schema changes will silently break
+- [x] `src/components/build-editor/hooks/use-build-persistence.ts:12-13` — `arsenyx_build_` keys store full `BuildState` with no version prefix; schema changes will silently break
 
 ### P2 — Rendering & JS Performance (MEDIUM)
 
 #### Combined iterations (multiple passes over arrays)
 
-- [ ] `src/lib/warframe/items.ts:188-209` — `filterItems()` chains 4 `.filter()` calls; iterates array up to 4x
-- [ ] `src/components/build-editor/mod-search-grid.tsx:153-178` — 4 chained `.filter()` calls on mods array
-- [ ] `src/components/build-editor/stat-breakdown.tsx:27-35` — 4 `.filter()` calls to bucket contributions by source type
-- [ ] `src/components/build-editor/arcane-search-panel.tsx:65-75` — 2 sequential `.filter()` calls
+- [x] `src/lib/warframe/items.ts:188-209` — `filterItems()` chains 4 `.filter()` calls; iterates array up to 4x
+- [x] `src/components/build-editor/mod-search-grid.tsx:153-178` — 4 chained `.filter()` calls on mods array
+- [x] `src/components/build-editor/stat-breakdown.tsx:27-35` — 4 `.filter()` calls to bucket contributions by source type
+- [x] `src/components/build-editor/arcane-search-panel.tsx:65-75` — 2 sequential `.filter()` calls
 
 #### Missing index Maps for repeated lookups
 
-- [ ] `src/lib/warframe/helminth.ts:97` — `warframes.find()` inside loop over ~60 abilities; O(n*m)
-- [ ] `src/lib/warframe/mods.ts:476` — `getModByName()` does linear scan over ~1500 mods (unlike `getModByUniqueName` which uses a Map)
-- [ ] `src/components/build/build-guide-section.tsx:92` — `availableBuilds.find()` inside `.map()` loop
+- [x] `src/lib/warframe/helminth.ts:97` — `warframes.find()` inside loop over ~60 abilities; O(n*m)
+- [x] `src/lib/warframe/mods.ts:476` — `getModByName()` does linear scan over ~1500 mods (unlike `getModByUniqueName` which uses a Map)
+- [x] `src/components/build/build-guide-section.tsx:92` — `availableBuilds.find()` inside `.map()` loop
 
 #### RegExp in hot paths
 
-- [ ] `src/lib/warframe/stat-parser.ts:160-247` — 4 regex patterns created inside `parseStatString()` on every call; hot path during stat calculation
-- [ ] `src/components/build-editor/mod-search-grid.tsx:89` — Regex created inside function called once per mod (~1500 instances)
-- [ ] `src/components/mod-card/mod-card.tsx:71` — Regex created inside `getModStats()` on every render
+- [x] `src/lib/warframe/stat-parser.ts:160-247` — 4 regex patterns created inside `parseStatString()` on every call; hot path during stat calculation
+- [x] `src/components/build-editor/mod-search-grid.tsx:89` — Regex created inside function called once per mod (~1500 instances)
+- [x] `src/components/mod-card/mod-card.tsx:71` — Regex created inside `getModStats()` on every render
 
 #### Missing `content-visibility`
 
-- [ ] `src/components/browse/item-grid.tsx:28` — 100+ item cards rendered without `content-visibility: auto`
+- [x] `src/components/browse/item-grid.tsx:28` — 100+ item cards rendered without `content-visibility: auto`

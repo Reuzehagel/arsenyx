@@ -27,7 +27,12 @@ export function ItemGrid({ items, isLoading }: ItemGridProps) {
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
       {items.map((item, index) => (
-        <ItemCard key={item.uniqueName} item={item} index={index} />
+        <div
+          key={item.uniqueName}
+          style={{ contentVisibility: "auto", containIntrinsicSize: "auto 200px" }}
+        >
+          <ItemCard item={item} index={index} />
+        </div>
       ))}
     </div>
   )

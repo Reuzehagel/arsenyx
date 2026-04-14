@@ -63,16 +63,15 @@ export function ArcaneSearchPanel({
 
   // Filter and sort arcanes
   const filteredArcanes = useMemo(() => {
-    let arcanes = [...availableArcanes]
+    const hasSearch = deferredSearchQuery.trim().length > 0
+    const query = hasSearch ? deferredSearchQuery.toLowerCase() : ""
+    const hasRarityFilter = rarityFilter !== "All"
 
-    if (deferredSearchQuery.trim()) {
-      const query = deferredSearchQuery.toLowerCase()
-      arcanes = arcanes.filter((a) => a.name.toLowerCase().includes(query))
-    }
-
-    if (rarityFilter !== "All") {
-      arcanes = arcanes.filter((a) => a.rarity === rarityFilter)
-    }
+    const arcanes = availableArcanes.filter((a) => {
+      if (hasSearch && !a.name.toLowerCase().includes(query)) return false
+      if (hasRarityFilter && a.rarity !== rarityFilter) return false
+      return true
+    })
 
     switch (sortBy) {
       case "Name":

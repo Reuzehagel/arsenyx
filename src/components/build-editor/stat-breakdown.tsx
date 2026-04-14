@@ -23,17 +23,27 @@ export function StatBreakdownTooltip({
   format,
   unit,
 }: StatBreakdownTooltipProps) {
-  // Group contributions by source type
-  const modContributions = stat.contributions.filter((c) => c.source === "mod")
-  const shardContributions = stat.contributions.filter(
-    (c) => c.source === "shard",
-  )
-  const setBonusContributions = stat.contributions.filter(
-    (c) => c.source === "set_bonus",
-  )
-  const auraContributions = stat.contributions.filter(
-    (c) => c.source === "aura",
-  )
+  // Group contributions by source type in a single pass
+  const modContributions: typeof stat.contributions = []
+  const shardContributions: typeof stat.contributions = []
+  const setBonusContributions: typeof stat.contributions = []
+  const auraContributions: typeof stat.contributions = []
+  for (const c of stat.contributions) {
+    switch (c.source) {
+      case "mod":
+        modContributions.push(c)
+        break
+      case "shard":
+        shardContributions.push(c)
+        break
+      case "set_bonus":
+        setBonusContributions.push(c)
+        break
+      case "aura":
+        auraContributions.push(c)
+        break
+    }
+  }
 
   // Helper to format values with the current format
   const formatValue = (value: number) => formatDisplayValue(value, format)

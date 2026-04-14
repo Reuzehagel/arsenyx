@@ -82,11 +82,13 @@ const SEARCH_ALIASES: Record<string, string[]> = {
   dmg: ["damage"],
 }
 
+const HTML_TAG_PATTERN = /<[^>]+>/g
+
 function getModSearchableStats(mod: Mod): string {
   if (!mod.levelStats || mod.levelStats.length === 0) return ""
   const maxRankStats = mod.levelStats[mod.levelStats.length - 1]?.stats ?? []
   return maxRankStats
-    .map((s) => s.replace(/<[^>]+>/g, ""))
+    .map((s) => s.replace(HTML_TAG_PATTERN, ""))
     .join(" ")
     .toLowerCase()
 }
@@ -151,32 +153,29 @@ export function ModSearchGrid({
 
   // Filter and sort mods
   const filteredMods = useMemo(() => {
-    let mods = [...availableMods]
+    const hasSearch = deferredSearchQuery.trim().length > 0
+    const searchTerms = hasSearch
+      ? expandSearchQuery(deferredSearchQuery.toLowerCase())
+      : []
+    const hasRarityFilter = rarityFilter !== "All"
+    const hasPolarityFilter = polarityFilter !== "All"
+    const polarityLower = polarityFilter.toLowerCase()
 
-    if (slotType === "aura") {
-      mods = mods.filter((m) => m.compatName?.toUpperCase() === "AURA")
-    } else if (slotType === "exilus") {
-      mods = mods.filter((m) => m.isExilus || m.isUtility)
-    }
-
-    if (deferredSearchQuery.trim()) {
-      const query = deferredSearchQuery.toLowerCase()
-      const searchTerms = expandSearchQuery(query)
-      mods = mods.filter((m) => {
+    const mods = availableMods.filter((m) => {
+      if (slotType === "aura") {
+        if (m.compatName?.toUpperCase() !== "AURA") return false
+      } else if (slotType === "exilus") {
+        if (!m.isExilus && !m.isUtility) return false
+      }
+      if (hasSearch) {
         const searchable = searchIndex.get(m.uniqueName) ?? ""
-        return searchTerms.some((term) => searchable.includes(term))
-      })
-    }
-
-    if (rarityFilter !== "All") {
-      mods = mods.filter((m) => m.rarity === rarityFilter)
-    }
-
-    if (polarityFilter !== "All") {
-      mods = mods.filter(
-        (m) => m.polarity.toLowerCase() === polarityFilter.toLowerCase(),
-      )
-    }
+        if (!searchTerms.some((term) => searchable.includes(term))) return false
+      }
+      if (hasRarityFilter && m.rarity !== rarityFilter) return false
+      if (hasPolarityFilter && m.polarity.toLowerCase() !== polarityLower)
+        return false
+      return true
+    })
 
     switch (sortBy) {
       case "Name":

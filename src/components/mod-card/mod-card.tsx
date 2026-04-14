@@ -23,6 +23,8 @@ import {
   LowerTab,
 } from "./mod-card-frame"
 
+const NUMBER_PATTERN = /(\d+(\.\d+)?)/g
+
 // =============================================================================
 // PROPS
 // =============================================================================
@@ -68,7 +70,7 @@ function getModStats(mod: Mod, rank: number, setCount: number = 0): string[] {
     }
 
     return baseStats.map((stat) => {
-      return stat.replace(/(\d+(\.\d+)?)/g, (match) => {
+      return stat.replace(NUMBER_PATTERN, (match) => {
         const value = parseFloat(match)
         const boosted = value * multiplier
         return parseFloat(boosted.toFixed(1)).toString()
@@ -471,13 +473,7 @@ function ModCardComponent({
     return () => window.removeEventListener("scroll", handleScroll, scrollOpts)
   }, [isHovered])
 
-  // Close when disableHover becomes true (during drag)
-  useEffect(() => {
-    if (disableHover) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: must sync hover state with parent's disableHover prop
-      setIsHovered(false)
-    }
-  }, [disableHover])
+  const effectiveHover = isHovered && !disableHover
 
   const compactSize = DISPLAY_SIZE.compact
 
@@ -494,7 +490,7 @@ function ModCardComponent({
         className={cn(
           "transition-opacity duration-100",
           isSelected && "drop-shadow-[0_0_6px_rgba(255,255,255,0.7)] filter",
-          isHovered ? "opacity-0" : "opacity-100",
+          effectiveHover ? "opacity-0" : "opacity-100",
         )}
       >
         <CompactModCard
@@ -508,7 +504,7 @@ function ModCardComponent({
       </div>
 
       {/* Expanded card - in portal */}
-      {isHovered && portalContainer && (
+      {effectiveHover && portalContainer && (
         <>
           {createPortal(
             <div

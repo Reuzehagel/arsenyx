@@ -92,9 +92,10 @@ export function BuildGuideSection({
     setKey((prev) => prev + 1)
 
     // Update partner builds from available builds
+    const buildById = new Map(availableBuilds.map((b) => [b.id, b]))
     const newPartnerBuilds = data.partnerBuildIds
       .map((id) => {
-        const build = availableBuilds.find((b) => b.id === id)
+        const build = buildById.get(id)
         if (!build) return null
         return {
           id: build.id,

@@ -180,36 +180,30 @@ export function filterItems(
   items: BrowseItem[],
   filters: Partial<BrowseFilters>,
 ): BrowseItem[] {
-  let result = [...items]
+  const query = filters.query?.toLowerCase()
+  const masteryMax = filters.masteryMax
+  const primeOnly = filters.primeOnly
+  const hideVaulted = filters.hideVaulted
 
-  // Text search
-  if (filters.query) {
-    const query = filters.query.toLowerCase()
-    result = result.filter(
-      (item) =>
-        item.name.toLowerCase().includes(query) ||
-        item.type?.toLowerCase().includes(query),
-    )
-  }
-
-  // Mastery requirement filter
-  if (filters.masteryMax !== undefined) {
-    result = result.filter(
-      (item) => (item.masteryReq ?? 0) <= filters.masteryMax!,
-    )
-  }
-
-  // Prime only filter
-  if (filters.primeOnly) {
-    result = result.filter((item) => item.isPrime)
-  }
-
-  // Hide vaulted filter
-  if (filters.hideVaulted) {
-    result = result.filter((item) => !item.vaulted)
-  }
-
-  return result
+  return items.filter((item) => {
+    if (
+      query &&
+      !item.name.toLowerCase().includes(query) &&
+      !item.type?.toLowerCase().includes(query)
+    ) {
+      return false
+    }
+    if (masteryMax !== undefined && (item.masteryReq ?? 0) > masteryMax) {
+      return false
+    }
+    if (primeOnly && !item.isPrime) {
+      return false
+    }
+    if (hideVaulted && item.vaulted) {
+      return false
+    }
+    return true
+  })
 }
 
 /**

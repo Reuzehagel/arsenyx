@@ -6,6 +6,16 @@ import type { ParsedStat, StatType } from "./stat-types"
 import { DAMAGE_TYPE_COLORS } from "./stat-types"
 import type { PlacedMod } from "./types"
 
+// Hoisted regex patterns for hot-path stat parsing (avoid re-creation per call)
+const COLOR_TAG_PATTERN =
+  /([+-]?\d+(?:\.\d+)?)\s*%\s*<([A-Z_]+)>([A-Za-z]+)/g
+const PERCENT_PATTERN =
+  /([+-]?\d+(?:\.\d+)?)\s*%\s+([A-Za-z][A-Za-z\s]*?)(?:\.|$|\n|,|<)/g
+const FLAT_PATTERN =
+  /([+-]\d+(?:\.\d+)?)\s+(?!%|s\b|m\b|x\b)([A-Za-z][A-Za-z\s]*?)(?:\.|$|\n|,)/g
+const MULT_PATTERN =
+  /(\d+(?:\.\d+)?)\s*x\s+([A-Za-z][A-Za-z\s]*?)(?:\.|$|\n|,)/g
+
 // Mapping from common stat names in WFCD data to our StatType enum
 const STAT_NAME_MAP: Record<string, StatType> = {
   // Warframe stats
@@ -157,10 +167,9 @@ export function parseStatString(statString: string): ParsedStat[] {
 
   // Process percentage with color tags first
   // Pattern: +90% <DT_HEAT_COLOR>Heat
-  const colorTagPattern = /([+-]?\d+(?:\.\d+)?)\s*%\s*<([A-Z_]+)>([A-Za-z]+)/g
   let match
 
-  while ((match = colorTagPattern.exec(statString)) !== null) {
+  for (match of statString.matchAll(COLOR_TAG_PATTERN)) {
     const value = parseFloat(match[1])
     const colorTag = match[2]
     // Note: match[3] is the stat name (e.g., "Heat") but we derive type from color tag
@@ -182,10 +191,7 @@ export function parseStatString(statString: string): ParsedStat[] {
   }
 
   // Process percentage without color tags
-  const percentPattern =
-    /([+-]?\d+(?:\.\d+)?)\s*%\s+([A-Za-z][A-Za-z\s]*?)(?:\.|$|\n|,|<)/g
-
-  while ((match = percentPattern.exec(statString)) !== null) {
+  for (match of statString.matchAll(PERCENT_PATTERN)) {
     const value = parseFloat(match[1])
     const statName = match[2].trim().toLowerCase()
 
@@ -209,10 +215,7 @@ export function parseStatString(statString: string): ParsedStat[] {
 
   // Process flat additions (rare, e.g., some companion mods)
   // Be careful not to match values that are part of other text
-  const flatPattern =
-    /([+-]\d+(?:\.\d+)?)\s+(?!%|s\b|m\b|x\b)([A-Za-z][A-Za-z\s]*?)(?:\.|$|\n|,)/g
-
-  while ((match = flatPattern.exec(statString)) !== null) {
+  for (match of statString.matchAll(FLAT_PATTERN)) {
     const value = parseFloat(match[1])
     const statName = match[2].trim().toLowerCase()
 
@@ -243,10 +246,7 @@ export function parseStatString(statString: string): ParsedStat[] {
   }
 
   // Handle multiplier notation (rare): 2.5x Combo Duration
-  const multPattern =
-    /(\d+(?:\.\d+)?)\s*x\s+([A-Za-z][A-Za-z\s]*?)(?:\.|$|\n|,)/g
-
-  while ((match = multPattern.exec(statString)) !== null) {
+  for (match of statString.matchAll(MULT_PATTERN)) {
     const value = parseFloat(match[1])
     const statName = match[2].trim().toLowerCase()
 

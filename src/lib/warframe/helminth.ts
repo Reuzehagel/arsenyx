@@ -92,9 +92,10 @@ export function getHelminthAbilities(): HelminthAbility[] {
   }
 
   // 2. Get Subsumable Abilities from other Warframes
+  const warframeByName = new Map(warframes.map((w) => [w.name, w]))
   Object.entries(SUBSUMABLE_ABILITIES).forEach(
     ([warframeName, abilityName]) => {
-      const warframe = warframes.find((w) => w.name === warframeName)
+      const warframe = warframeByName.get(warframeName)
       if (warframe && warframe.abilities) {
         const ability = warframe.abilities.find((a) => a.name === abilityName)
         if (ability) {
