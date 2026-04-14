@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react"
+import { useCallback, useRef, useState, useTransition } from "react"
 
 import {
   getOrgBuildsAction,
@@ -15,7 +15,6 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@/components/ui/empty"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import type { BuildListItem } from "@/lib/db/index"
 
@@ -45,9 +44,9 @@ export function ProfileBuilds({
   const [search, setSearch] = useState("")
   const [category, setCategory] = useState("all")
   const [sortBy, setSortBy] = useState<BuildSortBy>("votes")
-  const [isPending, startTransition] = useTransition()
+  const [, startTransition] = useTransition()
   const [isLoadingMore, setIsLoadingMore] = useState(false)
-  const hasInteracted = useRef(false)
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(null)
 
   const fetchBuilds = useCallback(
     (
@@ -86,25 +85,32 @@ export function ProfileBuilds({
     [userId, orgId],
   )
 
-  // Debounced search
-  useEffect(() => {
-    if (!hasInteracted.current) return
-    const timer = setTimeout(() => {
-      fetchBuilds(search, category, sortBy, 1, false)
-    }, 300)
-    return () => clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only debounce search input
-  }, [search])
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearch(value)
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+      searchTimerRef.current = setTimeout(() => {
+        fetchBuilds(value, category, sortBy, 1, false)
+      }, 300)
+    },
+    [fetchBuilds, category, sortBy],
+  )
 
-  // Instant filter changes (category, sort)
-  useEffect(() => {
-    if (!hasInteracted.current) {
-      hasInteracted.current = true
-      return
-    }
-    fetchBuilds(search, category, sortBy, 1, false)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- fire on category/sort change only
-  }, [category, sortBy])
+  const handleCategoryChange = useCallback(
+    (value: string) => {
+      setCategory(value)
+      fetchBuilds(search, value, sortBy, 1, false)
+    },
+    [fetchBuilds, search, sortBy],
+  )
+
+  const handleSortChange = useCallback(
+    (value: BuildSortBy) => {
+      setSortBy(value)
+      fetchBuilds(search, category, value, 1, false)
+    },
+    [fetchBuilds, search, category],
+  )
 
   function handleLoadMore() {
     fetchBuilds(search, category, sortBy, page + 1, true)
@@ -114,20 +120,14 @@ export function ProfileBuilds({
     <div className="flex flex-col gap-6">
       <ProfileBuildsFilters
         search={search}
-        onSearchChange={setSearch}
+        onSearchChange={handleSearchChange}
         category={category}
-        onCategoryChange={setCategory}
+        onCategoryChange={handleCategoryChange}
         sortBy={sortBy}
-        onSortChange={setSortBy}
+        onSortChange={handleSortChange}
       />
 
-      {isPending && !isLoadingMore ? (
-        <div className="flex flex-col gap-2.5">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 rounded-lg" />
-          ))}
-        </div>
-      ) : builds.length === 0 ? (
+      {builds.length === 0 ? (
         <Empty>
           <EmptyHeader>
             <EmptyTitle>No builds found</EmptyTitle>

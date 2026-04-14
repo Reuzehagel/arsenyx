@@ -2,13 +2,11 @@ import { Calendar } from "lucide-react"
 import type { Metadata } from "next"
 import Image from "next/image"
 import { notFound } from "next/navigation"
-import { Suspense } from "react"
 
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { ProfileBuilds } from "@/components/profile"
 import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
 import { getServerSession } from "@/lib/auth"
 import { getUserByUsername, getUserStats, getUserBuilds } from "@/lib/db/index"
 
@@ -37,61 +35,6 @@ export async function generateMetadata({
   }
 }
 
-function ProfileBuildsSkeleton() {
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex gap-6 pt-2">
-        <Skeleton className="h-12 w-16 rounded-md" />
-        <Skeleton className="h-12 w-16 rounded-md" />
-      </div>
-      <Skeleton className="h-7 w-16 rounded-md" />
-      {Array.from({ length: 6 }).map((_, i) => (
-        <Skeleton key={i} className="h-24 w-full rounded-lg" />
-      ))}
-    </div>
-  )
-}
-
-async function ProfileContent({
-  userId,
-  viewerId,
-}: {
-  userId: string
-  viewerId: string | undefined
-}) {
-  const [stats, { builds, total }] = await Promise.all([
-    getUserStats(userId),
-    getUserBuilds(userId, viewerId, { limit: 12, sortBy: "votes" }),
-  ])
-  const hasMore = total > 12
-
-  return (
-    <>
-      {/* Stats */}
-      <div className="flex gap-6 pt-2">
-        <div className="text-center">
-          <div className="text-2xl font-bold">{stats.totalBuilds}</div>
-          <div className="text-muted-foreground text-xs">Builds</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold">{stats.totalVotesReceived}</div>
-          <div className="text-muted-foreground text-xs">Votes Received</div>
-        </div>
-      </div>
-
-      {/* User's Builds */}
-      <section className="flex flex-col gap-4">
-        <h2 className="text-xl font-semibold">Builds</h2>
-        <ProfileBuilds
-          userId={userId}
-          initialBuilds={builds}
-          initialHasMore={hasMore}
-        />
-      </section>
-    </>
-  )
-}
-
 export default async function ProfilePage({ params }: ProfilePageProps) {
   const { username } = await params
   const [user, session] = await Promise.all([
@@ -104,6 +47,12 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   }
 
   const viewerId = session?.user?.id
+
+  const [stats, { builds, total }] = await Promise.all([
+    getUserStats(user.id),
+    getUserBuilds(user.id, viewerId, { limit: 12, sortBy: "votes" }),
+  ])
+  const hasMore = total > 12
 
   const joinDate = new Date(user.createdAt).toLocaleDateString("en-US", {
     month: "long",
@@ -164,12 +113,34 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                   Joined {joinDate}
                 </span>
               </div>
+
+              {/* Stats */}
+              <div className="flex gap-6 pt-2">
+                <div className="text-center">
+                  <div className="text-2xl font-bold">{stats.totalBuilds}</div>
+                  <div className="text-muted-foreground text-xs">Builds</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold">
+                    {stats.totalVotesReceived}
+                  </div>
+                  <div className="text-muted-foreground text-xs">
+                    Votes Received
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <Suspense fallback={<ProfileBuildsSkeleton />}>
-            <ProfileContent userId={user.id} viewerId={viewerId} />
-          </Suspense>
+          {/* User's Builds */}
+          <section className="flex flex-col gap-4">
+            <h2 className="text-xl font-semibold">Builds</h2>
+            <ProfileBuilds
+              userId={user.id}
+              initialBuilds={builds}
+              initialHasMore={hasMore}
+            />
+          </section>
         </div>
       </main>
       <Footer />

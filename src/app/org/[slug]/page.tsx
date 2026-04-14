@@ -2,14 +2,12 @@ import { Calendar, Settings, Users } from "lucide-react"
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { Suspense } from "react"
 
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { ProfileBuilds } from "@/components/profile"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
 import { getServerSession } from "@/lib/auth"
 import { getPublicBuilds } from "@/lib/db/index"
 import { getOrganizationBySlug } from "@/lib/db/organizations"
@@ -37,43 +35,6 @@ export async function generateMetadata({
   }
 }
 
-function OrgBuildsSkeleton() {
-  return (
-    <section className="flex flex-col gap-4">
-      <Skeleton className="h-7 w-16 rounded-md" />
-      {Array.from({ length: 6 }).map((_, i) => (
-        <Skeleton key={i} className="h-24 w-full rounded-lg" />
-      ))}
-    </section>
-  )
-}
-
-async function OrgBuilds({ orgId }: { orgId: string }) {
-  const { builds, total: totalBuilds } = await getPublicBuilds({
-    organizationId: orgId,
-    sortBy: "votes",
-    limit: 12,
-  })
-  const hasMore = totalBuilds > 12
-
-  return (
-    <section className="flex flex-col gap-4">
-      <h2 className="text-xl font-semibold">
-        Builds
-        <span className="text-muted-foreground ml-2 text-base font-normal">
-          ({totalBuilds})
-        </span>
-      </h2>
-      <ProfileBuilds
-        orgId={orgId}
-        initialBuilds={builds}
-        initialHasMore={hasMore}
-        emptyMessage="No builds published yet"
-      />
-    </section>
-  )
-}
-
 export default async function OrgProfilePage({ params }: OrgProfilePageProps) {
   const { slug } = await params
   const [org, session] = await Promise.all([
@@ -89,6 +50,13 @@ export default async function OrgProfilePage({ params }: OrgProfilePageProps) {
   const isOrgMember = viewerUserId
     ? org.members.some((m) => m.userId === viewerUserId)
     : false
+
+  const { builds, total: totalBuilds } = await getPublicBuilds({
+    organizationId: org.id,
+    sortBy: "votes",
+    limit: 12,
+  })
+  const hasMore = totalBuilds > 12
 
   const createdDate = new Date(org.createdAt).toLocaleDateString("en-US", {
     month: "long",
@@ -146,6 +114,10 @@ export default async function OrgProfilePage({ params }: OrgProfilePageProps) {
               {/* Stats */}
               <div className="flex gap-6 pt-2">
                 <div className="text-center">
+                  <div className="text-2xl font-bold">{totalBuilds}</div>
+                  <div className="text-muted-foreground text-xs">Builds</div>
+                </div>
+                <div className="text-center">
                   <div className="text-2xl font-bold">{org.members.length}</div>
                   <div className="text-muted-foreground text-xs">Members</div>
                 </div>
@@ -195,9 +167,15 @@ export default async function OrgProfilePage({ params }: OrgProfilePageProps) {
           </section>
 
           {/* Builds */}
-          <Suspense fallback={<OrgBuildsSkeleton />}>
-            <OrgBuilds orgId={org.id} />
-          </Suspense>
+          <section className="flex flex-col gap-4">
+            <h2 className="text-xl font-semibold">Builds</h2>
+            <ProfileBuilds
+              orgId={org.id}
+              initialBuilds={builds}
+              initialHasMore={hasMore}
+              emptyMessage="No builds published yet"
+            />
+          </section>
         </div>
       </main>
       <Footer />

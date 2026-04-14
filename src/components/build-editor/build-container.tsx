@@ -9,9 +9,6 @@ import { getBuildLayout } from "@/lib/builds/layout"
 import { isWarframeCategory } from "@/lib/warframe/categories"
 import type { Mod, Arcane } from "@/lib/warframe/types"
 
-const EMPTY_ARCANES: Arcane[] = []
-const EMPTY_PARTNER_BUILDS: BuildContainerProps["initialPartnerBuilds"] & {} = []
-
 import { BuildEditorGuideSection } from "./build-editor-guide-section"
 import { BuildEditorHeader } from "./build-editor-header"
 import { BuildEditorSearchPanel } from "./build-editor-search-panel"
@@ -27,6 +24,9 @@ import { useBuildUI } from "./hooks/use-build-ui"
 import { ItemSidebar } from "./item-sidebar"
 import { ModGrid } from "./mod-grid"
 import { useBuildKeyboard } from "./use-build-keyboard"
+
+const EMPTY_ARCANES: Arcane[] = []
+const EMPTY_PARTNER_BUILDS: BuildContainerProps["initialPartnerBuilds"] & {} = []
 
 export type { BuildContainerProps } from "./hooks/use-build-state"
 
