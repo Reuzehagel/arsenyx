@@ -129,20 +129,21 @@ export function BrowseContainer({
     [syncToUrl],
   )
 
+  const primeOnlyRef = useRef(primeOnly)
+  primeOnlyRef.current = primeOnly
+  const hideVaultedRef = useRef(hideVaulted)
+  hideVaultedRef.current = hideVaulted
+
   const handlePrimeToggle = useCallback(() => {
-    setPrimeOnly((prev) => {
-      const newValue = !prev
-      syncToUrl({ prime: newValue ? "true" : null })
-      return newValue
-    })
+    const newValue = !primeOnlyRef.current
+    setPrimeOnly(newValue)
+    syncToUrl({ prime: newValue ? "true" : null })
   }, [syncToUrl])
 
   const handleVaultedToggle = useCallback(() => {
-    setHideVaulted((prev) => {
-      const newValue = !prev
-      syncToUrl({ vaulted: newValue ? "hide" : null })
-      return newValue
-    })
+    const newValue = !hideVaultedRef.current
+    setHideVaulted(newValue)
+    syncToUrl({ vaulted: newValue ? "hide" : null })
   }, [syncToUrl])
 
   const handleSortChange = useCallback(

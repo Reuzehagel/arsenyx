@@ -80,14 +80,13 @@ function getGuideDefaults(
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireApiKey(request, "build:write")
+  if (!auth.success) {
+    return jsonError(auth.error.status, auth.error.code, auth.error.message)
+  }
+
   try {
-    const [auth, rawBody] = await Promise.all([
-      requireApiKey(request, "build:write"),
-      parseJsonBody(request),
-    ])
-    if (!auth.success) {
-      return jsonError(auth.error.status, auth.error.code, auth.error.message)
-    }
+    const rawBody = await parseJsonBody(request)
 
     const parsedBody = OverframeImportSavePayloadSchema.safeParse(rawBody)
     if (!parsedBody.success) {

@@ -16,14 +16,13 @@ import { createBuild } from "@/lib/db/builds"
 export const runtime = "nodejs"
 
 export async function POST(request: NextRequest) {
+  const auth = await requireApiKey(request, "build:write")
+  if (!auth.success) {
+    return jsonError(auth.error.status, auth.error.code, auth.error.message)
+  }
+
   try {
-    const [auth, body] = await Promise.all([
-      requireApiKey(request, "build:write"),
-      parseJsonBody(request),
-    ])
-    if (!auth.success) {
-      return jsonError(auth.error.status, auth.error.code, auth.error.message)
-    }
+    const body = await parseJsonBody(request)
     const normalized = await normalizeBuildDraftForPersistence(
       {
         userId: auth.data.userId,

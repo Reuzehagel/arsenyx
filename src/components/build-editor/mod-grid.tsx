@@ -416,6 +416,7 @@ const ModSlotCard = memo(function ModSlotCard({
             onContextMenu={(e: React.MouseEvent) => {
               e.preventDefault()
               if (readOnly) return
+              setPolarityOpen(false)
               onRemove()
             }}
           >
@@ -435,6 +436,7 @@ const ModSlotCard = memo(function ModSlotCard({
               className="bg-background/80 text-muted-foreground hover:bg-destructive hover:text-destructive-foreground absolute -top-1.5 -right-1.5 z-10 flex size-5 items-center justify-center rounded-full border transition-opacity group-hover:opacity-100 max-md:opacity-100 md:opacity-0"
               onClick={(e) => {
                 e.stopPropagation()
+                setPolarityOpen(false)
                 onRemove()
               }}
               aria-label="Remove mod"

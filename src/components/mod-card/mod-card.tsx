@@ -489,7 +489,7 @@ function ModCardComponent({
       <div
         className={cn(
           "transition-opacity duration-100",
-          isSelected && "drop-shadow-[0_0_6px_rgba(255,255,255,0.7)] filter",
+          isSelected && "brightness-125",
           effectiveHover ? "opacity-0" : "opacity-100",
         )}
       >

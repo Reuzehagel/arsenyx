@@ -58,7 +58,12 @@ async function OrgBuilds({ orgId }: { orgId: string }) {
 
   return (
     <section className="flex flex-col gap-4">
-      <h2 className="text-xl font-semibold">Builds</h2>
+      <h2 className="text-xl font-semibold">
+        Builds
+        <span className="text-muted-foreground ml-2 text-base font-normal">
+          ({totalBuilds})
+        </span>
+      </h2>
       <ProfileBuilds
         orgId={orgId}
         initialBuilds={builds}
