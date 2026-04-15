@@ -12,6 +12,16 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-04-15",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Riven mod support — add and configure Riven mods on weapon builds with custom stats, drain, and polarity",
+      },
+    ],
+  },
+  {
     date: "2026-04-13",
     changes: [
       {
