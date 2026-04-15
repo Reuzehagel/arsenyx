@@ -7,7 +7,7 @@ import { ArcaneDragGhost } from "@/components/arcane-card/arcane-card"
 import { CompactModCard, type ModRarity } from "@/components/mod-card/mod-card"
 import { getBuildLayout } from "@/lib/builds/layout"
 import { isWarframeCategory } from "@/lib/warframe/categories"
-import { isRivenMod, RIVEN_UNIQUE_NAME } from "@/lib/warframe/rivens"
+import { isRivenMod, RIVEN_UNIQUE_NAME, RIVEN_IMAGE_NAME } from "@/lib/warframe/rivens"
 import type { Mod, Arcane, RivenStats, Polarity, PlacedMod } from "@/lib/warframe/types"
 
 import { BuildEditorGuideSection } from "./build-editor-guide-section"
@@ -264,7 +264,7 @@ export function BuildContainer({
       const rivenMod: Mod = {
         uniqueName: RIVEN_UNIQUE_NAME,
         name: "Riven Mod",
-        imageName: "rifle-riven-mod-e05c5519f1.png",
+        imageName: RIVEN_IMAGE_NAME,
         polarity: config.polarity,
         rarity: "Riven",
         baseDrain: config.drain,
@@ -286,7 +286,7 @@ export function BuildContainer({
       setRivenDialogOpen(false)
       setPendingRivenSlotId(null)
 
-      const currentIndex = parseInt(pendingRivenSlotId.replace("normal-", "") ?? "")
+      const currentIndex = parseInt(pendingRivenSlotId.replace("normal-", ""))
       if (!isNaN(currentIndex) && currentIndex < 7) {
         setActiveSlotId(`normal-${currentIndex + 1}`)
       } else {
@@ -506,6 +506,7 @@ export function BuildContainer({
         ) : null}
       </DragOverlay>
       <RivenDialog
+        key={pendingRivenSlotId ?? "closed"}
         open={rivenDialogOpen}
         onOpenChange={(open) => {
           setRivenDialogOpen(open)

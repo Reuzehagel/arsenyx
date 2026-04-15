@@ -228,7 +228,7 @@ function CompactModCard({
               key={`neg-${i}`}
               className="text-center text-[11px] leading-snug font-normal text-gray-200"
             >
-              <span className="text-red-400">{s.value}%</span> {s.stat}
+              <span className="text-red-400">{s.value > 0 ? `-${s.value}` : s.value}%</span> {s.stat}
             </span>
           ))}
         </div>
@@ -356,7 +356,7 @@ function ExpandedModCard({
                   className="text-center text-[12px] leading-snug font-normal text-gray-300"
                   style={{ fontFamily: "Roboto, sans-serif" }}
                 >
-                  <span className="text-red-400">{s.value}%</span> {s.stat}
+                  <span className="text-red-400">{s.value > 0 ? `-${s.value}` : s.value}%</span> {s.stat}
                 </span>
               ))}
             </div>

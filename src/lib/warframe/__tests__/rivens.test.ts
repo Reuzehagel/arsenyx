@@ -8,8 +8,8 @@ import {
 } from "../rivens"
 
 describe("RIVEN_STATS", () => {
-  it("contains 24 stat names", () => {
-    expect(RIVEN_STATS).toHaveLength(24)
+  it("contains 31 stat names", () => {
+    expect(RIVEN_STATS).toHaveLength(31)
   })
 
   it("includes known stats", () => {
@@ -17,6 +17,12 @@ describe("RIVEN_STATS", () => {
     expect(RIVEN_STATS).toContain("Damage")
     expect(RIVEN_STATS).toContain("Multishot")
     expect(RIVEN_STATS).toContain("Zoom")
+  })
+
+  it("includes melee-specific stats", () => {
+    expect(RIVEN_STATS).toContain("Attack Speed")
+    expect(RIVEN_STATS).toContain("Range")
+    expect(RIVEN_STATS).toContain("Combo Duration")
   })
 })
 

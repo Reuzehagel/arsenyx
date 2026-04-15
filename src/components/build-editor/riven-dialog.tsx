@@ -116,6 +116,13 @@ export function RivenDialog({
     })
   }
 
+  // Collect all currently selected stats for uniqueness enforcement
+  const allSelectedStats = new Set(
+    [...positives, negative]
+      .map((r) => r.stat)
+      .filter((s): s is string => s !== null),
+  )
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -169,6 +176,7 @@ export function RivenDialog({
                   key={i}
                   stat={row.stat}
                   value={row.value}
+                  disabledStats={allSelectedStats}
                   onStatChange={(s) => updatePositive(i, "stat", s)}
                   onValueChange={(v) => updatePositive(i, "value", v)}
                 />
@@ -184,6 +192,7 @@ export function RivenDialog({
             <StatRow
               stat={negative.stat}
               value={negative.value}
+              disabledStats={allSelectedStats}
               onStatChange={(s) => setNegative((prev) => ({ ...prev, stat: s }))}
               onValueChange={(v) =>
                 setNegative((prev) => ({ ...prev, value: v }))
@@ -206,11 +215,16 @@ export function RivenDialog({
 interface StatRowProps {
   stat: string | null
   value: string
+  disabledStats: Set<string>
   onStatChange: (stat: string | null) => void
   onValueChange: (value: string) => void
 }
 
-function StatRow({ stat, value, onStatChange, onValueChange }: StatRowProps) {
+function StatRow({ stat, value, disabledStats, onStatChange, onValueChange }: StatRowProps) {
+  const availableStats = RIVEN_STATS.filter(
+    (s) => s === stat || !disabledStats.has(s),
+  )
+
   return (
     <div className="flex gap-2">
       <Input
@@ -224,7 +238,7 @@ function StatRow({ stat, value, onStatChange, onValueChange }: StatRowProps) {
         <Combobox
           value={stat}
           onValueChange={(val) => onStatChange(val)}
-          items={RIVEN_STATS}
+          items={availableStats}
         >
           <ComboboxInput placeholder="Select stat..." className="h-8" />
           <ComboboxContent>

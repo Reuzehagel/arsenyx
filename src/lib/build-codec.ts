@@ -2,6 +2,7 @@
 // Encodes builds to shareable base64 URLs and decodes them back
 
 import { SHARD_COLORS, getStatIndex, getStatByIndex } from "./warframe/shards"
+import { RIVEN_UNIQUE_NAME, RIVEN_IMAGE_NAME } from "./warframe/rivens"
 import type {
   BuildState,
   ModSlot,
@@ -11,6 +12,10 @@ import type {
   PlacedArcane,
   RivenStats,
 } from "./warframe/types"
+
+const VALID_POLARITIES = new Set<string>([
+  "madurai", "vazarin", "naramon", "zenurik", "unairu", "penjaga", "umbra", "any", "universal",
+])
 
 // =============================================================================
 // BUILD ENCODING
@@ -301,18 +306,17 @@ function decodeSlot(
   }
 
   if (encoded.m) {
+    const isRiven = encoded.m.u === RIVEN_UNIQUE_NAME
+    const rawPolarity = encoded.m.rv?.pol ?? "universal"
     const mod: import("./warframe/types").PlacedMod = {
       uniqueName: encoded.m.u,
-      name: encoded.m.u === "/riven" ? "Riven Mod" : "",
-      imageName:
-        encoded.m.u === "/riven"
-          ? "rifle-riven-mod-e05c5519f1.png"
-          : undefined,
-      polarity: (encoded.m.rv?.pol ?? "universal") as Polarity,
+      name: isRiven ? "Riven Mod" : "",
+      imageName: isRiven ? RIVEN_IMAGE_NAME : undefined,
+      polarity: (VALID_POLARITIES.has(rawPolarity) ? rawPolarity : "universal") as Polarity,
       baseDrain: encoded.m.rv?.d ?? 0,
-      fusionLimit: encoded.m.u === "/riven" ? 8 : 0,
+      fusionLimit: isRiven ? 8 : 0,
       rank: encoded.m.r,
-      rarity: encoded.m.u === "/riven" ? "Riven" : "",
+      rarity: isRiven ? "Riven" : "",
     }
 
     if (encoded.m.rv) {
