@@ -304,8 +304,32 @@ function ExpandedModCard({
             {mod.name}
           </span>
 
+          {/* Riven stats display */}
+          {mod.rivenStats && (
+            <div className="mt-1 flex w-full flex-col items-center gap-0.5 px-1">
+              {mod.rivenStats.positives.map((s, i) => (
+                <span
+                  key={`pos-${i}`}
+                  className="text-center text-[12px] leading-snug font-normal text-green-400"
+                  style={{ fontFamily: "Roboto, sans-serif" }}
+                >
+                  +{s.value}% {s.stat}
+                </span>
+              ))}
+              {mod.rivenStats.negatives.map((s, i) => (
+                <span
+                  key={`neg-${i}`}
+                  className="text-center text-[12px] leading-snug font-normal text-red-400"
+                  style={{ fontFamily: "Roboto, sans-serif" }}
+                >
+                  {s.value}% {s.stat}
+                </span>
+              ))}
+            </div>
+          )}
+
           {/* Stats */}
-          {formattedStats && (
+          {!mod.rivenStats && formattedStats && (
             <div className="mt-1 flex w-full flex-col items-center gap-1 px-1">
               <span
                 className="text-center text-[12px] leading-snug font-normal text-gray-300"

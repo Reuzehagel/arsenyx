@@ -228,6 +228,7 @@ export interface Mod {
   levelStats?: Array<{ stats: string[] }>
   modSet?: string
   modSetStats?: string[]
+  rivenStats?: RivenStats
   transmutable?: boolean
   stats?: string[]
   drops?: Array<{
