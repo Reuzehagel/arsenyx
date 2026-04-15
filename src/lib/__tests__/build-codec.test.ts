@@ -2,7 +2,8 @@
 import { describe, it, expect } from "bun:test"
 
 import { createEmptyBuildState } from "@/test/fixtures/builds"
-import { createTestMod, VITALITY } from "@/test/fixtures/mods"
+import { createTestMod, VITALITY, RIVEN_MOD } from "@/test/fixtures/mods"
+import type { Polarity } from "@/lib/warframe/types"
 
 import {
   encodeBuild,
@@ -377,6 +378,52 @@ describe("edge cases", () => {
       expect(decoded?.normalSlots?.[i].mod?.rank).toBe(i)
       expect(decoded?.normalSlots?.[i].formaPolarity).toBe("madurai")
     }
+  })
+
+  it("encodes riven mod with stats", () => {
+    const build = createEmptyBuildState({
+      itemCategory: "primary",
+      itemUniqueName: "/Lotus/Weapons/Tenno/LongGuns/Braton/Braton",
+    })
+    build.normalSlots[0].mod = { ...RIVEN_MOD }
+
+    const encoded = encodeBuild(build)
+    const decoded = decodeBuild(encoded)
+
+    expect(decoded?.normalSlots?.[0].mod?.uniqueName).toBe("/riven")
+    expect(decoded?.normalSlots?.[0].mod?.rank).toBe(8)
+    expect(decoded?.normalSlots?.[0].mod?.rivenStats?.positives).toHaveLength(2)
+    expect(decoded?.normalSlots?.[0].mod?.rivenStats?.positives[0].stat).toBe("Critical Chance")
+    expect(decoded?.normalSlots?.[0].mod?.rivenStats?.positives[0].value).toBe(152.3)
+    expect(decoded?.normalSlots?.[0].mod?.rivenStats?.negatives).toHaveLength(1)
+    expect(decoded?.normalSlots?.[0].mod?.rivenStats?.negatives[0].stat).toBe("Zoom")
+    expect(decoded?.normalSlots?.[0].mod?.baseDrain).toBe(18)
+    expect(decoded?.normalSlots?.[0].mod?.polarity).toBe("madurai")
+  })
+
+  it("encodes riven mod with no negatives", () => {
+    const build = createEmptyBuildState({ itemCategory: "primary" })
+    build.normalSlots[0].mod = createTestMod({
+      uniqueName: "/riven",
+      name: "Riven Mod",
+      rarity: "Riven",
+      fusionLimit: 8,
+      rank: 8,
+      baseDrain: 10,
+      polarity: "naramon" as Polarity,
+      rivenStats: {
+        positives: [{ stat: "Damage", value: 170.2 }],
+        negatives: [],
+      },
+    })
+
+    const encoded = encodeBuild(build)
+    const decoded = decodeBuild(encoded)
+
+    expect(decoded?.normalSlots?.[0].mod?.rivenStats?.positives).toHaveLength(1)
+    expect(decoded?.normalSlots?.[0].mod?.rivenStats?.negatives).toHaveLength(0)
+    expect(decoded?.normalSlots?.[0].mod?.polarity).toBe("naramon")
+    expect(decoded?.normalSlots?.[0].mod?.baseDrain).toBe(10)
   })
 
   it("handles all 5 shard slots filled and tauforged", () => {
