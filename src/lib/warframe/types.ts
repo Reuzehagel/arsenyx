@@ -274,6 +274,16 @@ export interface ModSlot {
   mod?: PlacedMod
 }
 
+export interface RivenStatEntry {
+  stat: string
+  value: number
+}
+
+export interface RivenStats {
+  positives: RivenStatEntry[]
+  negatives: RivenStatEntry[]
+}
+
 export interface PlacedMod {
   uniqueName: string
   name: string
@@ -290,6 +300,7 @@ export interface PlacedMod {
   modSetStats?: string[]
   isExilus?: boolean
   isUtility?: boolean // Also indicates exilus-compatible mods in WFCD data
+  rivenStats?: RivenStats
 }
 
 export interface PlacedArcane {

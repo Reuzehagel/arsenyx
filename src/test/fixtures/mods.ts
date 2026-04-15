@@ -1,5 +1,5 @@
 // Test fixtures for mods
-import type { PlacedMod, Polarity } from "@/lib/warframe/types"
+import type { PlacedMod, Polarity, RivenStats } from "@/lib/warframe/types"
 
 /**
  * Create a test mod with default values
@@ -354,4 +354,24 @@ export const GALVANIZED_CHAMBER: PlacedMod = createTestMod({
       ],
     },
   ],
+})
+
+// Riven mod
+export const RIVEN_MOD: PlacedMod = createTestMod({
+  uniqueName: "/riven",
+  name: "Riven Mod",
+  polarity: "madurai",
+  baseDrain: 18,
+  fusionLimit: 8,
+  rank: 8,
+  rarity: "Riven",
+  rivenStats: {
+    positives: [
+      { stat: "Critical Chance", value: 152.3 },
+      { stat: "Multishot", value: 89.1 },
+    ],
+    negatives: [
+      { stat: "Zoom", value: -40.5 },
+    ],
+  } satisfies RivenStats,
 })
