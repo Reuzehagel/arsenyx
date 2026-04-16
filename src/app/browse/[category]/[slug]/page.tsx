@@ -230,13 +230,13 @@ export default async function ItemPage({ params }: ItemPageProps) {
                 </CardHeader>
                 <CardContent>
                   <dl className="grid grid-cols-2 gap-3 text-sm">
-                    {(item as Gun).totalDamage && (
+                    {!!(item as Gun).totalDamage && (
                       <StatItem
                         label="Damage"
                         value={(item as Gun).totalDamage}
                       />
                     )}
-                    {(item as Gun).criticalChance && (
+                    {!!(item as Gun).criticalChance && (
                       <StatItem
                         label="Crit Chance"
                         value={`${((item as Gun).criticalChance! * 100).toFixed(
@@ -244,13 +244,13 @@ export default async function ItemPage({ params }: ItemPageProps) {
                         )}%`}
                       />
                     )}
-                    {(item as Gun).criticalMultiplier && (
+                    {!!(item as Gun).criticalMultiplier && (
                       <StatItem
                         label="Crit Multi"
                         value={`${(item as Gun).criticalMultiplier}x`}
                       />
                     )}
-                    {(item as Gun).procChance && (
+                    {!!(item as Gun).procChance && (
                       <StatItem
                         label="Status"
                         value={`${((item as Gun).procChance! * 100).toFixed(
@@ -258,25 +258,25 @@ export default async function ItemPage({ params }: ItemPageProps) {
                         )}%`}
                       />
                     )}
-                    {(item as Gun).fireRate && (
+                    {!!(item as Gun).fireRate && (
                       <StatItem
                         label="Fire Rate"
                         value={parseFloat((item as Gun).fireRate!.toFixed(3))}
                       />
                     )}
-                    {(item as Gun).magazineSize && (
+                    {!!(item as Gun).magazineSize && (
                       <StatItem
                         label="Magazine"
                         value={(item as Gun).magazineSize}
                       />
                     )}
-                    {(item as Gun).reloadTime && (
+                    {!!(item as Gun).reloadTime && (
                       <StatItem
                         label="Reload"
                         value={`${parseFloat((item as Gun).reloadTime!.toFixed(2))}s`}
                       />
                     )}
-                    {isMelee && (item as Melee).range && (
+                    {isMelee && !!(item as Melee).range && (
                       <StatItem label="Range" value={(item as Melee).range} />
                     )}
                   </dl>
