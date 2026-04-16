@@ -67,6 +67,8 @@ export function BuildContainer({
     handleChangeArcaneRank,
     handlePlaceShard,
     handleRemoveShard,
+    handleSetZawGrip,
+    handleSetZawLink,
     usedModNames,
     usedArcaneNames,
     arcaneDataMap,
@@ -442,6 +444,9 @@ export function BuildContainer({
                   undefined
                 }
                 arcaneDataMap={arcaneDataMap}
+                zawComponents={buildState.zawComponents}
+                onZawGripChange={handleSetZawGrip}
+                onZawLinkChange={handleSetZawLink}
                 readOnly={!canEdit}
               />
             </div>

@@ -37,6 +37,7 @@ import type {
 } from "@/lib/warframe/types"
 
 import { ArcaneSlotCard } from "./arcane-slot-card"
+import { ZawComponentSelector } from "./zaw-component-selector"
 
 // All available polarities for the selector
 const ALL_POLARITIES: Polarity[] = [
@@ -77,6 +78,9 @@ interface ModGridProps {
   readOnly?: boolean
   /** Number of normal slots per row (default: 4) */
   slotsPerRow?: number
+  zawComponents?: { strike: string; grip: string; link: string }
+  onZawGripChange?: (grip: string) => void
+  onZawLinkChange?: (link: string) => void
 }
 
 export function ModGrid({
@@ -98,6 +102,9 @@ export function ModGrid({
   arcaneDataMap,
   readOnly = false,
   slotsPerRow = 4,
+  zawComponents,
+  onZawGripChange,
+  onZawLinkChange,
 }: ModGridProps) {
   // Calculate set counts
   const setCounts = useMemo(() => {
@@ -190,9 +197,9 @@ export function ModGrid({
           ),
         )}
 
-        {/* Row 4: Arcanes */}
-        {arcaneSlots.length > 0 && (
-          <div className="mt-2 flex w-full justify-center gap-3 sm:gap-6">
+        {/* Row 4: Arcanes + Zaw Components */}
+        {(arcaneSlots.length > 0 || zawComponents) && (
+          <div className="mt-2 flex w-full items-start justify-center gap-3 sm:gap-6">
             {arcaneSlots.map((arcane, index) => (
               <ArcaneSlotCard
                 key={`arcane-${index}`}
@@ -210,6 +217,16 @@ export function ModGrid({
                 readOnly={readOnly}
               />
             ))}
+            {zawComponents && (
+              <ZawComponentSelector
+                strikeName={zawComponents.strike}
+                gripName={zawComponents.grip}
+                linkName={zawComponents.link}
+                onGripChange={onZawGripChange ?? (() => {})}
+                onLinkChange={onZawLinkChange ?? (() => {})}
+                readOnly={readOnly}
+              />
+            )}
           </div>
         )}
       </div>
