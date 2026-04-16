@@ -17,6 +17,7 @@ import { getPublicBuildsForItem } from "@/lib/db/index"
 import { getCategoryConfig, getImageUrl, isValidCategory } from "@/lib/warframe"
 // Server-only imports (uses Node.js fs via @wfcd/items)
 import { getItemBySlug, getStaticItems } from "@/lib/warframe/items"
+import { sumDamageTypes } from "@/lib/warframe/stats/stat-engine"
 import type { Attack, BrowseCategory, Warframe, Gun, Melee } from "@/lib/warframe/types"
 
 // Generate static params for top items
@@ -475,22 +476,16 @@ function getZawStrikeStats(item: { attacks?: Attack[] }): {
       : null
   if (!damage) return null
 
-  const totalDamage = Object.values(damage).reduce(
-    (sum: number, v) => sum + (typeof v === "number" ? v : 0),
-    0,
-  )
+  const totalDamage = sumDamageTypes(damage)
 
-  // WFCD attack mode stats may be in percentage (18) or decimal (0.18) form.
-  // Mirror the normalization used in weapon-stats.ts so display stays consistent.
-  const rawCrit = attack.crit_chance ?? 0
-  const rawStatus = attack.status_chance ?? 0
+  // WFCD attack stats may be percentage (18) or decimal (0.18) — normalize to decimal.
   const toDecimal = (v: number) => (v > 1 ? v / 100 : v)
 
   return {
     totalDamage,
-    criticalChance: toDecimal(rawCrit),
+    criticalChance: toDecimal(attack.crit_chance ?? 0),
     criticalMultiplier: attack.crit_mult ?? 2,
-    statusChance: toDecimal(rawStatus),
+    statusChance: toDecimal(attack.status_chance ?? 0),
     fireRate: attack.speed ?? 1,
   }
 }

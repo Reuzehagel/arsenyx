@@ -16,6 +16,12 @@ import {
   getZawComponentImage,
 } from "@/lib/warframe/zaw-data"
 
+const GRIP_OPTIONS = ZAW_GRIPS.map((g) => ({
+  name: g.name,
+  hint: g.oneHanded ? "1H" : "2H",
+}))
+const LINK_OPTIONS = ZAW_LINKS.map((l) => ({ name: l.name }))
+
 interface ZawComponentSelectorProps {
   gripName: string
   linkName: string
@@ -36,17 +42,14 @@ export function ZawComponentSelector({
       <ZawPartCard
         label="Grip"
         value={gripName}
-        options={ZAW_GRIPS.map((g) => ({
-          name: g.name,
-          hint: g.oneHanded ? "1H" : "2H",
-        }))}
+        options={GRIP_OPTIONS}
         onChange={onGripChange}
         readOnly={readOnly}
       />
       <ZawPartCard
         label="Link"
         value={linkName}
-        options={ZAW_LINKS.map((l) => ({ name: l.name }))}
+        options={LINK_OPTIONS}
         onChange={onLinkChange}
         readOnly={readOnly}
       />
@@ -113,7 +116,7 @@ function ZawPartCard({
         {card}
       </PopoverTrigger>
       <PopoverContent className="w-[260px] p-2" align="center">
-        <div className="grid max-h-[320px] grid-cols-3 gap-1.5 overflow-y-auto">
+        <div className="grid max-h-[320px] grid-cols-3 gap-1.5 overflow-y-auto p-0.5">
           {options.map((opt) => {
             const optImage = getZawComponentImage(opt.name)
             const isSelected = opt.name === value
@@ -128,7 +131,7 @@ function ZawPartCard({
                 className={cn(
                   "bg-card/60 flex flex-col items-center gap-0.5 rounded p-1 text-[10px] transition-colors",
                   "hover:bg-accent",
-                  isSelected && "ring-primary ring-1",
+                  isSelected && "ring-primary ring-1 ring-inset",
                 )}
               >
                 <div className="relative h-[44px] w-[52px] overflow-hidden rounded">

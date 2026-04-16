@@ -40,14 +40,13 @@ export function calculateWeaponStats(
   let zawOverride: ReturnType<typeof calculateZawBaseStats> | null = null
   if (buildState.zawComponents && hasSpecificAttackModes) {
     const { grip, link } = buildState.zawComponents
-    const gripData = getZawGrip(grip)
-    if (gripData && weapon.attacks?.[0]) {
-      zawOverride = calculateZawBaseStats(
-        weapon.attacks[0],
-        grip,
-        link,
-        weapon.name,
-      )
+    if (getZawGrip(grip) && weapon.attacks?.[0]) {
+      zawOverride = calculateZawBaseStats({
+        strikeAttack: weapon.attacks[0],
+        strikeName: weapon.name,
+        gripName: grip,
+        linkName: link,
+      })
     }
   }
 

@@ -58,7 +58,12 @@ describe("Zaw data", () => {
       status_chance: 18,
       speed: 1,
     }
-    const stats = calculateZawBaseStats(strikeAttack, "Peye", "Jai", "Balla")
+    const stats = calculateZawBaseStats({
+      strikeAttack,
+      strikeName: "Balla",
+      gripName: "Peye",
+      linkName: "Jai",
+    })
     expect(stats.totalDamage).toBeCloseTo(224 - 4)
     expect(stats.speed).toBeCloseTo(1 + 0.083)
   })

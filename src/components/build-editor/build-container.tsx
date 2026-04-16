@@ -444,9 +444,15 @@ export function BuildContainer({
                   undefined
                 }
                 arcaneDataMap={arcaneDataMap}
-                zawComponents={buildState.zawComponents}
-                onZawGripChange={handleSetZawGrip}
-                onZawLinkChange={handleSetZawLink}
+                zawComponents={
+                  buildState.zawComponents
+                    ? {
+                        ...buildState.zawComponents,
+                        onGripChange: handleSetZawGrip,
+                        onLinkChange: handleSetZawLink,
+                      }
+                    : undefined
+                }
                 readOnly={!canEdit}
               />
             </div>
