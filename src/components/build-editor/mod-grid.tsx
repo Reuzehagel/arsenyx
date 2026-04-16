@@ -2,7 +2,7 @@
 
 import { useDroppable, useDraggable } from "@dnd-kit/core"
 import { CSS } from "@dnd-kit/utilities"
-import { Plus, X } from "lucide-react"
+import { Pencil, Plus, X } from "lucide-react"
 import { useState, useMemo, memo } from "react"
 
 import { PolarityIcon } from "@/components/icons"
@@ -431,15 +431,11 @@ const ModSlotCard = memo(function ModSlotCard({
               isDragging && "opacity-0",
               transform && "will-change-transform",
             )}
-            onClick={(e) => {
+            onClick={() => {
               if (readOnly) return
-              if (e.shiftKey) {
-                setPolarityOpen(true)
-              } else if (slot.mod && isRivenMod(slot.mod) && onRivenEdit) {
-                onRivenEdit(slot.id, slot.mod)
-              } else {
-                onSelect()
-              }
+              onSelect()
+              // Click bubbles to PopoverTrigger to open the polarity picker.
+              // Riven stat editing lives on the pencil button below.
             }}
             onContextMenu={(e: React.MouseEvent) => {
               e.preventDefault()
@@ -472,6 +468,24 @@ const ModSlotCard = memo(function ModSlotCard({
               <X className="size-3" />
             </button>
           )}
+          {!readOnly &&
+            !isDragging &&
+            slot.mod &&
+            isRivenMod(slot.mod) &&
+            onRivenEdit && (
+              <button
+                type="button"
+                className="bg-background/80 text-muted-foreground hover:bg-accent hover:text-accent-foreground absolute top-4 -right-1.5 z-10 flex size-5 items-center justify-center rounded-full border transition-opacity group-hover:opacity-100 max-md:opacity-100 md:opacity-0"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setPolarityOpen(false)
+                  onRivenEdit(slot.id, slot.mod!)
+                }}
+                aria-label="Edit riven stats"
+              >
+                <Pencil className="size-3" />
+              </button>
+            )}
         </PopoverTrigger>
         {!readOnly && polaritySelectorContent}
       </Popover>
