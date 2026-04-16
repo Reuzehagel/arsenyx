@@ -349,6 +349,13 @@ export interface BuildState {
     slotIndex: number // 0-3, which ability slot was replaced
     ability: HelminthAbility
   }
+
+  // Zaw component selection (Zaw melee weapons only)
+  zawComponents?: {
+    strike: string // Strike name (matches item name)
+    grip: string // Grip name
+    link: string // Link name
+  }
 }
 
 export interface HelminthAbility {

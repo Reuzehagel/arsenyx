@@ -426,6 +426,25 @@ describe("edge cases", () => {
     expect(decoded?.normalSlots?.[0].mod?.baseDrain).toBe(10)
   })
 
+  it("round-trips Zaw components", () => {
+    const build = createEmptyBuildState({
+      itemCategory: "melee",
+      itemUniqueName: "/Lotus/Weapons/Tenno/Zaw/ZawStrike",
+    })
+    build.zawComponents = {
+      strike: "Balla",
+      grip: "Korb",
+      link: "Ekwana Jai II",
+    }
+
+    const encoded = encodeBuild(build)
+    const decoded = decodeBuild(encoded)
+
+    expect(decoded?.zawComponents?.strike).toBe("Balla")
+    expect(decoded?.zawComponents?.grip).toBe("Korb")
+    expect(decoded?.zawComponents?.link).toBe("Ekwana Jai II")
+  })
+
   it("handles all 5 shard slots filled and tauforged", () => {
     const build = createEmptyBuildState()
     build.shardSlots = [
