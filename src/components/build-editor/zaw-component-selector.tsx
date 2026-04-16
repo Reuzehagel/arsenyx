@@ -14,11 +14,9 @@ import {
   ZAW_GRIPS,
   ZAW_LINKS,
   getZawComponentImage,
-  getZawWeaponType,
 } from "@/lib/warframe/zaw-data"
 
 interface ZawComponentSelectorProps {
-  strikeName: string
   gripName: string
   linkName: string
   onGripChange: (grip: string) => void
@@ -27,47 +25,31 @@ interface ZawComponentSelectorProps {
 }
 
 export function ZawComponentSelector({
-  strikeName,
   gripName,
   linkName,
   onGripChange,
   onLinkChange,
   readOnly = false,
 }: ZawComponentSelectorProps) {
-  const weaponType = getZawWeaponType(strikeName, gripName)
-
   return (
-    <div className="flex flex-col items-center gap-1.5">
-      <span className="text-muted-foreground/60 font-mono text-[10px] tracking-wider uppercase">
-        Zaw Parts
-      </span>
-
-      <div className="flex items-start gap-2 sm:gap-3">
-        <ZawPartCard
-          label="Grip"
-          value={gripName}
-          options={ZAW_GRIPS.map((g) => ({
-            name: g.name,
-            hint: g.oneHanded ? "1H" : "2H",
-          }))}
-          onChange={onGripChange}
-          readOnly={readOnly}
-        />
-        <ZawPartCard
-          label="Link"
-          value={linkName}
-          options={ZAW_LINKS.map((l) => ({ name: l.name }))}
-          onChange={onLinkChange}
-          readOnly={readOnly}
-        />
-      </div>
-
-      {weaponType && (
-        <p className="text-muted-foreground text-[10px]">
-          Type:{" "}
-          <span className="text-foreground font-medium">{weaponType}</span>
-        </p>
-      )}
+    <div className="flex items-start gap-2 sm:gap-3">
+      <ZawPartCard
+        label="Grip"
+        value={gripName}
+        options={ZAW_GRIPS.map((g) => ({
+          name: g.name,
+          hint: g.oneHanded ? "1H" : "2H",
+        }))}
+        onChange={onGripChange}
+        readOnly={readOnly}
+      />
+      <ZawPartCard
+        label="Link"
+        value={linkName}
+        options={ZAW_LINKS.map((l) => ({ name: l.name }))}
+        onChange={onLinkChange}
+        readOnly={readOnly}
+      />
     </div>
   )
 }

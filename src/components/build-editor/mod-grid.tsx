@@ -78,9 +78,8 @@ interface ModGridProps {
   readOnly?: boolean
   /** Number of normal slots per row (default: 4) */
   slotsPerRow?: number
-  /** Present when the build item is a Zaw Strike. The strike name is the item name. */
+  /** Present when the build item is a Zaw Strike. */
   zawComponents?: { grip: string; link: string }
-  zawStrikeName?: string
   onZawGripChange?: (grip: string) => void
   onZawLinkChange?: (link: string) => void
 }
@@ -105,7 +104,6 @@ export function ModGrid({
   readOnly = false,
   slotsPerRow = 4,
   zawComponents,
-  zawStrikeName,
   onZawGripChange,
   onZawLinkChange,
 }: ModGridProps) {
@@ -220,9 +218,8 @@ export function ModGrid({
                 readOnly={readOnly}
               />
             ))}
-            {zawComponents && zawStrikeName && (
+            {zawComponents && (
               <ZawComponentSelector
-                strikeName={zawStrikeName}
                 gripName={zawComponents.grip}
                 linkName={zawComponents.link}
                 onGripChange={onZawGripChange ?? (() => {})}
