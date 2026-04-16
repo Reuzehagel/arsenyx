@@ -39,7 +39,7 @@ describe("Zaw data", () => {
 
   it("identifies links correctly", () => {
     expect(isZawLink("Jai")).toBe(true)
-    expect(isZawLink("Vargeet Jai Ii")).toBe(true)
+    expect(isZawLink("Vargeet Jai II")).toBe(true)
     expect(isZawLink("Balla")).toBe(false)
   })
 

@@ -433,14 +433,14 @@ describe("edge cases", () => {
     })
     build.zawComponents = {
       grip: "Korb",
-      link: "Ekwana Jai Ii",
+      link: "Ekwana Jai II",
     }
 
     const encoded = encodeBuild(build)
     const decoded = decodeBuild(encoded)
 
     expect(decoded?.zawComponents?.grip).toBe("Korb")
-    expect(decoded?.zawComponents?.link).toBe("Ekwana Jai Ii")
+    expect(decoded?.zawComponents?.link).toBe("Ekwana Jai II")
   })
 
   it("handles all 5 shard slots filled and tauforged", () => {

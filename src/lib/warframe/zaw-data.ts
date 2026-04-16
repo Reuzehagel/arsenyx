@@ -1,7 +1,6 @@
 // Zaw modular melee weapon data
 // Strikes: base damage/crit/status/speed come from WFCD attacks array
 // Grips & Links: hardcoded modifier tables (stable since Plains of Eidolon release)
-// Name casing (e.g. "Ekwana Ii Jai") matches WFCD's title-casing — do not "fix".
 
 import { sumDamageTypes } from "./stats/stat-engine"
 import type { DamageTypes } from "./types"
@@ -70,21 +69,21 @@ export const ZAW_GRIPS: ZawGrip[] = [
 
 export const ZAW_LINKS: ZawLink[] = [
   { name: "Jai", imageName: "jai-7a47884ee7.png", damage: -4, speed: 0.083, crit: 0, status: 0 },
-  { name: "Jai Ii", imageName: "jai-ii-a41b8b50ea.png", damage: -8, speed: 0.167, crit: 0, status: 0 },
+  { name: "Jai II", imageName: "jai-ii-a41b8b50ea.png", damage: -8, speed: 0.167, crit: 0, status: 0 },
   { name: "Ruhang", imageName: "ruhang-8c9076606f.png", damage: 14, speed: -0.067, crit: 0, status: 0 },
-  { name: "Ruhang Ii", imageName: "ruhang-ii-7aec53bcfb.png", damage: 28, speed: -0.133, crit: 0, status: 0 },
+  { name: "Ruhang II", imageName: "ruhang-ii-7aec53bcfb.png", damage: 28, speed: -0.133, crit: 0, status: 0 },
   { name: "Vargeet Jai", imageName: "vargeet-jai-fb8680a3ed.png", damage: -4, speed: 0.083, crit: 7, status: 0 },
   { name: "Vargeet Ruhang", imageName: "vargeet-ruhang-df37a83490.png", damage: 14, speed: -0.067, crit: 7, status: 0 },
-  { name: "Vargeet Ii Jai", imageName: "vargeet-ii-jai-f92b870e32.png", damage: -4, speed: 0.083, crit: 14, status: 0 },
-  { name: "Vargeet Ii Ruhang", imageName: "vargeet-ii-ruhang-55b5f0ac91.png", damage: 14, speed: -0.067, crit: 14, status: 0 },
-  { name: "Vargeet Jai Ii", imageName: "vargeet-jai-ii-c27048f259.png", damage: -8, speed: 0.167, crit: 7, status: 0 },
-  { name: "Vargeet Ruhang Ii", imageName: "vargeet-ruhang-ii-a934774072.png", damage: 28, speed: -0.133, crit: 7, status: 0 },
+  { name: "Vargeet II Jai", imageName: "vargeet-ii-jai-f92b870e32.png", damage: -4, speed: 0.083, crit: 14, status: 0 },
+  { name: "Vargeet II Ruhang", imageName: "vargeet-ii-ruhang-55b5f0ac91.png", damage: 14, speed: -0.067, crit: 14, status: 0 },
+  { name: "Vargeet Jai II", imageName: "vargeet-jai-ii-c27048f259.png", damage: -8, speed: 0.167, crit: 7, status: 0 },
+  { name: "Vargeet Ruhang II", imageName: "vargeet-ruhang-ii-a934774072.png", damage: 28, speed: -0.133, crit: 7, status: 0 },
   { name: "Ekwana Jai", imageName: "ekwana-jai-5dd1e0aabe.png", damage: -4, speed: 0.083, crit: 0, status: 7 },
   { name: "Ekwana Ruhang", imageName: "ekwana-ruhang-47efe1fcbb.png", damage: 14, speed: -0.067, crit: 0, status: 7 },
-  { name: "Ekwana Ii Jai", imageName: "ekwana-ii-jai-c5361c4620.png", damage: -4, speed: 0.083, crit: 0, status: 14 },
-  { name: "Ekwana Ii Ruhang", imageName: "ekwana-ii-ruhang-263840a491.png", damage: 14, speed: -0.067, crit: 0, status: 14 },
-  { name: "Ekwana Jai Ii", imageName: "ekwana-jai-ii-7cdd0a08c0.png", damage: -8, speed: 0.167, crit: 0, status: 7 },
-  { name: "Ekwana Ruhang Ii", imageName: "ekwana-ruhang-ii-5e40256eb9.png", damage: 28, speed: -0.133, crit: 0, status: 7 },
+  { name: "Ekwana II Jai", imageName: "ekwana-ii-jai-c5361c4620.png", damage: -4, speed: 0.083, crit: 0, status: 14 },
+  { name: "Ekwana II Ruhang", imageName: "ekwana-ii-ruhang-263840a491.png", damage: 14, speed: -0.067, crit: 0, status: 14 },
+  { name: "Ekwana Jai II", imageName: "ekwana-jai-ii-7cdd0a08c0.png", damage: -8, speed: 0.167, crit: 0, status: 7 },
+  { name: "Ekwana Ruhang II", imageName: "ekwana-ruhang-ii-5e40256eb9.png", damage: 28, speed: -0.133, crit: 0, status: 7 },
 ]
 
 const strikeMap = new Map(ZAW_STRIKES.map((s) => [s.name, s]))
