@@ -46,10 +46,6 @@ export function Header() {
 
         <div className="flex items-center gap-1">
           <SearchCommand />
-          <Button variant="ghost" size="icon" className="hidden sm:flex">
-            <Icons.bell />
-            <span className="sr-only">Notifications</span>
-          </Button>
           <ThemeToggle />
           <div className="hidden md:flex">
             <UserMenu />
