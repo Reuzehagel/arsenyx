@@ -1,6 +1,7 @@
 // Weapon-specific stat calculations (guns and melee)
 
 import { parseModStats } from "../stat-parser"
+import { getZawGrip, calculateZawBaseStats } from "../zaw-data"
 import type {
   WeaponStats,
   StatValue,
@@ -34,6 +35,20 @@ export function calculateWeaponStats(
 
   // Check if weapon has specific attack modes defined
   const hasSpecificAttackModes = weapon.attacks && weapon.attacks.length > 0
+
+  // Apply Zaw component modifiers if set. The Strike is the weapon being built.
+  let zawOverride: ReturnType<typeof calculateZawBaseStats> | null = null
+  if (buildState.zawComponents && hasSpecificAttackModes) {
+    const { grip, link } = buildState.zawComponents
+    if (getZawGrip(grip) && weapon.attacks?.[0]) {
+      zawOverride = calculateZawBaseStats({
+        strikeAttack: weapon.attacks[0],
+        strikeName: weapon.name,
+        gripName: grip,
+        linkName: link,
+      })
+    }
+  }
 
   // Primary attack mode from base weapon stats
   // Only create "Normal Attack" if there are no specific attack modes defined
@@ -115,19 +130,47 @@ export function calculateWeaponStats(
       // Skip "Normal Attack" only if we already created it from base weapon stats above
       if (attack.name === "Normal Attack" && attackModes.length > 0) continue
 
-      const attackDamage =
-        typeof attack.damage === "object" ? sumDamageTypes(attack.damage) : 0
+      const attackDamage = zawOverride
+        ? zawOverride.totalDamage
+        : typeof attack.damage === "object"
+          ? sumDamageTypes(attack.damage)
+          : 0
 
       // WFCD attack mode stats may be in percentage form (34) or decimal form (0.34)
       // Values > 1 are already percentages, values <= 1 need to be multiplied by 100
-      const rawCrit = attack.crit_chance ?? weapon.criticalChance ?? 0
-      const critBase = rawCrit > 1 ? rawCrit : rawCrit * 100
+      // zawOverride values are already in percentage form — skip normalization
+      const rawCrit = zawOverride
+        ? zawOverride.critChance
+        : attack.crit_chance ?? weapon.criticalChance ?? 0
+      const critBase = zawOverride
+        ? rawCrit
+        : rawCrit > 1
+          ? rawCrit
+          : rawCrit * 100
 
       // Critical multiplier is stored as actual multiplier (e.g., 3 for 3x)
-      const critMultBase = attack.crit_mult ?? weapon.criticalMultiplier ?? 1
+      const critMultBase = zawOverride
+        ? zawOverride.critMult
+        : attack.crit_mult ?? weapon.criticalMultiplier ?? 1
 
-      const rawStatus = attack.status_chance ?? weapon.procChance ?? 0
-      const statusBase = rawStatus > 1 ? rawStatus : rawStatus * 100
+      const rawStatus = zawOverride
+        ? zawOverride.statusChance
+        : attack.status_chance ?? weapon.procChance ?? 0
+      const statusBase = zawOverride
+        ? rawStatus
+        : rawStatus > 1
+          ? rawStatus
+          : rawStatus * 100
+
+      const fireRateBase = zawOverride
+        ? zawOverride.speed
+        : attack.speed ?? weapon.fireRate ?? 1
+
+      const damageSource = zawOverride
+        ? zawOverride.damageTypes
+        : typeof attack.damage === "object"
+          ? (attack.damage ?? {})
+          : {}
 
       const mode: AttackModeStats = {
         name: attack.name,
@@ -152,12 +195,12 @@ export function calculateWeaponStats(
         ),
         fireRate: calculateWeaponStat(
           "fire_rate",
-          attack.speed ?? weapon.fireRate ?? 1,
+          fireRateBase,
           mods,
           showMaxStacks,
         ),
         damageBreakdown: calculateDamageBreakdown(
-          typeof attack.damage === "object" ? attack.damage : {},
+          damageSource,
           mods,
           showMaxStacks,
         ),

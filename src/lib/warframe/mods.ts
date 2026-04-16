@@ -290,6 +290,11 @@ export function getModsForItem(item: {
   const itemNameLower = itemName?.toLowerCase() ?? ""
   const allModsNormalized = getAllMods()
 
+  // Zaw Components are melee weapons
+  if (itemTypeLower === "zaw component") {
+    return getModsByCompatibility("Melee")
+  }
+
   return allModsNormalized.filter((mod) => {
     const compatName = mod.compatName?.toLowerCase() ?? ""
     const modType = mod.type?.toLowerCase() ?? ""

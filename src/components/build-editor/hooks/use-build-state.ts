@@ -1,6 +1,7 @@
 import { useReducer, useCallback, useMemo } from "react"
 
 import { createBaseBuildState } from "@/lib/builds/layout"
+import { isZawStrike } from "@/lib/warframe/zaw-data"
 import {
   getCapacityStatus,
   calculateTotalEndoCost,
@@ -115,6 +116,13 @@ export function createInitialBuildState(
   helminthAugmentMods?: Record<string, Mod[]>,
 ): BuildState {
   const baseState = createBaseBuildState(item, category)
+
+  if (isZawStrike(item.name) && !importedBuild?.zawComponents) {
+    baseState.zawComponents = {
+      grip: "Jayap",
+      link: "Jai",
+    }
+  }
 
   if (importedBuild) {
     const mergeSlot = (baseSlot: ModSlot, importedSlot?: ModSlot): ModSlot => {
@@ -261,6 +269,8 @@ export type BuildAction =
       item: BrowseableItem
       category: BrowseCategory
     }
+  | { type: "SET_ZAW_GRIP"; grip: string }
+  | { type: "SET_ZAW_LINK"; link: string }
 
 // Slot-level helpers used by multiple actions
 function getModFromSlot(id: string, state: BuildState): PlacedMod | undefined {
@@ -547,6 +557,23 @@ function buildReducer(state: BuildState, action: BuildAction): BuildState {
       }
     }
 
+    case "SET_ZAW_GRIP": {
+      return {
+        ...state,
+        zawComponents: state.zawComponents
+          ? { ...state.zawComponents, grip: action.grip }
+          : undefined,
+      }
+    }
+    case "SET_ZAW_LINK": {
+      return {
+        ...state,
+        zawComponents: state.zawComponents
+          ? { ...state.zawComponents, link: action.link }
+          : undefined,
+      }
+    }
+
     default:
       return state
   }
@@ -664,6 +691,18 @@ export function useBuildState({
     dispatch({ type: "REMOVE_SHARD", slotIndex })
   }, [])
 
+  // --- Zaw actions ---
+
+  const handleSetZawGrip = useCallback(
+    (grip: string) => dispatch({ type: "SET_ZAW_GRIP", grip }),
+    [dispatch],
+  )
+
+  const handleSetZawLink = useCallback(
+    (link: string) => dispatch({ type: "SET_ZAW_LINK", link }),
+    [dispatch],
+  )
+
   // --- Derived state ---
 
   const usedModNames = useMemo((): Set<string> => {
@@ -728,6 +767,9 @@ export function useBuildState({
 
     handlePlaceShard,
     handleRemoveShard,
+
+    handleSetZawGrip,
+    handleSetZawLink,
 
     usedModNames,
     usedArcaneNames,

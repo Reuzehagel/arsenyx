@@ -2,7 +2,7 @@
 
 import { useDroppable, useDraggable } from "@dnd-kit/core"
 import { CSS } from "@dnd-kit/utilities"
-import { Plus, X } from "lucide-react"
+import { Pencil, Plus, X } from "lucide-react"
 import { useState, useMemo, memo } from "react"
 
 import { PolarityIcon } from "@/components/icons"
@@ -37,6 +37,7 @@ import type {
 } from "@/lib/warframe/types"
 
 import { ArcaneSlotCard } from "./arcane-slot-card"
+import { ZawComponentSelector } from "./zaw-component-selector"
 
 // All available polarities for the selector
 const ALL_POLARITIES: Polarity[] = [
@@ -77,6 +78,13 @@ interface ModGridProps {
   readOnly?: boolean
   /** Number of normal slots per row (default: 4) */
   slotsPerRow?: number
+  /** Present when the build item is a Zaw Strike. Handlers required when set. */
+  zawComponents?: {
+    grip: string
+    link: string
+    onGripChange: (grip: string) => void
+    onLinkChange: (link: string) => void
+  }
 }
 
 export function ModGrid({
@@ -98,6 +106,7 @@ export function ModGrid({
   arcaneDataMap,
   readOnly = false,
   slotsPerRow = 4,
+  zawComponents,
 }: ModGridProps) {
   // Calculate set counts
   const setCounts = useMemo(() => {
@@ -190,9 +199,9 @@ export function ModGrid({
           ),
         )}
 
-        {/* Row 4: Arcanes */}
-        {arcaneSlots.length > 0 && (
-          <div className="mt-2 flex w-full justify-center gap-3 sm:gap-6">
+        {/* Row 4: Arcanes + Zaw Components */}
+        {(arcaneSlots.length > 0 || zawComponents) && (
+          <div className="mt-2 flex w-full items-start justify-center gap-3 sm:gap-6">
             {arcaneSlots.map((arcane, index) => (
               <ArcaneSlotCard
                 key={`arcane-${index}`}
@@ -210,6 +219,15 @@ export function ModGrid({
                 readOnly={readOnly}
               />
             ))}
+            {zawComponents && (
+              <ZawComponentSelector
+                gripName={zawComponents.grip}
+                linkName={zawComponents.link}
+                onGripChange={zawComponents.onGripChange}
+                onLinkChange={zawComponents.onLinkChange}
+                readOnly={readOnly}
+              />
+            )}
           </div>
         )}
       </div>
@@ -413,15 +431,11 @@ const ModSlotCard = memo(function ModSlotCard({
               isDragging && "opacity-0",
               transform && "will-change-transform",
             )}
-            onClick={(e) => {
+            onClick={() => {
               if (readOnly) return
-              if (e.shiftKey) {
-                setPolarityOpen(true)
-              } else if (slot.mod && isRivenMod(slot.mod) && onRivenEdit) {
-                onRivenEdit(slot.id, slot.mod)
-              } else {
-                onSelect()
-              }
+              onSelect()
+              // Click bubbles to PopoverTrigger to open the polarity picker.
+              // Riven stat editing lives on the pencil button below.
             }}
             onContextMenu={(e: React.MouseEvent) => {
               e.preventDefault()
@@ -454,6 +468,24 @@ const ModSlotCard = memo(function ModSlotCard({
               <X className="size-3" />
             </button>
           )}
+          {!readOnly &&
+            !isDragging &&
+            slot.mod &&
+            isRivenMod(slot.mod) &&
+            onRivenEdit && (
+              <button
+                type="button"
+                className="bg-background/80 text-muted-foreground hover:bg-accent hover:text-accent-foreground absolute top-4 -right-1.5 z-10 flex size-5 items-center justify-center rounded-full border transition-opacity group-hover:opacity-100 max-md:opacity-100 md:opacity-0"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setPolarityOpen(false)
+                  onRivenEdit(slot.id, slot.mod!)
+                }}
+                aria-label="Edit riven stats"
+              >
+                <Pencil className="size-3" />
+              </button>
+            )}
         </PopoverTrigger>
         {!readOnly && polaritySelectorContent}
       </Popover>

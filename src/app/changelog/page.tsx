@@ -12,6 +12,21 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-04-16",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Zaw support — select Grip and Link components for Zaw Strike builds with dynamic stat recalculation",
+      },
+      {
+        type: "fix",
+        description:
+          "Fixed Zaw Strikes showing no mods and zero stats on the browse page",
+      },
+    ],
+  },
+  {
     date: "2026-04-15",
     changes: [
       {

@@ -34,6 +34,7 @@ interface EncodedBuild {
   sh?: number[] // Shard slots (5) - encoded as numbers
   n?: string // Build name
   h?: EncodedHelminth // Helminth ability
+  zc?: { g: string; l: string } // Zaw components (grip, link — strike is the item)
 }
 
 interface EncodedHelminth {
@@ -121,6 +122,13 @@ export function encodeBuild(state: BuildState): string {
 
   if (state.buildName) {
     encoded.n = state.buildName
+  }
+
+  if (state.zawComponents) {
+    encoded.zc = {
+      g: state.zawComponents.grip,
+      l: state.zawComponents.link,
+    }
   }
 
   // Encode to base64
@@ -281,6 +289,14 @@ export function decodeBuild(base64String: string): Partial<BuildState> | null {
           imageName: encoded.h.im,
           description: encoded.h.d,
         },
+      }
+    }
+
+    // Decode Zaw components
+    if (encoded.zc) {
+      state.zawComponents = {
+        grip: encoded.zc.g,
+        link: encoded.zc.l,
       }
     }
 

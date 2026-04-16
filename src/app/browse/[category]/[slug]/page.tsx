@@ -17,7 +17,8 @@ import { getPublicBuildsForItem } from "@/lib/db/index"
 import { getCategoryConfig, getImageUrl, isValidCategory } from "@/lib/warframe"
 // Server-only imports (uses Node.js fs via @wfcd/items)
 import { getItemBySlug, getStaticItems } from "@/lib/warframe/items"
-import type { BrowseCategory, Warframe, Gun, Melee } from "@/lib/warframe/types"
+import { sumDamageTypes } from "@/lib/warframe/stats/stat-engine"
+import type { Attack, BrowseCategory, Warframe, Gun, Melee } from "@/lib/warframe/types"
 
 // Generate static params for top items
 export async function generateStaticParams() {
@@ -166,7 +167,9 @@ export default async function ItemPage({ params }: ItemPageProps) {
                   <div className="flex items-center gap-1">
                     <span className="text-muted-foreground">Type:</span>
                     <span className="font-medium">
-                      {(item as { type?: string }).type}
+                      {(item as { type?: string }).type === "Zaw Component"
+                        ? "Zaw Strike"
+                        : (item as { type?: string }).type}
                     </span>
                   </div>
                 )}
@@ -222,21 +225,59 @@ export default async function ItemPage({ params }: ItemPageProps) {
               </Card>
             )}
 
+            {/* Zaw Strike Stats (from attacks array) */}
+            {isWeapon &&
+              (item as { type?: string }).type === "Zaw Component" && (() => {
+                const zawStats = getZawStrikeStats(item as { attacks?: Attack[] })
+                if (!zawStats) return null
+                return (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Strike Stats</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <dl className="grid grid-cols-2 gap-3 text-sm">
+                        <StatItem
+                          label="Damage"
+                          value={Math.round(zawStats.totalDamage)}
+                        />
+                        <StatItem
+                          label="Crit Chance"
+                          value={`${(zawStats.criticalChance * 100).toFixed(1)}%`}
+                        />
+                        <StatItem
+                          label="Crit Multi"
+                          value={`${zawStats.criticalMultiplier}x`}
+                        />
+                        <StatItem
+                          label="Status"
+                          value={`${(zawStats.statusChance * 100).toFixed(1)}%`}
+                        />
+                        <StatItem
+                          label="Attack Speed"
+                          value={zawStats.fireRate}
+                        />
+                      </dl>
+                    </CardContent>
+                  </Card>
+                )
+              })()}
+
             {/* Weapon Stats */}
-            {isWeapon && (
+            {isWeapon && (item as { type?: string }).type !== "Zaw Component" && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Weapon Stats</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <dl className="grid grid-cols-2 gap-3 text-sm">
-                    {(item as Gun).totalDamage && (
+                    {!!(item as Gun).totalDamage && (
                       <StatItem
                         label="Damage"
                         value={(item as Gun).totalDamage}
                       />
                     )}
-                    {(item as Gun).criticalChance && (
+                    {!!(item as Gun).criticalChance && (
                       <StatItem
                         label="Crit Chance"
                         value={`${((item as Gun).criticalChance! * 100).toFixed(
@@ -244,13 +285,13 @@ export default async function ItemPage({ params }: ItemPageProps) {
                         )}%`}
                       />
                     )}
-                    {(item as Gun).criticalMultiplier && (
+                    {!!(item as Gun).criticalMultiplier && (
                       <StatItem
                         label="Crit Multi"
                         value={`${(item as Gun).criticalMultiplier}x`}
                       />
                     )}
-                    {(item as Gun).procChance && (
+                    {!!(item as Gun).procChance && (
                       <StatItem
                         label="Status"
                         value={`${((item as Gun).procChance! * 100).toFixed(
@@ -258,25 +299,25 @@ export default async function ItemPage({ params }: ItemPageProps) {
                         )}%`}
                       />
                     )}
-                    {(item as Gun).fireRate && (
+                    {!!(item as Gun).fireRate && (
                       <StatItem
                         label="Fire Rate"
                         value={parseFloat((item as Gun).fireRate!.toFixed(3))}
                       />
                     )}
-                    {(item as Gun).magazineSize && (
+                    {!!(item as Gun).magazineSize && (
                       <StatItem
                         label="Magazine"
                         value={(item as Gun).magazineSize}
                       />
                     )}
-                    {(item as Gun).reloadTime && (
+                    {!!(item as Gun).reloadTime && (
                       <StatItem
                         label="Reload"
                         value={`${parseFloat((item as Gun).reloadTime!.toFixed(2))}s`}
                       />
                     )}
-                    {isMelee && (item as Melee).range && (
+                    {isMelee && !!(item as Melee).range && (
                       <StatItem label="Range" value={(item as Melee).range} />
                     )}
                   </dl>
@@ -415,6 +456,38 @@ async function CommunityBuildsSection({
       )}
     </section>
   )
+}
+
+/** Extract display stats from a Zaw Strike's attacks array */
+function getZawStrikeStats(item: { attacks?: Attack[] }): {
+  totalDamage: number
+  criticalChance: number
+  criticalMultiplier: number
+  statusChance: number
+  fireRate: number
+} | null {
+  const attacks = item.attacks
+  if (!attacks || attacks.length === 0) return null
+
+  const attack = attacks[0]
+  const damage =
+    typeof attack.damage === "object" && attack.damage
+      ? attack.damage
+      : null
+  if (!damage) return null
+
+  const totalDamage = sumDamageTypes(damage)
+
+  // WFCD attack stats may be percentage (18) or decimal (0.18) — normalize to decimal.
+  const toDecimal = (v: number) => (v > 1 ? v / 100 : v)
+
+  return {
+    totalDamage,
+    criticalChance: toDecimal(attack.crit_chance ?? 0),
+    criticalMultiplier: attack.crit_mult ?? 2,
+    statusChance: toDecimal(attack.status_chance ?? 0),
+    fireRate: attack.speed ?? 1,
+  }
 }
 
 function StatItem({

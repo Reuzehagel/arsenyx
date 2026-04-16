@@ -93,7 +93,11 @@ function toBrowseItem(
 function categorizeItem(item: BrowseableItem): BrowseCategory[] {
   if (!item.name || item.name.includes(" Blueprint")) return []
 
+  // Filter out items excluded from codex (PvP variants, duplicates)
+  if ((item as { excludeFromCodex?: boolean }).excludeFromCodex) return []
+
   const itemCategory = item.category as string
+  const itemType = (item as { type?: string }).type
   const categories: BrowseCategory[] = []
 
   if (itemCategory === "Warframes") {
@@ -109,7 +113,18 @@ function categorizeItem(item: BrowseableItem): BrowseCategory[] {
     }
   }
 
-  const itemType = (item as { type?: string }).type
+  // Zaw Components: only include Strikes (have attacks array with data).
+  // Filter out Grips and Links — they are not buildable items on their own.
+  if (itemType === "Zaw Component") {
+    const attacks = (item as { attacks?: { damage?: unknown }[] }).attacks
+    const hasAttackData =
+      attacks && attacks.length > 0 && attacks[0].damage != null
+    if (hasAttackData) {
+      categories.push("melee")
+    }
+    return categories
+  }
+
   const isCompanionWeapon = itemType === "Companion Weapon"
 
   // Exclude companion weapons from primary/secondary/melee categories
