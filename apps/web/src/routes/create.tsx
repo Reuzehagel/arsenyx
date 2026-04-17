@@ -5,14 +5,16 @@ import {
 } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Diamond, Gem, Pencil, UploadCloud, X } from "lucide-react";
-import { Suspense } from "react";
+import { Suspense, useMemo } from "react";
 
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
+import { ModCard, ModSlot } from "@/components/build-editor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { itemQuery } from "@/lib/item-query";
+import { modsQuery } from "@/lib/mods-query";
 import { cn } from "@/lib/utils";
 import {
   CATEGORIES,
@@ -21,6 +23,7 @@ import {
   type BrowseCategory,
   type DetailItem,
 } from "@/lib/warframe";
+import { getModsForItem } from "@arsenyx/shared/warframe/mods";
 
 type CreateSearch = {
   item: string;
@@ -45,8 +48,12 @@ export const Route = createFileRoute("/create")({
     item: search.item,
     category: search.category,
   }),
-  loader: ({ context, deps }) =>
-    context.queryClient.ensureQueryData(itemQuery(deps.category, deps.item)),
+  loader: async ({ context, deps }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData(itemQuery(deps.category, deps.item)),
+      context.queryClient.ensureQueryData(modsQuery),
+    ]);
+  },
   component: CreatePage,
 });
 
@@ -85,12 +92,12 @@ function EditorShell() {
           </div>
 
           <div className="bg-card min-w-0 flex-1 overflow-hidden rounded-lg border p-2 sm:p-4 lg:ml-[calc(260px+1rem)]">
-            <ModGridPlaceholder category={category} />
+            <ModGrid category={category} />
           </div>
         </div>
 
         <div className="bg-card rounded-lg border p-4">
-          <SearchPanelPlaceholder />
+          <SearchPanel item={item} />
         </div>
 
         <div className="bg-card rounded-lg border p-4">
@@ -296,22 +303,25 @@ function StatsBlock({
   );
 }
 
-function ModGridPlaceholder({ category }: { category: BrowseCategory }) {
+function ModGrid({ category }: { category: BrowseCategory }) {
   const isCompanion = category === "companions";
   const slotsPerRow = isCompanion ? 5 : 4;
+  const isWarframe = category === "warframes" || category === "necramechs";
+
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <span className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
-          Aura · Exilus
-        </span>
-      </div>
-      <div className="flex gap-2">
-        <ModSlot label="Aura" />
-        <ModSlot label="Exilus" />
-      </div>
-
-      <Separator />
+      {(isWarframe || isCompanion) && (
+        <>
+          <span className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+            Aura · Exilus
+          </span>
+          <div className="grid grid-cols-4 gap-2 sm:grid-cols-8">
+            <ModSlot kind="aura" />
+            <ModSlot kind="exilus" />
+          </div>
+          <Separator />
+        </>
+      )}
 
       <span className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
         Mods
@@ -326,33 +336,40 @@ function ModGridPlaceholder({ category }: { category: BrowseCategory }) {
           <ModSlot key={i} />
         ))}
       </div>
-
-      <p className="text-muted-foreground pt-2 text-center text-sm">
-        Mod slot editor coming next — drag mods in, rank them, forma polarities.
-      </p>
     </div>
   );
 }
 
-function ModSlot({ label }: { label?: string }) {
+function SearchPanel({ item }: { item: DetailItem }) {
+  const { data: allMods } = useSuspenseQuery(modsQuery);
+  const compatible = useMemo(
+    () =>
+      getModsForItem(
+        {
+          type: item.type,
+          category: item.category,
+          name: item.name,
+        },
+        allMods,
+      ),
+    [allMods, item.type, item.category, item.name],
+  );
+
   return (
-    <div className="border-muted-foreground/20 bg-muted/20 relative flex aspect-[3/4] items-center justify-center rounded-md border-2 border-dashed">
-      {label && (
-        <span className="text-muted-foreground text-[10px] font-semibold uppercase">
-          {label}
+    <div className="flex flex-col gap-3">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-lg font-semibold">Compatible Mods</h2>
+        <span className="text-muted-foreground text-sm">
+          {compatible.length} mod{compatible.length === 1 ? "" : "s"}
         </span>
-      )}
-    </div>
-  );
-}
-
-function SearchPanelPlaceholder() {
-  return (
-    <div className="flex flex-col gap-2">
-      <h2 className="text-lg font-semibold">Mods &amp; Arcanes</h2>
-      <p className="text-muted-foreground text-sm">
-        The searchable mod + arcane grid lands in Slice 6b. You'll be able to
-        filter, sort, and drag cards into the slots above.
+      </div>
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10">
+        {compatible.map((mod) => (
+          <ModCard key={mod.uniqueName} mod={mod} />
+        ))}
+      </div>
+      <p className="text-muted-foreground pt-2 text-center text-xs">
+        Click-to-place, ranks, polarities, and forma land in Slice 6c.
       </p>
     </div>
   );

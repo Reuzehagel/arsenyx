@@ -17,10 +17,12 @@ import { dirname, resolve } from "node:path"
 
 import { buildIndex } from "@arsenyx/shared/warframe/categorize"
 import { BROWSE_CATEGORIES } from "@arsenyx/shared/warframe/categories"
+import { normalizeMods } from "@arsenyx/shared/warframe/mods"
 import type {
   BrowseableItem,
   BrowseCategory,
   BrowseItem,
+  Mod,
 } from "@arsenyx/shared/warframe/types"
 
 const require = createRequire(import.meta.url)
@@ -46,6 +48,7 @@ const REPO = resolve(import.meta.dirname, "..")
 const PUBLIC_DATA = resolve(REPO, "apps/web/public/data")
 const INDEX_OUT = resolve(PUBLIC_DATA, "items-index.json")
 const DETAIL_DIR = resolve(PUBLIC_DATA, "items")
+const MODS_OUT = resolve(PUBLIC_DATA, "mods-all.json")
 
 async function loadAllItems(): Promise<BrowseableItem[]> {
   const all: BrowseableItem[] = []
@@ -57,8 +60,17 @@ async function loadAllItems(): Promise<BrowseableItem[]> {
   return all
 }
 
+async function loadAllMods(): Promise<Mod[]> {
+  const body = await readFile(resolve(WFCD_JSON, "Mods.json"), "utf8")
+  return JSON.parse(body) as Mod[]
+}
+
 async function main() {
-  const allItems = await loadAllItems()
+  const [allItems, rawMods] = await Promise.all([
+    loadAllItems(),
+    loadAllMods(),
+  ])
+  const mods = normalizeMods(rawMods)
   const { byCategory, slugLookup } = buildIndex(allItems)
 
   await mkdir(dirname(INDEX_OUT), { recursive: true })
@@ -99,6 +111,15 @@ async function main() {
   const detailMb = (detailBytes / 1024 / 1024).toFixed(2)
   console.log(
     `✓ wrote ${detailCount} per-item detail files → items/ (${detailMb} MB total)`,
+  )
+
+  // All normalized mods in one file. Client filters per-item via
+  // @arsenyx/shared's getModsForItem so we don't duplicate mod objects.
+  const modsBody = JSON.stringify(mods)
+  await writeFile(MODS_OUT, modsBody, "utf8")
+  const modsMb = (Buffer.byteLength(modsBody, "utf8") / 1024 / 1024).toFixed(2)
+  console.log(
+    `✓ wrote ${mods.length} normalized mods → mods-all.json (${modsMb} MB)`,
   )
 }
 
