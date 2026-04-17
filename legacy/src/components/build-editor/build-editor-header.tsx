@@ -1,6 +1,6 @@
 "use client"
 
-import type { BuildVisibility } from "@prisma/client"
+import type { BuildVisibility } from "@/generated/prisma/client"
 import {
   Check,
   Diamond,
