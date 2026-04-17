@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { cn } from "@/lib/utils";
 import {
@@ -205,6 +205,7 @@ function ExpandedModCard({
 
 export interface ModCardProps {
   mod: Mod;
+  /** Leave undefined to default to the mod's max rank. */
   rank?: number;
   setCount?: number;
   drainOverride?: number;
@@ -226,7 +227,7 @@ export interface ModCardProps {
  */
 export function ModCard({
   mod,
-  rank = 0,
+  rank,
   setCount = 0,
   drainOverride,
   matchState,
@@ -239,8 +240,20 @@ export function ModCard({
   const [isHovered, setIsHovered] = useState(false);
   const rarity = normalizeRarity(mod.rarity);
   const maxRank = mod.fusionLimit ?? 0;
-  const isMaxRank = maxRank > 0 && rank >= maxRank;
+  // Default to max rank so preview cards read the way equipped mods look
+  // in-game. Callers that need a specific rank (placed slots) pass one.
+  const effectiveRank = rank ?? maxRank;
+  const isMaxRank = maxRank > 0 && effectiveRank >= maxRank;
   const showExpanded = alwaysExpanded || (isHovered && !disableHover);
+
+  // Any scroll collapses the expanded preview — otherwise the card can stay
+  // stuck open if the wrapper moves out from under the cursor silently.
+  useEffect(() => {
+    if (!isHovered) return;
+    const close = () => setIsHovered(false);
+    window.addEventListener("scroll", close, { capture: true, passive: true });
+    return () => window.removeEventListener("scroll", close, { capture: true });
+  }, [isHovered]);
 
   const size = showExpanded ? DISPLAY_SIZE.expanded : DISPLAY_SIZE.compact;
 
@@ -288,7 +301,7 @@ export function ModCard({
           <ExpandedModCard
             mod={mod}
             rarity={rarity}
-            rank={rank}
+            rank={effectiveRank}
             isMaxRank={isMaxRank}
             setCount={setCount}
             drainOverride={drainOverride}
@@ -298,7 +311,7 @@ export function ModCard({
           <CompactModCard
             mod={mod}
             rarity={rarity}
-            rank={rank}
+            rank={effectiveRank}
             isMaxRank={isMaxRank}
             drainOverride={drainOverride}
             matchState={matchState}
