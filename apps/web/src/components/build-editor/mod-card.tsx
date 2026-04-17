@@ -225,6 +225,14 @@ export interface ModCardProps {
  * in an absolute wrapper. Screenshot-perfect rendering lives in a separate
  * component (to be built with the screenshot service, Slice 8).
  */
+// Rank dots hang ~32px below the 64px compact frame; extend the hover surface
+// so cursor motion across the dots doesn't trigger mouseleave.
+const HOVER_OVERHANG = 32;
+// Center the expanded card around the compact visual (y=32 inside the
+// HOVER_OVERHANG-extended wrapper, which makes transform-origin: center
+// scale naturally from the compact card's own midpoint).
+const COMPACT_CENTER_Y = DISPLAY_SIZE.compact.height / 2;
+
 export function ModCard({
   mod,
   rank,
@@ -238,13 +246,38 @@ export function ModCard({
   className,
 }: ModCardProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [phase, setPhase] = useState<"closed" | "open">("closed");
   const rarity = normalizeRarity(mod.rarity);
   const maxRank = mod.fusionLimit ?? 0;
   // Default to max rank so preview cards read the way equipped mods look
   // in-game. Callers that need a specific rank (placed slots) pass one.
   const effectiveRank = rank ?? maxRank;
   const isMaxRank = maxRank > 0 && effectiveRank >= maxRank;
-  const showExpanded = alwaysExpanded || (isHovered && !disableHover);
+  const wantsExpanded = alwaysExpanded || (isHovered && !disableHover);
+
+  // Animation state machine. wantsExpanded drives two things:
+  //   - mount/unmount the expanded subtree (kept during close transition)
+  //   - flip the data-state so CSS transitions fire between renders
+  useEffect(() => {
+    if (alwaysExpanded) {
+      setMounted(true);
+      setPhase("open");
+      return;
+    }
+    if (wantsExpanded) {
+      setMounted(true);
+      // Defer phase flip to the next frame so the browser sees a "closed"
+      // paint before transitioning to "open" — otherwise no animation runs.
+      const raf = requestAnimationFrame(() => setPhase("open"));
+      return () => cancelAnimationFrame(raf);
+    }
+    setPhase("closed");
+    // Unmount after the transition ends. 200ms is a hair longer than the
+    // 160ms transform so transitionend can fire before we pull the node.
+    const t = setTimeout(() => setMounted(false), 200);
+    return () => clearTimeout(t);
+  }, [wantsExpanded, alwaysExpanded]);
 
   // Any scroll collapses the expanded preview — otherwise the card can stay
   // stuck open if the wrapper moves out from under the cursor silently.
@@ -255,11 +288,7 @@ export function ModCard({
     return () => window.removeEventListener("scroll", close, { capture: true });
   }, [isHovered]);
 
-  const size = showExpanded ? DISPLAY_SIZE.expanded : DISPLAY_SIZE.compact;
-
-  // Rank dots hang ~32px below the 64px compact frame; extend the hover
-  // surface so cursor motion across the dots doesn't trigger mouseleave.
-  const HOVER_OVERHANG = 32;
+  const isOpen = phase === "open";
 
   return (
     <div
@@ -277,27 +306,45 @@ export function ModCard({
       onMouseLeave={() => setIsHovered(false)}
       onClick={onClick}
     >
-      {/* When expanded, the expanded card floats centered above the compact footprint. */}
+      {/* Compact card — always rendered so layout stays stable; fades out as
+          the expanded card fades/scales in so the transition crossfades. */}
       <div
-        className={cn(
-          "absolute left-1/2 -translate-x-1/2 transition-opacity",
-          showExpanded
-            ? "-top-[calc(50%+(var(--expanded-h,285px)-var(--compact-h,64px))/2)] pointer-events-none z-50"
-            : "top-0",
-        )}
-        style={
-          showExpanded
-            ? ({
-                "--expanded-h": `${DISPLAY_SIZE.expanded.height}px`,
-                "--compact-h": `${DISPLAY_SIZE.compact.height}px`,
-                width: size.width,
-                height: size.height,
-                filter: "drop-shadow(0 0 20px rgba(0,0,0,0.8))",
-              } as React.CSSProperties)
-            : { width: size.width, height: size.height }
-        }
+        className="absolute top-0 left-0 transition-opacity duration-100 ease-out"
+        style={{
+          width: DISPLAY_SIZE.compact.width,
+          height: DISPLAY_SIZE.compact.height,
+          opacity: isOpen ? 0 : 1,
+        }}
       >
-        {showExpanded ? (
+        <CompactModCard
+          mod={mod}
+          rarity={rarity}
+          rank={effectiveRank}
+          isMaxRank={isMaxRank}
+          drainOverride={drainOverride}
+          matchState={matchState}
+        />
+      </div>
+
+      {/* Expanded card — mounted only while the preview is (or is closing).
+          Scale starts at 0.94 to keep PNG/text sharpness (any larger range
+          would rasterize at the wrong size and blur during the transition). */}
+      {mounted && (
+        <div
+          className="pointer-events-none absolute left-1/2 z-50"
+          style={{
+            top: `${COMPACT_CENTER_Y}px`,
+            width: DISPLAY_SIZE.expanded.width,
+            height: DISPLAY_SIZE.expanded.height,
+            transformOrigin: "center center",
+            transform: `translate(-50%, -50%) scale(${isOpen ? 1 : 0.94})`,
+            opacity: isOpen ? 1 : 0,
+            transition:
+              "transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 120ms linear",
+            willChange: "transform, opacity",
+            filter: "drop-shadow(0 0 20px rgba(0,0,0,0.8))",
+          }}
+        >
           <ExpandedModCard
             mod={mod}
             rarity={rarity}
@@ -307,17 +354,8 @@ export function ModCard({
             drainOverride={drainOverride}
             matchState={matchState}
           />
-        ) : (
-          <CompactModCard
-            mod={mod}
-            rarity={rarity}
-            rank={effectiveRank}
-            isMaxRank={isMaxRank}
-            drainOverride={drainOverride}
-            matchState={matchState}
-          />
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
