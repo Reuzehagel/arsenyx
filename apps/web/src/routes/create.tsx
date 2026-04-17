@@ -5,24 +5,30 @@ import {
 } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Diamond, Gem, Pencil, UploadCloud, X } from "lucide-react";
-import { Suspense, useMemo } from "react";
+import { Suspense, useMemo, useRef, useState } from "react";
 
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import {
   ArcaneSlot,
+  calculateCapacity,
+  calculateFormaCount,
+  calculateTotalEndoCost,
   CANONICAL_POLARITIES,
   getArcaneSlotCount,
+  ItemSidebar,
   ModSearchGrid,
   ModSlot,
   useBuildSlots,
   type ModSlotKind,
   type SlotId,
 } from "@/components/build-editor";
+import type { HelminthAbility } from "@/lib/helminth-query";
+import type { PlacedShard } from "@/lib/shards";
 import type { Polarity } from "@arsenyx/shared/warframe/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
 import { itemQuery } from "@/lib/item-query";
 import { modsQuery } from "@/lib/mods-query";
 import {
@@ -94,14 +100,92 @@ function EditorShell() {
   const normalSlotCount = 8;
   const slots = useBuildSlots(normalSlotCount);
 
+  const [hasReactor, setHasReactor] = useState(true);
+  const [shards, setShards] = useState<(PlacedShard | null)[]>(() =>
+    Array.from({ length: 5 }, () => null),
+  );
+  const setShard = (i: number, s: PlacedShard | null) => {
+    setShards((prev) => {
+      const next = [...prev];
+      next[i] = s;
+      return next;
+    });
+  };
+
+  const [helminth, setHelminth] = useState<Record<number, HelminthAbility>>({});
+  const setHelminthAt = (i: number, ab: HelminthAbility | null) => {
+    setHelminth((prev) => {
+      if (!ab) {
+        const { [i]: _removed, ...rest } = prev;
+        return rest;
+      }
+      // Only one subsumed ability per build.
+      return { [i]: ab };
+    });
+  };
+
+  const auraRaw = Array.isArray(item.aura) ? item.aura[0] : item.aura;
+  const auraInnate = toPolarity(auraRaw);
+  const normalInnates = useMemo(
+    () =>
+      Array.from({ length: normalSlotCount }, (_, i) =>
+        toPolarity(item.polarities?.[i]),
+      ),
+    [item.polarities, normalSlotCount],
+  );
+
+  const totalEndoCost = useMemo(
+    () => calculateTotalEndoCost(slots.placed),
+    [slots.placed],
+  );
+  const formaCount = useMemo(
+    () =>
+      calculateFormaCount({
+        auraInnate,
+        normalInnates,
+        formaPolarities: slots.formaPolarities,
+      }),
+    [auraInnate, normalInnates, slots.formaPolarities],
+  );
+  const capacity = useMemo(
+    () =>
+      calculateCapacity({
+        placed: slots.placed,
+        formaPolarities: slots.formaPolarities,
+        auraInnate,
+        normalInnates,
+        hasReactor,
+      }),
+    [slots.placed, slots.formaPolarities, auraInnate, normalInnates, hasReactor],
+  );
+
   return (
     <>
-      <EditorHeader item={item} categoryLabel={categoryLabel} />
+      <EditorHeader
+        item={item}
+        category={category}
+        slug={slug}
+        categoryLabel={categoryLabel}
+        totalEndoCost={totalEndoCost}
+        formaCount={formaCount}
+      />
 
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-4 lg:relative lg:block">
           <div className="bg-card w-full rounded-lg border lg:absolute lg:top-0 lg:bottom-0 lg:left-0 lg:w-[260px] lg:overflow-y-auto">
-            <ItemSidebar item={item} category={category} />
+            <ItemSidebar
+              item={item}
+              category={category}
+              capacityUsed={capacity.used}
+              capacityMax={capacity.max}
+              capacityAuraBonus={capacity.auraBonus}
+              hasReactor={hasReactor}
+              onToggleReactor={() => setHasReactor((v) => !v)}
+              shards={shards}
+              onSetShard={setShard}
+              helminth={helminth}
+              onSetHelminth={setHelminthAt}
+            />
           </div>
 
           <div
@@ -146,11 +230,35 @@ function EditorShell() {
 
 function EditorHeader({
   item,
+  category,
+  slug,
   categoryLabel,
+  totalEndoCost,
+  formaCount,
 }: {
   item: DetailItem;
+  category: BrowseCategory;
+  slug: string;
   categoryLabel: string;
+  totalEndoCost: number;
+  formaCount: number;
 }) {
+  const [buildName, setBuildName] = useState(item.name);
+  const [editing, setEditing] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const startEdit = () => {
+    setEditing(true);
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    });
+  };
+  const commit = () => {
+    const trimmed = buildName.trim();
+    setBuildName(trimmed || item.name);
+    setEditing(false);
+  };
   return (
     <div className="bg-card mb-4 rounded-lg border p-4">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -164,12 +272,36 @@ function EditorHeader({
           </div>
           <div className="flex min-w-0 flex-col justify-center gap-2">
             <div className="flex items-center gap-2">
-              <h1 className="truncate text-xl leading-tight font-bold tracking-tight md:text-2xl">
-                {item.name}
-              </h1>
-              <Button variant="ghost" size="icon-sm" disabled title="Rename (sign in)">
-                <Pencil />
-              </Button>
+              {editing ? (
+                <Input
+                  ref={inputRef}
+                  value={buildName}
+                  onChange={(e) => setBuildName(e.target.value)}
+                  onBlur={commit}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") commit();
+                    else if (e.key === "Escape") {
+                      setBuildName(buildName);
+                      setEditing(false);
+                    }
+                  }}
+                  className="h-8 text-xl font-bold tracking-tight md:text-2xl"
+                />
+              ) : (
+                <>
+                  <h1 className="truncate text-xl leading-tight font-bold tracking-tight md:text-2xl">
+                    {buildName}
+                  </h1>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    title="Rename build"
+                    onClick={startEdit}
+                  >
+                    <Pencil />
+                  </Button>
+                </>
+              )}
             </div>
             <span className="text-muted-foreground text-sm">
               {item.name} · {categoryLabel}
@@ -179,14 +311,18 @@ function EditorHeader({
                 variant="secondary"
                 className="bg-muted/50 hover:bg-muted gap-1.5 px-2 py-0.5 text-xs font-semibold"
               >
-                <Diamond className="size-3 fill-current" />0
+                <Diamond className="size-3 fill-current" />
+                {totalEndoCost.toLocaleString("en-US")}
               </Badge>
-              <Badge
-                variant="secondary"
-                className="bg-muted/50 hover:bg-muted gap-1.5 px-2 py-0.5 text-xs font-semibold"
-              >
-                <Gem className="size-3" />0
-              </Badge>
+              {formaCount > 0 && (
+                <Badge
+                  variant="secondary"
+                  className="bg-muted/50 hover:bg-muted gap-1.5 px-2 py-0.5 text-xs font-semibold"
+                >
+                  <Gem className="size-3" />
+                  {formaCount}
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -201,7 +337,7 @@ function EditorHeader({
             render={
               <RouterLink
                 to="/browse/$category/$slug"
-                params={{ category: item.category, slug: item.slug }}
+                params={{ category, slug }}
               />
             }
           >
@@ -211,131 +347,6 @@ function EditorHeader({
         </div>
       </div>
     </div>
-  );
-}
-
-function ItemSidebar({
-  item,
-  category,
-}: {
-  item: DetailItem;
-  category: BrowseCategory;
-}) {
-  const isWarframe = category === "warframes" || category === "necramechs";
-  const isWeapon =
-    category === "primary" ||
-    category === "secondary" ||
-    category === "melee" ||
-    category === "companion-weapons" ||
-    category === "archwing" ||
-    category === "exalted-weapons";
-  const abilities = item.abilities ?? [];
-
-  return (
-    <div className="flex h-full flex-col">
-      {isWarframe && abilities.length > 0 && (
-        <div className="flex justify-around p-3">
-          {abilities.slice(0, 4).map((ability, i) => (
-            <div
-              key={ability.uniqueName}
-              title={`${ability.name} — ${ability.description}`}
-              className="bg-muted border-border relative size-10 overflow-hidden rounded border"
-            >
-              <div className="text-muted-foreground flex h-full w-full items-center justify-center text-xs">
-                {i + 1}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {isWarframe && abilities.length > 0 && <Separator />}
-
-      <div className="flex flex-col gap-3 p-4">
-        <CapacityBar used={0} max={60} />
-
-        {isWarframe && (
-          <StatsBlock
-            rows={[
-              ["Health", item.health],
-              ["Shield", item.shield],
-              ["Armor", item.armor],
-              ["Energy", item.power],
-              ["Sprint", item.sprintSpeed],
-            ]}
-          />
-        )}
-        {isWeapon && (
-          <StatsBlock
-            rows={[
-              ["Damage", item.totalDamage],
-              ["Crit Chance", pct(item.criticalChance)],
-              [
-                "Crit Multi",
-                item.criticalMultiplier
-                  ? `${item.criticalMultiplier}x`
-                  : undefined,
-              ],
-              ["Status", pct(item.procChance)],
-              ["Fire Rate", item.fireRate],
-              ["Magazine", item.magazineSize],
-              [
-                "Reload",
-                item.reloadTime !== undefined
-                  ? `${parseFloat(item.reloadTime.toFixed(2))}s`
-                  : undefined,
-              ],
-            ]}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
-
-function CapacityBar({ used, max }: { used: number; max: number }) {
-  const pctVal = Math.min(100, (used / max) * 100);
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground font-medium">Capacity</span>
-        <span className="font-semibold tabular-nums">
-          {used} / {max}
-        </span>
-      </div>
-      <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
-        <div
-          className="bg-primary h-full transition-all"
-          style={{ width: `${pctVal}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function StatsBlock({
-  rows,
-}: {
-  rows: [string, string | number | undefined][];
-}) {
-  const shown = rows.filter(([, v]) => v !== undefined && v !== null && v !== "");
-  if (shown.length === 0) return null;
-  return (
-    <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
-      {shown.map(([label, v]) => (
-        <div
-          key={label}
-          className="col-span-2 flex items-baseline justify-between"
-        >
-          <dt className="text-muted-foreground">{label}</dt>
-          <dd className="font-medium tabular-nums">
-            {typeof v === "number" && !Number.isInteger(v)
-              ? parseFloat(v.toFixed(2))
-              : v}
-          </dd>
-        </div>
-      ))}
-    </dl>
   );
 }
 

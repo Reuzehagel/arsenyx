@@ -158,13 +158,14 @@ export function ModSearchGrid({
       case "Name":
         copy.sort((a, b) => a.name.localeCompare(b.name));
         break;
-      case "Drain":
+      case "Drain": {
+        const maxDrain = (m: (typeof mods)[number]) =>
+          (m.baseDrain ?? 0) + (m.fusionLimit ?? 0);
         copy.sort(
-          (a, b) =>
-            (b.baseDrain ?? 0) - (a.baseDrain ?? 0) ||
-            a.name.localeCompare(b.name),
+          (a, b) => maxDrain(b) - maxDrain(a) || a.name.localeCompare(b.name),
         );
         break;
+      }
       case "Rarity":
         copy.sort(
           (a, b) =>

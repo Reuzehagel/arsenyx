@@ -49,6 +49,113 @@ const PUBLIC_DATA = resolve(REPO, "apps/web/public/data")
 const INDEX_OUT = resolve(PUBLIC_DATA, "items-index.json")
 const DETAIL_DIR = resolve(PUBLIC_DATA, "items")
 const MODS_OUT = resolve(PUBLIC_DATA, "mods-all.json")
+const HELMINTH_OUT = resolve(PUBLIC_DATA, "helminth-abilities.json")
+
+// Warframe → subsumed ability name. Mirrors legacy/src/lib/warframe/helminth.ts.
+const SUBSUMABLE_ABILITIES: Record<string, string> = {
+  Ash: "Shuriken",
+  Atlas: "Petrify",
+  Banshee: "Silence",
+  Baruuk: "Lull",
+  Caliban: "Sentient Wrath",
+  Citrine: "Fractured Blast",
+  Chroma: "Elemental Ward",
+  "Cyte-09": "Evade",
+  Dagath: "Wyrd Scythes",
+  Dante: "Dark Verse",
+  Ember: "Fire Blast",
+  Equinox: "Rest & Rage",
+  Excalibur: "Radial Blind",
+  Frost: "Ice Wave",
+  Gara: "Spectrorage",
+  Garuda: "Blood Altar",
+  Gauss: "Thermal Sunder",
+  Grendel: "Nourish",
+  Gyre: "Coil Horizon",
+  Harrow: "Condemn",
+  Hildryn: "Pillage",
+  Hydroid: "Tempest Barrage",
+  Inaros: "Desiccation",
+  Ivara: "Quiver",
+  Jade: "Ophanim Eyes",
+  Khora: "Ensnare",
+  Koumei: "Omamori",
+  Kullervo: "Wrathful Advance",
+  Lavos: "Vial Rush",
+  Limbo: "Banish",
+  Loki: "Decoy",
+  Mag: "Pull",
+  Mesa: "Shooting Gallery",
+  Mirage: "Eclipse",
+  Nekros: "Terrify",
+  Nezha: "Fire Walker",
+  Nidus: "Larva",
+  Nokko: "Brightbonnet",
+  Nova: "Null Star",
+  Nyx: "Mind Control",
+  Oberon: "Smite",
+  Octavia: "Resonator",
+  Oraxia: "Webbed Embrace",
+  Protea: "Dispensary",
+  Qorvex: "Chyrinka Pillar",
+  Revenant: "Reave",
+  Rhino: "Roar",
+  Saryn: "Molt",
+  Sevagoth: "Gloom",
+  Styanax: "Tharros Strike",
+  Temple: "Pyrotechnics",
+  Titania: "Spellbind",
+  Trinity: "Well of Life",
+  Uriel: "Remedium",
+  Valkyr: "Warcry",
+  Vauban: "Tesla Nervos",
+  Volt: "Shock",
+  Voruna: "Lycath's Hunt",
+  Wisp: "Breach Surge",
+  Wukong: "Defy",
+  Xaku: "Xata's Whisper",
+  Yareli: "Aquablades",
+  Zephyr: "Airburst",
+}
+
+interface HelminthAbility {
+  uniqueName: string
+  name: string
+  imageName?: string
+  description: string
+  source: string
+}
+
+async function buildHelminthAbilities(): Promise<HelminthAbility[]> {
+  const body = await readFile(resolve(WFCD_JSON, "Warframes.json"), "utf8")
+  const warframes = JSON.parse(body) as Array<{
+    name: string
+    abilities?: Array<{
+      uniqueName: string
+      name: string
+      imageName?: string
+      description: string
+    }>
+  }>
+  const byName = new Map(warframes.map((w) => [w.name, w]))
+  const out: HelminthAbility[] = []
+
+  const helminth = byName.get("Helminth")
+  if (helminth?.abilities) {
+    for (const a of helminth.abilities) {
+      out.push({ ...a, source: "Helminth" })
+    }
+  }
+
+  for (const [frame, abilityName] of Object.entries(SUBSUMABLE_ABILITIES)) {
+    const wf = byName.get(frame)
+    const a = wf?.abilities?.find((x) => x.name === abilityName)
+    if (a) out.push({ ...a, source: frame })
+  }
+
+  out.sort((a, b) => a.name.localeCompare(b.name))
+  return out
+}
 
 async function loadAllItems(): Promise<BrowseableItem[]> {
   const all: BrowseableItem[] = []
@@ -120,6 +227,14 @@ async function main() {
   const modsMb = (Buffer.byteLength(modsBody, "utf8") / 1024 / 1024).toFixed(2)
   console.log(
     `✓ wrote ${mods.length} normalized mods → mods-all.json (${modsMb} MB)`,
+  )
+
+  const helminth = await buildHelminthAbilities()
+  const helminthBody = JSON.stringify(helminth)
+  await writeFile(HELMINTH_OUT, helminthBody, "utf8")
+  const helminthKb = (Buffer.byteLength(helminthBody, "utf8") / 1024).toFixed(1)
+  console.log(
+    `✓ wrote ${helminth.length} helminth abilities → helminth-abilities.json (${helminthKb} KB)`,
   )
 }
 

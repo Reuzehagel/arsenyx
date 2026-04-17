@@ -40,11 +40,11 @@ export function PolarityPicker({
             onClick={() => onPick(p)}
             aria-label={`Apply ${p} polarity`}
             className={cn(
-              "hover:bg-muted flex size-8 items-center justify-center rounded-md transition-colors",
+              "hover:bg-muted flex size-6 items-center justify-center rounded transition-colors",
               current === p && "bg-muted ring-primary ring-2",
             )}
           >
-            <PolarityIcon polarity={p} className="size-5" />
+            <PolarityIcon polarity={p} className="size-4" />
           </button>
         ))}
         <button
@@ -53,11 +53,11 @@ export function PolarityPicker({
           aria-label="Clear polarity"
           title="Clear (apply Universal Forma)"
           className={cn(
-            "hover:bg-muted text-muted-foreground flex size-8 items-center justify-center rounded-md transition-colors",
+            "hover:bg-muted text-muted-foreground flex size-6 items-center justify-center rounded transition-colors",
             current === "universal" && "bg-muted ring-primary ring-2",
           )}
         >
-          <X className="size-4" />
+          <X className="size-3" />
         </button>
       </div>
     </div>

@@ -1,4 +1,11 @@
 export { ArcaneSlot } from "./arcane-slot";
+export { ItemSidebar } from "./item-sidebar";
+export {
+  calculateCapacity,
+  calculateFormaCount,
+  calculateModEndoCost,
+  calculateTotalEndoCost,
+} from "./calculations";
 export { getArcaneSlotCount } from "./layout";
 export { ModCard } from "./mod-card";
 export { ModSearchGrid } from "./mod-search-grid";

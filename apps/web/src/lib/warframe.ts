@@ -48,6 +48,7 @@ export interface ItemAbility {
   uniqueName: string;
   name: string;
   description: string;
+  imageName?: string;
 }
 
 export interface DetailItem extends BrowseItem {
