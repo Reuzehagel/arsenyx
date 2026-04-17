@@ -15,7 +15,9 @@ export function PolarityIcon({
   className?: string;
   color?: string;
 }) {
-  if (polarity === "universal" || polarity === "any") return null;
+  // "universal" means "explicitly cleared" — render nothing.
+  // "any" is Universal/Omni Forma, which has its own glyph (Any_Pol.svg).
+  if (polarity === "universal") return null;
   const url = getPolarityIconUrl(polarity);
   return (
     <span

@@ -1,5 +1,5 @@
 import { Search, X } from "lucide-react";
-import { useDeferredValue, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   InputGroup,
@@ -7,6 +7,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import { Kbd } from "@/components/ui/kbd";
 import {
   Select,
   SelectContent,
@@ -18,6 +19,8 @@ import { cn } from "@/lib/utils";
 import type { Mod, Polarity } from "@arsenyx/shared/warframe/types";
 
 import { ModCard } from "./mod-card";
+import type { ModSlotKind } from "./mod-slot";
+import { isAuraMod, isExilusCompatible } from "./use-build-slots";
 
 const SORT_OPTIONS = ["Drain", "Name", "Rarity"] as const;
 const RARITY_OPTIONS = [
@@ -99,18 +102,52 @@ interface ModSearchGridProps {
   mods: Mod[];
   usedModNames?: Set<string>;
   onSelect?: (mod: Mod) => void;
+  /**
+   * When set, mods incompatible with this slot kind are dimmed (aura-only for
+   * the aura slot, exilus/utility-only for exilus). `"normal"` or undefined
+   * disables the kind filter.
+   */
+  selectedSlotKind?: ModSlotKind;
+}
+
+function slotKindPredicate(kind: ModSlotKind | undefined) {
+  if (!kind || kind === "normal") return null;
+  if (kind === "aura") return (m: Mod) => isAuraMod(m);
+  return (m: Mod) => !isAuraMod(m) && isExilusCompatible(m);
 }
 
 export function ModSearchGrid({
   mods,
   usedModNames,
   onSelect,
+  selectedSlotKind,
 }: ModSearchGridProps) {
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
   const [sort, setSort] = useState<SortOption>("Drain");
   const [rarity, setRarity] = useState<RarityFilter>("All");
   const [polarity, setPolarity] = useState<PolarityFilter>("All");
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  // `/` focuses the search from anywhere on the page, mirroring the browse page.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "/") return;
+      const t = e.target as HTMLElement | null;
+      if (
+        t?.tagName === "INPUT" ||
+        t?.tagName === "TEXTAREA" ||
+        t?.isContentEditable
+      ) {
+        return;
+      }
+      e.preventDefault();
+      searchRef.current?.focus();
+      searchRef.current?.select();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   // Stable ordering: computed from `mods` + `sort` only. Filters dim instead
   // of remove, so positions don't shift when search/rarity/polarity narrow
@@ -155,6 +192,8 @@ export function ModSearchGrid({
     const hasRarity = rarity !== "All";
     const hasPolarity = polarity !== "All";
 
+    const kindPred = slotKindPredicate(selectedSlotKind);
+
     const set = new Set<string>();
     const hits: Mod[] = [];
     const rest: Mod[] = [];
@@ -162,7 +201,8 @@ export function ModSearchGrid({
       const matchesFilters =
         (!hasRarity || m.rarity === rarity) &&
         (!hasPolarity || m.polarity === polarity) &&
-        (!hasQuery || (searchIndex.get(m.uniqueName) ?? "").includes(q));
+        (!hasQuery || (searchIndex.get(m.uniqueName) ?? "").includes(q)) &&
+        (!kindPred || kindPred(m));
       if (matchesFilters) {
         set.add(m.uniqueName);
         hits.push(m);
@@ -170,11 +210,15 @@ export function ModSearchGrid({
         rest.push(m);
       }
     }
+    // Float matches to the front whenever a narrowing filter is active
+    // (search query or a slot-kind target). Rarity/polarity filters just dim
+    // in place — they're coarser and reshuffling would be disorienting.
+    const shouldFloat = hasQuery || !!kindPred;
     return {
       matches: set,
-      displayed: hasQuery ? [...hits, ...rest] : ordered,
+      displayed: shouldFloat ? [...hits, ...rest] : ordered,
     };
-  }, [ordered, deferredQuery, rarity, polarity, searchIndex]);
+  }, [ordered, deferredQuery, rarity, polarity, searchIndex, selectedSlotKind]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -191,11 +235,12 @@ export function ModSearchGrid({
             <Search className="size-4" />
           </InputGroupAddon>
           <InputGroupInput
+            ref={searchRef}
             placeholder="Search mods…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          {query.length > 0 && (
+          {query.length > 0 ? (
             <InputGroupAddon align="inline-end">
               <InputGroupButton
                 size="icon-xs"
@@ -204,6 +249,10 @@ export function ModSearchGrid({
               >
                 <X />
               </InputGroupButton>
+            </InputGroupAddon>
+          ) : (
+            <InputGroupAddon align="inline-end">
+              <Kbd>/</Kbd>
             </InputGroupAddon>
           )}
         </InputGroup>

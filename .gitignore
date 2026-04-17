@@ -50,6 +50,10 @@ next-env.d.ts
 
 # prisma generated files
 /legacy/src/generated/prisma
+# stray copy if `prisma generate` is run from the repo root (CWD) — can be
+# deleted; safe because legacy imports resolve to legacy/src/generated via
+# its tsconfig paths.
+/src/generated/
 
 # claude temp files
 /.claude/

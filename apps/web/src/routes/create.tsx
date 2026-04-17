@@ -10,17 +10,21 @@ import { Suspense, useMemo } from "react";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import {
+  ArcaneSlot,
+  CANONICAL_POLARITIES,
+  getArcaneSlotCount,
   ModSearchGrid,
   ModSlot,
   useBuildSlots,
+  type ModSlotKind,
   type SlotId,
 } from "@/components/build-editor";
+import type { Polarity } from "@arsenyx/shared/warframe/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { itemQuery } from "@/lib/item-query";
 import { modsQuery } from "@/lib/mods-query";
-import { cn } from "@/lib/utils";
 import {
   CATEGORIES,
   getImageUrl,
@@ -100,13 +104,21 @@ function EditorShell() {
             <ItemSidebar item={item} category={category} />
           </div>
 
-          <div className="bg-card min-w-0 flex-1 overflow-hidden rounded-lg border p-2 sm:p-4 lg:ml-[calc(260px+1rem)]">
+          <div
+            className="bg-card min-w-0 flex-1 overflow-hidden rounded-lg border p-2 sm:p-4 lg:ml-[calc(260px+1rem)]"
+            onClick={(e) => {
+              if (!(e.target instanceof HTMLElement)) return;
+              if (!e.target.closest("[data-build-slot]")) {
+                slots.select(null);
+              }
+            }}
+          >
             <ModGrid
+              item={item}
               category={category}
               isCompanion={isCompanion}
               normalSlotCount={normalSlotCount}
-              placed={slots.placed}
-              onRemove={slots.remove}
+              slots={slots}
             />
           </div>
         </div>
@@ -116,6 +128,11 @@ function EditorShell() {
             item={item}
             usedModNames={slots.usedNames}
             onSelect={slots.place}
+            selectedSlotKind={
+              slots.selected === "aura" || slots.selected === "exilus"
+                ? slots.selected
+                : undefined
+            }
           />
         </div>
 
@@ -322,62 +339,93 @@ function StatsBlock({
   );
 }
 
+const CANONICAL_SET = new Set<Polarity>(CANONICAL_POLARITIES);
+
+function toPolarity(v: string | undefined): Polarity | undefined {
+  if (!v) return undefined;
+  return CANONICAL_SET.has(v as Polarity) ? (v as Polarity) : undefined;
+}
+
 function ModGrid({
+  item,
   category,
   isCompanion,
   normalSlotCount,
-  placed,
-  onRemove,
+  slots,
 }: {
+  item: DetailItem;
   category: BrowseCategory;
   isCompanion: boolean;
   normalSlotCount: number;
-  placed: Partial<Record<SlotId, import("@arsenyx/shared/warframe/types").Mod>>;
-  onRemove: (id: SlotId) => void;
+  slots: import("@/components/build-editor").BuildSlotsState;
 }) {
   const slotsPerRow = isCompanion ? 5 : 4;
   const isWarframe = category === "warframes" || category === "necramechs";
+  const arcaneCount = getArcaneSlotCount(category);
+
+  // WFCD `aura` is usually a string, but a few items (e.g. Jade) ship it as string[].
+  const auraRaw = Array.isArray(item.aura) ? item.aura[0] : item.aura;
+  const auraPolarity = toPolarity(auraRaw);
+  const polarities = item.polarities ?? [];
+
+  const normalRows: number[][] = [];
+  for (let i = 0; i < normalSlotCount; i += slotsPerRow) {
+    normalRows.push(
+      Array.from(
+        { length: Math.min(slotsPerRow, normalSlotCount - i) },
+        (_, j) => i + j,
+      ),
+    );
+  }
+
+  const slotProps = (id: SlotId, innate?: Polarity) => {
+    const placed = slots.placed[id];
+    const forma = slots.formaPolarities[id];
+    return {
+      slotPolarity: innate,
+      formaPolarity: forma,
+      mod: placed?.mod,
+      rank: placed?.rank,
+      selected: slots.selected === id,
+      onClick: () => slots.select(id),
+      onRemove: placed ? () => slots.remove(id) : undefined,
+      onPickPolarity: (p: Polarity) => slots.setForma(id, p),
+      onRankChange: placed
+        ? (delta: number) => slots.setRank(id, placed.rank + delta)
+        : undefined,
+    };
+  };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6 sm:gap-4">
       {(isWarframe || isCompanion) && (
-        <>
-          <div className="flex flex-wrap gap-3">
-            <ModSlot
-              kind="aura"
-              mod={placed["aura"]}
-              onClick={placed["aura"] ? () => onRemove("aura") : undefined}
-            />
-            <ModSlot
-              kind="exilus"
-              mod={placed["exilus"]}
-              onClick={placed["exilus"] ? () => onRemove("exilus") : undefined}
-            />
-          </div>
-          <Separator />
-        </>
+        <div className="flex w-full justify-center gap-2 sm:gap-4">
+          <ModSlot kind="aura" {...slotProps("aura", auraPolarity)} />
+          <ModSlot kind="exilus" {...slotProps("exilus", undefined)} />
+        </div>
       )}
 
-      <div
-        className={cn(
-          "grid gap-3",
-          slotsPerRow === 4
-            ? "grid-cols-2 sm:grid-cols-4"
-            : "grid-cols-2 sm:grid-cols-5",
-        )}
-      >
-        {Array.from({ length: normalSlotCount }).map((_, i) => {
-          const id: SlotId = `normal-${i}`;
-          const mod = placed[id];
-          return (
-            <ModSlot
-              key={i}
-              mod={mod}
-              onClick={mod ? () => onRemove(id) : undefined}
-            />
-          );
-        })}
-      </div>
+      {normalRows.map((row, rowIdx) => (
+        <div
+          key={rowIdx}
+          className="grid grid-cols-2 justify-center gap-x-2 gap-y-6 sm:flex sm:gap-4"
+        >
+          {row.map((i) => {
+            const id: SlotId = `normal-${i}`;
+            return (
+              <ModSlot key={i} {...slotProps(id, toPolarity(polarities[i]))} />
+            );
+          })}
+        </div>
+      ))}
+
+      {arcaneCount > 0 && (
+        <div className="flex w-full items-start justify-center gap-3 sm:gap-6">
+          {Array.from({ length: arcaneCount }).map((_, i) => (
+            <ArcaneSlot key={i} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -386,10 +434,12 @@ function SearchPanel({
   item,
   usedModNames,
   onSelect,
+  selectedSlotKind,
 }: {
   item: DetailItem;
   usedModNames: Set<string>;
   onSelect: (mod: import("@arsenyx/shared/warframe/types").Mod) => void;
+  selectedSlotKind?: ModSlotKind;
 }) {
   const { data: allMods } = useSuspenseQuery(modsQuery);
   const compatible = useMemo(
@@ -410,6 +460,7 @@ function SearchPanel({
       mods={compatible}
       usedModNames={usedModNames}
       onSelect={onSelect}
+      selectedSlotKind={selectedSlotKind}
     />
   );
 }

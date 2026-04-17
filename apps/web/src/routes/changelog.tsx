@@ -45,6 +45,16 @@ const CHANGELOG: ChangelogEntry[] = [
         description:
           "Click-to-place mods — click a compatible mod to drop it in the next free slot (aura / exilus / normal); click a filled slot to remove. Mods placed at max rank. Ranks, polarities, and capacity math land in a follow-up slice",
       },
+      {
+        type: "feat",
+        description:
+          "Mod grid visuals — centered layout with per-slot polarity stamps from the item's innate polarities, `+` affordance on empty slots, and arcane slot placeholders (2 for warframes/necramechs, 1 for weapons)",
+      },
+      {
+        type: "feat",
+        description:
+          "Slot targeting + polarity picker — click an empty slot to select it and open a popover to forma any polarity; the next mod you click lands in that slot. Placed mods default to max rank; hover a placed mod and press `-`/`=` to change its rank",
+      },
     ],
   },
   {

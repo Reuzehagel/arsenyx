@@ -7,6 +7,10 @@ import { routeTree } from "./routeTree.gen";
 import { ThemeProvider } from "@/components/theme-provider";
 import "@/styles/globals.css";
 
+if (import.meta.env.DEV) {
+  import("cssstudio").then(({ startStudio }) => startStudio());
+}
+
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000 } },
 });
