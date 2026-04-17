@@ -244,6 +244,10 @@ export function ModCard({
 
   const size = showExpanded ? DISPLAY_SIZE.expanded : DISPLAY_SIZE.compact;
 
+  // Rank dots hang ~32px below the 64px compact frame; extend the hover
+  // surface so cursor motion across the dots doesn't trigger mouseleave.
+  const HOVER_OVERHANG = 32;
+
   return (
     <div
       className={cn(
@@ -254,7 +258,7 @@ export function ModCard({
       )}
       style={{
         width: DISPLAY_SIZE.compact.width,
-        height: DISPLAY_SIZE.compact.height,
+        height: DISPLAY_SIZE.compact.height + HOVER_OVERHANG,
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}

@@ -359,7 +359,7 @@ function SearchPanel({ item }: { item: DetailItem }) {
           {compatible.length} mod{compatible.length === 1 ? "" : "s"}
         </span>
       </div>
-      <div className="flex flex-wrap gap-x-3 gap-y-10 pt-2">
+      <div className="flex flex-wrap gap-x-3 gap-y-3 pt-2">
         {compatible.map((mod) => (
           <ModCard key={mod.uniqueName} mod={mod} />
         ))}
