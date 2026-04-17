@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { cn } from "@/lib/utils";
 import {
@@ -261,8 +262,6 @@ export interface ModCardProps {
 // Rank dots hang ~32px below the 64px compact frame; extend the hover surface
 // so cursor motion across the dots doesn't trigger mouseleave.
 const HOVER_OVERHANG = 32;
-// Center the expanded card around the compact visual.
-const COMPACT_CENTER_Y = DISPLAY_SIZE.compact.height / 2;
 
 export function ModCard({
   mod,
@@ -277,6 +276,10 @@ export function ModCard({
   className,
 }: ModCardProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const [hoverCenter, setHoverCenter] = useState<{ x: number; y: number } | null>(
+    null,
+  );
+  const compactRef = useRef<HTMLDivElement>(null);
   const rarity = normalizeRarity(mod.rarity);
   const maxRank = mod.fusionLimit ?? 0;
   // Default to max rank so preview cards read the way equipped mods look
@@ -335,13 +338,23 @@ export function ModCard({
         width: DISPLAY_SIZE.compact.width,
         height: DISPLAY_SIZE.compact.height + HOVER_OVERHANG,
       }}
-      onMouseEnter={() => setIsHovered(true)}
+      onMouseEnter={() => {
+        const r = compactRef.current?.getBoundingClientRect();
+        if (r) {
+          setHoverCenter({
+            x: r.left + DISPLAY_SIZE.compact.width / 2,
+            y: r.top + DISPLAY_SIZE.compact.height / 2,
+          });
+        }
+        setIsHovered(true);
+      }}
       onMouseLeave={() => setIsHovered(false)}
       onClick={onClick}
     >
       {/* Compact — always mounted, fades on hover so it crossfades into
           the expanded card. */}
       <div
+        ref={compactRef}
         className="absolute top-0 left-0 transition-opacity duration-100 ease-out"
         style={{
           width: DISPLAY_SIZE.compact.width,
@@ -359,33 +372,40 @@ export function ModCard({
         />
       </div>
 
-      {/* Expanded — mounted only while hovered. 150ms scale-in keyframe
-          (see `mod-card-expand` in globals.css) matches legacy's behavior. */}
-      {effectiveHover && (
-        <div
-          className="pointer-events-none absolute left-1/2 z-50"
-          style={{
-            top: `${COMPACT_CENTER_Y}px`,
-            width: DISPLAY_SIZE.expanded.width,
-            height: DISPLAY_SIZE.expanded.height,
-            transform: "translate(-50%, -50%)",
-            transformOrigin: "center center",
-            animation:
-              "mod-card-expand 150ms cubic-bezier(0.4, 0, 0.2, 1) forwards",
-            filter: "drop-shadow(0 0 20px rgba(0,0,0,0.8))",
-          }}
-        >
-          <ExpandedModCard
-            mod={mod}
-            rarity={rarity}
-            rank={effectiveRank}
-            isMaxRank={isMaxRank}
-            setCount={setCount}
-            drainOverride={drainOverride}
-            matchState={matchState}
-          />
-        </div>
-      )}
+      {/* Expanded — portaled to <body> so it escapes the horizontal-scroll
+          parent's clipping. Positioned with `fixed` at the compact card's
+          viewport-center; scroll listener closes hover so stale coords
+          don't matter. 150ms scale-in keyframe matches legacy's behavior. */}
+      {effectiveHover &&
+        hoverCenter &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="pointer-events-none fixed z-50"
+            style={{
+              top: hoverCenter.y,
+              left: hoverCenter.x,
+              width: DISPLAY_SIZE.expanded.width,
+              height: DISPLAY_SIZE.expanded.height,
+              transform: "translate(-50%, -50%)",
+              transformOrigin: "center center",
+              animation:
+                "mod-card-expand 150ms cubic-bezier(0.4, 0, 0.2, 1) forwards",
+              filter: "drop-shadow(0 0 20px rgba(0,0,0,0.8))",
+            }}
+          >
+            <ExpandedModCard
+              mod={mod}
+              rarity={rarity}
+              rank={effectiveRank}
+              isMaxRank={isMaxRank}
+              setCount={setCount}
+              drainOverride={drainOverride}
+              matchState={matchState}
+            />
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

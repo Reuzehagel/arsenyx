@@ -9,7 +9,7 @@ import { Suspense, useMemo } from "react";
 
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
-import { ModCard, ModSlot } from "@/components/build-editor";
+import { ModSearchGrid, ModSlot } from "@/components/build-editor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -351,24 +351,7 @@ function SearchPanel({ item }: { item: DetailItem }) {
     [allMods, item.type, item.category, item.name],
   );
 
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-lg font-semibold">Compatible Mods</h2>
-        <span className="text-muted-foreground text-sm">
-          {compatible.length} mod{compatible.length === 1 ? "" : "s"}
-        </span>
-      </div>
-      <div className="flex flex-wrap gap-x-3 gap-y-3 pt-2">
-        {compatible.map((mod) => (
-          <ModCard key={mod.uniqueName} mod={mod} />
-        ))}
-      </div>
-      <p className="text-muted-foreground pt-2 text-center text-xs">
-        Click-to-place, ranks, polarities, and forma land in Slice 6c.
-      </p>
-    </div>
-  );
+  return <ModSearchGrid mods={compatible} />;
 }
 
 function GuidePlaceholder() {

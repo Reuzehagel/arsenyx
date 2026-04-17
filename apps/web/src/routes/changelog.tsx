@@ -35,6 +35,11 @@ const CHANGELOG: ChangelogEntry[] = [
         description:
           "Build editor shell — /create?item=… with item sidebar and breadcrumb (mod editor + save land in follow-up slices)",
       },
+      {
+        type: "feat",
+        description:
+          "Compatible Mods grid — 2-row horizontal scroll with search, sort, and rarity/polarity filters; positions stay stable when filtering (no reshuffling)",
+      },
     ],
   },
   {
