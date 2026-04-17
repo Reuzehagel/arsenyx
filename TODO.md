@@ -8,6 +8,8 @@
 
 See [docs/migration-inventory.md](docs/migration-inventory.md) for the full inventory.
 
+Work happens on the `rewrite` branch (tracks `origin/rewrite`). Legacy Next.js app still runs side-by-side via `just legacy` (or `just legacy-nodb` without Docker); new stack via `just web` / `just dev`.
+
 ### Done
 
 - [x] Bun workspaces monorepo scaffold (`apps/web`, `apps/api`, `packages/shared`, `legacy/`)
