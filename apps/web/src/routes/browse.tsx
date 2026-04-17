@@ -12,7 +12,12 @@ import {
   SORT_VALUES,
   type SortOption,
 } from "@/components/browse/sort-dropdown";
-import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
+import { Kbd } from "@/components/ui/kbd";
 import {
   isValidCategory,
   type BrowseCategory,
@@ -140,19 +145,25 @@ function BrowseContent() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3 sm:flex-row">
-        <Input
-          ref={searchRef}
-          placeholder="Search items… (press / to focus)"
-          value={q}
-          onChange={(e) => {
-            const next = e.target.value;
-            navigate({
-              search: (s) => ({ ...s, q: next || undefined }),
-              replace: true,
-            });
-          }}
-          className="flex-1"
-        />
+        <InputGroup className="flex-1">
+          <InputGroupInput
+            ref={searchRef}
+            placeholder="Search items…"
+            value={q}
+            onChange={(e) => {
+              const next = e.target.value;
+              navigate({
+                search: (s) => ({ ...s, q: next || undefined }),
+                replace: true,
+              });
+            }}
+          />
+          {!q && (
+            <InputGroupAddon align="inline-end">
+              <Kbd>/</Kbd>
+            </InputGroupAddon>
+          )}
+        </InputGroup>
         <div className="flex gap-3">
           <SortDropdown
             value={sort}

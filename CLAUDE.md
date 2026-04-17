@@ -23,7 +23,7 @@ Game data (items, mods, arcanes) comes from static JSON files (`src/data/warfram
 
 - Update the changelog (`src/app/changelog/page.tsx`) when completing user-facing changes — add entries to the `CHANGELOG` array
 - Run `bun build` before claiming work is done — `bun dev` hides type errors
-- Invoke the `shadcn` skill before any frontend work (new components, UI changes, styling)
+- Invoke the `shadcn` skill before any frontend work (new components, UI changes, styling). **Monorepo gotcha:** the skill's bootstrap runs `shadcn info` from the current working directory, which errors at the monorepo root (`error: monorepo_root`). Workaround: either start Claude Code with cwd `apps/web` (preferred), or skip the skill and work with the CLI directly — `cd apps/web && bunx shadcn@latest view <name>` to inspect, `cd apps/web && bunx shadcn@latest add <name> -c apps/web` to add. When adding a component whose deps conflict with our customised `button`/`input`, fetch the file via `view` + write manually to `apps/web/src/components/ui/` and rewrite the `@/registry/base-nova/...` imports to `@/lib/utils` and `@/components/ui/...`
 - Use Server Components by default; only add `"use client"` when actually needed
 - Preserve keyboard navigation in browse components
 - Use `unoptimized` on all Next.js `<Image>` components
