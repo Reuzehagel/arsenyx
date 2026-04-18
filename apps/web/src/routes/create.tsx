@@ -2,30 +2,31 @@ import {
   createFileRoute,
   redirect,
   Link as RouterLink,
+  useNavigate,
 } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { authClient } from "@/lib/auth-client";
+import { API_URL } from "@/lib/constants";
+import { buildQuery, type SavedBuildData } from "@/lib/build-query";
 import { Diamond, Gem, Pencil, UploadCloud, X } from "lucide-react";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import {
-  ArcaneSlot,
+  ArcaneRow,
   calculateCapacity,
   calculateFormaCount,
   calculateTotalEndoCost,
-  CANONICAL_POLARITIES,
   getArcaneSlotCount,
   GuideEditor,
-  hasAuraSlot,
-  hasExilusSlot,
   ItemSidebar,
+  ModGrid,
   ModSearchGrid,
-  ModSlot,
   RivenDialog,
+  toPolarity,
   useArcaneSlots,
   useBuildSlots,
-  type ArcaneSlotsState,
   type ModSlotKind,
   type RivenDialogValues,
   type SlotId,
@@ -39,7 +40,7 @@ import type { Mod } from "@arsenyx/shared/warframe/types";
 import { arcanesQuery } from "@/lib/arcanes-query";
 import { getArcanesForCategory } from "@arsenyx/shared/warframe/arcanes";
 import { helminthQuery, type HelminthAbility } from "@/lib/helminth-query";
-import type { PlacedShard } from "@/lib/shards";
+import { padShards, type PlacedShard } from "@/lib/shards";
 import type { Polarity } from "@arsenyx/shared/warframe/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,7 @@ import { getModsForItem } from "@arsenyx/shared/warframe/mods";
 type CreateSearch = {
   item: string;
   category: BrowseCategory;
+  build?: string;
 };
 
 export const Route = createFileRoute("/create")({
@@ -67,7 +69,8 @@ export const Route = createFileRoute("/create")({
       typeof search.category === "string" && isValidCategory(search.category)
         ? search.category
         : ("warframes" as BrowseCategory);
-    return { item, category };
+    const build = typeof search.build === "string" ? search.build : undefined;
+    return { item, category, build };
   },
   beforeLoad: ({ search }) => {
     if (!search.item) {
@@ -77,6 +80,7 @@ export const Route = createFileRoute("/create")({
   loaderDeps: ({ search }) => ({
     item: search.item,
     category: search.category,
+    build: search.build,
   }),
   loader: async ({ context, deps }) => {
     const tasks: Promise<unknown>[] = [
@@ -86,6 +90,9 @@ export const Route = createFileRoute("/create")({
     ];
     if (deps.category === "warframes") {
       tasks.push(context.queryClient.ensureQueryData(helminthQuery));
+    }
+    if (deps.build) {
+      tasks.push(context.queryClient.ensureQueryData(buildQuery(deps.build)));
     }
     await Promise.all(tasks);
   },
@@ -111,16 +118,25 @@ function CreatePage() {
 }
 
 function EditorShell() {
-  const { item: slug, category } = Route.useSearch();
+  const { item: slug, category, build: buildSlug } = Route.useSearch();
   const { data: item } = useSuspenseQuery(itemQuery(category, slug));
+  const { data: existingBuild } = useQuery({
+    ...buildQuery(buildSlug ?? ""),
+    enabled: !!buildSlug,
+  });
+  const savedData = (existingBuild?.buildData ?? {}) as SavedBuildData;
+
   const categoryLabel =
     CATEGORIES.find((c) => c.id === category)?.label ?? category;
 
   const isCompanion = category === "companions";
   const normalSlotCount = 8;
-  const slots = useBuildSlots(normalSlotCount);
+  const slots = useBuildSlots(normalSlotCount, {
+    placed: savedData.slots,
+    formaPolarities: savedData.formaPolarities,
+  });
   const arcaneCount = getArcaneSlotCount(category);
-  const arcanes = useArcaneSlots(arcaneCount);
+  const arcanes = useArcaneSlots(arcaneCount, savedData.arcanes);
   const { data: allArcanes } = useSuspenseQuery(arcanesQuery);
   const arcaneOptions = useMemo(
     () => getArcanesForCategory(allArcanes, category),
@@ -149,9 +165,23 @@ function EditorShell() {
     return () => window.removeEventListener("keydown", onKey);
   }, [slots, arcanes]);
 
-  const [hasReactor, setHasReactor] = useState(true);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { data: session } = authClient.useSession();
+
+  const [buildName, setBuildName] = useState(
+    () => existingBuild?.name ?? item.name,
+  );
+  const [saveStatus, setSaveStatus] = useState<
+    "idle" | "saving" | "error"
+  >("idle");
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const [hasReactor, setHasReactor] = useState(
+    () => savedData.hasReactor ?? true,
+  );
   const [shards, setShards] = useState<(PlacedShard | null)[]>(() =>
-    Array.from({ length: 5 }, () => null),
+    padShards(savedData.shards),
   );
   const setShard = (i: number, s: PlacedShard | null) => {
     setShards((prev) => {
@@ -206,10 +236,16 @@ function EditorShell() {
     slots.place(mod);
   };
 
-  const [guideSummary, setGuideSummary] = useState("");
-  const [guideDescription, setGuideDescription] = useState("");
+  const [guideSummary, setGuideSummary] = useState(
+    () => existingBuild?.guide?.summary ?? "",
+  );
+  const [guideDescription, setGuideDescription] = useState(
+    () => existingBuild?.guide?.description ?? "",
+  );
 
-  const [helminth, setHelminth] = useState<Record<number, HelminthAbility>>({});
+  const [helminth, setHelminth] = useState<Record<number, HelminthAbility>>(
+    () => savedData.helminth ?? {},
+  );
   const setHelminthAt = (i: number, ab: HelminthAbility | null) => {
     setHelminth((prev) => {
       if (!ab) {
@@ -244,6 +280,62 @@ function EditorShell() {
       }),
     [auraInnate, normalInnates, slots.formaPolarities],
   );
+  const handleSave = async () => {
+    if (!session?.user) {
+      navigate({ to: "/auth/signin" });
+      return;
+    }
+    setSaveStatus("saving");
+    setSaveError(null);
+    try {
+      const isUpdate = !!existingBuild && existingBuild.isOwner;
+      const body = {
+        name: buildName.trim() || item.name,
+        visibility: "PUBLIC" as const,
+        buildData: {
+          version: 1,
+          slots: slots.placed,
+          formaPolarities: slots.formaPolarities,
+          arcanes: arcanes.placed,
+          shards,
+          hasReactor,
+          helminth,
+        },
+        guide: {
+          summary: guideSummary.trim() || null,
+          description: guideDescription.trim() || null,
+        },
+        ...(isUpdate
+          ? {}
+          : {
+              itemUniqueName: item.uniqueName,
+              itemCategory: category,
+              itemName: item.name,
+              itemImageName: item.imageName ?? null,
+            }),
+      };
+      const url = isUpdate
+        ? `${API_URL}/builds/${existingBuild!.slug}`
+        : `${API_URL}/builds`;
+      const r = await fetch(url, {
+        method: isUpdate ? "PATCH" : "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({ error: "save_failed" }));
+        throw new Error(err.error ?? "save_failed");
+      }
+      const { slug } = (await r.json()) as { id: string; slug: string };
+      await queryClient.invalidateQueries({ queryKey: ["build", slug] });
+      navigate({ to: "/builds/$slug", params: { slug } });
+    } catch (err) {
+      setSaveStatus("error");
+      setSaveError(err instanceof Error ? err.message : "save_failed");
+    }
+  };
+
   const capacity = useMemo(
     () =>
       calculateCapacity({
@@ -265,6 +357,12 @@ function EditorShell() {
         categoryLabel={categoryLabel}
         totalEndoCost={totalEndoCost}
         formaCount={formaCount}
+        buildName={buildName}
+        onBuildNameChange={setBuildName}
+        onSave={handleSave}
+        saveStatus={saveStatus}
+        saveError={saveError}
+        isSignedIn={!!session?.user}
       />
 
       <div className="flex flex-col gap-4">
@@ -363,6 +461,12 @@ function EditorHeader({
   categoryLabel,
   totalEndoCost,
   formaCount,
+  buildName,
+  onBuildNameChange,
+  onSave,
+  saveStatus,
+  saveError,
+  isSignedIn,
 }: {
   item: DetailItem;
   category: BrowseCategory;
@@ -370,8 +474,13 @@ function EditorHeader({
   categoryLabel: string;
   totalEndoCost: number;
   formaCount: number;
+  buildName: string;
+  onBuildNameChange: (name: string) => void;
+  onSave: () => void;
+  saveStatus: "idle" | "saving" | "error";
+  saveError: string | null;
+  isSignedIn: boolean;
 }) {
-  const [buildName, setBuildName] = useState(item.name);
   const [editing, setEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -384,7 +493,7 @@ function EditorHeader({
   };
   const commit = () => {
     const trimmed = buildName.trim();
-    setBuildName(trimmed || item.name);
+    onBuildNameChange(trimmed || item.name);
     setEditing(false);
   };
   return (
@@ -404,14 +513,11 @@ function EditorHeader({
                 <Input
                   ref={inputRef}
                   value={buildName}
-                  onChange={(e) => setBuildName(e.target.value)}
+                  onChange={(e) => onBuildNameChange(e.target.value)}
                   onBlur={commit}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") commit();
-                    else if (e.key === "Escape") {
-                      setBuildName(buildName);
-                      setEditing(false);
-                    }
+                    else if (e.key === "Escape") setEditing(false);
                   }}
                   className="h-8 text-xl font-bold tracking-tight md:text-2xl"
                 />
@@ -454,10 +560,21 @@ function EditorHeader({
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button size="sm" disabled>
+        <div className="flex items-center gap-2">
+          {saveStatus === "error" && saveError ? (
+            <span className="text-destructive text-xs">{saveError}</span>
+          ) : null}
+          <Button
+            size="sm"
+            onClick={onSave}
+            disabled={saveStatus === "saving"}
+          >
             <UploadCloud data-icon="inline-start" />
-            Publish (sign in)
+            {saveStatus === "saving"
+              ? "Saving…"
+              : isSignedIn
+                ? "Save"
+                : "Save (sign in)"}
           </Button>
           <Button
             variant="outline"
@@ -478,132 +595,6 @@ function EditorHeader({
   );
 }
 
-const CANONICAL_SET = new Set<Polarity>(CANONICAL_POLARITIES);
-
-function toPolarity(v: string | undefined): Polarity | undefined {
-  if (!v) return undefined;
-  return CANONICAL_SET.has(v as Polarity) ? (v as Polarity) : undefined;
-}
-
-function ArcaneRow({
-  count,
-  arcanes,
-  options,
-}: {
-  count: number;
-  arcanes: ArcaneSlotsState;
-  options: import("@arsenyx/shared/warframe/types").Arcane[];
-}) {
-  return (
-    <div className="flex w-full items-start justify-center gap-3 sm:gap-6">
-      {Array.from({ length: count }).map((_, i) => (
-        <ArcaneSlot
-          key={i}
-          options={options}
-          placed={arcanes.placed[i]}
-          usedNames={arcanes.usedNames}
-          selected={arcanes.selected === i}
-          onSelect={() => arcanes.select(i)}
-          onPick={(a) => arcanes.placeAt(i, a)}
-          onRemove={() => arcanes.remove(i)}
-          onRankChange={(delta) =>
-            arcanes.setRank(i, (arcanes.placed[i]?.rank ?? 0) + delta)
-          }
-        />
-      ))}
-    </div>
-  );
-}
-
-function ModGrid({
-  item,
-  category,
-  isCompanion,
-  normalSlotCount,
-  slots,
-  onEditRiven,
-  arcaneRow,
-}: {
-  item: DetailItem;
-  category: BrowseCategory;
-  isCompanion: boolean;
-  normalSlotCount: number;
-  slots: import("@/components/build-editor").BuildSlotsState;
-  onEditRiven?: (id: SlotId) => void;
-  arcaneRow?: React.ReactNode;
-}) {
-  const showAura = hasAuraSlot(category);
-  const showExilus = hasExilusSlot(category);
-  const slotsPerRow = isCompanion ? 5 : 4;
-
-  // WFCD `aura` is usually a string, but a few items (e.g. Jade) ship it as string[].
-  const auraRaw = Array.isArray(item.aura) ? item.aura[0] : item.aura;
-  const auraPolarity = toPolarity(auraRaw);
-  const polarities = item.polarities ?? [];
-
-  const normalRows: number[][] = [];
-  for (let i = 0; i < normalSlotCount; i += slotsPerRow) {
-    normalRows.push(
-      Array.from(
-        { length: Math.min(slotsPerRow, normalSlotCount - i) },
-        (_, j) => i + j,
-      ),
-    );
-  }
-
-  const slotProps = (id: SlotId, innate?: Polarity) => {
-    const placed = slots.placed[id];
-    const forma = slots.formaPolarities[id];
-    return {
-      slotPolarity: innate,
-      formaPolarity: forma,
-      mod: placed?.mod,
-      rank: placed?.rank,
-      selected: slots.selected === id,
-      onClick: () => slots.select(id),
-      onRemove: placed ? () => slots.remove(id) : undefined,
-      onPickPolarity: (p: Polarity) => slots.setForma(id, p),
-      onRankChange: placed
-        ? (delta: number) => slots.setRank(id, placed.rank + delta)
-        : undefined,
-      onEditRiven:
-        placed && onEditRiven && isRivenMod(placed.mod)
-          ? () => onEditRiven(id)
-          : undefined,
-    };
-  };
-
-  return (
-    <div className="flex flex-col gap-6 sm:gap-4">
-      {(showAura || showExilus) && (
-        <div className="flex w-full justify-center gap-2 sm:gap-4">
-          {showAura && (
-            <ModSlot kind="aura" {...slotProps("aura", auraPolarity)} />
-          )}
-          {showExilus && (
-            <ModSlot kind="exilus" {...slotProps("exilus", undefined)} />
-          )}
-        </div>
-      )}
-
-      {normalRows.map((row, rowIdx) => (
-        <div
-          key={rowIdx}
-          className="grid grid-cols-2 justify-center gap-x-2 gap-y-6 sm:flex sm:gap-4"
-        >
-          {row.map((i) => {
-            const id: SlotId = `normal-${i}`;
-            return (
-              <ModSlot key={i} {...slotProps(id, toPolarity(polarities[i]))} />
-            );
-          })}
-        </div>
-      ))}
-
-      {arcaneRow}
-    </div>
-  );
-}
 
 function SearchPanel({
   item,

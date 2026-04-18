@@ -14,6 +14,7 @@ export {
   calculateTotalEndoCost,
 } from "./calculations";
 export { getArcaneSlotCount, hasAuraSlot, hasExilusSlot } from "./layout";
+export { ArcaneRow, ModGrid, toPolarity } from "./mod-grid";
 export { ModCard } from "./mod-card";
 export { ModSearchGrid } from "./mod-search-grid";
 export { RivenDialog, type RivenDialogValues } from "./riven-dialog";

@@ -22,10 +22,19 @@ export interface ArcaneSlotsState {
   setRank: (index: number, rank: number) => void;
 }
 
-export function useArcaneSlots(slotCount: number): ArcaneSlotsState {
-  const [placed, setPlaced] = useState<(PlacedArcane | null)[]>(() =>
-    Array.from({ length: slotCount }, () => null),
-  );
+export function useArcaneSlots(
+  slotCount: number,
+  initial?: (PlacedArcane | null)[],
+): ArcaneSlotsState {
+  const [placed, setPlaced] = useState<(PlacedArcane | null)[]>(() => {
+    const base: (PlacedArcane | null)[] = Array.from({ length: slotCount }, () => null);
+    if (initial) {
+      for (let i = 0; i < Math.min(slotCount, initial.length); i++) {
+        base[i] = initial[i] ?? null;
+      }
+    }
+    return base;
+  });
   const [selected, setSelected] = useState<number | null>(null);
 
   const placeAt = useCallback(

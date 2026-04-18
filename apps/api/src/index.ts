@@ -3,6 +3,7 @@ import { cors } from "hono/cors";
 
 import { auth } from "./auth";
 import { webOrigins } from "./env";
+import { builds } from "./routes/builds";
 
 const app = new Hono();
 
@@ -12,13 +13,15 @@ app.use(
     origin: webOrigins,
     credentials: true,
     allowHeaders: ["Content-Type", "Authorization"],
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     exposeHeaders: ["Set-Cookie"],
     maxAge: 600,
   }),
 );
 
 app.all("/auth/*", (c) => auth.handler(c.req.raw));
+
+app.route("/builds", builds);
 
 app.get("/health", (c) => c.json({ ok: true }));
 

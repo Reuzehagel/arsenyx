@@ -41,6 +41,8 @@ interface ModSlotProps {
   onRankChange?: (delta: number) => void;
   /** Pencil-button handler, only rendered for riven mods. */
   onEditRiven?: () => void;
+  /** Disables click/hover/remove/picker/rank-hotkey. */
+  readOnly?: boolean;
 }
 
 const KIND_LABEL: Record<ModSlotKind, string> = {
@@ -61,17 +63,19 @@ export function ModSlot({
   onPickPolarity,
   onRankChange,
   onEditRiven,
+  readOnly = false,
 }: ModSlotProps) {
   const effective = effectivePolarity(slotPolarity, formaPolarity);
   const [hovered, setHovered] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
 
   useRankHotkey({
-    enabled: !!mod && hovered && !!onRankChange,
+    enabled: !readOnly && !!mod && hovered && !!onRankChange,
     onDelta: (d) => onRankChange?.(d),
   });
 
   const handleContextMenu = (e: MouseEvent) => {
+    if (readOnly) return;
     if (mod && onRemove) {
       e.preventDefault();
       onRemove();
@@ -83,22 +87,24 @@ export function ModSlot({
       <PopoverTrigger
         render={<div />}
         data-build-slot
-        onClick={onClick}
+        onClick={readOnly ? undefined : onClick}
         onContextMenu={handleContextMenu}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        onMouseEnter={readOnly ? undefined : () => setHovered(true)}
+        onMouseLeave={readOnly ? undefined : () => setHovered(false)}
         className={cn(
           // Identical dimensions for empty and filled states so a row's
           // height/width never shifts based on how many mods are placed.
           "group relative flex h-[80px] w-full flex-col items-center justify-center transition-colors",
           "sm:h-[90px] sm:w-[150px] md:h-[100px] md:w-[184px]",
-          "cursor-pointer",
+          !readOnly && "cursor-pointer",
           !mod && "rounded-md border",
           !mod &&
+            !readOnly &&
             (selected
               ? "border-solid border-white/70"
               : "border-muted-foreground/10 hover:border-muted-foreground/25 border-dashed"),
-          mod && selected && "ring-2 ring-white/60 rounded-md",
+          !mod && readOnly && "border-muted-foreground/10 border-dashed",
+          mod && selected && !readOnly && "ring-2 ring-white/60 rounded-md",
         )}
       >
         {mod ? (
@@ -114,7 +120,7 @@ export function ModSlot({
               }
               matchState={getMatchState(mod.polarity, effective)}
             />
-            {isRivenMod(mod) && onEditRiven && (
+            {!readOnly && isRivenMod(mod) && onEditRiven && (
               <button
                 type="button"
                 aria-label="Edit riven stats"
@@ -145,7 +151,7 @@ export function ModSlot({
           </>
         )}
       </PopoverTrigger>
-      {onPickPolarity && (
+      {!readOnly && onPickPolarity && (
         <PopoverContent className="w-auto">
           <PolarityPicker
             current={formaPolarity}

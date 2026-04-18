@@ -19,6 +19,26 @@ const CHANGELOG: ChangelogEntry[] = [
       {
         type: "feat",
         description:
+          "Build viewer uses the full editor layout in read-only mode — same ItemSidebar (capacity, reactor switch, shards, helminth, stats), same ModGrid with innate polarities, same ArcaneRow, plus the markdown guide underneath. A new `readOnly` prop on ModSlot / ArcaneSlot / ItemSidebar turns off click/hover/picker popovers and disables the reactor switch so the viewer doesn't feel like a broken editor",
+      },
+      {
+        type: "feat",
+        description:
+          "Editing saved builds round-trips through the editor — `/builds/$slug` has an Edit button for the owner that opens `/create?build=<slug>`, the editor hydrates slots / forma / arcanes / shards / helminth / reactor / name / guide from the saved state, and Save switches to `PATCH /builds/:slug` (guide is upserted) instead of creating a new build",
+      },
+      {
+        type: "feat",
+        description:
+          "Saving builds works end-to-end — `POST /builds` creates a build for the signed-in user with a unique 10-char slug, and the editor's header Save button serializes the current grid / arcanes / shards / reactor / helminth / guide and redirects to the new `/builds/$slug` page on success. Unauthenticated clicks bounce to `/auth/signin`",
+      },
+      {
+        type: "feat",
+        description:
+          "Build view foundation — full Prisma schema (builds, guides, orgs, votes, favorites, api keys) now lives in `apps/api` and is live on the Neon dev branch. New `GET /builds/:slug` Hono endpoint enforces owner / public / unlisted / org-member visibility, and `/builds/$slug` renders the build shell with metadata, description, and markdown guide (GFM). Mod grid rendering arrives with Slice 6",
+      },
+      {
+        type: "feat",
+        description:
           "Auth foundation — Hono API with Better Auth and GitHub OAuth, Prisma schema for User/Account/Session/Verification on a new Neon branch, `/auth/signin` and `/auth/error` pages, and a UserMenu in the header (sign-in, avatar, sign-out). Builds/votes/favorites still come in Slice 4 once the schema ports over",
       },
       {

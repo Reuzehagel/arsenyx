@@ -38,16 +38,18 @@ Work happens on the `rewrite` branch (tracks `origin/rewrite`). Legacy Next.js a
 - [x] Neon dev branch connection string wired into `apps/api/.env`
 - [x] GitHub OAuth app created + credentials in `apps/api/.env`
 - [x] First `bunx prisma db push` against the new branch
-- [ ] CORS + cookies across `web.arsenyx` and `api.arsenyx` (same-origin in prod — decide at deploy time)
+- [x] CORS + cookies — chose same-origin (SPA + `/api/*` proxy on one domain); no CORS middleware needed
 
 ### Slice 4 — Build view (first real content page needing backend)
 
-- [ ] Prisma schema + migrations live in `apps/api` (moved from `legacy/`)
-- [ ] Hono route: `GET /builds/:slug` with visibility checks
-- [ ] `/builds/[slug]` route in web (loader + query + render)
-- [ ] Markdown guide rendering (react-markdown + remark-gfm + rehype-highlight)
+- [x] Prisma schema moved into `apps/api/prisma/schema.prisma` and pushed to Neon dev
+- [x] Hono route: `GET /builds/:slug` with visibility checks (owner / public / unlisted / org member)
+- [x] `/builds/$slug` route in web (loader + query + minimal render)
+- [x] Markdown guide rendering (react-markdown + remark-gfm) — rehype-highlight deferred
 - [ ] Build codec moved to `packages/shared`
 - [ ] Warframe types moved to `packages/shared` (items.ts loader stays backend)
+- [ ] Full mod/arcane/shard render (reuse Slice 6 editor in read-only mode)
+- [ ] Port tsvector search trigger + index as raw SQL migration (needed for Slice 5 search)
 
 ### Slice 5 — Build listing + social (reads)
 
@@ -72,7 +74,10 @@ Work happens on the `rewrite` branch (tracks `origin/rewrite`). Legacy Next.js a
 - [x] Stats panel — recalc from placed mods/arcanes (multi-attack weapons, damage breakdown, rivens, warframe abilities, companions, archwing suits, stat caps)
 - [ ] Conditional mod stats — Galvanized, on-kill, Hunter Munitions, etc. (show-max-stacks toggle); also picks up rarer riven stats (Status Duration, Damage to Faction, Projectile Speed, Punch Through, Ammo Max, Zoom, Recoil, Finisher Damage, Slide Attack, Channeling…)
 - [ ] Aura ignore-list — Corrosive Projection and similar affect enemies not the player; port legacy ignore set before adding any player-affecting auras
-- [ ] Save / delete / fork build mutations (blocked on Slice 3 auth)
+- [x] Save build (create) — `POST /builds`, `/create` page wired to Save button
+- [x] Update build — `PATCH /builds/:slug`, editor hydrates from `?build=<slug>` and Save switches to PATCH for owner
+- [x] `readOnly` prop threaded through ModSlot / ArcaneSlot / ItemSidebar for `/builds/$slug`
+- [ ] Delete / fork build mutations
 - [ ] `/import` — Overframe import
 
 ### Slice 7 — Org + admin + settings

@@ -25,6 +25,7 @@ interface ArcaneSlotProps {
   onPick: (arcane: Arcane) => void;
   onRemove?: () => void;
   onRankChange?: (delta: -1 | 1) => void;
+  readOnly?: boolean;
 }
 
 export function ArcaneSlot({
@@ -36,10 +37,12 @@ export function ArcaneSlot({
   onPick,
   onRemove,
   onRankChange,
+  readOnly = false,
 }: ArcaneSlotProps) {
   const [open, setOpen] = useState(false);
 
   const handleContextMenu = (e: MouseEvent) => {
+    if (readOnly) return;
     if (placed && onRemove) {
       e.preventDefault();
       onRemove();
@@ -47,32 +50,38 @@ export function ArcaneSlot({
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={readOnly ? undefined : setOpen}>
       <PopoverTrigger
         render={<div />}
         data-build-slot
-        onClick={() => {
-          onSelect?.();
-          setOpen(true);
-        }}
+        onClick={
+          readOnly
+            ? undefined
+            : () => {
+                onSelect?.();
+                setOpen(true);
+              }
+        }
         onContextMenu={handleContextMenu}
         className={cn(
           "group relative flex h-[80px] w-full flex-col items-center justify-center transition-colors",
           "sm:h-[90px] sm:w-[120px] sm:flex-none md:h-[100px] md:w-[140px]",
-          "cursor-pointer",
+          !readOnly && "cursor-pointer",
           !placed && "rounded-md border",
           !placed &&
+            !readOnly &&
             (selected
               ? "border-solid border-white/70"
               : "border-muted-foreground/10 hover:border-muted-foreground/25 border-dashed"),
-          placed && selected && "rounded-md ring-2 ring-white/60",
+          !placed && readOnly && "border-muted-foreground/10 border-dashed",
+          placed && selected && !readOnly && "rounded-md ring-2 ring-white/60",
         )}
       >
         {placed ? (
           <ArcaneCard
             arcane={placed.arcane}
             rank={placed.rank}
-            onRankChange={onRankChange}
+            onRankChange={readOnly ? undefined : onRankChange}
             disableHover={open}
           />
         ) : (
@@ -84,16 +93,18 @@ export function ArcaneSlot({
           </>
         )}
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-3" align="center">
-        <ArcanePicker
-          options={options}
-          usedNames={usedNames}
-          onPick={(a) => {
-            onPick(a);
-            setOpen(false);
-          }}
-        />
-      </PopoverContent>
+      {!readOnly && (
+        <PopoverContent className="w-auto p-3" align="center">
+          <ArcanePicker
+            options={options}
+            usedNames={usedNames}
+            onPick={(a) => {
+              onPick(a);
+              setOpen(false);
+            }}
+          />
+        </PopoverContent>
+      )}
     </Popover>
   );
 }

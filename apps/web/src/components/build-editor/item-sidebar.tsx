@@ -77,6 +77,7 @@ export interface ItemSidebarProps {
   onSetHelminth: (slotIndex: number, ability: HelminthAbility | null) => void;
   placedMods: Partial<Record<SlotId, PlacedMod>>;
   placedArcanes: (PlacedArcane | null)[];
+  readOnly?: boolean;
 }
 
 export function ItemSidebar({
@@ -92,6 +93,7 @@ export function ItemSidebar({
   onSetHelminth,
   placedMods,
   placedArcanes,
+  readOnly = false,
 }: ItemSidebarProps) {
   // Distinguish archwing *suits* (have health) from arch-guns / arch-melee
   // (have attack data). Both share the `archwing` browse category.
@@ -186,7 +188,7 @@ export function ItemSidebar({
                 key={i}
                 ability={displayed}
                 isHelminth={Boolean(replaced)}
-                canSubsume={isPureWarframe}
+                canSubsume={isPureWarframe && !readOnly}
                 onSelectHelminth={(ab) => onSetHelminth(i, ab)}
               />
             );
@@ -204,6 +206,7 @@ export function ItemSidebar({
                 key={i}
                 shard={shards[i] ?? null}
                 onPick={(s) => onSetShard(i, s)}
+                readOnly={readOnly}
               />
             ))}
           </div>
@@ -218,6 +221,7 @@ export function ItemSidebar({
             size="sm"
             checked={hasReactor}
             onCheckedChange={onToggleReactor}
+            disabled={readOnly}
           />
         </div>
 
@@ -909,9 +913,11 @@ function CapacityBar({ used, max }: { used: number; max: number }) {
 function ShardSlot({
   shard,
   onPick,
+  readOnly = false,
 }: {
   shard: PlacedShard | null;
   onPick: (s: PlacedShard | null) => void;
+  readOnly?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const triggerButton = (
@@ -937,10 +943,12 @@ function ShardSlot({
   );
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={readOnly ? undefined : setOpen}>
       <Tooltip>
         <TooltipTrigger
-          render={<PopoverTrigger render={triggerButton} />}
+          render={
+            readOnly ? triggerButton : <PopoverTrigger render={triggerButton} />
+          }
         />
         <TooltipContent side="bottom">
           {shard ? (
@@ -956,19 +964,21 @@ function ShardSlot({
           )}
         </TooltipContent>
       </Tooltip>
-      <PopoverContent side="right" align="start" className="w-72">
-        <ShardPicker
-          current={shard}
-          onPick={(s) => {
-            onPick(s);
-            setOpen(false);
-          }}
-          onClear={() => {
-            onPick(null);
-            setOpen(false);
-          }}
-        />
-      </PopoverContent>
+      {!readOnly && (
+        <PopoverContent side="right" align="start" className="w-72">
+          <ShardPicker
+            current={shard}
+            onPick={(s) => {
+              onPick(s);
+              setOpen(false);
+            }}
+            onClear={() => {
+              onPick(null);
+              setOpen(false);
+            }}
+          />
+        </PopoverContent>
+      )}
     </Popover>
   );
 }

@@ -33,6 +33,10 @@ build-items-index:
 api:
     Push-Location apps/api; bun run dev
 
+# Kill leftover dev servers on ports 5173 (Vite), 8787 (Hono), 3000 (legacy Next).
+stop:
+    @foreach ($port in 5173, 8787, 3000) { $pids = (Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue).OwningProcess | Select-Object -Unique; if ($pids) { Write-Host "Stopping port $port (PID $($pids -join ', '))"; $pids | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue } } else { Write-Host "Port $port already free" } }
+
 # First-run setup for a fresh clone.
 setup:
     bun install

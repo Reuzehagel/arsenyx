@@ -116,6 +116,20 @@ const SHARD_IMAGES: Record<ShardColor, { regular: string; tauforged: string }> =
   },
 };
 
+export const SHARD_SLOT_COUNT = 5;
+
+export function padShards(
+  saved: (PlacedShard | null)[] | undefined,
+  length = SHARD_SLOT_COUNT,
+): (PlacedShard | null)[] {
+  const out: (PlacedShard | null)[] = Array.from({ length }, () => null);
+  const input = saved ?? [];
+  for (let i = 0; i < Math.min(length, input.length); i++) {
+    out[i] = input[i] ?? null;
+  }
+  return out;
+}
+
 export function getShardImageUrl(color: ShardColor, tauforged: boolean): string {
   return tauforged ? SHARD_IMAGES[color].tauforged : SHARD_IMAGES[color].regular;
 }

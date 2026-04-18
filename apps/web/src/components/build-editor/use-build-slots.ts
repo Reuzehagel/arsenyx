@@ -63,12 +63,20 @@ export interface BuildSlotsState {
   setForma: (id: SlotId, polarity: Polarity | null) => void;
 }
 
-export function useBuildSlots(normalSlotCount: number): BuildSlotsState {
-  const [placed, setPlaced] = useState<Partial<Record<SlotId, PlacedMod>>>({});
+export function useBuildSlots(
+  normalSlotCount: number,
+  initial?: {
+    placed?: Partial<Record<SlotId, PlacedMod>>;
+    formaPolarities?: Partial<Record<SlotId, Polarity>>;
+  },
+): BuildSlotsState {
+  const [placed, setPlaced] = useState<Partial<Record<SlotId, PlacedMod>>>(
+    () => initial?.placed ?? {},
+  );
   const [selected, setSelected] = useState<SlotId | null>(null);
   const [formaPolarities, setFormaPolarities] = useState<
     Partial<Record<SlotId, Polarity>>
-  >({});
+  >(() => initial?.formaPolarities ?? {});
 
   const place = useCallback(
     (mod: Mod) => {
