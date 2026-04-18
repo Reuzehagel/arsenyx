@@ -52,6 +52,7 @@ export function ArcaneSlot({
   return (
     <Popover open={open} onOpenChange={readOnly ? undefined : setOpen}>
       <PopoverTrigger
+        nativeButton={false}
         render={<div />}
         data-build-slot
         onClick={

@@ -85,6 +85,7 @@ export function ModSlot({
   return (
     <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
       <PopoverTrigger
+        nativeButton={false}
         render={<div />}
         data-build-slot
         onClick={readOnly ? undefined : onClick}

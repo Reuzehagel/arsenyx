@@ -436,7 +436,7 @@ function DamageRow({
 
   return (
     <Popover>
-      <PopoverTrigger render={row} />
+      <PopoverTrigger nativeButton={false} render={row} />
       <PopoverContent side="right" align="start" className="w-72 text-xs">
         <DamageFormula entry={entry} multishot={multishot} />
       </PopoverContent>
@@ -574,7 +574,7 @@ function StatLine({
 
   return (
     <Popover>
-      <PopoverTrigger render={row} />
+      <PopoverTrigger nativeButton={false} render={row} />
       <PopoverContent side="right" align="start" className="w-64 text-xs">
         <StatFormula value={value} unit={unit} digits={digits} inverted={inverted} />
       </PopoverContent>

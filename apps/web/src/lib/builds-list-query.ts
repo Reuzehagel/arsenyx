@@ -2,13 +2,20 @@ import { queryOptions } from "@tanstack/react-query";
 
 import { API_URL } from "@/lib/constants";
 
-export type BuildListSort = "newest" | "updated";
+export type BuildListSort =
+  | "newest"
+  | "updated"
+  | "top"
+  | "favorited"
+  | "viewed";
 
 export type BuildListParams = {
   page: number;
   sort: BuildListSort;
   q?: string;
   category?: string;
+  hasGuide?: boolean;
+  hasShards?: boolean;
 };
 
 export type BuildListItem = {
@@ -59,6 +66,8 @@ function buildQueryString(
   if (params.sort !== defaultSort) q.set("sort", params.sort);
   if (params.q) q.set("q", params.q);
   if (params.category) q.set("category", params.category);
+  if (params.hasGuide) q.set("hasGuide", "1");
+  if (params.hasShards) q.set("hasShards", "1");
   const str = q.toString();
   return str ? `?${str}` : "";
 }
@@ -82,6 +91,21 @@ export const myBuildsQuery = (params: BuildListParams) =>
     queryFn: async (): Promise<BuildListResponse> => {
       const r = await fetch(
         `${API_URL}/builds/mine${buildQueryString(params, "updated")}`,
+        { credentials: "include" },
+      );
+      if (r.status === 401) throw new Error("unauthorized");
+      if (!r.ok) throw new Error("failed to load builds");
+      return r.json();
+    },
+    retry: false,
+  });
+
+export const favoriteBuildsQuery = (params: BuildListParams) =>
+  queryOptions({
+    queryKey: ["builds", "favorites", params],
+    queryFn: async (): Promise<BuildListResponse> => {
+      const r = await fetch(
+        `${API_URL}/builds/favorites${buildQueryString(params, "newest")}`,
         { credentials: "include" },
       );
       if (r.status === 401) throw new Error("unauthorized");

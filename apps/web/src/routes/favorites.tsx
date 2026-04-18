@@ -15,10 +15,13 @@ import {
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { authClient } from "@/lib/auth-client";
-import { myBuildsQuery, type BuildListSort } from "@/lib/builds-list-query";
+import {
+  favoriteBuildsQuery,
+  type BuildListSort,
+} from "@/lib/builds-list-query";
 import { type BrowseCategory } from "@/lib/warframe";
 
-type MineSearch = {
+type FavoritesSearch = {
   page?: number;
   sort?: BuildListSort;
   q?: string;
@@ -27,8 +30,8 @@ type MineSearch = {
   hasShards?: boolean;
 };
 
-export const Route = createFileRoute("/builds/mine")({
-  validateSearch: (search): MineSearch => parseBuildsListSearch(search),
+export const Route = createFileRoute("/favorites")({
+  validateSearch: (search): FavoritesSearch => parseBuildsListSearch(search),
   beforeLoad: async () => {
     const session = await authClient.getSession();
     if (!session.data?.user) {
@@ -37,18 +40,18 @@ export const Route = createFileRoute("/builds/mine")({
   },
   loaderDeps: ({ search }) => ({
     page: search.page ?? 1,
-    sort: search.sort ?? "updated",
+    sort: search.sort ?? "newest",
     q: search.q ?? "",
     category: search.category,
     hasGuide: search.hasGuide ?? false,
     hasShards: search.hasShards ?? false,
   }),
   loader: ({ context, deps }) =>
-    context.queryClient.ensureQueryData(myBuildsQuery(deps)),
-  component: MineBuildsPage,
+    context.queryClient.ensureQueryData(favoriteBuildsQuery(deps)),
+  component: FavoritesPage,
 });
 
-function MineBuildsPage() {
+function FavoritesPage() {
   return (
     <div className="relative flex min-h-screen flex-col">
       <Header />
@@ -57,7 +60,7 @@ function MineBuildsPage() {
           <Suspense
             fallback={<p className="text-muted-foreground">Loading builds…</p>}
           >
-            <MineBuildsContent />
+            <FavoritesContent />
           </Suspense>
         </div>
       </main>
@@ -66,24 +69,24 @@ function MineBuildsPage() {
   );
 }
 
-function MineBuildsContent() {
+function FavoritesContent() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const page = search.page ?? 1;
-  const sort = search.sort ?? "updated";
+  const sort = search.sort ?? "newest";
   const q = search.q ?? "";
   const category = search.category;
   const hasGuide = search.hasGuide === true;
   const hasShards = search.hasShards === true;
 
   const onUpdateSearch = (next: BuildsListSearch) =>
-    navigate({ search: nextBuildsListSearch(next, "updated"), replace: true });
+    navigate({ search: nextBuildsListSearch(next, "newest"), replace: true });
 
   return (
     <BuildsListView
-      title="My Builds"
-      description="Builds you've authored."
-      query={myBuildsQuery({
+      title="My Favorites"
+      description="Builds you've favorited."
+      query={favoriteBuildsQuery({
         page,
         sort,
         q,
@@ -102,18 +105,14 @@ function MineBuildsContent() {
       emptyState={
         <>
           <p className="text-muted-foreground">
-            You haven't saved any builds yet.
+            You haven't favorited any builds yet.
           </p>
           <p className="text-muted-foreground mt-2 text-sm">
-            Start one from{" "}
-            <Link
-              to="/browse"
-              search={{ category: "warframes" }}
-              className="text-primary underline"
-            >
-              Browse
-            </Link>
-            .
+            Browse{" "}
+            <Link to="/builds" className="text-primary underline">
+              public builds
+            </Link>{" "}
+            and tap the heart to save them here.
           </p>
         </>
       }

@@ -1,4 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { Filter } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { BuildCard } from "@/components/builds/build-card";
@@ -12,10 +13,18 @@ import {
 } from "@/components/ui/input-group";
 import { Kbd } from "@/components/ui/kbd";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
+import {
   publicBuildsQuery,
   type BuildListSort,
 } from "@/lib/builds-list-query";
-import { type BrowseCategory } from "@/lib/warframe";
+import { isValidCategory, type BrowseCategory } from "@/lib/warframe";
+
+import { SORT_VALUES } from "./builds-sort-dropdown";
 
 type BuildsQuery = ReturnType<typeof publicBuildsQuery>;
 
@@ -24,7 +33,61 @@ export type BuildsListSearch = {
   sort?: BuildListSort;
   q?: string;
   category?: string;
+  hasGuide?: boolean;
+  hasShards?: boolean;
 };
+
+/** URL → typed search. Identical for every list route; the route's own
+ *  validateSearch just calls this. */
+export function parseBuildsListSearch(
+  search: Record<string, unknown>,
+): {
+  page?: number;
+  sort?: BuildListSort;
+  q?: string;
+  category?: BrowseCategory;
+  hasGuide?: boolean;
+  hasShards?: boolean;
+} {
+  const rawPage =
+    typeof search.page === "string"
+      ? parseInt(search.page, 10)
+      : typeof search.page === "number"
+        ? search.page
+        : NaN;
+  const page = Number.isFinite(rawPage) && rawPage > 1 ? rawPage : undefined;
+  const sort =
+    typeof search.sort === "string" &&
+    (SORT_VALUES as string[]).includes(search.sort)
+      ? (search.sort as BuildListSort)
+      : undefined;
+  const q =
+    typeof search.q === "string" && search.q.length > 0
+      ? search.q.slice(0, 200)
+      : undefined;
+  const category =
+    typeof search.category === "string" && isValidCategory(search.category)
+      ? (search.category as BrowseCategory)
+      : undefined;
+  const hasGuide = search.hasGuide === true || undefined;
+  const hasShards = search.hasShards === true || undefined;
+  return { page, sort, q, category, hasGuide, hasShards };
+}
+
+/** Strip defaults from `next` so the URL stays clean. */
+export function nextBuildsListSearch(
+  next: BuildsListSearch,
+  defaultSort: BuildListSort,
+) {
+  return {
+    page: next.page && next.page > 1 ? next.page : undefined,
+    sort: next.sort && next.sort !== defaultSort ? next.sort : undefined,
+    q: next.q || undefined,
+    category: (next.category as BrowseCategory | undefined) || undefined,
+    hasGuide: next.hasGuide || undefined,
+    hasShards: next.hasShards || undefined,
+  };
+}
 
 const SEARCH_DEBOUNCE_MS = 200;
 
@@ -36,6 +99,8 @@ export function BuildsListView({
   sort,
   q,
   category,
+  hasGuide,
+  hasShards,
   onUpdateSearch,
   emptyState,
   showFilters,
@@ -47,6 +112,8 @@ export function BuildsListView({
   sort: BuildListSort;
   q: string;
   category: BrowseCategory | undefined;
+  hasGuide: boolean;
+  hasShards: boolean;
   onUpdateSearch: (next: BuildsListSearch) => void;
   emptyState: ReactNode;
   showFilters: boolean;
@@ -68,10 +135,14 @@ export function BuildsListView({
         category: latest.current.category,
         q: qLocal || undefined,
         page: undefined,
+        hasGuide: hasGuide || undefined,
+        hasShards: hasShards || undefined,
       });
     }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(t);
-  }, [qLocal, q]);
+  }, [qLocal, q, hasGuide, hasShards]);
+
+  const activeFilterCount = (hasGuide ? 1 : 0) + (hasShards ? 1 : 0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -101,13 +172,58 @@ export function BuildsListView({
           <BuildsSortDropdown
             value={sort}
             onChange={(value) =>
-              onUpdateSearch({ sort: value, q, category, page: undefined })
+              onUpdateSearch({
+                sort: value,
+                q,
+                category,
+                hasGuide: hasGuide || undefined,
+                hasShards: hasShards || undefined,
+                page: undefined,
+              })
             }
           />
           {showFilters ? (
-            <Button variant="outline" size="sm" disabled>
-              Filters
-            </Button>
+            <Popover>
+              <PopoverTrigger
+                render={
+                  <Button variant="outline" size="sm">
+                    <Filter data-icon="inline-start" />
+                    Filters
+                    {activeFilterCount > 0 ? ` · ${activeFilterCount}` : ""}
+                  </Button>
+                }
+              />
+              <PopoverContent align="end" className="w-56 gap-3">
+                <FilterToggle
+                  label="Has guide"
+                  checked={hasGuide}
+                  onChange={(v) =>
+                    onUpdateSearch({
+                      sort,
+                      q,
+                      category,
+                      hasGuide: v || undefined,
+                      hasShards: hasShards || undefined,
+                      page: undefined,
+                    })
+                  }
+                />
+                <FilterToggle
+                  label="Has archon shards"
+                  checked={hasShards}
+                  onChange={(v) =>
+                    onUpdateSearch({
+                      sort,
+                      q,
+                      category,
+                      hasGuide: hasGuide || undefined,
+                      hasShards: v || undefined,
+                      page: undefined,
+                    })
+                  }
+                />
+              </PopoverContent>
+            </Popover>
           ) : null}
         </div>
       </div>
@@ -120,6 +236,8 @@ export function BuildsListView({
               sort,
               q,
               category: next,
+              hasGuide: hasGuide || undefined,
+              hasShards: hasShards || undefined,
               page: undefined,
             })
           }
@@ -152,6 +270,8 @@ export function BuildsListView({
                   sort,
                   q,
                   category,
+                  hasGuide: hasGuide || undefined,
+                  hasShards: hasShards || undefined,
                   page: page - 1 === 1 ? undefined : page - 1,
                 })
               }
@@ -167,7 +287,14 @@ export function BuildsListView({
               variant="outline"
               size="sm"
               onClick={() =>
-                onUpdateSearch({ sort, q, category, page: page + 1 })
+                onUpdateSearch({
+                  sort,
+                  q,
+                  category,
+                  hasGuide: hasGuide || undefined,
+                  hasShards: hasShards || undefined,
+                  page: page + 1,
+                })
               }
             >
               Next
@@ -176,6 +303,23 @@ export function BuildsListView({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function FilterToggle({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <label className="hover:bg-muted/50 flex cursor-pointer items-center justify-between gap-3 rounded-md px-2 py-1.5 text-sm">
+      <span>{label}</span>
+      <Switch checked={checked} onCheckedChange={onChange} />
+    </label>
   );
 }
 

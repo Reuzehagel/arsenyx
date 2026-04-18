@@ -8,6 +8,7 @@ import type { InputJsonValue } from "../generated/prisma/internal/prismaNamespac
 
 import { auth } from "../auth";
 import { prisma } from "../db";
+import { parseListQuery, runList } from "./_build-list";
 
 export const builds = new Hono();
 
@@ -187,203 +188,6 @@ builds.patch("/:slug", async (c) => {
   return c.json(updated);
 });
 
-const LIST_LIMIT = 24;
-const LIST_SORTS = ["newest", "updated"] as const;
-type ListSort = (typeof LIST_SORTS)[number];
-
-const LIST_SELECT = {
-  id: true,
-  slug: true,
-  name: true,
-  visibility: true,
-  voteCount: true,
-  favoriteCount: true,
-  viewCount: true,
-  hasGuide: true,
-  hasShards: true,
-  createdAt: true,
-  updatedAt: true,
-  itemName: true,
-  itemImageName: true,
-  itemCategory: true,
-  user: {
-    select: {
-      id: true,
-      name: true,
-      username: true,
-      displayUsername: true,
-      image: true,
-    },
-  },
-  organization: {
-    select: { id: true, name: true, slug: true, image: true },
-  },
-} as const;
-
-type ListRow = Prisma.BuildGetPayload<{ select: typeof LIST_SELECT }>;
-
-function serializeListRow(b: ListRow) {
-  return {
-    id: b.id,
-    slug: b.slug,
-    name: b.name,
-    visibility: b.visibility,
-    voteCount: b.voteCount,
-    favoriteCount: b.favoriteCount,
-    viewCount: b.viewCount,
-    hasGuide: b.hasGuide,
-    hasShards: b.hasShards,
-    createdAt: b.createdAt.toISOString(),
-    updatedAt: b.updatedAt.toISOString(),
-    item: {
-      name: b.itemName,
-      imageName: b.itemImageName,
-      category: b.itemCategory,
-    },
-    user: b.user,
-    organization: b.organization,
-  };
-}
-
-type ListFilters = {
-  page: number;
-  sort: ListSort | undefined;
-  q: string | undefined;
-  category: string | undefined;
-};
-
-function parseListQuery(c: {
-  req: { query: (k: string) => string | undefined };
-}): ListFilters {
-  const pageRaw = parseInt(c.req.query("page") ?? "1", 10);
-  const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1;
-  const sortRaw = c.req.query("sort");
-  const sort: ListSort | undefined = (LIST_SORTS as readonly string[]).includes(
-    sortRaw ?? "",
-  )
-    ? (sortRaw as ListSort)
-    : undefined;
-  const qRaw = c.req.query("q")?.trim();
-  const q = qRaw && qRaw.length > 0 ? qRaw.slice(0, 200) : undefined;
-  const catRaw = c.req.query("category");
-  const category = catRaw && isValidCategory(catRaw) ? catRaw : undefined;
-  return { page, sort, q, category };
-}
-
-function orderByForSort(sort: ListSort) {
-  return sort === "updated"
-    ? { updatedAt: "desc" as const }
-    : { createdAt: "desc" as const };
-}
-
-/**
- * Search path: tsvector match ordered by ts_rank (with sort as tiebreaker).
- * Returns the paginated ID list + total match count.
- */
-async function searchBuildIds(params: {
-  q: string;
-  category: string | undefined;
-  baseFilter: Prisma.Sql;
-  sort: ListSort;
-  skip: number;
-  take: number;
-}): Promise<{ ids: string[]; total: number }> {
-  const { q, category, baseFilter, sort, skip, take } = params;
-  const query = Prisma.sql`websearch_to_tsquery('english', ${q})`;
-  const categoryFilter = category
-    ? Prisma.sql`AND "itemCategory" = ${category}`
-    : Prisma.empty;
-  const tiebreaker =
-    sort === "updated"
-      ? Prisma.sql`"updatedAt" DESC`
-      : Prisma.sql`"createdAt" DESC`;
-
-  const [rows, totalRows] = await Promise.all([
-    prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
-      SELECT id
-      FROM builds
-      WHERE "searchVector" @@ ${query}
-        AND ${baseFilter}
-        ${categoryFilter}
-      ORDER BY ts_rank("searchVector", ${query}) DESC, ${tiebreaker}
-      LIMIT ${take} OFFSET ${skip}
-    `),
-    prisma.$queryRaw<{ n: number }[]>(Prisma.sql`
-      SELECT COUNT(*)::int AS n
-      FROM builds
-      WHERE "searchVector" @@ ${query}
-        AND ${baseFilter}
-        ${categoryFilter}
-    `),
-  ]);
-  return { ids: rows.map((r) => r.id), total: totalRows[0]?.n ?? 0 };
-}
-
-async function runList({
-  filters,
-  baseWhere,
-  baseFilter,
-  defaultSort,
-}: {
-  filters: ListFilters;
-  baseWhere: Record<string, unknown>;
-  baseFilter: Prisma.Sql;
-  defaultSort: ListSort;
-}) {
-  const { page, q, category } = filters;
-  const sort: ListSort = filters.sort ?? defaultSort;
-  const skip = (page - 1) * LIST_LIMIT;
-
-  const where: Record<string, unknown> = { ...baseWhere };
-  if (category) where.itemCategory = category;
-
-  if (q) {
-    const { ids, total } = await searchBuildIds({
-      q,
-      category,
-      baseFilter,
-      sort,
-      skip,
-      take: LIST_LIMIT,
-    });
-    if (ids.length === 0) {
-      return { builds: [], total, page, limit: LIST_LIMIT };
-    }
-    const rows = await prisma.build.findMany({
-      where: { id: { in: ids } },
-      select: LIST_SELECT,
-    });
-    const byId = new Map(rows.map((r) => [r.id, r]));
-    const ordered = ids
-      .map((id) => byId.get(id))
-      .filter((r): r is ListRow => r != null);
-    return {
-      builds: ordered.map(serializeListRow),
-      total,
-      page,
-      limit: LIST_LIMIT,
-    };
-  }
-
-  const [rows, total] = await Promise.all([
-    prisma.build.findMany({
-      where,
-      orderBy: orderByForSort(sort),
-      skip,
-      take: LIST_LIMIT,
-      select: LIST_SELECT,
-    }),
-    prisma.build.count({ where }),
-  ]);
-
-  return {
-    builds: rows.map(serializeListRow),
-    total,
-    page,
-    limit: LIST_LIMIT,
-  };
-}
-
 builds.get("/", async (c) => {
   const result = await runList({
     filters: parseListQuery(c),
@@ -405,6 +209,179 @@ builds.get("/mine", async (c) => {
     defaultSort: "updated",
   });
   return c.json(result);
+});
+
+builds.get("/favorites", async (c) => {
+  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+  if (!session?.user) return c.json({ error: "unauthorized" }, 401);
+  const userId = session.user.id;
+
+  // Favorited AND visible to viewer (own / public / unlisted; not others' private).
+  const result = await runList({
+    filters: parseListQuery(c),
+    baseWhere: {
+      favorites: { some: { userId } },
+      OR: [
+        { visibility: BuildVisibility.PUBLIC },
+        { visibility: BuildVisibility.UNLISTED },
+        { userId },
+      ],
+    },
+    baseFilter: Prisma.sql`
+      EXISTS (
+        SELECT 1 FROM build_favorites bf
+        WHERE bf."buildId" = builds.id AND bf."userId" = ${userId}
+      )
+      AND (visibility IN ('PUBLIC', 'UNLISTED') OR "userId" = ${userId})
+    `,
+    defaultSort: "newest",
+  });
+  return c.json(result);
+});
+
+async function getBuildForSocial(slug: string) {
+  return prisma.build.findUnique({
+    where: { slug },
+    select: {
+      id: true,
+      userId: true,
+      visibility: true,
+      organizationId: true,
+      voteCount: true,
+      favoriteCount: true,
+    },
+  });
+}
+
+async function canViewerSeeBuild(
+  build: { userId: string; visibility: BuildVisibility; organizationId: string | null },
+  viewerId: string,
+) {
+  if (build.visibility === "PUBLIC" || build.visibility === "UNLISTED") return true;
+  if (build.userId === viewerId) return true;
+  if (build.organizationId) {
+    return isOrgMember(build.organizationId, viewerId);
+  }
+  return false;
+}
+
+builds.post("/:slug/vote", async (c) => {
+  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+  if (!session?.user) return c.json({ error: "unauthorized" }, 401);
+  const userId = session.user.id;
+
+  const build = await getBuildForSocial(c.req.param("slug"));
+  if (!build) return c.json({ error: "not_found" }, 404);
+  if (!(await canViewerSeeBuild(build, userId))) {
+    return c.json({ error: "not_found" }, 404);
+  }
+  if (build.userId === userId) {
+    return c.json({ error: "cannot_vote_own_build" }, 400);
+  }
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const existing = await tx.buildVote.findUnique({
+      where: { userId_buildId: { userId, buildId: build.id } },
+      select: { id: true },
+    });
+    if (existing) {
+      return { hasVoted: true, voteCount: build.voteCount };
+    }
+    await tx.buildVote.create({
+      data: { userId, buildId: build.id, value: 1 },
+    });
+    const row = await tx.build.update({
+      where: { id: build.id },
+      data: { voteCount: { increment: 1 } },
+      select: { voteCount: true },
+    });
+    return { hasVoted: true, voteCount: row.voteCount };
+  });
+  return c.json(updated);
+});
+
+builds.delete("/:slug/vote", async (c) => {
+  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+  if (!session?.user) return c.json({ error: "unauthorized" }, 401);
+  const userId = session.user.id;
+
+  const build = await getBuildForSocial(c.req.param("slug"));
+  if (!build) return c.json({ error: "not_found" }, 404);
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const existing = await tx.buildVote.findUnique({
+      where: { userId_buildId: { userId, buildId: build.id } },
+      select: { id: true },
+    });
+    if (!existing) {
+      return { hasVoted: false, voteCount: build.voteCount };
+    }
+    await tx.buildVote.delete({ where: { id: existing.id } });
+    const row = await tx.build.update({
+      where: { id: build.id },
+      data: { voteCount: { decrement: 1 } },
+      select: { voteCount: true },
+    });
+    return { hasVoted: false, voteCount: row.voteCount };
+  });
+  return c.json(updated);
+});
+
+builds.post("/:slug/favorite", async (c) => {
+  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+  if (!session?.user) return c.json({ error: "unauthorized" }, 401);
+  const userId = session.user.id;
+
+  const build = await getBuildForSocial(c.req.param("slug"));
+  if (!build) return c.json({ error: "not_found" }, 404);
+  if (!(await canViewerSeeBuild(build, userId))) {
+    return c.json({ error: "not_found" }, 404);
+  }
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const existing = await tx.buildFavorite.findUnique({
+      where: { userId_buildId: { userId, buildId: build.id } },
+      select: { id: true },
+    });
+    if (existing) {
+      return { hasFavorited: true, favoriteCount: build.favoriteCount };
+    }
+    await tx.buildFavorite.create({ data: { userId, buildId: build.id } });
+    const row = await tx.build.update({
+      where: { id: build.id },
+      data: { favoriteCount: { increment: 1 } },
+      select: { favoriteCount: true },
+    });
+    return { hasFavorited: true, favoriteCount: row.favoriteCount };
+  });
+  return c.json(updated);
+});
+
+builds.delete("/:slug/favorite", async (c) => {
+  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+  if (!session?.user) return c.json({ error: "unauthorized" }, 401);
+  const userId = session.user.id;
+
+  const build = await getBuildForSocial(c.req.param("slug"));
+  if (!build) return c.json({ error: "not_found" }, 404);
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const existing = await tx.buildFavorite.findUnique({
+      where: { userId_buildId: { userId, buildId: build.id } },
+      select: { id: true },
+    });
+    if (!existing) {
+      return { hasFavorited: false, favoriteCount: build.favoriteCount };
+    }
+    await tx.buildFavorite.delete({ where: { id: existing.id } });
+    const row = await tx.build.update({
+      where: { id: build.id },
+      data: { favoriteCount: { decrement: 1 } },
+      select: { favoriteCount: true },
+    });
+    return { hasFavorited: false, favoriteCount: row.favoriteCount };
+  });
+  return c.json(updated);
 });
 
 builds.get("/:slug", async (c) => {
@@ -447,6 +424,25 @@ builds.get("/:slug", async (c) => {
 
   if (!canView) return c.json({ error: "not_found" }, 404);
 
+  await maybeIncrementView(c, build.id, build.slug, viewerId, build.userId);
+
+  let viewerHasVoted = false;
+  let viewerHasFavorited = false;
+  if (viewerId) {
+    const [vote, fav] = await Promise.all([
+      prisma.buildVote.findUnique({
+        where: { userId_buildId: { userId: viewerId, buildId: build.id } },
+        select: { id: true },
+      }),
+      prisma.buildFavorite.findUnique({
+        where: { userId_buildId: { userId: viewerId, buildId: build.id } },
+        select: { id: true },
+      }),
+    ]);
+    viewerHasVoted = vote != null;
+    viewerHasFavorited = fav != null;
+  }
+
   return c.json({
     id: build.id,
     slug: build.slug,
@@ -471,8 +467,36 @@ builds.get("/:slug", async (c) => {
     organization: build.organization,
     guide: build.buildGuide,
     isOwner: viewerId != null && build.userId === viewerId,
+    viewerHasVoted,
+    viewerHasFavorited,
   });
 });
+
+const VIEW_COOKIE_MAX_AGE = 12 * 60 * 60; // 12h
+
+async function maybeIncrementView(
+  c: { req: { raw: Request }; header: (k: string, v: string) => void },
+  buildId: string,
+  slug: string,
+  viewerId: string | undefined,
+  ownerId: string,
+) {
+  if (viewerId && viewerId === ownerId) return;
+  const cookieName = `vw_${slug}`;
+  const cookieHeader = c.req.raw.headers.get("cookie") ?? "";
+  const has = cookieHeader.split(/;\s*/).some((p) => p.startsWith(`${cookieName}=`));
+  if (has) return;
+  await prisma.build.update({
+    where: { id: buildId },
+    data: { viewCount: { increment: 1 } },
+    select: { id: true },
+  });
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  c.header(
+    "Set-Cookie",
+    `${cookieName}=1; Path=/; Max-Age=${VIEW_COOKIE_MAX_AGE}; SameSite=Lax; HttpOnly${secure}`,
+  );
+}
 
 async function isOrgMember(organizationId: string, userId: string) {
   const membership = await prisma.organizationMember.findUnique({

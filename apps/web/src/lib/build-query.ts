@@ -57,6 +57,8 @@ export type BuildDetail = {
     updatedAt: string;
   } | null;
   isOwner: boolean;
+  viewerHasVoted: boolean;
+  viewerHasFavorited: boolean;
 };
 
 export const buildQuery = (slug: string) =>

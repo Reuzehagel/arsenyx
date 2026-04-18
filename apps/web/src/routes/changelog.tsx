@@ -19,6 +19,21 @@ const CHANGELOG: ChangelogEntry[] = [
       {
         type: "feat",
         description:
+          "Sort and filter options expanded across every builds list (`/builds`, `/builds/mine`, `/favorites`, `/profile/<user>`). Sort dropdown gains Most Voted / Most Favorited / Most Viewed alongside Newest and Recently Updated. New Filters popover holds Has guide / Has archon shards toggles, with an active-count chip on the trigger. Backend respects `sort`, `hasGuide`, `hasShards` in both the standard and full-text-search code paths",
+      },
+      {
+        type: "feat",
+        description:
+          "Search bars land on `/builds/mine`, `/favorites`, and `/profile/<user>` — same debounced full-text search and category tabs as `/builds`. Profile builds endpoint (`GET /users/:username/builds`) now supports `q` / `category` / `hasGuide` / `hasShards`",
+      },
+      {
+        type: "fix",
+        description:
+          "Silenced a flood of Base UI `nativeButton` console warnings on the build viewer — mod slots, arcane slots, and stat / damage popover triggers now declare `nativeButton={false}` because they render as `<div>` rather than `<button>`",
+      },
+      {
+        type: "feat",
+        description:
           "Publish dialog in the build editor — Save no longer silently commits as Public. New builds open a dialog first to pick visibility (Public / Unlisted / Private) and a publish target (yourself now; Organizations placeholder for later). Existing builds still save silently, but the editor header gets a Settings button that re-opens the dialog so you can change visibility or owner after the fact",
       },
       {

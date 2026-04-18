@@ -1,14 +1,6 @@
 import { useNavigate } from "@tanstack/react-router"
 import { useState } from "react"
-import {
-  Heart,
-  LogIn,
-  LogOut,
-  Settings,
-  Shield,
-  Swords,
-  User,
-} from "lucide-react"
+import { LogIn } from "lucide-react"
 
 import { Link } from "@/components/link"
 import { SettingsDialog } from "@/components/settings-dialog"
@@ -92,35 +84,27 @@ export function UserMenu() {
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem render={<Link href={ROUTES.profile} />}>
-          <User className="size-4" />
           My Profile
         </DropdownMenuItem>
         <DropdownMenuItem render={<Link href={ROUTES.myBuilds} />}>
-          <Swords className="size-4" />
           My Builds
         </DropdownMenuItem>
         <DropdownMenuItem render={<Link href={ROUTES.favorites} />}>
-          <Heart className="size-4" />
           My Favorites
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
-          <Settings className="size-4" />
           Settings
         </DropdownMenuItem>
         {isAdmin ? (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem render={<Link href={ROUTES.admin} />}>
-              <Shield className="size-4" />
               Admin
             </DropdownMenuItem>
           </>
         ) : null}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={onSignOut}>
-          <LogOut className="size-4" />
-          Sign out
-        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onSignOut}>Sign out</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
     <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
