@@ -1,6 +1,10 @@
-import { createFileRoute, Link as RouterLink } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link as RouterLink,
+  useNavigate,
+} from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { Diamond, Gem, Pencil } from "lucide-react";
+import { ArrowBigUp, Diamond, Gem, Heart, Pencil } from "lucide-react";
 import { Suspense, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -22,8 +26,11 @@ import {
 import { arcanesQuery } from "@/lib/arcanes-query";
 import { getArcanesForCategory } from "@arsenyx/shared/warframe/arcanes";
 import { buildQuery, type BuildDetail, type SavedBuildData } from "@/lib/build-query";
+import { useToggleFavorite, useToggleVote } from "@/lib/build-social";
+import { authClient } from "@/lib/auth-client";
+import { cn } from "@/lib/utils";
 import { padShards } from "@/lib/shards";
-import { authorName } from "@/lib/user-display";
+import { authorName, formatVisibility } from "@/lib/user-display";
 import { slugify } from "@arsenyx/shared/warframe/slugs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -281,16 +288,18 @@ function ViewerHeader({
               </Badge>
               {build.visibility !== "PUBLIC" ? (
                 <Badge variant="secondary" className="text-xs">
-                  {build.visibility.toLowerCase()}
+                  {formatVisibility(build.visibility)}
                 </Badge>
               ) : null}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <SocialActions build={build} />
           {build.isOwner ? (
             <Button
               size="sm"
+              nativeButton={false}
               render={
                 <RouterLink
                   to="/create"
@@ -305,6 +314,59 @@ function ViewerHeader({
         </div>
       </div>
     </div>
+  );
+}
+
+function SocialActions({ build }: { build: BuildDetail }) {
+  const { data: session } = authClient.useSession();
+  const navigate = useNavigate();
+  const vote = useToggleVote(build.slug);
+  const fav = useToggleFavorite(build.slug);
+  const isOwner = build.isOwner;
+
+  const requireAuthThen = (run: () => void) => () => {
+    if (!session?.user) {
+      navigate({ to: "/auth/signin" });
+      return;
+    }
+    run();
+  };
+
+  const onVote = requireAuthThen(() => vote.mutate(!build.viewerHasVoted));
+  const onFavorite = requireAuthThen(() =>
+    fav.mutate(!build.viewerHasFavorited),
+  );
+
+  return (
+    <>
+      <Button
+        size="sm"
+        variant={build.viewerHasVoted ? "default" : "outline"}
+        onClick={onVote}
+        disabled={isOwner || vote.isPending}
+        aria-pressed={build.viewerHasVoted}
+        title={isOwner ? "You can't vote on your own build" : undefined}
+      >
+        <ArrowBigUp
+          data-icon="inline-start"
+          className={cn(build.viewerHasVoted && "fill-current")}
+        />
+        <span className="tabular-nums">{build.voteCount}</span>
+      </Button>
+      <Button
+        size="sm"
+        variant={build.viewerHasFavorited ? "default" : "outline"}
+        onClick={onFavorite}
+        disabled={fav.isPending}
+        aria-pressed={build.viewerHasFavorited}
+      >
+        <Heart
+          data-icon="inline-start"
+          className={cn(build.viewerHasFavorited && "fill-current")}
+        />
+        <span className="tabular-nums">{build.favoriteCount}</span>
+      </Button>
+    </>
   );
 }
 

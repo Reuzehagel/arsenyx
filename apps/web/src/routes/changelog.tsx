@@ -19,6 +19,31 @@ const CHANGELOG: ChangelogEntry[] = [
       {
         type: "feat",
         description:
+          "Publish dialog in the build editor — Save no longer silently commits as Public. New builds open a dialog first to pick visibility (Public / Unlisted / Private) and a publish target (yourself now; Organizations placeholder for later). Existing builds still save silently, but the editor header gets a Settings button that re-opens the dialog so you can change visibility or owner after the fact",
+      },
+      {
+        type: "feat",
+        description:
+          "View counts actually count — `GET /builds/:slug` increments `viewCount` when a non-owner loads the page, deduped per browser per 12h via a per-build `vw_<slug>` cookie. Owners viewing their own builds don't pad the number",
+      },
+      {
+        type: "chore",
+        description:
+          "Unified vote iconography — build cards swap the `ThumbsUp` glyph for `ArrowBigUp` to match the build viewer's upvote button, so the same action looks the same everywhere",
+      },
+      {
+        type: "feat",
+        description:
+          "Public profile pages — `/profile/<username>` shows the user's avatar, name, handle, bio, badges (verified / community leader / moderator / admin), join date, and aggregate stats (builds, total votes / favorites / views), with a paginated grid of their public builds underneath. The user-menu \"My Profile\" entry now goes to your own page (`/profile` redirects to `/profile/<your-username>`). Backend exposes `GET /users/:username` and `GET /users/:username/builds`",
+      },
+      {
+        type: "feat",
+        description:
+          "Vote and favorite buttons on the build viewer — signed-in users can upvote (not their own builds) or favorite any build they can see, with optimistic counts. Unauthenticated clicks bounce to sign-in. New `/favorites` page lists everything you've favorited, paginated and sortable, mirroring `/builds/mine`. Backend exposes `POST/DELETE /builds/:slug/{vote,favorite}` and `GET /builds/favorites`, and `GET /builds/:slug` now reports `viewerHasVoted` / `viewerHasFavorited`",
+      },
+      {
+        type: "feat",
+        description:
           "User menu gets real entries — My Profile, My Builds, My Favorites, Settings, Sign out, plus a conditional Admin entry for staff. Settings opens an in-app dialog (sidebar layout, sidebar-13 style) with Appearance / Profile / Connected accounts / Notifications / Privacy / Advanced sections; the standalone header theme toggle is gone — theme now lives under Appearance",
       },
       {

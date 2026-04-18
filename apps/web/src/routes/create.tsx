@@ -8,7 +8,7 @@ import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-quer
 import { authClient } from "@/lib/auth-client";
 import { API_URL } from "@/lib/constants";
 import { buildQuery, type SavedBuildData } from "@/lib/build-query";
-import { Diamond, Gem, Pencil, UploadCloud, X } from "lucide-react";
+import { Diamond, Gem, Pencil, Settings2, UploadCloud, X } from "lucide-react";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 
 import { Footer } from "@/components/footer";
@@ -23,7 +23,9 @@ import {
   ItemSidebar,
   ModGrid,
   ModSearchGrid,
+  PublishDialog,
   RivenDialog,
+  type PublishVisibility,
   toPolarity,
   useArcaneSlots,
   useBuildSlots,
@@ -55,6 +57,7 @@ import {
   type DetailItem,
 } from "@/lib/warframe";
 import { getModsForItem } from "@arsenyx/shared/warframe/mods";
+import { formatVisibility } from "@/lib/user-display";
 
 type CreateSearch = {
   item: string;
@@ -177,6 +180,11 @@ function EditorShell() {
   >("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  const [visibility, setVisibility] = useState<PublishVisibility>(
+    () => existingBuild?.visibility ?? "PUBLIC",
+  );
+  const [publishDialogOpen, setPublishDialogOpen] = useState(false);
+
   const [hasReactor, setHasReactor] = useState(
     () => savedData.hasReactor ?? true,
   );
@@ -280,18 +288,32 @@ function EditorShell() {
       }),
     [auraInnate, normalInnates, slots.formaPolarities],
   );
-  const handleSave = async () => {
+  const isUpdate = !!existingBuild && existingBuild.isOwner;
+
+  const handleSaveClick = () => {
     if (!session?.user) {
       navigate({ to: "/auth/signin" });
       return;
     }
+    if (!isUpdate) {
+      setPublishDialogOpen(true);
+      return;
+    }
+    void performSave(visibility);
+  };
+
+  const performSave = async (nextVisibility: PublishVisibility) => {
+    if (!session?.user) {
+      navigate({ to: "/auth/signin" });
+      return;
+    }
+    setPublishDialogOpen(false);
     setSaveStatus("saving");
     setSaveError(null);
     try {
-      const isUpdate = !!existingBuild && existingBuild.isOwner;
       const body = {
         name: buildName.trim() || item.name,
-        visibility: "PUBLIC" as const,
+        visibility: nextVisibility,
         buildData: {
           version: 1,
           slots: slots.placed,
@@ -359,10 +381,15 @@ function EditorShell() {
         formaCount={formaCount}
         buildName={buildName}
         onBuildNameChange={setBuildName}
-        onSave={handleSave}
+        onSave={handleSaveClick}
         saveStatus={saveStatus}
         saveError={saveError}
         isSignedIn={!!session?.user}
+        settings={
+          isUpdate
+            ? { visibility, onEdit: () => setPublishDialogOpen(true) }
+            : undefined
+        }
       />
 
       <div className="flex flex-col gap-4">
@@ -438,6 +465,25 @@ function EditorShell() {
         </div>
       </div>
 
+      <PublishDialog
+        open={publishDialogOpen}
+        onOpenChange={setPublishDialogOpen}
+        initialVisibility={visibility}
+        owner={{
+          name: session?.user?.name ?? "You",
+          username:
+            (session?.user as { username?: string | null } | undefined)
+              ?.username ?? null,
+          image: session?.user?.image ?? null,
+        }}
+        confirmLabel={isUpdate ? "Update settings" : "Save build"}
+        onConfirm={({ visibility: next }) => {
+          setVisibility(next);
+          setPublishDialogOpen(false);
+          if (!isUpdate) void performSave(next);
+        }}
+      />
+
       {rivenEdit && (
         <RivenDialog
           key={rivenEdit.slotId}
@@ -467,6 +513,7 @@ function EditorHeader({
   saveStatus,
   saveError,
   isSignedIn,
+  settings,
 }: {
   item: DetailItem;
   category: BrowseCategory;
@@ -480,6 +527,7 @@ function EditorHeader({
   saveStatus: "idle" | "saving" | "error";
   saveError: string | null;
   isSignedIn: boolean;
+  settings?: { visibility: PublishVisibility; onEdit: () => void };
 }) {
   const [editing, setEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -564,6 +612,17 @@ function EditorHeader({
           {saveStatus === "error" && saveError ? (
             <span className="text-destructive text-xs">{saveError}</span>
           ) : null}
+          {settings && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={settings.onEdit}
+              title="Build settings"
+            >
+              <Settings2 data-icon="inline-start" />
+              {formatVisibility(settings.visibility)}
+            </Button>
+          )}
           <Button
             size="sm"
             onClick={onSave}

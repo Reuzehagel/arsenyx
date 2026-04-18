@@ -18,6 +18,11 @@ export { ArcaneRow, ModGrid, toPolarity } from "./mod-grid";
 export { ModCard } from "./mod-card";
 export { ModSearchGrid } from "./mod-search-grid";
 export { RivenDialog, type RivenDialogValues } from "./riven-dialog";
+export {
+  PublishDialog,
+  type PublishDialogValues,
+  type PublishVisibility,
+} from "./publish-dialog";
 export { ModSlot, type ModSlotKind } from "./mod-slot";
 export { PolarityIcon } from "./polarity-icon";
 export { CANONICAL_POLARITIES, PolarityPicker } from "./polarity-picker";
