@@ -4,6 +4,7 @@ import { cors } from "hono/cors";
 import { auth } from "./auth";
 import { webOrigins } from "./env";
 import { builds } from "./routes/builds";
+import { imports } from "./routes/imports";
 import { users } from "./routes/users";
 
 const app = new Hono();
@@ -23,6 +24,7 @@ app.use(
 app.all("/auth/*", (c) => auth.handler(c.req.raw));
 
 app.route("/builds", builds);
+app.route("/imports", imports);
 app.route("/users", users);
 
 app.get("/health", (c) => c.json({ ok: true }));

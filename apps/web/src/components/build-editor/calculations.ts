@@ -3,24 +3,33 @@ import type { Mod, Polarity } from "@arsenyx/shared/warframe/types";
 
 import type { PlacedMod, SlotId } from "./use-build-slots";
 
-const ENDO_PER_RANK: Record<Mod["rarity"], number> = {
+/**
+ * Endo cost per rank, per the Warframe wiki's Fusion Costs table:
+ *   `endo = 10 × rarityNumber × (2^rank - 1)`
+ *
+ * Rarity groupings (all share the same endo scale):
+ *   - Common (1): just Common
+ *   - Uncommon (2): Uncommon, Peculiar
+ *   - Rare (3): Rare, Riven, Amalgam, Galvanized
+ *   - Legendary (4): Legendary, Archon, Umbra, Primed (excluding Primed Chamber)
+ *
+ * Umbra and Primed mods are regular Legendary-rarity entries; no separate
+ * curve. Antique Mods use a different formula (not modeled here).
+ */
+const ENDO_BASE_BY_RARITY: Record<Mod["rarity"], number> = {
   Common: 10,
-  Uncommon: 15,
-  Rare: 20,
-  Legendary: 30,
-  Peculiar: 15,
-  Riven: 20,
-  Amalgam: 20,
-  Galvanized: 20,
+  Uncommon: 20,
+  Rare: 30,
+  Legendary: 40,
+  Peculiar: 20,
+  Riven: 30,
+  Amalgam: 30,
+  Galvanized: 30,
 };
 
 export function calculateModEndoCost(placed: PlacedMod): number {
-  const base = ENDO_PER_RANK[placed.mod.rarity] ?? 15;
-  let total = 0;
-  for (let i = 0; i < placed.rank; i++) {
-    total += base * Math.pow(2, i);
-  }
-  return total;
+  const base = ENDO_BASE_BY_RARITY[placed.mod.rarity] ?? 20;
+  return base * (2 ** placed.rank - 1);
 }
 
 export function calculateTotalEndoCost(

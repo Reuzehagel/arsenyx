@@ -8,6 +8,7 @@ import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-quer
 import { authClient } from "@/lib/auth-client";
 import { API_URL } from "@/lib/constants";
 import { buildQuery, type SavedBuildData } from "@/lib/build-query";
+import { consumeDraft } from "@/lib/import-draft";
 import { Diamond, Gem, Pencil, Settings2, UploadCloud, X } from "lucide-react";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 
@@ -63,6 +64,7 @@ type CreateSearch = {
   item: string;
   category: BrowseCategory;
   build?: string;
+  draft?: string;
 };
 
 export const Route = createFileRoute("/create")({
@@ -73,7 +75,8 @@ export const Route = createFileRoute("/create")({
         ? search.category
         : ("warframes" as BrowseCategory);
     const build = typeof search.build === "string" ? search.build : undefined;
-    return { item, category, build };
+    const draft = typeof search.draft === "string" ? search.draft : undefined;
+    return { item, category, build, draft };
   },
   beforeLoad: ({ search }) => {
     if (!search.item) {
@@ -121,13 +124,21 @@ function CreatePage() {
 }
 
 function EditorShell() {
-  const { item: slug, category, build: buildSlug } = Route.useSearch();
+  const {
+    item: slug,
+    category,
+    build: buildSlug,
+    draft: draftId,
+  } = Route.useSearch();
   const { data: item } = useSuspenseQuery(itemQuery(category, slug));
   const { data: existingBuild } = useQuery({
     ...buildQuery(buildSlug ?? ""),
     enabled: !!buildSlug,
   });
-  const savedData = (existingBuild?.buildData ?? {}) as SavedBuildData;
+  const [draft] = useState(() => consumeDraft(draftId));
+  const savedData = draft
+    ? draft.data
+    : ((existingBuild?.buildData ?? {}) as SavedBuildData);
 
   const categoryLabel =
     CATEGORIES.find((c) => c.id === category)?.label ?? category;
@@ -173,7 +184,7 @@ function EditorShell() {
   const { data: session } = authClient.useSession();
 
   const [buildName, setBuildName] = useState(
-    () => existingBuild?.name ?? item.name,
+    () => existingBuild?.name ?? draft?.buildName ?? item.name,
   );
   const [saveStatus, setSaveStatus] = useState<
     "idle" | "saving" | "error"

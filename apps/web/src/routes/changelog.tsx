@@ -19,6 +19,16 @@ const CHANGELOG: ChangelogEntry[] = [
       {
         type: "feat",
         description:
+          "Endo calc fix: rewritten to match the Warframe wiki's Fusion Cost formula `endo = 10 × rarityNumber × (2^rank - 1)` with rarityNumber = 1/2/3/4 (Common/Uncommon/Rare/Legendary). Riven/Amalgam/Galvanized group with Rare; Peculiar with Uncommon; Archon/Umbra/Primed with Legendary. Previous values were ~33% low across the board — e.g. a rank-10 Primed mod is 40,920 endo, not 30,690. Totals now match Overframe exactly",
+      },
+      {
+        type: "feat",
+        description:
+          "Overframe import end-to-end — `/import` page takes an overframe.gg URL, the Hono `POST /imports/overframe` endpoint scrapes `__NEXT_DATA__` + resolves Overframe mod IDs via a bundled items map, and the client matches item / mods / arcanes / Helminth ability against WFCD data, reinterprets slot IDs by category, detects forma by comparing imported polarity vs innate (per-item `aura` / `polarities[]`), and hands off to the editor via a sessionStorage draft so `Open in editor` lands you on `/create` pre-populated",
+      },
+      {
+        type: "feat",
+        description:
           "Sort and filter options expanded across every builds list (`/builds`, `/builds/mine`, `/favorites`, `/profile/<user>`). Sort dropdown gains Most Voted / Most Favorited / Most Viewed alongside Newest and Recently Updated. New Filters popover holds Has guide / Has archon shards toggles, with an active-count chip on the trigger. Backend respects `sort`, `hasGuide`, `hasShards` in both the standard and full-text-search code paths",
       },
       {

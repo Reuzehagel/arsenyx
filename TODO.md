@@ -48,7 +48,7 @@ Work happens on the `rewrite` branch (tracks `origin/rewrite`). Legacy Next.js a
 - [x] Markdown guide rendering (react-markdown + remark-gfm) — rehype-highlight deferred
 - [ ] Build codec moved to `packages/shared`
 - [ ] Warframe types moved to `packages/shared` (items.ts loader stays backend)
-- [ ] Full mod/arcane/shard render (reuse Slice 6 editor in read-only mode)
+- [x] Full mod/arcane/shard render (reuse Slice 6 editor in read-only mode)
 - [x] Port tsvector search trigger + index as raw SQL migration (needed for Slice 5 search)
 
 ### Slice 5 — Build listing + social (reads)
@@ -78,7 +78,13 @@ Work happens on the `rewrite` branch (tracks `origin/rewrite`). Legacy Next.js a
 - [x] Update build — `PATCH /builds/:slug`, editor hydrates from `?build=<slug>` and Save switches to PATCH for owner
 - [x] `readOnly` prop threaded through ModSlot / ArcaneSlot / ItemSidebar for `/builds/$slug`
 - [ ] Delete / fork build mutations
-- [ ] `/import` — Overframe import
+- [x] `/import` — Overframe import
+  - [x] Server scraper — `POST /imports/overframe` extracts `__NEXT_DATA__`, resolves Overframe IDs to names via bundled items.csv, returns raw slot data + warnings
+  - [x] `/import` page — URL input, preview of parsed result
+  - [x] Client matching — item/mod/arcane/helminth against WFCD data, slot_id interpretation by category
+  - [x] Editor handoff via sessionStorage draft — `/create?item=&category=&draft=` hydrates pre-populated state
+  - [x] Forma-polarity detection via per-item JSON (aura + polarities)
+  - [ ] Port `build-codec` + add `getStatIndex`/`getStatByIndex` to shards (for URL-sharable encoded builds — unrelated to import)
 
 ### Slice 7 — Org + admin + settings
 
