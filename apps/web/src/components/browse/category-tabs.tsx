@@ -9,13 +9,9 @@ interface CategoryTabsProps {
 export function CategoryTabs({ activeCategory, onChange }: CategoryTabsProps) {
   return (
     <Tabs value={activeCategory} onValueChange={(v) => onChange(v as BrowseCategory)}>
-      <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 bg-transparent p-0">
+      <TabsList>
         {CATEGORIES.map((c) => (
-          <TabsTrigger
-            key={c.id}
-            value={c.id}
-            className="data-[state=active]:bg-muted data-[state=active]:text-foreground"
-          >
+          <TabsTrigger key={c.id} value={c.id}>
             {c.label}
           </TabsTrigger>
         ))}

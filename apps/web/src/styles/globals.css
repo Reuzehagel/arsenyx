@@ -95,7 +95,6 @@ body {
 
   /* Warframe misc game colors */
   --color-wf-rank-pip: oklch(0.82 0.09 240);
-  --color-wf-prime: oklch(0.769 0.183 55.934);
   --color-wf-highlight: oklch(0.828 0.189 84.429);
 }
 

@@ -32,7 +32,7 @@ export function SortDropdown({ value, onChange }: SortDropdownProps) {
         if (v) onChange(v as SortOption);
       }}
     >
-      <SelectTrigger className="w-[140px]">
+      <SelectTrigger className="w-36">
         <SelectValue />
       </SelectTrigger>
       <SelectContent align="end">

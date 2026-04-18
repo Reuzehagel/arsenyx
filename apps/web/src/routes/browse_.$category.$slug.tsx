@@ -102,9 +102,6 @@ function ItemDetailContent() {
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-3xl font-bold tracking-tight">{item.name}</h1>
-              {item.isPrime && (
-                <Badge className="bg-wf-prime text-white">Prime</Badge>
-              )}
               {item.vaulted && <Badge variant="outline">Vaulted</Badge>}
             </div>
             {item.description && (

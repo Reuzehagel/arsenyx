@@ -11,6 +11,7 @@ import { Kbd } from "@/components/ui/kbd";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -83,17 +84,20 @@ function FilterSelect<T extends string>({
   options,
   labelFor,
 }: FilterSelectProps<T>) {
+  const items = options.map((o) => ({ label: labelFor ? labelFor(o) : o, value: o }));
   return (
-    <Select value={value} onValueChange={(v) => onChange(v as T)}>
-      <SelectTrigger>
+    <Select items={items} value={value} onValueChange={(v) => onChange(v as T)}>
+      <SelectTrigger className="w-36">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        {options.map((o) => (
-          <SelectItem key={o} value={o}>
-            {labelFor ? labelFor(o) : o}
-          </SelectItem>
-        ))}
+        <SelectGroup>
+          {options.map((o) => (
+            <SelectItem key={o} value={o}>
+              {labelFor ? labelFor(o) : o}
+            </SelectItem>
+          ))}
+        </SelectGroup>
       </SelectContent>
     </Select>
   );

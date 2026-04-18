@@ -17,6 +17,11 @@ const CHANGELOG: ChangelogEntry[] = [
     date: "2026-04-18",
     changes: [
       {
+        type: "refactor",
+        description:
+          "Browse / editor UI polish — dropped the orange Prime badge on item detail pages (Prime items are still surfaced by name and by the Prime-only filter), default shadcn styling on the category tabs, and unified widths on the filter selects",
+      },
+      {
         type: "feat",
         description:
           "Companions now show health/shield/armor/energy with mod recalc; archwing suits (Itzal, Odonata) render as warframes with abilities, while arch-guns / arch-melee fall through to the weapon panel — all auto-detected from item data",
