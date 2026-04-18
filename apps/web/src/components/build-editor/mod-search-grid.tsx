@@ -223,13 +223,6 @@ export function ModSearchGrid({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-lg font-semibold">Compatible Mods</h2>
-        <span className="text-muted-foreground text-sm">
-          {matches.size} / {mods.length}
-        </span>
-      </div>
-
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <InputGroup className="flex-1">
           <InputGroupAddon>
@@ -243,6 +236,9 @@ export function ModSearchGrid({
           />
           {query.length > 0 ? (
             <InputGroupAddon align="inline-end">
+              <span className="text-muted-foreground text-xs tabular-nums">
+                {matches.size} / {mods.length}
+              </span>
               <InputGroupButton
                 size="icon-xs"
                 onClick={() => setQuery("")}
@@ -253,6 +249,9 @@ export function ModSearchGrid({
             </InputGroupAddon>
           ) : (
             <InputGroupAddon align="inline-end">
+              <span className="text-muted-foreground text-xs tabular-nums">
+                {matches.size} / {mods.length}
+              </span>
               <Kbd>/</Kbd>
             </InputGroupAddon>
           )}
