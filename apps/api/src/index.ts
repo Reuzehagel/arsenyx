@@ -3,6 +3,7 @@ import { cors } from "hono/cors"
 
 import { auth } from "./auth"
 import { webOrigins } from "./env"
+import { admin } from "./routes/admin"
 import { builds } from "./routes/builds"
 import { imports } from "./routes/imports"
 import { me } from "./routes/me"
@@ -25,6 +26,7 @@ app.use(
 
 app.all("/auth/*", (c) => auth.handler(c.req.raw))
 
+app.route("/admin", admin)
 app.route("/builds", builds)
 app.route("/imports", imports)
 app.route("/me", me)

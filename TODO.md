@@ -90,7 +90,7 @@ Work happens on the `rewrite` branch (tracks `origin/rewrite`). Legacy Next.js a
 
 - [ ] `/settings` — profile, API keys (Organizations tab landed via existing SettingsDialog)
 - [x] `/org/[slug]/settings` — org management (general, members, delete)
-- [ ] `/admin` — admin panel (ban user, delete build, etc.)
+- [x] `/admin` — admin panel (users, content, orgs, stats)
 - [x] Organizations CRUD (create, update, delete, add/remove member, role change)
 - [ ] Wire `Build.organizationId` into `/create` editor so builds can publish under an org
 
