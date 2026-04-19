@@ -3,6 +3,7 @@ import { Hono } from "hono"
 import { auth } from "../auth"
 import { prisma } from "../db"
 import {
+  type ApiKeyListItem,
   ApiKeyLimitExceededError,
   createApiKey,
   listApiKeysForUser,
@@ -13,17 +14,13 @@ export const me = new Hono()
 
 const MAX_API_KEY_NAME = 100
 
-function serializeApiKey(k: {
-  id: string
-  name: string
-  keyPrefix: string
-  scopes: string[]
-  rateLimit: number
-  isActive: boolean
-  createdAt: Date
-  expiresAt: Date | null
-  lastUsedAt: Date | null
-}) {
+async function requireSession(req: Request) {
+  const session = await auth.api.getSession({ headers: req.headers })
+  if (!session?.user) return null
+  return session.user
+}
+
+function serializeApiKey(k: ApiKeyListItem) {
   return {
     id: k.id,
     name: k.name,
@@ -38,11 +35,11 @@ function serializeApiKey(k: {
 }
 
 me.get("/builds/export", async (c) => {
-  const session = await auth.api.getSession({ headers: c.req.raw.headers })
-  if (!session?.user) return c.json({ error: "unauthorized" }, 401)
+  const user = await requireSession(c.req.raw)
+  if (!user) return c.json({ error: "unauthorized" }, 401)
 
   const builds = await prisma.build.findMany({
-    where: { userId: session.user.id },
+    where: { userId: user.id },
     orderBy: { createdAt: "asc" },
     select: {
       id: true,
@@ -67,7 +64,7 @@ me.get("/builds/export", async (c) => {
   const date = new Date().toISOString().slice(0, 10)
   const payload = {
     exportedAt: new Date().toISOString(),
-    userId: session.user.id,
+    userId: user.id,
     count: builds.length,
     builds,
   }
@@ -82,16 +79,16 @@ me.get("/builds/export", async (c) => {
 })
 
 me.get("/api-keys", async (c) => {
-  const session = await auth.api.getSession({ headers: c.req.raw.headers })
-  if (!session?.user) return c.json({ error: "unauthorized" }, 401)
+  const user = await requireSession(c.req.raw)
+  if (!user) return c.json({ error: "unauthorized" }, 401)
 
-  const keys = await listApiKeysForUser(session.user.id)
+  const keys = await listApiKeysForUser(user.id)
   return c.json({ apiKeys: keys.map(serializeApiKey) })
 })
 
 me.post("/api-keys", async (c) => {
-  const session = await auth.api.getSession({ headers: c.req.raw.headers })
-  if (!session?.user) return c.json({ error: "unauthorized" }, 401)
+  const user = await requireSession(c.req.raw)
+  if (!user) return c.json({ error: "unauthorized" }, 401)
 
   let body: unknown
   try {
@@ -124,7 +121,7 @@ me.post("/api-keys", async (c) => {
   }
 
   try {
-    const created = await createApiKey(session.user.id, { name, expiresAt })
+    const created = await createApiKey(user.id, { name, expiresAt })
     return c.json(
       { token: created.token, apiKey: serializeApiKey(created.apiKey) },
       201,
@@ -138,10 +135,10 @@ me.post("/api-keys", async (c) => {
 })
 
 me.delete("/api-keys/:id", async (c) => {
-  const session = await auth.api.getSession({ headers: c.req.raw.headers })
-  if (!session?.user) return c.json({ error: "unauthorized" }, 401)
+  const user = await requireSession(c.req.raw)
+  if (!user) return c.json({ error: "unauthorized" }, 401)
 
-  const ok = await revokeApiKey(session.user.id, c.req.param("id"))
+  const ok = await revokeApiKey(user.id, c.req.param("id"))
   if (!ok) return c.json({ error: "not_found" }, 404)
   return c.body(null, 204)
 })

@@ -84,5 +84,5 @@ export async function revokeApiKey(id: string): Promise<void> {
     method: "DELETE",
     credentials: "include",
   })
-  if (!r.ok && r.status !== 204) throw new Error(await readError(r))
+  if (!r.ok) throw new Error(await readError(r))
 }
