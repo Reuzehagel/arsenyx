@@ -29,7 +29,7 @@
     "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.5.0",
     "@sparticuz/chromium-min": "^143.0.4",
-    "@wfcd/items": "^1.1273.17",
+    "@wfcd/items": "^1.1273.24",
     "better-auth": "^1.5.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
