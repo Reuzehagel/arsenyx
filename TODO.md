@@ -46,8 +46,8 @@ Work happens on the `rewrite` branch (tracks `origin/rewrite`). Legacy Next.js a
 - [x] Hono route: `GET /builds/:slug` with visibility checks (owner / public / unlisted / org member)
 - [x] `/builds/$slug` route in web (loader + query + minimal render)
 - [x] Markdown guide rendering (react-markdown + remark-gfm) — rehype-highlight deferred
-- [ ] Build codec moved to `packages/shared`
-- [ ] Warframe types moved to `packages/shared` (items.ts loader stays backend)
+- [x] Build codec moved to `packages/shared` (includes `getStatIndex`/`getStatByIndex` shard helpers)
+- [x] Warframe types moved to `packages/shared` (items.ts loader stays backend)
 - [x] Full mod/arcane/shard render (reuse Slice 6 editor in read-only mode)
 - [x] Port tsvector search trigger + index as raw SQL migration (needed for Slice 5 search)
 
@@ -84,7 +84,7 @@ Work happens on the `rewrite` branch (tracks `origin/rewrite`). Legacy Next.js a
   - [x] Client matching — item/mod/arcane/helminth against WFCD data, slot_id interpretation by category
   - [x] Editor handoff via sessionStorage draft — `/create?item=&category=&draft=` hydrates pre-populated state
   - [x] Forma-polarity detection via per-item JSON (aura + polarities)
-  - [ ] Port `build-codec` + add `getStatIndex`/`getStatByIndex` to shards (for URL-sharable encoded builds — unrelated to import)
+  - [ ] Wire `build-codec` into `/create` (`?build=<encoded>` loader) + Share button — codec lives in `@arsenyx/shared/warframe/build-codec`
 
 ### Slice 7 — Org + admin + settings
 
