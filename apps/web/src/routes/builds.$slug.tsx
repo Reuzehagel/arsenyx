@@ -149,6 +149,7 @@ function BuildViewerBody({
   const shards = useMemo(() => padShards(saved.shards), [saved.shards])
   const helminth = saved.helminth ?? {}
   const hasReactor = saved.hasReactor ?? true
+  const zawComponents = saved.zawComponents
 
   const auraRaw = Array.isArray(item.aura) ? item.aura[0] : item.aura
   const auraInnate = toPolarity(auraRaw)
@@ -219,6 +220,7 @@ function BuildViewerBody({
               onSetShard={() => {}}
               helminth={helminth}
               onSetHelminth={() => {}}
+              zawComponents={zawComponents}
               placedMods={slots.placed}
               placedArcanes={arcanes.placed}
               readOnly

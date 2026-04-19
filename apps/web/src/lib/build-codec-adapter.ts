@@ -24,6 +24,7 @@ type EditorState = {
   arcanes: (PlacedArcane | null)[]
   shards: (PlacedShard | null)[]
   helminth: Record<number, HelminthAbility>
+  zawComponents?: { grip: string; link: string }
   normalSlotCount: number
 }
 
@@ -152,6 +153,7 @@ export function savedDataToBuildState(state: EditorState): BuildState {
     formaCount: 0,
     buildName: state.buildName,
     helminthAbility,
+    zawComponents: state.zawComponents,
   }
 }
 
@@ -207,6 +209,7 @@ export function buildStateToSavedData(
       shards: state.shardSlots ?? [],
       hasReactor: state.hasReactor ?? true,
       helminth,
+      zawComponents: state.zawComponents,
     },
     buildName: state.buildName,
   }

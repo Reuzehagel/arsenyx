@@ -1,25 +1,24 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { ChevronLeft, Plus, Undo2, X, Zap } from "lucide-react";
-import { Suspense, useMemo, useState } from "react";
+import type { Gun, Melee, Warframe } from "@arsenyx/shared/warframe/types"
+import { isZawStrike } from "@arsenyx/shared/warframe/zaw-data"
+import { useSuspenseQuery } from "@tanstack/react-query"
+import { ChevronLeft, Plus, Undo2, X, Zap } from "lucide-react"
+import { Suspense, useMemo, useState } from "react"
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
-import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
+} from "@/components/ui/popover"
+import { Separator } from "@/components/ui/separator"
+import { Switch } from "@/components/ui/switch"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  helminthQuery,
-  type HelminthAbility,
-} from "@/lib/helminth-query";
+} from "@/components/ui/tooltip"
+import { helminthQuery, type HelminthAbility } from "@/lib/helminth-query"
 import {
   getShardImageUrl,
   SHARD_COLOR_NAMES,
@@ -28,7 +27,7 @@ import {
   type PlacedShard,
   type ShardColor,
   formatStatValue,
-} from "@/lib/shards";
+} from "@/lib/shards"
 import {
   calculateCompanionStats,
   calculateWarframeStats,
@@ -43,41 +42,44 @@ import {
   type StatValue,
   type WarframeStats,
   type WeaponStats,
-} from "@/lib/stats";
-import { cn } from "@/lib/utils";
+} from "@/lib/stats"
+import { cn } from "@/lib/utils"
 import {
   type BrowseCategory,
   type DetailItem,
   formatStat,
   getImageUrl,
-} from "@/lib/warframe";
-import type { Gun, Melee, Warframe } from "@arsenyx/shared/warframe/types";
+} from "@/lib/warframe"
+import { adjustStrikeForZaw } from "@/lib/zaw-stats"
 
-import type { PlacedArcane } from "./use-arcane-slots";
-import type { PlacedMod, SlotId } from "./use-build-slots";
+import type { PlacedArcane } from "./use-arcane-slots"
+import type { PlacedMod, SlotId } from "./use-build-slots"
+import { ZawComponentSelector } from "./zaw-component-selector"
 
-const SHARD_SLOTS = 5;
+const SHARD_SLOTS = 5
 
 function itemHasWeaponData(item: DetailItem): boolean {
-  if (item.totalDamage !== undefined) return true;
-  const attacks = (item as { attacks?: unknown[] }).attacks;
-  return Array.isArray(attacks) && attacks.length > 0;
+  if (item.totalDamage !== undefined) return true
+  const attacks = (item as { attacks?: unknown[] }).attacks
+  return Array.isArray(attacks) && attacks.length > 0
 }
 
 export interface ItemSidebarProps {
-  item: DetailItem;
-  category: BrowseCategory;
-  capacityUsed: number;
-  capacityMax: number;
-  hasReactor: boolean;
-  onToggleReactor: () => void;
-  shards: (PlacedShard | null)[];
-  onSetShard: (index: number, shard: PlacedShard | null) => void;
-  helminth: Record<number, HelminthAbility>;
-  onSetHelminth: (slotIndex: number, ability: HelminthAbility | null) => void;
-  placedMods: Partial<Record<SlotId, PlacedMod>>;
-  placedArcanes: (PlacedArcane | null)[];
-  readOnly?: boolean;
+  item: DetailItem
+  category: BrowseCategory
+  capacityUsed: number
+  capacityMax: number
+  hasReactor: boolean
+  onToggleReactor: () => void
+  shards: (PlacedShard | null)[]
+  onSetShard: (index: number, shard: PlacedShard | null) => void
+  helminth: Record<number, HelminthAbility>
+  onSetHelminth: (slotIndex: number, ability: HelminthAbility | null) => void
+  zawComponents?: { grip: string; link: string }
+  onSetZawComponents?: (components: { grip: string; link: string }) => void
+  placedMods: Partial<Record<SlotId, PlacedMod>>
+  placedArcanes: (PlacedArcane | null)[]
+  readOnly?: boolean
 }
 
 export function ItemSidebar({
@@ -91,21 +93,22 @@ export function ItemSidebar({
   onSetShard,
   helminth,
   onSetHelminth,
+  zawComponents,
+  onSetZawComponents,
   placedMods,
   placedArcanes,
   readOnly = false,
 }: ItemSidebarProps) {
+  const isZawItem = category === "melee" && isZawStrike(item.name)
   // Distinguish archwing *suits* (have health) from arch-guns / arch-melee
   // (have attack data). Both share the `archwing` browse category.
-  const hasWeaponData = itemHasWeaponData(item);
+  const hasWeaponData = itemHasWeaponData(item)
   const isArchwingSuit =
-    category === "archwing" && !hasWeaponData && item.health !== undefined;
+    category === "archwing" && !hasWeaponData && item.health !== undefined
   const isWarframe =
-    category === "warframes" ||
-    category === "necramechs" ||
-    isArchwingSuit;
-  const isPureWarframe = category === "warframes";
-  const isCompanion = category === "companions" && !hasWeaponData;
+    category === "warframes" || category === "necramechs" || isArchwingSuit
+  const isPureWarframe = category === "warframes"
+  const isCompanion = category === "companions" && !hasWeaponData
   const isWeapon =
     hasWeaponData &&
     (category === "primary" ||
@@ -114,47 +117,54 @@ export function ItemSidebar({
       category === "companion-weapons" ||
       category === "archwing" ||
       category === "exalted-weapons" ||
-      category === "companions");
-  const showShards = category === "warframes";
-  const skipRankUpBonus =
-    category === "necramechs" || isArchwingSuit;
-  const abilities = item.abilities ?? [];
-  const boosterLabel = isWarframe ? "Reactor" : "Catalyst";
+      category === "companions")
+  const showShards = category === "warframes"
+  const skipRankUpBonus = category === "necramechs" || isArchwingSuit
+  const abilities = item.abilities ?? []
+  const boosterLabel = isWarframe ? "Reactor" : "Catalyst"
 
   const modList = useMemo(
     () =>
-      Object.values(placedMods).filter(
-        (p): p is PlacedMod => p !== undefined,
-      ),
+      Object.values(placedMods).filter((p): p is PlacedMod => p !== undefined),
     [placedMods],
-  );
+  )
   const arcaneList = useMemo(
     () => placedArcanes.filter((a): a is PlacedArcane => !!a),
     [placedArcanes],
-  );
+  )
 
   const warframeStats = useMemo<WarframeStats | null>(() => {
-    if (!isWarframe) return null;
+    if (!isWarframe) return null
     return calculateWarframeStats({
       warframe: item as unknown as Warframe,
       mods: modList,
       arcanes: arcaneList,
       shards,
       skipRankUpBonus,
-    });
-  }, [isWarframe, item, modList, arcaneList, shards, skipRankUpBonus]);
+    })
+  }, [isWarframe, item, modList, arcaneList, shards, skipRankUpBonus])
 
   const weaponStats = useMemo<WeaponStats | null>(() => {
-    if (!isWeapon) return null;
+    if (!isWeapon) return null
+    const baseWeapon = item as unknown as Gun | Melee
+    const weapon =
+      isZawItem && zawComponents
+        ? adjustStrikeForZaw(
+            baseWeapon,
+            item.name,
+            zawComponents.grip,
+            zawComponents.link,
+          )
+        : baseWeapon
     return calculateWeaponStats({
-      weapon: item as unknown as Gun | Melee,
+      weapon,
       mods: modList,
       arcanes: arcaneList,
-    });
-  }, [isWeapon, item, modList, arcaneList]);
+    })
+  }, [isWeapon, isZawItem, zawComponents, item, modList, arcaneList])
 
   const companionStats = useMemo<CompanionStats | null>(() => {
-    if (!isCompanion) return null;
+    if (!isCompanion) return null
     return calculateCompanionStats({
       companion: {
         name: item.name,
@@ -165,36 +175,49 @@ export function ItemSidebar({
       },
       mods: modList,
       arcanes: arcaneList,
-    });
-  }, [isCompanion, item, modList, arcaneList]);
+    })
+  }, [isCompanion, item, modList, arcaneList])
 
   return (
     <div className="flex h-full flex-col">
       {isWarframe && abilities.length > 0 && (
         <>
-        <div className="flex justify-around p-3">
-          {abilities.slice(0, 4).map((a, i) => {
-            const replaced = helminth[i];
-            const displayed = replaced
-              ? {
-                  uniqueName: replaced.uniqueName,
-                  name: replaced.name,
-                  description: replaced.description,
-                  imageName: replaced.imageName,
-                }
-              : a;
-            return (
-              <AbilityIcon
-                key={i}
-                ability={displayed}
-                isHelminth={Boolean(replaced)}
-                canSubsume={isPureWarframe && !readOnly}
-                onSelectHelminth={(ab) => onSetHelminth(i, ab)}
-              />
-            );
-          })}
-        </div>
-        <Separator />
+          <div className="flex justify-around p-3">
+            {abilities.slice(0, 4).map((a, i) => {
+              const replaced = helminth[i]
+              const displayed = replaced
+                ? {
+                    uniqueName: replaced.uniqueName,
+                    name: replaced.name,
+                    description: replaced.description,
+                    imageName: replaced.imageName,
+                  }
+                : a
+              return (
+                <AbilityIcon
+                  key={i}
+                  ability={displayed}
+                  isHelminth={Boolean(replaced)}
+                  canSubsume={isPureWarframe && !readOnly}
+                  onSelectHelminth={(ab) => onSetHelminth(i, ab)}
+                />
+              )
+            })}
+          </div>
+          <Separator />
+        </>
+      )}
+
+      {isZawItem && zawComponents && (
+        <>
+          <div className="flex justify-center p-3">
+            <ZawComponentSelector
+              components={zawComponents}
+              onChange={onSetZawComponents}
+              readOnly={readOnly}
+            />
+          </div>
+          <Separator />
         </>
       )}
 
@@ -236,7 +259,7 @@ export function ItemSidebar({
         {companionStats && <CompanionStatsPanel stats={companionStats} />}
       </div>
     </div>
-  );
+  )
 }
 
 function CompanionStatsPanel({ stats }: { stats: CompanionStats }) {
@@ -255,7 +278,7 @@ function CompanionStatsPanel({ stats }: { stats: CompanionStats }) {
         <StatLine label="Energy" value={stats.energy} digits={0} />
       )}
     </div>
-  );
+  )
 }
 
 function WarframeStatsPanel({ stats }: { stats: WarframeStats }) {
@@ -272,30 +295,69 @@ function WarframeStatsPanel({ stats }: { stats: WarframeStats }) {
       <Separator />
 
       <div className="flex flex-col gap-1 text-xs">
-        <StatLine label="Strength" value={stats.abilityStrength} unit="%" digits={1} />
-        <StatLine label="Duration" value={stats.abilityDuration} unit="%" digits={1} />
-        <StatLine label="Efficiency" value={stats.abilityEfficiency} unit="%" digits={1} />
-        <StatLine label="Range" value={stats.abilityRange} unit="%" digits={1} />
+        <StatLine
+          label="Strength"
+          value={stats.abilityStrength}
+          unit="%"
+          digits={1}
+        />
+        <StatLine
+          label="Duration"
+          value={stats.abilityDuration}
+          unit="%"
+          digits={1}
+        />
+        <StatLine
+          label="Efficiency"
+          value={stats.abilityEfficiency}
+          unit="%"
+          digits={1}
+        />
+        <StatLine
+          label="Range"
+          value={stats.abilityRange}
+          unit="%"
+          digits={1}
+        />
       </div>
     </>
-  );
+  )
 }
 
 function WeaponStatsPanel({ stats }: { stats: WeaponStats }) {
-  const { attackModes, multishot, grandTotalDamage } = stats;
-  const showMultiple = attackModes.length > 1;
-  const primary = attackModes[0];
+  const { attackModes, multishot, grandTotalDamage } = stats
+  const showMultiple = attackModes.length > 1
+  const primary = attackModes[0]
 
   return (
     <div className="flex flex-col gap-3 text-xs">
       {primary && (
         <div className="flex flex-col gap-1">
-          <StatLine label="Crit Chance" value={primary.criticalChance} unit="%" digits={1} />
-          <StatLine label="Crit Multi" value={primary.criticalMultiplier} unit="x" digits={2} />
-          <StatLine label="Status" value={primary.statusChance} unit="%" digits={1} />
+          <StatLine
+            label="Crit Chance"
+            value={primary.criticalChance}
+            unit="%"
+            digits={1}
+          />
+          <StatLine
+            label="Crit Multi"
+            value={primary.criticalMultiplier}
+            unit="x"
+            digits={2}
+          />
+          <StatLine
+            label="Status"
+            value={primary.statusChance}
+            unit="%"
+            digits={1}
+          />
           <StatLine label="Fire Rate" value={primary.fireRate} digits={2} />
           {primary.magazineSize && (
-            <StatLine label="Magazine" value={primary.magazineSize} digits={0} />
+            <StatLine
+              label="Magazine"
+              value={primary.magazineSize}
+              digits={0}
+            />
           )}
           {primary.reloadTime && (
             <StatLine
@@ -336,7 +398,7 @@ function WeaponStatsPanel({ stats }: { stats: WeaponStats }) {
         </>
       )}
     </div>
-  );
+  )
 }
 
 function AttackModeBlock({
@@ -344,35 +406,30 @@ function AttackModeBlock({
   multishot,
   showHeader,
 }: {
-  mode: AttackModeStats;
-  multishot: number;
-  showHeader: boolean;
+  mode: AttackModeStats
+  multishot: number
+  showHeader: boolean
 }) {
   const scaledTotal: StatValue = {
     base: mode.totalDamage.base * multishot,
     modified: mode.totalDamage.modified * multishot,
     contributions: mode.totalDamage.contributions,
-  };
+  }
 
-  const physical = mode.damageBreakdown.physical;
-  const elemental = mode.damageBreakdown.elemental;
+  const physical = mode.damageBreakdown.physical
+  const elemental = mode.damageBreakdown.elemental
 
   return (
     <div className="flex flex-col gap-1.5">
       {showHeader && (
         <>
           <Separator />
-          <div className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <div className="text-muted-foreground mt-1 text-[10px] font-semibold tracking-wide uppercase">
             {mode.name}
           </div>
         </>
       )}
-      <StatLine
-        label="Total Damage"
-        value={scaledTotal}
-        digits={1}
-        emphasis
-      />
+      <StatLine label="Total Damage" value={scaledTotal} digits={1} emphasis />
 
       {physical.length > 0 && (
         <>
@@ -390,31 +447,35 @@ function AttackModeBlock({
           <DamageSectionHeader label="Elemental" />
           <div className="flex flex-col gap-0.5">
             {elemental.map((d, i) => (
-              <DamageRow key={`${d.type}-${i}`} entry={d} multishot={multishot} />
+              <DamageRow
+                key={`${d.type}-${i}`}
+                entry={d}
+                multishot={multishot}
+              />
             ))}
           </div>
         </>
       )}
     </div>
-  );
+  )
 }
 
 function DamageSectionHeader({ label }: { label: string }) {
   return (
-    <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/70 mt-1">
+    <div className="text-muted-foreground/70 mt-1 text-[9px] font-semibold tracking-wider uppercase">
       {label}
     </div>
-  );
+  )
 }
 
 function DamageRow({
   entry,
   multishot,
 }: {
-  entry: DamageEntry;
-  multishot: number;
+  entry: DamageEntry
+  multishot: number
 }) {
-  const scaled = entry.value * multishot;
+  const scaled = entry.value * multishot
   const row = (
     <div className="flex cursor-help items-baseline justify-between">
       <span className="flex items-center gap-1.5">
@@ -428,11 +489,11 @@ function DamageRow({
           {DAMAGE_TYPE_LABELS[entry.type]}
         </span>
       </span>
-      <span className="tabular-nums font-medium">{formatStat(scaled, 1)}</span>
+      <span className="font-medium tabular-nums">{formatStat(scaled, 1)}</span>
     </div>
-  );
+  )
 
-  if (entry.contributions.length === 0) return row;
+  if (entry.contributions.length === 0) return row
 
   return (
     <Popover>
@@ -441,38 +502,36 @@ function DamageRow({
         <DamageFormula entry={entry} multishot={multishot} />
       </PopoverContent>
     </Popover>
-  );
+  )
 }
 
 function DamageFormula({
   entry,
   multishot,
 }: {
-  entry: DamageEntry;
-  multishot: number;
+  entry: DamageEntry
+  multishot: number
 }) {
-  const grouped = groupContributions(entry.contributions);
-  const scaled = entry.value * multishot;
+  const grouped = groupContributions(entry.contributions)
+  const scaled = entry.value * multishot
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline justify-between">
         <span
-          className={cn(
-            "font-semibold",
-            DAMAGE_TYPE_STYLE[entry.type].text,
-          )}
+          className={cn("font-semibold", DAMAGE_TYPE_STYLE[entry.type].text)}
         >
           {DAMAGE_TYPE_LABELS[entry.type]}
         </span>
-        <span className="tabular-nums font-semibold">
+        <span className="font-semibold tabular-nums">
           {formatStat(scaled, 1)}
         </span>
       </div>
       {grouped.map((g, i) => (
         <div key={i} className="flex flex-col gap-0.5">
           <Separator />
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
-            {g.label} <span className="tabular-nums">({formatSum(g.contribs)})</span>
+          <div className="text-muted-foreground text-[10px] tracking-wide uppercase">
+            {g.label}{" "}
+            <span className="tabular-nums">({formatSum(g.contribs)})</span>
           </div>
           {g.contribs.map((c, j) => (
             <ContribRow
@@ -487,35 +546,35 @@ function DamageFormula({
       {multishot > 1.001 && (
         <>
           <Separator />
-          <div className="text-[10px] text-muted-foreground">
+          <div className="text-muted-foreground text-[10px]">
             × {formatStat(multishot, 2)} multishot
           </div>
         </>
       )}
     </div>
-  );
+  )
 }
 
 function groupContributions(
   contribs: StatContribution[],
 ): { label: string; contribs: StatContribution[] }[] {
-  const groups = new Map<string, StatContribution[]>();
+  const groups = new Map<string, StatContribution[]>()
   for (const c of contribs) {
-    const key = c.group ?? "";
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(c);
+    const key = c.group ?? ""
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key)!.push(c)
   }
-  return Array.from(groups, ([label, contribs]) => ({ label, contribs }));
+  return Array.from(groups, ([label, contribs]) => ({ label, contribs }))
 }
 
 function formatSum(contribs: StatContribution[]): string {
-  const sum = contribs.reduce((t, c) => t + c.amount, 0);
-  const sign = sum >= 0 ? "+" : "";
-  return `${sign}${formatStat(sum, 1)}%`;
+  const sum = contribs.reduce((t, c) => t + c.amount, 0)
+  const sign = sum >= 0 ? "+" : ""
+  return `${sign}${formatStat(sum, 1)}%`
 }
 
 function formatContribAmount(c: StatContribution): string {
-  return formatWithSign(c.amount, 1, c.operation === "percent_add" ? "%" : "");
+  return formatWithSign(c.amount, 1, c.operation === "percent_add" ? "%" : "")
 }
 
 function StatLine({
@@ -526,22 +585,18 @@ function StatLine({
   inverted = false,
   emphasis = false,
 }: {
-  label: string;
-  value: StatValue;
-  unit?: string;
-  digits?: number;
-  inverted?: boolean;
-  emphasis?: boolean;
+  label: string
+  value: StatValue
+  unit?: string
+  digits?: number
+  inverted?: boolean
+  emphasis?: boolean
 }) {
-  const delta = value.modified - value.base;
-  const changed = Math.abs(delta) > 0.005;
-  const capped = value.uncapped !== undefined;
-  const better = inverted ? delta < 0 : delta > 0;
-  const color = !changed
-    ? ""
-    : better
-      ? "text-green-500"
-      : "text-red-500";
+  const delta = value.modified - value.base
+  const changed = Math.abs(delta) > 0.005
+  const capped = value.uncapped !== undefined
+  const better = inverted ? delta < 0 : delta > 0
+  const color = !changed ? "" : better ? "text-green-500" : "text-red-500"
 
   const row = (
     <div
@@ -568,18 +623,23 @@ function StatLine({
         )}
       </span>
     </div>
-  );
+  )
 
-  if (!changed || value.contributions.length === 0) return row;
+  if (!changed || value.contributions.length === 0) return row
 
   return (
     <Popover>
       <PopoverTrigger nativeButton={false} render={row} />
       <PopoverContent side="right" align="start" className="w-64 text-xs">
-        <StatFormula value={value} unit={unit} digits={digits} inverted={inverted} />
+        <StatFormula
+          value={value}
+          unit={unit}
+          digits={digits}
+          inverted={inverted}
+        />
       </PopoverContent>
     </Popover>
-  );
+  )
 }
 
 function StatFormula({
@@ -588,18 +648,18 @@ function StatFormula({
   digits,
   inverted,
 }: {
-  value: StatValue;
-  unit: string;
-  digits: number;
-  inverted: boolean;
+  value: StatValue
+  unit: string
+  digits: number
+  inverted: boolean
 }) {
-  const hasGroups = value.contributions.some((c) => c.group);
-  const flats = value.contributions.filter((c) => c.operation === "flat_add");
+  const hasGroups = value.contributions.some((c) => c.group)
+  const flats = value.contributions.filter((c) => c.operation === "flat_add")
   const percents = value.contributions.filter(
     (c) => c.operation === "percent_add",
-  );
-  const percentSum = percents.reduce((s, c) => s + c.amount, 0);
-  const flatSum = flats.reduce((s, c) => s + c.amount, 0);
+  )
+  const percentSum = percents.reduce((s, c) => s + c.amount, 0)
+  const flatSum = flats.reduce((s, c) => s + c.amount, 0)
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -648,7 +708,7 @@ function StatFormula({
           )}
 
           <Separator />
-          <div className="text-[10px] text-muted-foreground">
+          <div className="text-muted-foreground text-[10px]">
             {inverted ? (
               <>
                 {formatStat(value.base, digits)} ÷ (1 +{" "}
@@ -667,7 +727,7 @@ function StatFormula({
 
       <Separator />
       {value.uncapped !== undefined && (
-        <div className="flex items-baseline justify-between text-muted-foreground">
+        <div className="text-muted-foreground flex items-baseline justify-between">
           <span>Uncapped</span>
           <span className="tabular-nums">
             {formatStat(value.uncapped, digits)}
@@ -683,17 +743,17 @@ function StatFormula({
         </span>
       </div>
     </div>
-  );
+  )
 }
 
 function GroupedContribs({ contribs }: { contribs: StatContribution[] }) {
-  const groups = groupContributions(contribs);
+  const groups = groupContributions(contribs)
   return (
     <>
       {groups.map((g, i) => (
         <div key={i} className="flex flex-col gap-0.5">
           <Separator />
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+          <div className="text-muted-foreground text-[10px] tracking-wide uppercase">
             {g.label || "Other"}{" "}
             <span className="tabular-nums">({formatSum(g.contribs)})</span>
           </div>
@@ -708,7 +768,7 @@ function GroupedContribs({ contribs }: { contribs: StatContribution[] }) {
         </div>
       ))}
     </>
-  );
+  )
 }
 
 function ContribRow({
@@ -716,13 +776,13 @@ function ContribRow({
   amount,
   positive,
 }: {
-  name: string;
-  amount: string;
-  positive: boolean;
+  name: string
+  amount: string
+  positive: boolean
 }) {
   return (
     <div className="flex items-baseline justify-between gap-2">
-      <span className="truncate text-muted-foreground">{name}</span>
+      <span className="text-muted-foreground truncate">{name}</span>
       <span
         className={cn(
           "shrink-0 tabular-nums",
@@ -732,7 +792,7 @@ function ContribRow({
         {amount}
       </span>
     </div>
-  );
+  )
 }
 
 function AbilityIcon({
@@ -741,12 +801,12 @@ function AbilityIcon({
   canSubsume,
   onSelectHelminth,
 }: {
-  ability: { name: string; description: string; imageName?: string };
-  isHelminth: boolean;
-  canSubsume: boolean;
-  onSelectHelminth: (ability: HelminthAbility | null) => void;
+  ability: { name: string; description: string; imageName?: string }
+  isHelminth: boolean
+  canSubsume: boolean
+  onSelectHelminth: (ability: HelminthAbility | null) => void
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false)
   const triggerButton = (
     <button
       type="button"
@@ -769,14 +829,12 @@ function AbilityIcon({
         </div>
       )}
     </button>
-  );
+  )
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <Tooltip>
-        <TooltipTrigger
-          render={<PopoverTrigger render={triggerButton} />}
-        />
+        <TooltipTrigger render={<PopoverTrigger render={triggerButton} />} />
         <TooltipContent side="bottom" className="max-w-xs">
           <p className="font-semibold">{ability.name}</p>
           <p className="text-muted-foreground mt-0.5 whitespace-pre-line">
@@ -787,42 +845,39 @@ function AbilityIcon({
       {canSubsume && (
         <PopoverContent side="bottom" align="center" className="w-72">
           <Suspense
-            fallback={
-              <p className="text-muted-foreground text-xs">Loading…</p>
-            }
+            fallback={<p className="text-muted-foreground text-xs">Loading…</p>}
           >
             <HelminthPicker
               isHelminth={isHelminth}
               onPick={(ab) => {
-                onSelectHelminth(ab);
-                setOpen(false);
+                onSelectHelminth(ab)
+                setOpen(false)
               }}
             />
           </Suspense>
         </PopoverContent>
       )}
     </Popover>
-  );
+  )
 }
 
 function HelminthPicker({
   isHelminth,
   onPick,
 }: {
-  isHelminth: boolean;
-  onPick: (ability: HelminthAbility | null) => void;
+  isHelminth: boolean
+  onPick: (ability: HelminthAbility | null) => void
 }) {
-  const { data } = useSuspenseQuery(helminthQuery);
-  const [query, setQuery] = useState("");
+  const { data } = useSuspenseQuery(helminthQuery)
+  const [query, setQuery] = useState("")
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return data;
+    const q = query.trim().toLowerCase()
+    if (!q) return data
     return data.filter(
       (a) =>
-        a.name.toLowerCase().includes(q) ||
-        a.source.toLowerCase().includes(q),
-    );
-  }, [data, query]);
+        a.name.toLowerCase().includes(q) || a.source.toLowerCase().includes(q),
+    )
+  }, [data, query])
 
   return (
     <div className="flex flex-col gap-2">
@@ -878,12 +933,12 @@ function HelminthPicker({
         )}
       </div>
     </div>
-  );
+  )
 }
 
 function CapacityBar({ used, max }: { used: number; max: number }) {
-  const pctVal = max > 0 ? Math.min(100, (used / max) * 100) : 0;
-  const over = used > max;
+  const pctVal = max > 0 ? Math.min(100, (used / max) * 100) : 0
+  const over = used > max
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between text-xs">
@@ -907,7 +962,7 @@ function CapacityBar({ used, max }: { used: number; max: number }) {
         />
       </div>
     </div>
-  );
+  )
 }
 
 function ShardSlot({
@@ -915,11 +970,11 @@ function ShardSlot({
   onPick,
   readOnly = false,
 }: {
-  shard: PlacedShard | null;
-  onPick: (s: PlacedShard | null) => void;
-  readOnly?: boolean;
+  shard: PlacedShard | null
+  onPick: (s: PlacedShard | null) => void
+  readOnly?: boolean
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false)
   const triggerButton = (
     <button
       type="button"
@@ -940,7 +995,7 @@ function ShardSlot({
         <Plus className="text-muted-foreground/20 size-4" />
       )}
     </button>
-  );
+  )
 
   return (
     <Popover open={open} onOpenChange={readOnly ? undefined : setOpen}>
@@ -969,18 +1024,18 @@ function ShardSlot({
           <ShardPicker
             current={shard}
             onPick={(s) => {
-              onPick(s);
-              setOpen(false);
+              onPick(s)
+              setOpen(false)
             }}
             onClear={() => {
-              onPick(null);
-              setOpen(false);
+              onPick(null)
+              setOpen(false)
             }}
           />
         </PopoverContent>
       )}
     </Popover>
-  );
+  )
 }
 
 function ShardPicker({
@@ -988,12 +1043,12 @@ function ShardPicker({
   onPick,
   onClear,
 }: {
-  current: PlacedShard | null;
-  onPick: (s: PlacedShard) => void;
-  onClear: () => void;
+  current: PlacedShard | null
+  onPick: (s: PlacedShard) => void
+  onClear: () => void
 }) {
-  const [color, setColor] = useState<ShardColor | null>(current?.color ?? null);
-  const [tauforged, setTauforged] = useState(current?.tauforged ?? true);
+  const [color, setColor] = useState<ShardColor | null>(current?.color ?? null)
+  const [tauforged, setTauforged] = useState(current?.tauforged ?? true)
 
   return (
     <div className="flex flex-col gap-2">
@@ -1058,7 +1113,7 @@ function ShardPicker({
               const isActive =
                 current?.color === color &&
                 current.stat === s.name &&
-                current.tauforged === tauforged;
+                current.tauforged === tauforged
               return (
                 <button
                   key={s.name}
@@ -1074,11 +1129,11 @@ function ShardPicker({
                     {formatStatValue(s, tauforged)}
                   </span>
                 </button>
-              );
+              )
             })}
           </div>
         </>
       )}
     </div>
-  );
+  )
 }

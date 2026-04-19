@@ -8,6 +8,11 @@ import {
 } from "@arsenyx/shared/warframe/rivens"
 import type { Mod } from "@arsenyx/shared/warframe/types"
 import {
+  isZawStrike,
+  ZAW_DEFAULT_GRIP,
+  ZAW_DEFAULT_LINK,
+} from "@arsenyx/shared/warframe/zaw-data"
+import {
   useQuery,
   useQueryClient,
   useSuspenseQuery,
@@ -294,6 +299,25 @@ function EditorShell() {
     () => existingBuild?.guide?.description ?? "",
   )
 
+  const [zawComponents, setZawComponents] = useState<
+    { grip: string; link: string } | undefined
+  >(() => {
+    if (savedData.zawComponents) return savedData.zawComponents
+    if (isZawStrike(item.name)) {
+      return { grip: ZAW_DEFAULT_GRIP, link: ZAW_DEFAULT_LINK }
+    }
+    return undefined
+  })
+
+  useEffect(() => {
+    setZawComponents((prev) => {
+      if (isZawStrike(item.name)) {
+        return prev ?? { grip: ZAW_DEFAULT_GRIP, link: ZAW_DEFAULT_LINK }
+      }
+      return undefined
+    })
+  }, [item.name])
+
   const [helminth, setHelminth] = useState<Record<number, HelminthAbility>>(
     () => savedData.helminth ?? {},
   )
@@ -349,6 +373,7 @@ function EditorShell() {
       arcanes: arcanes.placed,
       shards,
       helminth,
+      zawComponents,
       normalSlotCount,
     })
     const encoded = encodeBuild(state)
@@ -388,6 +413,7 @@ function EditorShell() {
           shards,
           hasReactor,
           helminth,
+          zawComponents,
         },
         guide: {
           summary: guideSummary.trim() || null,
@@ -481,6 +507,8 @@ function EditorShell() {
               onSetShard={setShard}
               helminth={helminth}
               onSetHelminth={setHelminthAt}
+              zawComponents={zawComponents}
+              onSetZawComponents={setZawComponents}
               placedMods={slots.placed}
               placedArcanes={arcanes.placed}
             />
