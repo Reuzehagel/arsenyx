@@ -1,24 +1,25 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
-import { Check, Copy, UploadCloud } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { Check, Copy, UploadCloud } from "lucide-react"
+import { useMemo, useState } from "react"
 
-import { Footer } from "@/components/footer";
-import { Header } from "@/components/header";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { API_URL } from "@/lib/constants";
-import { arcanesQuery } from "@/lib/arcanes-query";
-import { helminthQuery } from "@/lib/helminth-query";
-import { itemQuery } from "@/lib/item-query";
-import { itemsIndexQuery } from "@/lib/items-index-query";
-import { modsQuery } from "@/lib/mods-query";
-import { saveDraft } from "@/lib/import-draft";
+import { Footer } from "@/components/footer"
+import { Header } from "@/components/header"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { arcanesQuery } from "@/lib/arcanes-query"
+import { API_URL } from "@/lib/constants"
+import { helminthQuery } from "@/lib/helminth-query"
+import { saveDraft } from "@/lib/import-draft"
+import { itemQuery } from "@/lib/item-query"
+import { itemsIndexQuery } from "@/lib/items-index-query"
+import { modsQuery } from "@/lib/mods-query"
 import {
   applyOverframeScrape,
   matchOverframeItem,
   type ScrapeResponse,
-} from "@/lib/overframe";
+} from "@/lib/overframe"
+import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard"
 
 export const Route = createFileRoute("/import")({
   loader: async ({ context }) => {
@@ -27,10 +28,10 @@ export const Route = createFileRoute("/import")({
       context.queryClient.ensureQueryData(modsQuery),
       context.queryClient.ensureQueryData(arcanesQuery),
       context.queryClient.ensureQueryData(helminthQuery),
-    ]);
+    ])
   },
   component: ImportPage,
-});
+})
 
 async function postOverframeImport(url: string): Promise<ScrapeResponse> {
   const r = await fetch(`${API_URL}/imports/overframe`, {
@@ -38,37 +39,37 @@ async function postOverframeImport(url: string): Promise<ScrapeResponse> {
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify({ url }),
-  });
+  })
   if (!r.ok) {
-    const body = await r.json().catch(() => ({}));
+    const body = await r.json().catch(() => ({}))
     throw new Error(
       (body as { error?: string; details?: string }).details ??
         (body as { error?: string }).error ??
         `Import failed: ${r.status}`,
-    );
+    )
   }
-  return r.json();
+  return r.json()
 }
 
 function ImportPage() {
-  const [url, setUrl] = useState("");
-  const navigate = useNavigate();
-  const { data: items } = useQuery(itemsIndexQuery);
-  const { data: mods } = useQuery(modsQuery);
-  const { data: arcanes } = useQuery(arcanesQuery);
-  const { data: helminthAbilities } = useQuery(helminthQuery);
+  const [url, setUrl] = useState("")
+  const navigate = useNavigate()
+  const { data: items } = useQuery(itemsIndexQuery)
+  const { data: mods } = useQuery(modsQuery)
+  const { data: arcanes } = useQuery(arcanesQuery)
+  const { data: helminthAbilities } = useQuery(helminthQuery)
 
-  const mutation = useMutation({ mutationFn: postOverframeImport });
-  const result = mutation.data;
+  const mutation = useMutation({ mutationFn: postOverframeImport })
+  const result = mutation.data
 
   const fatalWarning = result?.warnings.find(
     (w) => w.type === "invalid_url" || w.type === "fetch_failed",
-  );
+  )
 
   const matchedItem = useMemo(() => {
-    if (!result || fatalWarning || !items) return null;
-    return matchOverframeItem(result, items);
-  }, [result, fatalWarning, items]);
+    if (!result || fatalWarning || !items) return null
+    return matchOverframeItem(result, items)
+  }, [result, fatalWarning, items])
 
   const { data: detailItem } = useQuery({
     ...itemQuery(
@@ -76,7 +77,7 @@ function ImportPage() {
       matchedItem?.item.slug ?? "__none__",
     ),
     enabled: !!matchedItem,
-  });
+  })
 
   const applied = useMemo(() => {
     if (
@@ -88,7 +89,7 @@ function ImportPage() {
       !arcanes ||
       !helminthAbilities
     ) {
-      return null;
+      return null
     }
     return applyOverframeScrape({
       scrape: result,
@@ -98,7 +99,7 @@ function ImportPage() {
       mods,
       arcanes,
       helminthAbilities,
-    });
+    })
   }, [
     result,
     fatalWarning,
@@ -107,21 +108,21 @@ function ImportPage() {
     mods,
     arcanes,
     helminthAbilities,
-  ]);
+  ])
 
   const onSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = url.trim();
-    if (!trimmed) return;
-    mutation.mutate(trimmed);
-  };
+    e.preventDefault()
+    const trimmed = url.trim()
+    if (!trimmed) return
+    mutation.mutate(trimmed)
+  }
 
   const onOpenInEditor = () => {
-    if (!applied || !matchedItem) return;
+    if (!applied || !matchedItem) return
     const id = saveDraft({
       data: applied.data,
       buildName: applied.buildName,
-    });
+    })
     navigate({
       to: "/create",
       search: {
@@ -129,8 +130,8 @@ function ImportPage() {
         category: matchedItem.category,
         draft: id,
       },
-    });
-  };
+    })
+  }
 
   return (
     <div className="relative flex min-h-screen flex-col">
@@ -176,7 +177,9 @@ function ImportPage() {
             <WarningBox
               fatal
               title="Import failed"
-              items={[{ tag: "error", text: (mutation.error as Error).message }]}
+              items={[
+                { tag: "error", text: (mutation.error as Error).message },
+              ]}
             />
           )}
 
@@ -258,9 +261,7 @@ function ImportPage() {
                       )}
                     </dl>
                     <div className="mt-4 flex items-center justify-between">
-                      <CopyDebugButton
-                        payload={{ scrape: result, applied }}
-                      />
+                      <CopyDebugButton payload={{ scrape: result, applied }} />
                       <Button onClick={onOpenInEditor}>Open in editor</Button>
                     </div>
                   </div>
@@ -287,9 +288,7 @@ function ImportPage() {
                               <td>{s.overframeName ?? "—"}</td>
                               <td>{s.overframeId ?? "—"}</td>
                               <td>{s.rank}</td>
-                              <td>
-                                {s.polarity ?? `code:${s.polarityCode}`}
-                              </td>
+                              <td>{s.polarity ?? `code:${s.polarityCode}`}</td>
                             </tr>
                           ))}
                       </tbody>
@@ -303,22 +302,17 @@ function ImportPage() {
       </main>
       <Footer />
     </div>
-  );
+  )
 }
 
 function CopyDebugButton({ payload }: { payload: unknown }) {
-  const [copied, setCopied] = useState(false);
-  const onCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* noop */
-    }
-  };
+  const { copied, copy } = useCopyToClipboard()
   return (
-    <Button variant="outline" size="sm" onClick={onCopy}>
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => void copy(JSON.stringify(payload, null, 2))}
+    >
       {copied ? (
         <>
           <Check className="h-4 w-4" /> Copied
@@ -329,7 +323,7 @@ function CopyDebugButton({ payload }: { payload: unknown }) {
         </>
       )}
     </Button>
-  );
+  )
 }
 
 function WarningBox({
@@ -337,9 +331,9 @@ function WarningBox({
   title,
   items,
 }: {
-  fatal: boolean;
-  title: string;
-  items: { tag: string; text: string }[];
+  fatal: boolean
+  title: string
+  items: { tag: string; text: string }[]
 }) {
   return (
     <div
@@ -359,5 +353,5 @@ function WarningBox({
         ))}
       </ul>
     </div>
-  );
+  )
 }

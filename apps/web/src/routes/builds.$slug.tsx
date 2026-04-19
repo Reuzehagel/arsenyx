@@ -1,16 +1,25 @@
+import { getArcanesForCategory } from "@arsenyx/shared/warframe/arcanes"
+import { slugify } from "@arsenyx/shared/warframe/slugs"
+import { useSuspenseQuery } from "@tanstack/react-query"
 import {
   createFileRoute,
   Link as RouterLink,
   useNavigate,
-} from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { Bookmark, Diamond, Gem, Heart, Pencil } from "lucide-react";
-import { Suspense, useMemo } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+} from "@tanstack/react-router"
+import {
+  Bookmark,
+  Diamond,
+  Gem,
+  GitFork,
+  Heart,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+} from "lucide-react"
+import { Suspense, useMemo, useState } from "react"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
-import { Footer } from "@/components/footer";
-import { Header } from "@/components/header";
 import {
   ArcaneRow,
   calculateCapacity,
@@ -22,32 +31,52 @@ import {
   toPolarity,
   useArcaneSlots,
   useBuildSlots,
-} from "@/components/build-editor";
-import { arcanesQuery } from "@/lib/arcanes-query";
-import { getArcanesForCategory } from "@arsenyx/shared/warframe/arcanes";
-import { buildQuery, type BuildDetail, type SavedBuildData } from "@/lib/build-query";
-import { useToggleBookmark, useToggleLike } from "@/lib/build-social";
-import { authClient } from "@/lib/auth-client";
-import { cn } from "@/lib/utils";
-import { padShards } from "@/lib/shards";
-import { authorName, formatVisibility } from "@/lib/user-display";
-import { slugify } from "@arsenyx/shared/warframe/slugs";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { itemQuery } from "@/lib/item-query";
+} from "@/components/build-editor"
+import { Footer } from "@/components/footer"
+import { Header } from "@/components/header"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { arcanesQuery } from "@/lib/arcanes-query"
+import { authClient } from "@/lib/auth-client"
+import { useDeleteBuild, useForkBuild } from "@/lib/build-actions"
+import {
+  buildQuery,
+  type BuildDetail,
+  type SavedBuildData,
+} from "@/lib/build-query"
+import { useToggleBookmark, useToggleLike } from "@/lib/build-social"
+import { itemQuery } from "@/lib/item-query"
+import { padShards } from "@/lib/shards"
+import { authorName, formatVisibility } from "@/lib/user-display"
+import { cn } from "@/lib/utils"
 import {
   CATEGORIES,
   getImageUrl,
   isValidCategory,
   type BrowseCategory,
-} from "@/lib/warframe";
+} from "@/lib/warframe"
 
 export const Route = createFileRoute("/builds/$slug")({
   loader: ({ context, params }) =>
     context.queryClient.ensureQueryData(buildQuery(params.slug)),
   component: BuildPage,
   notFoundComponent: BuildNotFound,
-});
+})
 
 function BuildPage() {
   return (
@@ -55,31 +84,33 @@ function BuildPage() {
       <Header />
       <main className="flex-1">
         <div className="container px-4 py-4 md:py-6">
-          <Suspense fallback={<p className="text-muted-foreground">Loading build…</p>}>
+          <Suspense
+            fallback={<p className="text-muted-foreground">Loading build…</p>}
+          >
             <BuildViewer />
           </Suspense>
         </div>
       </main>
       <Footer />
     </div>
-  );
+  )
 }
 
 function BuildViewer() {
-  const { slug } = Route.useParams();
-  const { data: build } = useSuspenseQuery(buildQuery(slug));
+  const { slug } = Route.useParams()
+  const { data: build } = useSuspenseQuery(buildQuery(slug))
 
   if (!isValidCategory(build.item.category)) {
-    return <p className="text-muted-foreground">Unsupported category.</p>;
+    return <p className="text-muted-foreground">Unsupported category.</p>
   }
-  const category = build.item.category as BrowseCategory;
-  const itemSlug = slugify(build.item.name);
+  const category = build.item.category as BrowseCategory
+  const itemSlug = slugify(build.item.name)
 
   return (
     <Suspense fallback={<p className="text-muted-foreground">Loading item…</p>}>
       <BuildViewerBody build={build} category={category} itemSlug={itemSlug} />
     </Suspense>
-  );
+  )
 }
 
 function BuildViewerBody({
@@ -87,52 +118,52 @@ function BuildViewerBody({
   category,
   itemSlug,
 }: {
-  build: BuildDetail;
-  category: BrowseCategory;
-  itemSlug: string;
+  build: BuildDetail
+  category: BrowseCategory
+  itemSlug: string
 }) {
-  const { data: item } = useSuspenseQuery(itemQuery(category, itemSlug));
-  const { data: allArcanes } = useSuspenseQuery(arcanesQuery);
+  const { data: item } = useSuspenseQuery(itemQuery(category, itemSlug))
+  const { data: allArcanes } = useSuspenseQuery(arcanesQuery)
 
   const saved = useMemo(
     () => (build.buildData ?? {}) as SavedBuildData,
     [build.buildData],
-  );
+  )
 
   const categoryLabel =
-    CATEGORIES.find((c) => c.id === category)?.label ?? category;
-  const isCompanion = category === "companions";
-  const normalSlotCount = 8;
-  const arcaneCount = getArcaneSlotCount(category);
+    CATEGORIES.find((c) => c.id === category)?.label ?? category
+  const isCompanion = category === "companions"
+  const normalSlotCount = 8
+  const arcaneCount = getArcaneSlotCount(category)
 
   const arcaneOptions = useMemo(
     () => getArcanesForCategory(allArcanes, category),
     [allArcanes, category],
-  );
+  )
 
   const slots = useBuildSlots(normalSlotCount, {
     placed: saved.slots,
     formaPolarities: saved.formaPolarities,
-  });
-  const arcanes = useArcaneSlots(arcaneCount, saved.arcanes);
-  const shards = useMemo(() => padShards(saved.shards), [saved.shards]);
-  const helminth = saved.helminth ?? {};
-  const hasReactor = saved.hasReactor ?? true;
+  })
+  const arcanes = useArcaneSlots(arcaneCount, saved.arcanes)
+  const shards = useMemo(() => padShards(saved.shards), [saved.shards])
+  const helminth = saved.helminth ?? {}
+  const hasReactor = saved.hasReactor ?? true
 
-  const auraRaw = Array.isArray(item.aura) ? item.aura[0] : item.aura;
-  const auraInnate = toPolarity(auraRaw);
+  const auraRaw = Array.isArray(item.aura) ? item.aura[0] : item.aura
+  const auraInnate = toPolarity(auraRaw)
   const normalInnates = useMemo(
     () =>
       Array.from({ length: normalSlotCount }, (_, i) =>
         toPolarity(item.polarities?.[i]),
       ),
     [item.polarities],
-  );
+  )
 
   const totalEndoCost = useMemo(
     () => calculateTotalEndoCost(slots.placed),
     [slots.placed],
-  );
+  )
   const formaCount = useMemo(
     () =>
       calculateFormaCount({
@@ -141,7 +172,7 @@ function BuildViewerBody({
         formaPolarities: slots.formaPolarities,
       }),
     [auraInnate, normalInnates, slots.formaPolarities],
-  );
+  )
   const capacity = useMemo(
     () =>
       calculateCapacity({
@@ -151,10 +182,16 @@ function BuildViewerBody({
         normalInnates,
         hasReactor,
       }),
-    [slots.placed, slots.formaPolarities, auraInnate, normalInnates, hasReactor],
-  );
+    [
+      slots.placed,
+      slots.formaPolarities,
+      auraInnate,
+      normalInnates,
+      hasReactor,
+    ],
+  )
 
-  const author = authorName(build.user);
+  const author = authorName(build.user)
 
   return (
     <>
@@ -226,7 +263,7 @@ function BuildViewerBody({
         ) : null}
       </div>
     </>
-  );
+  )
 }
 
 function ViewerHeader({
@@ -238,13 +275,13 @@ function ViewerHeader({
   category,
   itemSlug,
 }: {
-  build: BuildDetail;
-  categoryLabel: string;
-  author: string;
-  totalEndoCost: number;
-  formaCount: number;
-  category: BrowseCategory;
-  itemSlug: string;
+  build: BuildDetail
+  categoryLabel: string
+  author: string
+  totalEndoCost: number
+  formaCount: number
+  category: BrowseCategory
+  itemSlug: string
 }) {
   return (
     <div className="bg-card mb-4 rounded-lg border p-4">
@@ -311,31 +348,131 @@ function ViewerHeader({
               Edit
             </Button>
           ) : null}
+          <BuildActionsMenu
+            slug={build.slug}
+            name={build.name}
+            isOwner={build.isOwner}
+          />
         </div>
       </div>
     </div>
-  );
+  )
+}
+
+function BuildActionsMenu({
+  slug,
+  name,
+  isOwner,
+}: {
+  slug: string
+  name: string
+  isOwner: boolean
+}) {
+  const { data: session } = authClient.useSession()
+  const navigate = useNavigate()
+  const fork = useForkBuild(slug)
+  const del = useDeleteBuild(slug)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  const onFork = () => {
+    if (!session?.user) {
+      navigate({ to: "/auth/signin" })
+      return
+    }
+    fork.mutate(undefined, {
+      onSuccess: ({ slug: newSlug }) => {
+        navigate({ to: "/builds/$slug", params: { slug: newSlug } })
+      },
+    })
+  }
+
+  const onDelete = () => {
+    del.mutate(undefined, {
+      onSuccess: () => {
+        setConfirmOpen(false)
+        navigate({ to: "/builds/mine" })
+      },
+    })
+  }
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button variant="ghost" size="icon" aria-label="More actions" />
+          }
+        >
+          <MoreHorizontal />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-40">
+          <DropdownMenuItem onClick={onFork} disabled={fork.isPending}>
+            <GitFork className="size-4" />
+            {fork.isPending ? "Forking…" : "Fork"}
+          </DropdownMenuItem>
+          {isOwner ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => setConfirmOpen(true)}
+              >
+                <Trash2 className="size-4" />
+                Delete
+              </DropdownMenuItem>
+            </>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete this build?</DialogTitle>
+            <DialogDescription>
+              This permanently removes “{name}”. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmOpen(false)}
+              disabled={del.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={onDelete}
+              disabled={del.isPending}
+            >
+              {del.isPending ? "Deleting…" : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
 }
 
 function SocialActions({ build }: { build: BuildDetail }) {
-  const { data: session } = authClient.useSession();
-  const navigate = useNavigate();
-  const like = useToggleLike(build.slug);
-  const bookmark = useToggleBookmark(build.slug);
-  const isOwner = build.isOwner;
+  const { data: session } = authClient.useSession()
+  const navigate = useNavigate()
+  const like = useToggleLike(build.slug)
+  const bookmark = useToggleBookmark(build.slug)
+  const isOwner = build.isOwner
 
   const requireAuthThen = (run: () => void) => () => {
     if (!session?.user) {
-      navigate({ to: "/auth/signin" });
-      return;
+      navigate({ to: "/auth/signin" })
+      return
     }
-    run();
-  };
+    run()
+  }
 
-  const onLike = requireAuthThen(() => like.mutate(!build.viewerHasLiked));
+  const onLike = requireAuthThen(() => like.mutate(!build.viewerHasLiked))
   const onBookmark = requireAuthThen(() =>
     bookmark.mutate(!build.viewerHasBookmarked),
-  );
+  )
 
   return (
     <>
@@ -367,7 +504,7 @@ function SocialActions({ build }: { build: BuildDetail }) {
         <span className="tabular-nums">{build.bookmarkCount}</span>
       </Button>
     </>
-  );
+  )
 }
 
 function BuildNotFound() {
@@ -382,5 +519,5 @@ function BuildNotFound() {
       </main>
       <Footer />
     </div>
-  );
+  )
 }

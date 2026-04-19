@@ -77,14 +77,14 @@ Work happens on the `rewrite` branch (tracks `origin/rewrite`). Legacy Next.js a
 - [x] Save build (create) — `POST /builds`, `/create` page wired to Save button
 - [x] Update build — `PATCH /builds/:slug`, editor hydrates from `?build=<slug>` and Save switches to PATCH for owner
 - [x] `readOnly` prop threaded through ModSlot / ArcaneSlot / ItemSidebar for `/builds/$slug`
-- [ ] Delete / fork build mutations
+- [x] Delete / fork build mutations
 - [x] `/import` — Overframe import
   - [x] Server scraper — `POST /imports/overframe` extracts `__NEXT_DATA__`, resolves Overframe IDs to names via bundled items.csv, returns raw slot data + warnings
   - [x] `/import` page — URL input, preview of parsed result
   - [x] Client matching — item/mod/arcane/helminth against WFCD data, slot_id interpretation by category
   - [x] Editor handoff via sessionStorage draft — `/create?item=&category=&draft=` hydrates pre-populated state
   - [x] Forma-polarity detection via per-item JSON (aura + polarities)
-  - [ ] Wire `build-codec` into `/create` (`?build=<encoded>` loader) + Share button — codec lives in `@arsenyx/shared/warframe/build-codec`
+  - [x] Wire `build-codec` into `/create` (`?share=<encoded>` loader) + Share button — codec in `@arsenyx/shared/warframe/build-codec`, adapter in `apps/web/src/lib/build-codec-adapter.ts`
 
 ### Slice 7 — Org + admin + settings
 

@@ -43,8 +43,12 @@ reset:
     cd legacy; bunx prisma db push --force-reset
     Get-Content legacy/scripts/setup-search.sql | docker compose exec -T postgres psql -U arsenyx arsenyx
 
-# Lint, format, test.
+# Lint + format-check (oxlint + oxfmt) across apps/web, apps/api, packages/shared.
 check:
-    cd legacy; bun run lint
-    cd legacy; bun run fmt:check
-    cd legacy; bun run test
+    bun run lint
+    bun run fmt:check
+
+# Auto-fix lint + format.
+fix:
+    bun run lint:fix
+    bun run fmt

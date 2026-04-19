@@ -1,19 +1,35 @@
+import { getArcanesForCategory } from "@arsenyx/shared/warframe/arcanes"
+import { decodeBuild, encodeBuild } from "@arsenyx/shared/warframe/build-codec"
+import { getModsForItem } from "@arsenyx/shared/warframe/mods"
+import {
+  createSyntheticRiven,
+  isRivenEligible,
+  isRivenMod,
+} from "@arsenyx/shared/warframe/rivens"
+import type { Mod } from "@arsenyx/shared/warframe/types"
+import {
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query"
 import {
   createFileRoute,
   redirect,
   Link as RouterLink,
   useNavigate,
-} from "@tanstack/react-router";
-import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { authClient } from "@/lib/auth-client";
-import { API_URL } from "@/lib/constants";
-import { buildQuery, type SavedBuildData } from "@/lib/build-query";
-import { consumeDraft } from "@/lib/import-draft";
-import { Diamond, Gem, Pencil, Settings2, UploadCloud, X } from "lucide-react";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+} from "@tanstack/react-router"
+import {
+  Check,
+  Diamond,
+  Gem,
+  Pencil,
+  Settings2,
+  Share2,
+  UploadCloud,
+  X,
+} from "lucide-react"
+import { Suspense, useEffect, useMemo, useRef, useState } from "react"
 
-import { Footer } from "@/components/footer";
-import { Header } from "@/components/header";
 import {
   ArcaneRow,
   calculateCapacity,
@@ -33,54 +49,58 @@ import {
   type ModSlotKind,
   type RivenDialogValues,
   type SlotId,
-} from "@/components/build-editor";
+} from "@/components/build-editor"
+import { Footer } from "@/components/footer"
+import { Header } from "@/components/header"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { arcanesQuery } from "@/lib/arcanes-query"
+import { authClient } from "@/lib/auth-client"
 import {
-  createSyntheticRiven,
-  isRivenEligible,
-  isRivenMod,
-} from "@arsenyx/shared/warframe/rivens";
-import type { Mod } from "@arsenyx/shared/warframe/types";
-import { arcanesQuery } from "@/lib/arcanes-query";
-import { getArcanesForCategory } from "@arsenyx/shared/warframe/arcanes";
-import { helminthQuery, type HelminthAbility } from "@/lib/helminth-query";
-import { padShards, type PlacedShard } from "@/lib/shards";
-import type { Polarity } from "@arsenyx/shared/warframe/types";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { itemQuery } from "@/lib/item-query";
-import { modsQuery } from "@/lib/mods-query";
+  buildStateToSavedData,
+  savedDataToBuildState,
+} from "@/lib/build-codec-adapter"
+import { buildQuery, type SavedBuildData } from "@/lib/build-query"
+import { API_URL } from "@/lib/constants"
+import { helminthQuery, type HelminthAbility } from "@/lib/helminth-query"
+import { consumeDraft } from "@/lib/import-draft"
+import { itemQuery } from "@/lib/item-query"
+import { modsQuery } from "@/lib/mods-query"
+import { padShards, type PlacedShard } from "@/lib/shards"
+import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard"
+import { formatVisibility } from "@/lib/user-display"
 import {
   CATEGORIES,
   getImageUrl,
   isValidCategory,
   type BrowseCategory,
   type DetailItem,
-} from "@/lib/warframe";
-import { getModsForItem } from "@arsenyx/shared/warframe/mods";
-import { formatVisibility } from "@/lib/user-display";
+} from "@/lib/warframe"
 
 type CreateSearch = {
-  item: string;
-  category: BrowseCategory;
-  build?: string;
-  draft?: string;
-};
+  item: string
+  category: BrowseCategory
+  build?: string
+  draft?: string
+  share?: string
+}
 
 export const Route = createFileRoute("/create")({
   validateSearch: (search: Record<string, unknown>): CreateSearch => {
-    const item = typeof search.item === "string" ? search.item : "";
+    const item = typeof search.item === "string" ? search.item : ""
     const category =
       typeof search.category === "string" && isValidCategory(search.category)
         ? search.category
-        : ("warframes" as BrowseCategory);
-    const build = typeof search.build === "string" ? search.build : undefined;
-    const draft = typeof search.draft === "string" ? search.draft : undefined;
-    return { item, category, build, draft };
+        : ("warframes" as BrowseCategory)
+    const build = typeof search.build === "string" ? search.build : undefined
+    const draft = typeof search.draft === "string" ? search.draft : undefined
+    const share = typeof search.share === "string" ? search.share : undefined
+    return { item, category, build, draft, share }
   },
   beforeLoad: ({ search }) => {
     if (!search.item) {
-      throw redirect({ to: "/browse", search: { category: "warframes" } });
+      throw redirect({ to: "/browse", search: { category: "warframes" } })
     }
   },
   loaderDeps: ({ search }) => ({
@@ -93,17 +113,17 @@ export const Route = createFileRoute("/create")({
       context.queryClient.ensureQueryData(itemQuery(deps.category, deps.item)),
       context.queryClient.ensureQueryData(modsQuery),
       context.queryClient.ensureQueryData(arcanesQuery),
-    ];
+    ]
     if (deps.category === "warframes") {
-      tasks.push(context.queryClient.ensureQueryData(helminthQuery));
+      tasks.push(context.queryClient.ensureQueryData(helminthQuery))
     }
     if (deps.build) {
-      tasks.push(context.queryClient.ensureQueryData(buildQuery(deps.build)));
+      tasks.push(context.queryClient.ensureQueryData(buildQuery(deps.build)))
     }
-    await Promise.all(tasks);
+    await Promise.all(tasks)
   },
   component: CreatePage,
-});
+})
 
 function CreatePage() {
   return (
@@ -120,7 +140,7 @@ function CreatePage() {
       </main>
       <Footer />
     </div>
-  );
+  )
 }
 
 function EditorShell() {
@@ -129,101 +149,113 @@ function EditorShell() {
     category,
     build: buildSlug,
     draft: draftId,
-  } = Route.useSearch();
-  const { data: item } = useSuspenseQuery(itemQuery(category, slug));
+    share: shareEncoded,
+  } = Route.useSearch()
+  const { data: item } = useSuspenseQuery(itemQuery(category, slug))
   const { data: existingBuild } = useQuery({
     ...buildQuery(buildSlug ?? ""),
     enabled: !!buildSlug,
-  });
-  const [draft] = useState(() => consumeDraft(draftId));
-  const savedData = draft
+  })
+  const { data: allMods } = useSuspenseQuery(modsQuery)
+  const { data: allArcanes } = useSuspenseQuery(arcanesQuery)
+  const [draft] = useState(() => consumeDraft(draftId))
+  const [shareHydrated] = useState(() => {
+    if (!shareEncoded) return null
+    const decoded = decodeBuild(shareEncoded)
+    if (!decoded) return null
+    return buildStateToSavedData(decoded, allMods, allArcanes)
+  })
+  const savedData: SavedBuildData = draft
     ? draft.data
-    : ((existingBuild?.buildData ?? {}) as SavedBuildData);
+    : existingBuild
+      ? (existingBuild.buildData as SavedBuildData)
+      : shareHydrated
+        ? shareHydrated.data
+        : ({} as SavedBuildData)
 
   const categoryLabel =
-    CATEGORIES.find((c) => c.id === category)?.label ?? category;
+    CATEGORIES.find((c) => c.id === category)?.label ?? category
 
-  const isCompanion = category === "companions";
-  const normalSlotCount = 8;
+  const isCompanion = category === "companions"
+  const normalSlotCount = 8
   const slots = useBuildSlots(normalSlotCount, {
     placed: savedData.slots,
     formaPolarities: savedData.formaPolarities,
-  });
-  const arcaneCount = getArcaneSlotCount(category);
-  const arcanes = useArcaneSlots(arcaneCount, savedData.arcanes);
-  const { data: allArcanes } = useSuspenseQuery(arcanesQuery);
+  })
+  const arcaneCount = getArcaneSlotCount(category)
+  const arcanes = useArcaneSlots(arcaneCount, savedData.arcanes)
   const arcaneOptions = useMemo(
     () => getArcanesForCategory(allArcanes, category),
     [allArcanes, category],
-  );
+  )
 
   // Escape deselects the active mod/arcane slot, mirroring the
   // click-outside behavior. Skip when a dialog/popover is open (base-ui
   // closes those via its own Escape handler) or when typing in a field.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      const t = e.target as HTMLElement | null;
+      if (e.key !== "Escape") return
+      const t = e.target as HTMLElement | null
       if (
         t?.tagName === "INPUT" ||
         t?.tagName === "TEXTAREA" ||
         t?.isContentEditable
       ) {
-        return;
+        return
       }
-      if (document.querySelector("[data-state='open'][role='dialog']")) return;
-      slots.select(null);
-      arcanes.select(null);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [slots, arcanes]);
+      if (document.querySelector("[data-state='open'][role='dialog']")) return
+      slots.select(null)
+      arcanes.select(null)
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [slots, arcanes])
 
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const { data: session } = authClient.useSession();
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const { data: session } = authClient.useSession()
 
   const [buildName, setBuildName] = useState(
     () => existingBuild?.name ?? draft?.buildName ?? item.name,
-  );
-  const [saveStatus, setSaveStatus] = useState<
-    "idle" | "saving" | "error"
-  >("idle");
-  const [saveError, setSaveError] = useState<string | null>(null);
+  )
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "error">(
+    "idle",
+  )
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const [visibility, setVisibility] = useState<PublishVisibility>(
     () => existingBuild?.visibility ?? "PUBLIC",
-  );
-  const [publishDialogOpen, setPublishDialogOpen] = useState(false);
+  )
+  const [publishDialogOpen, setPublishDialogOpen] = useState(false)
 
   const [hasReactor, setHasReactor] = useState(
     () => savedData.hasReactor ?? true,
-  );
+  )
   const [shards, setShards] = useState<(PlacedShard | null)[]>(() =>
     padShards(savedData.shards),
-  );
+  )
   const setShard = (i: number, s: PlacedShard | null) => {
     setShards((prev) => {
-      const next = [...prev];
-      next[i] = s;
-      return next;
-    });
-  };
+      const next = [...prev]
+      next[i] = s
+      return next
+    })
+  }
 
   const [rivenEdit, setRivenEdit] = useState<{
-    slotId: SlotId;
-    initial?: Partial<RivenDialogValues>;
-  } | null>(null);
+    slotId: SlotId
+    initial?: Partial<RivenDialogValues>
+  } | null>(null)
 
   const openRivenForPlacement = () => {
-    const target = findFreeNormalSlot(slots, normalSlotCount);
-    if (!target) return;
-    setRivenEdit({ slotId: target, initial: undefined });
-  };
+    const target = findFreeNormalSlot(slots, normalSlotCount)
+    if (!target) return
+    setRivenEdit({ slotId: target, initial: undefined })
+  }
 
   const openRivenForEdit = (slotId: SlotId) => {
-    const placed = slots.placed[slotId];
-    if (!placed) return;
+    const placed = slots.placed[slotId]
+    if (!placed) return
     setRivenEdit({
       slotId,
       initial: {
@@ -231,65 +263,65 @@ function EditorShell() {
         drain: placed.mod.baseDrain,
         rivenStats: placed.mod.rivenStats,
       },
-    });
-  };
+    })
+  }
 
   const confirmRiven = (values: RivenDialogValues) => {
-    if (!rivenEdit) return;
-    const base = createSyntheticRiven();
+    if (!rivenEdit) return
+    const base = createSyntheticRiven()
     const mod: Mod = {
       ...base,
       polarity: values.polarity,
       baseDrain: values.drain,
       rivenStats: values.rivenStats,
-    };
-    slots.placeAt(rivenEdit.slotId, mod, base.fusionLimit);
-    setRivenEdit(null);
-  };
+    }
+    slots.placeAt(rivenEdit.slotId, mod, base.fusionLimit)
+    setRivenEdit(null)
+  }
 
   const handleModSelect = (mod: Mod) => {
     if (isRivenMod(mod)) {
-      openRivenForPlacement();
-      return;
+      openRivenForPlacement()
+      return
     }
-    slots.place(mod);
-  };
+    slots.place(mod)
+  }
 
   const [guideSummary, setGuideSummary] = useState(
     () => existingBuild?.guide?.summary ?? "",
-  );
+  )
   const [guideDescription, setGuideDescription] = useState(
     () => existingBuild?.guide?.description ?? "",
-  );
+  )
 
   const [helminth, setHelminth] = useState<Record<number, HelminthAbility>>(
     () => savedData.helminth ?? {},
-  );
+  )
   const setHelminthAt = (i: number, ab: HelminthAbility | null) => {
     setHelminth((prev) => {
       if (!ab) {
-        const { [i]: _removed, ...rest } = prev;
-        return rest;
+        const { [i]: _removed, ...rest } = prev
+        return rest
       }
       // Only one subsumed ability per build.
-      return { [i]: ab };
-    });
-  };
+      return { [i]: ab }
+    })
+  }
 
-  const auraRaw = Array.isArray(item.aura) ? item.aura[0] : item.aura;
-  const auraInnate = toPolarity(auraRaw);
+  const auraRaw = Array.isArray(item.aura) ? item.aura[0] : item.aura
+  const auraInnate = toPolarity(auraRaw)
   const normalInnates = useMemo(
     () =>
       Array.from({ length: normalSlotCount }, (_, i) =>
         toPolarity(item.polarities?.[i]),
       ),
     [item.polarities, normalSlotCount],
-  );
+  )
 
   const totalEndoCost = useMemo(
     () => calculateTotalEndoCost(slots.placed),
     [slots.placed],
-  );
+  )
   const formaCount = useMemo(
     () =>
       calculateFormaCount({
@@ -298,29 +330,52 @@ function EditorShell() {
         formaPolarities: slots.formaPolarities,
       }),
     [auraInnate, normalInnates, slots.formaPolarities],
-  );
-  const isUpdate = !!existingBuild && existingBuild.isOwner;
+  )
+  const isUpdate = !!existingBuild && existingBuild.isOwner
+
+  const { copied: shareCopied, copy: copyShare } = useCopyToClipboard()
+  const handleShare = () => {
+    const state = savedDataToBuildState({
+      item: {
+        uniqueName: item.uniqueName,
+        name: item.name,
+        imageName: item.imageName ?? undefined,
+      },
+      category,
+      buildName: buildName.trim() || item.name,
+      hasReactor,
+      slots: slots.placed,
+      formaPolarities: slots.formaPolarities,
+      arcanes: arcanes.placed,
+      shards,
+      helminth,
+      normalSlotCount,
+    })
+    const encoded = encodeBuild(state)
+    const url = `${window.location.origin}/create?item=${encodeURIComponent(slug)}&category=${encodeURIComponent(category)}&share=${encodeURIComponent(encoded)}`
+    void copyShare(url)
+  }
 
   const handleSaveClick = () => {
     if (!session?.user) {
-      navigate({ to: "/auth/signin" });
-      return;
+      navigate({ to: "/auth/signin" })
+      return
     }
     if (!isUpdate) {
-      setPublishDialogOpen(true);
-      return;
+      setPublishDialogOpen(true)
+      return
     }
-    void performSave(visibility);
-  };
+    void performSave(visibility)
+  }
 
   const performSave = async (nextVisibility: PublishVisibility) => {
     if (!session?.user) {
-      navigate({ to: "/auth/signin" });
-      return;
+      navigate({ to: "/auth/signin" })
+      return
     }
-    setPublishDialogOpen(false);
-    setSaveStatus("saving");
-    setSaveError(null);
+    setPublishDialogOpen(false)
+    setSaveStatus("saving")
+    setSaveError(null)
     try {
       const body = {
         name: buildName.trim() || item.name,
@@ -346,28 +401,28 @@ function EditorShell() {
               itemName: item.name,
               itemImageName: item.imageName ?? null,
             }),
-      };
+      }
       const url = isUpdate
         ? `${API_URL}/builds/${existingBuild!.slug}`
-        : `${API_URL}/builds`;
+        : `${API_URL}/builds`
       const r = await fetch(url, {
         method: isUpdate ? "PATCH" : "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
-      });
+      })
       if (!r.ok) {
-        const err = await r.json().catch(() => ({ error: "save_failed" }));
-        throw new Error(err.error ?? "save_failed");
+        const err = await r.json().catch(() => ({ error: "save_failed" }))
+        throw new Error(err.error ?? "save_failed")
       }
-      const { slug } = (await r.json()) as { id: string; slug: string };
-      await queryClient.invalidateQueries({ queryKey: ["build", slug] });
-      navigate({ to: "/builds/$slug", params: { slug } });
+      const { slug } = (await r.json()) as { id: string; slug: string }
+      await queryClient.invalidateQueries({ queryKey: ["build", slug] })
+      navigate({ to: "/builds/$slug", params: { slug } })
     } catch (err) {
-      setSaveStatus("error");
-      setSaveError(err instanceof Error ? err.message : "save_failed");
+      setSaveStatus("error")
+      setSaveError(err instanceof Error ? err.message : "save_failed")
     }
-  };
+  }
 
   const capacity = useMemo(
     () =>
@@ -378,8 +433,14 @@ function EditorShell() {
         normalInnates,
         hasReactor,
       }),
-    [slots.placed, slots.formaPolarities, auraInnate, normalInnates, hasReactor],
-  );
+    [
+      slots.placed,
+      slots.formaPolarities,
+      auraInnate,
+      normalInnates,
+      hasReactor,
+    ],
+  )
 
   return (
     <>
@@ -387,6 +448,7 @@ function EditorShell() {
         item={item}
         category={category}
         slug={slug}
+        buildSlug={buildSlug}
         categoryLabel={categoryLabel}
         totalEndoCost={totalEndoCost}
         formaCount={formaCount}
@@ -401,6 +463,8 @@ function EditorShell() {
             ? { visibility, onEdit: () => setPublishDialogOpen(true) }
             : undefined
         }
+        onShare={handleShare}
+        shareCopied={shareCopied}
       />
 
       <div className="flex flex-col gap-4">
@@ -425,10 +489,10 @@ function EditorShell() {
           <div
             className="bg-card min-w-0 flex-1 overflow-hidden rounded-lg border p-2 sm:p-4 lg:ml-[calc(260px+1rem)]"
             onClick={(e) => {
-              if (!(e.target instanceof HTMLElement)) return;
+              if (!(e.target instanceof HTMLElement)) return
               if (!e.target.closest("[data-build-slot]")) {
-                slots.select(null);
-                arcanes.select(null);
+                slots.select(null)
+                arcanes.select(null)
               }
             }}
           >
@@ -489,9 +553,9 @@ function EditorShell() {
         }}
         confirmLabel={isUpdate ? "Update settings" : "Save build"}
         onConfirm={({ visibility: next }) => {
-          setVisibility(next);
-          setPublishDialogOpen(false);
-          if (!isUpdate) void performSave(next);
+          setVisibility(next)
+          setPublishDialogOpen(false)
+          if (!isUpdate) void performSave(next)
         }}
       />
 
@@ -500,7 +564,7 @@ function EditorShell() {
           key={rivenEdit.slotId}
           open={true}
           onOpenChange={(o) => {
-            if (!o) setRivenEdit(null);
+            if (!o) setRivenEdit(null)
           }}
           category={category}
           initialValues={rivenEdit.initial}
@@ -508,13 +572,14 @@ function EditorShell() {
         />
       )}
     </>
-  );
+  )
 }
 
 function EditorHeader({
   item,
   category,
   slug,
+  buildSlug,
   categoryLabel,
   totalEndoCost,
   formaCount,
@@ -525,36 +590,41 @@ function EditorHeader({
   saveError,
   isSignedIn,
   settings,
+  onShare,
+  shareCopied,
 }: {
-  item: DetailItem;
-  category: BrowseCategory;
-  slug: string;
-  categoryLabel: string;
-  totalEndoCost: number;
-  formaCount: number;
-  buildName: string;
-  onBuildNameChange: (name: string) => void;
-  onSave: () => void;
-  saveStatus: "idle" | "saving" | "error";
-  saveError: string | null;
-  isSignedIn: boolean;
-  settings?: { visibility: PublishVisibility; onEdit: () => void };
+  item: DetailItem
+  category: BrowseCategory
+  slug: string
+  buildSlug?: string
+  categoryLabel: string
+  totalEndoCost: number
+  formaCount: number
+  buildName: string
+  onBuildNameChange: (name: string) => void
+  onSave: () => void
+  saveStatus: "idle" | "saving" | "error"
+  saveError: string | null
+  isSignedIn: boolean
+  settings?: { visibility: PublishVisibility; onEdit: () => void }
+  onShare: () => void
+  shareCopied: boolean
 }) {
-  const [editing, setEditing] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [editing, setEditing] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const startEdit = () => {
-    setEditing(true);
+    setEditing(true)
     requestAnimationFrame(() => {
-      inputRef.current?.focus();
-      inputRef.current?.select();
-    });
-  };
+      inputRef.current?.focus()
+      inputRef.current?.select()
+    })
+  }
   const commit = () => {
-    const trimmed = buildName.trim();
-    onBuildNameChange(trimmed || item.name);
-    setEditing(false);
-  };
+    const trimmed = buildName.trim()
+    onBuildNameChange(trimmed || item.name)
+    setEditing(false)
+  }
   return (
     <div className="bg-card mb-4 rounded-lg border p-4">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -575,8 +645,8 @@ function EditorHeader({
                   onChange={(e) => onBuildNameChange(e.target.value)}
                   onBlur={commit}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") commit();
-                    else if (e.key === "Escape") setEditing(false);
+                    if (e.key === "Enter") commit()
+                    else if (e.key === "Escape") setEditing(false)
                   }}
                   className="h-8 text-xl font-bold tracking-tight md:text-2xl"
                 />
@@ -635,10 +705,24 @@ function EditorHeader({
             </Button>
           )}
           <Button
+            variant="outline"
             size="sm"
-            onClick={onSave}
-            disabled={saveStatus === "saving"}
+            onClick={onShare}
+            title="Copy shareable link"
           >
+            {shareCopied ? (
+              <>
+                <Check data-icon="inline-start" />
+                Copied
+              </>
+            ) : (
+              <>
+                <Share2 data-icon="inline-start" />
+                Share
+              </>
+            )}
+          </Button>
+          <Button size="sm" onClick={onSave} disabled={saveStatus === "saving"}>
             <UploadCloud data-icon="inline-start" />
             {saveStatus === "saving"
               ? "Saving…"
@@ -650,10 +734,14 @@ function EditorHeader({
             variant="outline"
             size="sm"
             render={
-              <RouterLink
-                to="/browse/$category/$slug"
-                params={{ category, slug }}
-              />
+              buildSlug ? (
+                <RouterLink to="/builds/$slug" params={{ slug: buildSlug }} />
+              ) : (
+                <RouterLink
+                  to="/browse/$category/$slug"
+                  params={{ category, slug }}
+                />
+              )
             }
           >
             <X data-icon="inline-start" />
@@ -662,9 +750,8 @@ function EditorHeader({
         </div>
       </div>
     </div>
-  );
+  )
 }
-
 
 function SearchPanel({
   item,
@@ -673,13 +760,13 @@ function SearchPanel({
   onSelect,
   selectedSlotKind,
 }: {
-  item: DetailItem;
-  category: BrowseCategory;
-  usedModNames: Set<string>;
-  onSelect: (mod: Mod) => void;
-  selectedSlotKind?: ModSlotKind;
+  item: DetailItem
+  category: BrowseCategory
+  usedModNames: Set<string>
+  onSelect: (mod: Mod) => void
+  selectedSlotKind?: ModSlotKind
 }) {
-  const { data: allMods } = useSuspenseQuery(modsQuery);
+  const { data: allMods } = useSuspenseQuery(modsQuery)
   const compatible = useMemo(() => {
     const mods = getModsForItem(
       {
@@ -688,12 +775,12 @@ function SearchPanel({
         name: item.name,
       },
       allMods,
-    );
+    )
     if (isRivenEligible(category, item)) {
-      return [createSyntheticRiven(), ...mods];
+      return [createSyntheticRiven(), ...mods]
     }
-    return mods;
-  }, [allMods, item.type, item.category, item.name, category]);
+    return mods
+  }, [allMods, item.type, item.category, item.name, category])
 
   return (
     <ModSearchGrid
@@ -702,7 +789,7 @@ function SearchPanel({
       onSelect={onSelect}
       selectedSlotKind={selectedSlotKind}
     />
-  );
+  )
 }
 
 function findFreeNormalSlot(
@@ -715,12 +802,11 @@ function findFreeNormalSlot(
     slots.selected !== "exilus" &&
     !slots.placed[slots.selected]
   ) {
-    return slots.selected;
+    return slots.selected
   }
   for (let i = 0; i < normalSlotCount; i++) {
-    const id = `normal-${i}` as SlotId;
-    if (!slots.placed[id]) return id;
+    const id = `normal-${i}` as SlotId
+    if (!slots.placed[id]) return id
   }
-  return null;
+  return null
 }
-

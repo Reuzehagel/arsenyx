@@ -1,15 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router"
 
-import { Footer } from "@/components/footer";
-import { Header } from "@/components/header";
+import { Footer } from "@/components/footer"
+import { Header } from "@/components/header"
 
 interface ChangelogEntry {
-  date: string;
-  version?: string;
+  date: string
+  version?: string
   changes: {
-    type: "feat" | "fix" | "refactor" | "chore";
-    description: string;
-  }[];
+    type: "feat" | "fix" | "refactor" | "chore"
+    description: string
+  }[]
 }
 
 const CHANGELOG: ChangelogEntry[] = [
@@ -17,42 +17,40 @@ const CHANGELOG: ChangelogEntry[] = [
     date: "2026-04-19",
     changes: [
       {
-        type: "refactor",
-        description:
-          "Renamed Votes → Likes (heart icon) and Favorites → Bookmarks (bookmark icon). /favorites is now /bookmarks.",
-      },
-      {
         type: "feat",
-        description: "Arsenyx rewrite — new stack, same build planner. More to come.",
+        description:
+          "Arsenyx rewrite — new stack, same build planner. More to come.",
       },
     ],
   },
-];
+]
 
 const TYPE_LABELS: Record<ChangelogEntry["changes"][number]["type"], string> = {
   feat: "New",
   fix: "Fix",
   refactor: "Improved",
   chore: "Maintenance",
-};
+}
 
 const TYPE_COLORS: Record<ChangelogEntry["changes"][number]["type"], string> = {
   feat: "border-emerald-200 bg-emerald-100 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-200",
   fix: "border-blue-200 bg-blue-100 text-blue-800 dark:border-blue-900 dark:bg-blue-950/60 dark:text-blue-200",
-  refactor: "border-purple-200 bg-purple-100 text-purple-800 dark:border-purple-900 dark:bg-purple-950/60 dark:text-purple-200",
-  chore: "border-neutral-200 bg-neutral-100 text-neutral-700 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300",
-};
+  refactor:
+    "border-purple-200 bg-purple-100 text-purple-800 dark:border-purple-900 dark:bg-purple-950/60 dark:text-purple-200",
+  chore:
+    "border-neutral-200 bg-neutral-100 text-neutral-700 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300",
+}
 
 const TYPE_ORDER: Record<ChangelogEntry["changes"][number]["type"], number> = {
   feat: 0,
   refactor: 1,
   fix: 2,
   chore: 3,
-};
+}
 
 export const Route = createFileRoute("/changelog")({
   component: ChangelogPage,
-});
+})
 
 function ChangelogPage() {
   return (
@@ -74,11 +72,14 @@ function ChangelogPage() {
                 className="flex flex-col gap-4 border-t py-8 first:border-t-0 first:pt-0"
               >
                 <h2 className="text-muted-foreground text-sm font-medium tracking-wide uppercase">
-                  {new Date(entry.date + "T00:00:00").toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
+                  {new Date(entry.date + "T00:00:00").toLocaleDateString(
+                    "en-US",
+                    {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    },
+                  )}
                 </h2>
                 <ul className="flex flex-col gap-3">
                   {[...entry.changes]
@@ -101,5 +102,5 @@ function ChangelogPage() {
       </main>
       <Footer />
     </div>
-  );
+  )
 }

@@ -19,7 +19,11 @@ just setup              # first-run: install, start Postgres, db:push
 ```bash
 bun --cwd apps/web run build     # tsc -b && vite build — run before claiming done
 bunx --cwd apps/api tsc --noEmit # type-check api
+just check                       # oxlint + oxfmt --check across apps/web, apps/api, packages/shared
+just fix                         # oxlint --fix + oxfmt --write
 ```
+
+Oxlint / oxfmt config live at the repo root (`.oxlintrc.json`, `.oxfmtrc.json`).
 
 ## Database (apps/api)
 

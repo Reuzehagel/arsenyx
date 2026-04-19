@@ -12,10 +12,18 @@
     "dev:api": "bun --cwd apps/api run dev",
     "build:web": "bun --cwd apps/web run build",
     "build:legacy": "bun --cwd legacy run build",
-    "build:items": "bun run scripts/build-items-index.ts"
+    "build:items": "bun run scripts/build-items-index.ts",
+    "lint": "oxlint apps/web/src apps/api/src packages/shared/src",
+    "lint:fix": "oxlint --fix apps/web/src apps/api/src packages/shared/src",
+    "fmt": "oxfmt --write apps/web/src apps/api/src packages/shared/src",
+    "fmt:check": "oxfmt --check apps/web/src apps/api/src packages/shared/src"
   },
   "dependencies": {
     "@arsenyx/shared": "workspace:*",
     "@wfcd/items": "^1.1273.17"
+  },
+  "devDependencies": {
+    "oxfmt": "^0.41.0",
+    "oxlint": "^1.56.0"
   }
 }

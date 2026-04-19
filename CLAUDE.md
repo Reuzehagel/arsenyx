@@ -23,7 +23,8 @@ Game data is static, user data is dynamic. If something is read-heavy and rarely
 
 **Always**
 - `bun run build` in `apps/web/` and `bunx tsc --noEmit` in `apps/api/` before claiming done — dev servers hide type errors
-- Update the changelog (`apps/web/src/routes/changelog.tsx`) for user-facing changes
+- `just check` (oxlint + oxfmt) touched files before committing; `just fix` auto-applies
+- Don't update the changelog (`apps/web/src/routes/changelog.tsx`) during the rewrite — it resumes once `legacy/` is deleted and the new stack ships
 - Use `uv run python` instead of `python`/`python3`
 
 **Ask first**
