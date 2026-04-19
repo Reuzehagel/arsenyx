@@ -25,7 +25,6 @@ Work happens on the `rewrite` branch (tracks `origin/rewrite`). Legacy Next.js a
 ### Slice 2c — Browse polish
 
 - [ ] Keyboard navigation in browse grid (arrow keys, enter, focus ring)
-- [ ] Vaulted badge polish / primed indicator
 
 ### Slice 3 — Auth foundation
 
