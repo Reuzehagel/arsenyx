@@ -1,7 +1,11 @@
 import type { Arcane, Mod, RivenStats } from "@arsenyx/shared/warframe/types";
 
-import type { ParsedStat, StatType } from "./types";
+import type { ConditionLabel, ParsedStat, StatType } from "./types";
 import { DAMAGE_TYPE_COLORS } from "./types";
+
+type ConditionInfo =
+  | { isConditional?: undefined }
+  | { isConditional: true; maxStacks?: number; condition?: ConditionLabel };
 
 const COLOR_TAG_PATTERN =
   /([+-]?\d+(?:\.\d+)?)\s*%\s*<([A-Z_]+)>([A-Za-z]+)/g;
@@ -63,7 +67,63 @@ const STAT_NAME_MAP: Record<string, StatType> = {
   corrosive: "corrosive",
   "melee damage": "melee_damage",
   "tau resistance": "tau_resistance",
+  "status duration": "status_duration",
+  "damage to grineer": "damage_vs_grineer",
+  "damage to corpus": "damage_vs_corpus",
+  "damage to infested": "damage_vs_infested",
+  "damage to corrupted": "damage_vs_corrupted",
+  "damage to sentient": "damage_vs_sentient",
+  "damage to sentients": "damage_vs_sentient",
+  "projectile speed": "projectile_speed",
+  "projectile flight speed": "projectile_speed",
+  "flight speed": "projectile_speed",
+  "ammo max": "ammo_max",
+  "ammo maximum": "ammo_max",
+  "maximum ammo": "ammo_max",
+  zoom: "zoom",
+  recoil: "recoil",
+  "weapon recoil": "recoil",
+  "finisher damage": "finisher_damage",
+  "slide attack": "slide_attack",
+  "slide attack crit chance": "slide_attack",
+  "channeling damage": "channeling",
+  "channeling efficiency": "channeling",
 };
+
+const CONDITIONAL_PATTERNS = [
+  /on kill/i,
+  /on hit/i,
+  /when damaged/i,
+  /stacks up to/i,
+  /for \d+(?:\.\d+)?\s*s\b/i,
+  /after (?:a )?(?:reload|headshot|kill)/i,
+];
+
+const STACK_PATTERN = /stacks? up to (\d+)/i;
+
+const CONDITION_LABELS: Record<string, ConditionLabel> = {
+  "on kill": "On Kill",
+  "on hit": "On Hit",
+  "when damaged": "When Damaged",
+  "after reload": "After Reload",
+  "after headshot": "After Headshot",
+};
+
+const CONDITION_LABEL_PATTERN = new RegExp(
+  `^(${Object.keys(CONDITION_LABELS).join("|")})`,
+  "i",
+);
+
+function detectCondition(statString: string): ConditionInfo {
+  if (!CONDITIONAL_PATTERNS.some((p) => p.test(statString))) return {};
+  const stackMatch = statString.match(STACK_PATTERN);
+  const maxStacks = stackMatch ? parseInt(stackMatch[1], 10) : undefined;
+  const labelMatch = statString.match(CONDITION_LABEL_PATTERN);
+  const condition = labelMatch
+    ? CONDITION_LABELS[labelMatch[1].toLowerCase()]
+    : undefined;
+  return { isConditional: true, maxStacks, condition };
+}
 
 export interface PlacedModInput {
   mod: Mod;
@@ -109,18 +169,32 @@ export function parseModStats(input: PlacedModInput): ParsedStat[] {
   return results;
 }
 
+const arcaneCache = new WeakMap<Arcane, Map<number, ParsedStat[]>>();
+
 /** Parse stat effects from a placed arcane (same levelStats shape as mods). */
 export function parseArcaneStats(input: PlacedArcaneInput): ParsedStat[] {
   const { arcane, rank } = input;
-  const levels = arcane.levelStats;
-  if (!levels || levels.length === 0) return [];
-  const rankIndex = Math.min(Math.max(rank, 0), levels.length - 1);
-  const levelData = levels[rankIndex];
-  if (!levelData?.stats) return [];
-  const out: ParsedStat[] = [];
-  for (const s of levelData.stats) {
-    out.push(...parseStatString(s));
+
+  let perRank = arcaneCache.get(arcane);
+  if (!perRank) {
+    perRank = new Map();
+    arcaneCache.set(arcane, perRank);
   }
+  const cached = perRank.get(rank);
+  if (cached) return cached;
+
+  const out: ParsedStat[] = [];
+  const levels = arcane.levelStats;
+  if (levels && levels.length > 0) {
+    const rankIndex = Math.min(Math.max(rank, 0), levels.length - 1);
+    const levelData = levels[rankIndex];
+    if (levelData?.stats) {
+      for (const s of levelData.stats) {
+        out.push(...parseStatString(s));
+      }
+    }
+  }
+  perRank.set(rank, out);
   return out;
 }
 
@@ -149,6 +223,8 @@ export function parseStatString(statString: string): ParsedStat[] {
   if (lower.includes("pickups give")) return results;
   if (lower.includes("lethal damage")) return results;
 
+  const cond = detectCondition(statString);
+
   let match: RegExpMatchArray;
 
   for (match of statString.matchAll(COLOR_TAG_PATTERN)) {
@@ -161,6 +237,7 @@ export function parseStatString(statString: string): ParsedStat[] {
         value,
         operation: "percent_add",
         damageType,
+        ...cond,
       });
     }
   }
@@ -171,7 +248,7 @@ export function parseStatString(statString: string): ParsedStat[] {
     if (DAMAGE_TYPE_COLORS[`DT_${statName.toUpperCase()}_COLOR`]) continue;
     const statType = STAT_NAME_MAP[statName];
     if (statType) {
-      results.push({ type: statType, value, operation: "percent_add" });
+      results.push({ type: statType, value, operation: "percent_add", ...cond });
     }
   }
 
@@ -188,7 +265,7 @@ export function parseStatString(statString: string): ParsedStat[] {
     const statType = STAT_NAME_MAP[statName];
     if (statType) {
       if (!results.find((r) => r.type === statType)) {
-        results.push({ type: statType, value, operation: "flat_add" });
+        results.push({ type: statType, value, operation: "flat_add", ...cond });
       }
     }
   }
@@ -198,7 +275,7 @@ export function parseStatString(statString: string): ParsedStat[] {
     const statName = match[2].trim().toLowerCase();
     const statType = STAT_NAME_MAP[statName];
     if (statType) {
-      results.push({ type: statType, value, operation: "percent_mult" });
+      results.push({ type: statType, value, operation: "percent_mult", ...cond });
     }
   }
 
@@ -209,26 +286,67 @@ export interface SourcedStat extends ParsedStat {
   sourceName: string;
 }
 
+export interface CollectOptions {
+  setMultiplierFor?: (modName: string) => number;
+  /** When true, conditional stats apply at full stacks (maxStacks × value).
+   * When false (default), conditional stats are omitted from the running
+   * total — they are shown separately in the contributions list instead. */
+  showMaxStacks?: boolean;
+}
+
+interface Source {
+  stats: ParsedStat[];
+  sourceName: string;
+  mult: number;
+}
+
 /** Flatten mods + arcanes into a single list tagged with source names. */
 export function collectSourcedStats(
   mods: PlacedModInput[],
   arcanes: PlacedArcaneInput[],
-  opts?: { setMultiplierFor?: (modName: string) => number },
+  opts?: CollectOptions,
 ): SourcedStat[] {
-  const out: SourcedStat[] = [];
+  const showMax = opts?.showMaxStacks ?? false;
+  const sources: Source[] = [];
   for (const m of mods) {
-    const mult = opts?.setMultiplierFor?.(m.mod.name) ?? 1;
-    const sourceName =
-      m.mod.rivenStats !== undefined ? "Riven" : m.mod.name;
-    for (const s of parseModStats(m)) {
-      const value = s.operation === "percent_add" ? s.value * mult : s.value;
+    sources.push({
+      stats: parseModStats(m),
+      sourceName: m.mod.rivenStats !== undefined ? "Riven" : m.mod.name,
+      mult: opts?.setMultiplierFor?.(m.mod.name) ?? 1,
+    });
+  }
+  for (const a of arcanes) {
+    sources.push({
+      stats: parseArcaneStats(a),
+      sourceName: a.arcane.name,
+      mult: 1,
+    });
+  }
+
+  const out: SourcedStat[] = [];
+  for (const { stats, sourceName, mult } of sources) {
+    for (const s of stats) {
+      if (s.isConditional && !showMax) continue;
+      const stacks = s.isConditional && s.maxStacks ? s.maxStacks : 1;
+      const value =
+        s.operation === "percent_add" ? s.value * mult * stacks : s.value * stacks;
       out.push({ ...s, value, sourceName });
     }
   }
-  for (const a of arcanes) {
-    for (const s of parseArcaneStats(a)) {
-      out.push({ ...s, sourceName: a.arcane.name });
-    }
-  }
   return out;
+}
+
+/** True if any placed mod/arcane carries a conditional stat — used to gate
+ *  the "Max stacks" toggle in the UI. */
+export function hasConditionalStats(
+  mods: PlacedModInput[],
+  arcanes: PlacedArcaneInput[],
+): boolean {
+  for (const m of mods) {
+    if (parseModStats(m).some((s) => s.isConditional)) return true;
+  }
+  for (const a of arcanes) {
+    if (parseArcaneStats(a).some((s) => s.isConditional)) return true;
+  }
+  return false;
 }

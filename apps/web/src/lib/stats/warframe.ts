@@ -2,6 +2,7 @@ import type { Warframe } from "@arsenyx/shared/warframe/types";
 
 import { findShardStat, type PlacedShard } from "@/lib/shards";
 
+import { EXCLUDED_WARFRAME_AURAS } from "./aura-ignore";
 import { applyStatCap } from "./caps";
 import { round } from "./helpers";
 import {
@@ -63,6 +64,7 @@ export interface WarframeCalcInput {
   arcanes: PlacedArcaneInput[];
   shards: (PlacedShard | null)[];
   skipRankUpBonus?: boolean;
+  showMaxStacks?: boolean;
 }
 
 export interface CompanionStats {
@@ -82,13 +84,16 @@ export interface CompanionCalcInput {
   };
   mods: PlacedModInput[];
   arcanes: PlacedArcaneInput[];
+  showMaxStacks?: boolean;
 }
 
 export function calculateCompanionStats(
   input: CompanionCalcInput,
 ): CompanionStats {
   const { companion, mods, arcanes } = input;
-  const stats = collectSourcedStats(mods, arcanes);
+  const stats = collectSourcedStats(mods, arcanes, {
+    showMaxStacks: input.showMaxStacks,
+  });
   return {
     health: calcSingle("health", companion.health ?? 0, stats, [], 0),
     shield: calcSingle("shield", companion.shield ?? 0, stats, [], 0),
@@ -98,7 +103,10 @@ export function calculateCompanionStats(
 }
 
 export function calculateWarframeStats(input: WarframeCalcInput): WarframeStats {
-  const { warframe, mods, arcanes, shards } = input;
+  const { warframe, arcanes, shards } = input;
+  const mods = input.mods.filter(
+    (m) => !EXCLUDED_WARFRAME_AURAS.has(m.mod.name),
+  );
 
   const bonus = input.skipRankUpBonus
     ? { health: 0, shield: 0, armor: 0, energy: 0 }
@@ -113,7 +121,10 @@ export function calculateWarframeStats(input: WarframeCalcInput): WarframeStats 
   const setMultiplierFor = (name: string): number =>
     UMBRAL_MODS.has(name) ? (UMBRAL_SET_BONUSES[umbralCount] ?? 1) : 1;
 
-  const stats = collectSourcedStats(mods, arcanes, { setMultiplierFor });
+  const stats = collectSourcedStats(mods, arcanes, {
+    setMultiplierFor,
+    showMaxStacks: input.showMaxStacks,
+  });
 
   return {
     health: calcSingle("health", baseHp, stats, shards, 0),

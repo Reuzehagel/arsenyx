@@ -35,6 +35,7 @@ import {
   DAMAGE_TYPE_LABELS,
   DAMAGE_TYPE_STYLE,
   formatWithSign,
+  hasConditionalStats,
   type AttackModeStats,
   type CompanionStats,
   type DamageEntry,
@@ -133,6 +134,12 @@ export function ItemSidebar({
     [placedArcanes],
   )
 
+  const [showMaxStacks, setShowMaxStacks] = useState(false)
+  const hasConditional = useMemo(
+    () => hasConditionalStats(modList, arcaneList),
+    [modList, arcaneList],
+  )
+
   const warframeStats = useMemo<WarframeStats | null>(() => {
     if (!isWarframe) return null
     return calculateWarframeStats({
@@ -141,8 +148,17 @@ export function ItemSidebar({
       arcanes: arcaneList,
       shards,
       skipRankUpBonus,
+      showMaxStacks,
     })
-  }, [isWarframe, item, modList, arcaneList, shards, skipRankUpBonus])
+  }, [
+    isWarframe,
+    item,
+    modList,
+    arcaneList,
+    shards,
+    skipRankUpBonus,
+    showMaxStacks,
+  ])
 
   const weaponStats = useMemo<WeaponStats | null>(() => {
     if (!isWeapon) return null
@@ -160,8 +176,17 @@ export function ItemSidebar({
       weapon,
       mods: modList,
       arcanes: arcaneList,
+      showMaxStacks,
     })
-  }, [isWeapon, isZawItem, zawComponents, item, modList, arcaneList])
+  }, [
+    isWeapon,
+    isZawItem,
+    zawComponents,
+    item,
+    modList,
+    arcaneList,
+    showMaxStacks,
+  ])
 
   const companionStats = useMemo<CompanionStats | null>(() => {
     if (!isCompanion) return null
@@ -175,8 +200,9 @@ export function ItemSidebar({
       },
       mods: modList,
       arcanes: arcaneList,
+      showMaxStacks,
     })
-  }, [isCompanion, item, modList, arcaneList])
+  }, [isCompanion, item, modList, arcaneList, showMaxStacks])
 
   return (
     <div className="flex h-full flex-col">
@@ -254,6 +280,16 @@ export function ItemSidebar({
       <Separator />
 
       <div className="flex flex-col gap-3 p-3">
+        {hasConditional && (
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Max stacks</span>
+            <Switch
+              size="sm"
+              checked={showMaxStacks}
+              onCheckedChange={setShowMaxStacks}
+            />
+          </div>
+        )}
         {warframeStats && <WarframeStatsPanel stats={warframeStats} />}
         {weaponStats && <WeaponStatsPanel stats={weaponStats} />}
         {companionStats && <CompanionStatsPanel stats={companionStats} />}

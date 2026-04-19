@@ -30,11 +30,14 @@ export interface WeaponCalcInput {
   weapon: Gun | Melee | Weapon
   mods: PlacedModInput[]
   arcanes: PlacedArcaneInput[]
+  showMaxStacks?: boolean
 }
 
 export function calculateWeaponStats(input: WeaponCalcInput): WeaponStats {
   const { weapon } = input
-  const stats = collectSourcedStats(input.mods, input.arcanes)
+  const stats = collectSourcedStats(input.mods, input.arcanes, {
+    showMaxStacks: input.showMaxStacks,
+  })
 
   const multishot = calcStat("multishot", 1, stats)
   const hasAttacks = Boolean(weapon.attacks && weapon.attacks.length > 0)

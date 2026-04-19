@@ -33,7 +33,20 @@ export type StatType =
   | "viral"
   | "corrosive"
   | "tau_resistance"
-  | "melee_damage";
+  | "melee_damage"
+  | "status_duration"
+  | "damage_vs_grineer"
+  | "damage_vs_corpus"
+  | "damage_vs_infested"
+  | "damage_vs_corrupted"
+  | "damage_vs_sentient"
+  | "projectile_speed"
+  | "ammo_max"
+  | "zoom"
+  | "recoil"
+  | "finisher_damage"
+  | "slide_attack"
+  | "channeling";
 
 export type DamageType =
   | "impact"
@@ -59,7 +72,17 @@ export interface ParsedStat {
   value: number;
   operation: StatOperation;
   damageType?: DamageType;
+  isConditional?: boolean;
+  maxStacks?: number;
+  condition?: ConditionLabel;
 }
+
+export type ConditionLabel =
+  | "On Kill"
+  | "On Hit"
+  | "When Damaged"
+  | "After Reload"
+  | "After Headshot";
 
 export interface StatContribution {
   name: string;

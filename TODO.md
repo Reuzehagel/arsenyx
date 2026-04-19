@@ -72,8 +72,8 @@ Work happens on the `rewrite` branch (tracks `origin/rewrite`). Legacy Next.js a
 - [x] Helminth abilities (subsume picker in editor sidebar)
 - [x] Zaw component editors
 - [x] Stats panel — recalc from placed mods/arcanes (multi-attack weapons, damage breakdown, rivens, warframe abilities, companions, archwing suits, stat caps)
-- [ ] Conditional mod stats — Galvanized, on-kill, Hunter Munitions, etc. (show-max-stacks toggle); also picks up rarer riven stats (Status Duration, Damage to Faction, Projectile Speed, Punch Through, Ammo Max, Zoom, Recoil, Finisher Damage, Slide Attack, Channeling…)
-- [ ] Aura ignore-list — Corrosive Projection and similar affect enemies not the player; port legacy ignore set before adding any player-affecting auras
+- [x] Conditional mod stats — Galvanized, on-kill, Hunter Munitions, etc. (show-max-stacks toggle); also picks up rarer riven stats (Status Duration, Damage to Faction, Projectile Speed, Punch Through, Ammo Max, Zoom, Recoil, Finisher Damage, Slide Attack, Channeling…)
+- [x] Aura ignore-list — Corrosive Projection and similar affect enemies not the player; port legacy ignore set before adding any player-affecting auras
 - [x] Save build (create) — `POST /builds`, `/create` page wired to Save button
 - [x] Update build — `PATCH /builds/:slug`, editor hydrates from `?build=<slug>` and Save switches to PATCH for owner
 - [x] `readOnly` prop threaded through ModSlot / ArcaneSlot / ItemSidebar for `/builds/$slug`
