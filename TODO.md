@@ -87,7 +87,7 @@ Work happens on the `rewrite` branch (tracks `origin/rewrite`). Legacy Next.js a
 
 ### Slice 7 — Org + admin + settings
 
-- [ ] `/settings` — profile, API keys (Organizations tab landed via existing SettingsDialog)
+- [x] `/settings` — profile, API keys (dialog-based; API keys tab lists/creates/revokes, token shown once)
 - [x] `/org/[slug]/settings` — org management (general, members, delete)
 - [x] `/admin` — admin panel (users, content, orgs, stats)
 - [x] Organizations CRUD (create, update, delete, add/remove member, role change)
