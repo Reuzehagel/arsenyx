@@ -42,8 +42,9 @@ import {
   calculateTotalEndoCost,
   getArcaneSlotCount,
   getAuraPolarities,
-  GuideEditor,
   getAuraSlotCount,
+  getNormalSlotCount,
+  GuideEditor,
   hasExilusSlot,
   ItemSidebar,
   ModGrid,
@@ -188,7 +189,7 @@ function EditorShell() {
     CATEGORIES.find((c) => c.id === category)?.label ?? category
 
   const isCompanion = category === "companions"
-  const normalSlotCount = 8
+  const normalSlotCount = getNormalSlotCount(category)
   const auraSlotCount = getAuraSlotCount(category, item)
   const showExilus = hasExilusSlot(category)
   const slots = useBuildSlots(normalSlotCount, {

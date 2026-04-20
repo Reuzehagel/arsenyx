@@ -3,7 +3,7 @@
 ## Bugs
 
 - [ ] Add riven mod support to Overframe import
-- [ ] Fix companions
+- [x] Fix companions
 - [ ] Fix Lich weapons
 - [ ] Fix Necramech
 - [ ] Fix Jade

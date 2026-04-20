@@ -1,6 +1,6 @@
 import { isRivenMod } from "@arsenyx/shared/warframe/rivens"
 import type { Mod, Polarity } from "@arsenyx/shared/warframe/types"
-import { Pencil, Plus } from "lucide-react"
+import { Pencil, Plus, X, type LucideIcon } from "lucide-react"
 import { useState, type MouseEvent } from "react"
 
 import {
@@ -125,18 +125,23 @@ export function ModSlot({
               }
               matchState={getMatchState(mod.polarity, effective)}
             />
-            {!readOnly && isRivenMod(mod) && onEditRiven && (
-              <button
-                type="button"
-                aria-label="Edit riven stats"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onEditRiven()
-                }}
-                className="bg-background/80 text-muted-foreground hover:bg-accent hover:text-accent-foreground absolute top-1 right-1 z-30 flex size-5 items-center justify-center rounded-full border opacity-0 transition-opacity group-hover:opacity-100 max-md:opacity-100"
-              >
-                <Pencil className="size-3" />
-              </button>
+            {!readOnly && (onRemove || (isRivenMod(mod) && onEditRiven)) && (
+              <div className="absolute -top-2 -right-2 z-30 flex flex-col gap-1 md:hidden">
+                {onRemove && (
+                  <MobileSlotButton
+                    icon={X}
+                    label="Remove mod"
+                    onClick={onRemove}
+                  />
+                )}
+                {isRivenMod(mod) && onEditRiven && (
+                  <MobileSlotButton
+                    icon={Pencil}
+                    label="Edit riven stats"
+                    onClick={onEditRiven}
+                  />
+                )}
+              </div>
             )}
           </>
         ) : (
@@ -168,5 +173,29 @@ export function ModSlot({
         </PopoverContent>
       )}
     </Popover>
+  )
+}
+
+function MobileSlotButton({
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  icon: LucideIcon
+  label: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick()
+      }}
+      className="bg-background/80 text-muted-foreground hover:bg-accent hover:text-accent-foreground flex size-5 items-center justify-center rounded-full border"
+    >
+      <Icon className="size-3" />
+    </button>
   )
 }

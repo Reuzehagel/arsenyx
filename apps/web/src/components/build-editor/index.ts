@@ -13,7 +13,12 @@ export {
   calculateModEndoCost,
   calculateTotalEndoCost,
 } from "./calculations"
-export { getArcaneSlotCount, getAuraSlotCount, hasExilusSlot } from "./layout"
+export {
+  getArcaneSlotCount,
+  getAuraSlotCount,
+  getNormalSlotCount,
+  hasExilusSlot,
+} from "./layout"
 export { ArcaneRow, getAuraPolarities, ModGrid, toPolarity } from "./mod-grid"
 export { ModCard } from "./mod-card"
 export { ModSearchGrid } from "./mod-search-grid"

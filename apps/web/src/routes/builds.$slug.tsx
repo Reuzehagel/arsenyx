@@ -28,6 +28,7 @@ import {
   getArcaneSlotCount,
   getAuraPolarities,
   getAuraSlotCount,
+  getNormalSlotCount,
   hasExilusSlot,
   ItemSidebar,
   ModGrid,
@@ -135,7 +136,7 @@ function BuildViewerBody({
   const categoryLabel =
     CATEGORIES.find((c) => c.id === category)?.label ?? category
   const isCompanion = category === "companions"
-  const normalSlotCount = 8
+  const normalSlotCount = getNormalSlotCount(category)
   const arcaneCount = getArcaneSlotCount(category)
 
   const arcaneOptions = useMemo(
