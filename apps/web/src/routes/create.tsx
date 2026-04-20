@@ -42,7 +42,7 @@ import {
   calculateTotalEndoCost,
   getArcaneSlotCount,
   GuideEditor,
-  hasAuraSlot,
+  getAuraSlotCount,
   hasExilusSlot,
   ItemSidebar,
   ModGrid,
@@ -77,9 +77,9 @@ import { itemQuery } from "@/lib/item-query"
 import { modsQuery } from "@/lib/mods-query"
 import { myOrgsQuery } from "@/lib/org-query"
 import { padShards, type PlacedShard } from "@/lib/shards"
-import { isEditableTarget } from "@/lib/utils"
 import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard"
 import { formatVisibility } from "@/lib/user-display"
+import { isEditableTarget } from "@/lib/utils"
 import {
   CATEGORIES,
   getImageUrl,
@@ -188,17 +188,17 @@ function EditorShell() {
 
   const isCompanion = category === "companions"
   const normalSlotCount = 8
-  const showAura = hasAuraSlot(category)
+  const auraSlotCount = getAuraSlotCount(category, item)
   const showExilus = hasExilusSlot(category)
   const slots = useBuildSlots(normalSlotCount, {
     placed: savedData.slots,
     formaPolarities: savedData.formaPolarities,
-    showAura,
+    auraSlotCount,
     showExilus,
   })
   useSlotKeyboardNav({
     slots,
-    layout: { normalSlotCount, showAura, showExilus },
+    layout: { normalSlotCount, auraSlotCount, showExilus },
   })
   const arcaneCount = getArcaneSlotCount(category)
   const arcanes = useArcaneSlots(arcaneCount, savedData.arcanes)
@@ -347,8 +347,14 @@ function EditorShell() {
     })
   }
 
-  const auraRaw = Array.isArray(item.aura) ? item.aura[0] : item.aura
-  const auraInnate = toPolarity(auraRaw)
+  const auraInnates = useMemo(() => {
+    const raws = Array.isArray(item.aura)
+      ? item.aura
+      : item.aura
+        ? [item.aura]
+        : []
+    return Array.from({ length: auraSlotCount }, (_, i) => toPolarity(raws[i]))
+  }, [item.aura, auraSlotCount])
   const normalInnates = useMemo(
     () =>
       Array.from({ length: normalSlotCount }, (_, i) =>
@@ -364,11 +370,11 @@ function EditorShell() {
   const formaCount = useMemo(
     () =>
       calculateFormaCount({
-        auraInnate,
+        auraInnates,
         normalInnates,
         formaPolarities: slots.formaPolarities,
       }),
-    [auraInnate, normalInnates, slots.formaPolarities],
+    [auraInnates, normalInnates, slots.formaPolarities],
   )
   const isUpdate = !!existingBuild && existingBuild.isOwner
 
@@ -390,6 +396,7 @@ function EditorShell() {
       helminth,
       zawComponents,
       normalSlotCount,
+      auraSlotCount,
     })
     const encoded = encodeBuild(state)
     const url = `${window.location.origin}/create?item=${encodeURIComponent(slug)}&category=${encodeURIComponent(category)}&share=${encodeURIComponent(encoded)}`
@@ -474,14 +481,14 @@ function EditorShell() {
       calculateCapacity({
         placed: slots.placed,
         formaPolarities: slots.formaPolarities,
-        auraInnate,
+        auraInnates,
         normalInnates,
         hasReactor,
       }),
     [
       slots.placed,
       slots.formaPolarities,
-      auraInnate,
+      auraInnates,
       normalInnates,
       hasReactor,
     ],

@@ -140,7 +140,7 @@ function interpretSlot(
   const warframeLike = isWarframeLike(category)
   if (slot_id === 9) {
     return warframeLike
-      ? { kind: "mod", id: "aura" }
+      ? { kind: "mod", id: "aura-0" }
       : { kind: "mod", id: "exilus" }
   }
   if (slot_id === 10) {
@@ -160,10 +160,13 @@ function innatePolarityFor(
   detail: DetailItem,
   slotId: SlotId,
 ): Polarity | undefined {
-  if (slotId === "aura") {
+  if (slotId.startsWith("aura-")) {
+    const idx = Number(slotId.slice("aura-".length))
     const a = detail.aura
     if (!a) return undefined
-    return (Array.isArray(a) ? a[0] : a) as Polarity | undefined
+    return (Array.isArray(a) ? a[idx] : idx === 0 ? a : undefined) as
+      | Polarity
+      | undefined
   }
   if (slotId === "exilus") return undefined // not stored in items index
   if (slotId.startsWith("normal-")) {

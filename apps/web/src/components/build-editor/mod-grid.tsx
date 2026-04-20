@@ -4,7 +4,7 @@ import type { Arcane, Polarity } from "@arsenyx/shared/warframe/types"
 import type { BrowseCategory, DetailItem } from "@/lib/warframe"
 
 import { ArcaneSlot } from "./arcane-slot"
-import { hasAuraSlot, hasExilusSlot } from "./layout"
+import { getAuraSlotCount, hasExilusSlot } from "./layout"
 import { ModSlot } from "./mod-slot"
 import { CANONICAL_POLARITIES } from "./polarity-picker"
 import type { ArcaneSlotsState } from "./use-arcane-slots"
@@ -69,12 +69,18 @@ export function ModGrid({
   arcaneRow?: React.ReactNode
   readOnly?: boolean
 }) {
-  const showAura = hasAuraSlot(category)
+  const auraSlotCount = getAuraSlotCount(category, item)
   const showExilus = hasExilusSlot(category)
   const slotsPerRow = isCompanion ? 5 : 4
 
-  const auraRaw = Array.isArray(item.aura) ? item.aura[0] : item.aura
-  const auraPolarity = toPolarity(auraRaw)
+  const auraRaws = Array.isArray(item.aura)
+    ? item.aura
+    : item.aura
+      ? [item.aura]
+      : []
+  const auraPolarities = Array.from({ length: auraSlotCount }, (_, i) =>
+    toPolarity(auraRaws[i]),
+  )
   const polarities = item.polarities ?? []
 
   const normalRows: number[][] = []
@@ -112,14 +118,28 @@ export function ModGrid({
 
   return (
     <div className="flex flex-col gap-6 sm:gap-4">
-      {(showAura || showExilus) && (
+      {(auraSlotCount > 0 || showExilus) && (
         <div className="flex w-full justify-center gap-2 sm:gap-4">
-          {showAura && (
-            <ModSlot kind="aura" {...slotProps("aura", auraPolarity)} />
+          {auraSlotCount > 0 && (
+            <ModSlot
+              kind="aura"
+              {...slotProps("aura-0" as SlotId, auraPolarities[0])}
+            />
           )}
           {showExilus && (
             <ModSlot kind="exilus" {...slotProps("exilus", undefined)} />
           )}
+          {Array.from({ length: Math.max(0, auraSlotCount - 1) }, (_, i) => {
+            const idx = i + 1
+            const id = `aura-${idx}` as SlotId
+            return (
+              <ModSlot
+                key={id}
+                kind="aura"
+                {...slotProps(id, auraPolarities[idx])}
+              />
+            )
+          })}
         </div>
       )}
 
