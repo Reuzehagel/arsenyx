@@ -1,6 +1,4 @@
-import { readFile } from "node:fs/promises"
-import { dirname, join } from "node:path"
-import { fileURLToPath } from "node:url"
+import { OVERFRAME_ITEMS_CSV } from "./data/items-csv"
 
 const HEADER_RE = /^id\s*,/i
 const QUOTE_WRAP_RE = /^"|"$/g
@@ -30,15 +28,8 @@ function parseItemsCsv(csv: string): Map<string, string> {
   return map
 }
 
-async function loadOverframeItemsMap(): Promise<Map<string, string>> {
-  const here = dirname(fileURLToPath(import.meta.url))
-  const csvPath = join(here, "data", "items.csv")
-  const csv = await readFile(csvPath, "utf8")
-  return parseItemsCsv(csv)
-}
-
-const overframeItemsMapPromise = loadOverframeItemsMap()
+const overframeItemsMap = parseItemsCsv(OVERFRAME_ITEMS_CSV)
 
 export async function getOverframeItemsMap(): Promise<Map<string, string>> {
-  return overframeItemsMapPromise
+  return overframeItemsMap
 }
