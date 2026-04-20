@@ -17,6 +17,23 @@ export function toPolarity(v: string | undefined): Polarity | undefined {
   return CANONICAL_SET.has(v as Polarity) ? (v as Polarity) : undefined
 }
 
+/**
+ * Per-slot innate polarities for an item's aura slots. `item.aura` may be a
+ * single polarity string (most frames) or an array (Jade: 2 slots). Length
+ * always matches `count` so callers can zip by index.
+ */
+export function getAuraPolarities(
+  item: Pick<DetailItem, "aura">,
+  count: number,
+): (Polarity | undefined)[] {
+  const raws = Array.isArray(item.aura)
+    ? item.aura
+    : item.aura
+      ? [item.aura]
+      : []
+  return Array.from({ length: count }, (_, i) => toPolarity(raws[i]))
+}
+
 export function ArcaneRow({
   count,
   arcanes,
@@ -73,14 +90,7 @@ export function ModGrid({
   const showExilus = hasExilusSlot(category)
   const slotsPerRow = isCompanion ? 5 : 4
 
-  const auraRaws = Array.isArray(item.aura)
-    ? item.aura
-    : item.aura
-      ? [item.aura]
-      : []
-  const auraPolarities = Array.from({ length: auraSlotCount }, (_, i) =>
-    toPolarity(auraRaws[i]),
-  )
+  const auraPolarities = getAuraPolarities(item, auraSlotCount)
   const polarities = item.polarities ?? []
 
   const normalRows: number[][] = []

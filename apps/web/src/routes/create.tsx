@@ -41,6 +41,7 @@ import {
   calculateFormaCount,
   calculateTotalEndoCost,
   getArcaneSlotCount,
+  getAuraPolarities,
   GuideEditor,
   getAuraSlotCount,
   hasExilusSlot,
@@ -347,14 +348,10 @@ function EditorShell() {
     })
   }
 
-  const auraInnates = useMemo(() => {
-    const raws = Array.isArray(item.aura)
-      ? item.aura
-      : item.aura
-        ? [item.aura]
-        : []
-    return Array.from({ length: auraSlotCount }, (_, i) => toPolarity(raws[i]))
-  }, [item.aura, auraSlotCount])
+  const auraInnates = useMemo(
+    () => getAuraPolarities(item, auraSlotCount),
+    [item, auraSlotCount],
+  )
   const normalInnates = useMemo(
     () =>
       Array.from({ length: normalSlotCount }, (_, i) =>

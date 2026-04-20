@@ -26,7 +26,9 @@ import {
   calculateFormaCount,
   calculateTotalEndoCost,
   getArcaneSlotCount,
+  getAuraPolarities,
   getAuraSlotCount,
+  hasExilusSlot,
   ItemSidebar,
   ModGrid,
   toPolarity,
@@ -141,11 +143,12 @@ function BuildViewerBody({
     [allArcanes, category],
   )
 
+  const auraSlotCount = getAuraSlotCount(category, item)
   const slots = useBuildSlots(normalSlotCount, {
     placed: saved.slots,
     formaPolarities: saved.formaPolarities,
-    auraSlotCount: getAuraSlotCount(category, item),
-    showExilus: true,
+    auraSlotCount,
+    showExilus: hasExilusSlot(category),
     initialSelected: null,
   })
   const arcanes = useArcaneSlots(arcaneCount, saved.arcanes)
@@ -154,15 +157,10 @@ function BuildViewerBody({
   const hasReactor = saved.hasReactor ?? true
   const zawComponents = saved.zawComponents
 
-  const auraSlotCount = getAuraSlotCount(category, item)
-  const auraInnates = useMemo(() => {
-    const raws = Array.isArray(item.aura)
-      ? item.aura
-      : item.aura
-        ? [item.aura]
-        : []
-    return Array.from({ length: auraSlotCount }, (_, i) => toPolarity(raws[i]))
-  }, [item.aura, auraSlotCount])
+  const auraInnates = useMemo(
+    () => getAuraPolarities(item, auraSlotCount),
+    [item, auraSlotCount],
+  )
   const normalInnates = useMemo(
     () =>
       Array.from({ length: normalSlotCount }, (_, i) =>
