@@ -4,7 +4,6 @@ import type { BrowseCategory, DetailItem } from "@/lib/warframe"
 export function getArcaneSlotCount(category: BrowseCategory): number {
   switch (category) {
     case "warframes":
-    case "necramechs":
       return 2
     case "primary":
     case "secondary":
@@ -34,7 +33,9 @@ export function getAuraSlotCount(
   return item.aura ? 1 : 0
 }
 
-/** Normal mod slot count. Companions have 10; everything else has 8. */
+/** Normal mod slot count. Companions have 10, necramechs have 12, everything else 8. */
 export function getNormalSlotCount(category: BrowseCategory): number {
-  return category === "companions" ? 10 : 8
+  if (category === "companions") return 10
+  if (category === "necramechs") return 12
+  return 8
 }
