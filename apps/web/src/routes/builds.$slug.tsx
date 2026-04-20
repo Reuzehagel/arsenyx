@@ -51,14 +51,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import type { BuildState } from "@arsenyx/shared/warframe/types"
+
 import { arcanesQuery } from "@/lib/arcanes-query"
 import { authClient } from "@/lib/auth-client"
 import { useDeleteBuild, useForkBuild } from "@/lib/build-actions"
+import { buildStateToSavedData } from "@/lib/build-codec-adapter"
 import {
   buildQuery,
   type BuildDetail,
   type SavedBuildData,
 } from "@/lib/build-query"
+import { modsQuery } from "@/lib/mods-query"
 import { useToggleBookmark, useToggleLike } from "@/lib/build-social"
 import { itemQuery } from "@/lib/item-query"
 import { padShards } from "@/lib/shards"
@@ -124,11 +128,21 @@ function BuildViewerBody({
 }) {
   const { data: item } = useSuspenseQuery(itemQuery(category, itemSlug))
   const { data: allArcanes } = useSuspenseQuery(arcanesQuery)
+  const { data: allMods } = useSuspenseQuery(modsQuery)
 
-  const saved = useMemo(
-    () => (build.buildData ?? {}) as SavedBuildData,
-    [build.buildData],
-  )
+  const saved = useMemo(() => {
+    const raw = (build.buildData ?? {}) as Partial<BuildState> & SavedBuildData
+    // Legacy builds stored as BuildState (auraSlots/normalSlots/...); the editor
+    // expects SavedBuildData (slots/formaPolarities/...). Detect by presence of
+    // a BuildState-only field and convert on the fly.
+    if (
+      raw &&
+      (raw.normalSlots || raw.auraSlots || raw.exilusSlot || raw.arcaneSlots)
+    ) {
+      return buildStateToSavedData(raw, allMods, allArcanes).data
+    }
+    return raw as SavedBuildData
+  }, [build.buildData, allMods, allArcanes])
 
   const categoryLabel =
     CATEGORIES.find((c) => c.id === category)?.label ?? category
