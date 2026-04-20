@@ -4,6 +4,7 @@ import { cors } from "hono/cors"
 import { auth } from "./auth"
 import { withPrisma } from "./db"
 import { webOrigins } from "./env"
+import { isPrismaNotFound } from "./routes/_admin"
 import { admin } from "./routes/admin"
 import { builds } from "./routes/builds"
 import { imports } from "./routes/imports"
@@ -26,6 +27,12 @@ app.use(
   }),
 )
 
+app.onError((err, c) => {
+  if (isPrismaNotFound(err)) return c.json({ error: "not_found" }, 404)
+  console.error(err)
+  return c.json({ error: "internal_error" }, 500)
+})
+
 app.all("/auth/*", (c) => auth.handler(c.req.raw))
 
 app.route("/admin", admin)
@@ -41,5 +48,5 @@ app.get("/health", (c) => c.json({ ok: true }))
 export default {
   port: 8787,
   fetch: (req: Request, env: unknown, ctx: ExecutionContext) =>
-    withPrisma(() => app.fetch(req, env, ctx)),
+    withPrisma(ctx, () => app.fetch(req, env, ctx)),
 }

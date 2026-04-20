@@ -8,6 +8,11 @@ import { webOrigins } from "./env"
 const githubId = process.env.GITHUB_CLIENT_ID?.trim()
 const githubSecret = process.env.GITHUB_CLIENT_SECRET?.trim()
 
+// Drive cookie flags off BETTER_AUTH_URL's scheme, not NODE_ENV. If NODE_ENV
+// were ever missing/unset in prod, the old check silently dropped Secure +
+// SameSite=None and cross-origin login broke. The scheme is always correct.
+const isHttps = process.env.BETTER_AUTH_URL?.startsWith("https://") === true
+
 export const auth = betterAuth({
   appName: "Arsenyx",
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:8787",
@@ -41,15 +46,18 @@ export const auth = betterAuth({
     },
   },
   session: {
-    cookieCache: { enabled: true, maxAge: 5 * 60 },
+    // 60s keeps admin-revocation / ban latency tolerable without hammering
+    // the DB on every request. Raise cautiously — privileged flags on the
+    // session are read straight from this cache.
+    cookieCache: { enabled: true, maxAge: 60 },
   },
   advanced: {
     // Host-only cookies on api.arsenyx.com — web clients call /auth/get-session
     // cross-origin with credentials:include; no need for Domain=.arsenyx.com.
     crossSubDomainCookies: { enabled: false },
     defaultCookieAttributes: {
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      secure: process.env.NODE_ENV === "production",
+      sameSite: isHttps ? "none" : "lax",
+      secure: isHttps,
     },
   },
 })

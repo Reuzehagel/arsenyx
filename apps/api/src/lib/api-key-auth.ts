@@ -1,6 +1,6 @@
 import type { MiddlewareHandler } from "hono"
 
-import { prisma } from "../db"
+import { prisma, registerBackgroundWork } from "../db"
 import { type ApiKeyScope, hashApiKey } from "./api-keys"
 
 const PRUNE_PROBABILITY = 0.01
@@ -48,6 +48,9 @@ export function requireApiKey(requiredScope: ApiKeyScope): MiddlewareHandler {
       )
     }
 
+    // Best-effort rate limit: the upsert+compare is racy across isolates, so
+    // short bursts can exceed `limit` before any isolate observes it. Fine
+    // for abuse throttling; do not rely on this for hard quotas or billing.
     const windowStart = currentWindowStart()
     const window = await prisma.apiKeyRateLimitWindow.upsert({
       where: { apiKeyId_windowStart: { apiKeyId: apiKey.id, windowStart } },
@@ -69,22 +72,22 @@ export function requireApiKey(requiredScope: ApiKeyScope): MiddlewareHandler {
       return c.json({ error: "rate_limited" }, 429)
     }
 
-    prisma.apiKey
-      .update({
+    registerBackgroundWork(
+      prisma.apiKey.update({
         where: { id: apiKey.id },
         data: { lastUsedAt: new Date() },
         select: { id: true },
-      })
-      .catch(() => {})
+      }),
+    )
 
     if (Math.random() < PRUNE_PROBABILITY) {
-      prisma.apiKeyRateLimitWindow
-        .deleteMany({
+      registerBackgroundWork(
+        prisma.apiKeyRateLimitWindow.deleteMany({
           where: {
             windowStart: { lt: new Date(Date.now() - PRUNE_MAX_AGE_MS) },
           },
-        })
-        .catch(() => {})
+        }),
+      )
     }
 
     await next()
