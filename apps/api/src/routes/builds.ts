@@ -619,10 +619,12 @@ async function maybeIncrementView(
     data: { viewCount: { increment: 1 } },
     select: { id: true },
   })
-  const secure = process.env.NODE_ENV === "production" ? "; Secure" : ""
+  const isProd = process.env.NODE_ENV === "production"
+  const sameSite = isProd ? "None" : "Lax"
+  const secure = isProd ? "; Secure" : ""
   c.header(
     "Set-Cookie",
-    `${cookieName}=1; Path=/; Max-Age=${VIEW_COOKIE_MAX_AGE}; SameSite=Lax; HttpOnly${secure}`,
+    `${cookieName}=1; Path=/; Max-Age=${VIEW_COOKIE_MAX_AGE}; SameSite=${sameSite}; HttpOnly${secure}`,
   )
 }
 
