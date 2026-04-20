@@ -1,51 +1,53 @@
-# CLAUDE.md - Arsenyx
+# CLAUDE.md — Arsenyx
 
-## Project Overview
+Warframe build planner. Create, share, discover equipment builds. Live at [www.arsenyx.com](https://www.arsenyx.com).
 
-Arsenyx is a Warframe build planner — create, share, and discover equipment builds. Features keyboard-first navigation, rich text guides, mod/arcane management, and social features (voting, favorites, forking).
+Game data (items, mods, arcanes) is static JSON precomputed at build time and served from the CDN under `apps/web/public/data/`. User data (builds, votes, favorites) lives in Postgres via the API.
 
-Game data (items, mods, arcanes) comes from static JSON files (`src/data/warframe/`) loaded into in-memory Maps at server start — not from the database. User data (builds, guides, votes, favorites) lives in PostgreSQL.
+## Deployment
 
-## Tech Stack
+- Web (Vite SPA) → Cloudflare Pages, `www.arsenyx.com` + `arsenyx.com`
+- API (Hono on Workers) → `api.arsenyx.com`, Prisma 7 + `@prisma/adapter-neon` (workerd runtime)
+- DB → Neon Postgres, EU (`eu-central-1`)
+- Screenshot service → homelab Docker via Cloudflare Tunnel
+- CI deploys both apps on push to `rewrite` (prod branch). Secrets live in the CF dashboard, not in `.env`.
 
-- **Framework**: Next.js 16 (App Router, React 19, Server Components by default)
-- **Language**: TypeScript (strict mode)
-- **Styling**: Tailwind CSS v4 + shadcn/ui (New York theme)
-- **Database**: PostgreSQL via Prisma ORM with `@prisma/adapter-pg`
-- **Auth**: Better Auth with GitHub OAuth
-- **Linting/Formatting**: Oxlint + Oxfmt (with Tailwind class sorting)
-- **Package Manager**: Bun (required — never use npm/npx)
-- **Data Source**: `@wfcd/items` (Warframe Community Data)
+## Monorepo
+
+Bun workspaces. **Never use npm/npx.**
+
+- `apps/web/` — Vite + React 19 + TanStack Router + Tailwind v4 + shadcn/ui → see [apps/web/CLAUDE.md](apps/web/CLAUDE.md)
+- `apps/api/` — Hono + Prisma 7 + Better Auth + Postgres → see [apps/api/CLAUDE.md](apps/api/CLAUDE.md)
+- `packages/shared/` — types/codecs shared by web and api (`@arsenyx/shared/*`)
+- `services/screenshot/` — standalone Playwright screenshot service (homelab Docker)
+
+Run: `just dev` (web + api), `just web`, `just api`.
+
+## Architecture
+
+Game data is static, user data is dynamic. If something is read-heavy and rarely changes, emit it as a file under `apps/web/public/data/` — don't add an API route for it.
 
 ## Boundaries
 
-### Always
+**Always**
+- `bun run build` in `apps/web/` and `bunx tsc --noEmit` in `apps/api/` before claiming done — dev servers hide type errors
+- `just check` (oxlint + oxfmt) touched files before committing; `just fix` auto-applies
+- Use `uv run python` instead of `python`/`python3`
 
-- Update the changelog (`src/app/changelog/page.tsx`) when completing user-facing changes — add entries to the `CHANGELOG` array
-- Run `bun build` before claiming work is done — `bun dev` hides type errors
-- Invoke the `shadcn` skill before any frontend work (new components, UI changes, styling)
-- Use Server Components by default; only add `"use client"` when actually needed
-- Preserve keyboard navigation in browse components
-- Use `unoptimized` on all Next.js `<Image>` components
-- Never import from `@/lib/warframe/items` or `@/lib/db` in client components (server-only)
-- Use `uv` instead of `python` directly
-
-### Ask First
-
-- Schema changes that drop/rename columns or add required fields
+**Ask first**
 - Adding new dependencies
+- Schema changes that drop/rename columns or add required fields
 
-### Never
+**Never**
+- Modify `apps/web/src/components/ui/` — override via `className` instead
 
-- Modify `src/components/ui/` — override via className instead
-- Use npm/npx — always use bun/bunx
+## Progressive disclosure — load on demand
 
-## Data Quirks
+- [TODO.md](TODO.md) — open bugs, deploy steps
+- [docs/commands.md](docs/commands.md) — full command reference (build, db, data sync)
+- [docs/gotchas.md](docs/gotchas.md) — non-obvious pitfalls (PowerShell, Base UI, shadcn in monorepo)
+- [apps/web/docs/rules/](apps/web/docs/rules/) — TanStack Router rules (per-topic)
 
-- WFCD item fields can vary types across items (e.g. `aura` is `string` for most warframes but `string[]` for Jade) — always handle both forms
+## Keeping docs fresh
 
-## Reference Docs
-
-- [docs/commands.md](docs/commands.md) — Build, test, database, and data sync commands
-- [docs/gotchas.md](docs/gotchas.md) — Non-obvious pitfalls (Satori, Base UI, PowerShell, etc.)
-- [docs/database.md](docs/database.md) — Local dev setup, migrations, and prod deployment
+These files (`CLAUDE.md`, `apps/*/CLAUDE.md`, `docs/*.md`) are infrastructure — a stale line cascades into bad plans. **If you notice something here is wrong, out of date, or missing, update it directly** in the same session. Prefer deleting stale content over leaving it to rot. Prefer pointers (`file:line`) over embedded snippets.

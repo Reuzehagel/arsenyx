@@ -1,7 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -14,8 +14,15 @@
 /coverage
 
 # next.js
-/.next/
-/out/
+.next/
+out/
+
+# vite
+/apps/*/dist
+/apps/*/.vite
+
+# tanstack router generated
+/apps/web/src/routeTree.gen.ts
 
 # production
 /build
@@ -41,8 +48,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# wrangler
+.wrangler/
+
 # prisma generated files
-/src/generated/prisma
+/apps/api/src/generated/
+/src/generated/
 
 # claude temp files
 /.claude/

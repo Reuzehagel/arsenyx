@@ -1,0 +1,4 @@
+.env
+
+# Prisma generated client
+/src/generated/

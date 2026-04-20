@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "react", "nextjs", "import"],
+  "plugins": ["typescript", "react", "import"],
   "categories": {
     "correctness": "error",
     "suspicious": "warn"
@@ -12,9 +12,6 @@
   "settings": {
     "react": {
       "version": "19"
-    },
-    "next": {
-      "rootDir": "./"
     }
   },
   "rules": {

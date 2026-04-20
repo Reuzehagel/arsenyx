@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en" style="color-scheme: light dark">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      // Apply stored theme before React mounts to avoid a flash of the wrong theme.
+      (function () {
+        try {
+          var t = localStorage.getItem("arsenyx-theme") || "system";
+          var isDark =
+            t === "dark" ||
+            (t === "system" &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches);
+          if (isDark) document.documentElement.classList.add("dark");
+        } catch (e) {}
+      })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+    <meta name="theme-color" content="#09090b" />
+    <title>Arsenyx — Warframe Build Planner</title>
+    <meta
+      name="description"
+      content="Open-source Warframe build planner. Fast, keyboard-first, and community-driven."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap"
+    />
+    <link rel="preconnect" href="https://cdn.warframestat.us" />
+    <link rel="preconnect" href="https://wiki.warframe.com" />
+  </head>
+  <body class="antialiased">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

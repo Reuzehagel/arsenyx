@@ -1,0 +1,237 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --font-geist-sans:
+    "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-geist-mono: "Geist Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+body {
+  font-family: var(--font-geist-sans);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-positive: var(--positive);
+  --color-warning: var(--warning);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-heading: var(--font-sans);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Warframe damage type colors */
+  --color-wf-impact: oklch(0.707 0.165 254.624);
+  --color-wf-puncture: oklch(0.707 0 0);
+  --color-wf-slash: oklch(0.704 0.191 22.216);
+  --color-wf-heat: oklch(0.75 0.183 55.934);
+  --color-wf-cold: oklch(0.789 0.154 211.527);
+  --color-wf-electricity: oklch(0.809 0.105 251.813);
+  --color-wf-toxin: oklch(0.792 0.209 151.711);
+  --color-wf-blast: oklch(0.795 0.184 86.047);
+  --color-wf-radiation: oklch(0.879 0.169 91.605);
+  --color-wf-gas: oklch(0.897 0.196 126.665);
+  --color-wf-magnetic: oklch(0.714 0.203 305.504);
+  --color-wf-viral: oklch(0.777 0.152 181.912);
+  --color-wf-corrosive: oklch(0.852 0.199 91.936);
+  --color-wf-void: oklch(1 0 0);
+  --color-wf-tau: oklch(0.865 0.127 207.078);
+
+  /* Warframe mod rarity border colors */
+  --color-wf-rarity-common: oklch(0.555 0.163 67.059);
+  --color-wf-rarity-uncommon: oklch(0.707 0 0);
+  --color-wf-rarity-rare: oklch(0.795 0.184 86.047);
+  --color-wf-rarity-legendary: oklch(0.714 0.203 305.504);
+  --color-wf-rarity-riven: oklch(0.627 0.265 303.9);
+  --color-wf-rarity-amalgam: oklch(0.789 0.154 211.527);
+  --color-wf-rarity-galvanized: oklch(0.707 0.165 254.624);
+
+  /* Warframe mod rarity background base colors (use with /90 opacity) */
+  --color-wf-rarity-common-bg: oklch(0.279 0.068 65.03);
+  --color-wf-rarity-uncommon-bg: oklch(0.269 0 0);
+  --color-wf-rarity-rare-bg: oklch(0.249 0.057 83.97);
+  --color-wf-rarity-legendary-bg: oklch(0.197 0.063 313.46);
+  --color-wf-rarity-riven-bg: oklch(0.197 0.07 303.9);
+  --color-wf-rarity-amalgam-bg: oklch(0.217 0.06 208.18);
+  --color-wf-rarity-galvanized-bg: oklch(0.221 0.097 261.94);
+
+  /* Warframe misc game colors */
+  --color-wf-rank-pip: oklch(0.82 0.09 240);
+  --color-wf-highlight: oklch(0.828 0.189 84.429);
+}
+
+:root {
+  --radius: 0.625rem;
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --positive: oklch(0.527 0.154 150.069);
+  --warning: oklch(0.681 0.162 75.834);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --positive: oklch(0.627 0.194 149.214);
+  --warning: oklch(0.769 0.188 70.08);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+@layer components {
+  .container {
+    @apply mx-auto w-full max-w-screen-xl px-4 sm:px-6 lg:px-8;
+  }
+}
+
+/* Virtualization: skip layout/paint for off-screen search grid items */
+.search-grid-item {
+  content-visibility: auto;
+  contain-intrinsic-size: 200px 80px;
+}
+
+/* Screenshot mode: show riven stats instead of name on compact cards */
+[data-screenshot] [data-riven-name] {
+  display: none;
+}
+[data-screenshot] [data-riven-stats] {
+  display: flex;
+}
+[data-screenshot] [data-riven-image] {
+  display: none;
+}
+[data-screenshot] [data-riven-frame-star] {
+  display: none;
+}
+[data-screenshot] [data-riven-frame-nostar] {
+  display: block;
+}
+
+@keyframes mod-card-expand {
+  from {
+    transform: translate(-50%, -50%) scale(0.225);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes rankReveal {
+  0% {
+    mask-size: 0% 100%;
+    -webkit-mask-size: 0% 100%;
+  }
+  100% {
+    mask-size: 200% 100%;
+    -webkit-mask-size: 200% 100%;
+  }
+}

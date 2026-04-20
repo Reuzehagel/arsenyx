@@ -1,0 +1,345 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  runtime  = "workerd"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =============================================================================
+// AUTH (Better Auth required tables)
+// =============================================================================
+
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+
+  username        String? @unique
+  displayUsername String?
+  bio             String?
+
+  defaultBuildVisibility BuildVisibility @default(PUBLIC)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  isVerified        Boolean @default(false)
+  isCommunityLeader Boolean @default(false)
+  isModerator       Boolean @default(false)
+  isAdmin           Boolean @default(false)
+  isBanned          Boolean @default(false)
+
+  accounts                Account[]
+  sessions                Session[]
+  builds                  Build[]
+  likes                   BuildLike[]
+  bookmarks               BuildBookmark[]
+  apiKeys                 ApiKey[]
+  organizationMemberships OrganizationMember[]
+
+  @@map("users")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("verifications")
+}
+
+// =============================================================================
+// ORGANIZATIONS
+// =============================================================================
+
+enum OrgRole {
+  ADMIN
+  MEMBER
+}
+
+model Organization {
+  id          String  @id @default(cuid())
+  name        String
+  slug        String  @unique
+  image       String?
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members OrganizationMember[]
+  builds  Build[]
+
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role     OrgRole  @default(MEMBER)
+  joinedAt DateTime @default(now())
+
+  @@id([organizationId, userId])
+  @@index([userId])
+  @@map("organization_members")
+}
+
+// =============================================================================
+// BUILDS
+// =============================================================================
+
+enum BuildVisibility {
+  PUBLIC
+  PRIVATE
+  UNLISTED
+}
+
+model Build {
+  id   String @id @default(cuid())
+  slug String @unique
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  // Denormalized WFCD item reference
+  itemUniqueName String
+  itemCategory   String
+  itemName       String
+  itemImageName  String?
+
+  name        String
+  description String?
+  visibility  BuildVisibility @default(PUBLIC)
+
+  // Full build configuration: slots, mods, arcanes, shards, reactor, forma, etc.
+  buildData Json
+
+  hasShards Boolean @default(false)
+  hasGuide  Boolean @default(false)
+
+  // Maintained by Postgres trigger, not Prisma
+  searchVector Unsupported("tsvector")?
+
+  likeCount     Int @default(0)
+  bookmarkCount Int @default(0)
+  viewCount     Int @default(0)
+
+  forkedFromId String?
+  forkedFrom   Build?  @relation("BuildForks", fields: [forkedFromId], references: [id], onDelete: SetNull)
+  forks        Build[] @relation("BuildForks")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  likes         BuildLike[]
+  bookmarks     BuildBookmark[]
+  linkedFrom    BuildLink[]     @relation("LinkedFromBuild")
+  linkedTo      BuildLink[]     @relation("LinkedToBuild")
+  partnerBuilds Build[]         @relation("PartnerBuilds")
+  partneredBy   Build[]         @relation("PartnerBuilds")
+
+  buildGuide      BuildGuide?
+  generatedImages GeneratedImage[]
+
+  @@index([userId])
+  @@index([itemUniqueName])
+  @@index([visibility])
+  @@index([likeCount])
+  @@index([createdAt])
+  @@index([visibility, likeCount])
+  @@index([visibility, createdAt])
+  @@index([userId, visibility])
+  @@index([itemUniqueName, visibility, likeCount])
+  @@index([hasGuide])
+  @@index([forkedFromId])
+  @@index([organizationId])
+  @@index([userId, visibility, likeCount])
+  @@index([itemCategory, visibility, likeCount])
+  @@map("builds")
+}
+
+model BuildGuide {
+  id      String @id @default(cuid())
+  buildId String @unique
+  build   Build  @relation(fields: [buildId], references: [id], onDelete: Cascade)
+
+  summary     String? @db.VarChar(400)
+  description String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("build_guides")
+}
+
+model BuildLink {
+  id String @id @default(cuid())
+
+  fromBuildId String
+  fromBuild   Build  @relation("LinkedFromBuild", fields: [fromBuildId], references: [id], onDelete: Cascade)
+
+  toBuildId String
+  toBuild   Build  @relation("LinkedToBuild", fields: [toBuildId], references: [id], onDelete: Cascade)
+
+  label     String?
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@unique([fromBuildId, toBuildId])
+  @@index([fromBuildId])
+  @@index([toBuildId])
+  @@map("build_links")
+}
+
+// =============================================================================
+// SOCIAL FEATURES
+// =============================================================================
+
+model BuildLike {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  buildId String
+  build   Build  @relation(fields: [buildId], references: [id], onDelete: Cascade)
+
+  value Int @default(1)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, buildId])
+  @@index([buildId])
+  @@map("build_likes")
+}
+
+model BuildBookmark {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  buildId String
+  build   Build  @relation(fields: [buildId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, buildId])
+  @@index([buildId])
+  @@map("build_bookmarks")
+}
+
+// =============================================================================
+// USER API KEYS
+// =============================================================================
+
+model ApiKey {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name      String
+  key       String @unique
+  keyPrefix String
+
+  scopes String[]
+
+  rateLimit Int @default(60)
+
+  isActive   Boolean   @default(true)
+  lastUsedAt DateTime?
+
+  createdAt DateTime  @default(now())
+  expiresAt DateTime?
+
+  rateLimitWindows ApiKeyRateLimitWindow[]
+
+  @@index([userId])
+  @@map("api_keys")
+}
+
+model ApiKeyRateLimitWindow {
+  apiKeyId String
+  apiKey   ApiKey   @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+
+  windowStart  DateTime
+  requestCount Int      @default(0)
+
+  @@id([apiKeyId, windowStart])
+  @@index([windowStart])
+  @@map("api_key_rate_limit_windows")
+}
+
+model GeneratedImage {
+  id String @id @default(cuid())
+
+  buildId  String
+  build    Build  @relation(fields: [buildId], references: [id], onDelete: Cascade)
+  template String
+  options  Json?
+
+  imageUrl String
+  width    Int
+  height   Int
+
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@unique([buildId, template, options])
+  @@map("generated_images")
+}
