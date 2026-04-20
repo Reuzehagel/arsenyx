@@ -44,10 +44,9 @@ export const auth = betterAuth({
     cookieCache: { enabled: true, maxAge: 5 * 60 },
   },
   advanced: {
-    crossSubDomainCookies:
-      process.env.NODE_ENV === "production"
-        ? { enabled: true, domain: ".arsenyx.com" }
-        : { enabled: false },
+    // Host-only cookies on api.arsenyx.com — web clients call /auth/get-session
+    // cross-origin with credentials:include; no need for Domain=.arsenyx.com.
+    crossSubDomainCookies: { enabled: false },
     defaultCookieAttributes: {
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       secure: process.env.NODE_ENV === "production",
