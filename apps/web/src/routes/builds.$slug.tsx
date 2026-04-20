@@ -131,13 +131,18 @@ function BuildViewerBody({
   const { data: allMods } = useSuspenseQuery(modsQuery)
 
   const saved = useMemo(() => {
-    const raw = (build.buildData ?? {}) as Partial<BuildState> & SavedBuildData
+    const raw = (build.buildData ?? {}) as Partial<BuildState> &
+      SavedBuildData & { auraSlot?: unknown }
     // Legacy builds stored as BuildState (auraSlots/normalSlots/...); the editor
-    // expects SavedBuildData (slots/formaPolarities/...). Detect by presence of
-    // a BuildState-only field and convert on the fly.
+    // expects SavedBuildData (slots/formaPolarities/...). Detect any of the
+    // legacy shape fields (older builds used singular `auraSlot`).
     if (
       raw &&
-      (raw.normalSlots || raw.auraSlots || raw.exilusSlot || raw.arcaneSlots)
+      (raw.normalSlots ||
+        raw.auraSlots ||
+        raw.auraSlot ||
+        raw.exilusSlot ||
+        raw.arcaneSlots)
     ) {
       return buildStateToSavedData(raw, allMods, allArcanes).data
     }

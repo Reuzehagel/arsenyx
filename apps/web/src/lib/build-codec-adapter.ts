@@ -177,7 +177,10 @@ export function buildStateToSavedData(
     }
   }
 
-  assign("aura", state.auraSlots?.[0])
+  // Legacy builds may have `auraSlot` (singular) instead of `auraSlots`.
+  const legacyAura = (state as Partial<BuildState> & { auraSlot?: ModSlot })
+    .auraSlot
+  assign("aura", state.auraSlots?.[0] ?? legacyAura)
   assign("exilus", state.exilusSlot)
   state.normalSlots?.forEach((s, i) => assign(`normal-${i}` as SlotId, s))
 
