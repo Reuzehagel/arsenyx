@@ -99,7 +99,8 @@ Work happens on the `rewrite` branch (tracks `origin/rewrite`). Legacy Next.js a
 - [x] `/api/v1/builds/[slug]` — public build detail
 - [x] `/api/v1/imports/overframe` — public import endpoint
 - [x] API keys: list/create/revoke flow
-- [ ] Screenshot service — homelab Docker (Bun + Playwright), R2 + CF edge cache, Cloudflare Tunnel. Code in `services/screenshot/`, infra setup in `services/screenshot/DEPLOY.md`
+- [x] Screenshot service — homelab Docker (Bun + Playwright), R2 + CF edge cache, Cloudflare Tunnel. Code in `services/screenshot/`, infra setup in `services/screenshot/DEPLOY.md`
+- [x] `image:generate` PAT scope — gated to admin/mod (server + settings UI)
 
 ### Header polish (pulls in as slices land)
 
