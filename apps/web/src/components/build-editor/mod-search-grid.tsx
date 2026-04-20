@@ -250,10 +250,7 @@ export function ModSearchGrid({
   // Navigate in visual 2D, skipping dimmed/used cards by continuing in the
   // same direction until a focusable card is found (or clamp at the edge).
   const GRID_ROWS = 2
-  const moveFromDisplayedIndex = (
-    from: number,
-    dir: Dir,
-  ): number | null => {
+  const moveFromDisplayedIndex = (from: number, dir: Dir): number | null => {
     const row = from % GRID_ROWS
     const col = Math.floor(from / GRID_ROWS)
     const focusable = (i: number) =>
@@ -312,9 +309,7 @@ export function ModSearchGrid({
                 if (!onSelect) return
                 const firstName = focusableOrder[0]
                 if (!firstName) return
-                const first = displayed.find(
-                  (m) => m.uniqueName === firstName,
-                )
+                const first = displayed.find((m) => m.uniqueName === firstName)
                 if (!first) return
                 e.preventDefault()
                 onSelect(first)

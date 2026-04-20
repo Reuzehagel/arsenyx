@@ -26,6 +26,7 @@ type EditorState = {
   helminth: Record<number, HelminthAbility>
   zawComponents?: { grip: string; link: string }
   normalSlotCount: number
+  auraSlotCount: number
 }
 
 function toSharedPlacedMod(p: PlacedMod): SharedPlacedMod {
@@ -89,9 +90,13 @@ function buildSlot(
 }
 
 export function savedDataToBuildState(state: EditorState): BuildState {
-  const auraSlots: ModSlot[] = [
-    buildSlot("aura", "aura", state.slots.aura, state.formaPolarities.aura),
-  ]
+  const auraSlots: ModSlot[] = Array.from(
+    { length: state.auraSlotCount },
+    (_, i) => {
+      const id = `aura-${i}` as SlotId
+      return buildSlot(id, "aura", state.slots[id], state.formaPolarities[id])
+    },
+  )
   const exilusSlot = buildSlot(
     "exilus",
     "exilus",
@@ -177,9 +182,10 @@ export function buildStateToSavedData(
     }
   }
 
-  // Pre-Jade builds stored a singular auraSlot.
+  // Pre-Jade builds stored a singular auraSlot. Newer builds store an array.
   const auraFallback = (state as { auraSlot?: ModSlot }).auraSlot
-  assign("aura", state.auraSlots?.[0] ?? auraFallback)
+  const auraSlotsIn = state.auraSlots ?? (auraFallback ? [auraFallback] : [])
+  auraSlotsIn.forEach((s, i) => assign(`aura-${i}` as SlotId, s))
   assign("exilus", state.exilusSlot)
   state.normalSlots?.forEach((s, i) => assign(`normal-${i}` as SlotId, s))
 
@@ -237,5 +243,33 @@ export function normalizeBuildData(
   ) {
     return buildStateToSavedData(r, mods, arcanes).data
   }
-  return r as SavedBuildData
+  return migrateLegacyAuraKey(r as SavedBuildData)
+}
+
+/**
+ * Builds saved before Jade's two-aura support used a bare "aura" key.
+ * Rewrite it to "aura-0" so current loaders find it.
+ */
+function migrateLegacyAuraKey(data: SavedBuildData): SavedBuildData {
+  const slots = data.slots as Partial<Record<string, PlacedMod>> | undefined
+  const forma = data.formaPolarities as
+    | Partial<Record<string, Polarity>>
+    | undefined
+  const needsSlotMigration = slots && "aura" in slots && !("aura-0" in slots)
+  const needsFormaMigration = forma && "aura" in forma && !("aura-0" in forma)
+  if (!needsSlotMigration && !needsFormaMigration) return data
+
+  const nextSlots: Partial<Record<SlotId, PlacedMod>> = { ...(slots ?? {}) }
+  const nextForma: Partial<Record<SlotId, Polarity>> = { ...(forma ?? {}) }
+  if (needsSlotMigration) {
+    const legacy = (slots as Record<string, PlacedMod>).aura
+    delete (nextSlots as Record<string, unknown>).aura
+    if (legacy) nextSlots["aura-0"] = legacy
+  }
+  if (needsFormaMigration) {
+    const legacy = (forma as Record<string, Polarity>).aura
+    delete (nextForma as Record<string, unknown>).aura
+    if (legacy) nextForma["aura-0"] = legacy
+  }
+  return { ...data, slots: nextSlots, formaPolarities: nextForma }
 }

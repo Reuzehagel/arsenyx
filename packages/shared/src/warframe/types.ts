@@ -49,7 +49,7 @@ export interface Warframe extends BaseItem {
   power: number
   sprintSpeed?: number
   abilities?: Ability[]
-  aura?: string
+  aura?: string | string[]
   polarities?: string[]
   passiveDescription?: string
   sex?: "Male" | "Female"

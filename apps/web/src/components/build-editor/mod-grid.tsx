@@ -4,7 +4,7 @@ import type { Arcane, Polarity } from "@arsenyx/shared/warframe/types"
 import type { BrowseCategory, DetailItem } from "@/lib/warframe"
 
 import { ArcaneSlot } from "./arcane-slot"
-import { hasAuraSlot, hasExilusSlot } from "./layout"
+import { getAuraSlotCount, hasExilusSlot } from "./layout"
 import { ModSlot } from "./mod-slot"
 import { CANONICAL_POLARITIES } from "./polarity-picker"
 import type { ArcaneSlotsState } from "./use-arcane-slots"
@@ -15,6 +15,23 @@ const CANONICAL_SET = new Set<Polarity>(CANONICAL_POLARITIES)
 export function toPolarity(v: string | undefined): Polarity | undefined {
   if (!v) return undefined
   return CANONICAL_SET.has(v as Polarity) ? (v as Polarity) : undefined
+}
+
+/**
+ * Per-slot innate polarities for an item's aura slots. `item.aura` may be a
+ * single polarity string (most frames) or an array (Jade: 2 slots). Length
+ * always matches `count` so callers can zip by index.
+ */
+export function getAuraPolarities(
+  item: Pick<DetailItem, "aura">,
+  count: number,
+): (Polarity | undefined)[] {
+  const raws = Array.isArray(item.aura)
+    ? item.aura
+    : item.aura
+      ? [item.aura]
+      : []
+  return Array.from({ length: count }, (_, i) => toPolarity(raws[i]))
 }
 
 export function ArcaneRow({
@@ -69,12 +86,11 @@ export function ModGrid({
   arcaneRow?: React.ReactNode
   readOnly?: boolean
 }) {
-  const showAura = hasAuraSlot(category)
+  const auraSlotCount = getAuraSlotCount(category, item)
   const showExilus = hasExilusSlot(category)
   const slotsPerRow = isCompanion ? 5 : 4
 
-  const auraRaw = Array.isArray(item.aura) ? item.aura[0] : item.aura
-  const auraPolarity = toPolarity(auraRaw)
+  const auraPolarities = getAuraPolarities(item, auraSlotCount)
   const polarities = item.polarities ?? []
 
   const normalRows: number[][] = []
@@ -112,14 +128,28 @@ export function ModGrid({
 
   return (
     <div className="flex flex-col gap-6 sm:gap-4">
-      {(showAura || showExilus) && (
+      {(auraSlotCount > 0 || showExilus) && (
         <div className="flex w-full justify-center gap-2 sm:gap-4">
-          {showAura && (
-            <ModSlot kind="aura" {...slotProps("aura", auraPolarity)} />
+          {auraSlotCount > 0 && (
+            <ModSlot
+              kind="aura"
+              {...slotProps("aura-0" as SlotId, auraPolarities[0])}
+            />
           )}
           {showExilus && (
             <ModSlot kind="exilus" {...slotProps("exilus", undefined)} />
           )}
+          {Array.from({ length: Math.max(0, auraSlotCount - 1) }, (_, i) => {
+            const idx = i + 1
+            const id = `aura-${idx}` as SlotId
+            return (
+              <ModSlot
+                key={id}
+                kind="aura"
+                {...slotProps(id, auraPolarities[idx])}
+              />
+            )
+          })}
         </div>
       )}
 

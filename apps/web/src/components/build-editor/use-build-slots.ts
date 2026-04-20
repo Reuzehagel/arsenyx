@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState } from "react"
 
 import type { ModSlotKind } from "./mod-slot"
 
-export type SlotId = "aura" | "exilus" | `normal-${number}`
+export type SlotId = `aura-${number}` | "exilus" | `normal-${number}`
 
 export interface PlacedMod {
   mod: Mod
@@ -19,7 +19,7 @@ export function isExilusCompatible(mod: Mod): boolean {
 }
 
 function slotKind(id: SlotId): ModSlotKind {
-  if (id === "aura") return "aura"
+  if (id.startsWith("aura-")) return "aura"
   if (id === "exilus") return "exilus"
   return "normal"
 }
@@ -41,18 +41,23 @@ function maxRank(mod: Mod): number {
 
 export interface SlotLayout {
   normalSlotCount: number
-  showAura: boolean
+  auraSlotCount: number
   showExilus: boolean
 }
 
 /**
- * Ordered list of visible slots in reading order: aura?, exilus?, normal-0..N.
- * Used by keyboard nav and auto-advance to step one slot forward.
+ * Ordered list of visible slots in reading order:
+ * aura-0, exilus?, aura-1..N-1, normal-0..N.
+ * Exilus sits between the first and second aura so the top row reads
+ * `Aura | Exilus | Aura` for Jade (two auras), or `Aura | Exilus` otherwise.
  */
 export function getVisibleSlots(layout: SlotLayout): SlotId[] {
   const out: SlotId[] = []
-  if (layout.showAura) out.push("aura")
+  if (layout.auraSlotCount > 0) out.push("aura-0")
   if (layout.showExilus) out.push("exilus")
+  for (let i = 1; i < layout.auraSlotCount; i++) {
+    out.push(`aura-${i}` as SlotId)
+  }
   for (let i = 0; i < layout.normalSlotCount; i++) {
     out.push(`normal-${i}` as SlotId)
   }
@@ -95,7 +100,7 @@ export function useBuildSlots(
   initial?: {
     placed?: Partial<Record<SlotId, PlacedMod>>
     formaPolarities?: Partial<Record<SlotId, Polarity>>
-    showAura?: boolean
+    auraSlotCount?: number
     showExilus?: boolean
     /** Set to null for read-only views that shouldn't start with a focused slot. */
     initialSelected?: SlotId | null
@@ -111,9 +116,10 @@ export function useBuildSlots(
     Partial<Record<SlotId, Polarity>>
   >(() => initial?.formaPolarities ?? {})
 
+  const auraSlotCount = initial?.auraSlotCount ?? 0
   const layout: SlotLayout = {
     normalSlotCount,
-    showAura: initial?.showAura ?? false,
+    auraSlotCount,
     showExilus: initial?.showExilus ?? false,
   }
 
@@ -129,20 +135,19 @@ export function useBuildSlots(
           return { ...prev, [selected]: { mod, rank: maxRank(mod) } }
         }
 
+        const auraIds = Array.from(
+          { length: auraSlotCount },
+          (_, i) => `aura-${i}` as SlotId,
+        )
+        const normalIds = Array.from(
+          { length: normalSlotCount },
+          (_, i) => `normal-${i}` as SlotId,
+        )
         const tryIds: SlotId[] = isAuraMod(mod)
-          ? ["aura"]
+          ? auraIds
           : isExilusCompatible(mod)
-            ? [
-                "exilus",
-                ...Array.from(
-                  { length: normalSlotCount },
-                  (_, i) => `normal-${i}` as SlotId,
-                ),
-              ]
-            : Array.from(
-                { length: normalSlotCount },
-                (_, i) => `normal-${i}` as SlotId,
-              )
+            ? ["exilus", ...normalIds]
+            : normalIds
 
         for (const id of tryIds) {
           if (!prev[id] && canPlaceIn(mod, id)) {
@@ -156,7 +161,7 @@ export function useBuildSlots(
     // layout is derived from `initial` options that are stable per editor
     // mount; no need to include every field.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [normalSlotCount, selected, layout.showAura, layout.showExilus],
+    [normalSlotCount, selected, layout.auraSlotCount, layout.showExilus],
   )
 
   const placeAt = useCallback((id: SlotId, mod: Mod, rank?: number) => {

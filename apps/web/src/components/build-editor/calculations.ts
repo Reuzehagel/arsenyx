@@ -136,7 +136,7 @@ export function auraBonusForMod(
 export interface CapacityInput {
   placed: Partial<Record<SlotId, PlacedMod>>
   formaPolarities: Partial<Record<SlotId, Polarity>>
-  auraInnate?: Polarity
+  auraInnates: (Polarity | undefined)[]
   normalInnates: (Polarity | undefined)[]
   hasReactor: boolean
   maxLevelCap?: number
@@ -153,7 +153,7 @@ export function calculateCapacity(input: CapacityInput): CapacityResult {
   const {
     placed,
     formaPolarities,
-    auraInnate,
+    auraInnates,
     normalInnates,
     hasReactor,
     maxLevelCap,
@@ -163,12 +163,14 @@ export function calculateCapacity(input: CapacityInput): CapacityResult {
   const base = hasReactor ? level * 2 : level
 
   let auraBonus = 0
-  const auraPlaced = placed.aura
-  if (auraPlaced) {
+  for (let i = 0; i < auraInnates.length; i++) {
+    const id = `aura-${i}` as SlotId
+    const auraPlaced = placed[id]
+    if (!auraPlaced) continue
     auraBonus += auraBonusForMod(
       auraPlaced.mod,
       auraPlaced.rank,
-      effectivePolarity(auraInnate, formaPolarities.aura),
+      effectivePolarity(auraInnates[i], formaPolarities[id]),
     )
   }
 
@@ -196,17 +198,22 @@ export function calculateCapacity(input: CapacityInput): CapacityResult {
 }
 
 export interface FormaCountInput {
-  auraInnate?: Polarity
+  auraInnates: (Polarity | undefined)[]
   exilusInnate?: Polarity
   normalInnates: (Polarity | undefined)[]
   formaPolarities: Partial<Record<SlotId, Polarity>>
 }
 
 export function calculateFormaCount(input: FormaCountInput): number {
-  const { auraInnate, exilusInnate, normalInnates, formaPolarities } = input
+  const { auraInnates, exilusInnate, normalInnates, formaPolarities } = input
   let total = 0
 
-  total += singleSlotForma(auraInnate, formaPolarities.aura)
+  for (let i = 0; i < auraInnates.length; i++) {
+    total += singleSlotForma(
+      auraInnates[i],
+      formaPolarities[`aura-${i}` as SlotId],
+    )
+  }
   total += singleSlotForma(exilusInnate, formaPolarities.exilus)
 
   const normalSlots: NormalSlotEntry[] = normalInnates.map((innate, i) => ({

@@ -17,17 +17,30 @@ const COLS = 4
 
 function buildGrid(layout: SlotLayout): (SlotId | null)[][] {
   const grid: (SlotId | null)[][] = []
-  if (layout.showAura || layout.showExilus) {
-    const top: (SlotId | null)[] = new Array(COLS).fill(null)
-    if (layout.showAura) top[0] = "aura"
-    if (layout.showExilus) top[1] = "exilus"
+  const { auraSlotCount, showExilus } = layout
+  if (auraSlotCount > 0 || showExilus) {
+    // Reading order: aura-0, exilus?, aura-1..N-1
+    const topOrder: SlotId[] = []
+    if (auraSlotCount > 0) topOrder.push("aura-0" as SlotId)
+    if (showExilus) topOrder.push("exilus")
+    for (let i = 1; i < auraSlotCount; i++) {
+      topOrder.push(`aura-${i}` as SlotId)
+    }
+    const top: (SlotId | null)[] = new Array(
+      Math.max(COLS, topOrder.length),
+    ).fill(null)
+    topOrder.forEach((id, idx) => {
+      top[idx] = id
+    })
     grid.push(top)
   }
   for (let i = 0; i < layout.normalSlotCount; i += COLS) {
     const row: (SlotId | null)[] = []
     for (let j = 0; j < COLS; j++) {
       const idx = i + j
-      row.push(idx < layout.normalSlotCount ? (`normal-${idx}` as SlotId) : null)
+      row.push(
+        idx < layout.normalSlotCount ? (`normal-${idx}` as SlotId) : null,
+      )
     }
     grid.push(row)
   }
@@ -103,12 +116,12 @@ export function useSlotKeyboardNav({
 }) {
   // Pull primitives so the effect doesn't re-register on every render just
   // because `layout` is a fresh object identity from the caller.
-  const { normalSlotCount, showAura, showExilus } = layout
+  const { normalSlotCount, auraSlotCount, showExilus } = layout
   useEffect(() => {
     if (!enabled) return
     const layoutSnapshot: SlotLayout = {
       normalSlotCount,
-      showAura,
+      auraSlotCount,
       showExilus,
     }
     const onKey = (e: KeyboardEvent) => {
@@ -134,5 +147,5 @@ export function useSlotKeyboardNav({
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [slots, normalSlotCount, showAura, showExilus, enabled])
+  }, [slots, normalSlotCount, auraSlotCount, showExilus, enabled])
 }

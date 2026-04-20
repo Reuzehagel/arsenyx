@@ -1,4 +1,4 @@
-import type { BrowseCategory } from "@/lib/warframe"
+import type { BrowseCategory, DetailItem } from "@/lib/warframe"
 
 /** Arcane slot count per category, mirroring legacy `src/lib/builds/layout.ts`. */
 export function getArcaneSlotCount(category: BrowseCategory): number {
@@ -20,7 +20,16 @@ export function hasExilusSlot(category: BrowseCategory): boolean {
   return category !== "necramechs"
 }
 
-/** Categories with an Aura slot (polarity bonus to capacity). */
-export function hasAuraSlot(category: BrowseCategory): boolean {
-  return category === "warframes" || category === "companions"
+/**
+ * Number of Aura slots for an item. Warframes derive from `item.aura` —
+ * an array means multiple aura slots (Jade: 2). Companions always have 1.
+ */
+export function getAuraSlotCount(
+  category: BrowseCategory,
+  item: Pick<DetailItem, "aura">,
+): number {
+  if (category === "companions") return 1
+  if (category !== "warframes") return 0
+  if (Array.isArray(item.aura)) return item.aura.length
+  return item.aura ? 1 : 0
 }

@@ -26,6 +26,9 @@ import {
   calculateFormaCount,
   calculateTotalEndoCost,
   getArcaneSlotCount,
+  getAuraPolarities,
+  getAuraSlotCount,
+  hasExilusSlot,
   ItemSidebar,
   ModGrid,
   toPolarity,
@@ -56,9 +59,9 @@ import { authClient } from "@/lib/auth-client"
 import { useDeleteBuild, useForkBuild } from "@/lib/build-actions"
 import { normalizeBuildData } from "@/lib/build-codec-adapter"
 import { buildQuery, type BuildDetail } from "@/lib/build-query"
-import { modsQuery } from "@/lib/mods-query"
 import { useToggleBookmark, useToggleLike } from "@/lib/build-social"
 import { itemQuery } from "@/lib/item-query"
+import { modsQuery } from "@/lib/mods-query"
 import { padShards } from "@/lib/shards"
 import { authorName, formatVisibility } from "@/lib/user-display"
 import { cn } from "@/lib/utils"
@@ -140,9 +143,12 @@ function BuildViewerBody({
     [allArcanes, category],
   )
 
+  const auraSlotCount = getAuraSlotCount(category, item)
   const slots = useBuildSlots(normalSlotCount, {
     placed: saved.slots,
     formaPolarities: saved.formaPolarities,
+    auraSlotCount,
+    showExilus: hasExilusSlot(category),
     initialSelected: null,
   })
   const arcanes = useArcaneSlots(arcaneCount, saved.arcanes)
@@ -151,8 +157,10 @@ function BuildViewerBody({
   const hasReactor = saved.hasReactor ?? true
   const zawComponents = saved.zawComponents
 
-  const auraRaw = Array.isArray(item.aura) ? item.aura[0] : item.aura
-  const auraInnate = toPolarity(auraRaw)
+  const auraInnates = useMemo(
+    () => getAuraPolarities(item, auraSlotCount),
+    [item, auraSlotCount],
+  )
   const normalInnates = useMemo(
     () =>
       Array.from({ length: normalSlotCount }, (_, i) =>
@@ -168,25 +176,25 @@ function BuildViewerBody({
   const formaCount = useMemo(
     () =>
       calculateFormaCount({
-        auraInnate,
+        auraInnates,
         normalInnates,
         formaPolarities: slots.formaPolarities,
       }),
-    [auraInnate, normalInnates, slots.formaPolarities],
+    [auraInnates, normalInnates, slots.formaPolarities],
   )
   const capacity = useMemo(
     () =>
       calculateCapacity({
         placed: slots.placed,
         formaPolarities: slots.formaPolarities,
-        auraInnate,
+        auraInnates,
         normalInnates,
         hasReactor,
       }),
     [
       slots.placed,
       slots.formaPolarities,
-      auraInnate,
+      auraInnates,
       normalInnates,
       hasReactor,
     ],
