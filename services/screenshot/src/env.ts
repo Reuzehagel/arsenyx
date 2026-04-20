@@ -23,5 +23,5 @@ export const env = {
     .map((o) => o.trim().toLowerCase())
     .filter(Boolean),
   SCREENSHOT_BASE_URL: optional("SCREENSHOT_BASE_URL", "https://arsenyx.com"),
-  PUBLIC_BASE_URL: optional("PUBLIC_BASE_URL", "https://ss.arsenyx.com"),
+  PUBLIC_BASE_URL: optional("PUBLIC_BASE_URL", "https://img.arsenyx.com"),
 }

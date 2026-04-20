@@ -1,8 +1,8 @@
 # arsenyx-screenshot
 
-Standalone Playwright screenshot service. Runs on the homelab behind Cloudflare Tunnel, fronted by Cloudflare edge cache, with R2 as the persistent PNG store.
+Standalone Playwright screenshot service. Runs on the homelab behind Cloudflare Tunnel (`img.arsenyx.com`), fronted by Cloudflare edge cache, with R2 as the persistent PNG store.
 
-See the [deploy guide](./DEPLOY.md) for full setup.
+Deployed via the homelab `docker-compose.yml` (`screenshot` service). Env is set there; see `.env.example` for the full list.
 
 ## Endpoints
 

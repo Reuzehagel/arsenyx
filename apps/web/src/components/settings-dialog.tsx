@@ -666,7 +666,7 @@ const SCOPE_OPTIONS: readonly ScopeOption[] = [
   {
     value: "image:generate",
     label: "image:generate",
-    description: "Request build screenshots from ss.arsenyx.com",
+    description: "Request build screenshots from img.arsenyx.com",
     privileged: true,
   },
 ]

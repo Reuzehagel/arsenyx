@@ -26,5 +26,4 @@
 ## Post-launch cleanup
 
 - [ ] Delete Vercel project
-- [ ] Merge `rewrite` → `main`; switch Pages + Workers Builds prod branch to `main`
 - [ ] Retire `beta.arsenyx.com` (custom domain + DNS record) once staging is no longer useful

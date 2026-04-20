@@ -10,7 +10,7 @@ Game data (items, mods, arcanes) is static JSON precomputed at build time and se
 - API (Hono on Workers) → `api.arsenyx.com`, Prisma 7 + `@prisma/adapter-neon` (workerd runtime)
 - DB → Neon Postgres, EU (`eu-central-1`)
 - Screenshot service → homelab Docker via Cloudflare Tunnel
-- CI deploys both apps on push to `rewrite` (prod branch). Secrets live in the CF dashboard, not in `.env`.
+- CI deploys both apps on push to `main` (prod branch). Secrets live in the CF dashboard, not in `.env`.
 
 ## Monorepo
 
