@@ -19,7 +19,7 @@ routes = [
 
 [vars]
 BETTER_AUTH_URL = "https://api.arsenyx.com"
-WEB_ORIGIN = "https://www.arsenyx.com,https://arsenyx.com,https://arsenyx.pages.dev"
+WEB_ORIGIN = "https://www.arsenyx.com,https://arsenyx.com,https://beta.arsenyx.com,https://arsenyx.pages.dev"
 NODE_ENV = "production"
 
 [observability]
