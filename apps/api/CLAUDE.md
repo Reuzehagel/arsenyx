@@ -29,7 +29,7 @@ Hono on Bun. Better Auth + Prisma 7 (PrismaPg adapter) + Postgres. Listens on `:
 - Use `bun` / `bunx`, never `npm` / `npx`
 
 **Never**
-- Import `apps/web/*` or `legacy/*` — only `@arsenyx/shared` crosses the boundary
+- Import `apps/web/*` — only `@arsenyx/shared` crosses the boundary
 - Commit `src/generated/`
 - Hand-roll a build list query — use `_build-list.ts`
 

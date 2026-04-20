@@ -4,16 +4,14 @@
   "workspaces": [
     "apps/*",
     "packages/*",
-    "services/*",
-    "legacy"
+    "services/*"
   ],
   "scripts": {
-    "dev:legacy": "bun --cwd legacy run dev",
     "dev:web": "bun --cwd apps/web run dev",
     "dev:api": "bun --cwd apps/api run dev",
     "build:web": "bun --cwd apps/web run build",
-    "build:legacy": "bun --cwd legacy run build",
     "build:items": "bun run scripts/build-items-index.ts",
+    "update-data": "bun update @wfcd/items && bun run build:items",
     "lint": "oxlint apps/web/src apps/api/src packages/shared/src",
     "lint:fix": "oxlint --fix apps/web/src apps/api/src packages/shared/src",
     "fmt": "oxfmt --write apps/web/src apps/api/src packages/shared/src",

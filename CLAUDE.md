@@ -11,9 +11,9 @@ Bun workspaces. **Never use npm/npx.**
 - `apps/web/` — Vite + React 19 + TanStack Router + Tailwind v4 + shadcn/ui → see [apps/web/CLAUDE.md](apps/web/CLAUDE.md)
 - `apps/api/` — Hono + Prisma 7 + Better Auth + Postgres → see [apps/api/CLAUDE.md](apps/api/CLAUDE.md)
 - `packages/shared/` — types/codecs shared by web and api (`@arsenyx/shared/*`)
-- `legacy/` — old Next.js app, deleted slice-by-slice. **Don't add features here — port to `apps/web`.**
+- `services/screenshot/` — standalone Playwright screenshot service (homelab Docker)
 
-Run: `just dev` (web + api), `just web`, `just api`, `just legacy`.
+Run: `just dev` (web + api), `just web`, `just api`.
 
 ## Architecture
 
@@ -24,7 +24,6 @@ Game data is static, user data is dynamic. If something is read-heavy and rarely
 **Always**
 - `bun run build` in `apps/web/` and `bunx tsc --noEmit` in `apps/api/` before claiming done — dev servers hide type errors
 - `just check` (oxlint + oxfmt) touched files before committing; `just fix` auto-applies
-- Don't update the changelog (`apps/web/src/routes/changelog.tsx`) during the rewrite — it resumes once `legacy/` is deleted and the new stack ships
 - Use `uv run python` instead of `python`/`python3`
 
 **Ask first**
@@ -32,14 +31,11 @@ Game data is static, user data is dynamic. If something is read-heavy and rarely
 - Schema changes that drop/rename columns or add required fields
 
 **Never**
-- Add features in `legacy/` — port to `apps/web`
 - Modify `apps/web/src/components/ui/` — override via `className` instead
-- Import `@/lib/warframe/items` or `@/lib/db` from `legacy/` into `apps/web` — they use Node `fs`
 
 ## Progressive disclosure — load on demand
 
-- [TODO.md](TODO.md) — migration slices, open bugs
-- [docs/migration-inventory.md](docs/migration-inventory.md) — legacy → new stack feature map
+- [TODO.md](TODO.md) — open bugs, deploy steps
 - [docs/commands.md](docs/commands.md) — full command reference (build, db, data sync)
 - [docs/gotchas.md](docs/gotchas.md) — non-obvious pitfalls (PowerShell, Base UI, shadcn in monorepo)
 - [apps/web/docs/rules/](apps/web/docs/rules/) — TanStack Router rules (per-topic)

@@ -5,8 +5,7 @@
  *  2. `items/<category>/<slug>.json` — one file per item, full WFCD object,
  *     consumed by the detail page.
  *
- * Reads raw WFCD JSON directly from the `@wfcd/items` package, so no
- * `legacy/` imports are required.
+ * Reads raw WFCD JSON directly from the `@wfcd/items` package.
  *
  * Run: `bun run build:items`
  */
@@ -31,7 +30,7 @@ const require = createRequire(import.meta.url)
 const WFCD_PKG = dirname(require.resolve("@wfcd/items/package.json"))
 const WFCD_JSON = resolve(WFCD_PKG, "data/json")
 
-// WFCD files that contribute browseable items. See legacy/scripts/sync-warframe-data.ts.
+// WFCD files that contribute browseable items.
 const DATA_FILES = [
   "Warframes.json",
   "Primary.json",

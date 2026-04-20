@@ -44,9 +44,12 @@ export const auth = betterAuth({
     cookieCache: { enabled: true, maxAge: 5 * 60 },
   },
   advanced: {
-    crossSubDomainCookies: { enabled: false },
+    crossSubDomainCookies:
+      process.env.NODE_ENV === "production"
+        ? { enabled: true, domain: ".arsenyx.com" }
+        : { enabled: false },
     defaultCookieAttributes: {
-      sameSite: "lax",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       secure: process.env.NODE_ENV === "production",
     },
   },

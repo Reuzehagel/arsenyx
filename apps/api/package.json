@@ -4,6 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "bun run --hot src/index.ts",
+    "dev:workers": "wrangler dev",
+    "deploy": "wrangler deploy",
     "db:push": "bunx prisma db push",
     "db:studio": "bunx prisma studio",
     "db:generate": "bunx prisma generate",
@@ -11,18 +13,17 @@
   },
   "dependencies": {
     "@arsenyx/shared": "workspace:*",
-    "@prisma/adapter-pg": "^7.5.0",
+    "@prisma/adapter-neon": "^7.7.0",
     "@prisma/client": "^7.5.0",
     "better-auth": "^1.5.5",
     "hono": "^4.6.14",
-    "nanoid": "^5.1.9",
-    "pg": "^8.20.0"
+    "nanoid": "^5.1.9"
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "@types/pg": "^8.11.10",
     "dotenv": "^16.4.7",
     "prisma": "^7.5.0",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "wrangler": "^4.84.0"
   }
 }

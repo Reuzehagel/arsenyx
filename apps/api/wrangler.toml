@@ -1,0 +1,25 @@
+name = "arsenyx-api"
+main = "src/index.ts"
+compatibility_date = "2026-04-01"
+compatibility_flags = ["nodejs_compat_v2"]
+
+# Secrets (set via `bunx wrangler secret put <NAME>`):
+#   DATABASE_URL              — Neon production pooled connection string
+#   BETTER_AUTH_SECRET        — `openssl rand -base64 32`
+#   GITHUB_CLIENT_ID
+#   GITHUB_CLIENT_SECRET
+#   SCREENSHOT_SERVICE_SECRET — optional, if the screenshot service PAT is set
+[vars]
+BETTER_AUTH_URL = "https://api.arsenyx.com"
+WEB_ORIGIN = "https://www.arsenyx.com,https://arsenyx.com"
+NODE_ENV = "production"
+
+# Route Workers behind the api subdomain. The Cloudflare dashboard needs a
+# matching Custom Domain (`api.arsenyx.com`) added in the Worker's Triggers tab
+# once DNS is set up.
+routes = [
+  { pattern = "api.arsenyx.com", custom_domain = true },
+]
+
+[observability]
+enabled = true
