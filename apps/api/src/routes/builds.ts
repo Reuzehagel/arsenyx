@@ -621,10 +621,10 @@ async function maybeIncrementView(
   })
   const isProd = process.env.NODE_ENV === "production"
   const sameSite = isProd ? "None" : "Lax"
-  const secure = isProd ? "; Secure" : ""
+  const extras = isProd ? "; Secure; Partitioned" : ""
   c.header(
     "Set-Cookie",
-    `${cookieName}=1; Path=/; Max-Age=${VIEW_COOKIE_MAX_AGE}; SameSite=${sameSite}; HttpOnly${secure}`,
+    `${cookieName}=1; Path=/; Max-Age=${VIEW_COOKIE_MAX_AGE}; SameSite=${sameSite}; HttpOnly${extras}`,
   )
 }
 
