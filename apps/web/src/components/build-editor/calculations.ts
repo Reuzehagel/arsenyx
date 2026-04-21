@@ -116,7 +116,7 @@ export function effectiveDrainForMod(
     return mod.polarity === "umbra" ? base : Math.ceil(base / 2)
   }
   if (mod.polarity === slotPolarity) return Math.ceil(base / 2)
-  return Math.ceil(base * 1.25)
+  return Math.round(base * 1.25)
 }
 
 export function auraBonusForMod(
@@ -130,7 +130,7 @@ export function auraBonusForMod(
     return mod.polarity === "umbra" ? base : base * 2
   }
   if (mod.polarity === slotPolarity) return base * 2
-  return Math.floor(base / 2)
+  return Math.round(base * 0.75)
 }
 
 export interface CapacityInput {
