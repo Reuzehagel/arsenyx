@@ -36,10 +36,18 @@ users.get("/:username", async (c) => {
 
   const [buildCount, agg] = await Promise.all([
     prisma.build.count({
-      where: { userId: user.id, visibility: BuildVisibility.PUBLIC },
+      where: {
+        userId: user.id,
+        visibility: BuildVisibility.PUBLIC,
+        organizationId: null,
+      },
     }),
     prisma.build.aggregate({
-      where: { userId: user.id, visibility: BuildVisibility.PUBLIC },
+      where: {
+        userId: user.id,
+        visibility: BuildVisibility.PUBLIC,
+        organizationId: null,
+      },
       _sum: { likeCount: true, bookmarkCount: true, viewCount: true },
     }),
   ])
@@ -77,8 +85,12 @@ users.get("/:username/builds", async (c) => {
 
   const result = await runList({
     filters: parseListQuery(c),
-    baseWhere: { userId: user.id, visibility: BuildVisibility.PUBLIC },
-    baseFilter: Prisma.sql`"userId" = ${user.id} AND visibility = 'PUBLIC'`,
+    baseWhere: {
+      userId: user.id,
+      visibility: BuildVisibility.PUBLIC,
+      organizationId: null,
+    },
+    baseFilter: Prisma.sql`"userId" = ${user.id} AND visibility = 'PUBLIC' AND "organizationId" IS NULL`,
     defaultSort: "newest",
   })
   return c.json(result)

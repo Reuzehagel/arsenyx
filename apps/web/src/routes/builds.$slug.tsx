@@ -357,7 +357,18 @@ function ViewerHeader({
               {build.name}
             </h1>
             <span className="text-muted-foreground text-sm">
-              {build.item.name} · {categoryLabel} · by {author}
+              {build.item.name} · {categoryLabel} ·{" "}
+              {build.organization ? (
+                <RouterLink
+                  to="/org/$slug"
+                  params={{ slug: build.organization.slug }}
+                  className="text-[#a78bfa] hover:underline"
+                >
+                  {build.organization.name}
+                </RouterLink>
+              ) : (
+                <>by {author}</>
+              )}
             </span>
             <div className="flex flex-wrap items-center gap-2">
               <Badge
