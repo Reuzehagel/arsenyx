@@ -4,6 +4,7 @@ import { prisma } from "../db"
 import { Prisma } from "../generated/prisma/client"
 import { isPrismaNotFound, requireAdmin } from "./_admin"
 import { parseListQuery, runList } from "./_build-list"
+import { parsePage, trimQ } from "./_query"
 
 export const admin = new Hono()
 
@@ -18,18 +19,12 @@ type UserFlag = (typeof USER_FLAGS)[number]
 
 const LIST_PAGE = 24
 
-function parsePage(v: string | undefined): number {
-  const n = parseInt(v ?? "1", 10)
-  return Number.isFinite(n) && n > 0 ? n : 1
-}
-
 admin.get("/users", async (c) => {
   const actor = await requireAdmin(c)
   if (actor instanceof Response) return actor
 
   const page = parsePage(c.req.query("page"))
-  const qRaw = c.req.query("q")?.trim()
-  const q = qRaw && qRaw.length > 0 ? qRaw.slice(0, 100) : undefined
+  const q = trimQ(c.req.query("q"))
   const skip = (page - 1) * LIST_PAGE
 
   const where: Prisma.UserWhereInput = q
@@ -202,8 +197,7 @@ admin.get("/orgs", async (c) => {
   if (actor instanceof Response) return actor
 
   const page = parsePage(c.req.query("page"))
-  const qRaw = c.req.query("q")?.trim()
-  const q = qRaw && qRaw.length > 0 ? qRaw.slice(0, 100) : undefined
+  const q = trimQ(c.req.query("q"))
   const skip = (page - 1) * LIST_PAGE
 
   const where: Prisma.OrganizationWhereInput = q

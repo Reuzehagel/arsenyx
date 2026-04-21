@@ -51,6 +51,37 @@ export type MyOrgsResponse = {
   }>
 }
 
+export type OrgDirectoryItem = {
+  id: string
+  name: string
+  slug: string
+  image: string | null
+  description: string | null
+  createdAt: string
+  memberCount: number
+  buildCount: number
+}
+
+export type OrgDirectoryResponse = {
+  orgs: OrgDirectoryItem[]
+  total: number
+  page: number
+  limit: number
+}
+
+export const orgsDirectoryQuery = (page: number) =>
+  queryOptions({
+    queryKey: ["orgs", "directory", page],
+    queryFn: async (): Promise<OrgDirectoryResponse> => {
+      const qs = page > 1 ? `?page=${page}` : ""
+      const r = await fetch(`${API_URL}/orgs/public${qs}`, {
+        credentials: "include",
+      })
+      if (!r.ok) throw new Error("failed to load organizations")
+      return r.json()
+    },
+  })
+
 export const orgQuery = (slug: string) =>
   queryOptions({
     queryKey: ["org", slug.toLowerCase()],

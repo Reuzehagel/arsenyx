@@ -5,6 +5,7 @@ import { prisma } from "../db"
 import { Prisma } from "../generated/prisma/client"
 import { BuildVisibility, OrgRole } from "../generated/prisma/enums"
 import { parseListQuery, runList } from "./_build-list"
+import { parsePage, trimQ } from "./_query"
 
 export const orgs = new Hono()
 
@@ -13,6 +14,9 @@ const MAX_NAME = 50
 const MAX_SLUG = 30
 const MAX_DESCRIPTION = 200
 const MEMBERS_LIMIT = 200
+const DIRECTORY_PAGE = 20
+// Reserved because they collide with sibling paths on the /orgs router.
+const RESERVED_SLUGS = new Set(["public"])
 
 function trimToMax(v: unknown, max: number): string | null {
   if (typeof v !== "string") return null
@@ -114,6 +118,9 @@ orgs.post("/", async (c) => {
   if (!slugRaw || !SLUG_RE.test(slugRaw)) {
     return c.json({ error: "invalid_slug" }, 400)
   }
+  if (RESERVED_SLUGS.has(slugRaw)) {
+    return c.json({ error: "slug_taken" }, 409)
+  }
 
   try {
     const created = await prisma.$transaction(async (tx) => {
@@ -137,6 +144,62 @@ orgs.post("/", async (c) => {
     }
     throw err
   }
+})
+
+// Public directory — declared before /:slug so Hono doesn't capture "public" as a slug.
+orgs.get("/public", async (c) => {
+  const page = parsePage(c.req.query("page"))
+  const q = trimQ(c.req.query("q"))
+  const skip = (page - 1) * DIRECTORY_PAGE
+
+  const where: Prisma.OrganizationWhereInput = q
+    ? {
+        OR: [
+          { name: { contains: q, mode: "insensitive" } },
+          { slug: { contains: q, mode: "insensitive" } },
+        ],
+      }
+    : {}
+
+  const [rows, total] = await Promise.all([
+    prisma.organization.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: DIRECTORY_PAGE,
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        image: true,
+        description: true,
+        createdAt: true,
+        _count: {
+          select: {
+            members: true,
+            builds: { where: { visibility: BuildVisibility.PUBLIC } },
+          },
+        },
+      },
+    }),
+    prisma.organization.count({ where }),
+  ])
+
+  return c.json({
+    orgs: rows.map((o) => ({
+      id: o.id,
+      name: o.name,
+      slug: o.slug,
+      image: o.image,
+      description: o.description,
+      createdAt: o.createdAt.toISOString(),
+      memberCount: o._count.members,
+      buildCount: o._count.builds,
+    })),
+    total,
+    page,
+    limit: DIRECTORY_PAGE,
+  })
 })
 
 orgs.get("/:slug", async (c) => {
@@ -255,6 +318,7 @@ orgs.patch("/:slug", async (c) => {
   if (typeof b.slug === "string") {
     const s = trimToMax(b.slug, MAX_SLUG)?.toLowerCase() ?? ""
     if (!s || !SLUG_RE.test(s)) return c.json({ error: "invalid_slug" }, 400)
+    if (RESERVED_SLUGS.has(s)) return c.json({ error: "slug_taken" }, 409)
     data.slug = s
   }
   if (typeof b.description === "string" || b.description === null) {
