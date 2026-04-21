@@ -13,7 +13,7 @@
 
 - [ ] Keyboard navigation in browse grid (arrow keys, enter, focus ring)
 - [ ] Mobile nav (hamburger + sheet)
-- [ ] Split frontend bundle — route-level code splitting to get under the 500KB Vite warning
+- [x] Split frontend bundle — route-level code splitting to get under the 500KB Vite warning
 
 ## Deploy — done
 
