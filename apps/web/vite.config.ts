@@ -18,15 +18,9 @@ export default defineConfig({
   },
   server: { port: 5173 },
   build: {
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          router: ["@tanstack/react-router", "@tanstack/router-devtools"],
-          query: ["@tanstack/react-query"],
-          markdown: ["react-markdown", "remark-gfm"],
-          "base-ui": ["@base-ui/react", "cmdk"],
-        },
-      },
-    },
+    // Main app-shell chunk is ~650KB; per-route code is already split out
+    // via autoCodeSplitting. Vendor manualChunks were tried and reverted —
+    // they only shuffle code into eager modulepreloads, growing first paint.
+    chunkSizeWarningLimit: 700,
   },
 })
