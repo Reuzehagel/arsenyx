@@ -841,22 +841,19 @@ function SearchPanel({
     // Augments for subsumed abilities belong to a different warframe's
     // `compatName`, so `getModsForItem` filters them out. Stitch them back
     // in by matching source warframe + "<Ability> Augment:" description prefix.
-    const seen = new Set(base.map((m) => m.uniqueName))
     const extras: Mod[] = []
     for (const ability of Object.values(helminth)) {
       const source = ability.source.toLowerCase()
       const prefix = `${ability.name.toLowerCase()} augment:`
       for (const m of allMods) {
         if (!m.isAugment) continue
-        if (seen.has(m.uniqueName)) continue
         if ((m.compatName ?? "").toLowerCase() !== source) continue
         const desc = (m.levelStats?.[0]?.stats?.[0] ?? "").toLowerCase()
         if (!desc.startsWith(prefix)) continue
-        seen.add(m.uniqueName)
         extras.push(m)
       }
     }
-    const mods = extras.length ? [...base, ...extras] : base
+    const mods = [...base, ...extras]
     if (isRivenEligible(category, item)) {
       return [createSyntheticRiven(), ...mods]
     }
