@@ -30,6 +30,9 @@ Arsenyx dev setup
 // placeholder as a real secret and skip regeneration.
 const SECRET_PLACEHOLDER = "generate with: openssl rand -base64 32"
 
+// Known-shape-only. Handles the UPPER_SNAKE_CASE="value" lines in .env.example.
+// Not a general-purpose .env parser — doesn't handle lowercase keys, multi-line
+// values, or escaped quotes.
 function parseEnv(text: string): Map<string, string> {
   const out = new Map<string, string>()
   for (const line of text.split(/\r?\n/)) {
