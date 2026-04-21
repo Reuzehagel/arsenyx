@@ -13,6 +13,10 @@ const githubSecret = process.env.GITHUB_CLIENT_SECRET?.trim()
 // SameSite=None and cross-origin login broke. The scheme is always correct.
 const isHttps = process.env.BETTER_AUTH_URL?.startsWith("https://") === true
 
+// Email+password sign-in exists only for local dev — we have no email service
+// for verification/reset flows, so prod stays GitHub-OAuth-only.
+const devEmailPasswordEnabled = process.env.NODE_ENV === "development"
+
 export const auth = betterAuth({
   appName: "Arsenyx",
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:8787",
@@ -20,6 +24,7 @@ export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET,
   database: prismaAdapter(prisma, { provider: "postgresql" }),
   trustedOrigins: webOrigins,
+  emailAndPassword: { enabled: devEmailPasswordEnabled },
   socialProviders:
     githubId && githubSecret
       ? {

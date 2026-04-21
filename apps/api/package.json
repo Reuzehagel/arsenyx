@@ -3,8 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun run --hot src/index.ts",
-    "dev:workers": "wrangler dev",
+    "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "db:push": "bunx prisma db push",
     "db:studio": "bunx prisma studio",
@@ -13,6 +12,7 @@
   },
   "dependencies": {
     "@arsenyx/shared": "workspace:*",
+    "@neondatabase/serverless": "^1.1.0",
     "@prisma/adapter-neon": "^7.7.0",
     "@prisma/client": "^7.5.0",
     "better-auth": "^1.5.5",

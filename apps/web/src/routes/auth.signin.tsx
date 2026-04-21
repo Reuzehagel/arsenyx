@@ -1,10 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { Icons } from "@/components/icons"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { authClient } from "@/lib/auth-client"
 import { ROUTES, SITE_CONFIG } from "@/lib/constants"
 
@@ -61,6 +62,8 @@ function SignInPage() {
             Continue with GitHub
           </Button>
 
+          {import.meta.env.DEV ? <DevSignInForm redirect={redirect} /> : null}
+
           <p className="text-muted-foreground text-center text-xs">
             By signing in you agree to our{" "}
             <a href={ROUTES.terms} className="underline underline-offset-4">
@@ -76,5 +79,61 @@ function SignInPage() {
       </main>
       <Footer />
     </div>
+  )
+}
+
+// Dev-only email+password form. Tree-shaken out of prod builds via
+// `import.meta.env.DEV`. Paired with `just setup`, which seeds
+// admin@admin.com / admin.
+function DevSignInForm({ redirect }: { redirect: string | undefined }) {
+  const navigate = useNavigate()
+  const [email, setEmail] = useState("admin@admin.com")
+  const [password, setPassword] = useState("admin")
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setBusy(true)
+    setError(null)
+    const { error: err } = await authClient.signIn.email({ email, password })
+    setBusy(false)
+    if (err) {
+      setError(err.message ?? "sign-in failed")
+      return
+    }
+    navigate({ to: redirect ?? ROUTES.home, replace: true })
+  }
+
+  return (
+    <>
+      <div className="flex items-center gap-2">
+        <div className="bg-border h-px flex-1" />
+        <span className="text-muted-foreground text-xs uppercase">
+          dev login
+        </span>
+        <div className="bg-border h-px flex-1" />
+      </div>
+      <form onSubmit={onSubmit} className="flex flex-col gap-2">
+        <Input
+          type="email"
+          autoComplete="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="admin@admin.com"
+        />
+        <Input
+          type="password"
+          autoComplete="current-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="admin"
+        />
+        {error ? <p className="text-destructive text-sm">{error}</p> : null}
+        <Button type="submit" variant="secondary" disabled={busy}>
+          Sign in
+        </Button>
+      </form>
+    </>
   )
 }
