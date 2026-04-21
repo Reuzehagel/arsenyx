@@ -162,10 +162,10 @@ builds.patch("/:slug", async (c) => {
 
   const existing = await prisma.build.findUnique({
     where: { slug },
-    select: { id: true, userId: true },
+    select: { id: true, userId: true, organizationId: true },
   })
   if (!existing) return c.json({ error: "not_found" }, 404)
-  if (existing.userId !== session.user.id) {
+  if (!(await canMutateBuild(existing, session.user.id))) {
     return c.json({ error: "forbidden" }, 403)
   }
 
@@ -235,10 +235,10 @@ builds.delete("/:slug", async (c) => {
 
   const existing = await prisma.build.findUnique({
     where: { slug },
-    select: { id: true, userId: true },
+    select: { id: true, userId: true, organizationId: true },
   })
   if (!existing) return c.json({ error: "not_found" }, 404)
-  if (existing.userId !== session.user.id) {
+  if (!(await canMutateBuild(existing, session.user.id))) {
     return c.json({ error: "forbidden" }, 403)
   }
 
@@ -593,7 +593,12 @@ builds.get("/:slug", async (c) => {
     user: build.user,
     organization: build.organization,
     guide: build.buildGuide,
-    isOwner: viewerId != null && build.userId === viewerId,
+    isOwner:
+      viewerId != null &&
+      (await canMutateBuild(
+        { userId: build.userId, organizationId: build.organizationId },
+        viewerId,
+      )),
     viewerHasLiked,
     viewerHasBookmarked,
   })
@@ -624,6 +629,16 @@ async function maybeIncrementView(
     sameSite: isProd ? "None" : "Lax",
     secure: isProd,
   })
+}
+
+async function canMutateBuild(
+  existing: { userId: string; organizationId: string | null },
+  sessionUserId: string,
+) {
+  if (existing.userId === sessionUserId) return true
+  if (existing.organizationId)
+    return isOrgMember(existing.organizationId, sessionUserId)
+  return false
 }
 
 async function isOrgMember(organizationId: string, userId: string) {
