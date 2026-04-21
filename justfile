@@ -21,10 +21,11 @@ build-items-index:
 stop:
     @foreach ($port in 5173, 8787) { $pids = (Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue).OwningProcess | Select-Object -Unique; if ($pids) { Write-Host "Stopping port $port (PID $($pids -join ', '))"; $pids | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue } } else { Write-Host "Port $port already free" } }
 
-# First-run setup for a fresh clone. Requires apps/api/.env with a Neon DATABASE_URL.
+# Interactive first-run setup. Asks for a Neon DATABASE_URL, generates a
+# BETTER_AUTH_SECRET, pushes the schema, and seeds an admin@admin.com / admin
+# user. Safe to re-run.
 setup:
-    bun install
-    cd apps/api; bun run db:push
+    bun run scripts/setup.ts
 
 # Update game data (WFCD items + browse index).
 update-data:

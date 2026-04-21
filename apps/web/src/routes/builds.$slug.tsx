@@ -1,5 +1,6 @@
 import { getArcanesForCategory } from "@arsenyx/shared/warframe/arcanes"
 import { slugify } from "@arsenyx/shared/warframe/slugs"
+import type { Arcane, Mod } from "@arsenyx/shared/warframe/types"
 import { useSuspenseQuery } from "@tanstack/react-query"
 import {
   createFileRoute,
@@ -59,7 +60,10 @@ import {
 import { arcanesQuery } from "@/lib/arcanes-query"
 import { authClient } from "@/lib/auth-client"
 import { useDeleteBuild, useForkBuild } from "@/lib/build-actions"
-import { normalizeBuildData } from "@/lib/build-codec-adapter"
+import {
+  isLegacyBuildData,
+  normalizeBuildData,
+} from "@/lib/build-codec-adapter"
 import { buildQuery, type BuildDetail } from "@/lib/build-query"
 import { useToggleBookmark, useToggleLike } from "@/lib/build-social"
 import { itemQuery } from "@/lib/item-query"
@@ -116,18 +120,50 @@ function BuildViewer() {
   )
 }
 
-function BuildViewerBody({
-  build,
-  category,
-  itemSlug,
-}: {
+function BuildViewerBody(props: {
   build: BuildDetail
   category: BrowseCategory
   itemSlug: string
 }) {
-  const { data: item } = useSuspenseQuery(itemQuery(category, itemSlug))
+  // New-format builds (SavedBuildData) carry full mod/arcane objects inline in
+  // buildData, so we skip the ~1.35MB mods-all.json + arcanes-all.json fetches.
+  // Only legacy BuildState-shape builds need the catalogs for uniqueName lookup.
+  if (isLegacyBuildData(props.build.buildData)) {
+    return <BuildViewerBodyWithCatalog {...props} />
+  }
+  return <BuildViewerBodyInner {...props} allMods={[]} allArcanes={[]} />
+}
+
+function BuildViewerBodyWithCatalog(props: {
+  build: BuildDetail
+  category: BrowseCategory
+  itemSlug: string
+}) {
   const { data: allArcanes } = useSuspenseQuery(arcanesQuery)
   const { data: allMods } = useSuspenseQuery(modsQuery)
+  return (
+    <BuildViewerBodyInner
+      {...props}
+      allMods={allMods}
+      allArcanes={allArcanes}
+    />
+  )
+}
+
+function BuildViewerBodyInner({
+  build,
+  category,
+  itemSlug,
+  allMods,
+  allArcanes,
+}: {
+  build: BuildDetail
+  category: BrowseCategory
+  itemSlug: string
+  allMods: Mod[]
+  allArcanes: Arcane[]
+}) {
+  const { data: item } = useSuspenseQuery(itemQuery(category, itemSlug))
 
   const saved = useMemo(
     () => normalizeBuildData(build.buildData, allMods, allArcanes),

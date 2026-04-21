@@ -39,11 +39,18 @@ Game data is **static** and served as JSON from `apps/web/public/data/`. User da
 
 ## Running locally
 
+Requires Bun 1.2+, [just](https://github.com/casey/just), and a free Neon Postgres project ([neon.tech](https://neon.tech) — 1 minute signup).
+
 ```bash
 bun install
-just setup   # first run — pushes the Prisma schema to the Neon branch in apps/api/.env
-just dev     # web on :5173, api on :8787
+just setup    # interactive — asks for your Neon DATABASE_URL, generates
+              # an auth secret, pushes the schema, and seeds a dev user.
+just dev      # web on :5173, api on :8787
 ```
+
+Sign in at `http://localhost:5173` with **`admin@admin.com`** / **`admin`**.
+
+GitHub OAuth is optional locally — fill `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` in `apps/api/.env` if you want to test the real OAuth flow. **In production, GitHub OAuth is the only sign-in method**; email+password is dev-only.
 
 The full command list is in the [justfile](justfile); [docs/commands.md](docs/commands.md) covers build, database, and data-sync workflows.
 

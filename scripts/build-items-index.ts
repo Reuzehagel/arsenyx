@@ -15,9 +15,14 @@ import { createRequire } from "node:module"
 import { dirname, resolve } from "node:path"
 
 import { normalizeArcanes } from "@arsenyx/shared/warframe/arcanes"
-import { buildIndex } from "@arsenyx/shared/warframe/categorize"
 import { BROWSE_CATEGORIES } from "@arsenyx/shared/warframe/categories"
+import { buildIndex } from "@arsenyx/shared/warframe/categorize"
 import { normalizeMods } from "@arsenyx/shared/warframe/mods"
+import {
+  slimArcanesForClient,
+  slimItemForClient,
+  slimModsForClient,
+} from "@arsenyx/shared/warframe/slim"
 import type {
   Arcane,
   BrowseableItem,
@@ -241,7 +246,7 @@ async function main() {
     for (const slim of byCategory[cat.id] ?? []) {
       const full = slugLookup.get(`${cat.id}|${slim.slug}`)
       if (!full) continue
-      const body = JSON.stringify(full)
+      const body = JSON.stringify(slimItemForClient(full))
       await writeFile(resolve(catDir, `${slim.slug}.json`), body, "utf8")
       detailCount++
       detailBytes += Buffer.byteLength(body, "utf8")
@@ -254,14 +259,14 @@ async function main() {
 
   // All normalized mods in one file. Client filters per-item via
   // @arsenyx/shared's getModsForItem so we don't duplicate mod objects.
-  const modsBody = JSON.stringify(mods)
+  const modsBody = JSON.stringify(slimModsForClient(mods))
   await writeFile(MODS_OUT, modsBody, "utf8")
   const modsMb = (Buffer.byteLength(modsBody, "utf8") / 1024 / 1024).toFixed(2)
   console.log(
     `✓ wrote ${mods.length} normalized mods → mods-all.json (${modsMb} MB)`,
   )
 
-  const arcanesBody = JSON.stringify(arcanes)
+  const arcanesBody = JSON.stringify(slimArcanesForClient(arcanes))
   await writeFile(ARCANES_OUT, arcanesBody, "utf8")
   const arcanesKb = (Buffer.byteLength(arcanesBody, "utf8") / 1024).toFixed(1)
   console.log(
