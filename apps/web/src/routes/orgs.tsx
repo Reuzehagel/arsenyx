@@ -136,7 +136,7 @@ function OrgsDirectoryContent() {
         total={total}
         limit={limit}
         onPage={goto}
-        showTotal={false}
+        href={(p) => (p > 1 ? `/orgs?page=${p}` : "/orgs")}
       />
     </>
   )

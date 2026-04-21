@@ -11,8 +11,6 @@ export const Route = createFileRoute("/docs")({
   component: DocsPage,
 })
 
-const API_BASE = "https://api.arsenyx.com"
-
 type Endpoint = {
   method: "GET"
   path: string
@@ -50,7 +48,7 @@ const PUBLIC_ENDPOINTS: Endpoint[] = [
     method: "GET",
     path: "/orgs/public",
     summary:
-      "Directory of all organizations. Supports ?page (20 per page) and ?q for name/slug search.",
+      "Directory of all organizations. Paginated, with ?q for name/slug search.",
     example: `{
   "orgs": [
     { "slug": "...", "name": "...", "memberCount": 12, "buildCount": 34, ... }
@@ -109,7 +107,7 @@ function DocsPage() {
 
           <h2>Public API</h2>
           <p>
-            Base URL: <code>{API_BASE}</code>. Authentication is cookie-based
+            Base URL: <code>{EXTERNAL_LINKS.apiBase}</code>. Authentication is cookie-based
             (Better Auth). The endpoints below are public and read-only — no
             credentials required. Write endpoints, user data, and admin routes
             require a session and aren&apos;t documented here.

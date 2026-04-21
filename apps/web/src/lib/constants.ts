@@ -41,6 +41,7 @@ export const API_URL =
 export const EXTERNAL_LINKS = {
   github: "https://github.com/Reuzehagel/arsenyx",
   wfcd: "https://warframestat.us",
+  apiBase: "https://api.arsenyx.com",
 } as const
 
 // Navigation items for header
