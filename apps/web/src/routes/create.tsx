@@ -43,6 +43,7 @@ import {
   getArcaneSlotCount,
   getAuraPolarities,
   getAuraSlotCount,
+  getMaxLevelCap,
   getNormalSlotCount,
   GuideEditor,
   hasExilusSlot,
@@ -482,6 +483,7 @@ function EditorShell() {
         auraInnates,
         normalInnates,
         hasReactor,
+        maxLevelCap: getMaxLevelCap(category, item),
       }),
     [
       slots.placed,
@@ -489,6 +491,8 @@ function EditorShell() {
       auraInnates,
       normalInnates,
       hasReactor,
+      category,
+      item.maxLevelCap,
     ],
   )
 

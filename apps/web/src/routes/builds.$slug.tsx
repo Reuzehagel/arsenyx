@@ -28,6 +28,7 @@ import {
   getArcaneSlotCount,
   getAuraPolarities,
   getAuraSlotCount,
+  getMaxLevelCap,
   getNormalSlotCount,
   hasExilusSlot,
   ItemSidebar,
@@ -191,6 +192,7 @@ function BuildViewerBody({
         auraInnates,
         normalInnates,
         hasReactor,
+        maxLevelCap: getMaxLevelCap(category, item),
       }),
     [
       slots.placed,
@@ -198,6 +200,8 @@ function BuildViewerBody({
       auraInnates,
       normalInnates,
       hasReactor,
+      category,
+      item.maxLevelCap,
     ],
   )
 

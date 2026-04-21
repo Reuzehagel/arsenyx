@@ -39,3 +39,16 @@ export function getNormalSlotCount(category: BrowseCategory): number {
   if (category === "necramechs") return 12
   return 8
 }
+
+/**
+ * Max rank for an item. Necramechs overlevel to 40 (not flagged in WFCD data).
+ * Kuva/Tenet/Coda weapons + Paracesis carry `maxLevelCap: 40` in their JSON.
+ * Undefined for normal-rank items; `calculateCapacity` treats that as 30.
+ */
+export function getMaxLevelCap(
+  category: BrowseCategory,
+  item: Pick<DetailItem, "maxLevelCap">,
+): number | undefined {
+  if (category === "necramechs") return 40
+  return item.maxLevelCap
+}

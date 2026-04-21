@@ -16,6 +16,7 @@ export {
 export {
   getArcaneSlotCount,
   getAuraSlotCount,
+  getMaxLevelCap,
   getNormalSlotCount,
   hasExilusSlot,
 } from "./layout"

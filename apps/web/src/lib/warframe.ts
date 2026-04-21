@@ -81,6 +81,7 @@ export interface DetailItem extends BrowseItem {
   sprintSpeed?: number
   abilities?: ItemAbility[]
   // weapon
+  maxLevelCap?: number
   totalDamage?: number
   criticalChance?: number
   criticalMultiplier?: number

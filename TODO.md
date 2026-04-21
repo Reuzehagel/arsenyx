@@ -4,7 +4,8 @@
 
 - [ ] Add riven mod support to Overframe import
 - [x] Fix companions
-- [ ] Fix Lich weapons
+- [x] Fix Lich weapons
+- [ ] Overleveled weapons — display unique rank bonuses (Kuva/Tenet/Coda elemental bonus)
 - [ ] Fix Necramech
 - [ ] Fix Jade
 - [ ] Check exalted weapons
