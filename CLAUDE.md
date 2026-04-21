@@ -46,6 +46,7 @@ Game data is static, user data is dynamic. If something is read-heavy and rarely
 - [TODO.md](TODO.md) — open bugs, deploy steps
 - [docs/commands.md](docs/commands.md) — full command reference (build, db, data sync)
 - [docs/gotchas.md](docs/gotchas.md) — non-obvious pitfalls (PowerShell, Base UI, shadcn in monorepo)
+- [docs/off-cloudflare.md](docs/off-cloudflare.md) — inventory of CF-Workers-specific decisions + what would change if we ever migrate
 - [apps/web/docs/rules/](apps/web/docs/rules/) — TanStack Router rules (per-topic)
 
 ## Keeping docs fresh
