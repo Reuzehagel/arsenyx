@@ -356,7 +356,22 @@ export interface BuildState {
     grip: string
     link: string
   }
+
+  // Bonus element on Kuva/Tenet/Coda weapons (maxLevelCap: 40).
+  lichBonusElement?: LichBonusElement
 }
+
+export const LICH_BONUS_ELEMENTS = [
+  "Heat",
+  "Cold",
+  "Electricity",
+  "Toxin",
+  "Radiation",
+  "Magnetic",
+  "Impact",
+] as const
+
+export type LichBonusElement = (typeof LICH_BONUS_ELEMENTS)[number]
 
 export interface HelminthAbility {
   uniqueName: string

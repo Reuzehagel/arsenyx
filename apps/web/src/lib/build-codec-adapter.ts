@@ -2,6 +2,7 @@ import type {
   Arcane,
   BrowseCategory,
   BuildState,
+  LichBonusElement,
   Mod,
   ModSlot,
   PlacedArcane as SharedPlacedArcane,
@@ -25,6 +26,7 @@ type EditorState = {
   shards: (PlacedShard | null)[]
   helminth: Record<number, HelminthAbility>
   zawComponents?: { grip: string; link: string }
+  lichBonusElement?: LichBonusElement
   normalSlotCount: number
   auraSlotCount: number
 }
@@ -159,6 +161,7 @@ export function savedDataToBuildState(state: EditorState): BuildState {
     buildName: state.buildName,
     helminthAbility,
     zawComponents: state.zawComponents,
+    lichBonusElement: state.lichBonusElement,
   }
 }
 
@@ -218,6 +221,7 @@ export function buildStateToSavedData(
       hasReactor: state.hasReactor ?? true,
       helminth,
       zawComponents: state.zawComponents,
+      lichBonusElement: state.lichBonusElement,
     },
     buildName: state.buildName,
   }

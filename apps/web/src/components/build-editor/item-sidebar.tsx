@@ -1,4 +1,10 @@
-import type { Gun, Melee, Warframe } from "@arsenyx/shared/warframe/types"
+import {
+  LICH_BONUS_ELEMENTS,
+  type Gun,
+  type LichBonusElement,
+  type Melee,
+  type Warframe,
+} from "@arsenyx/shared/warframe/types"
 import { isZawStrike } from "@arsenyx/shared/warframe/zaw-data"
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { ChevronLeft, Plus, Undo2, X, Zap } from "lucide-react"
@@ -11,6 +17,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import {
@@ -53,6 +67,7 @@ import {
 } from "@/lib/warframe"
 import { adjustStrikeForZaw } from "@/lib/zaw-stats"
 
+import { isLichWeapon } from "./layout"
 import type { PlacedArcane } from "./use-arcane-slots"
 import type { PlacedMod, SlotId } from "./use-build-slots"
 import { ZawComponentSelector } from "./zaw-component-selector"
@@ -78,6 +93,8 @@ export interface ItemSidebarProps {
   onSetHelminth: (slotIndex: number, ability: HelminthAbility | null) => void
   zawComponents?: { grip: string; link: string }
   onSetZawComponents?: (components: { grip: string; link: string }) => void
+  lichBonusElement?: LichBonusElement | null
+  onSetLichBonusElement?: (value: LichBonusElement | null) => void
   placedMods: Partial<Record<SlotId, PlacedMod>>
   placedArcanes: (PlacedArcane | null)[]
   readOnly?: boolean
@@ -96,6 +113,8 @@ export function ItemSidebar({
   onSetHelminth,
   zawComponents,
   onSetZawComponents,
+  lichBonusElement,
+  onSetLichBonusElement,
   placedMods,
   placedArcanes,
   readOnly = false,
@@ -119,6 +138,7 @@ export function ItemSidebar({
       category === "archwing" ||
       category === "exalted-weapons" ||
       category === "companions")
+  const showLichBonus = isWeapon && isLichWeapon(item)
   const showShards = category === "warframes"
   const skipRankUpBonus = category === "necramechs" || isArchwingSuit
   const abilities = item.abilities ?? []
@@ -290,10 +310,59 @@ export function ItemSidebar({
             />
           </div>
         )}
+        {showLichBonus && (
+          <LichBonusElementPicker
+            value={lichBonusElement ?? null}
+            onChange={(v) => onSetLichBonusElement?.(v)}
+            readOnly={readOnly}
+          />
+        )}
         {warframeStats && <WarframeStatsPanel stats={warframeStats} />}
         {weaponStats && <WeaponStatsPanel stats={weaponStats} />}
         {companionStats && <CompanionStatsPanel stats={companionStats} />}
       </div>
+    </div>
+  )
+}
+
+const LICH_BONUS_ITEMS: { value: LichBonusElement | null; label: string }[] = [
+  { value: null, label: "No element selected" },
+  ...LICH_BONUS_ELEMENTS.map((el) => ({ value: el, label: `+60% ${el}` })),
+]
+
+function LichBonusElementPicker({
+  value,
+  onChange,
+  readOnly,
+}: {
+  value: LichBonusElement | null
+  onChange: (v: LichBonusElement | null) => void
+  readOnly: boolean
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+        Bonus Element
+      </span>
+      <Select
+        items={LICH_BONUS_ITEMS}
+        value={value}
+        onValueChange={(v) => onChange(v as LichBonusElement | null)}
+        disabled={readOnly}
+      >
+        <SelectTrigger size="sm" className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            {LICH_BONUS_ITEMS.map((item) => (
+              <SelectItem key={item.value ?? "none"} value={item.value}>
+                {item.label}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
     </div>
   )
 }

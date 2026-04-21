@@ -194,6 +194,7 @@ function BuildViewerBodyInner({
   const helminth = saved.helminth ?? {}
   const hasReactor = saved.hasReactor ?? true
   const zawComponents = saved.zawComponents
+  const lichBonusElement = saved.lichBonusElement ?? null
 
   const auraInnates = useMemo(
     () => getAuraPolarities(item, auraSlotCount),
@@ -273,6 +274,7 @@ function BuildViewerBodyInner({
               helminth={helminth}
               onSetHelminth={() => {}}
               zawComponents={zawComponents}
+              lichBonusElement={lichBonusElement}
               placedMods={slots.placed}
               placedArcanes={arcanes.placed}
               readOnly

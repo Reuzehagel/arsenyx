@@ -4,6 +4,7 @@ import { SHARD_COLORS, getStatByIndex, getStatIndex } from "./shards"
 import type {
   BrowseCategory,
   BuildState,
+  LichBonusElement,
   ModSlot,
   PlacedArcane,
   PlacedMod,
@@ -28,6 +29,7 @@ interface EncodedBuild {
   n?: string
   h?: EncodedHelminth
   zc?: { g: string; l: string }
+  lb?: string
 }
 
 interface EncodedHelminth {
@@ -115,6 +117,10 @@ export function encodeBuild(state: BuildState): string {
       g: state.zawComponents.grip,
       l: state.zawComponents.link,
     }
+  }
+
+  if (state.lichBonusElement) {
+    encoded.lb = state.lichBonusElement
   }
 
   const jsonString = JSON.stringify(encoded)
@@ -255,6 +261,10 @@ export function decodeBuild(base64String: string): Partial<BuildState> | null {
         grip: encoded.zc.g,
         link: encoded.zc.l,
       }
+    }
+
+    if (encoded.lb) {
+      state.lichBonusElement = encoded.lb as LichBonusElement
     }
 
     return state
