@@ -228,19 +228,20 @@ export function buildStateToSavedData(
 type LegacyOrSaved = Partial<BuildState> &
   SavedBuildData & { auraSlot?: unknown }
 
+export function isLegacyBuildData(raw: unknown): boolean {
+  const r = (raw ?? {}) as LegacyOrSaved
+  return Boolean(
+    r.normalSlots || r.auraSlots || r.auraSlot || r.exilusSlot || r.arcaneSlots,
+  )
+}
+
 export function normalizeBuildData(
   raw: unknown,
   mods: Mod[],
   arcanes: Arcane[],
 ): SavedBuildData {
   const r = (raw ?? {}) as LegacyOrSaved
-  if (
-    r.normalSlots ||
-    r.auraSlots ||
-    r.auraSlot ||
-    r.exilusSlot ||
-    r.arcaneSlots
-  ) {
+  if (isLegacyBuildData(r)) {
     return buildStateToSavedData(r, mods, arcanes).data
   }
   return migrateLegacyAuraKey(r as SavedBuildData)
