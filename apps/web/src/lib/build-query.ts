@@ -1,4 +1,4 @@
-import type { Polarity } from "@arsenyx/shared/warframe/types"
+import type { LichBonusElement, Polarity } from "@arsenyx/shared/warframe/types"
 import { queryOptions } from "@tanstack/react-query"
 import { notFound } from "@tanstack/react-router"
 
@@ -17,6 +17,7 @@ export type SavedBuildData = {
   hasReactor?: boolean
   helminth?: Record<number, HelminthAbility>
   zawComponents?: { grip: string; link: string }
+  lichBonusElement?: LichBonusElement
 }
 
 export type BuildDetail = {

@@ -6,7 +6,7 @@ import {
   isRivenEligible,
   isRivenMod,
 } from "@arsenyx/shared/warframe/rivens"
-import type { Mod } from "@arsenyx/shared/warframe/types"
+import type { LichBonusElement, Mod } from "@arsenyx/shared/warframe/types"
 import {
   isZawStrike,
   ZAW_DEFAULT_GRIP,
@@ -336,6 +336,9 @@ function EditorShell() {
     })
   }, [item.name])
 
+  const [lichBonusElement, setLichBonusElement] =
+    useState<LichBonusElement | null>(() => savedData.lichBonusElement ?? null)
+
   const [helminth, setHelminth] = useState<Record<number, HelminthAbility>>(
     () => savedData.helminth ?? {},
   )
@@ -394,6 +397,7 @@ function EditorShell() {
       shards,
       helminth,
       zawComponents,
+      lichBonusElement: lichBonusElement ?? undefined,
       normalSlotCount,
       auraSlotCount,
     })
@@ -439,6 +443,7 @@ function EditorShell() {
           hasReactor,
           helminth,
           zawComponents,
+          lichBonusElement: lichBonusElement ?? undefined,
         },
         guide: {
           summary: guideSummary.trim() || null,
@@ -537,6 +542,8 @@ function EditorShell() {
               onSetHelminth={setHelminthAt}
               zawComponents={zawComponents}
               onSetZawComponents={setZawComponents}
+              lichBonusElement={lichBonusElement}
+              onSetLichBonusElement={setLichBonusElement}
               placedMods={slots.placed}
               placedArcanes={arcanes.placed}
             />

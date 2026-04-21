@@ -52,3 +52,14 @@ export function getMaxLevelCap(
   if (category === "necramechs") return 40
   return item.maxLevelCap
 }
+
+// Paracesis also carries maxLevelCap: 40 but has no Lich bonus element —
+// gate on the name prefix so it's excluded.
+const LICH_WEAPON_PREFIXES = ["Kuva ", "Tenet ", "Coda "]
+
+export function isLichWeapon(
+  item: Pick<DetailItem, "name" | "maxLevelCap">,
+): boolean {
+  if (item.maxLevelCap !== 40) return false
+  return LICH_WEAPON_PREFIXES.some((p) => item.name.startsWith(p))
+}

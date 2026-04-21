@@ -21,6 +21,7 @@ Never modify existing files in `apps/web/src/components/ui/` — override via `c
 
 - `Slider` — `onValueChange` / `onValueCommitted` receive `number | readonly number[]`.
 - `Select` — `onValueChange` receives `string | null`.
+- `Select` — for `SelectValue` to render a label for the current value, pass an `items={[{ value, label }]}` prop to `<Select>`. Without it, `SelectValue` falls back to showing the raw value string (so `value={null}` renders literally as `null`, `value="__none__"` renders as `__none__`). Use `value: null` for the "no selection" entry. Reference: [select-example.tsx](https://raw.githubusercontent.com/shadcn-ui/ui/refs/heads/main/apps/v4/registry/bases/base/examples/select-example.tsx).
 
 ## WFCD data quirks
 
