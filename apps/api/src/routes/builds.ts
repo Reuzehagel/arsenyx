@@ -417,12 +417,10 @@ builds.post("/:slug/like", async (c) => {
     await tx.buildLike.create({
       data: { userId, buildId: build.id, value: 1 },
     })
-    const row = await tx.build.update({
-      where: { id: build.id },
-      data: { likeCount: { increment: 1 } },
-      select: { likeCount: true },
-    })
-    return { hasLiked: true, likeCount: row.likeCount }
+    const rows = await tx.$queryRaw<{ likeCount: number }[]>`
+      UPDATE builds SET "likeCount" = "likeCount" + 1 WHERE id = ${build.id} RETURNING "likeCount"
+    `
+    return { hasLiked: true, likeCount: rows[0]?.likeCount ?? build.likeCount + 1 }
   })
   return c.json(updated)
 })
@@ -444,12 +442,10 @@ builds.delete("/:slug/like", async (c) => {
       return { hasLiked: false, likeCount: build.likeCount }
     }
     await tx.buildLike.delete({ where: { id: existing.id } })
-    const row = await tx.build.update({
-      where: { id: build.id },
-      data: { likeCount: { decrement: 1 } },
-      select: { likeCount: true },
-    })
-    return { hasLiked: false, likeCount: row.likeCount }
+    const rows = await tx.$queryRaw<{ likeCount: number }[]>`
+      UPDATE builds SET "likeCount" = "likeCount" - 1 WHERE id = ${build.id} RETURNING "likeCount"
+    `
+    return { hasLiked: false, likeCount: rows[0]?.likeCount ?? Math.max(0, build.likeCount - 1) }
   })
   return c.json(updated)
 })
@@ -474,12 +470,10 @@ builds.post("/:slug/bookmark", async (c) => {
       return { hasBookmarked: true, bookmarkCount: build.bookmarkCount }
     }
     await tx.buildBookmark.create({ data: { userId, buildId: build.id } })
-    const row = await tx.build.update({
-      where: { id: build.id },
-      data: { bookmarkCount: { increment: 1 } },
-      select: { bookmarkCount: true },
-    })
-    return { hasBookmarked: true, bookmarkCount: row.bookmarkCount }
+    const rows = await tx.$queryRaw<{ bookmarkCount: number }[]>`
+      UPDATE builds SET "bookmarkCount" = "bookmarkCount" + 1 WHERE id = ${build.id} RETURNING "bookmarkCount"
+    `
+    return { hasBookmarked: true, bookmarkCount: rows[0]?.bookmarkCount ?? build.bookmarkCount + 1 }
   })
   return c.json(updated)
 })
@@ -501,12 +495,10 @@ builds.delete("/:slug/bookmark", async (c) => {
       return { hasBookmarked: false, bookmarkCount: build.bookmarkCount }
     }
     await tx.buildBookmark.delete({ where: { id: existing.id } })
-    const row = await tx.build.update({
-      where: { id: build.id },
-      data: { bookmarkCount: { decrement: 1 } },
-      select: { bookmarkCount: true },
-    })
-    return { hasBookmarked: false, bookmarkCount: row.bookmarkCount }
+    const rows = await tx.$queryRaw<{ bookmarkCount: number }[]>`
+      UPDATE builds SET "bookmarkCount" = "bookmarkCount" - 1 WHERE id = ${build.id} RETURNING "bookmarkCount"
+    `
+    return { hasBookmarked: false, bookmarkCount: rows[0]?.bookmarkCount ?? Math.max(0, build.bookmarkCount - 1) }
   })
   return c.json(updated)
 })
@@ -616,11 +608,9 @@ async function maybeIncrementView(
   if (viewerId && viewerId === ownerId) return
   const cookieName = `vw_${slug}`
   if (getCookie(c, cookieName)) return
-  await prisma.build.update({
-    where: { id: buildId },
-    data: { viewCount: { increment: 1 } },
-    select: { id: true },
-  })
+  await prisma.$executeRaw`
+    UPDATE builds SET "viewCount" = "viewCount" + 1 WHERE id = ${buildId}
+  `
   const isProd = process.env.NODE_ENV === "production"
   setCookie(c, cookieName, "1", {
     path: "/",
