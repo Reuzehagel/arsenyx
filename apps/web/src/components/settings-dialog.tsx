@@ -105,6 +105,11 @@ const SECTIONS: Section[] = [
   { id: "advanced", name: "Advanced", icon: SettingsIcon },
 ]
 
+const SECTION_SELECT_ITEMS = SECTIONS.map((s) => ({
+  value: s.id,
+  label: s.name,
+}))
+
 const THEMES = [
   { value: "light" as const, label: "Light" },
   { value: "dark" as const, label: "Dark" },
@@ -144,7 +149,7 @@ export function SettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="overflow-hidden p-0 md:max-h-[500px] md:max-w-[700px] lg:max-w-[800px]">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-hidden p-0 md:max-h-[500px] md:max-w-[700px] lg:max-w-[800px]">
         <DialogTitle className="sr-only">Settings</DialogTitle>
         <DialogDescription className="sr-only">
           Customize your Arsenyx experience.
@@ -177,15 +182,17 @@ export function SettingsDialog({
               </SidebarGroup>
             </SidebarContent>
           </Sidebar>
-          <main className="flex h-[480px] flex-1 flex-col overflow-hidden">
-            <header className="flex h-16 shrink-0 items-center gap-2">
-              <div className="flex items-center gap-2 px-4">
-                <Breadcrumb>
+          <main className="flex min-h-0 flex-1 flex-col overflow-hidden md:h-[480px]">
+            <header className="flex h-14 shrink-0 items-center gap-2 md:h-16">
+              {/* `pr-12` on mobile leaves room for the dialog's X close
+                  button which sits absolute top-right. */}
+              <div className="flex w-full items-center gap-2 pr-12 pl-4 md:w-auto md:pr-4">
+                <Breadcrumb className="hidden md:block">
                   <BreadcrumbList>
-                    <BreadcrumbItem className="hidden md:block">
+                    <BreadcrumbItem>
                       <BreadcrumbLink href="#">Settings</BreadcrumbLink>
                     </BreadcrumbItem>
-                    <BreadcrumbSeparator className="hidden md:block" />
+                    <BreadcrumbSeparator />
                     <BreadcrumbItem>
                       <BreadcrumbPage>
                         {SECTIONS.find((s) => s.id === active)?.name}
@@ -193,6 +200,26 @@ export function SettingsDialog({
                     </BreadcrumbItem>
                   </BreadcrumbList>
                 </Breadcrumb>
+                <Select
+                  items={SECTION_SELECT_ITEMS}
+                  value={active}
+                  onValueChange={(v) => {
+                    if (v) setActive(v as SectionId)
+                  }}
+                >
+                  <SelectTrigger className="w-full md:hidden">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {SECTIONS.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
               </div>
             </header>
             <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4 pt-0">
@@ -681,8 +708,7 @@ function CreateApiKeyForm({ disabled }: { disabled: boolean }) {
   const user = session?.user as
     | { isAdmin?: boolean; isModerator?: boolean }
     | undefined
-  const canUsePrivileged =
-    user?.isAdmin === true || user?.isModerator === true
+  const canUsePrivileged = user?.isAdmin === true || user?.isModerator === true
 
   const [name, setName] = React.useState("")
   const [expiry, setExpiry] = React.useState<ExpiryValue>("never")
@@ -805,18 +831,18 @@ function CreateApiKeyForm({ disabled }: { disabled: boolean }) {
           Controls which endpoints this key can access.
         </FieldDescription>
         <div className="flex flex-col gap-1.5">
-          {SCOPE_OPTIONS.filter(
-            (s) => !s.privileged || canUsePrivileged,
-          ).map((s) => (
-            <ScopeCheckbox
-              key={s.value}
-              id={`scope-${s.value}`}
-              label={s.label}
-              description={s.description}
-              checked={scopes.has(s.value)}
-              onChange={() => toggleScope(s.value)}
-            />
-          ))}
+          {SCOPE_OPTIONS.filter((s) => !s.privileged || canUsePrivileged).map(
+            (s) => (
+              <ScopeCheckbox
+                key={s.value}
+                id={`scope-${s.value}`}
+                label={s.label}
+                description={s.description}
+                checked={scopes.has(s.value)}
+                onChange={() => toggleScope(s.value)}
+              />
+            ),
+          )}
         </div>
       </Field>
       {create.error ? (

@@ -259,9 +259,9 @@ function BuildViewerBodyInner({
       <div className="flex flex-col gap-4">
         <div
           data-screenshot-target
-          className="flex flex-col gap-4 lg:relative lg:block"
+          className="flex flex-col gap-4 xl:relative xl:block"
         >
-          <div className="bg-card w-full rounded-lg border lg:absolute lg:top-0 lg:bottom-0 lg:left-0 lg:w-[260px] lg:overflow-y-auto">
+          <div className="flex w-full flex-col xl:absolute xl:top-0 xl:bottom-0 xl:left-0 xl:w-[260px]">
             <ItemSidebar
               item={item}
               category={category}
@@ -281,7 +281,7 @@ function BuildViewerBodyInner({
             />
           </div>
 
-          <div className="bg-card min-w-0 flex-1 overflow-hidden rounded-lg border p-2 sm:p-4 lg:ml-[calc(260px+1rem)]">
+          <div className="bg-card @container/loadout min-w-0 flex-1 overflow-hidden rounded-lg border p-2 sm:p-4 xl:ml-[calc(260px+1rem)]">
             <ModGrid
               item={item}
               category={category}

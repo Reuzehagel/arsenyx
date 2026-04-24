@@ -69,7 +69,7 @@ export function ArcaneSlot({
         }
         onContextMenu={handleContextMenu}
         className={cn(
-          "group relative flex h-[80px] w-full flex-col items-center justify-center transition-colors",
+          "group relative flex h-[80px] w-full max-w-[140px] flex-col items-center justify-center transition-colors",
           "sm:h-[90px] sm:w-[120px] sm:flex-none md:h-[100px] md:w-[140px]",
           !readOnly && "cursor-pointer",
           !placed && "rounded-md border",
