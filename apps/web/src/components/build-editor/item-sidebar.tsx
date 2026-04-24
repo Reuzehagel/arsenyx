@@ -304,8 +304,10 @@ export function ItemSidebar({
           <CapacityBar used={capacityUsed} max={capacityMax} />
         </div>
 
+        {/* `sm:flex` is unconditional so desktop visibility never depends on
+            `statsExpanded` — the toggle that flips it is `sm:hidden`. */}
         <div
-          className={cn("flex-col", statsExpanded ? "flex" : "hidden sm:flex")}
+          className={cn("flex-col sm:flex", statsExpanded ? "flex" : "hidden")}
         >
           <Separator />
           <div className="flex flex-col gap-3 p-3">

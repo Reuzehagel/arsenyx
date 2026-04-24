@@ -32,6 +32,10 @@ export function TabScroller({
   const [edge, setEdge] = useState<Edge>("none")
 
   useEffect(() => {
+    // `aria-selected="true"` is what Base UI's Tabs primitive sets on the
+    // active tab; `[data-state="active"]` covers the Radix-style convention
+    // in case the underlying primitive swaps. If neither attribute is
+    // present (custom children), the scroll-into-view is a no-op.
     const active = wrapperRef.current?.querySelector<HTMLElement>(
       '[aria-selected="true"], [data-state="active"]',
     )
