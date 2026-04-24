@@ -99,8 +99,14 @@ export function ModSlot({
         className={cn(
           // Identical dimensions for empty and filled states so a row's
           // height/width never shifts based on how many mods are placed.
-          "group relative flex h-[80px] w-full flex-col items-center justify-center transition-colors",
-          "sm:h-[90px] sm:w-[150px] md:h-[100px] md:w-[184px]",
+          // Sizes respond to the loadout container (@container/loadout on the
+          // grid wrapper), not the viewport — so the sidebar's width never
+          // squeezes the grid into overflow. ModCard itself is fixed 184px
+          // (see mod-card-config.ts DISPLAY_SIZE), so there's no intermediate
+          // slot size — either we have room for a 184px card, or we fall back
+          // to the 2-col stacked layout.
+          "group relative flex h-[80px] w-full max-w-[184px] flex-col items-center justify-center transition-colors",
+          "@min-[816px]/loadout:h-[100px] @min-[816px]/loadout:w-[184px]",
           !readOnly && "cursor-pointer",
           !mod && "rounded-md border",
           !mod &&

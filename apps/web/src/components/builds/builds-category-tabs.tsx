@@ -1,3 +1,4 @@
+import { TabScroller } from "@/components/tab-scroller"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CATEGORIES, type BrowseCategory } from "@/lib/warframe"
 
@@ -10,22 +11,25 @@ export function BuildsCategoryTabs({
   value: BrowseCategory | undefined
   onChange: (value: BrowseCategory | undefined) => void
 }) {
+  const activeKey = value ?? ALL
   return (
-    <Tabs
-      value={value ?? ALL}
-      onValueChange={(v) => {
-        if (v === ALL) onChange(undefined)
-        else onChange(v as BrowseCategory)
-      }}
-    >
-      <TabsList>
-        <TabsTrigger value={ALL}>All</TabsTrigger>
-        {CATEGORIES.map((c) => (
-          <TabsTrigger key={c.id} value={c.id}>
-            {c.label}
-          </TabsTrigger>
-        ))}
-      </TabsList>
-    </Tabs>
+    <TabScroller activeKey={activeKey}>
+      <Tabs
+        value={activeKey}
+        onValueChange={(v) => {
+          if (v === ALL) onChange(undefined)
+          else onChange(v as BrowseCategory)
+        }}
+      >
+        <TabsList>
+          <TabsTrigger value={ALL}>All</TabsTrigger>
+          {CATEGORIES.map((c) => (
+            <TabsTrigger key={c.id} value={c.id}>
+              {c.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+    </TabScroller>
   )
 }

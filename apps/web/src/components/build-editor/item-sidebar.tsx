@@ -7,7 +7,7 @@ import {
 } from "@arsenyx/shared/warframe/types"
 import { isZawStrike } from "@arsenyx/shared/warframe/zaw-data"
 import { useSuspenseQuery } from "@tanstack/react-query"
-import { ChevronLeft, Plus, Undo2, X, Zap } from "lucide-react"
+import { ChevronDown, ChevronLeft, Plus, Undo2, X, Zap } from "lucide-react"
 import { Suspense, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -155,6 +155,12 @@ export function ItemSidebar({
   )
 
   const [showMaxStacks, setShowMaxStacks] = useState(false)
+
+  // Stats panels fold on phones only. On sm+ (≥640px) the `sm:flex` rule
+  // below forces the panel visible regardless of this state, so we default
+  // to collapsed: the toggle button is sm:hidden and only flips this on
+  // actual phones.
+  const [statsExpanded, setStatsExpanded] = useState(false)
   const hasConditional = useMemo(
     () => hasConditionalStats(modList, arcaneList),
     [modList, arcaneList],
@@ -225,103 +231,123 @@ export function ItemSidebar({
   }, [isCompanion, item, modList, arcaneList, showMaxStacks])
 
   return (
-    <div className="flex h-full flex-col">
-      {isWarframe && abilities.length > 0 && (
-        <>
-          <div className="flex justify-around p-3">
-            {abilities.slice(0, 4).map((a, i) => {
-              const replaced = helminth[i]
-              const displayed = replaced
-                ? {
-                    uniqueName: replaced.uniqueName,
-                    name: replaced.name,
-                    description: replaced.description,
-                    imageName: replaced.imageName,
-                  }
-                : a
-              return (
-                <AbilityIcon
-                  key={i}
-                  ability={displayed}
-                  isHelminth={Boolean(replaced)}
-                  canSubsume={isPureWarframe && !readOnly}
-                  onSelectHelminth={(ab) => onSetHelminth(i, ab)}
-                />
-              )
-            })}
-          </div>
-          <Separator />
-        </>
-      )}
+    <>
+      <div className="bg-card flex h-full flex-col rounded-lg border xl:overflow-y-auto">
+        {isWarframe && abilities.length > 0 && (
+          <>
+            <div className="flex justify-around p-3">
+              {abilities.slice(0, 4).map((a, i) => {
+                const replaced = helminth[i]
+                const displayed = replaced
+                  ? {
+                      uniqueName: replaced.uniqueName,
+                      name: replaced.name,
+                      description: replaced.description,
+                      imageName: replaced.imageName,
+                    }
+                  : a
+                return (
+                  <AbilityIcon
+                    key={i}
+                    ability={displayed}
+                    isHelminth={Boolean(replaced)}
+                    canSubsume={isPureWarframe && !readOnly}
+                    onSelectHelminth={(ab) => onSetHelminth(i, ab)}
+                  />
+                )
+              })}
+            </div>
+            <Separator />
+          </>
+        )}
 
-      {isZawItem && zawComponents && (
-        <>
-          <div className="flex justify-center p-3">
-            <ZawComponentSelector
-              components={zawComponents}
-              onChange={onSetZawComponents}
-              readOnly={readOnly}
-            />
-          </div>
-          <Separator />
-        </>
-      )}
-
-      {showShards && (
-        <>
-          <div className="flex justify-around p-3">
-            {Array.from({ length: SHARD_SLOTS }).map((_, i) => (
-              <ShardSlot
-                key={i}
-                shard={shards[i] ?? null}
-                onPick={(s) => onSetShard(i, s)}
+        {isZawItem && zawComponents && (
+          <>
+            <div className="flex justify-center p-3">
+              <ZawComponentSelector
+                components={zawComponents}
+                onChange={onSetZawComponents}
                 readOnly={readOnly}
               />
-            ))}
-          </div>
-          <Separator />
-        </>
-      )}
+            </div>
+            <Separator />
+          </>
+        )}
 
-      <div className="flex flex-col gap-2 p-3">
-        <div className="flex items-center justify-between text-xs">
-          <span className="font-medium">{boosterLabel}</span>
-          <Switch
-            size="sm"
-            checked={hasReactor}
-            onCheckedChange={onToggleReactor}
-            disabled={readOnly}
-          />
-        </div>
+        {showShards && (
+          <>
+            <div className="flex justify-around p-3">
+              {Array.from({ length: SHARD_SLOTS }).map((_, i) => (
+                <ShardSlot
+                  key={i}
+                  shard={shards[i] ?? null}
+                  onPick={(s) => onSetShard(i, s)}
+                  readOnly={readOnly}
+                />
+              ))}
+            </div>
+            <Separator />
+          </>
+        )}
 
-        <CapacityBar used={capacityUsed} max={capacityMax} />
-      </div>
-
-      <Separator />
-
-      <div className="flex flex-col gap-3 p-3">
-        {hasConditional && (
+        <div className="flex flex-col gap-2 p-3">
           <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Max stacks</span>
+            <span className="font-medium">{boosterLabel}</span>
             <Switch
               size="sm"
-              checked={showMaxStacks}
-              onCheckedChange={setShowMaxStacks}
+              checked={hasReactor}
+              onCheckedChange={onToggleReactor}
+              disabled={readOnly}
             />
           </div>
-        )}
-        {showLichBonus && (
-          <LichBonusElementPicker
-            value={lichBonusElement ?? null}
-            onChange={(v) => onSetLichBonusElement?.(v)}
-            readOnly={readOnly}
-          />
-        )}
-        {warframeStats && <WarframeStatsPanel stats={warframeStats} />}
-        {weaponStats && <WeaponStatsPanel stats={weaponStats} />}
-        {companionStats && <CompanionStatsPanel stats={companionStats} />}
+
+          <CapacityBar used={capacityUsed} max={capacityMax} />
+        </div>
+
+        {/* `sm:flex` is unconditional so desktop visibility never depends on
+            `statsExpanded` — the toggle that flips it is `sm:hidden`. */}
+        <div
+          className={cn("flex-col sm:flex", statsExpanded ? "flex" : "hidden")}
+        >
+          <Separator />
+          <div className="flex flex-col gap-3 p-3">
+            {hasConditional && (
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Max stacks</span>
+                <Switch
+                  size="sm"
+                  checked={showMaxStacks}
+                  onCheckedChange={setShowMaxStacks}
+                />
+              </div>
+            )}
+            {showLichBonus && (
+              <LichBonusElementPicker
+                value={lichBonusElement ?? null}
+                onChange={(v) => onSetLichBonusElement?.(v)}
+                readOnly={readOnly}
+              />
+            )}
+            {warframeStats && <WarframeStatsPanel stats={warframeStats} />}
+            {weaponStats && <WeaponStatsPanel stats={weaponStats} />}
+            {companionStats && <CompanionStatsPanel stats={companionStats} />}
+          </div>
+        </div>
       </div>
-    </div>
+      <button
+        type="button"
+        onClick={() => setStatsExpanded((v) => !v)}
+        className="bg-card text-muted-foreground hover:bg-accent/40 hover:text-foreground mx-auto flex items-center gap-1.5 rounded-t-none rounded-b-md border border-t-0 px-3 py-1 text-xs transition-colors sm:hidden"
+      >
+        <span>{statsExpanded ? "Hide stats" : "Show stats"}</span>
+        <ChevronDown
+          className={cn(
+            "size-3.5 transition-transform",
+            statsExpanded && "rotate-180",
+          )}
+        />
+      </button>
+    </>
   )
 }
 

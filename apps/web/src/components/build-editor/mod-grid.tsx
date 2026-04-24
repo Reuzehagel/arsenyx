@@ -127,9 +127,9 @@ export function ModGrid({
   }
 
   return (
-    <div className="flex flex-col gap-6 sm:gap-4">
+    <div className="flex flex-col gap-6 @min-[816px]/loadout:gap-4">
       {(auraSlotCount > 0 || showExilus) && (
-        <div className="flex w-full justify-center gap-2 sm:gap-4">
+        <div className="flex w-full justify-center gap-2 @min-[816px]/loadout:gap-4">
           {auraSlotCount > 0 && (
             <ModSlot
               kind="aura"
@@ -154,7 +154,7 @@ export function ModGrid({
       )}
 
       {isCompanion ? (
-        <div className="grid grid-cols-2 gap-x-2 gap-y-6 lg:mx-auto lg:w-fit lg:grid-cols-5 lg:gap-4">
+        <div className="grid grid-cols-[repeat(2,minmax(0,184px))] justify-center gap-x-2 gap-y-6 @min-[1016px]/loadout:mx-auto @min-[1016px]/loadout:w-fit @min-[1016px]/loadout:grid-cols-5 @min-[1016px]/loadout:gap-4">
           {Array.from({ length: normalSlotCount }, (_, i) => {
             const id: SlotId = `normal-${i}`
             return (
@@ -166,12 +166,15 @@ export function ModGrid({
         normalRows.map((row, rowIdx) => (
           <div
             key={rowIdx}
-            className="grid grid-cols-2 justify-center gap-x-2 gap-y-6 sm:flex sm:gap-4"
+            className="grid grid-cols-[repeat(2,minmax(0,184px))] justify-center gap-x-2 gap-y-6 @min-[816px]/loadout:flex @min-[816px]/loadout:gap-4"
           >
             {row.map((i) => {
               const id: SlotId = `normal-${i}`
               return (
-                <ModSlot key={i} {...slotProps(id, toPolarity(polarities[i]))} />
+                <ModSlot
+                  key={i}
+                  {...slotProps(id, toPolarity(polarities[i]))}
+                />
               )
             })}
           </div>

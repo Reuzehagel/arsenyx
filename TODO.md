@@ -12,5 +12,5 @@
 
 ## Polish
 
-- [ ] Mobile nav (hamburger + sheet)
+- [x] Mobile nav (hamburger + sheet)
 - [x] Split frontend bundle — route-level code splitting to get under the 500KB Vite warning
