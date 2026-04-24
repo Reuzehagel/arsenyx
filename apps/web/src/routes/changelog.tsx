@@ -14,6 +14,15 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-04-24",
+    changes: [
+      {
+        type: "feat",
+        description: "Mobile compatibility pass across the app.",
+      },
+    ],
+  },
+  {
     date: "2026-04-19",
     changes: [
       {
