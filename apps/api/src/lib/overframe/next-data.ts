@@ -107,41 +107,15 @@ function findFirstArray(
   return walk(obj, "")
 }
 
-function findFirstNumber(
-  obj: unknown,
-  keyNames: string[],
-): { keyPath: string; value: number } | null {
-  const seen = new Set<unknown>()
-  const keySet = new Set(keyNames)
-
-  function walk(
-    value: unknown,
-    path: string,
-  ): { keyPath: string; value: number } | null {
-    if (value && typeof value === "object") {
-      if (seen.has(value)) return null
-      seen.add(value)
-
-      if (Array.isArray(value)) {
-        for (let i = 0; i < value.length; i++) {
-          const res = walk(value[i], `${path}[${i}]`)
-          if (res) return res
-        }
-        return null
-      }
-
-      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-        if (keySet.has(k) && typeof v === "number" && Number.isFinite(v)) {
-          return { keyPath: path ? `${path}.${k}` : k, value: v }
-        }
-        const res = walk(v, path ? `${path}.${k}` : k)
-        if (res) return res
-      }
-    }
-    return null
+function readNumberAtPath(obj: unknown, path: string[]): number | undefined {
+  let current: unknown = obj
+  for (const segment of path) {
+    if (!current || typeof current !== "object") return undefined
+    current = (current as Record<string, unknown>)[segment]
   }
-
-  return walk(obj, "")
+  return typeof current === "number" && Number.isFinite(current)
+    ? current
+    : undefined
 }
 
 function readStringAtPath(obj: unknown, path: string[]): string | undefined {
@@ -287,15 +261,11 @@ export function extractOverframeDataFromHtml(
   })
   if (itemNameRes) extractedKeys.push(itemNameRes.keyPath)
 
-  const formaRes = findFirstNumber(nextData, [
-    "forma",
-    "formaCount",
-    "forma_count",
-    "formas",
-    "numForma",
-    "num_forma",
-  ])
-  if (formaRes) extractedKeys.push(formaRes.keyPath)
+  // Pinned path — Overframe embeds many `formas` numbers in __NEXT_DATA__
+  // (sibling builds, related builds), so a tree walk picks the wrong one.
+  const formaPath = ["props", "pageProps", "data", "formas"]
+  const formaCount = readNumberAtPath(nextData, formaPath)
+  if (formaCount !== undefined) extractedKeys.push(formaPath.join("."))
 
   const pageTitle = readStringAtPath(nextData, [
     "props",
@@ -332,7 +302,7 @@ export function extractOverframeDataFromHtml(
     buildString: buildStringRes?.value,
     slots: slotsRes?.value,
     itemName: itemNameRes?.value,
-    formaCount: formaRes?.value,
+    formaCount,
     pageTitle,
     pageDescription,
     guideDescription,
