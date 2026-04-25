@@ -1,0 +1,47 @@
+name: Game data correction
+description: Wrong stat, missing item, mislabeled mod or arcane
+labels: ["data"]
+body:
+  - type: dropdown
+    id: item-type
+    attributes:
+      label: Item type
+      options:
+        - Warframe
+        - Primary
+        - Secondary
+        - Melee
+        - Companion
+        - Archwing
+        - Mod
+        - Arcane
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: item-name
+    attributes:
+      label: Item name
+      placeholder: e.g. Braton Prime
+    validations:
+      required: true
+  - type: dropdown
+    id: issue-type
+    attributes:
+      label: What's wrong?
+      options:
+        - Wrong stat
+        - Missing item
+        - Wrong icon
+        - Wrong polarity
+        - Wrong mastery requirement
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: correction
+    attributes:
+      label: Correct value + source
+      description: What should it be, and where can we verify? (Wiki link, in-game screenshot, etc.)
+    validations:
+      required: true

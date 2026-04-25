@@ -1,0 +1,34 @@
+name: UI/UX feedback
+description: Something looks off or feels hard to use
+labels: ["ui"]
+body:
+  - type: input
+    id: location
+    attributes:
+      label: Page or component
+      placeholder: e.g. Build page header, settings tab, mobile nav
+    validations:
+      required: true
+  - type: textarea
+    id: feedback
+    attributes:
+      label: What feels off?
+    validations:
+      required: true
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot
+      description: Strongly encouraged — drag and drop an image.
+    validations:
+      required: false
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device
+      options:
+        - Desktop
+        - Tablet
+        - Mobile
+    validations:
+      required: true

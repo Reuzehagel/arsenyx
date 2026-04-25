@@ -1,0 +1,39 @@
+name: Bug report
+description: Something broken on arsenyx.com
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the bug.
+      placeholder: |
+        - What I did:
+        - What I expected:
+        - What actually happened:
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: input
+    id: build
+    attributes:
+      label: Build ID or URL
+      description: If the bug is tied to a specific build, paste the link or ID.
+    validations:
+      required: false
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot
+      description: Drag and drop an image, or paste a URL.
+    validations:
+      required: false
