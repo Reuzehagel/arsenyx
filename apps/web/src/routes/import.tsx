@@ -3,6 +3,13 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { Check, Copy, UploadCloud } from "lucide-react"
 import { useMemo, useState } from "react"
 
+import {
+  calculateFormaCount,
+  getAuraPolarities,
+  getAuraSlotCount,
+  getNormalSlotCount,
+  toPolarity,
+} from "@/components/build-editor"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
@@ -237,7 +244,28 @@ function ImportPage() {
                       </dd>
                       <dt className="text-muted-foreground">Forma</dt>
                       <dd>
-                        {Object.keys(applied.data.formaPolarities ?? {}).length}
+                        {detailItem
+                          ? calculateFormaCount({
+                              auraInnates: getAuraPolarities(
+                                detailItem,
+                                getAuraSlotCount(
+                                  matchedItem.category,
+                                  detailItem,
+                                ),
+                              ),
+                              normalInnates: Array.from(
+                                {
+                                  length: getNormalSlotCount(
+                                    matchedItem.category,
+                                  ),
+                                },
+                                (_, i) => toPolarity(detailItem.polarities?.[i]),
+                              ),
+                              formaPolarities:
+                                applied.data.formaPolarities ?? {},
+                            })
+                          : Object.keys(applied.data.formaPolarities ?? {})
+                              .length}
                         {result.formaCount != null &&
                           ` (OF reports ${result.formaCount})`}
                       </dd>
