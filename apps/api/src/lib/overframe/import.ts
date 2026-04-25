@@ -175,6 +175,10 @@ export async function scrapeOverframeBuild(
       const decoded = decodeOverframeBuildString(extracted.buildString)
       slots = decoded.slots.map((s) => {
         // Map (slotType, slotIndex) back to slot_id for a uniform shape.
+        // TODO: warframe-shaped only — companion/necramech buildstring fallbacks
+        // will emit wrong slot_ids here. Mirror of the decoder in
+        // apps/web/src/lib/overframe/index.ts `interpretSlot`; share once a
+        // second case forces the abstraction. Related: #57.
         const slot_id =
           s.slotType === "normal"
             ? 8 - s.slotIndex
