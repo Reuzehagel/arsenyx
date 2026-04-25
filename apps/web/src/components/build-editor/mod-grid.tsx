@@ -1,6 +1,7 @@
 import { isRivenMod } from "@arsenyx/shared/warframe/rivens"
 import type { Arcane, Polarity } from "@arsenyx/shared/warframe/types"
 
+import { cn } from "@/lib/utils"
 import type { BrowseCategory, DetailItem } from "@/lib/warframe"
 
 import { ArcaneSlot } from "./arcane-slot"
@@ -76,6 +77,7 @@ export function ModGrid({
   onEditRiven,
   arcaneRow,
   readOnly = false,
+  embed = false,
 }: {
   item: DetailItem
   category: BrowseCategory
@@ -85,6 +87,9 @@ export function ModGrid({
   onEditRiven?: (id: SlotId) => void
   arcaneRow?: React.ReactNode
   readOnly?: boolean
+  /** When true, force the dense single-row mod layout (4 mods per row,
+   *  ignoring container queries) for the wiki embed. */
+  embed?: boolean
 }) {
   const auraSlotCount = getAuraSlotCount(category, item)
   const showExilus = hasExilusSlot(category)
@@ -127,9 +132,19 @@ export function ModGrid({
   }
 
   return (
-    <div className="flex flex-col gap-6 @min-[816px]/loadout:gap-4">
+    <div
+      className={cn(
+        "flex flex-col gap-6 @min-[816px]/loadout:gap-4",
+        embed && "gap-4",
+      )}
+    >
       {(auraSlotCount > 0 || showExilus) && (
-        <div className="flex w-full justify-center gap-2 @min-[816px]/loadout:gap-4">
+        <div
+          className={cn(
+            "flex w-full justify-center gap-2 @min-[816px]/loadout:gap-4",
+            embed && "gap-4",
+          )}
+        >
           {auraSlotCount > 0 && (
             <ModSlot
               kind="aura"
@@ -154,7 +169,12 @@ export function ModGrid({
       )}
 
       {isCompanion ? (
-        <div className="grid grid-cols-[repeat(2,minmax(0,184px))] justify-center gap-x-2 gap-y-6 @min-[1016px]/loadout:mx-auto @min-[1016px]/loadout:w-fit @min-[1016px]/loadout:grid-cols-5 @min-[1016px]/loadout:gap-4">
+        <div
+          className={cn(
+            "grid grid-cols-[repeat(2,minmax(0,184px))] justify-center gap-x-2 gap-y-6 @min-[1016px]/loadout:mx-auto @min-[1016px]/loadout:w-fit @min-[1016px]/loadout:grid-cols-5 @min-[1016px]/loadout:gap-4",
+            embed && "mx-auto w-fit grid-cols-5 gap-4",
+          )}
+        >
           {Array.from({ length: normalSlotCount }, (_, i) => {
             const id: SlotId = `normal-${i}`
             return (
@@ -166,7 +186,10 @@ export function ModGrid({
         normalRows.map((row, rowIdx) => (
           <div
             key={rowIdx}
-            className="grid grid-cols-[repeat(2,minmax(0,184px))] justify-center gap-x-2 gap-y-6 @min-[816px]/loadout:flex @min-[816px]/loadout:gap-4"
+            className={cn(
+              "grid grid-cols-[repeat(2,minmax(0,184px))] justify-center gap-x-2 gap-y-6 @min-[816px]/loadout:flex @min-[816px]/loadout:gap-4",
+              embed && "flex justify-center gap-4",
+            )}
           >
             {row.map((i) => {
               const id: SlotId = `normal-${i}`

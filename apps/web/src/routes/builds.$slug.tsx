@@ -17,7 +17,7 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react"
-import { Suspense, useMemo, useState } from "react"
+import { Suspense, useEffect, useMemo, useRef, useState } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 
@@ -79,7 +79,43 @@ import {
   type BrowseCategory,
 } from "@/lib/warframe"
 
+interface BuildSearch {
+  /** When true, render a chrome-less view suitable for embedding (e.g. the
+   *  Profit-Taker wiki). Hides the site header/footer, viewer header, and
+   *  guide block. */
+  embed?: boolean
+  /** Visual scale factor applied to the embed. Defaults to 0.65 — sized to
+   *  fit comfortably in a ~700px iframe (the PT wiki's Nuxt embed width). */
+  scale?: number
+  /** Logical layout width (px) the embed renders at internally before
+   *  scaling. Kept ≥ 1024 by default so the dense single-row mod layout
+   *  triggers; the visible width is `layout * scale`. */
+  layout?: number
+}
+
 export const Route = createFileRoute("/builds/$slug")({
+  validateSearch: (s: Record<string, unknown>): BuildSearch => {
+    const embed = s.embed === true || s.embed === "1" || s.embed === "true"
+    const num = (v: unknown) => {
+      const n = typeof v === "string" ? Number(v) : v
+      return typeof n === "number" && Number.isFinite(n) ? n : undefined
+    }
+    const rawScale = num(s.scale)
+    const rawLayout = num(s.layout)
+    const scale =
+      rawScale !== undefined
+        ? Math.min(1.5, Math.max(0.3, rawScale))
+        : undefined
+    const layout =
+      rawLayout !== undefined
+        ? Math.min(2000, Math.max(640, Math.round(rawLayout)))
+        : undefined
+    return {
+      ...(embed && { embed }),
+      ...(scale !== undefined && { scale }),
+      ...(layout !== undefined && { layout }),
+    }
+  },
   loader: ({ context, params }) =>
     context.queryClient.ensureQueryData(buildQuery(params.slug)),
   component: BuildPage,
@@ -87,6 +123,20 @@ export const Route = createFileRoute("/builds/$slug")({
 })
 
 function BuildPage() {
+  const { embed, scale, layout } = Route.useSearch()
+
+  if (embed) {
+    return (
+      <EmbedShell scale={scale ?? 0.65} layoutWidth={layout ?? 1140}>
+        <Suspense
+          fallback={<p className="text-muted-foreground">Loading build…</p>}
+        >
+          <BuildViewer embed />
+        </Suspense>
+      </EmbedShell>
+    )
+  }
+
   return (
     <div className="relative flex min-h-screen flex-col">
       <Header />
@@ -104,7 +154,61 @@ function BuildPage() {
   )
 }
 
-function BuildViewer() {
+/**
+ * Embed wrapper that forces the build view to lay out at a fixed logical
+ * width (so the dense single-row mod layout triggers via container queries)
+ * then visually scales the result down to fit a smaller iframe. A
+ * ResizeObserver mirrors the inner element's height back to the wrapper so
+ * the iframe content doesn't have a giant whitespace gutter.
+ */
+function EmbedShell({
+  scale,
+  layoutWidth,
+  children,
+}: {
+  scale: number
+  layoutWidth: number
+  children: React.ReactNode
+}) {
+  const innerRef = useRef<HTMLDivElement | null>(null)
+  const [innerHeight, setInnerHeight] = useState<number | null>(null)
+
+  useEffect(() => {
+    const node = innerRef.current
+    if (!node) return
+    const ro = new ResizeObserver((entries) => {
+      const h = entries[0]?.contentRect.height
+      if (typeof h !== "number") return
+      const rounded = Math.ceil(h)
+      setInnerHeight((prev) => (prev === rounded ? prev : rounded))
+    })
+    ro.observe(node)
+    return () => ro.disconnect()
+  }, [])
+
+  return (
+    <div
+      className="bg-background overflow-hidden"
+      style={{
+        width: layoutWidth * scale,
+        height: innerHeight !== null ? innerHeight * scale : undefined,
+      }}
+    >
+      <div
+        ref={innerRef}
+        style={{
+          width: layoutWidth,
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function BuildViewer({ embed = false }: { embed?: boolean }) {
   const { slug } = Route.useParams()
   const { data: build } = useSuspenseQuery(buildQuery(slug))
 
@@ -116,7 +220,12 @@ function BuildViewer() {
 
   return (
     <Suspense fallback={<p className="text-muted-foreground">Loading item…</p>}>
-      <BuildViewerBody build={build} category={category} itemSlug={itemSlug} />
+      <BuildViewerBody
+        build={build}
+        category={category}
+        itemSlug={itemSlug}
+        embed={embed}
+      />
     </Suspense>
   )
 }
@@ -125,6 +234,7 @@ function BuildViewerBody(props: {
   build: BuildDetail
   category: BrowseCategory
   itemSlug: string
+  embed: boolean
 }) {
   // New-format builds (SavedBuildData) carry full mod/arcane objects inline in
   // buildData, so we skip the ~1.35MB mods-all.json + arcanes-all.json fetches.
@@ -139,6 +249,7 @@ function BuildViewerBodyWithCatalog(props: {
   build: BuildDetail
   category: BrowseCategory
   itemSlug: string
+  embed: boolean
 }) {
   const { data: allArcanes } = useSuspenseQuery(arcanesQuery)
   const { data: allMods } = useSuspenseQuery(modsQuery)
@@ -157,12 +268,14 @@ function BuildViewerBodyInner({
   itemSlug,
   allMods,
   allArcanes,
+  embed,
 }: {
   build: BuildDetail
   category: BrowseCategory
   itemSlug: string
   allMods: Mod[]
   allArcanes: Arcane[]
+  embed: boolean
 }) {
   const { data: item } = useSuspenseQuery(itemQuery(category, itemSlug))
 
@@ -245,62 +358,69 @@ function BuildViewerBodyInner({
 
   const author = authorName(build.user)
 
+  const sidebarProps = {
+    item,
+    category,
+    capacityUsed: capacity.used,
+    capacityMax: capacity.max,
+    hasReactor,
+    onToggleReactor: () => {},
+    shards,
+    onSetShard: () => {},
+    helminth,
+    onSetHelminth: () => {},
+    zawComponents,
+    lichBonusElement,
+    placedMods: slots.placed,
+    placedArcanes: arcanes.placed,
+    readOnly: true as const,
+  }
+
   return (
     <>
-      <ViewerHeader
-        build={build}
-        categoryLabel={categoryLabel}
-        author={author}
-        totalEndoCost={totalEndoCost}
-        formaCount={formaCount}
-        category={category}
-        itemSlug={itemSlug}
-      />
+      {!embed && (
+        <ViewerHeader
+          build={build}
+          categoryLabel={categoryLabel}
+          author={author}
+          totalEndoCost={totalEndoCost}
+          formaCount={formaCount}
+          category={category}
+          itemSlug={itemSlug}
+        />
+      )}
 
       <div className="flex flex-col gap-4">
         <div
           data-screenshot-target
-          className="flex flex-col gap-4 xl:relative xl:block"
+          className={cn(
+            "flex flex-col gap-4",
+            embed ? "flex-row" : "xl:relative xl:block",
+          )}
         >
-          <div className="flex w-full flex-col sm:hidden xl:absolute xl:top-0 xl:bottom-0 xl:left-0 xl:flex xl:w-[260px]">
-            <ItemSidebar
-              item={item}
-              category={category}
-              capacityUsed={capacity.used}
-              capacityMax={capacity.max}
-              hasReactor={hasReactor}
-              onToggleReactor={() => {}}
-              shards={shards}
-              onSetShard={() => {}}
-              helminth={helminth}
-              onSetHelminth={() => {}}
-              zawComponents={zawComponents}
-              lichBonusElement={lichBonusElement}
-              placedMods={slots.placed}
-              placedArcanes={arcanes.placed}
-              readOnly
-            />
+          <div
+            className={cn(
+              "flex w-full flex-col",
+              embed
+                ? "w-[260px] shrink-0"
+                : "sm:hidden xl:absolute xl:top-0 xl:bottom-0 xl:left-0 xl:flex xl:w-[260px]",
+            )}
+          >
+            <ItemSidebar {...sidebarProps} />
           </div>
 
-          <div className="bg-card @container/loadout flex min-w-0 flex-1 flex-col gap-3 overflow-hidden rounded-lg border p-2 sm:p-4 xl:ml-[calc(260px+1rem)]">
-            <ItemSidebarPopover
-              className="hidden self-start sm:inline-flex xl:hidden"
-              item={item}
-              category={category}
-              capacityUsed={capacity.used}
-              capacityMax={capacity.max}
-              hasReactor={hasReactor}
-              onToggleReactor={() => {}}
-              shards={shards}
-              onSetShard={() => {}}
-              helminth={helminth}
-              onSetHelminth={() => {}}
-              zawComponents={zawComponents}
-              lichBonusElement={lichBonusElement}
-              placedMods={slots.placed}
-              placedArcanes={arcanes.placed}
-              readOnly
-            />
+          <div
+            className={cn(
+              "bg-card @container/loadout flex min-w-0 flex-1 flex-col gap-3 overflow-hidden rounded-lg border p-2 sm:p-4",
+              !embed && "xl:ml-[calc(260px+1rem)]",
+            )}
+          >
+            {!embed && (
+              <ItemSidebarPopover
+                {...sidebarProps}
+                className="hidden self-start sm:inline-flex xl:hidden"
+              />
+            )}
             <ModGrid
               item={item}
               category={category}
@@ -308,6 +428,7 @@ function BuildViewerBodyInner({
               normalSlotCount={normalSlotCount}
               slots={slots}
               readOnly
+              embed={embed}
               arcaneRow={
                 arcaneCount > 0 ? (
                   <ArcaneRow
@@ -322,7 +443,7 @@ function BuildViewerBodyInner({
           </div>
         </div>
 
-        {build.guide?.description || build.guide?.summary ? (
+        {!embed && (build.guide?.description || build.guide?.summary) ? (
           <div className="bg-card rounded-lg border p-4">
             {build.guide.summary ? (
               <p className="mb-3 font-medium">{build.guide.summary}</p>

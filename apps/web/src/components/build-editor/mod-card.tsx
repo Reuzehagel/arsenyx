@@ -365,9 +365,13 @@ export function ModCard({
       onMouseEnter={() => {
         const r = compactRef.current?.getBoundingClientRect()
         if (r) {
+          // Use rect's own width/height (not DISPLAY_SIZE constants) so the
+          // center is correct under any ancestor `transform: scale()` —
+          // getBoundingClientRect already returns visual/transformed coords,
+          // so adding the unscaled width would overshoot.
           hoverCenter.current = {
-            x: r.left + DISPLAY_SIZE.compact.width / 2,
-            y: r.top + DISPLAY_SIZE.compact.height / 2,
+            x: r.left + r.width / 2,
+            y: r.top + r.height / 2,
           }
         }
         setIsHovered(true)
