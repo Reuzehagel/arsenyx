@@ -18,6 +18,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  BASE_ELEMENTS,
+  DAMAGE_TYPE_COLORS,
+  ELEMENTAL_COMBINATIONS,
+} from "@/lib/stats/types"
 import { cn, isEditableTarget } from "@/lib/utils"
 
 import { ModCard } from "./mod-card"
@@ -57,15 +62,31 @@ const RARITY_ORDER: Record<Exclude<RarityFilter, "All">, number> = {
 
 const HTML_TAG_PATTERN = /<[^>]+>/g
 
+const UNCOMBINED_TAG_TO_COMBINED: ReadonlyArray<readonly [string, string[]]> =
+  Object.entries(DAMAGE_TYPE_COLORS).flatMap(([tag, element]) => {
+    if (!BASE_ELEMENTS.includes(element)) return []
+    const combos = BASE_ELEMENTS.filter((other) => other !== element)
+      .map((other) => ELEMENTAL_COMBINATIONS[`${element}+${other}`])
+      .filter((c): c is string => Boolean(c))
+    return [[tag, [...new Set(combos)]] as const]
+  })
+
 function getSearchable(mod: Mod): string {
   const name = mod.name.toLowerCase()
   const desc = mod.description?.toLowerCase() ?? ""
-  const stats =
-    mod.levelStats?.[mod.levelStats.length - 1]?.stats
-      ?.map((s) => s.replace(HTML_TAG_PATTERN, ""))
-      .join(" ")
-      .toLowerCase() ?? ""
-  return `${name} ${desc} ${stats}`
+  const rawStats = mod.levelStats?.[mod.levelStats.length - 1]?.stats ?? []
+  const combined = new Set<string>()
+  for (const stat of rawStats) {
+    for (const [tag, combos] of UNCOMBINED_TAG_TO_COMBINED) {
+      if (stat.includes(tag)) for (const c of combos) combined.add(c)
+    }
+  }
+  const stats = rawStats
+    .map((s) => s.replace(HTML_TAG_PATTERN, ""))
+    .join(" ")
+    .toLowerCase()
+  const combinedStr = combined.size > 0 ? ` ${[...combined].join(" ")}` : ""
+  return `${name} ${desc} ${stats}${combinedStr}`
 }
 
 function cap(s: string): string {
