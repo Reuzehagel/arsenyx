@@ -71,6 +71,22 @@ const UNCOMBINED_TAG_TO_COMBINED: ReadonlyArray<readonly [string, string[]]> =
     return [[tag, [...new Set(combos)]] as const]
   })
 
+// Community shorthand for common attributes — "cc" surfaces critical chance
+// mods, etc. Phrases match the lowercased plain-text stat lines, so the
+// canonical form (e.g. "critical chance") is already searchable on its own;
+// these aliases only add what isn't a substring of the phrase itself.
+const STAT_ALIASES: ReadonlyArray<readonly [string, string[]]> = [
+  ["critical chance", ["cc"]],
+  ["critical damage", ["cd"]],
+  ["status chance", ["sc"]],
+  ["status duration", ["sd"]],
+  ["multishot", ["ms"]],
+  ["punch through", ["pt"]],
+  ["fire rate", ["fr"]],
+  ["reload speed", ["rs"]],
+  ["health", ["hp"]],
+]
+
 function getSearchable(mod: Mod): string {
   const name = mod.name.toLowerCase()
   const desc = mod.description?.toLowerCase() ?? ""
@@ -85,8 +101,13 @@ function getSearchable(mod: Mod): string {
     .map((s) => s.replace(HTML_TAG_PATTERN, ""))
     .join(" ")
     .toLowerCase()
+  const aliases = new Set<string>()
+  for (const [phrase, shorts] of STAT_ALIASES) {
+    if (stats.includes(phrase)) for (const s of shorts) aliases.add(s)
+  }
   const combinedStr = combined.size > 0 ? ` ${[...combined].join(" ")}` : ""
-  return `${name} ${desc} ${stats}${combinedStr}`
+  const aliasStr = aliases.size > 0 ? ` ${[...aliases].join(" ")}` : ""
+  return `${name} ${desc} ${stats}${combinedStr}${aliasStr}`
 }
 
 function cap(s: string): string {
