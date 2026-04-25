@@ -48,6 +48,7 @@ import {
   GuideEditor,
   hasExilusSlot,
   ItemSidebar,
+  ItemSidebarPopover,
   ModGrid,
   ModSearchGrid,
   PublishDialog,
@@ -528,7 +529,7 @@ function EditorShell() {
 
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-4 xl:relative xl:block">
-          <div className="flex w-full flex-col xl:absolute xl:top-0 xl:bottom-0 xl:left-0 xl:w-[260px]">
+          <div className="flex w-full flex-col sm:hidden xl:absolute xl:top-0 xl:bottom-0 xl:left-0 xl:flex xl:w-[260px]">
             <ItemSidebar
               item={item}
               category={category}
@@ -550,7 +551,7 @@ function EditorShell() {
           </div>
 
           <div
-            className="bg-card @container/loadout min-w-0 flex-1 overflow-hidden rounded-lg border p-2 sm:p-4 xl:ml-[calc(260px+1rem)]"
+            className="bg-card @container/loadout flex min-w-0 flex-1 flex-col gap-3 overflow-hidden rounded-lg border p-2 sm:p-4 xl:ml-[calc(260px+1rem)]"
             onClick={(e) => {
               if (!(e.target instanceof HTMLElement)) return
               if (!e.target.closest("[data-build-slot]")) {
@@ -559,6 +560,25 @@ function EditorShell() {
               }
             }}
           >
+            <ItemSidebarPopover
+              className="hidden self-start sm:inline-flex xl:hidden"
+              item={item}
+              category={category}
+              capacityUsed={capacity.used}
+              capacityMax={capacity.max}
+              hasReactor={hasReactor}
+              onToggleReactor={() => setHasReactor((v) => !v)}
+              shards={shards}
+              onSetShard={setShard}
+              helminth={helminth}
+              onSetHelminth={setHelminthAt}
+              zawComponents={zawComponents}
+              onSetZawComponents={setZawComponents}
+              lichBonusElement={lichBonusElement}
+              onSetLichBonusElement={setLichBonusElement}
+              placedMods={slots.placed}
+              placedArcanes={arcanes.placed}
+            />
             <ModGrid
               item={item}
               category={category}

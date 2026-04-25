@@ -33,6 +33,7 @@ import {
   getNormalSlotCount,
   hasExilusSlot,
   ItemSidebar,
+  ItemSidebarPopover,
   ModGrid,
   toPolarity,
   useArcaneSlots,
@@ -261,7 +262,7 @@ function BuildViewerBodyInner({
           data-screenshot-target
           className="flex flex-col gap-4 xl:relative xl:block"
         >
-          <div className="flex w-full flex-col xl:absolute xl:top-0 xl:bottom-0 xl:left-0 xl:w-[260px]">
+          <div className="flex w-full flex-col sm:hidden xl:absolute xl:top-0 xl:bottom-0 xl:left-0 xl:flex xl:w-[260px]">
             <ItemSidebar
               item={item}
               category={category}
@@ -281,7 +282,25 @@ function BuildViewerBodyInner({
             />
           </div>
 
-          <div className="bg-card @container/loadout min-w-0 flex-1 overflow-hidden rounded-lg border p-2 sm:p-4 xl:ml-[calc(260px+1rem)]">
+          <div className="bg-card @container/loadout flex min-w-0 flex-1 flex-col gap-3 overflow-hidden rounded-lg border p-2 sm:p-4 xl:ml-[calc(260px+1rem)]">
+            <ItemSidebarPopover
+              className="hidden self-start sm:inline-flex xl:hidden"
+              item={item}
+              category={category}
+              capacityUsed={capacity.used}
+              capacityMax={capacity.max}
+              hasReactor={hasReactor}
+              onToggleReactor={() => {}}
+              shards={shards}
+              onSetShard={() => {}}
+              helminth={helminth}
+              onSetHelminth={() => {}}
+              zawComponents={zawComponents}
+              lichBonusElement={lichBonusElement}
+              placedMods={slots.placed}
+              placedArcanes={arcanes.placed}
+              readOnly
+            />
             <ModGrid
               item={item}
               category={category}

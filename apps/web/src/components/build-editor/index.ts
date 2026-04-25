@@ -6,7 +6,7 @@ export {
   type PlacedArcane,
 } from "./use-arcane-slots"
 export { GuideEditor } from "./guide-editor"
-export { ItemSidebar } from "./item-sidebar"
+export { ItemSidebar, ItemSidebarPopover } from "./item-sidebar"
 export {
   calculateCapacity,
   calculateFormaCount,

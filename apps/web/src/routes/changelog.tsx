@@ -14,6 +14,16 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-04-25",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "On tablets and smaller laptops, your stats and abilities now open in a popover so the mods get the full width of the page.",
+      },
+    ],
+  },
+  {
     date: "2026-04-24",
     changes: [
       {

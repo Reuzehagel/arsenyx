@@ -7,7 +7,15 @@ import {
 } from "@arsenyx/shared/warframe/types"
 import { isZawStrike } from "@arsenyx/shared/warframe/zaw-data"
 import { useSuspenseQuery } from "@tanstack/react-query"
-import { ChevronDown, ChevronLeft, Plus, Undo2, X, Zap } from "lucide-react"
+import {
+  ChevronDown,
+  ChevronLeft,
+  Plus,
+  SlidersHorizontal,
+  Undo2,
+  X,
+  Zap,
+} from "lucide-react"
 import { Suspense, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -98,6 +106,13 @@ export interface ItemSidebarProps {
   placedMods: Partial<Record<SlotId, PlacedMod>>
   placedArcanes: (PlacedArcane | null)[]
   readOnly?: boolean
+  /**
+   * When true, render without the outer card chrome and without the mobile
+   * "Show stats" toggle. Used when ItemSidebar is hosted inside a popover
+   * (which provides its own surface and is already an explicit "show stats"
+   * action).
+   */
+  bare?: boolean
 }
 
 export function ItemSidebar({
@@ -118,6 +133,7 @@ export function ItemSidebar({
   placedMods,
   placedArcanes,
   readOnly = false,
+  bare = false,
 }: ItemSidebarProps) {
   const isZawItem = category === "melee" && isZawStrike(item.name)
   // Distinguish archwing *suits* (have health) from arch-guns / arch-melee
@@ -232,7 +248,14 @@ export function ItemSidebar({
 
   return (
     <>
-      <div className="bg-card flex h-full flex-col rounded-lg border xl:overflow-y-auto">
+      <div
+        className={cn(
+          "flex flex-col",
+          bare
+            ? "min-w-0"
+            : "bg-card h-full rounded-lg border xl:overflow-y-auto",
+        )}
+      >
         {isWarframe && abilities.length > 0 && (
           <>
             <div className="flex justify-around p-3">
@@ -334,20 +357,58 @@ export function ItemSidebar({
           </div>
         </div>
       </div>
-      <button
-        type="button"
-        onClick={() => setStatsExpanded((v) => !v)}
-        className="bg-card text-muted-foreground hover:bg-accent/40 hover:text-foreground mx-auto flex items-center gap-1.5 rounded-t-none rounded-b-md border border-t-0 px-3 py-1 text-xs transition-colors sm:hidden"
-      >
-        <span>{statsExpanded ? "Hide stats" : "Show stats"}</span>
-        <ChevronDown
-          className={cn(
-            "size-3.5 transition-transform",
-            statsExpanded && "rotate-180",
-          )}
-        />
-      </button>
+      {!bare && (
+        <button
+          type="button"
+          onClick={() => setStatsExpanded((v) => !v)}
+          className="bg-card text-muted-foreground hover:bg-accent/40 hover:text-foreground mx-auto flex items-center gap-1.5 rounded-t-none rounded-b-md border border-t-0 px-3 py-1 text-xs transition-colors sm:hidden"
+        >
+          <span>{statsExpanded ? "Hide stats" : "Show stats"}</span>
+          <ChevronDown
+            className={cn(
+              "size-3.5 transition-transform",
+              statsExpanded && "rotate-180",
+            )}
+          />
+        </button>
+      )}
     </>
+  )
+}
+
+/**
+ * Trigger + popover wrapper used at intermediate widths (sm to xl) where the
+ * stacked sidebar would leave awkward horizontal whitespace. Renders a small
+ * "Stats" button that opens the full ItemSidebar contents in a popover.
+ */
+export function ItemSidebarPopover({
+  className,
+  ...sidebarProps
+}: ItemSidebarProps & { className?: string }) {
+  return (
+    <Popover>
+      <PopoverTrigger
+        render={
+          <button
+            type="button"
+            className={cn(
+              "text-muted-foreground hover:bg-accent/40 hover:text-foreground inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs transition-colors",
+              className,
+            )}
+          >
+            <SlidersHorizontal className="size-3.5" />
+            <span>Stats</span>
+          </button>
+        }
+      />
+      <PopoverContent
+        side="bottom"
+        align="start"
+        className="max-h-[85vh] w-[280px] overflow-y-auto p-3"
+      >
+        <ItemSidebar {...sidebarProps} bare />
+      </PopoverContent>
+    </Popover>
   )
 }
 
