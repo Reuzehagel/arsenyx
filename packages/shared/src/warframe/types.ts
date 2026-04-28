@@ -359,6 +359,12 @@ export interface BuildState {
 
   // Bonus element on Kuva/Tenet/Coda weapons (maxLevelCap: 40).
   lichBonusElement?: LichBonusElement
+
+  // Incarnon adapter installed + per-tier perk selections (incarnon weapons
+  // only). `incarnonPerks[i]` is the picked perk name for tier i+1, or null.
+  // Index 0 (tier 1) is always null — tier 1 has no choice.
+  incarnonEnabled?: boolean
+  incarnonPerks?: (string | null)[]
 }
 
 export const LICH_BONUS_ELEMENTS = [

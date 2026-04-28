@@ -1,4 +1,8 @@
 import {
+  getIncarnonEvolution,
+  type IncarnonEvolution,
+} from "@arsenyx/shared/warframe/incarnon-data"
+import {
   LICH_BONUS_ELEMENTS,
   type Gun,
   type LichBonusElement,
@@ -103,6 +107,10 @@ export interface ItemSidebarProps {
   onSetZawComponents?: (components: { grip: string; link: string }) => void
   lichBonusElement?: LichBonusElement | null
   onSetLichBonusElement?: (value: LichBonusElement | null) => void
+  incarnonEnabled?: boolean
+  onToggleIncarnon?: () => void
+  incarnonPerks?: (string | null)[]
+  onSetIncarnonPerk?: (tierIndex: number, perkName: string | null) => void
   placedMods: Partial<Record<SlotId, PlacedMod>>
   placedArcanes: (PlacedArcane | null)[]
   readOnly?: boolean
@@ -130,6 +138,10 @@ export function ItemSidebar({
   onSetZawComponents,
   lichBonusElement,
   onSetLichBonusElement,
+  incarnonEnabled = false,
+  onToggleIncarnon,
+  incarnonPerks,
+  onSetIncarnonPerk,
   placedMods,
   placedArcanes,
   readOnly = false,
@@ -159,6 +171,11 @@ export function ItemSidebar({
   const skipRankUpBonus = category === "necramechs" || isArchwingSuit
   const abilities = item.abilities ?? []
   const boosterLabel = isWarframe ? "Reactor" : "Catalyst"
+
+  const incarnonEvolution = useMemo<IncarnonEvolution | null>(
+    () => (isWeapon ? getIncarnonEvolution(item.name) : null),
+    [isWeapon, item.name],
+  )
 
   const modList = useMemo(
     () =>
@@ -214,12 +231,22 @@ export function ItemSidebar({
             zawComponents.link,
           )
         : baseWeapon
-    return calculateWeaponStats({
+    const stats = calculateWeaponStats({
       weapon,
       mods: modList,
       arcanes: arcaneList,
       showMaxStacks,
     })
+    // The Incarnon Form alt-fire is only available with the adapter installed.
+    if (incarnonEvolution && !incarnonEnabled) {
+      return {
+        ...stats,
+        attackModes: stats.attackModes.filter(
+          (m) => !/incarnon/i.test(m.name),
+        ),
+      }
+    }
+    return stats
   }, [
     isWeapon,
     isZawItem,
@@ -228,6 +255,8 @@ export function ItemSidebar({
     modList,
     arcaneList,
     showMaxStacks,
+    incarnonEvolution,
+    incarnonEnabled,
   ])
 
   const companionStats = useMemo<CompanionStats | null>(() => {
@@ -308,6 +337,33 @@ export function ItemSidebar({
                   readOnly={readOnly}
                 />
               ))}
+            </div>
+            <Separator />
+          </>
+        )}
+
+        {incarnonEvolution && (
+          <>
+            <div className="flex flex-col gap-2 p-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-medium">Incarnon</span>
+                <Switch
+                  size="sm"
+                  checked={incarnonEnabled}
+                  onCheckedChange={onToggleIncarnon}
+                  disabled={readOnly}
+                />
+              </div>
+              {incarnonEnabled && (
+                <IncarnonTierGrid
+                  evolution={incarnonEvolution}
+                  perks={incarnonPerks ?? []}
+                  onPick={(tierIndex, perk) =>
+                    onSetIncarnonPerk?.(tierIndex, perk)
+                  }
+                  readOnly={readOnly}
+                />
+              )}
             </div>
             <Separator />
           </>
@@ -1125,6 +1181,141 @@ function HelminthPicker({
         )}
       </div>
     </div>
+  )
+}
+
+function IncarnonTierGrid({
+  evolution,
+  perks,
+  onPick,
+  readOnly,
+}: {
+  evolution: IncarnonEvolution
+  perks: (string | null)[]
+  onPick: (tierIndex: number, perk: string | null) => void
+  readOnly: boolean
+}) {
+  // Tier 1 is the unlock — no choice. Render only tiers with >1 perk option.
+  const choosableTiers = evolution.tiers.filter((t) => t.perks.length > 1)
+  return (
+    <div className="flex flex-wrap justify-around gap-1.5">
+      {choosableTiers.map((tier) => {
+        const tierIndex = tier.tier - 1
+        const picked = perks[tierIndex] ?? null
+        const pickedPerk = tier.perks.find((p) => p.name === picked) ?? null
+        return (
+          <IncarnonTierSlot
+            key={tier.tier}
+            tier={tier.tier}
+            perks={tier.perks}
+            picked={pickedPerk}
+            onPick={(perk) => onPick(tierIndex, perk?.name ?? null)}
+            readOnly={readOnly}
+          />
+        )
+      })}
+    </div>
+  )
+}
+
+function IncarnonTierSlot({
+  tier,
+  perks,
+  picked,
+  onPick,
+  readOnly,
+}: {
+  tier: number
+  perks: { name: string; description: string }[]
+  picked: { name: string; description: string } | null
+  onPick: (perk: { name: string; description: string } | null) => void
+  readOnly: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const triggerButton = (
+    <button
+      type="button"
+      className={cn(
+        "relative flex size-10 items-center justify-center rounded-sm border text-xs font-semibold tabular-nums transition-colors",
+        picked
+          ? "bg-muted/40 border-border text-foreground hover:border-muted-foreground/60"
+          : "border-muted-foreground/10 hover:border-muted-foreground/25 text-muted-foreground/40 border-dashed",
+      )}
+    >
+      T{tier}
+    </button>
+  )
+
+  return (
+    <Popover open={open} onOpenChange={readOnly ? undefined : setOpen}>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            readOnly ? triggerButton : <PopoverTrigger render={triggerButton} />
+          }
+        />
+        <TooltipContent side="bottom" className="max-w-xs">
+          {picked ? (
+            <>
+              <p className="font-semibold">{picked.name}</p>
+              <p className="text-muted-foreground mt-0.5">
+                {picked.description}
+              </p>
+            </>
+          ) : (
+            <span className="text-muted-foreground">
+              Tier {tier} — select a perk
+            </span>
+          )}
+        </TooltipContent>
+      </Tooltip>
+      {!readOnly && (
+        <PopoverContent side="right" align="start" className="w-72">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-medium">Tier {tier}</span>
+              {picked && (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => {
+                    onPick(null)
+                    setOpen(false)
+                  }}
+                  title="Clear selection"
+                >
+                  <X className="size-3" />
+                </Button>
+              )}
+            </div>
+            <div className="flex flex-col gap-0.5">
+              {perks.map((perk) => {
+                const isActive = picked?.name === perk.name
+                return (
+                  <button
+                    key={perk.name}
+                    type="button"
+                    onClick={() => {
+                      onPick(perk)
+                      setOpen(false)
+                    }}
+                    className={cn(
+                      "hover:bg-muted flex flex-col items-start gap-0.5 rounded px-1.5 py-1 text-left text-xs transition-colors",
+                      isActive && "bg-muted",
+                    )}
+                  >
+                    <span className="font-medium">{perk.name}</span>
+                    <span className="text-muted-foreground text-[10px] leading-snug">
+                      {perk.description}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </PopoverContent>
+      )}
+    </Popover>
   )
 }
 
