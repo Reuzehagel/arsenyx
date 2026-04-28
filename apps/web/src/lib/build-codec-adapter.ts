@@ -27,6 +27,8 @@ type EditorState = {
   helminth: Record<number, HelminthAbility>
   zawComponents?: { grip: string; link: string }
   lichBonusElement?: LichBonusElement
+  incarnonEnabled?: boolean
+  incarnonPerks?: (string | null)[]
   normalSlotCount: number
   auraSlotCount: number
 }
@@ -162,6 +164,8 @@ export function savedDataToBuildState(state: EditorState): BuildState {
     helminthAbility,
     zawComponents: state.zawComponents,
     lichBonusElement: state.lichBonusElement,
+    incarnonEnabled: state.incarnonEnabled,
+    incarnonPerks: state.incarnonPerks,
   }
 }
 
@@ -222,6 +226,8 @@ export function buildStateToSavedData(
       helminth,
       zawComponents: state.zawComponents,
       lichBonusElement: state.lichBonusElement,
+      incarnonEnabled: state.incarnonEnabled,
+      incarnonPerks: state.incarnonPerks,
     },
     buildName: state.buildName,
   }

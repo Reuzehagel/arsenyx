@@ -1,5 +1,9 @@
 import { getArcanesForCategory } from "@arsenyx/shared/warframe/arcanes"
 import { decodeBuild, encodeBuild } from "@arsenyx/shared/warframe/build-codec"
+import {
+  getIncarnonGenesisImage,
+  isInnateIncarnon,
+} from "@arsenyx/shared/warframe/incarnon-data"
 import { getModsForItem } from "@arsenyx/shared/warframe/mods"
 import {
   createSyntheticRiven,
@@ -340,6 +344,27 @@ function EditorShell() {
   const [lichBonusElement, setLichBonusElement] =
     useState<LichBonusElement | null>(() => savedData.lichBonusElement ?? null)
 
+  // Innate incarnons (no separate Genesis adapter) default-on; Steel Path
+  // Circuit weapons require installing the adapter, so default-off.
+  const [incarnonEnabled, setIncarnonEnabled] = useState(
+    () => savedData.incarnonEnabled ?? isInnateIncarnon(item.name),
+  )
+  const [incarnonPerks, setIncarnonPerks] = useState<(string | null)[]>(
+    () => savedData.incarnonPerks ?? [],
+  )
+  const setIncarnonPerkAt = (tierIndex: number, perk: string | null) => {
+    setIncarnonPerks((prev) => {
+      const next = [...prev]
+      while (next.length <= tierIndex) next.push(null)
+      next[tierIndex] = perk
+      return next
+    })
+  }
+
+  const displayImageName = incarnonEnabled
+    ? (getIncarnonGenesisImage(item.name) ?? item.imageName ?? undefined)
+    : (item.imageName ?? undefined)
+
   const [helminth, setHelminth] = useState<Record<number, HelminthAbility>>(
     () => savedData.helminth ?? {},
   )
@@ -399,6 +424,8 @@ function EditorShell() {
       helminth,
       zawComponents,
       lichBonusElement: lichBonusElement ?? undefined,
+      incarnonEnabled,
+      incarnonPerks,
       normalSlotCount,
       auraSlotCount,
     })
@@ -445,6 +472,8 @@ function EditorShell() {
           helminth,
           zawComponents,
           lichBonusElement: lichBonusElement ?? undefined,
+          incarnonEnabled,
+          incarnonPerks,
         },
         guide: {
           summary: guideSummary.trim() || null,
@@ -456,7 +485,7 @@ function EditorShell() {
               itemUniqueName: item.uniqueName,
               itemCategory: category,
               itemName: item.name,
-              itemImageName: item.imageName ?? null,
+              itemImageName: displayImageName ?? null,
             }),
       }
       const url = isUpdate
@@ -513,6 +542,7 @@ function EditorShell() {
         totalEndoCost={totalEndoCost}
         formaCount={formaCount}
         buildName={buildName}
+        displayImageName={displayImageName}
         onBuildNameChange={setBuildName}
         onSave={handleSaveClick}
         saveStatus={saveStatus}
@@ -545,6 +575,10 @@ function EditorShell() {
               onSetZawComponents={setZawComponents}
               lichBonusElement={lichBonusElement}
               onSetLichBonusElement={setLichBonusElement}
+              incarnonEnabled={incarnonEnabled}
+              onToggleIncarnon={() => setIncarnonEnabled((v) => !v)}
+              incarnonPerks={incarnonPerks}
+              onSetIncarnonPerk={setIncarnonPerkAt}
               placedMods={slots.placed}
               placedArcanes={arcanes.placed}
             />
@@ -576,6 +610,10 @@ function EditorShell() {
               onSetZawComponents={setZawComponents}
               lichBonusElement={lichBonusElement}
               onSetLichBonusElement={setLichBonusElement}
+              incarnonEnabled={incarnonEnabled}
+              onToggleIncarnon={() => setIncarnonEnabled((v) => !v)}
+              incarnonPerks={incarnonPerks}
+              onSetIncarnonPerk={setIncarnonPerkAt}
               placedMods={slots.placed}
               placedArcanes={arcanes.placed}
             />
@@ -671,6 +709,7 @@ function EditorHeader({
   totalEndoCost,
   formaCount,
   buildName,
+  displayImageName,
   onBuildNameChange,
   onSave,
   saveStatus,
@@ -688,6 +727,7 @@ function EditorHeader({
   totalEndoCost: number
   formaCount: number
   buildName: string
+  displayImageName?: string
   onBuildNameChange: (name: string) => void
   onSave: () => void
   saveStatus: "idle" | "saving" | "error"
@@ -718,7 +758,7 @@ function EditorHeader({
         <div className="flex min-w-0 flex-1 items-center gap-4">
           <div className="bg-muted/10 relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-md md:size-24">
             <img
-              src={getImageUrl(item.imageName)}
+              src={getImageUrl(displayImageName ?? item.imageName)}
               alt={item.name}
               className="h-full w-full object-cover"
             />
