@@ -1,5 +1,7 @@
 import {
-  getIncarnonEvolution,
+  getIncarnonBaseName,
+  hasIncarnon,
+  INCARNON_FORM_ATTACK_NAME,
   type IncarnonEvolution,
 } from "@arsenyx/shared/warframe/incarnon-data"
 import {
@@ -45,6 +47,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { helminthQuery, type HelminthAbility } from "@/lib/helminth-query"
+import { incarnonEvolutionsQuery } from "@/lib/incarnon-query"
 import {
   getShardImageUrl,
   SHARD_COLOR_NAMES,
@@ -172,10 +175,7 @@ export function ItemSidebar({
   const abilities = item.abilities ?? []
   const boosterLabel = isWarframe ? "Reactor" : "Catalyst"
 
-  const incarnonEvolution = useMemo<IncarnonEvolution | null>(
-    () => (isWeapon ? getIncarnonEvolution(item.name) : null),
-    [isWeapon, item.name],
-  )
+  const showIncarnon = isWeapon && hasIncarnon(item.name)
 
   const modList = useMemo(
     () =>
@@ -238,11 +238,11 @@ export function ItemSidebar({
       showMaxStacks,
     })
     // The Incarnon Form alt-fire is only available with the adapter installed.
-    if (incarnonEvolution && !incarnonEnabled) {
+    if (showIncarnon && !incarnonEnabled) {
       return {
         ...stats,
         attackModes: stats.attackModes.filter(
-          (m) => !/incarnon/i.test(m.name),
+          (m) => m.name !== INCARNON_FORM_ATTACK_NAME,
         ),
       }
     }
@@ -255,7 +255,7 @@ export function ItemSidebar({
     modList,
     arcaneList,
     showMaxStacks,
-    incarnonEvolution,
+    showIncarnon,
     incarnonEnabled,
   ])
 
@@ -342,7 +342,7 @@ export function ItemSidebar({
           </>
         )}
 
-        {incarnonEvolution && (
+        {showIncarnon && (
           <>
             <div className="flex flex-col gap-2 p-3">
               <div className="flex items-center justify-between text-xs">
@@ -355,14 +355,18 @@ export function ItemSidebar({
                 />
               </div>
               {incarnonEnabled && (
-                <IncarnonTierGrid
-                  evolution={incarnonEvolution}
-                  perks={incarnonPerks ?? []}
-                  onPick={(tierIndex, perk) =>
-                    onSetIncarnonPerk?.(tierIndex, perk)
-                  }
-                  readOnly={readOnly}
-                />
+                <Suspense
+                  fallback={<IncarnonTierGridSkeleton />}
+                >
+                  <IncarnonTierGrid
+                    weaponName={item.name}
+                    perks={incarnonPerks ?? []}
+                    onPick={(tierIndex, perk) =>
+                      onSetIncarnonPerk?.(tierIndex, perk)
+                    }
+                    readOnly={readOnly}
+                  />
+                </Suspense>
               )}
             </div>
             <Separator />
@@ -1184,17 +1188,36 @@ function HelminthPicker({
   )
 }
 
+function IncarnonTierGridSkeleton() {
+  return (
+    <div className="flex flex-wrap justify-around gap-1.5">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div
+          key={i}
+          className="border-muted-foreground/10 size-10 animate-pulse rounded-sm border border-dashed"
+        />
+      ))}
+    </div>
+  )
+}
+
 function IncarnonTierGrid({
-  evolution,
+  weaponName,
   perks,
   onPick,
   readOnly,
 }: {
-  evolution: IncarnonEvolution
+  weaponName: string
   perks: (string | null)[]
   onPick: (tierIndex: number, perk: string | null) => void
   readOnly: boolean
 }) {
+  const { data: evolutions } = useSuspenseQuery(incarnonEvolutionsQuery)
+  const baseName = getIncarnonBaseName(weaponName)
+  const evolution: IncarnonEvolution | undefined = baseName
+    ? evolutions[baseName]
+    : undefined
+  if (!evolution) return null
   // Tier 1 is the unlock — no choice. Render only tiers with >1 perk option.
   const choosableTiers = evolution.tiers.filter((t) => t.perks.length > 1)
   return (

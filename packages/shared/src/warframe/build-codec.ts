@@ -124,8 +124,12 @@ export function encodeBuild(state: BuildState): string {
     encoded.lb = state.lichBonusElement
   }
 
+  // Encode whenever the user touched any incarnon field. Encoding only on
+  // truthy values would lose "explicitly disabled" for innate incarnons,
+  // since the decoder re-applies a default-on heuristic when the field is
+  // missing.
   const hasPickedPerks = state.incarnonPerks?.some((p) => p) ?? false
-  if (state.incarnonEnabled || hasPickedPerks) {
+  if (state.incarnonEnabled !== undefined || hasPickedPerks) {
     encoded.ic = { e: state.incarnonEnabled ?? false }
     if (hasPickedPerks) encoded.ic.p = state.incarnonPerks
   }

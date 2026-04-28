@@ -1,6 +1,9 @@
 import { getArcanesForCategory } from "@arsenyx/shared/warframe/arcanes"
 import { decodeBuild, encodeBuild } from "@arsenyx/shared/warframe/build-codec"
-import { getIncarnonEvolution } from "@arsenyx/shared/warframe/incarnon-data"
+import {
+  getIncarnonGenesisImage,
+  isInnateIncarnon,
+} from "@arsenyx/shared/warframe/incarnon-data"
 import { getModsForItem } from "@arsenyx/shared/warframe/mods"
 import {
   createSyntheticRiven,
@@ -341,17 +344,11 @@ function EditorShell() {
   const [lichBonusElement, setLichBonusElement] =
     useState<LichBonusElement | null>(() => savedData.lichBonusElement ?? null)
 
-  const incarnonEvolution = useMemo(
-    () => getIncarnonEvolution(item.name),
-    [item.name],
-  )
   // Innate incarnons (no separate Genesis adapter) default-on; Steel Path
   // Circuit weapons require installing the adapter, so default-off.
-  const [incarnonEnabled, setIncarnonEnabled] = useState(() => {
-    if (savedData.incarnonEnabled !== undefined) return savedData.incarnonEnabled
-    const evo = getIncarnonEvolution(item.name)
-    return evo !== null && !evo.genesisImage
-  })
+  const [incarnonEnabled, setIncarnonEnabled] = useState(
+    () => savedData.incarnonEnabled ?? isInnateIncarnon(item.name),
+  )
   const [incarnonPerks, setIncarnonPerks] = useState<(string | null)[]>(
     () => savedData.incarnonPerks ?? [],
   )
@@ -364,10 +361,12 @@ function EditorShell() {
     })
   }
 
+  const genesisImage = useMemo(
+    () => getIncarnonGenesisImage(item.name),
+    [item.name],
+  )
   const displayImageName =
-    incarnonEnabled && incarnonEvolution?.genesisImage
-      ? incarnonEvolution.genesisImage
-      : (item.imageName ?? undefined)
+    incarnonEnabled && genesisImage ? genesisImage : (item.imageName ?? undefined)
 
   const [helminth, setHelminth] = useState<Record<number, HelminthAbility>>(
     () => savedData.helminth ?? {},
