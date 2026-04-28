@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@arsenyx/shared": "workspace:*",
-    "@wfcd/items": "^1.1273.17"
+    "@wfcd/items": "^1.1273.28"
   },
   "devDependencies": {
     "oxfmt": "^0.41.0",
