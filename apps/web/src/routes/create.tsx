@@ -361,12 +361,9 @@ function EditorShell() {
     })
   }
 
-  const genesisImage = useMemo(
-    () => getIncarnonGenesisImage(item.name),
-    [item.name],
-  )
-  const displayImageName =
-    incarnonEnabled && genesisImage ? genesisImage : (item.imageName ?? undefined)
+  const displayImageName = incarnonEnabled
+    ? (getIncarnonGenesisImage(item.name) ?? item.imageName ?? undefined)
+    : (item.imageName ?? undefined)
 
   const [helminth, setHelminth] = useState<Record<number, HelminthAbility>>(
     () => savedData.helminth ?? {},
