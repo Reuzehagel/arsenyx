@@ -67,6 +67,7 @@ import {
   normalizeBuildData,
 } from "@/lib/build-codec-adapter"
 import { buildQuery, type BuildDetail } from "@/lib/build-query"
+import { helminthQuery, type HelminthAbility } from "@/lib/helminth-query"
 import { useToggleBookmark, useToggleLike } from "@/lib/build-social"
 import { itemQuery } from "@/lib/item-query"
 import { modsQuery } from "@/lib/mods-query"
@@ -239,11 +240,19 @@ function BuildViewerBody(props: {
 }) {
   // New-format builds (SavedBuildData) carry full mod/arcane objects inline in
   // buildData, so we skip the ~1.35MB mods-all.json + arcanes-all.json fetches.
-  // Only legacy BuildState-shape builds need the catalogs for uniqueName lookup.
+  // Only legacy BuildState-shape builds need the catalogs for uniqueName lookup
+  // and image refresh (older wfcd hashed-slug filenames now 404 on the CDN).
   if (isLegacyBuildData(props.build.buildData)) {
     return <BuildViewerBodyWithCatalog {...props} />
   }
-  return <BuildViewerBodyInner {...props} allMods={[]} allArcanes={[]} />
+  return (
+    <BuildViewerBodyInner
+      {...props}
+      allMods={[]}
+      allArcanes={[]}
+      helminthAbilities={[]}
+    />
+  )
 }
 
 function BuildViewerBodyWithCatalog(props: {
@@ -254,11 +263,13 @@ function BuildViewerBodyWithCatalog(props: {
 }) {
   const { data: allArcanes } = useSuspenseQuery(arcanesQuery)
   const { data: allMods } = useSuspenseQuery(modsQuery)
+  const { data: helminthAbilities } = useSuspenseQuery(helminthQuery)
   return (
     <BuildViewerBodyInner
       {...props}
       allMods={allMods}
       allArcanes={allArcanes}
+      helminthAbilities={helminthAbilities}
     />
   )
 }
@@ -269,6 +280,7 @@ function BuildViewerBodyInner({
   itemSlug,
   allMods,
   allArcanes,
+  helminthAbilities,
   embed,
 }: {
   build: BuildDetail
@@ -276,13 +288,20 @@ function BuildViewerBodyInner({
   itemSlug: string
   allMods: Mod[]
   allArcanes: Arcane[]
+  helminthAbilities: HelminthAbility[]
   embed: boolean
 }) {
   const { data: item } = useSuspenseQuery(itemQuery(category, itemSlug))
 
   const saved = useMemo(
-    () => normalizeBuildData(build.buildData, allMods, allArcanes),
-    [build.buildData, allMods, allArcanes],
+    () =>
+      normalizeBuildData(
+        build.buildData,
+        allMods,
+        allArcanes,
+        helminthAbilities,
+      ),
+    [build.buildData, allMods, allArcanes, helminthAbilities],
   )
 
   const categoryLabel =
