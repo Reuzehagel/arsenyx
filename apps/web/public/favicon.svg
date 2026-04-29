@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="370 287 532 648" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;" color="#000"><style>@media(prefers-color-scheme:dark){svg{color:#fff}}</style>
+    <g transform="matrix(1,0,0,1,-35.883062,-2788.435661)">
+        <g id="Artboard4" transform="matrix(1,0,0,1,1767.997419,2928.395975)">
+            <rect x="-1732.114" y="-139.96" width="1272.067" height="1250.643" style="fill:none;"/>
+            <g transform="matrix(1.112784,0,0,0.923306,-1894.000916,-176.937604)">
+                <path d="M513.518,870.868L717.048,394.007L920.579,870.868" style="fill:none;stroke:currentColor;stroke-width:59.91px;"/>
+            </g>
+            <g transform="matrix(0.491708,0,0,0.407983,-1448.659021,197.239651)">
+                <path d="M615.283,632.438L717.048,394.007L818.814,632.438L717.048,870.868L615.283,632.438Z" fill="currentColor"/>
+            </g>
+            <g transform="matrix(-1.583688,-0,0,-0.89781,2813.462814,2119.381429)">
+                <path d="M2366.933,1666.755L2453.679,1509.993C2457.611,1502.887 2463.003,1485.36 2468.633,1485.36C2474.262,1485.36 2479.654,1502.887 2483.586,1509.993L2570.333,1666.755L2550.177,1735.872L2468.633,1588.511L2387.089,1735.872L2366.933,1666.755Z" fill="currentColor"/>
+            </g>
+        </g>
+    </g>
+</svg>
