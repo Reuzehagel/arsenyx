@@ -2,14 +2,9 @@
 
 ## Cloudflare Pages → Workers cutover (web)
 
-Code is migrated; the dashboard moves are manual. Order matters — domains can only be attached to one product at a time.
+Live on Workers Static Assets as `arsenyx-web` since 2026-04-29. Verified: SPA fallback, `_headers` cache rules, apex + www domains all serving correctly.
 
-- [ ] First-time deploy: `cd apps/web && bun run deploy` (creates the `arsenyx-web` Worker; will fail to attach `www.arsenyx.com` / `arsenyx.com` while Pages still owns them — that's expected).
-- [ ] In the CF dashboard: Pages → `arsenyx` project → **Custom Domains** → remove `www.arsenyx.com` and `arsenyx.com`.
-- [ ] Workers → `arsenyx-web` → **Triggers** → add both custom domains. (Or re-run `bun run deploy` once Pages has released them.)
-- [ ] Verify: `curl -I https://www.arsenyx.com` returns the `_headers` cache rules, and a deep link like `https://www.arsenyx.com/browse/warframes` returns 200 with `index.html` (SPA fallback).
-- [ ] Set up **Workers Builds** for `arsenyx-web` (CF dashboard → Workers → arsenyx-web → Settings → Builds → Connect repo, root dir `apps/web`, build command `bun run build`). Disable the Pages project's git integration to stop double-deploys.
-- [ ] Once stable for ~a week: delete the Pages project entirely.
+- [ ] Delete the old Pages `arsenyx` project (CF dashboard → Pages → arsenyx → Settings → Delete). Wait a few days for a rollback window if cautious.
 
 ## Bugs
 
