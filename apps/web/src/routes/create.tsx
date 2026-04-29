@@ -47,6 +47,7 @@ import {
   getArcaneSlotCount,
   getAuraPolarities,
   getAuraSlotCount,
+  getExilusInnatePolarity,
   getMaxLevelCap,
   getNormalSlotCount,
   GuideEditor,
@@ -383,6 +384,7 @@ function EditorShell() {
     () => getAuraPolarities(item, auraSlotCount),
     [item, auraSlotCount],
   )
+  const exilusInnate = useMemo(() => getExilusInnatePolarity(item), [item])
   const normalInnates = useMemo(
     () =>
       Array.from({ length: normalSlotCount }, (_, i) =>
@@ -399,10 +401,11 @@ function EditorShell() {
     () =>
       calculateFormaCount({
         auraInnates,
+        exilusInnate,
         normalInnates,
         formaPolarities: slots.formaPolarities,
       }),
-    [auraInnates, normalInnates, slots.formaPolarities],
+    [auraInnates, exilusInnate, normalInnates, slots.formaPolarities],
   )
   const isUpdate = !!existingBuild && existingBuild.isOwner
 
@@ -516,6 +519,7 @@ function EditorShell() {
         placed: slots.placed,
         formaPolarities: slots.formaPolarities,
         auraInnates,
+        exilusInnate,
         normalInnates,
         hasReactor,
         maxLevelCap: getMaxLevelCap(category, item),
@@ -524,6 +528,7 @@ function EditorShell() {
       slots.placed,
       slots.formaPolarities,
       auraInnates,
+      exilusInnate,
       normalInnates,
       hasReactor,
       category,

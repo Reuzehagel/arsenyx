@@ -29,6 +29,7 @@ import {
   getArcaneSlotCount,
   getAuraPolarities,
   getAuraSlotCount,
+  getExilusInnatePolarity,
   getMaxLevelCap,
   getNormalSlotCount,
   hasExilusSlot,
@@ -316,6 +317,7 @@ function BuildViewerBodyInner({
     () => getAuraPolarities(item, auraSlotCount),
     [item, auraSlotCount],
   )
+  const exilusInnate = useMemo(() => getExilusInnatePolarity(item), [item])
   const normalInnates = useMemo(
     () =>
       Array.from({ length: normalSlotCount }, (_, i) =>
@@ -332,10 +334,11 @@ function BuildViewerBodyInner({
     () =>
       calculateFormaCount({
         auraInnates,
+        exilusInnate,
         normalInnates,
         formaPolarities: slots.formaPolarities,
       }),
-    [auraInnates, normalInnates, slots.formaPolarities],
+    [auraInnates, exilusInnate, normalInnates, slots.formaPolarities],
   )
   const capacity = useMemo(
     () =>
@@ -343,6 +346,7 @@ function BuildViewerBodyInner({
         placed: slots.placed,
         formaPolarities: slots.formaPolarities,
         auraInnates,
+        exilusInnate,
         normalInnates,
         hasReactor,
         maxLevelCap: getMaxLevelCap(category, item),
@@ -351,6 +355,7 @@ function BuildViewerBodyInner({
       slots.placed,
       slots.formaPolarities,
       auraInnates,
+      exilusInnate,
       normalInnates,
       hasReactor,
       category,

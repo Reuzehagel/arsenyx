@@ -21,7 +21,13 @@ export {
   hasExilusSlot,
   isLichWeapon,
 } from "./layout"
-export { ArcaneRow, getAuraPolarities, ModGrid, toPolarity } from "./mod-grid"
+export {
+  ArcaneRow,
+  getAuraPolarities,
+  getExilusInnatePolarity,
+  ModGrid,
+  toPolarity,
+} from "./mod-grid"
 export { ModCard } from "./mod-card"
 export { ModSearchGrid } from "./mod-search-grid"
 export { RivenDialog, type RivenDialogValues } from "./riven-dialog"

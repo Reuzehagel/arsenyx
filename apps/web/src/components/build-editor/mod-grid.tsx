@@ -35,6 +35,17 @@ export function getAuraPolarities(
   return Array.from({ length: count }, (_, i) => toPolarity(raws[i]))
 }
 
+/**
+ * Innate exilus polarity, sourced from WFCD's `exilusPolarity` field
+ * (extracted from the Warframe wiki's `Module:Weapons/data` /
+ * `Module:Warframes/data` Lua tables).
+ */
+export function getExilusInnatePolarity(
+  item: Pick<DetailItem, "exilusPolarity">,
+): Polarity | undefined {
+  return toPolarity(item.exilusPolarity)
+}
+
 export function ArcaneRow({
   count,
   arcanes,
@@ -152,7 +163,10 @@ export function ModGrid({
             />
           )}
           {showExilus && (
-            <ModSlot kind="exilus" {...slotProps("exilus", undefined)} />
+            <ModSlot
+              kind="exilus"
+              {...slotProps("exilus", getExilusInnatePolarity(item))}
+            />
           )}
           {Array.from({ length: Math.max(0, auraSlotCount - 1) }, (_, i) => {
             const idx = i + 1

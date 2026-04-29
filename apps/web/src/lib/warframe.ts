@@ -70,9 +70,11 @@ export interface ItemAbility {
 export interface DetailItem extends BrowseItem {
   description?: string
   // slot polarities (from WFCD): `aura` is warframe-only, `polarities` lists
-  // innate polarities on normal slots in slot order.
+  // innate polarities on normal slots in slot order, `exilusPolarity` is the
+  // innate polarity on the exilus slot (weapons + warframes).
   aura?: string | string[]
   polarities?: string[]
+  exilusPolarity?: string
   // warframe
   health?: number
   shield?: number
