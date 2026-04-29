@@ -262,8 +262,8 @@ export function normalizeBuildData(
 // (e.g. `roar-e206197372.png`); the newer `@wfcd/items` package uses canonical
 // names and the upstream CDN no longer maps the old hashed slugs. Mods and
 // arcanes are already re-resolved via `toEditorPlacedMod` upstream, but
-// `buildStateToSavedData` copies helminth fields verbatim — so refresh that
-// one shape from `helminthAbilities` to self-heal stale legacy rows.
+// `buildStateToSavedData` copies helminth fields verbatim — so refresh just
+// the imageName from `helminthAbilities` to self-heal stale legacy rows.
 function refreshHelminthImage(
   data: SavedBuildData,
   helminthAbilities: HelminthAbility[],
@@ -272,7 +272,10 @@ function refreshHelminthImage(
   const byUnique = new Map(helminthAbilities.map((h) => [h.uniqueName, h]))
   const next: Record<number, HelminthAbility> = {}
   for (const [slotIndex, ability] of Object.entries(data.helminth)) {
-    next[Number(slotIndex)] = byUnique.get(ability.uniqueName) ?? ability
+    const fresh = byUnique.get(ability.uniqueName)
+    next[Number(slotIndex)] = fresh
+      ? { ...ability, imageName: fresh.imageName }
+      : ability
   }
   return { ...data, helminth: next }
 }

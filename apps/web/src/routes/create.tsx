@@ -76,6 +76,7 @@ import { arcanesQuery } from "@/lib/arcanes-query"
 import { authClient } from "@/lib/auth-client"
 import {
   buildStateToSavedData,
+  normalizeBuildData,
   savedDataToBuildState,
 } from "@/lib/build-codec-adapter"
 import { buildQuery, type SavedBuildData } from "@/lib/build-query"
@@ -177,6 +178,7 @@ function EditorShell() {
   })
   const { data: allMods } = useSuspenseQuery(modsQuery)
   const { data: allArcanes } = useSuspenseQuery(arcanesQuery)
+  const { data: helminthAbilities } = useSuspenseQuery(helminthQuery)
   const [draft] = useState(() => consumeDraft(draftId))
   const [shareHydrated] = useState(() => {
     if (!shareEncoded) return null
@@ -184,13 +186,25 @@ function EditorShell() {
     if (!decoded) return null
     return buildStateToSavedData(decoded, allMods, allArcanes)
   })
-  const savedData: SavedBuildData = draft
-    ? draft.data
-    : existingBuild
-      ? (existingBuild.buildData as SavedBuildData)
-      : shareHydrated
-        ? shareHydrated.data
-        : ({} as SavedBuildData)
+  const savedData: SavedBuildData = useMemo(() => {
+    if (draft) return draft.data
+    if (existingBuild)
+      return normalizeBuildData(
+        existingBuild.buildData,
+        allMods,
+        allArcanes,
+        helminthAbilities,
+      )
+    if (shareHydrated) return shareHydrated.data
+    return {} as SavedBuildData
+  }, [
+    draft,
+    existingBuild,
+    shareHydrated,
+    allMods,
+    allArcanes,
+    helminthAbilities,
+  ])
 
   const categoryLabel =
     CATEGORIES.find((c) => c.id === category)?.label ?? category
@@ -532,7 +546,7 @@ function EditorShell() {
       normalInnates,
       hasReactor,
       category,
-      item.maxLevelCap,
+      item,
     ],
   )
 
@@ -930,7 +944,7 @@ function SearchPanel({
       return [createSyntheticRiven(), ...mods]
     }
     return mods
-  }, [allMods, item.type, item.category, item.name, category, helminth])
+  }, [allMods, item, category, helminth])
 
   return (
     <ModSearchGrid

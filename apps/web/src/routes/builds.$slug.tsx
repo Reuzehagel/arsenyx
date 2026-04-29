@@ -67,8 +67,8 @@ import {
   normalizeBuildData,
 } from "@/lib/build-codec-adapter"
 import { buildQuery, type BuildDetail } from "@/lib/build-query"
-import { helminthQuery, type HelminthAbility } from "@/lib/helminth-query"
 import { useToggleBookmark, useToggleLike } from "@/lib/build-social"
+import { helminthQuery, type HelminthAbility } from "@/lib/helminth-query"
 import { itemQuery } from "@/lib/item-query"
 import { modsQuery } from "@/lib/mods-query"
 import { padShards } from "@/lib/shards"
@@ -342,7 +342,7 @@ function BuildViewerBodyInner({
       Array.from({ length: normalSlotCount }, (_, i) =>
         toPolarity(item.polarities?.[i]),
       ),
-    [item.polarities],
+    [item.polarities, normalSlotCount],
   )
 
   const totalEndoCost = useMemo(
@@ -378,7 +378,7 @@ function BuildViewerBodyInner({
       normalInnates,
       hasReactor,
       category,
-      item.maxLevelCap,
+      item,
     ],
   )
 

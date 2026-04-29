@@ -137,7 +137,7 @@ function BrowseContent() {
     return () => window.removeEventListener("keydown", onKey)
   }, [])
 
-  const items = data[category] ?? []
+  const items = useMemo(() => data[category] ?? [], [data, category])
 
   const visible = useMemo(
     () =>
@@ -149,15 +149,7 @@ function BrowseContent() {
         incarnonOnly,
         sort,
       }),
-    [
-      items,
-      deferredQ,
-      masteryMax,
-      primeOnly,
-      hideVaulted,
-      incarnonOnly,
-      sort,
-    ],
+    [items, deferredQ, masteryMax, primeOnly, hideVaulted, incarnonOnly, sort],
   )
 
   return (

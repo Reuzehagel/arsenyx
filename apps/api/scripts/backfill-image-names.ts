@@ -14,10 +14,11 @@
  *
  * Usage:
  *   cd apps/api
- *   bun run scripts/backfill-image-names.ts          # dry run
- *   bun run scripts/backfill-image-names.ts --apply  # actually write
+ *   bun --env-file=.env run scripts/backfill-image-names.ts          # dry run
+ *   bun --env-file=.env run scripts/backfill-image-names.ts --apply  # actually write
  */
 
+import "dotenv/config"
 import { readFile } from "node:fs/promises"
 import { resolve } from "node:path"
 
@@ -45,7 +46,7 @@ async function loadLookup<T extends { uniqueName: string; imageName?: string }>(
   file: string,
 ): Promise<Lookup> {
   const body = await readFile(resolve(DATA_DIR, file), "utf8")
-  const list = (JSON.parse(body) as T[]) ?? []
+  const list = JSON.parse(body) as T[]
   const map: Lookup = new Map()
   for (const entry of list) {
     if (entry?.uniqueName) map.set(entry.uniqueName, entry.imageName)
@@ -137,32 +138,33 @@ function refreshBuildData(
     | undefined
   if (slots) {
     for (const placed of Object.values(slots)) {
-      if (placed?.mod && rewriteImageName(placed.mod, lookups.mods, "mod", stats)) {
+      if (
+        placed?.mod &&
+        rewriteImageName(placed.mod, lookups.mods, "mod", stats)
+      ) {
         stats.mods++
         changed = true
       }
     }
   }
 
-  // Legacy slot arrays (`auraSlots[]`, `normalSlots[]`, `exilusSlot`)
+  // Legacy slot arrays (`auraSlots[]`, `normalSlots[]`) + singular `exilusSlot`
+  const legacySlots: Array<{ mod?: Record<string, unknown> }> = []
   for (const key of ["auraSlots", "normalSlots"] as const) {
-    const arr = next[key] as Array<{ mod?: Record<string, unknown> }> | undefined
-    if (Array.isArray(arr)) {
-      for (const slot of arr) {
-        if (slot?.mod && rewriteImageName(slot.mod, lookups.mods, "mod", stats)) {
-          stats.mods++
-          changed = true
-        }
-      }
-    }
+    const arr = next[key] as
+      | Array<{ mod?: Record<string, unknown> }>
+      | undefined
+    if (Array.isArray(arr)) legacySlots.push(...arr)
   }
-  const exilus = next.exilusSlot as { mod?: Record<string, unknown> } | undefined
-  if (
-    exilus?.mod &&
-    rewriteImageName(exilus.mod, lookups.mods, "mod", stats)
-  ) {
-    stats.mods++
-    changed = true
+  const exilus = next.exilusSlot as
+    | { mod?: Record<string, unknown> }
+    | undefined
+  if (exilus) legacySlots.push(exilus)
+  for (const slot of legacySlots) {
+    if (slot?.mod && rewriteImageName(slot.mod, lookups.mods, "mod", stats)) {
+      stats.mods++
+      changed = true
+    }
   }
 
   // Modern arcane slots (`arcanes[]: { arcane, rank } | null`)
@@ -216,7 +218,12 @@ function refreshBuildData(
     | undefined
   if (
     legacyHelminth?.ability &&
-    rewriteImageName(legacyHelminth.ability, lookups.helminth, "helminth", stats)
+    rewriteImageName(
+      legacyHelminth.ability,
+      lookups.helminth,
+      "helminth",
+      stats,
+    )
   ) {
     stats.helminth++
     changed = true
@@ -293,8 +300,12 @@ async function main() {
       const k = `${u.kind}:${u.uniqueName}`
       counts.set(k, (counts.get(k) ?? 0) + 1)
     }
-    console.log(`\nUnresolved uniqueNames (left as-is): ${stats.unresolved.length}`)
-    for (const [k, n] of [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20)) {
+    console.log(
+      `\nUnresolved uniqueNames (left as-is): ${stats.unresolved.length}`,
+    )
+    for (const [k, n] of [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20)) {
       console.log(`  ${n}× ${k}`)
     }
   }

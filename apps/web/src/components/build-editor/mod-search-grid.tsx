@@ -294,7 +294,6 @@ export function ModSearchGrid({
   const GRID_ROWS = 2
   const moveFromDisplayedIndex = (from: number, dir: Dir): number | null => {
     const row = from % GRID_ROWS
-    const col = Math.floor(from / GRID_ROWS)
     const focusable = (i: number) =>
       i >= 0 &&
       i < displayed.length &&
