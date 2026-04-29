@@ -254,8 +254,7 @@ function ImportPage() {
                                   detailItem,
                                 ),
                               ),
-                              exilusInnate:
-                                getExilusInnatePolarity(detailItem),
+                              exilusInnate: getExilusInnatePolarity(detailItem),
                               normalInnates: Array.from(
                                 {
                                   length: getNormalSlotCount(
