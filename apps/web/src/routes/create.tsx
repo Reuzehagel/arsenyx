@@ -780,14 +780,6 @@ function EditorHeader({
               src={getImageUrl(displayImageName ?? item.imageName)}
               alt={item.name}
               className="h-full w-full object-cover"
-              onError={(e) => {
-                // wfcd's incarnon-genesis filenames carry a content-hash
-                // suffix that goes stale on upstream image regenerations.
-                // Fall back to the base weapon image once.
-                const img = e.currentTarget
-                const fallback = getImageUrl(item.imageName)
-                if (item.imageName && img.src !== fallback) img.src = fallback
-              }}
             />
           </div>
           <div className="flex min-w-0 flex-col justify-center gap-2">
