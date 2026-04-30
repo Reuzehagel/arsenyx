@@ -15,8 +15,10 @@ import {
   Gem,
   GitFork,
   Heart,
+  Link2,
   MoreHorizontal,
   Pencil,
+  Share2,
   Trash2,
 } from "lucide-react"
 import { Suspense, useEffect, useMemo, useRef, useState } from "react"
@@ -421,18 +423,34 @@ function BuildViewerBodyInner({
       <div className="flex flex-col gap-4">
         <div
           data-screenshot-target
-          className={cn("flex flex-col gap-4", !embed && "md:flex-row")}
+          className={cn(
+            "flex flex-col gap-4",
+            // At xl, switch to block + relative so the sidebar can be absolutely
+            // positioned with top/bottom and inherit the loadout's height. That
+            // gives ItemSidebar's inner `h-full` something concrete to fill so
+            // its `xl:overflow-y-auto` triggers when stats are long.
+            !embed && "xl:relative xl:block",
+          )}
         >
           {!embed && (
-            <div className="flex w-full flex-col md:w-[260px] md:shrink-0">
+            <div className="flex w-full flex-col sm:hidden xl:absolute xl:top-0 xl:bottom-0 xl:left-0 xl:flex xl:w-[260px]">
               <ItemSidebar {...sidebarProps} />
             </div>
           )}
 
-          <div className="bg-card @container/loadout flex min-w-0 flex-1 flex-col gap-3 overflow-hidden rounded-lg border p-[clamp(0.5rem,1.5vw,1rem)]">
-            {embed && (
-              <ItemSidebarPopover {...sidebarProps} className="self-start" />
+          <div
+            className={cn(
+              "bg-card @container/loadout flex min-w-0 flex-1 flex-col gap-3 overflow-hidden rounded-lg border p-[clamp(0.5rem,1.5vw,1rem)]",
+              !embed && "xl:ml-[calc(260px+1rem)]",
             )}
+          >
+            <ItemSidebarPopover
+              {...sidebarProps}
+              className={cn(
+                "self-start",
+                !embed && "hidden sm:inline-flex xl:hidden",
+              )}
+            />
             <ModGrid
               item={item}
               category={category}
@@ -551,7 +569,7 @@ function ViewerHeader({
         </div>
         <div className="flex items-center gap-2">
           <SocialActions build={build} />
-          <CopyEmbedButton slug={build.slug} />
+          <ShareMenu slug={build.slug} />
           {build.isOwner ? (
             <Button
               size="sm"
@@ -673,33 +691,39 @@ function BuildActionsMenu({
   )
 }
 
-function CopyEmbedButton({ slug }: { slug: string }) {
+function ShareMenu({ slug }: { slug: string }) {
   const { copied, copy } = useCopyToClipboard()
-  const [hovered, setHovered] = useState(false)
-  const handleCopy = () => {
-    const src = `${window.location.origin}/builds/${slug}?embed=1`
+  const buildUrl = () => `${window.location.origin}/builds/${slug}`
+  const onCopyLink = () => copy(buildUrl())
+  const onCopyEmbed = () =>
     copy(
-      `<iframe src="${src}" style="width:100%;border:none" height="1" loading="lazy"></iframe>`,
+      `<iframe src="${buildUrl()}?embed=1" style="width:100%;border:none" height="1" loading="lazy"></iframe>`,
     )
-  }
   return (
-    <Button
-      size="sm"
-      variant="outline"
-      onClick={handleCopy}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      title="Copy embed code"
-    >
-      {copied ? (
-        <Check data-icon="inline-start" className="text-green-500" />
-      ) : (
-        <Code2 data-icon="inline-start" />
-      )}
-      <span className="inline-block w-[3.25rem] text-center">
-        {copied ? "Copied!" : hovered ? "Copy" : "Embed"}
-      </span>
-    </Button>
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={<Button size="sm" variant="outline" title="Share" />}
+      >
+        {copied ? (
+          <Check data-icon="inline-start" className="text-green-500" />
+        ) : (
+          <Share2 data-icon="inline-start" />
+        )}
+        <span className="inline-block w-[3.25rem] text-center">
+          {copied ? "Copied!" : "Share"}
+        </span>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-44">
+        <DropdownMenuItem onClick={onCopyLink}>
+          <Link2 className="size-4" />
+          Copy link
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onCopyEmbed}>
+          <Code2 className="size-4" />
+          Copy embed code
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 
