@@ -84,6 +84,18 @@ function getModStats(mod: Mod, rank: number, setCount: number = 0): StatLine[] {
   return baseStats.map((s) => ({ kind: "plain" as const, text: s }))
 }
 
+// Game data embeds inline tokens like <DT_ELECTRICITY_COLOR>, <LINE_SEPARATOR>,
+// <ENERGY>, etc. that the in-game UI uses for coloring/icons. We render plain
+// text, so normalize: <LINE_SEPARATOR> becomes a literal "\n" split point,
+// every other <…> token is stripped. The previous innerHTML path silently
+// dropped these as unknown custom elements; React would otherwise render them
+// as visible text.
+const INLINE_TAG_PATTERN = /<[A-Z_][A-Z0-9_]*>/g
+
+function stripInlineTags(text: string): string {
+  return text.replace(/<LINE_SEPARATOR>/g, "\\n").replace(INLINE_TAG_PATTERN, "")
+}
+
 function StatLineView({ line }: { line: StatLine }) {
   if (line.kind === "riven") {
     const color = line.sign === "positive" ? "text-green-400" : "text-red-400"
@@ -95,7 +107,7 @@ function StatLineView({ line }: { line: StatLine }) {
   }
   // Game data stores literal "\n" (backslash-n) in stat strings, not real
   // newlines — split on the escape sequence to render multi-line entries.
-  const parts = line.text.split(/\\n/g)
+  const parts = stripInlineTags(line.text).split(/\\n/g)
   return (
     <>
       {parts.map((part, i) => (
