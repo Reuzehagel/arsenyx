@@ -36,7 +36,7 @@ function OrgsDirectoryPage() {
     <div className="relative flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        <div className="container max-w-5xl flex flex-col gap-8 py-10">
+        <div className="wrap max-w-5xl flex flex-col gap-8 py-10">
           <div className="flex flex-col gap-2">
             <h1 className="text-3xl font-bold tracking-tight">Organizations</h1>
             <p className="text-muted-foreground text-sm">

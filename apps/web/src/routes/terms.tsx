@@ -12,7 +12,7 @@ function TermsPage() {
   return (
     <div className="relative flex min-h-screen flex-col">
       <Header />
-      <main className="container max-w-3xl flex-1 py-12">
+      <main className="wrap max-w-3xl flex-1 py-12">
         <div className="flex flex-col gap-6">
           <h1 className="text-4xl font-bold tracking-tight">
             Terms of Service

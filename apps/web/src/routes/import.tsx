@@ -143,7 +143,7 @@ function ImportPage() {
   return (
     <div className="relative flex min-h-screen flex-col">
       <Header />
-      <main className="container max-w-3xl flex-1 py-12">
+      <main className="wrap max-w-3xl flex-1 py-12">
         <div className="flex flex-col gap-8">
           <div className="flex flex-col gap-2">
             <h1 className="flex items-center gap-3 text-4xl font-bold tracking-tight">

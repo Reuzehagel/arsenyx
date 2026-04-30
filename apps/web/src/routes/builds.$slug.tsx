@@ -86,7 +86,7 @@ interface BuildSearch {
   /** When true, render a chrome-less view suitable for embedding. */
   embed?: boolean
   /** CSS zoom multiplier applied to the whole embed (e.g. 0.9 = 90%).
-   *  Shrinks everything uniformly while container-query reflow still works
+   *  Shrinks everything uniformly while wrap-query reflow still works
    *  (mods wrap at narrow widths). */
   scale?: number
   /** Optional background colour (CSS value without #, e.g. `22272e`).
@@ -139,7 +139,7 @@ function BuildPage() {
     <div className="relative flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        <div className="container px-4 py-4 md:py-6">
+        <div className="wrap py-4 md:py-6">
           <Suspense
             fallback={<p className="text-muted-foreground">Loading build…</p>}
           >
@@ -158,7 +158,7 @@ function BuildPage() {
  * the embed with the host page.
  *
  * `scale` applies CSS `zoom` globally (e.g. 0.9 = 90%). Because `zoom`
- * affects layout, container-query responsive reflow still works — mods wrap
+ * affects layout, wrap-query responsive reflow still works — mods wrap
  * at narrow widths just as they do without scaling.
  */
 function EmbedShell({
@@ -398,28 +398,22 @@ function BuildViewerBodyInner({
           data-screenshot-target
           className={cn(
             "flex flex-col gap-4",
-            !embed && "xl:relative xl:block",
+            !embed && "md:flex-row",
           )}
         >
           {!embed && (
-            <div className="flex w-full flex-col sm:hidden xl:absolute xl:top-0 xl:bottom-0 xl:left-0 xl:flex xl:w-[260px]">
+            <div className="flex w-full flex-col md:w-[260px] md:shrink-0">
               <ItemSidebar {...sidebarProps} />
             </div>
           )}
 
-          <div
-            className={cn(
-              "bg-card @container/loadout flex min-w-0 flex-1 flex-col gap-3 overflow-hidden rounded-lg border p-2 sm:p-4",
-              !embed && "xl:ml-[calc(260px+1rem)]",
+          <div className="bg-card @container/loadout flex min-w-0 flex-1 flex-col gap-3 overflow-hidden rounded-lg border p-[clamp(0.5rem,1.5vw,1rem)]">
+            {embed && (
+              <ItemSidebarPopover
+                {...sidebarProps}
+                className="self-start"
+              />
             )}
-          >
-            <ItemSidebarPopover
-              {...sidebarProps}
-              className={cn(
-                "self-start",
-                !embed && "hidden sm:inline-flex xl:hidden",
-              )}
-            />
             <ModGrid
               item={item}
               category={category}
@@ -427,7 +421,6 @@ function BuildViewerBodyInner({
               normalSlotCount={normalSlotCount}
               slots={slots}
               readOnly
-              embed={embed}
               arcaneRow={
                 arcaneCount > 0 ? (
                   <ArcaneRow
@@ -482,7 +475,7 @@ function ViewerHeader({
     <div className="bg-card mb-4 rounded-lg border p-4">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex min-w-0 flex-1 items-center gap-4">
-          <div className="bg-muted/10 relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-md md:size-24">
+          <div className="bg-muted/10 relative flex size-[clamp(4rem,8vw,6rem)] shrink-0 items-center justify-center overflow-hidden rounded-md">
             {build.item.imageName ? (
               <img
                 src={getImageUrl(build.item.imageName)}
@@ -492,7 +485,7 @@ function ViewerHeader({
             ) : null}
           </div>
           <div className="flex min-w-0 flex-col justify-center gap-2">
-            <h1 className="truncate text-xl leading-tight font-bold tracking-tight md:text-2xl">
+            <h1 className="truncate text-[clamp(1.25rem,2vw,1.5rem)] leading-tight font-bold tracking-tight">
               {build.name}
             </h1>
             <span className="text-muted-foreground text-sm">
@@ -748,7 +741,7 @@ function BuildNotFound() {
   return (
     <div className="relative flex min-h-screen flex-col">
       <Header />
-      <main className="container flex flex-1 flex-col items-center justify-center gap-3 py-12">
+      <main className="wrap flex flex-1 flex-col items-center justify-center gap-3 py-12">
         <h1 className="text-2xl font-semibold">Build not found</h1>
         <p className="text-muted-foreground">
           This build may have been deleted or is private.

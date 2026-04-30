@@ -77,7 +77,6 @@ export function ModGrid({
   onEditRiven,
   arcaneRow,
   readOnly = false,
-  embed = false,
 }: {
   item: DetailItem
   category: BrowseCategory
@@ -87,26 +86,12 @@ export function ModGrid({
   onEditRiven?: (id: SlotId) => void
   arcaneRow?: React.ReactNode
   readOnly?: boolean
-  /** When true, force the dense single-row mod layout (4 mods per row,
-   *  ignoring container queries) for the wiki embed. */
-  embed?: boolean
 }) {
   const auraSlotCount = getAuraSlotCount(category, item)
   const showExilus = hasExilusSlot(category)
-  const slotsPerRow = isCompanion ? 5 : 4
 
   const auraPolarities = getAuraPolarities(item, auraSlotCount)
   const polarities = item.polarities ?? []
-
-  const normalRows: number[][] = []
-  for (let i = 0; i < normalSlotCount; i += slotsPerRow) {
-    normalRows.push(
-      Array.from(
-        { length: Math.min(slotsPerRow, normalSlotCount - i) },
-        (_, j) => i + j,
-      ),
-    )
-  }
 
   const slotProps = (id: SlotId, innate?: Polarity) => {
     const placed = slots.placed[id]
@@ -131,20 +116,17 @@ export function ModGrid({
     }
   }
 
+  // Auto-arranging mod grid. The aura/exilus row stays centered at the top.
+  // Below it, normal mods flow into a flex-wrap wrap whose max-width
+  // steps up at wrap-query breakpoints, giving 2 → 3 → 4 (→ 5 for
+  // companions) columns. Slots are a fixed 184px each (see mod-slot.tsx);
+  // the column count is what changes, not the slot size. Buffers between
+  // breakpoints leave breathing room when resizing inside a given column
+  // count before the next reflow.
   return (
-    <div
-      className={cn(
-        "flex flex-col gap-6 @min-[816px]/loadout:gap-4",
-        embed && "gap-4",
-      )}
-    >
+    <div className="flex flex-col gap-6">
       {(auraSlotCount > 0 || showExilus) && (
-        <div
-          className={cn(
-            "flex w-full justify-center gap-2 @min-[816px]/loadout:gap-4",
-            embed && "gap-4",
-          )}
-        >
+        <div className="flex w-full flex-wrap justify-center gap-4">
           {auraSlotCount > 0 && (
             <ModSlot
               kind="aura"
@@ -168,43 +150,22 @@ export function ModGrid({
         </div>
       )}
 
-      {isCompanion ? (
-        <div
-          className={cn(
-            "grid grid-cols-[repeat(2,minmax(0,184px))] justify-center gap-x-2 gap-y-6 @min-[1016px]/loadout:mx-auto @min-[1016px]/loadout:w-fit @min-[1016px]/loadout:grid-cols-5 @min-[1016px]/loadout:gap-4",
-            embed &&
-              "grid-cols-3 gap-3 @min-[520px]/loadout:grid-cols-5 @min-[520px]/loadout:gap-4",
-          )}
-        >
-          {Array.from({ length: normalSlotCount }, (_, i) => {
-            const id: SlotId = `normal-${i}`
-            return (
-              <ModSlot key={i} {...slotProps(id, toPolarity(polarities[i]))} />
-            )
-          })}
-        </div>
-      ) : (
-        normalRows.map((row, rowIdx) => (
-          <div
-            key={rowIdx}
-            className={cn(
-              "grid grid-cols-[repeat(2,minmax(0,184px))] justify-center gap-x-2 gap-y-6 @min-[816px]/loadout:flex @min-[816px]/loadout:gap-4",
-              embed &&
-                "grid grid-cols-2 gap-3 @min-[520px]/loadout:grid-cols-4 @min-[520px]/loadout:gap-4",
-            )}
-          >
-            {row.map((i) => {
-              const id: SlotId = `normal-${i}`
-              return (
-                <ModSlot
-                  key={i}
-                  {...slotProps(id, toPolarity(polarities[i]))}
-                />
-              )
-            })}
-          </div>
-        ))
-      )}
+      <div
+        className={cn(
+          // Fixed upper bound = max column count × card width + gaps.
+          // A single max-width means the grid never snaps wider — flex-wrap
+          // handles 2→3→4 reflow within the same boundary.
+          "mx-auto flex flex-wrap justify-center gap-x-4 gap-y-6",
+          isCompanion ? "max-w-[984px]" : "max-w-[784px]",
+        )}
+      >
+        {Array.from({ length: normalSlotCount }, (_, i) => {
+          const id: SlotId = `normal-${i}`
+          return (
+            <ModSlot key={i} {...slotProps(id, toPolarity(polarities[i]))} />
+          )
+        })}
+      </div>
 
       {arcaneRow}
     </div>

@@ -46,7 +46,7 @@ function FooterLinkSection({
 export function Footer() {
   return (
     <footer className="bg-background border-t">
-      <div className="container py-10">
+      <div className="wrap py-10">
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}
           <div className="flex flex-col gap-4">

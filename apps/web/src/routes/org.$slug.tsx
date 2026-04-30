@@ -47,7 +47,7 @@ function OrgPage() {
     <div className="relative flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        <div className="container flex flex-col gap-6 py-6">
+        <div className="wrap flex flex-col gap-6 py-6">
           <Suspense
             fallback={
               <p className="text-muted-foreground">Loading organization…</p>
@@ -221,7 +221,7 @@ function OrgNotFound() {
   return (
     <div className="relative flex min-h-screen flex-col">
       <Header />
-      <main className="container flex flex-1 flex-col items-center justify-center gap-3 py-12">
+      <main className="wrap flex flex-1 flex-col items-center justify-center gap-3 py-12">
         <h1 className="text-2xl font-semibold">Organization not found</h1>
         <p className="text-muted-foreground">
           This organization may not exist or has been deleted.

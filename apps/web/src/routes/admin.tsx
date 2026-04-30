@@ -91,7 +91,7 @@ function AdminPage() {
     <div className="relative flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        <div className="container flex max-w-5xl flex-col gap-6 py-6">
+        <div className="wrap flex max-w-5xl flex-col gap-6 py-6">
           <div>
             <h1 className="text-2xl font-bold">Admin Panel</h1>
             <p className="text-muted-foreground text-sm">

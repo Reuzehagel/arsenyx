@@ -185,10 +185,17 @@ body {
   }
 }
 
-@layer components {
-  .container {
-    @apply mx-auto w-full max-w-screen-xl px-4 sm:px-6 lg:px-8;
-  }
+/* Site-wide centred wrapper with fluid horizontal padding.
+ * Named "wrap" instead of "container" to avoid Tailwind v4's built-in
+ * container utility, which injects its own responsive max-width media
+ * queries that always win the cascade and cause hard width snaps.
+ * Single-unit vw middle value avoids the mixed-unit calc() that PostCSS
+ * strips during minification, which caused silent padding loss. */
+@utility wrap {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 1534px;
+  padding-inline: 16px;
 }
 
 /* Virtualization: skip layout/paint for off-screen search grid items */

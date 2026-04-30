@@ -42,7 +42,7 @@ function SignInPage() {
   return (
     <div className="relative flex min-h-screen flex-col">
       <Header />
-      <main className="container flex flex-1 items-center justify-center py-12">
+      <main className="wrap flex flex-1 items-center justify-center py-12">
         <div className="flex w-full max-w-sm flex-col gap-6 rounded-xl border p-8">
           <div className="flex flex-col gap-2 text-center">
             <h1 className="text-2xl font-bold tracking-tight">

@@ -144,7 +144,7 @@ function CreatePage() {
     <div className="relative flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        <div className="container px-4 py-4 md:py-6">
+        <div className="wrap px-4 py-4 md:py-6">
           <Suspense
             fallback={<p className="text-muted-foreground">Loading item…</p>}
           >

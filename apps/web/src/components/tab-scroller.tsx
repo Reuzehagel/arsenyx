@@ -13,9 +13,9 @@ const MASK_IMAGES: Record<Exclude<Edge, "none">, string> = {
  * Horizontal scroll wrapper for tab lists that are wider than narrow
  * viewports. Handles:
  *
- *  - edge-to-edge scroll under the page's 16px container padding (via `-mx-4`)
+ *  - edge-to-edge scroll under the page's 16px wrap padding (via `-mx-4`)
  *  - 16px leading/trailing gap inside the scroll area (via an inner `w-max`
- *    box), since `padding-right` on an `overflow-x` container isn't counted
+ *    box), since `padding-right` on an `overflow-x` wrap isn't counted
  *    in most browsers' scroll-end calculation
  *  - scrolling the active tab into view when `activeKey` changes
  *  - a fade mask on the edge that has hidden content (right when more lives

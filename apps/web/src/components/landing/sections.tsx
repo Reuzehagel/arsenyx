@@ -23,7 +23,7 @@ export function HeroSection() {
     <section className="relative overflow-hidden border-b">
       <HeroBackground />
 
-      <div className="container py-24 md:py-32">
+      <div className="wrap py-24 md:py-32">
         <div className="mx-auto flex max-w-3xl flex-col gap-8 text-center">
           <StatusBadge text={badge} />
 
@@ -77,7 +77,7 @@ export function HeroSection() {
 export function FeaturesSection() {
   return (
     <section className="bg-muted/30 border-b">
-      <div className="container py-24">
+      <div className="wrap py-24">
         <div className="mx-auto mb-16 flex max-w-3xl flex-col gap-4 text-center">
           <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">
             {FEATURES_SECTION.headline}
@@ -102,7 +102,7 @@ export function CTASection() {
 
   return (
     <section className="border-b">
-      <div className="container py-24">
+      <div className="wrap py-24">
         <div className="mx-auto flex max-w-3xl flex-col gap-8 text-center">
           <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">
             {headline}

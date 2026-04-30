@@ -79,7 +79,7 @@ function BrowsePage() {
     <div className="relative flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        <div className="container flex flex-col gap-6 py-6">
+        <div className="wrap flex flex-col gap-6 py-6">
           <div className="flex flex-col gap-2">
             <h1 className="text-3xl font-bold tracking-tight">Browse Items</h1>
             <p className="text-muted-foreground">

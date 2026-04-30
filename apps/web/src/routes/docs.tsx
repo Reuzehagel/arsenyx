@@ -87,7 +87,7 @@ function DocsPage() {
   return (
     <div className="relative flex min-h-screen flex-col">
       <Header />
-      <main className="container max-w-3xl flex-1 py-12">
+      <main className="wrap max-w-3xl flex-1 py-12">
         <article className="prose prose-neutral dark:prose-invert max-w-none">
           <h1>Documentation</h1>
           <p className="lead">

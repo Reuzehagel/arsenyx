@@ -62,7 +62,7 @@ function OrgSettingsPage() {
     <div className="relative flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        <div className="container flex max-w-3xl flex-col gap-6 py-6">
+        <div className="wrap flex max-w-3xl flex-col gap-6 py-6">
           <Suspense
             fallback={<p className="text-muted-foreground">Loading…</p>}
           >

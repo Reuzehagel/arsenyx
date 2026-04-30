@@ -39,7 +39,7 @@ function ItemDetailPage() {
     <div className="relative flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        <div className="container flex flex-col gap-8 py-6">
+        <div className="wrap flex flex-col gap-8 py-6">
           <Suspense
             fallback={<p className="text-muted-foreground">Loading item…</p>}
           >
@@ -245,7 +245,7 @@ function ItemNotFound() {
     <div className="relative flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        <div className="container flex flex-col items-center gap-4 py-20 text-center">
+        <div className="wrap flex flex-col items-center gap-4 py-20 text-center">
           <h1 className="text-3xl font-bold tracking-tight">Item not found</h1>
           <p className="text-muted-foreground">
             We couldn't find an item at that path.
