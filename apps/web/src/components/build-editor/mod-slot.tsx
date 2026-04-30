@@ -72,6 +72,10 @@ export function ModSlot({
   const effective = effectivePolarity(slotPolarity, formaPolarity)
   const [hovered, setHovered] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
+  // The picker can only be open while this slot is the selected one. Tying
+  // open-state to `selected` lets arrow-key nav implicitly close the popover
+  // on the previously-clicked slot without a separate close effect.
+  const popoverOpen = pickerOpen && !!selected
 
   useRankHotkey({
     enabled: !readOnly && !!mod && hovered && !!onRankChange,
@@ -87,26 +91,28 @@ export function ModSlot({
   }
 
   return (
-    <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+    <Popover open={popoverOpen} onOpenChange={setPickerOpen}>
       <PopoverTrigger
         nativeButton={false}
-        render={<div />}
+        // Slots are driven by arrow-key navigation (window-scoped, see
+        // use-keyboard-nav.ts), not by Tab traversal. Keeping them out of the
+        // tab order avoids the browser focus ring visually enlarging the
+        // focused slot relative to its neighbors.
+        render={<div tabIndex={-1} />}
         data-build-slot
         onClick={readOnly ? undefined : onClick}
         onContextMenu={handleContextMenu}
         onMouseEnter={readOnly ? undefined : () => setHovered(true)}
         onMouseLeave={readOnly ? undefined : () => setHovered(false)}
         className={cn(
-          // Identical dimensions for empty and filled states so a row's
-          // height/width never shifts based on how many mods are placed.
-          // Sizes respond to the loadout container (@container/loadout on the
-          // grid wrapper), not the viewport — so the sidebar's width never
-          // squeezes the grid into overflow. ModCard itself is fixed 184px
-          // (see mod-card-config.ts DISPLAY_SIZE), so there's no intermediate
-          // slot size — either we have room for a 184px card, or we fall back
-          // to the 2-col stacked layout.
+          // Sized via @container/loadout on the parent grid (not the viewport),
+          // so the sidebar's width never squeezes the grid into overflow.
           "group relative flex h-[80px] w-full max-w-[184px] flex-col items-center justify-center transition-colors",
           "@min-[816px]/loadout:h-[100px] @min-[816px]/loadout:w-[184px]",
+          // `selected` is the single source of visual truth; suppress the
+          // default focus ring so a clicked-then-arrowed-away slot doesn't
+          // keep highlighting alongside the new selection.
+          "outline-none",
           !readOnly && "cursor-pointer",
           !mod && "rounded-md border",
           !mod &&
@@ -123,7 +129,7 @@ export function ModSlot({
             <ModCard
               mod={mod}
               rank={rank}
-              disableHover={pickerOpen}
+              disableHover={popoverOpen}
               drainOverride={
                 kind === "aura"
                   ? auraBonusForMod(mod, rank, effective)

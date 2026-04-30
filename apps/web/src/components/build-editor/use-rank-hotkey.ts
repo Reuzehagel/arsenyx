@@ -1,9 +1,9 @@
-import { useEffect } from "react"
+import { useHotkey } from "@/lib/hotkeys"
 
 /**
  * Listen for `-`/`+` while `enabled`, firing `onDelta(-1)` or `onDelta(1)`.
- * Ignores keypresses inside editable elements so the rank doesn't shift
- * while the user is typing in a search box.
+ * Both shifted (`_`/`+`) and unshifted (`-`/`=`) variants are accepted so
+ * the same physical key works regardless of whether shift is held.
  */
 export function useRankHotkey({
   enabled,
@@ -12,23 +12,13 @@ export function useRankHotkey({
   enabled: boolean
   onDelta: (delta: -1 | 1) => void
 }) {
-  useEffect(() => {
-    if (!enabled) return
-    const handler = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLElement) {
-        const tag = e.target.tagName
-        if (tag === "INPUT" || tag === "TEXTAREA" || e.target.isContentEditable)
-          return
-      }
-      if (e.key === "-" || e.key === "_") {
-        e.preventDefault()
-        onDelta(-1)
-      } else if (e.key === "=" || e.key === "+") {
-        e.preventDefault()
-        onDelta(1)
-      }
-    }
-    window.addEventListener("keydown", handler)
-    return () => window.removeEventListener("keydown", handler)
-  }, [enabled, onDelta])
+  // Function matcher rather than array form: `+` only fires with shift held,
+  // and the string-spec parser enforces shift state strictly.
+  useHotkey(
+    (e) => RANK_KEYS.has(e.key),
+    (e) => onDelta(e.key === "-" || e.key === "_" ? -1 : 1),
+    { enabled },
+  )
 }
+
+const RANK_KEYS = new Set(["-", "_", "=", "+"])

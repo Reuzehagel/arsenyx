@@ -1,7 +1,7 @@
 import { hasIncarnon } from "@arsenyx/shared/warframe/incarnon-data"
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { Suspense, useDeferredValue, useEffect, useMemo, useRef } from "react"
+import { Suspense, useDeferredValue, useMemo, useRef } from "react"
 
 import { CategoryTabs } from "@/components/browse/category-tabs"
 import {
@@ -22,6 +22,7 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group"
 import { Kbd } from "@/components/ui/kbd"
+import { useHotkey } from "@/lib/hotkeys"
 import { itemsIndexQuery } from "@/lib/items-index-query"
 import {
   isValidCategory,
@@ -118,24 +119,10 @@ function BrowseContent() {
   const deferredQ = useDeferredValue(q)
   const searchRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key !== "/") return
-      const target = e.target as HTMLElement | null
-      if (
-        target?.tagName === "INPUT" ||
-        target?.tagName === "TEXTAREA" ||
-        target?.isContentEditable
-      ) {
-        return
-      }
-      e.preventDefault()
-      searchRef.current?.focus()
-      searchRef.current?.select()
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [])
+  useHotkey("/", () => {
+    searchRef.current?.focus()
+    searchRef.current?.select()
+  })
 
   const items = useMemo(() => data[category] ?? [], [data, category])
 

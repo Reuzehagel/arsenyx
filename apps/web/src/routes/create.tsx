@@ -54,6 +54,8 @@ import {
   hasExilusSlot,
   ItemSidebar,
   ItemSidebarPopover,
+  KeyboardHintBanner,
+  KeyboardHintsStrip,
   ModGrid,
   ModSearchGrid,
   PublishDialog,
@@ -82,6 +84,7 @@ import {
 import { buildQuery, type SavedBuildData } from "@/lib/build-query"
 import { API_URL } from "@/lib/constants"
 import { helminthQuery, type HelminthAbility } from "@/lib/helminth-query"
+import { useHotkey } from "@/lib/hotkeys"
 import { consumeDraft } from "@/lib/import-draft"
 import { itemQuery } from "@/lib/item-query"
 import { modsQuery } from "@/lib/mods-query"
@@ -89,7 +92,6 @@ import { myOrgsQuery } from "@/lib/org-query"
 import { padShards, type PlacedShard } from "@/lib/shards"
 import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard"
 import { formatVisibility } from "@/lib/user-display"
-import { isEditableTarget } from "@/lib/utils"
 import {
   CATEGORIES,
   getImageUrl,
@@ -232,18 +234,17 @@ function EditorShell() {
 
   // Escape deselects the active mod/arcane slot, mirroring the
   // click-outside behavior. Skip when a dialog/popover is open (base-ui
-  // closes those via its own Escape handler) or when typing in a field.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return
-      if (isEditableTarget(e.target)) return
+  // closes those via its own Escape handler) or when typing in a field
+  // (useHotkey's editable-target guard handles the latter).
+  useHotkey(
+    "Escape",
+    () => {
       if (document.querySelector("[data-state='open'][role='dialog']")) return
       slots.select(null)
       arcanes.select(null)
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [slots, arcanes])
+    },
+    { preventDefault: false },
+  )
 
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -580,6 +581,7 @@ function EditorShell() {
       />
 
       <div className="flex flex-col gap-4">
+        <KeyboardHintBanner />
         <div className="flex flex-col gap-4 xl:relative xl:block">
           <div className="flex w-full flex-col sm:hidden xl:absolute xl:top-0 xl:bottom-0 xl:left-0 xl:flex xl:w-[260px]">
             <ItemSidebar
@@ -656,6 +658,7 @@ function EditorShell() {
                 ) : undefined
               }
             />
+            <KeyboardHintsStrip />
           </div>
         </div>
 
