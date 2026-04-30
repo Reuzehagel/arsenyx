@@ -45,7 +45,7 @@ export async function verifyPat(c: Context): Promise<PatAuthResult> {
     expiresAt: Date | null
   }>(
     `SELECT id, "userId", scopes, "isActive", "expiresAt"
-     FROM "ApiKey"
+     FROM api_keys
      WHERE key = $1
      LIMIT 1`,
     [hashApiKey(token)],

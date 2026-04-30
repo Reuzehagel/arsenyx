@@ -4,6 +4,7 @@ import { cors } from "hono/cors"
 import { auth } from "./auth"
 import { withPrisma } from "./db"
 import { webOrigins } from "./env"
+import { banGuard, originGuard } from "./middleware/security"
 import { isPrismaNotFound } from "./routes/_admin"
 import { admin } from "./routes/admin"
 import { builds } from "./routes/builds"
@@ -34,6 +35,15 @@ app.onError((err, c) => {
 })
 
 app.all("/auth/*", (c) => auth.handler(c.req.raw))
+
+// Origin/ban guards on session-cookie routes only — Better Auth handles its
+// own CSRF on /auth/*, and /api/v1 is the PAT-authed surface.
+app.use("/builds/*", originGuard, banGuard)
+app.use("/imports/*", originGuard, banGuard)
+app.use("/me/*", originGuard, banGuard)
+app.use("/orgs/*", originGuard, banGuard)
+app.use("/users/*", originGuard, banGuard)
+app.use("/admin/*", originGuard, banGuard)
 
 app.route("/admin", admin)
 app.route("/builds", builds)
