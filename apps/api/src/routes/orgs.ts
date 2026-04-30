@@ -1,9 +1,9 @@
-import { Hono } from "hono"
+import { Hono, type Context } from "hono"
 
-import { auth } from "../auth"
 import { prisma } from "../db"
 import { Prisma } from "../generated/prisma/client"
 import { BuildVisibility, OrgRole } from "../generated/prisma/enums"
+import { getSession } from "../lib/session"
 import { parseListQuery, runList } from "./_build-list"
 import { parsePage, trimQ } from "./_query"
 
@@ -36,10 +36,10 @@ function hasPrismaCode(err: unknown, code: string): boolean {
   )
 }
 
-async function requireSessionUser(c: {
-  req: { raw: Request }
-}): Promise<{ id: string } | Response> {
-  const session = await auth.api.getSession({ headers: c.req.raw.headers })
+async function requireSessionUser(
+  c: Context,
+): Promise<{ id: string } | Response> {
+  const session = await getSession(c)
   if (!session?.user)
     return new Response(JSON.stringify({ error: "unauthorized" }), {
       status: 401,
@@ -206,7 +206,7 @@ orgs.get("/:slug", async (c) => {
   const slug = c.req.param("slug").toLowerCase()
 
   const [session, org] = await Promise.all([
-    auth.api.getSession({ headers: c.req.raw.headers }),
+    getSession(c),
     prisma.organization.findUnique({
       where: { slug },
       select: {

@@ -1,6 +1,5 @@
-import { Hono } from "hono"
+import { Hono, type Context } from "hono"
 
-import { auth } from "../auth"
 import { prisma } from "../db"
 import {
   ALL_API_KEY_SCOPES,
@@ -11,6 +10,7 @@ import {
   PRIVILEGED_API_KEY_SCOPES,
   revokeApiKey,
 } from "../lib/api-keys"
+import { getSession } from "../lib/session"
 import { getUserRoles } from "./_admin"
 
 const KNOWN_SCOPES = new Set<string>(ALL_API_KEY_SCOPES)
@@ -20,8 +20,8 @@ export const me = new Hono()
 
 const MAX_API_KEY_NAME = 100
 
-async function requireSession(req: Request) {
-  const session = await auth.api.getSession({ headers: req.headers })
+async function requireSession(c: Context) {
+  const session = await getSession(c)
   if (!session?.user) return null
   return session.user
 }
@@ -41,7 +41,7 @@ function serializeApiKey(k: ApiKeyListItem) {
 }
 
 me.get("/builds/export", async (c) => {
-  const user = await requireSession(c.req.raw)
+  const user = await requireSession(c)
   if (!user) return c.json({ error: "unauthorized" }, 401)
 
   const builds = await prisma.build.findMany({
@@ -85,7 +85,7 @@ me.get("/builds/export", async (c) => {
 })
 
 me.get("/api-keys", async (c) => {
-  const user = await requireSession(c.req.raw)
+  const user = await requireSession(c)
   if (!user) return c.json({ error: "unauthorized" }, 401)
 
   const keys = await listApiKeysForUser(user.id)
@@ -93,7 +93,7 @@ me.get("/api-keys", async (c) => {
 })
 
 me.post("/api-keys", async (c) => {
-  const user = await requireSession(c.req.raw)
+  const user = await requireSession(c)
   if (!user) return c.json({ error: "unauthorized" }, 401)
 
   let body: unknown
@@ -161,7 +161,7 @@ me.post("/api-keys", async (c) => {
 })
 
 me.delete("/api-keys/:id", async (c) => {
-  const user = await requireSession(c.req.raw)
+  const user = await requireSession(c)
   if (!user) return c.json({ error: "unauthorized" }, 401)
 
   const ok = await revokeApiKey(user.id, c.req.param("id"))

@@ -388,7 +388,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Boar": {
     source: "Steel Path Circuit",
-    genesisImage: "boar-incarnon-genesis-dc5057673e.png",
+    genesisImage: "BoarIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -424,7 +424,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Boltor": {
     source: "Steel Path Circuit",
-    genesisImage: "boltor-incarnon-genesis-48cb27d044.png",
+    genesisImage: "BoltorIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -460,7 +460,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Braton": {
     source: "Steel Path Circuit",
-    genesisImage: "braton-incarnon-genesis-6e1b9f2706.png",
+    genesisImage: "BratonIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -496,7 +496,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Burston": {
     source: "Steel Path Circuit",
-    genesisImage: "burston-incarnon-genesis-3bd03393ef.png",
+    genesisImage: "BurstonIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -532,7 +532,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Dera": {
     source: "Steel Path Circuit",
-    genesisImage: "dera-incarnon-genesis-8e5a4b4202.png",
+    genesisImage: "DeraIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -568,7 +568,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Dread": {
     source: "Steel Path Circuit",
-    genesisImage: "dread-incarnon-genesis-f426f4836e.png",
+    genesisImage: "DreadIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -604,7 +604,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Gorgon": {
     source: "Steel Path Circuit",
-    genesisImage: "gorgon-incarnon-genesis-6b6d3afc74.png",
+    genesisImage: "GorgonIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -640,7 +640,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Latron": {
     source: "Steel Path Circuit",
-    genesisImage: "latron-incarnon-genesis-fdb0e32d10.png",
+    genesisImage: "LatronIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -676,7 +676,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Miter": {
     source: "Steel Path Circuit",
-    genesisImage: "miter-incarnon-genesis-0132066e5b.png",
+    genesisImage: "MiterIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -712,7 +712,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Paris": {
     source: "Steel Path Circuit",
-    genesisImage: "paris-incarnon-genesis-fc565f73ce.png",
+    genesisImage: "ParisIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -748,7 +748,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Soma": {
     source: "Steel Path Circuit",
-    genesisImage: "soma-incarnon-genesis-980f2c3695.png",
+    genesisImage: "SomaIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -784,7 +784,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Strun": {
     source: "Steel Path Circuit",
-    genesisImage: "strun-incarnon-genesis-dd91e0dde3.png",
+    genesisImage: "StrunIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -820,7 +820,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Sybaris": {
     source: "Steel Path Circuit",
-    genesisImage: "sybaris-incarnon-genesis-6e569b3afa.png",
+    genesisImage: "SybarisIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -856,7 +856,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Torid": {
     source: "Steel Path Circuit",
-    genesisImage: "torid-incarnon-genesis-ac933e5824.png",
+    genesisImage: "ToridIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -894,7 +894,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Angstrum": {
     source: "Steel Path Circuit",
-    genesisImage: "angstrum-incarnon-genesis-c193a62744.png",
+    genesisImage: "AngstrumIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -930,7 +930,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Atomos": {
     source: "Steel Path Circuit",
-    genesisImage: "atomos-incarnon-genesis-8e653f4129.png",
+    genesisImage: "AtomosIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -966,7 +966,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Bronco": {
     source: "Steel Path Circuit",
-    genesisImage: "bronco-incarnon-genesis-30aedff429.png",
+    genesisImage: "BroncoIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1002,7 +1002,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Cestra": {
     source: "Steel Path Circuit",
-    genesisImage: "cestra-incarnon-genesis-afa2e5eded.png",
+    genesisImage: "CestraIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1038,7 +1038,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Despair": {
     source: "Steel Path Circuit",
-    genesisImage: "despair-incarnon-genesis-3edd9f35c5.png",
+    genesisImage: "DespairIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1074,7 +1074,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Dual Toxocyst": {
     source: "Steel Path Circuit",
-    genesisImage: "dual-toxocyst-incarnon-genesis-232806645f.png",
+    genesisImage: "DualToxocystIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1110,7 +1110,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Furis": {
     source: "Steel Path Circuit",
-    genesisImage: "furis-incarnon-genesis-0619c9b272.png",
+    genesisImage: "FurisIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1146,7 +1146,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Gammacor": {
     source: "Steel Path Circuit",
-    genesisImage: "gammacor-incarnon-genesis-d780652d4e.png",
+    genesisImage: "GammacorIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1182,7 +1182,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Kunai": {
     source: "Steel Path Circuit",
-    genesisImage: "kunai-incarnon-genesis-4d96c8fa08.png",
+    genesisImage: "KunaiIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1218,7 +1218,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Lato": {
     source: "Steel Path Circuit",
-    genesisImage: "lato-incarnon-genesis-e6b8e7103a.png",
+    genesisImage: "LatoIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1254,7 +1254,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Lex": {
     source: "Steel Path Circuit",
-    genesisImage: "lex-incarnon-genesis-1b0f6c93ca.png",
+    genesisImage: "LexIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1290,7 +1290,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Sicarus": {
     source: "Steel Path Circuit",
-    genesisImage: "sicarus-incarnon-genesis-d76130686e.png",
+    genesisImage: "SicarusIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1326,7 +1326,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Vasto": {
     source: "Steel Path Circuit",
-    genesisImage: "vasto-incarnon-genesis-d46bbc3760.png",
+    genesisImage: "VastoIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1362,7 +1362,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Zylok": {
     source: "Steel Path Circuit",
-    genesisImage: "zylok-incarnon-genesis-8a778d911c.png",
+    genesisImage: "ZylokPrimeIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1400,7 +1400,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Ack & Brunt": {
     source: "Steel Path Circuit",
-    genesisImage: "ack-&-brunt-incarnon-genesis-60193158a5.png",
+    genesisImage: "AckBruntIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1436,7 +1436,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Anku": {
     source: "Steel Path Circuit",
-    genesisImage: "anku-incarnon-genesis-2f1e9f5da5.png",
+    genesisImage: "AnkuIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1472,7 +1472,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Bo": {
     source: "Steel Path Circuit",
-    genesisImage: "bo-incarnon-genesis-4ed74cbfe6.png",
+    genesisImage: "BoIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1508,7 +1508,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Ceramic Dagger": {
     source: "Steel Path Circuit",
-    genesisImage: "ceramic-dagger-incarnon-genesis-96b24632f3.png",
+    genesisImage: "CeramicDaggerIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1544,7 +1544,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Dual Ichor": {
     source: "Steel Path Circuit",
-    genesisImage: "dual-ichor-incarnon-genesis-88ae97cf2c.png",
+    genesisImage: "DualIchorIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1580,7 +1580,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Furax": {
     source: "Steel Path Circuit",
-    genesisImage: "furax-incarnon-genesis-f7733b9520.png",
+    genesisImage: "FuraxIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1616,7 +1616,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Hate": {
     source: "Steel Path Circuit",
-    genesisImage: "hate-incarnon-genesis-d4a9290beb.png",
+    genesisImage: "HateIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1652,7 +1652,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Magistar": {
     source: "Steel Path Circuit",
-    genesisImage: "magistar-incarnon-genesis-f7effb894e.png",
+    genesisImage: "MagistarIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1688,7 +1688,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Nami Solo": {
     source: "Steel Path Circuit",
-    genesisImage: "nami-solo-incarnon-genesis-cb63f8bd81.png",
+    genesisImage: "NamiIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1724,7 +1724,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Okina": {
     source: "Steel Path Circuit",
-    genesisImage: "okina-incarnon-genesis-b577797b58.png",
+    genesisImage: "OkinaIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1760,7 +1760,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Sibear": {
     source: "Steel Path Circuit",
-    genesisImage: "sibear-incarnon-genesis-4bd3c74fbe.png",
+    genesisImage: "SibearIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1796,7 +1796,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Skana": {
     source: "Steel Path Circuit",
-    genesisImage: "skana-incarnon-genesis-f7b7beb3d7.png",
+    genesisImage: "SkanaIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,

@@ -496,13 +496,16 @@ function EditorShell() {
           summary: guideSummary.trim() || null,
           description: guideDescription.trim() || null,
         },
+        // itemImageName tracks the incarnon toggle (and any future image
+        // change), so update it on PATCH too. The identity fields
+        // (itemUniqueName / itemCategory / itemName) stay create-only.
+        itemImageName: displayImageName ?? null,
         ...(isUpdate
           ? {}
           : {
               itemUniqueName: item.uniqueName,
               itemCategory: category,
               itemName: item.name,
-              itemImageName: displayImageName ?? null,
             }),
       }
       const url = isUpdate

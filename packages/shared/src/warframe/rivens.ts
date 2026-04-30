@@ -1,7 +1,7 @@
 import type { BrowseCategory, Mod, Polarity } from "./types"
 
 export const RIVEN_UNIQUE_NAME = "/riven"
-export const RIVEN_IMAGE_NAME = "rifle-riven-mod-e05c5519f1.png"
+export const RIVEN_IMAGE_NAME = "OmegaMod.png"
 
 /** Polarities a riven mod can be rolled with. */
 export const RIVEN_POLARITIES: readonly Polarity[] = [

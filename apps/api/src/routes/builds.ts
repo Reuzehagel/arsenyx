@@ -3,12 +3,12 @@ import { Hono, type Context } from "hono"
 import { getCookie, setCookie } from "hono/cookie"
 import { customAlphabet } from "nanoid"
 
-import { auth } from "../auth"
 import { prisma } from "../db"
 import { Prisma } from "../generated/prisma/client"
 import { BuildVisibility } from "../generated/prisma/enums"
 import type { InputJsonValue } from "../generated/prisma/internal/prismaNamespace"
 import { invalidateBuildScreenshot } from "../lib/screenshot-invalidate"
+import { getSession } from "../lib/session"
 import { parseListQuery, runList } from "./_build-list"
 
 export const builds = new Hono()
@@ -56,7 +56,7 @@ function parseGuide(input: unknown) {
 }
 
 builds.post("/", async (c) => {
-  const session = await auth.api.getSession({ headers: c.req.raw.headers })
+  const session = await getSession(c)
   if (!session?.user) return c.json({ error: "unauthorized" }, 401)
 
   let body: unknown
@@ -157,7 +157,7 @@ builds.post("/", async (c) => {
 builds.patch("/:slug", async (c) => {
   const slug = c.req.param("slug")
 
-  const session = await auth.api.getSession({ headers: c.req.raw.headers })
+  const session = await getSession(c)
   if (!session?.user) return c.json({ error: "unauthorized" }, 401)
 
   const existing = await prisma.build.findUnique({
@@ -206,6 +206,14 @@ builds.patch("/:slug", async (c) => {
     data.buildData = b.buildData as InputJsonValue
     data.hasShards = hasShardsInBuildData(b.buildData)
   }
+  // The editor flips itemImageName when the incarnon toggle is applied;
+  // accept it on PATCH so the build-overview thumbnail tracks the change.
+  // Reject undefined deliberately — PATCH treats absent fields as "don't
+  // touch" and only string|null as "write this value". POST differs because
+  // every create needs a value, so it coerces non-string to null instead.
+  if (typeof b.itemImageName === "string" || b.itemImageName === null) {
+    data.itemImageName = b.itemImageName
+  }
 
   const guide = parseGuide(b.guide)
   if (guide) {
@@ -230,7 +238,7 @@ builds.patch("/:slug", async (c) => {
 builds.delete("/:slug", async (c) => {
   const slug = c.req.param("slug")
 
-  const session = await auth.api.getSession({ headers: c.req.raw.headers })
+  const session = await getSession(c)
   if (!session?.user) return c.json({ error: "unauthorized" }, 401)
 
   const existing = await prisma.build.findUnique({
@@ -248,7 +256,7 @@ builds.delete("/:slug", async (c) => {
 })
 
 builds.post("/:slug/fork", async (c) => {
-  const session = await auth.api.getSession({ headers: c.req.raw.headers })
+  const session = await getSession(c)
   if (!session?.user) return c.json({ error: "unauthorized" }, 401)
   const userId = session.user.id
 
@@ -321,7 +329,7 @@ builds.get("/", async (c) => {
 })
 
 builds.get("/mine", async (c) => {
-  const session = await auth.api.getSession({ headers: c.req.raw.headers })
+  const session = await getSession(c)
   if (!session?.user) return c.json({ error: "unauthorized" }, 401)
 
   const result = await runList({
@@ -334,7 +342,7 @@ builds.get("/mine", async (c) => {
 })
 
 builds.get("/bookmarks", async (c) => {
-  const session = await auth.api.getSession({ headers: c.req.raw.headers })
+  const session = await getSession(c)
   if (!session?.user) return c.json({ error: "unauthorized" }, 401)
   const userId = session.user.id
 
@@ -393,7 +401,7 @@ async function canViewerSeeBuild(
 }
 
 builds.post("/:slug/like", async (c) => {
-  const session = await auth.api.getSession({ headers: c.req.raw.headers })
+  const session = await getSession(c)
   if (!session?.user) return c.json({ error: "unauthorized" }, 401)
   const userId = session.user.id
 
@@ -426,7 +434,7 @@ builds.post("/:slug/like", async (c) => {
 })
 
 builds.delete("/:slug/like", async (c) => {
-  const session = await auth.api.getSession({ headers: c.req.raw.headers })
+  const session = await getSession(c)
   if (!session?.user) return c.json({ error: "unauthorized" }, 401)
   const userId = session.user.id
 
@@ -451,7 +459,7 @@ builds.delete("/:slug/like", async (c) => {
 })
 
 builds.post("/:slug/bookmark", async (c) => {
-  const session = await auth.api.getSession({ headers: c.req.raw.headers })
+  const session = await getSession(c)
   if (!session?.user) return c.json({ error: "unauthorized" }, 401)
   const userId = session.user.id
 
@@ -479,7 +487,7 @@ builds.post("/:slug/bookmark", async (c) => {
 })
 
 builds.delete("/:slug/bookmark", async (c) => {
-  const session = await auth.api.getSession({ headers: c.req.raw.headers })
+  const session = await getSession(c)
   if (!session?.user) return c.json({ error: "unauthorized" }, 401)
   const userId = session.user.id
 
@@ -507,7 +515,7 @@ builds.get("/:slug", async (c) => {
   const slug = c.req.param("slug")
 
   const [session, build] = await Promise.all([
-    auth.api.getSession({ headers: c.req.raw.headers }),
+    getSession(c),
     prisma.build.findUnique({
       where: { slug },
       include: {
