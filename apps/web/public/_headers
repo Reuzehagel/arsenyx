@@ -2,7 +2,7 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
-  X-Frame-Options: DENY
+  Content-Security-Policy: frame-ancestors 'self' https://profit-taker.com https://testing.profit-taker.com
   Strict-Transport-Security: max-age=31536000; includeSubDomains
 
 /index.html
