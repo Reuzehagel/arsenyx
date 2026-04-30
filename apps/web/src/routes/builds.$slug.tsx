@@ -31,6 +31,7 @@ import {
   getArcaneSlotCount,
   getAuraPolarities,
   getAuraSlotCount,
+  getExilusInnatePolarity,
   getMaxLevelCap,
   getNormalSlotCount,
   hasExilusSlot,
@@ -69,10 +70,11 @@ import {
 } from "@/lib/build-codec-adapter"
 import { buildQuery, type BuildDetail } from "@/lib/build-query"
 import { useToggleBookmark, useToggleLike } from "@/lib/build-social"
-import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard"
+import { helminthQuery, type HelminthAbility } from "@/lib/helminth-query"
 import { itemQuery } from "@/lib/item-query"
 import { modsQuery } from "@/lib/mods-query"
 import { padShards } from "@/lib/shards"
+import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard"
 import { authorName, formatVisibility } from "@/lib/user-display"
 import { cn } from "@/lib/utils"
 import {
@@ -103,11 +105,8 @@ export const Route = createFileRoute("/builds/$slug")({
     }
     const rawScale = num(s.scale)
     const scale =
-      rawScale !== undefined
-        ? Math.min(2, Math.max(0.1, rawScale))
-        : undefined
-    const bg =
-      typeof s.bg === "string" && s.bg.length > 0 ? s.bg : undefined
+      rawScale !== undefined ? Math.min(2, Math.max(0.1, rawScale)) : undefined
+    const bg = typeof s.bg === "string" && s.bg.length > 0 ? s.bg : undefined
     return {
       ...(embed && { embed }),
       ...(scale !== undefined && { scale }),
@@ -241,11 +240,19 @@ function BuildViewerBody(props: {
 }) {
   // New-format builds (SavedBuildData) carry full mod/arcane objects inline in
   // buildData, so we skip the ~1.35MB mods-all.json + arcanes-all.json fetches.
-  // Only legacy BuildState-shape builds need the catalogs for uniqueName lookup.
+  // Only legacy BuildState-shape builds need the catalogs for uniqueName lookup
+  // and image refresh (older wfcd hashed-slug filenames now 404 on the CDN).
   if (isLegacyBuildData(props.build.buildData)) {
     return <BuildViewerBodyWithCatalog {...props} />
   }
-  return <BuildViewerBodyInner {...props} allMods={[]} allArcanes={[]} />
+  return (
+    <BuildViewerBodyInner
+      {...props}
+      allMods={[]}
+      allArcanes={[]}
+      helminthAbilities={[]}
+    />
+  )
 }
 
 function BuildViewerBodyWithCatalog(props: {
@@ -256,11 +263,13 @@ function BuildViewerBodyWithCatalog(props: {
 }) {
   const { data: allArcanes } = useSuspenseQuery(arcanesQuery)
   const { data: allMods } = useSuspenseQuery(modsQuery)
+  const { data: helminthAbilities } = useSuspenseQuery(helminthQuery)
   return (
     <BuildViewerBodyInner
       {...props}
       allMods={allMods}
       allArcanes={allArcanes}
+      helminthAbilities={helminthAbilities}
     />
   )
 }
@@ -271,6 +280,7 @@ function BuildViewerBodyInner({
   itemSlug,
   allMods,
   allArcanes,
+  helminthAbilities,
   embed,
 }: {
   build: BuildDetail
@@ -278,13 +288,20 @@ function BuildViewerBodyInner({
   itemSlug: string
   allMods: Mod[]
   allArcanes: Arcane[]
+  helminthAbilities: HelminthAbility[]
   embed: boolean
 }) {
   const { data: item } = useSuspenseQuery(itemQuery(category, itemSlug))
 
   const saved = useMemo(
-    () => normalizeBuildData(build.buildData, allMods, allArcanes),
-    [build.buildData, allMods, allArcanes],
+    () =>
+      normalizeBuildData(
+        build.buildData,
+        allMods,
+        allArcanes,
+        helminthAbilities,
+      ),
+    [build.buildData, allMods, allArcanes, helminthAbilities],
   )
 
   const categoryLabel =
@@ -312,17 +329,20 @@ function BuildViewerBodyInner({
   const hasReactor = saved.hasReactor ?? true
   const zawComponents = saved.zawComponents
   const lichBonusElement = saved.lichBonusElement ?? null
+  const incarnonEnabled = saved.incarnonEnabled ?? false
+  const incarnonPerks = saved.incarnonPerks ?? []
 
   const auraInnates = useMemo(
     () => getAuraPolarities(item, auraSlotCount),
     [item, auraSlotCount],
   )
+  const exilusInnate = useMemo(() => getExilusInnatePolarity(item), [item])
   const normalInnates = useMemo(
     () =>
       Array.from({ length: normalSlotCount }, (_, i) =>
         toPolarity(item.polarities?.[i]),
       ),
-    [item.polarities],
+    [item.polarities, normalSlotCount],
   )
 
   const totalEndoCost = useMemo(
@@ -333,10 +353,11 @@ function BuildViewerBodyInner({
     () =>
       calculateFormaCount({
         auraInnates,
+        exilusInnate,
         normalInnates,
         formaPolarities: slots.formaPolarities,
       }),
-    [auraInnates, normalInnates, slots.formaPolarities],
+    [auraInnates, exilusInnate, normalInnates, slots.formaPolarities],
   )
   const capacity = useMemo(
     () =>
@@ -344,6 +365,7 @@ function BuildViewerBodyInner({
         placed: slots.placed,
         formaPolarities: slots.formaPolarities,
         auraInnates,
+        exilusInnate,
         normalInnates,
         hasReactor,
         maxLevelCap: getMaxLevelCap(category, item),
@@ -352,10 +374,11 @@ function BuildViewerBodyInner({
       slots.placed,
       slots.formaPolarities,
       auraInnates,
+      exilusInnate,
       normalInnates,
       hasReactor,
       category,
-      item.maxLevelCap,
+      item,
     ],
   )
 
@@ -374,6 +397,8 @@ function BuildViewerBodyInner({
     onSetHelminth: () => {},
     zawComponents,
     lichBonusElement,
+    incarnonEnabled,
+    incarnonPerks,
     placedMods: slots.placed,
     placedArcanes: arcanes.placed,
     readOnly: true as const,
@@ -396,10 +421,7 @@ function BuildViewerBodyInner({
       <div className="flex flex-col gap-4">
         <div
           data-screenshot-target
-          className={cn(
-            "flex flex-col gap-4",
-            !embed && "md:flex-row",
-          )}
+          className={cn("flex flex-col gap-4", !embed && "md:flex-row")}
         >
           {!embed && (
             <div className="flex w-full flex-col md:w-[260px] md:shrink-0">
@@ -409,10 +431,7 @@ function BuildViewerBodyInner({
 
           <div className="bg-card @container/loadout flex min-w-0 flex-1 flex-col gap-3 overflow-hidden rounded-lg border p-[clamp(0.5rem,1.5vw,1rem)]">
             {embed && (
-              <ItemSidebarPopover
-                {...sidebarProps}
-                className="self-start"
-              />
+              <ItemSidebarPopover {...sidebarProps} className="self-start" />
             )}
             <ModGrid
               item={item}

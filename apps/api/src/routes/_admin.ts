@@ -1,4 +1,6 @@
-import { auth } from "../auth"
+import type { Context } from "hono"
+
+import { getSession } from "../lib/session"
 
 export type AdminUser = { id: string; isAdmin: boolean }
 export type PrivilegedUser = {
@@ -15,18 +17,15 @@ export function isPrismaNotFound(err: unknown): boolean {
   )
 }
 
-export async function requireAdmin(c: {
-  req: { raw: Request }
-}): Promise<AdminUser | Response> {
-  const session = await auth.api.getSession({ headers: c.req.raw.headers })
+export async function requireAdmin(c: Context): Promise<AdminUser | Response> {
+  const session = await getSession(c)
   if (!session?.user) {
     return new Response(JSON.stringify({ error: "unauthorized" }), {
       status: 401,
       headers: { "Content-Type": "application/json" },
     })
   }
-  const isAdmin = (session.user as { isAdmin?: boolean }).isAdmin === true
-  if (!isAdmin) {
+  if (session.user.isAdmin !== true) {
     return new Response(JSON.stringify({ error: "forbidden" }), {
       status: 403,
       headers: { "Content-Type": "application/json" },

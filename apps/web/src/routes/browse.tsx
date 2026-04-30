@@ -1,6 +1,7 @@
+import { hasIncarnon } from "@arsenyx/shared/warframe/incarnon-data"
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { Suspense, useDeferredValue, useEffect, useMemo, useRef } from "react"
+import { Suspense, useDeferredValue, useMemo, useRef } from "react"
 
 import { CategoryTabs } from "@/components/browse/category-tabs"
 import {
@@ -21,6 +22,7 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group"
 import { Kbd } from "@/components/ui/kbd"
+import { useHotkey } from "@/lib/hotkeys"
 import { itemsIndexQuery } from "@/lib/items-index-query"
 import {
   isValidCategory,
@@ -35,6 +37,7 @@ type BrowseSearch = {
   mastery?: number
   prime?: boolean
   vaulted?: boolean
+  incarnon?: boolean
 }
 
 export const Route = createFileRoute("/browse")({
@@ -68,7 +71,9 @@ export const Route = createFileRoute("/browse")({
       search.vaulted === "hide"
         ? true
         : undefined
-    return { category, q, sort, mastery, prime, vaulted }
+    const incarnon =
+      search.incarnon === true || search.incarnon === "true" ? true : undefined
+    return { category, q, sort, mastery, prime, vaulted, incarnon }
   },
   loader: ({ context }) => context.queryClient.ensureQueryData(itemsIndexQuery),
   component: BrowsePage,
@@ -109,30 +114,17 @@ function BrowseContent() {
   const masteryMax = search.mastery ?? MASTERY_MAX
   const primeOnly = search.prime ?? false
   const hideVaulted = search.vaulted ?? false
+  const incarnonOnly = search.incarnon ?? false
 
   const deferredQ = useDeferredValue(q)
   const searchRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key !== "/") return
-      const target = e.target as HTMLElement | null
-      if (
-        target?.tagName === "INPUT" ||
-        target?.tagName === "TEXTAREA" ||
-        target?.isContentEditable
-      ) {
-        return
-      }
-      e.preventDefault()
-      searchRef.current?.focus()
-      searchRef.current?.select()
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [])
+  useHotkey("/", () => {
+    searchRef.current?.focus()
+    searchRef.current?.select()
+  })
 
-  const items = data[category] ?? []
+  const items = useMemo(() => data[category] ?? [], [data, category])
 
   const visible = useMemo(
     () =>
@@ -141,9 +133,10 @@ function BrowseContent() {
         masteryMax,
         primeOnly,
         hideVaulted,
+        incarnonOnly,
         sort,
       }),
-    [items, deferredQ, masteryMax, primeOnly, hideVaulted, sort],
+    [items, deferredQ, masteryMax, primeOnly, hideVaulted, incarnonOnly, sort],
   )
 
   return (
@@ -182,7 +175,7 @@ function BrowseContent() {
             }
           />
           <FilterDropdown
-            filters={{ masteryMax, primeOnly, hideVaulted }}
+            filters={{ masteryMax, primeOnly, hideVaulted, incarnonOnly }}
             onChange={(next) =>
               navigate({
                 search: (s) => ({
@@ -191,6 +184,7 @@ function BrowseContent() {
                     next.masteryMax < MASTERY_MAX ? next.masteryMax : undefined,
                   prime: next.primeOnly ? true : undefined,
                   vaulted: next.hideVaulted ? true : undefined,
+                  incarnon: next.incarnonOnly ? true : undefined,
                 }),
                 replace: true,
               })
@@ -235,12 +229,14 @@ function filterAndSort(
     masteryMax,
     primeOnly,
     hideVaulted,
+    incarnonOnly,
     sort,
   }: {
     deferredQ: string
     masteryMax: number
     primeOnly: boolean
     hideVaulted: boolean
+    incarnonOnly: boolean
     sort: SortOption
   },
 ): BrowseItem[] {
@@ -256,6 +252,7 @@ function filterAndSort(
       return false
     if (primeOnly && !item.isPrime) return false
     if (hideVaulted && item.vaulted) return false
+    if (incarnonOnly && !hasIncarnon(item.name)) return false
     return true
   })
 

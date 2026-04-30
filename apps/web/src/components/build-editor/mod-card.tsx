@@ -1,5 +1,5 @@
 import type { Mod } from "@arsenyx/shared/warframe/types"
-import { useEffect, useRef, useState } from "react"
+import { Fragment, useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 
 import {
@@ -35,18 +35,28 @@ function formatRivenValue(stat: string, v: number): string {
   return `${sign}${stripped}%`
 }
 
-function getModStats(mod: Mod, rank: number, setCount: number = 0): string[] {
+type StatLine =
+  | { kind: "plain"; text: string }
+  | { kind: "riven"; sign: "positive" | "negative"; value: string; stat: string }
+
+function getModStats(mod: Mod, rank: number, setCount: number = 0): StatLine[] {
   if (mod.rivenStats) {
-    const out: string[] = []
+    const out: StatLine[] = []
     for (const p of mod.rivenStats.positives ?? []) {
-      out.push(
-        `<span class="text-green-400">${formatRivenValue(p.stat, p.value)}</span> ${p.stat}`,
-      )
+      out.push({
+        kind: "riven",
+        sign: "positive",
+        value: formatRivenValue(p.stat, p.value),
+        stat: p.stat,
+      })
     }
     for (const n of mod.rivenStats.negatives ?? []) {
-      out.push(
-        `<span class="text-red-400">${formatRivenValue(n.stat, n.value)}</span> ${n.stat}`,
-      )
+      out.push({
+        kind: "riven",
+        sign: "negative",
+        value: formatRivenValue(n.stat, n.value),
+        stat: n.stat,
+      })
     }
     return out
   }
@@ -62,15 +72,52 @@ function getModStats(mod: Mod, rank: number, setCount: number = 0): string[] {
     let multiplier = 1.0
     if (setCount === 2) multiplier = isIntensify ? 1.25 : 1.3
     else if (setCount >= 3) multiplier = isIntensify ? 1.75 : 1.8
-    return baseStats.map((stat) =>
-      stat.replace(NUMBER_PATTERN, (match) => {
+    return baseStats.map((stat) => ({
+      kind: "plain" as const,
+      text: stat.replace(NUMBER_PATTERN, (match) => {
         const value = parseFloat(match)
         return parseFloat((value * multiplier).toFixed(1)).toString()
       }),
-    )
+    }))
   }
 
-  return baseStats
+  return baseStats.map((s) => ({ kind: "plain" as const, text: s }))
+}
+
+// Game data embeds inline tokens like <DT_ELECTRICITY_COLOR>, <LINE_SEPARATOR>,
+// <ENERGY>, etc. that the in-game UI uses for coloring/icons. We render plain
+// text, so normalize: <LINE_SEPARATOR> becomes a literal "\n" split point,
+// every other <…> token is stripped. The previous innerHTML path silently
+// dropped these as unknown custom elements; React would otherwise render them
+// as visible text.
+const INLINE_TAG_PATTERN = /<[A-Z_][A-Z0-9_]*>/g
+
+function stripInlineTags(text: string): string {
+  return text.replace(/<LINE_SEPARATOR>/g, "\\n").replace(INLINE_TAG_PATTERN, "")
+}
+
+function StatLineView({ line }: { line: StatLine }) {
+  if (line.kind === "riven") {
+    const color = line.sign === "positive" ? "text-green-400" : "text-red-400"
+    return (
+      <span>
+        <span className={color}>{line.value}</span> {line.stat}
+      </span>
+    )
+  }
+  // Game data stores literal "\n" (backslash-n) in stat strings, not real
+  // newlines — split on the escape sequence to render multi-line entries.
+  const parts = stripInlineTags(line.text).split(/\\n/g)
+  return (
+    <>
+      {parts.map((part, i) => (
+        <Fragment key={i}>
+          {i > 0 && <br />}
+          {part}
+        </Fragment>
+      ))}
+    </>
+  )
 }
 
 interface CompactProps {
@@ -183,9 +230,7 @@ function ExpandedModCard({
     mod.compatName ||
     (mod.type ? mod.type.replace(" Mod", "").toUpperCase() : "")
 
-  const formattedStats = stats
-    .map((s) => s.replace(/\\n/g, "<br/>"))
-    .join("<br/>")
+  const hasStats = stats.length > 0
 
   return (
     <ModCardFrame rarity={rarity} variant="expanded" vtPrefix={vtPrefix}>
@@ -232,13 +277,19 @@ function ExpandedModCard({
             {mod.name}
           </span>
 
-          {formattedStats && (
+          {hasStats && (
             <div className="mt-1 flex w-full flex-col items-center gap-1 px-1">
               <span
                 className="text-center text-[12px] leading-snug font-normal text-gray-300"
                 style={{ fontFamily: "Roboto, sans-serif" }}
-                dangerouslySetInnerHTML={{ __html: formattedStats }}
-              />
+              >
+                {stats.map((line, i) => (
+                  <Fragment key={i}>
+                    {i > 0 && <br />}
+                    <StatLineView line={line} />
+                  </Fragment>
+                ))}
+              </span>
             </div>
           )}
 

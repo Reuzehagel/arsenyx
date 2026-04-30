@@ -13,19 +13,12 @@ node_modules
 # testing
 /coverage
 
-# next.js
-.next/
-out/
-
 # vite
 /apps/*/dist
 /apps/*/.vite
 
 # tanstack router generated
 /apps/web/src/routeTree.gen.ts
-
-# production
-/build
 
 # misc
 .DS_Store
@@ -41,12 +34,8 @@ yarn-error.log*
 .env*
 !.env.example
 
-# vercel
-.vercel
-
 # typescript
 *.tsbuildinfo
-next-env.d.ts
 
 # wrangler
 .wrangler/
@@ -54,7 +43,6 @@ next-env.d.ts
 
 # prisma generated files
 /apps/api/src/generated/
-/src/generated/
 
 # claude temp files
 /.claude/

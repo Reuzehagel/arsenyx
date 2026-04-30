@@ -72,6 +72,10 @@ export function ModSlot({
   const effective = effectivePolarity(slotPolarity, formaPolarity)
   const [hovered, setHovered] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
+  // The picker can only be open while this slot is the selected one. Tying
+  // open-state to `selected` lets arrow-key nav implicitly close the popover
+  // on the previously-clicked slot without a separate close effect.
+  const popoverOpen = pickerOpen && !!selected
 
   useRankHotkey({
     enabled: !readOnly && !!mod && hovered && !!onRankChange,
@@ -87,10 +91,14 @@ export function ModSlot({
   }
 
   return (
-    <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+    <Popover open={popoverOpen} onOpenChange={setPickerOpen}>
       <PopoverTrigger
         nativeButton={false}
-        render={<div />}
+        // Slots are driven by arrow-key navigation (window-scoped, see
+        // use-keyboard-nav.ts), not by Tab traversal. Keeping them out of the
+        // tab order avoids the browser focus ring visually enlarging the
+        // focused slot relative to its neighbors.
+        render={<div tabIndex={-1} />}
         data-build-slot
         onClick={readOnly ? undefined : onClick}
         onContextMenu={handleContextMenu}
@@ -102,6 +110,10 @@ export function ModSlot({
           // the loadout wrap width — see mod-grid.tsx — so individual
           // slots stay a constant size and never need to shrink.
           "group relative flex h-[100px] w-[184px] flex-col items-center justify-center transition-colors",
+          // `selected` is the single source of visual truth; suppress the
+          // default focus ring so a clicked-then-arrowed-away slot doesn't
+          // keep highlighting alongside the new selection.
+          "outline-none",
           !readOnly && "cursor-pointer",
           !mod && "rounded-md border",
           !mod &&
@@ -118,7 +130,7 @@ export function ModSlot({
             <ModCard
               mod={mod}
               rank={rank}
-              disableHover={pickerOpen}
+              disableHover={popoverOpen}
               drainOverride={
                 kind === "aura"
                   ? auraBonusForMod(mod, rank, effective)
@@ -127,16 +139,19 @@ export function ModSlot({
               matchState={getMatchState(mod.polarity, effective)}
             />
             {!readOnly && (onRemove || (isRivenMod(mod) && onEditRiven)) && (
-              <div className="absolute -top-2 -right-2 z-30 flex flex-col gap-1 md:hidden">
+              // Mobile: always visible (no hover). Desktop: appear on slot
+              // hover via CSS group-hover (parent has `group`) so we don't
+              // re-render the slot for a purely visual transition.
+              <div className="absolute -top-2 -right-2 z-30 flex flex-col gap-1 md:opacity-0 md:transition-opacity md:group-hover:opacity-100">
                 {onRemove && (
-                  <MobileSlotButton
+                  <SlotIconButton
                     icon={X}
                     label="Remove mod"
                     onClick={onRemove}
                   />
                 )}
                 {isRivenMod(mod) && onEditRiven && (
-                  <MobileSlotButton
+                  <SlotIconButton
                     icon={Pencil}
                     label="Edit riven stats"
                     onClick={onEditRiven}
@@ -177,7 +192,7 @@ export function ModSlot({
   )
 }
 
-function MobileSlotButton({
+function SlotIconButton({
   icon: Icon,
   label,
   onClick,

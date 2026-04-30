@@ -1,5 +1,9 @@
 import { getArcanesForCategory } from "@arsenyx/shared/warframe/arcanes"
 import { decodeBuild, encodeBuild } from "@arsenyx/shared/warframe/build-codec"
+import {
+  getIncarnonGenesisImage,
+  isInnateIncarnon,
+} from "@arsenyx/shared/warframe/incarnon-data"
 import { getModsForItem } from "@arsenyx/shared/warframe/mods"
 import {
   createSyntheticRiven,
@@ -43,12 +47,15 @@ import {
   getArcaneSlotCount,
   getAuraPolarities,
   getAuraSlotCount,
+  getExilusInnatePolarity,
   getMaxLevelCap,
   getNormalSlotCount,
   GuideEditor,
   hasExilusSlot,
   ItemSidebar,
   ItemSidebarPopover,
+  KeyboardHintBanner,
+  KeyboardHintsStrip,
   ModGrid,
   ModSearchGrid,
   PublishDialog,
@@ -71,11 +78,13 @@ import { arcanesQuery } from "@/lib/arcanes-query"
 import { authClient } from "@/lib/auth-client"
 import {
   buildStateToSavedData,
+  normalizeBuildData,
   savedDataToBuildState,
 } from "@/lib/build-codec-adapter"
 import { buildQuery, type SavedBuildData } from "@/lib/build-query"
 import { API_URL } from "@/lib/constants"
 import { helminthQuery, type HelminthAbility } from "@/lib/helminth-query"
+import { useHotkey } from "@/lib/hotkeys"
 import { consumeDraft } from "@/lib/import-draft"
 import { itemQuery } from "@/lib/item-query"
 import { modsQuery } from "@/lib/mods-query"
@@ -83,7 +92,6 @@ import { myOrgsQuery } from "@/lib/org-query"
 import { padShards, type PlacedShard } from "@/lib/shards"
 import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard"
 import { formatVisibility } from "@/lib/user-display"
-import { isEditableTarget } from "@/lib/utils"
 import {
   CATEGORIES,
   getImageUrl,
@@ -172,6 +180,7 @@ function EditorShell() {
   })
   const { data: allMods } = useSuspenseQuery(modsQuery)
   const { data: allArcanes } = useSuspenseQuery(arcanesQuery)
+  const { data: helminthAbilities } = useSuspenseQuery(helminthQuery)
   const [draft] = useState(() => consumeDraft(draftId))
   const [shareHydrated] = useState(() => {
     if (!shareEncoded) return null
@@ -179,13 +188,25 @@ function EditorShell() {
     if (!decoded) return null
     return buildStateToSavedData(decoded, allMods, allArcanes)
   })
-  const savedData: SavedBuildData = draft
-    ? draft.data
-    : existingBuild
-      ? (existingBuild.buildData as SavedBuildData)
-      : shareHydrated
-        ? shareHydrated.data
-        : ({} as SavedBuildData)
+  const savedData: SavedBuildData = useMemo(() => {
+    if (draft) return draft.data
+    if (existingBuild)
+      return normalizeBuildData(
+        existingBuild.buildData,
+        allMods,
+        allArcanes,
+        helminthAbilities,
+      )
+    if (shareHydrated) return shareHydrated.data
+    return {} as SavedBuildData
+  }, [
+    draft,
+    existingBuild,
+    shareHydrated,
+    allMods,
+    allArcanes,
+    helminthAbilities,
+  ])
 
   const categoryLabel =
     CATEGORIES.find((c) => c.id === category)?.label ?? category
@@ -213,18 +234,17 @@ function EditorShell() {
 
   // Escape deselects the active mod/arcane slot, mirroring the
   // click-outside behavior. Skip when a dialog/popover is open (base-ui
-  // closes those via its own Escape handler) or when typing in a field.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return
-      if (isEditableTarget(e.target)) return
+  // closes those via its own Escape handler) or when typing in a field
+  // (useHotkey's editable-target guard handles the latter).
+  useHotkey(
+    "Escape",
+    () => {
       if (document.querySelector("[data-state='open'][role='dialog']")) return
       slots.select(null)
       arcanes.select(null)
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [slots, arcanes])
+    },
+    { preventDefault: false },
+  )
 
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -340,6 +360,27 @@ function EditorShell() {
   const [lichBonusElement, setLichBonusElement] =
     useState<LichBonusElement | null>(() => savedData.lichBonusElement ?? null)
 
+  // Innate incarnons (no separate Genesis adapter) default-on; Steel Path
+  // Circuit weapons require installing the adapter, so default-off.
+  const [incarnonEnabled, setIncarnonEnabled] = useState(
+    () => savedData.incarnonEnabled ?? isInnateIncarnon(item.name),
+  )
+  const [incarnonPerks, setIncarnonPerks] = useState<(string | null)[]>(
+    () => savedData.incarnonPerks ?? [],
+  )
+  const setIncarnonPerkAt = (tierIndex: number, perk: string | null) => {
+    setIncarnonPerks((prev) => {
+      const next = [...prev]
+      while (next.length <= tierIndex) next.push(null)
+      next[tierIndex] = perk
+      return next
+    })
+  }
+
+  const displayImageName = incarnonEnabled
+    ? (getIncarnonGenesisImage(item.name) ?? item.imageName ?? undefined)
+    : (item.imageName ?? undefined)
+
   const [helminth, setHelminth] = useState<Record<number, HelminthAbility>>(
     () => savedData.helminth ?? {},
   )
@@ -358,6 +399,7 @@ function EditorShell() {
     () => getAuraPolarities(item, auraSlotCount),
     [item, auraSlotCount],
   )
+  const exilusInnate = useMemo(() => getExilusInnatePolarity(item), [item])
   const normalInnates = useMemo(
     () =>
       Array.from({ length: normalSlotCount }, (_, i) =>
@@ -374,10 +416,11 @@ function EditorShell() {
     () =>
       calculateFormaCount({
         auraInnates,
+        exilusInnate,
         normalInnates,
         formaPolarities: slots.formaPolarities,
       }),
-    [auraInnates, normalInnates, slots.formaPolarities],
+    [auraInnates, exilusInnate, normalInnates, slots.formaPolarities],
   )
   const isUpdate = !!existingBuild && existingBuild.isOwner
 
@@ -399,6 +442,8 @@ function EditorShell() {
       helminth,
       zawComponents,
       lichBonusElement: lichBonusElement ?? undefined,
+      incarnonEnabled,
+      incarnonPerks,
       normalSlotCount,
       auraSlotCount,
     })
@@ -445,18 +490,23 @@ function EditorShell() {
           helminth,
           zawComponents,
           lichBonusElement: lichBonusElement ?? undefined,
+          incarnonEnabled,
+          incarnonPerks,
         },
         guide: {
           summary: guideSummary.trim() || null,
           description: guideDescription.trim() || null,
         },
+        // itemImageName tracks the incarnon toggle (and any future image
+        // change), so update it on PATCH too. The identity fields
+        // (itemUniqueName / itemCategory / itemName) stay create-only.
+        itemImageName: displayImageName ?? null,
         ...(isUpdate
           ? {}
           : {
               itemUniqueName: item.uniqueName,
               itemCategory: category,
               itemName: item.name,
-              itemImageName: item.imageName ?? null,
             }),
       }
       const url = isUpdate
@@ -487,6 +537,7 @@ function EditorShell() {
         placed: slots.placed,
         formaPolarities: slots.formaPolarities,
         auraInnates,
+        exilusInnate,
         normalInnates,
         hasReactor,
         maxLevelCap: getMaxLevelCap(category, item),
@@ -495,10 +546,11 @@ function EditorShell() {
       slots.placed,
       slots.formaPolarities,
       auraInnates,
+      exilusInnate,
       normalInnates,
       hasReactor,
       category,
-      item.maxLevelCap,
+      item,
     ],
   )
 
@@ -513,6 +565,7 @@ function EditorShell() {
         totalEndoCost={totalEndoCost}
         formaCount={formaCount}
         buildName={buildName}
+        displayImageName={displayImageName}
         onBuildNameChange={setBuildName}
         onSave={handleSaveClick}
         saveStatus={saveStatus}
@@ -528,6 +581,7 @@ function EditorShell() {
       />
 
       <div className="flex flex-col gap-4">
+        <KeyboardHintBanner />
         <div className="flex flex-col gap-4 xl:relative xl:block">
           <div className="flex w-full flex-col sm:hidden xl:absolute xl:top-0 xl:bottom-0 xl:left-0 xl:flex xl:w-[260px]">
             <ItemSidebar
@@ -545,6 +599,10 @@ function EditorShell() {
               onSetZawComponents={setZawComponents}
               lichBonusElement={lichBonusElement}
               onSetLichBonusElement={setLichBonusElement}
+              incarnonEnabled={incarnonEnabled}
+              onToggleIncarnon={() => setIncarnonEnabled((v) => !v)}
+              incarnonPerks={incarnonPerks}
+              onSetIncarnonPerk={setIncarnonPerkAt}
               placedMods={slots.placed}
               placedArcanes={arcanes.placed}
             />
@@ -576,6 +634,10 @@ function EditorShell() {
               onSetZawComponents={setZawComponents}
               lichBonusElement={lichBonusElement}
               onSetLichBonusElement={setLichBonusElement}
+              incarnonEnabled={incarnonEnabled}
+              onToggleIncarnon={() => setIncarnonEnabled((v) => !v)}
+              incarnonPerks={incarnonPerks}
+              onSetIncarnonPerk={setIncarnonPerkAt}
               placedMods={slots.placed}
               placedArcanes={arcanes.placed}
             />
@@ -596,6 +658,7 @@ function EditorShell() {
                 ) : undefined
               }
             />
+            <KeyboardHintsStrip />
           </div>
         </div>
 
@@ -671,6 +734,7 @@ function EditorHeader({
   totalEndoCost,
   formaCount,
   buildName,
+  displayImageName,
   onBuildNameChange,
   onSave,
   saveStatus,
@@ -688,6 +752,7 @@ function EditorHeader({
   totalEndoCost: number
   formaCount: number
   buildName: string
+  displayImageName?: string
   onBuildNameChange: (name: string) => void
   onSave: () => void
   saveStatus: "idle" | "saving" | "error"
@@ -718,7 +783,7 @@ function EditorHeader({
         <div className="flex min-w-0 flex-1 items-center gap-4">
           <div className="bg-muted/10 relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-md md:size-24">
             <img
-              src={getImageUrl(item.imageName)}
+              src={getImageUrl(displayImageName ?? item.imageName)}
               alt={item.name}
               className="h-full w-full object-cover"
             />
@@ -885,7 +950,7 @@ function SearchPanel({
       return [createSyntheticRiven(), ...mods]
     }
     return mods
-  }, [allMods, item.type, item.category, item.name, category, helminth])
+  }, [allMods, item, category, helminth])
 
   return (
     <ModSearchGrid

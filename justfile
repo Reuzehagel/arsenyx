@@ -13,6 +13,14 @@ api:
 web:
     cd apps/web; bun run dev
 
+# Deploy the web app to Cloudflare Workers (Static Assets). Requires `wrangler login`.
+deploy-web:
+    cd apps/web; bun run deploy
+
+# Deploy the API Worker.
+deploy-api:
+    cd apps/api; bun run deploy
+
 # Regenerate the static browse data (items-index.json + per-item JSON).
 build-items-index:
     bun run build:items

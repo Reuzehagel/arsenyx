@@ -1,0 +1,24 @@
+name = "arsenyx-web"
+compatibility_date = "2026-04-29"
+
+# Custom domains. The zone must use Cloudflare nameservers (already the case
+# for arsenyx.com). On first deploy these will fail to attach while the Pages
+# project still owns them — remove them from Pages first, or attach via the
+# Worker's Triggers tab in the dashboard.
+routes = [
+  { pattern = "www.arsenyx.com", custom_domain = true },
+  { pattern = "arsenyx.com", custom_domain = true },
+]
+
+# Assets-only Worker — no `main` entry point. Workers Static Assets serves
+# everything under `dist/` directly and applies the `_headers` / `_redirects`
+# rules that ship in the build output (originally from `public/_headers`).
+#
+# `not_found_handling = "single-page-application"` makes any unmatched route
+# return `/index.html` with a 200, so TanStack Router can take over client-side.
+[assets]
+directory = "./dist"
+not_found_handling = "single-page-application"
+
+[observability]
+enabled = true

@@ -12,11 +12,61 @@ export const Route = createFileRoute("/docs")({
 })
 
 type Endpoint = {
-  method: "GET"
+  method: "GET" | "POST" | "PUT"
   path: string
   summary: string
   example: string
 }
+
+const WRITE_ENDPOINTS: Endpoint[] = [
+  {
+    method: "POST",
+    path: "/api/v1/builds",
+    summary:
+      "Create a build. Body specifies item, slots, arcanes, shards, and optional guide. Server resolves canonical refs and recomputes derived fields.",
+    example: `{
+  "name": "Rhino Tank",
+  "visibility": "PUBLIC",
+  "itemUniqueName": "/Lotus/Powersuits/Rhino/Rhino",
+  "itemCategory": "warframes",
+  "guide": { "summary": "...", "description": "..." },
+  "build": {
+    "hasReactor": true,
+    "slots": [
+      {
+        "slotId": "aura-0",
+        "mod": {
+          "uniqueName": "/Lotus/Upgrades/Mods/Aura/SteelCharge",
+          "rank": 5
+        }
+      }
+    ],
+    "arcanes": [],
+    "shards": [],
+    "helminthAbility": null
+  }
+}`,
+  },
+  {
+    method: "PUT",
+    path: "/api/v1/builds/:slug",
+    summary: "Update a build you own. Same payload shape as create.",
+    example: `{ "name": "...", "build": { ... } }`,
+  },
+  {
+    method: "POST",
+    path: "/api/v1/imports/overframe",
+    summary:
+      "Import an Overframe build by URL. If nameOverride / description / guide are omitted, Arsenyx preserves the Overframe metadata. Explicit null clears nullable fields.",
+    example: `{
+  "url": "https://overframe.gg/build/935570/",
+  "visibility": "PUBLIC",
+  "nameOverride": null,
+  "description": null,
+  "guide": null
+}`,
+  },
+]
 
 const PUBLIC_ENDPOINTS: Endpoint[] = [
   {
@@ -134,6 +184,39 @@ function DocsPage() {
           <p className="text-sm opacity-75">
             Fields abbreviated. Responses are subject to change while Arsenyx
             is in beta — pin to the commit you tested against.
+          </p>
+
+          <h2>Authenticated write API</h2>
+          <p>
+            Arsenyx supports bearer-token build publishing, so you can push
+            builds from a script or bot instead of clicking through the editor.
+            Sign in, open the user menu, head to <strong>Settings</strong>, and
+            create a personal access token with the <code>build:write</code>{" "}
+            scope. Send it as <code>Authorization: Bearer &lt;token&gt;</code>.
+          </p>
+          <ul className="not-prose flex list-none flex-col gap-4 pl-0">
+            {WRITE_ENDPOINTS.map((ep) => (
+              <li
+                key={`${ep.method} ${ep.path}`}
+                className="border-border bg-card flex flex-col gap-2 rounded-lg border p-4"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="bg-muted rounded px-2 py-0.5 font-mono text-xs font-semibold">
+                    {ep.method}
+                  </span>
+                  <code className="text-sm font-medium">{ep.path}</code>
+                </div>
+                <p className="text-muted-foreground text-sm">{ep.summary}</p>
+                <pre className="bg-muted/50 overflow-x-auto rounded p-3 text-xs leading-relaxed">
+                  <code>{ep.example}</code>
+                </pre>
+              </li>
+            ))}
+          </ul>
+          <p className="text-sm opacity-75">
+            The server resolves canonical item / mod / arcane / shard data,
+            recomputes derived capacity and forma fields, and rejects invalid
+            writes with structured <code>4xx</code> JSON errors.
           </p>
 
           <h2>Game data</h2>

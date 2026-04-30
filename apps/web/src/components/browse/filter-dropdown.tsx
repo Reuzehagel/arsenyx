@@ -18,12 +18,14 @@ interface BrowseFilters {
   masteryMax: number
   primeOnly: boolean
   hideVaulted: boolean
+  incarnonOnly: boolean
 }
 
 const DEFAULT_FILTERS: BrowseFilters = {
   masteryMax: MASTERY_MAX,
   primeOnly: false,
   hideVaulted: false,
+  incarnonOnly: false,
 }
 
 function activeFilterCount(filters: BrowseFilters): number {
@@ -31,6 +33,7 @@ function activeFilterCount(filters: BrowseFilters): number {
     filters.masteryMax < MASTERY_MAX,
     filters.primeOnly,
     filters.hideVaulted,
+    filters.incarnonOnly,
   ].filter(Boolean).length
 }
 
@@ -125,6 +128,18 @@ export function FilterDropdown({ filters, onChange }: FilterDropdownProps) {
                 }
               >
                 Hide Vaulted
+              </Button>
+              <Button
+                variant={filters.incarnonOnly ? "default" : "outline"}
+                size="sm"
+                onClick={() =>
+                  onChange({
+                    ...filters,
+                    incarnonOnly: !filters.incarnonOnly,
+                  })
+                }
+              >
+                Incarnon Only
               </Button>
             </div>
           </Field>

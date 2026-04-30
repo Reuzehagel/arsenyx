@@ -18,6 +18,8 @@ export type SavedBuildData = {
   helminth?: Record<number, HelminthAbility>
   zawComponents?: { grip: string; link: string }
   lichBonusElement?: LichBonusElement
+  incarnonEnabled?: boolean
+  incarnonPerks?: (string | null)[]
 }
 
 export type BuildDetail = {

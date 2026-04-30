@@ -57,7 +57,10 @@ export function ArcaneSlot({
     <Popover open={open} onOpenChange={readOnly ? undefined : setOpen}>
       <PopoverTrigger
         nativeButton={false}
-        render={<div />}
+        // Same reasoning as mod-slot.tsx: arrow-key nav drives selection,
+        // Tab order would just visually enlarge the focused slot via the
+        // browser's default focus ring.
+        render={<div tabIndex={-1} />}
         data-build-slot
         onClick={
           readOnly
@@ -71,6 +74,7 @@ export function ArcaneSlot({
         className={cn(
           "group relative flex h-[80px] w-full max-w-[140px] flex-col items-center justify-center transition-colors",
           "sm:h-[90px] sm:w-[120px] sm:flex-none md:h-[100px] md:w-[140px]",
+          "outline-none",
           !readOnly && "cursor-pointer",
           !placed && "rounded-md border",
           !placed &&

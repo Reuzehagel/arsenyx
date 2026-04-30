@@ -1,7 +1,7 @@
 import { isRivenMod } from "@arsenyx/shared/warframe/rivens"
 import type { Mod, Polarity } from "@arsenyx/shared/warframe/types"
 import { Search, X } from "lucide-react"
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react"
+import { useDeferredValue, useMemo, useRef, useState } from "react"
 
 import {
   InputGroup,
@@ -18,12 +18,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { useHotkey } from "@/lib/hotkeys"
 import {
   BASE_ELEMENTS,
   DAMAGE_TYPE_COLORS,
   ELEMENTAL_COMBINATIONS,
 } from "@/lib/stats/types"
-import { cn, isEditableTarget } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 
 import { ModCard } from "./mod-card"
 import type { ModSlotKind } from "./mod-slot"
@@ -186,18 +187,7 @@ export function ModSearchGrid({
     searchRef.current?.select()
   }
 
-  // `/` focuses the search from anywhere on the page, mirroring the browse page.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "/") return
-      if (isEditableTarget(e.target)) return
-      e.preventDefault()
-      searchRef.current?.focus()
-      searchRef.current?.select()
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [])
+  useHotkey("/", focusInput)
 
   // Stable ordering: computed from `mods` + `sort` only. Filters dim instead
   // of remove, so positions don't shift when search/rarity/polarity narrow
@@ -294,7 +284,6 @@ export function ModSearchGrid({
   const GRID_ROWS = 2
   const moveFromDisplayedIndex = (from: number, dir: Dir): number | null => {
     const row = from % GRID_ROWS
-    const col = Math.floor(from / GRID_ROWS)
     const focusable = (i: number) =>
       i >= 0 &&
       i < displayed.length &&

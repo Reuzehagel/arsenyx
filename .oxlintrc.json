@@ -18,7 +18,8 @@
     "react/react-in-jsx-scope": "off",
     "import/no-unassigned-import": "off",
     "import/no-named-as-default-member": "off",
-    "no-shadow": "off"
+    "no-shadow": "off",
+    "no-underscore-dangle": "off"
   },
   "ignorePatterns": [
     ".next/",

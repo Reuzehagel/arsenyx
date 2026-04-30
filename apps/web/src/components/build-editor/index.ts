@@ -6,6 +6,7 @@ export {
   type PlacedArcane,
 } from "./use-arcane-slots"
 export { GuideEditor } from "./guide-editor"
+export { KeyboardHintBanner, KeyboardHintsStrip } from "./keyboard-hints"
 export { ItemSidebar, ItemSidebarPopover } from "./item-sidebar"
 export {
   calculateCapacity,
@@ -21,7 +22,13 @@ export {
   hasExilusSlot,
   isLichWeapon,
 } from "./layout"
-export { ArcaneRow, getAuraPolarities, ModGrid, toPolarity } from "./mod-grid"
+export {
+  ArcaneRow,
+  getAuraPolarities,
+  getExilusInnatePolarity,
+  ModGrid,
+  toPolarity,
+} from "./mod-grid"
 export { ModCard } from "./mod-card"
 export { ModSearchGrid } from "./mod-search-grid"
 export { RivenDialog, type RivenDialogValues } from "./riven-dialog"

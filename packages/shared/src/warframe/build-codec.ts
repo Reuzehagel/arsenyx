@@ -30,6 +30,7 @@ interface EncodedBuild {
   h?: EncodedHelminth
   zc?: { g: string; l: string }
   lb?: string
+  ic?: { e: boolean; p?: (string | null)[] }
 }
 
 interface EncodedHelminth {
@@ -121,6 +122,16 @@ export function encodeBuild(state: BuildState): string {
 
   if (state.lichBonusElement) {
     encoded.lb = state.lichBonusElement
+  }
+
+  // Encode whenever the user touched any incarnon field. Encoding only on
+  // truthy values would lose "explicitly disabled" for innate incarnons,
+  // since the decoder re-applies a default-on heuristic when the field is
+  // missing.
+  const hasPickedPerks = state.incarnonPerks?.some((p) => p) ?? false
+  if (state.incarnonEnabled !== undefined || hasPickedPerks) {
+    encoded.ic = { e: state.incarnonEnabled ?? false }
+    if (hasPickedPerks) encoded.ic.p = state.incarnonPerks
   }
 
   const jsonString = JSON.stringify(encoded)
@@ -265,6 +276,11 @@ export function decodeBuild(base64String: string): Partial<BuildState> | null {
 
     if (encoded.lb) {
       state.lichBonusElement = encoded.lb as LichBonusElement
+    }
+
+    if (encoded.ic) {
+      state.incarnonEnabled = encoded.ic.e
+      state.incarnonPerks = encoded.ic.p
     }
 
     return state

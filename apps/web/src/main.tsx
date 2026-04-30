@@ -9,7 +9,42 @@ import { routeTree } from "./routeTree.gen"
 import "@/styles/globals.css"
 
 if (import.meta.env.DEV) {
-  import("cssstudio").then(({ startStudio }) => startStudio())
+  setupCssStudio()
+}
+
+function setupCssStudio() {
+  const KEY = "arsenyx.cssstudio"
+  const params = new URLSearchParams(location.search)
+  const param = params.get("cssstudio")
+  if (param === "1" || param === "0") {
+    try {
+      localStorage.setItem(KEY, param)
+    } catch {
+      /* private mode — fine, just won't persist */
+    }
+    // Strip the param so the URL doesn't stay sticky as the user navigates.
+    params.delete("cssstudio")
+    const qs = params.toString()
+    history.replaceState(
+      null,
+      "",
+      location.pathname + (qs ? `?${qs}` : "") + location.hash,
+    )
+  }
+  let on = false
+  try {
+    on = localStorage.getItem(KEY) === "1"
+  } catch {
+    /* fine */
+  }
+  if (on) {
+    void import("cssstudio").then(({ startStudio }) => startStudio())
+  } else {
+    // eslint-disable-next-line no-console
+    console.info(
+      "cssstudio is OFF. Append ?cssstudio=1 to the URL to enable, ?cssstudio=0 to disable.",
+    )
+  }
 }
 
 const queryClient = new QueryClient({

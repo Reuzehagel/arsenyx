@@ -137,6 +137,7 @@ export interface CapacityInput {
   placed: Partial<Record<SlotId, PlacedMod>>
   formaPolarities: Partial<Record<SlotId, Polarity>>
   auraInnates: (Polarity | undefined)[]
+  exilusInnate?: Polarity
   normalInnates: (Polarity | undefined)[]
   hasReactor: boolean
   maxLevelCap?: number
@@ -154,6 +155,7 @@ export function calculateCapacity(input: CapacityInput): CapacityResult {
     placed,
     formaPolarities,
     auraInnates,
+    exilusInnate,
     normalInnates,
     hasReactor,
     maxLevelCap,
@@ -180,7 +182,7 @@ export function calculateCapacity(input: CapacityInput): CapacityResult {
     used += effectiveDrainForMod(
       exilus.mod,
       exilus.rank,
-      effectivePolarity(undefined, formaPolarities.exilus),
+      effectivePolarity(exilusInnate, formaPolarities.exilus),
     )
   }
   for (let i = 0; i < normalInnates.length; i++) {

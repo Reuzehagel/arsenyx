@@ -1,7 +1,8 @@
-import { Menu, Search } from "lucide-react"
-import { useEffect, useState } from "react"
+import { Keyboard, Menu, Search } from "lucide-react"
+import { useState } from "react"
 
 import { CommandPalette } from "@/components/command-palette"
+import { openHotkeyCheatSheet } from "@/components/hotkey-cheat-sheet"
 import { Link } from "@/components/link"
 import { Button } from "@/components/ui/button"
 import { Kbd } from "@/components/ui/kbd"
@@ -14,21 +15,13 @@ import {
 } from "@/components/ui/sheet"
 import { UserMenu } from "@/components/user-menu"
 import { SITE_CONFIG, NAV_ITEMS, ROUTES } from "@/lib/constants"
+import { useHotkey } from "@/lib/hotkeys"
 
 export function Header() {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault()
-        setPaletteOpen((v) => !v)
-      }
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [])
+  useHotkey("mod+k", () => setPaletteOpen((v) => !v), { allowInEditable: true })
 
   return (
     <header className="bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 w-full border-b backdrop-blur">
@@ -110,6 +103,15 @@ export function Header() {
             aria-label="Open search"
           >
             <Search />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={openHotkeyCheatSheet}
+            aria-label="Show keyboard shortcuts"
+            title="Keyboard shortcuts (?)"
+          >
+            <Keyboard />
           </Button>
           <UserMenu />
         </div>

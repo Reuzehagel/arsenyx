@@ -1,16 +1,18 @@
 # TODO
 
+## Cloudflare Pages → Workers cutover (web)
+
+Live on Workers Static Assets as `arsenyx-web` since 2026-04-29. Verified: SPA fallback, `_headers` cache rules, apex + www domains all serving correctly.
+
+- [ ] Delete the old Pages `arsenyx` project (CF dashboard → Pages → arsenyx → Settings → Delete). Wait a few days for a rollback window if cautious.
+
 ## Bugs
 
 - [ ] Add riven mod support to Overframe import
-- [x] Fix companions
-- [x] Fix Lich weapons
 - [ ] Kuva/Tenet/Coda bonus element — flow selected element into `calculateWeaponStats` so picking one actually changes the damage numbers (dropdown + codec already wired; see [apps/web/src/lib/stats/weapon.ts](apps/web/src/lib/stats/weapon.ts))
-- [x] Fix Necramech
-- [x] Fix Jade
 - [ ] Check exalted weapons
 
-## Polish
+## Incarnon
 
-- [x] Mobile nav (hamburger + sheet)
-- [x] Split frontend bundle — route-level code splitting to get under the 500KB Vite warning
+- [ ] **Conditional damage math for incarnon perks** — picked perks (and Incarnon Form alt-fire mode) feed into stat calculations. Most perks are conditional triggers (on-headshot, on-reload, etc.), so this lands with the broader conditional-damage rework. See [apps/web/src/lib/stats/weapon.ts](apps/web/src/lib/stats/weapon.ts) and [packages/shared/src/warframe/incarnon-data.ts](packages/shared/src/warframe/incarnon-data.ts).
+- [ ] **`hasIncarnon` flag on builds + filter** — add `hasIncarnon Boolean` column to the `Build` model (mirrors `hasShards`/`hasGuide`), populate in [apps/api/src/routes/builds.ts](apps/api/src/routes/builds.ts) on create/update from `buildData.incarnonEnabled`, add filter param in [apps/api/src/routes/_build-list.ts](apps/api/src/routes/_build-list.ts), then expose in [apps/web/src/lib/builds-list-query.ts](apps/web/src/lib/builds-list-query.ts) and add a "Has Incarnon" filter chip + a small badge on [apps/web/src/components/builds/build-card.tsx](apps/web/src/components/builds/build-card.tsx).

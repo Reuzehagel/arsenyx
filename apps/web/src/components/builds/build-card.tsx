@@ -20,7 +20,7 @@ export function BuildCard({ build }: { build: BuildListItem }) {
         <img
           src={getImageUrl(build.item.imageName ?? undefined)}
           alt={build.item.name}
-          className="absolute inset-0 h-full w-full object-cover"
+          className="absolute inset-0 h-full w-full object-contain p-2"
         />
       </div>
       <div className="flex flex-col gap-1 p-3">

@@ -7,6 +7,7 @@ import {
   calculateFormaCount,
   getAuraPolarities,
   getAuraSlotCount,
+  getExilusInnatePolarity,
   getNormalSlotCount,
   toPolarity,
 } from "@/components/build-editor"
@@ -253,6 +254,7 @@ function ImportPage() {
                                   detailItem,
                                 ),
                               ),
+                              exilusInnate: getExilusInnatePolarity(detailItem),
                               normalInnates: Array.from(
                                 {
                                   length: getNormalSlotCount(

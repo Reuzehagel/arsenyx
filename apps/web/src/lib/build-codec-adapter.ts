@@ -1,3 +1,4 @@
+import { RIVEN_IMAGE_NAME } from "@arsenyx/shared/warframe/rivens"
 import type {
   Arcane,
   BrowseCategory,
@@ -27,6 +28,8 @@ type EditorState = {
   helminth: Record<number, HelminthAbility>
   zawComponents?: { grip: string; link: string }
   lichBonusElement?: LichBonusElement
+  incarnonEnabled?: boolean
+  incarnonPerks?: (string | null)[]
   normalSlotCount: number
   auraSlotCount: number
 }
@@ -58,11 +61,14 @@ function toEditorPlacedMod(
   modsByName: Map<string, Mod>,
 ): PlacedMod | null {
   // Rivens come with a stub uniqueName and rivenStats attached; preserve as-is.
+  // Older saved builds carry the legacy hashed riven imageName (e.g.
+  // rifle-riven-mod-e05c5519f1.png) that wfcd no longer hosts — pin to the
+  // current RIVEN_IMAGE_NAME so they self-heal on next render.
   if (shared.rivenStats) {
     const mod: Mod = {
       uniqueName: shared.uniqueName,
       name: shared.name || "Riven Mod",
-      imageName: shared.imageName,
+      imageName: RIVEN_IMAGE_NAME,
       polarity: shared.polarity,
       rarity: "Riven",
       baseDrain: shared.baseDrain,
@@ -162,6 +168,8 @@ export function savedDataToBuildState(state: EditorState): BuildState {
     helminthAbility,
     zawComponents: state.zawComponents,
     lichBonusElement: state.lichBonusElement,
+    incarnonEnabled: state.incarnonEnabled,
+    incarnonPerks: state.incarnonPerks,
   }
 }
 
@@ -222,6 +230,8 @@ export function buildStateToSavedData(
       helminth,
       zawComponents: state.zawComponents,
       lichBonusElement: state.lichBonusElement,
+      incarnonEnabled: state.incarnonEnabled,
+      incarnonPerks: state.incarnonPerks,
     },
     buildName: state.buildName,
   }
@@ -243,12 +253,35 @@ export function normalizeBuildData(
   raw: unknown,
   mods: Mod[],
   arcanes: Arcane[],
+  helminthAbilities: HelminthAbility[] = [],
 ): SavedBuildData {
   const r = (raw ?? {}) as LegacyOrSaved
-  if (isLegacyBuildData(r)) {
-    return buildStateToSavedData(r, mods, arcanes).data
+  const base = isLegacyBuildData(r)
+    ? buildStateToSavedData(r, mods, arcanes).data
+    : migrateLegacyAuraKey(r as SavedBuildData)
+  return refreshHelminthImage(base, helminthAbilities)
+}
+
+// Older builds were saved when wfcd shipped content-hashed image filenames
+// (e.g. `roar-e206197372.png`); the newer `@wfcd/items` package uses canonical
+// names and the upstream CDN no longer maps the old hashed slugs. Mods and
+// arcanes are already re-resolved via `toEditorPlacedMod` upstream, but
+// `buildStateToSavedData` copies helminth fields verbatim — so refresh just
+// the imageName from `helminthAbilities` to self-heal stale legacy rows.
+function refreshHelminthImage(
+  data: SavedBuildData,
+  helminthAbilities: HelminthAbility[],
+): SavedBuildData {
+  if (!data.helminth || helminthAbilities.length === 0) return data
+  const byUnique = new Map(helminthAbilities.map((h) => [h.uniqueName, h]))
+  const next: Record<number, HelminthAbility> = {}
+  for (const [slotIndex, ability] of Object.entries(data.helminth)) {
+    const fresh = byUnique.get(ability.uniqueName)
+    next[Number(slotIndex)] = fresh
+      ? { ...ability, imageName: fresh.imageName }
+      : ability
   }
-  return migrateLegacyAuraKey(r as SavedBuildData)
+  return { ...data, helminth: next }
 }
 
 /**

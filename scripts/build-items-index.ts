@@ -17,6 +17,11 @@ import { dirname, resolve } from "node:path"
 import { normalizeArcanes } from "@arsenyx/shared/warframe/arcanes"
 import { BROWSE_CATEGORIES } from "@arsenyx/shared/warframe/categories"
 import { buildIndex } from "@arsenyx/shared/warframe/categorize"
+import {
+  INCARNON_GENESIS_IMAGES,
+  INCARNON_NAMES,
+} from "@arsenyx/shared/warframe/incarnon-data"
+import { INCARNON_EVOLUTIONS } from "@arsenyx/shared/warframe/incarnon-evolutions"
 import { normalizeMods } from "@arsenyx/shared/warframe/mods"
 import {
   slimArcanesForClient,
@@ -57,6 +62,7 @@ const DETAIL_DIR = resolve(PUBLIC_DATA, "items")
 const MODS_OUT = resolve(PUBLIC_DATA, "mods-all.json")
 const ARCANES_OUT = resolve(PUBLIC_DATA, "arcanes-all.json")
 const HELMINTH_OUT = resolve(PUBLIC_DATA, "helminth-abilities.json")
+const INCARNON_OUT = resolve(PUBLIC_DATA, "incarnon-evolutions.json")
 const META_OUT = resolve(PUBLIC_DATA, "meta.json")
 
 async function readWfcdMeta(): Promise<{
@@ -279,6 +285,36 @@ async function main() {
   const helminthKb = (Buffer.byteLength(helminthBody, "utf8") / 1024).toFixed(1)
   console.log(
     `✓ wrote ${helminth.length} helminth abilities → helminth-abilities.json (${helminthKb} KB)`,
+  )
+
+  // Cross-check: the small lookup module must enumerate every weapon present
+  // in the full evolution data, otherwise the auto-toggle and image swap will
+  // silently miss weapons. Fail loud at build time.
+  const evolutionKeys = Object.keys(INCARNON_EVOLUTIONS)
+  for (const key of evolutionKeys) {
+    if (!INCARNON_NAMES.has(key)) {
+      throw new Error(`INCARNON_NAMES missing entry: "${key}"`)
+    }
+    const expectedImage = INCARNON_EVOLUTIONS[key]?.genesisImage
+    if (expectedImage && INCARNON_GENESIS_IMAGES[key] !== expectedImage) {
+      throw new Error(
+        `INCARNON_GENESIS_IMAGES[${key}] mismatch: ` +
+          `expected ${expectedImage}, got ${INCARNON_GENESIS_IMAGES[key]}`,
+      )
+    }
+  }
+  for (const key of INCARNON_NAMES) {
+    if (!evolutionKeys.includes(key)) {
+      throw new Error(`INCARNON_NAMES has stale entry: "${key}"`)
+    }
+  }
+  const incarnonBody = JSON.stringify(INCARNON_EVOLUTIONS)
+  await writeFile(INCARNON_OUT, incarnonBody, "utf8")
+  const incarnonKb = (
+    Buffer.byteLength(incarnonBody, "utf8") / 1024
+  ).toFixed(1)
+  console.log(
+    `✓ wrote ${evolutionKeys.length} incarnon evolutions → incarnon-evolutions.json (${incarnonKb} KB)`,
   )
 
   const meta = {
