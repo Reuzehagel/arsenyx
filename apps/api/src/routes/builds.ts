@@ -208,6 +208,9 @@ builds.patch("/:slug", async (c) => {
   }
   // The editor flips itemImageName when the incarnon toggle is applied;
   // accept it on PATCH so the build-overview thumbnail tracks the change.
+  // Reject undefined deliberately — PATCH treats absent fields as "don't
+  // touch" and only string|null as "write this value". POST differs because
+  // every create needs a value, so it coerces non-string to null instead.
   if (typeof b.itemImageName === "string" || b.itemImageName === null) {
     data.itemImageName = b.itemImageName
   }

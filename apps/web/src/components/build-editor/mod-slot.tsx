@@ -132,24 +132,19 @@ export function ModSlot({
               matchState={getMatchState(mod.polarity, effective)}
             />
             {!readOnly && (onRemove || (isRivenMod(mod) && onEditRiven)) && (
-              <div
-                className={cn(
-                  "absolute -top-2 -right-2 z-30 flex flex-col gap-1",
-                  // Mobile: always visible (no hover). Desktop: appear on
-                  // slot hover so the buttons don't crowd the loadout grid.
-                  "md:opacity-0 md:transition-opacity",
-                  hovered && "md:opacity-100",
-                )}
-              >
+              // Mobile: always visible (no hover). Desktop: appear on slot
+              // hover via CSS group-hover (parent has `group`) so we don't
+              // re-render the slot for a purely visual transition.
+              <div className="absolute -top-2 -right-2 z-30 flex flex-col gap-1 md:opacity-0 md:transition-opacity md:group-hover:opacity-100">
                 {onRemove && (
-                  <MobileSlotButton
+                  <SlotIconButton
                     icon={X}
                     label="Remove mod"
                     onClick={onRemove}
                   />
                 )}
                 {isRivenMod(mod) && onEditRiven && (
-                  <MobileSlotButton
+                  <SlotIconButton
                     icon={Pencil}
                     label="Edit riven stats"
                     onClick={onEditRiven}
@@ -190,7 +185,7 @@ export function ModSlot({
   )
 }
 
-function MobileSlotButton({
+function SlotIconButton({
   icon: Icon,
   label,
   onClick,
