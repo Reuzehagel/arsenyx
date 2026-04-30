@@ -1,6 +1,4 @@
-import { useEffect } from "react"
-
-import { isEditableTarget } from "@/lib/utils"
+import { useHotkey } from "@/lib/hotkeys"
 
 import type { BuildSlotsState, SlotId, SlotLayout } from "./use-build-slots"
 
@@ -114,20 +112,11 @@ export function useSlotKeyboardNav({
   layout: SlotLayout
   enabled?: boolean
 }) {
-  // Pull primitives so the effect doesn't re-register on every render just
-  // because `layout` is a fresh object identity from the caller.
-  const { normalSlotCount, auraSlotCount, showExilus } = layout
-  useEffect(() => {
-    if (!enabled) return
-    const layoutSnapshot: SlotLayout = {
-      normalSlotCount,
-      auraSlotCount,
-      showExilus,
-    }
-    const onKey = (e: KeyboardEvent) => {
+  useHotkey(
+    ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"],
+    (e) => {
       const dir = DIR_BY_KEY[e.key]
       if (!dir) return
-      if (isEditableTarget(e.target)) return
       // Mod-search grid has its own keyboard handling (Tab in, arrows cycle
       // matches, Enter places). Don't also move the editor slot selection.
       const t = e.target as HTMLElement | null
@@ -135,17 +124,12 @@ export function useSlotKeyboardNav({
       // First arrow press after a click-outside restores selection to the
       // top-left normal slot rather than jumping a direction from there.
       if (slots.selected === null) {
-        e.preventDefault()
         slots.select("normal-0")
         return
       }
-      const next = move(slots.selected, dir, layoutSnapshot)
-      if (next !== slots.selected) {
-        e.preventDefault()
-        slots.select(next)
-      }
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [slots, normalSlotCount, auraSlotCount, showExilus, enabled])
+      const next = move(slots.selected, dir, layout)
+      if (next !== slots.selected) slots.select(next)
+    },
+    { enabled },
+  )
 }

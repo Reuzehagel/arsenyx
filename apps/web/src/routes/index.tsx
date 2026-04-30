@@ -23,8 +23,7 @@ export const Route = createFileRoute("/")({
 function Home() {
   const recent = useRecentItems(10)
   const hero =
-    recent.find((it) => it.category === "warframes" && it.isPrime) ??
-    recent[0]
+    recent.find((it) => it.category === "warframes" && it.isPrime) ?? recent[0]
 
   return (
     <div className="relative flex min-h-screen flex-col">
@@ -50,7 +49,7 @@ function Home() {
                     className="h-[220px] w-auto object-contain transition-transform duration-700 ease-out hover:scale-[1.02] md:h-[280px]"
                     draggable={false}
                   />
-                  <div className="mt-5 flex items-baseline justify-between gap-3 text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+                  <div className="text-muted-foreground mt-5 flex items-baseline justify-between gap-3 text-[11px] tracking-[0.22em] uppercase">
                     <span className="font-mono">
                       {formatDate(hero.releaseDate)}
                     </span>
@@ -58,7 +57,7 @@ function Home() {
                   </div>
                 </Link>
               ) : (
-                <div className="mx-auto h-[280px] w-full max-w-sm animate-pulse rounded-lg bg-muted/40" />
+                <div className="bg-muted/40 mx-auto h-[280px] w-full max-w-sm animate-pulse rounded-lg" />
               )}
             </div>
 
@@ -69,27 +68,27 @@ function Home() {
                 <br />
                 for Warframe.
               </h1>
-              <p className="mt-6 max-w-md text-base leading-relaxed text-muted-foreground">
-                Every frame, weapon, and companion in the game.
-                Mods, arcanes, shards. A URL when you're done.
+              <p className="text-muted-foreground mt-6 max-w-md text-base leading-relaxed">
+                Every frame, weapon, and companion in the game. Mods, arcanes,
+                shards. A URL when you're done.
               </p>
 
               <div className="mt-10 flex items-center gap-4">
                 <Link
                   href="/browse"
-                  className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background transition-opacity hover:opacity-85"
+                  className="bg-foreground text-background inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-opacity hover:opacity-85"
                 >
                   Open arsenal
                   <ArrowRight aria-hidden className="size-4" />
                 </Link>
-                <span className="flex items-center gap-2 text-xs text-muted-foreground">
-                  or press <Kbd>/</Kbd> to search
+                <span className="text-muted-foreground flex items-center gap-2 text-xs">
+                  or press <Kbd>?</Kbd> for shortcuts
                 </span>
               </div>
 
               {/* ticker */}
               <div className="mt-14 border-t pt-6">
-                <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+                <p className="text-muted-foreground font-mono text-[11px] tracking-[0.22em] uppercase">
                   Recently added
                 </p>
                 <ul className="mt-3 space-y-1.5">
@@ -98,17 +97,17 @@ function Home() {
                       key={`${it.category}-${it.slug}`}
                       className="flex items-baseline gap-3 text-sm"
                     >
-                      <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+                      <span className="text-muted-foreground font-mono text-[11px] tabular-nums">
                         {formatDate(it.releaseDate)}
                       </span>
                       <Link
                         href={getItemUrl(it.category, it.slug)}
-                        className="truncate text-foreground hover:underline"
+                        className="text-foreground truncate hover:underline"
                       >
                         {it.name}
                       </Link>
                       {it.isPrime && !isPrimeRedundant(it.name) && (
-                        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                        <span className="text-muted-foreground font-mono text-[10px] tracking-[0.2em] uppercase">
                           prime
                         </span>
                       )}
@@ -125,13 +124,15 @@ function Home() {
           <div className="mx-auto grid max-w-7xl gap-x-12 gap-y-14 px-6 py-20 md:grid-cols-3 md:py-28">
             <Pillar
               kicker="Keyboard"
-              line="Press / to find anything."
-              detail="The command palette searches frames, weapons, mods, arcanes, and builds. Arrow keys do the rest."
+              line="Press ? for shortcuts."
+              detail="The command palette searches frames, weapons, mods, arcanes, and builds. Arrows move between slots in the editor. The full list is one keystroke away."
               demo={
-                <div className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 font-mono text-xs">
-                  <span className="text-muted-foreground">/</span>
-                  <span className="text-foreground">voruna</span>
-                  <span className="ml-auto inline-block h-3 w-1.5 animate-pulse bg-foreground" />
+                <div className="bg-background flex items-center gap-2 rounded-md border px-3 py-2 font-mono text-xs">
+                  <Kbd>Ctrl K</Kbd>
+                  <span className="text-foreground">command palette</span>
+                  <span className="text-muted-foreground ml-auto inline-flex items-center gap-1">
+                    <Kbd>?</Kbd>
+                  </span>
                 </div>
               }
             />
@@ -140,7 +141,7 @@ function Home() {
               line="One URL, no account."
               detail="Builds encode into a short URL. Drop it in chat. The reader sees the full editor without signing in."
               demo={
-                <div className="rounded-md border bg-background px-3 py-2 font-mono text-xs">
+                <div className="bg-background rounded-md border px-3 py-2 font-mono text-xs">
                   <span className="text-muted-foreground">arsenyx.com/b/</span>
                   <span className="text-foreground">v0r-prime-tank</span>
                 </div>
@@ -153,11 +154,11 @@ function Home() {
               demo={
                 <Link
                   href="https://github.com/Reuzehagel/arsenyx"
-                  className="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-2 font-mono text-xs hover:bg-muted/60"
+                  className="bg-background hover:bg-muted/60 inline-flex items-center gap-2 rounded-md border px-3 py-2 font-mono text-xs"
                 >
                   <span className="text-muted-foreground">git clone</span>
                   <span className="text-foreground">arsenyx</span>
-                  <span className="ml-auto text-muted-foreground" aria-hidden>
+                  <span className="text-muted-foreground ml-auto" aria-hidden>
                     ↗
                   </span>
                 </Link>
@@ -169,12 +170,12 @@ function Home() {
         {/* Quiet closing */}
         <section>
           <div className="mx-auto max-w-7xl px-6 py-16 text-center">
-            <p className="font-mono text-xs uppercase tracking-[0.22em] text-muted-foreground">
+            <p className="text-muted-foreground font-mono text-xs tracking-[0.22em] uppercase">
               Begin
             </p>
             <Link
               href="/browse"
-              className="group mt-4 inline-flex items-baseline gap-3 text-2xl font-medium tracking-tight text-foreground hover:underline md:text-3xl"
+              className="group text-foreground mt-4 inline-flex items-baseline gap-3 text-2xl font-medium tracking-tight hover:underline md:text-3xl"
             >
               Open the arsenal
               <ArrowRight
@@ -203,14 +204,14 @@ function Pillar({
 }) {
   return (
     <article className="flex flex-col gap-4">
-      <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+      <p className="text-muted-foreground font-mono text-[11px] tracking-[0.22em] uppercase">
         {kicker}
       </p>
-      <h3 className="text-2xl font-medium tracking-tight text-foreground">
+      <h3 className="text-foreground text-2xl font-medium tracking-tight">
         {line}
       </h3>
       <div>{demo}</div>
-      <p className="text-sm leading-relaxed text-muted-foreground">{detail}</p>
+      <p className="text-muted-foreground text-sm leading-relaxed">{detail}</p>
     </article>
   )
 }
