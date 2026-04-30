@@ -28,6 +28,10 @@ export function formatDate(iso?: string): string {
   return `${y}.${m}.${d}`
 }
 
+function assertNever(x: never): never {
+  throw new Error(`unhandled BrowseCategory: ${String(x)}`)
+}
+
 export function shortCategory(c: BrowseCategory): string {
   switch (c) {
     case "warframes":
@@ -48,6 +52,8 @@ export function shortCategory(c: BrowseCategory): string {
       return "EXA"
     case "archwing":
       return "ARW"
+    default:
+      return assertNever(c)
   }
 }
 
@@ -71,6 +77,8 @@ export function longCategory(c: BrowseCategory): string {
       return "exalted weapon"
     case "archwing":
       return "archwing"
+    default:
+      return assertNever(c)
   }
 }
 

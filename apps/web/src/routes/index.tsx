@@ -10,9 +10,13 @@ import {
 } from "@/components/landing/use-recent-items"
 import { Link } from "@/components/link"
 import { Kbd } from "@/components/ui/kbd"
+import { itemsIndexQuery } from "@/lib/items-index-query"
 import { getImageUrl, getItemUrl } from "@/lib/warframe"
 
 export const Route = createFileRoute("/")({
+  // Pre-warm the items index so the hero/ticker render on first paint
+  // instead of flashing in once useRecentItems resolves.
+  loader: ({ context }) => context.queryClient.ensureQueryData(itemsIndexQuery),
   component: Home,
 })
 
