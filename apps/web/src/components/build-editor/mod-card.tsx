@@ -1,5 +1,5 @@
 import type { Mod } from "@arsenyx/shared/warframe/types"
-import { useEffect, useRef, useState } from "react"
+import { Fragment, useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 
 import {
@@ -93,14 +93,16 @@ function StatLineView({ line }: { line: StatLine }) {
       </span>
     )
   }
+  // Game data stores literal "\n" (backslash-n) in stat strings, not real
+  // newlines — split on the escape sequence to render multi-line entries.
   const parts = line.text.split(/\\n/g)
   return (
     <>
       {parts.map((part, i) => (
-        <span key={i}>
+        <Fragment key={i}>
           {i > 0 && <br />}
           {part}
-        </span>
+        </Fragment>
       ))}
     </>
   )
@@ -270,10 +272,10 @@ function ExpandedModCard({
                 style={{ fontFamily: "Roboto, sans-serif" }}
               >
                 {stats.map((line, i) => (
-                  <span key={i}>
+                  <Fragment key={i}>
                     {i > 0 && <br />}
                     <StatLineView line={line} />
-                  </span>
+                  </Fragment>
                 ))}
               </span>
             </div>
