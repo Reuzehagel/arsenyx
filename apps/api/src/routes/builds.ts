@@ -206,6 +206,11 @@ builds.patch("/:slug", async (c) => {
     data.buildData = b.buildData as InputJsonValue
     data.hasShards = hasShardsInBuildData(b.buildData)
   }
+  // The editor flips itemImageName when the incarnon toggle is applied;
+  // accept it on PATCH so the build-overview thumbnail tracks the change.
+  if (typeof b.itemImageName === "string" || b.itemImageName === null) {
+    data.itemImageName = b.itemImageName
+  }
 
   const guide = parseGuide(b.guide)
   if (guide) {

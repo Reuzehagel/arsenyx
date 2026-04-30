@@ -1,3 +1,4 @@
+import { RIVEN_IMAGE_NAME } from "@arsenyx/shared/warframe/rivens"
 import type {
   Arcane,
   BrowseCategory,
@@ -60,11 +61,14 @@ function toEditorPlacedMod(
   modsByName: Map<string, Mod>,
 ): PlacedMod | null {
   // Rivens come with a stub uniqueName and rivenStats attached; preserve as-is.
+  // Older saved builds carry the legacy hashed riven imageName (e.g.
+  // rifle-riven-mod-e05c5519f1.png) that wfcd no longer hosts — pin to the
+  // current RIVEN_IMAGE_NAME so they self-heal on next render.
   if (shared.rivenStats) {
     const mod: Mod = {
       uniqueName: shared.uniqueName,
       name: shared.name || "Riven Mod",
-      imageName: shared.imageName,
+      imageName: RIVEN_IMAGE_NAME,
       polarity: shared.polarity,
       rarity: "Riven",
       baseDrain: shared.baseDrain,
