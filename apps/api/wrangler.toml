@@ -15,7 +15,6 @@ routes = [
 #   BETTER_AUTH_SECRET        — `openssl rand -base64 32`
 #   GITHUB_CLIENT_ID
 #   GITHUB_CLIENT_SECRET
-#   SCREENSHOT_SERVICE_SECRET — optional, if the screenshot service PAT is set
 
 [vars]
 BETTER_AUTH_URL = "https://api.arsenyx.com"

@@ -355,9 +355,7 @@ export function ItemSidebar({
                 />
               </div>
               {incarnonEnabled && (
-                <Suspense
-                  fallback={<IncarnonTierGridSkeleton />}
-                >
+                <Suspense fallback={<IncarnonTierGridSkeleton />}>
                   <IncarnonTierGrid
                     weaponName={item.name}
                     perks={incarnonPerks ?? []}

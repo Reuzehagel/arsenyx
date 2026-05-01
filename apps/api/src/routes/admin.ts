@@ -2,6 +2,7 @@ import { Hono } from "hono"
 
 import { prisma } from "../db"
 import { Prisma } from "../generated/prisma/client"
+import { parseJsonBody } from "../lib/validate"
 import { isPrismaNotFound, requireAdmin } from "./_admin"
 import { parseListQuery, runList } from "./_build-list"
 import { parsePage, trimQ } from "./_query"
@@ -91,16 +92,9 @@ admin.patch("/users/:id", async (c) => {
 
   const targetId = c.req.param("id")
 
-  let body: unknown
-  try {
-    body = await c.req.json()
-  } catch {
-    return c.json({ error: "invalid_json" }, 400)
-  }
-  if (!body || typeof body !== "object") {
-    return c.json({ error: "invalid_body" }, 400)
-  }
-  const b = body as Record<string, unknown>
+  const parsed = await parseJsonBody(c, { maxBytes: 2 * 1024 })
+  if (!parsed.ok) return parsed.response
+  const b = parsed.value
 
   const data: Partial<Record<UserFlag, boolean>> = {}
   for (const key of Object.keys(b)) {

@@ -7,9 +7,15 @@ import { prisma } from "../db"
 import { Prisma } from "../generated/prisma/client"
 import { BuildVisibility } from "../generated/prisma/enums"
 import type { InputJsonValue } from "../generated/prisma/internal/prismaNamespace"
-import { invalidateBuildScreenshot } from "../lib/screenshot-invalidate"
 import { getSession } from "../lib/session"
-import { parseListQuery, runList } from "./_build-list"
+import { hasPrismaCode, parseJsonBody, trimToMax } from "../lib/validate"
+import { rateLimitUser } from "../middleware/rate-limit"
+import {
+  DETAIL_INCLUDE,
+  parseListQuery,
+  runList,
+  serializeBuildDetail,
+} from "./_build-list"
 
 export const builds = new Hono()
 
@@ -31,12 +37,6 @@ function isVisibility(v: unknown): v is BuildVisibility {
   )
 }
 
-function trimToMax(v: unknown, max: number): string | null {
-  if (typeof v !== "string") return null
-  const t = v.trim()
-  return t.length > 0 ? t.slice(0, max) : null
-}
-
 function hasShardsInBuildData(buildData: unknown): boolean {
   if (!buildData || typeof buildData !== "object") return false
   const shards = (buildData as Record<string, unknown>).shards
@@ -55,21 +55,13 @@ function parseGuide(input: unknown) {
   }
 }
 
-builds.post("/", async (c) => {
+builds.post("/", rateLimitUser("mutate"), async (c) => {
   const session = await getSession(c)
   if (!session?.user) return c.json({ error: "unauthorized" }, 401)
 
-  let body: unknown
-  try {
-    body = await c.req.json()
-  } catch {
-    return c.json({ error: "invalid_json" }, 400)
-  }
-
-  if (!body || typeof body !== "object") {
-    return c.json({ error: "invalid_body" }, 400)
-  }
-  const b = body as Record<string, unknown>
+  const parsed = await parseJsonBody(c)
+  if (!parsed.ok) return parsed.response
+  const b = parsed.value
 
   const itemUniqueName =
     typeof b.itemUniqueName === "string" ? b.itemUniqueName.trim() : ""
@@ -140,13 +132,7 @@ builds.post("/", async (c) => {
       return c.json(created, 201)
     } catch (err: unknown) {
       // P2002 = unique constraint on slug → retry
-      if (
-        typeof err === "object" &&
-        err != null &&
-        (err as { code?: string }).code === "P2002"
-      ) {
-        continue
-      }
+      if (hasPrismaCode(err, "P2002")) continue
       throw err
     }
   }
@@ -154,7 +140,7 @@ builds.post("/", async (c) => {
   return c.json({ error: "slug_collision" }, 500)
 })
 
-builds.patch("/:slug", async (c) => {
+builds.patch("/:slug", rateLimitUser("mutate"), async (c) => {
   const slug = c.req.param("slug")
 
   const session = await getSession(c)
@@ -169,16 +155,9 @@ builds.patch("/:slug", async (c) => {
     return c.json({ error: "forbidden" }, 403)
   }
 
-  let body: unknown
-  try {
-    body = await c.req.json()
-  } catch {
-    return c.json({ error: "invalid_json" }, 400)
-  }
-  if (!body || typeof body !== "object") {
-    return c.json({ error: "invalid_body" }, 400)
-  }
-  const b = body as Record<string, unknown>
+  const parsed = await parseJsonBody(c)
+  if (!parsed.ok) return parsed.response
+  const b = parsed.value
 
   const data: Record<string, unknown> = {}
   if (typeof b.name === "string") {
@@ -231,11 +210,10 @@ builds.patch("/:slug", async (c) => {
     data,
     select: { id: true, slug: true },
   })
-  invalidateBuildScreenshot(updated.slug)
   return c.json(updated)
 })
 
-builds.delete("/:slug", async (c) => {
+builds.delete("/:slug", rateLimitUser("mutate"), async (c) => {
   const slug = c.req.param("slug")
 
   const session = await getSession(c)
@@ -251,11 +229,10 @@ builds.delete("/:slug", async (c) => {
   }
 
   await prisma.build.delete({ where: { id: existing.id } })
-  invalidateBuildScreenshot(slug)
   return c.body(null, 204)
 })
 
-builds.post("/:slug/fork", async (c) => {
+builds.post("/:slug/fork", rateLimitUser("mutate"), async (c) => {
   const session = await getSession(c)
   if (!session?.user) return c.json({ error: "unauthorized" }, 401)
   const userId = session.user.id
@@ -400,7 +377,7 @@ async function canViewerSeeBuild(
   return false
 }
 
-builds.post("/:slug/like", async (c) => {
+builds.post("/:slug/like", rateLimitUser("social"), async (c) => {
   const session = await getSession(c)
   if (!session?.user) return c.json({ error: "unauthorized" }, 401)
   const userId = session.user.id
@@ -428,12 +405,15 @@ builds.post("/:slug/like", async (c) => {
     const rows = await tx.$queryRaw<{ likeCount: number }[]>`
       UPDATE builds SET "likeCount" = "likeCount" + 1 WHERE id = ${build.id} RETURNING "likeCount"
     `
-    return { hasLiked: true, likeCount: rows[0]?.likeCount ?? build.likeCount + 1 }
+    return {
+      hasLiked: true,
+      likeCount: rows[0]?.likeCount ?? build.likeCount + 1,
+    }
   })
   return c.json(updated)
 })
 
-builds.delete("/:slug/like", async (c) => {
+builds.delete("/:slug/like", rateLimitUser("social"), async (c) => {
   const session = await getSession(c)
   if (!session?.user) return c.json({ error: "unauthorized" }, 401)
   const userId = session.user.id
@@ -453,12 +433,15 @@ builds.delete("/:slug/like", async (c) => {
     const rows = await tx.$queryRaw<{ likeCount: number }[]>`
       UPDATE builds SET "likeCount" = "likeCount" - 1 WHERE id = ${build.id} RETURNING "likeCount"
     `
-    return { hasLiked: false, likeCount: rows[0]?.likeCount ?? Math.max(0, build.likeCount - 1) }
+    return {
+      hasLiked: false,
+      likeCount: rows[0]?.likeCount ?? Math.max(0, build.likeCount - 1),
+    }
   })
   return c.json(updated)
 })
 
-builds.post("/:slug/bookmark", async (c) => {
+builds.post("/:slug/bookmark", rateLimitUser("social"), async (c) => {
   const session = await getSession(c)
   if (!session?.user) return c.json({ error: "unauthorized" }, 401)
   const userId = session.user.id
@@ -481,12 +464,15 @@ builds.post("/:slug/bookmark", async (c) => {
     const rows = await tx.$queryRaw<{ bookmarkCount: number }[]>`
       UPDATE builds SET "bookmarkCount" = "bookmarkCount" + 1 WHERE id = ${build.id} RETURNING "bookmarkCount"
     `
-    return { hasBookmarked: true, bookmarkCount: rows[0]?.bookmarkCount ?? build.bookmarkCount + 1 }
+    return {
+      hasBookmarked: true,
+      bookmarkCount: rows[0]?.bookmarkCount ?? build.bookmarkCount + 1,
+    }
   })
   return c.json(updated)
 })
 
-builds.delete("/:slug/bookmark", async (c) => {
+builds.delete("/:slug/bookmark", rateLimitUser("social"), async (c) => {
   const session = await getSession(c)
   if (!session?.user) return c.json({ error: "unauthorized" }, 401)
   const userId = session.user.id
@@ -506,7 +492,11 @@ builds.delete("/:slug/bookmark", async (c) => {
     const rows = await tx.$queryRaw<{ bookmarkCount: number }[]>`
       UPDATE builds SET "bookmarkCount" = "bookmarkCount" - 1 WHERE id = ${build.id} RETURNING "bookmarkCount"
     `
-    return { hasBookmarked: false, bookmarkCount: rows[0]?.bookmarkCount ?? Math.max(0, build.bookmarkCount - 1) }
+    return {
+      hasBookmarked: false,
+      bookmarkCount:
+        rows[0]?.bookmarkCount ?? Math.max(0, build.bookmarkCount - 1),
+    }
   })
   return c.json(updated)
 })
@@ -518,23 +508,7 @@ builds.get("/:slug", async (c) => {
     getSession(c),
     prisma.build.findUnique({
       where: { slug },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            username: true,
-            displayUsername: true,
-            image: true,
-          },
-        },
-        organization: {
-          select: { id: true, name: true, slug: true, image: true },
-        },
-        buildGuide: {
-          select: { summary: true, description: true, updatedAt: true },
-        },
-      },
+      include: DETAIL_INCLUDE,
     }),
   ])
 
@@ -570,38 +544,20 @@ builds.get("/:slug", async (c) => {
     viewerHasBookmarked = bookmark != null
   }
 
-  return c.json({
-    id: build.id,
-    slug: build.slug,
-    name: build.name,
-    description: build.description,
-    visibility: build.visibility,
-    item: {
-      uniqueName: build.itemUniqueName,
-      category: build.itemCategory,
-      name: build.itemName,
-      imageName: build.itemImageName,
-    },
-    buildData: build.buildData,
-    hasShards: build.hasShards,
-    hasGuide: build.hasGuide,
-    likeCount: build.likeCount,
-    bookmarkCount: build.bookmarkCount,
-    viewCount: build.viewCount,
-    createdAt: build.createdAt,
-    updatedAt: build.updatedAt,
-    user: build.user,
-    organization: build.organization,
-    guide: build.buildGuide,
-    isOwner:
-      viewerId != null &&
-      (await canMutateBuild(
-        { userId: build.userId, organizationId: build.organizationId },
-        viewerId,
-      )),
-    viewerHasLiked,
-    viewerHasBookmarked,
-  })
+  const isOwner =
+    viewerId != null &&
+    (await canMutateBuild(
+      { userId: build.userId, organizationId: build.organizationId },
+      viewerId,
+    ))
+
+  return c.json(
+    serializeBuildDetail(build, {
+      isOwner,
+      hasLiked: viewerHasLiked,
+      hasBookmarked: viewerHasBookmarked,
+    }),
+  )
 })
 
 const VIEW_COOKIE_MAX_AGE = 12 * 60 * 60 // 12h

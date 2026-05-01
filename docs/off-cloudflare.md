@@ -11,7 +11,7 @@ The API is a [Hono](https://hono.dev/) app deployed to Cloudflare Workers. Worke
 3. **Two env files** — `.env` (Prisma CLI) + `.dev.vars` (wrangler).
 4. **Workers primitives in app code** — `ctx.waitUntil`, Workers-typed handlers, `[vars]`/secrets split in wrangler.toml.
 
-Everything else (Hono, Better Auth, Neon Postgres, the web SPA, the screenshot service) is runtime-agnostic and wouldn't change.
+Everything else (Hono, Better Auth, Neon Postgres, the web SPA) is runtime-agnostic and wouldn't change.
 
 ## The four CF-specific things
 
@@ -73,7 +73,7 @@ Off-CF migration:
 
 - **`ctx.waitUntil`** — [apps/api/src/db.ts](../apps/api/src/db.ts) uses this to keep the per-request Prisma client alive while background work (e.g. `lastUsedAt` bumps) settles. Workers-specific API. Node/Bun have no equivalent; you'd either `await` the cleanup inline, or register a process-level promise tracker.
 - **Fetch-style handler** — [apps/api/src/index.ts](../apps/api/src/index.ts) exports `{ fetch(req, env, ctx) }`. Under Node/Bun you'd use Hono's `serve()` adapter, which exposes `req` only — no `env`, no `ctx`.
-- **`env.SCREENSHOT_SERVICE_URL` etc.** — Workers injects secrets via `env` param, not `process.env`. Today some code reads `process.env` (Node compat is enabled via `compatibility_flags = ["nodejs_compat"]`), some reads `env` — inconsistent. A migration is a good moment to consolidate on `process.env`.
+- **Secret injection** — Workers injects secrets via `env` param, not `process.env`. Today some code reads `process.env` (Node compat is enabled via `compatibility_flags = ["nodejs_compat"]`), some reads `env` — inconsistent. A migration is a good moment to consolidate on `process.env`.
 - **[wrangler.toml](../apps/api/wrangler.toml)** — the deployment manifest. `[vars]`, secrets (`wrangler secret put`), routes, observability are all CF-specific.
 
 Off-CF migration:
@@ -89,7 +89,6 @@ Off-CF migration:
 - **Better Auth** — framework-agnostic. Runs anywhere.
 - **Neon Postgres** — works from any runtime via `@prisma/adapter-neon` (fetch-based) or the standard `pg` driver. If we leave CF we can keep Neon or move to any Postgres host.
 - **The web SPA (Vite)** — Cloudflare Pages is just a static host. Any CDN / static host works (Vercel, Netlify, Fly static, S3+CloudFront).
-- **Screenshot service** — already a plain Docker container, no CF coupling.
 
 ## What we'd lose / gain
 
@@ -102,8 +101,7 @@ Off-CF migration:
 - A normal dev loop. Bun or Node hot reload is ~instant; no wrangler startup tax.
 - No Prisma-workerd landmines.
 - Single `.env`. No `.dev.vars`.
-- `ctx.waitUntil` goes away. Long-running tasks (background writes, image generation) become natural.
-- Can run Playwright / Puppeteer in-process for the screenshot service if we want to.
+- `ctx.waitUntil` goes away. Long-running tasks (background writes) become natural.
 
 ## Alternative stack if we did a bigger rewrite
 

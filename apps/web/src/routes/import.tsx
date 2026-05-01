@@ -261,7 +261,8 @@ function ImportPage() {
                                     matchedItem.category,
                                   ),
                                 },
-                                (_, i) => toPolarity(detailItem.polarities?.[i]),
+                                (_, i) =>
+                                  toPolarity(detailItem.polarities?.[i]),
                               ),
                               formaPolarities:
                                 applied.data.formaPolarities ?? {},

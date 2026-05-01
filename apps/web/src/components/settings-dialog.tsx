@@ -690,12 +690,6 @@ const SCOPE_OPTIONS: readonly ScopeOption[] = [
     label: "build:write",
     description: "Import builds (/api/v1/imports/overframe)",
   },
-  {
-    value: "image:generate",
-    label: "image:generate",
-    description: "Request build screenshots from img.arsenyx.com",
-    privileged: true,
-  },
 ]
 
 const DEFAULT_SCOPES = SCOPE_OPTIONS.filter((s) => !s.privileged).map(

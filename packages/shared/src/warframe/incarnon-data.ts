@@ -3,7 +3,11 @@
 // imported by the build script) and are fetched on demand from
 // /data/incarnon-evolutions.json — see apps/web/src/lib/incarnon-query.ts.
 
-export type { IncarnonEvolution, IncarnonPerk, IncarnonTier } from "./incarnon-evolutions"
+export type {
+  IncarnonEvolution,
+  IncarnonPerk,
+  IncarnonTier,
+} from "./incarnon-evolutions"
 
 /** Stable identifier for the incarnon-form alt-fire attack mode in WFCD data. */
 export const INCARNON_FORM_ATTACK_NAME = "Incarnon Form"
@@ -66,45 +70,45 @@ export const INCARNON_NAMES: ReadonlySet<string> = new Set([
  */
 export const INCARNON_GENESIS_IMAGES: Readonly<Record<string, string>> = {
   "Ack & Brunt": "AckBruntIncarnonAdapter.png",
-  "Angstrum": "AngstrumIncarnonAdapter.png",
-  "Anku": "AnkuIncarnonAdapter.png",
-  "Atomos": "AtomosIncarnonAdapter.png",
-  "Bo": "BoIncarnonAdapter.png",
-  "Boar": "BoarIncarnonAdapter.png",
-  "Boltor": "BoltorIncarnonAdapter.png",
-  "Braton": "BratonIncarnonAdapter.png",
-  "Bronco": "BroncoIncarnonAdapter.png",
-  "Burston": "BurstonIncarnonAdapter.png",
+  Angstrum: "AngstrumIncarnonAdapter.png",
+  Anku: "AnkuIncarnonAdapter.png",
+  Atomos: "AtomosIncarnonAdapter.png",
+  Bo: "BoIncarnonAdapter.png",
+  Boar: "BoarIncarnonAdapter.png",
+  Boltor: "BoltorIncarnonAdapter.png",
+  Braton: "BratonIncarnonAdapter.png",
+  Bronco: "BroncoIncarnonAdapter.png",
+  Burston: "BurstonIncarnonAdapter.png",
   "Ceramic Dagger": "CeramicDaggerIncarnonAdapter.png",
-  "Cestra": "CestraIncarnonAdapter.png",
-  "Dera": "DeraIncarnonAdapter.png",
-  "Despair": "DespairIncarnonAdapter.png",
-  "Dread": "DreadIncarnonAdapter.png",
+  Cestra: "CestraIncarnonAdapter.png",
+  Dera: "DeraIncarnonAdapter.png",
+  Despair: "DespairIncarnonAdapter.png",
+  Dread: "DreadIncarnonAdapter.png",
   "Dual Ichor": "DualIchorIncarnonAdapter.png",
   "Dual Toxocyst": "DualToxocystIncarnonAdapter.png",
-  "Furax": "FuraxIncarnonAdapter.png",
-  "Furis": "FurisIncarnonAdapter.png",
-  "Gammacor": "GammacorIncarnonAdapter.png",
-  "Gorgon": "GorgonIncarnonAdapter.png",
-  "Hate": "HateIncarnonAdapter.png",
-  "Kunai": "KunaiIncarnonAdapter.png",
-  "Lato": "LatoIncarnonAdapter.png",
-  "Latron": "LatronIncarnonAdapter.png",
-  "Lex": "LexIncarnonAdapter.png",
-  "Magistar": "MagistarIncarnonAdapter.png",
-  "Miter": "MiterIncarnonAdapter.png",
+  Furax: "FuraxIncarnonAdapter.png",
+  Furis: "FurisIncarnonAdapter.png",
+  Gammacor: "GammacorIncarnonAdapter.png",
+  Gorgon: "GorgonIncarnonAdapter.png",
+  Hate: "HateIncarnonAdapter.png",
+  Kunai: "KunaiIncarnonAdapter.png",
+  Lato: "LatoIncarnonAdapter.png",
+  Latron: "LatronIncarnonAdapter.png",
+  Lex: "LexIncarnonAdapter.png",
+  Magistar: "MagistarIncarnonAdapter.png",
+  Miter: "MiterIncarnonAdapter.png",
   "Nami Solo": "NamiIncarnonAdapter.png",
-  "Okina": "OkinaIncarnonAdapter.png",
-  "Paris": "ParisIncarnonAdapter.png",
-  "Sibear": "SibearIncarnonAdapter.png",
-  "Sicarus": "SicarusIncarnonAdapter.png",
-  "Skana": "SkanaIncarnonAdapter.png",
-  "Soma": "SomaIncarnonAdapter.png",
-  "Strun": "StrunIncarnonAdapter.png",
-  "Sybaris": "SybarisIncarnonAdapter.png",
-  "Torid": "ToridIncarnonAdapter.png",
-  "Vasto": "VastoIncarnonAdapter.png",
-  "Zylok": "ZylokPrimeIncarnonAdapter.png",
+  Okina: "OkinaIncarnonAdapter.png",
+  Paris: "ParisIncarnonAdapter.png",
+  Sibear: "SibearIncarnonAdapter.png",
+  Sicarus: "SicarusIncarnonAdapter.png",
+  Skana: "SkanaIncarnonAdapter.png",
+  Soma: "SomaIncarnonAdapter.png",
+  Strun: "StrunIncarnonAdapter.png",
+  Sybaris: "SybarisIncarnonAdapter.png",
+  Torid: "ToridIncarnonAdapter.png",
+  Vasto: "VastoIncarnonAdapter.png",
+  Zylok: "ZylokPrimeIncarnonAdapter.png",
 }
 
 // Variant prefixes/suffixes stripped before lookup. Order matters — strip
@@ -167,4 +171,3 @@ export function isInnateIncarnon(weaponName: string): boolean {
   const base = getIncarnonBaseName(weaponName)
   return base !== null && !INCARNON_GENESIS_IMAGES[base]
 }
-

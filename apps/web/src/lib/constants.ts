@@ -69,4 +69,3 @@ export const FOOTER_LINKS = {
     { label: "About", href: ROUTES.about },
   ],
 } as const
-

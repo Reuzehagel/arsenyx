@@ -11,6 +11,7 @@ import {
   revokeApiKey,
 } from "../lib/api-keys"
 import { getSession } from "../lib/session"
+import { parseJsonBody } from "../lib/validate"
 import { getUserRoles } from "./_admin"
 
 const KNOWN_SCOPES = new Set<string>(ALL_API_KEY_SCOPES)
@@ -96,16 +97,9 @@ me.post("/api-keys", async (c) => {
   const user = await requireSession(c)
   if (!user) return c.json({ error: "unauthorized" }, 401)
 
-  let body: unknown
-  try {
-    body = await c.req.json()
-  } catch {
-    return c.json({ error: "invalid_json" }, 400)
-  }
-  if (!body || typeof body !== "object") {
-    return c.json({ error: "invalid_body" }, 400)
-  }
-  const b = body as Record<string, unknown>
+  const parsed = await parseJsonBody(c, { maxBytes: 4 * 1024 })
+  if (!parsed.ok) return parsed.response
+  const b = parsed.value
 
   const rawName = typeof b.name === "string" ? b.name.trim() : ""
   if (!rawName) return c.json({ error: "invalid_name" }, 400)
@@ -116,19 +110,22 @@ me.post("/api-keys", async (c) => {
     if (typeof b.expiresAt !== "string") {
       return c.json({ error: "invalid_expiresAt" }, 400)
     }
-    const parsed = new Date(b.expiresAt)
-    if (Number.isNaN(parsed.getTime())) {
+    const expiresAtDate = new Date(b.expiresAt)
+    if (Number.isNaN(expiresAtDate.getTime())) {
       return c.json({ error: "invalid_expiresAt" }, 400)
     }
-    if (parsed.getTime() <= Date.now()) {
+    if (expiresAtDate.getTime() <= Date.now()) {
       return c.json({ error: "expiresAt_in_past" }, 400)
     }
-    expiresAt = parsed
+    expiresAt = expiresAtDate
   }
 
   let scopes: string[] | undefined
   if (b.scopes !== undefined) {
-    if (!Array.isArray(b.scopes) || b.scopes.some((s) => typeof s !== "string")) {
+    if (
+      !Array.isArray(b.scopes) ||
+      b.scopes.some((s) => typeof s !== "string")
+    ) {
       return c.json({ error: "invalid_scopes" }, 400)
     }
     const requested = Array.from(new Set(b.scopes as string[]))

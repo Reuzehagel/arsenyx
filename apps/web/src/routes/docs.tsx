@@ -157,10 +157,10 @@ function DocsPage() {
 
           <h2>Public API</h2>
           <p>
-            Base URL: <code>{EXTERNAL_LINKS.apiBase}</code>. Authentication is cookie-based
-            (Better Auth). The endpoints below are public and read-only — no
-            credentials required. Write endpoints, user data, and admin routes
-            require a session and aren&apos;t documented here.
+            Base URL: <code>{EXTERNAL_LINKS.apiBase}</code>. Authentication is
+            cookie-based (Better Auth). The endpoints below are public and
+            read-only — no credentials required. Write endpoints, user data, and
+            admin routes require a session and aren&apos;t documented here.
           </p>
           <ul className="not-prose flex list-none flex-col gap-4 pl-0">
             {PUBLIC_ENDPOINTS.map((ep) => (
@@ -182,8 +182,8 @@ function DocsPage() {
             ))}
           </ul>
           <p className="text-sm opacity-75">
-            Fields abbreviated. Responses are subject to change while Arsenyx
-            is in beta — pin to the commit you tested against.
+            Fields abbreviated. Responses are subject to change while Arsenyx is
+            in beta — pin to the commit you tested against.
           </p>
 
           <h2>Authenticated write API</h2>

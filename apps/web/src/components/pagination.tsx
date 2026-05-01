@@ -46,11 +46,10 @@ export function Pagination({
   const items = pageRange(page, pages)
   const linkHref = (p: number) => href?.(p) ?? "#"
 
-  const handle =
-    (p: number) => (e: React.MouseEvent<HTMLAnchorElement>) => {
-      e.preventDefault()
-      onPage(p)
-    }
+  const handle = (p: number) => (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault()
+    onPage(p)
+  }
 
   return (
     <PaginationRoot>

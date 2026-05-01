@@ -204,23 +204,6 @@ body {
   contain-intrinsic-size: 200px 80px;
 }
 
-/* Screenshot mode: show riven stats instead of name on compact cards */
-[data-screenshot] [data-riven-name] {
-  display: none;
-}
-[data-screenshot] [data-riven-stats] {
-  display: flex;
-}
-[data-screenshot] [data-riven-image] {
-  display: none;
-}
-[data-screenshot] [data-riven-frame-star] {
-  display: none;
-}
-[data-screenshot] [data-riven-frame-nostar] {
-  display: block;
-}
-
 @keyframes mod-card-expand {
   from {
     transform: translate(-50%, -50%) scale(0.225);

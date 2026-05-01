@@ -7,7 +7,6 @@ Thanks for poking around. Arsenyx is a Bun workspaces monorepo — no npm, no np
 - [`apps/web/`](apps/web/) — the SPA (Vite + React 19 + TanStack Router)
 - [`apps/api/`](apps/api/) — the Hono API (Cloudflare Workers + Prisma 7)
 - [`packages/shared/`](packages/shared/) — types and codecs shared by both
-- [`services/screenshot/`](services/screenshot/) — Playwright screenshot worker
 
 Game data is **static** and served as JSON from `apps/web/public/data/`. User data (builds, votes, favorites, guides) is **dynamic** and lives in Postgres behind the API.
 

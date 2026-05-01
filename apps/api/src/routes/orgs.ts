@@ -4,6 +4,8 @@ import { prisma } from "../db"
 import { Prisma } from "../generated/prisma/client"
 import { BuildVisibility, OrgRole } from "../generated/prisma/enums"
 import { getSession } from "../lib/session"
+import { hasPrismaCode, parseJsonBody, trimToMax } from "../lib/validate"
+import { rateLimitUser } from "../middleware/rate-limit"
 import { parseListQuery, runList } from "./_build-list"
 import { parsePage, trimQ } from "./_query"
 
@@ -18,22 +20,8 @@ const DIRECTORY_PAGE = 20
 // Reserved because they collide with sibling paths on the /orgs router.
 const RESERVED_SLUGS = new Set(["public"])
 
-function trimToMax(v: unknown, max: number): string | null {
-  if (typeof v !== "string") return null
-  const t = v.trim()
-  return t.length > 0 ? t.slice(0, max) : null
-}
-
 function isOrgRole(v: unknown): v is OrgRole {
   return v === "ADMIN" || v === "MEMBER"
-}
-
-function hasPrismaCode(err: unknown, code: string): boolean {
-  return (
-    typeof err === "object" &&
-    err != null &&
-    (err as { code?: string }).code === code
-  )
 }
 
 async function requireSessionUser(
@@ -94,20 +82,13 @@ orgs.get("/", async (c) => {
   })
 })
 
-orgs.post("/", async (c) => {
+orgs.post("/", rateLimitUser("mutate"), async (c) => {
   const user = await requireSessionUser(c)
   if (user instanceof Response) return user
 
-  let body: unknown
-  try {
-    body = await c.req.json()
-  } catch {
-    return c.json({ error: "invalid_json" }, 400)
-  }
-  if (!body || typeof body !== "object") {
-    return c.json({ error: "invalid_body" }, 400)
-  }
-  const b = body as Record<string, unknown>
+  const parsed = await parseJsonBody(c, { maxBytes: 8 * 1024 })
+  if (!parsed.ok) return parsed.response
+  const b = parsed.value
 
   const name = trimToMax(b.name, MAX_NAME)
   const slugRaw = trimToMax(b.slug, MAX_SLUG)?.toLowerCase() ?? null
@@ -289,7 +270,7 @@ orgs.get("/:slug/builds", async (c) => {
   return c.json(result)
 })
 
-orgs.patch("/:slug", async (c) => {
+orgs.patch("/:slug", rateLimitUser("mutate"), async (c) => {
   const slug = c.req.param("slug").toLowerCase()
   const user = await requireSessionUser(c)
   if (user instanceof Response) return user
@@ -298,16 +279,9 @@ orgs.patch("/:slug", async (c) => {
   if (!ctx) return c.json({ error: "not_found" }, 404)
   if (ctx.role !== "ADMIN") return c.json({ error: "forbidden" }, 403)
 
-  let body: unknown
-  try {
-    body = await c.req.json()
-  } catch {
-    return c.json({ error: "invalid_json" }, 400)
-  }
-  if (!body || typeof body !== "object") {
-    return c.json({ error: "invalid_body" }, 400)
-  }
-  const b = body as Record<string, unknown>
+  const parsed = await parseJsonBody(c, { maxBytes: 8 * 1024 })
+  if (!parsed.ok) return parsed.response
+  const b = parsed.value
 
   const data: Record<string, unknown> = {}
   if (typeof b.name === "string") {
@@ -343,7 +317,7 @@ orgs.patch("/:slug", async (c) => {
   }
 })
 
-orgs.delete("/:slug", async (c) => {
+orgs.delete("/:slug", rateLimitUser("mutate"), async (c) => {
   const slug = c.req.param("slug").toLowerCase()
   const user = await requireSessionUser(c)
   if (user instanceof Response) return user
@@ -356,7 +330,7 @@ orgs.delete("/:slug", async (c) => {
   return c.body(null, 204)
 })
 
-orgs.post("/:slug/members", async (c) => {
+orgs.post("/:slug/members", rateLimitUser("mutate"), async (c) => {
   const slug = c.req.param("slug").toLowerCase()
   const user = await requireSessionUser(c)
   if (user instanceof Response) return user
@@ -365,16 +339,9 @@ orgs.post("/:slug/members", async (c) => {
   if (!ctx) return c.json({ error: "not_found" }, 404)
   if (ctx.role !== "ADMIN") return c.json({ error: "forbidden" }, 403)
 
-  let body: unknown
-  try {
-    body = await c.req.json()
-  } catch {
-    return c.json({ error: "invalid_json" }, 400)
-  }
-  const username =
-    body && typeof body === "object"
-      ? trimToMax((body as Record<string, unknown>).username, 64)?.toLowerCase()
-      : null
+  const parsed = await parseJsonBody(c, { maxBytes: 1024 })
+  if (!parsed.ok) return parsed.response
+  const username = trimToMax(parsed.value.username, 64)?.toLowerCase()
   if (!username) return c.json({ error: "invalid_username" }, 400)
 
   const target = await prisma.user.findUnique({
@@ -401,7 +368,7 @@ orgs.post("/:slug/members", async (c) => {
   return c.json({ userId: target.id, role: "MEMBER" }, 201)
 })
 
-orgs.patch("/:slug/members/:userId", async (c) => {
+orgs.patch("/:slug/members/:userId", rateLimitUser("mutate"), async (c) => {
   const slug = c.req.param("slug").toLowerCase()
   const targetUserId = c.req.param("userId")
   const user = await requireSessionUser(c)
@@ -411,16 +378,9 @@ orgs.patch("/:slug/members/:userId", async (c) => {
   if (!ctx) return c.json({ error: "not_found" }, 404)
   if (ctx.role !== "ADMIN") return c.json({ error: "forbidden" }, 403)
 
-  let body: unknown
-  try {
-    body = await c.req.json()
-  } catch {
-    return c.json({ error: "invalid_json" }, 400)
-  }
-  const role =
-    body && typeof body === "object"
-      ? (body as Record<string, unknown>).role
-      : null
+  const parsed = await parseJsonBody(c, { maxBytes: 1024 })
+  if (!parsed.ok) return parsed.response
+  const role = parsed.value.role
   if (!isOrgRole(role)) return c.json({ error: "invalid_role" }, 400)
 
   if (role === "MEMBER") {
@@ -464,7 +424,7 @@ orgs.patch("/:slug/members/:userId", async (c) => {
   }
 })
 
-orgs.delete("/:slug/members/:userId", async (c) => {
+orgs.delete("/:slug/members/:userId", rateLimitUser("mutate"), async (c) => {
   const slug = c.req.param("slug").toLowerCase()
   const targetUserId = c.req.param("userId")
   const user = await requireSessionUser(c)

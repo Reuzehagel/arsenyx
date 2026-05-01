@@ -37,7 +37,12 @@ function formatRivenValue(stat: string, v: number): string {
 
 type StatLine =
   | { kind: "plain"; text: string }
-  | { kind: "riven"; sign: "positive" | "negative"; value: string; stat: string }
+  | {
+      kind: "riven"
+      sign: "positive" | "negative"
+      value: string
+      stat: string
+    }
 
 function getModStats(mod: Mod, rank: number, setCount: number = 0): StatLine[] {
   if (mod.rivenStats) {
@@ -93,7 +98,9 @@ function getModStats(mod: Mod, rank: number, setCount: number = 0): StatLine[] {
 const INLINE_TAG_PATTERN = /<[A-Z_][A-Z0-9_]*>/g
 
 function stripInlineTags(text: string): string {
-  return text.replace(/<LINE_SEPARATOR>/g, "\\n").replace(INLINE_TAG_PATTERN, "")
+  return text
+    .replace(/<LINE_SEPARATOR>/g, "\\n")
+    .replace(INLINE_TAG_PATTERN, "")
 }
 
 function StatLineView({ line }: { line: StatLine }) {
@@ -330,12 +337,6 @@ export interface ModCardProps {
   className?: string
 }
 
-/**
- * In-game-styled mod card. Compact by default; expands on hover to show the
- * stats panel. No portal — the expanded variant floats over the compact one
- * in an absolute wrapper. Screenshot-perfect rendering lives in a separate
- * component (to be built with the screenshot service, Slice 8).
- */
 // Rank dots hang ~32px below the 64px compact frame; extend the hover surface
 // so cursor motion across the dots doesn't trigger mouseleave.
 const HOVER_OVERHANG = 32

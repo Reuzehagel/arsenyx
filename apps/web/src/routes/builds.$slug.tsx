@@ -422,7 +422,6 @@ function BuildViewerBodyInner({
 
       <div className="flex flex-col gap-4">
         <div
-          data-screenshot-target
           className={cn(
             "flex flex-col gap-4",
             // At xl, switch to block + relative so the sidebar can be absolutely

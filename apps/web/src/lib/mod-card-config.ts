@@ -1,14 +1,3 @@
-/**
- * Mod-card rarity configuration.
- * Ported from legacy/src/lib/warframe/mod-card-config.ts — same asset layout
- * (assets under /public/mod-components and /public/focus-schools).
- *
- * Cleanups vs legacy:
- *  - No screenshot-mode branches (the screenshot artifact is a separate
- *    renderer, not a special prop on this component).
- *  - One polarity icon map, one asset URL resolver, one rarity text color.
- */
-
 import type { Polarity } from "@arsenyx/shared/warframe/types"
 
 export type ModRarity =

@@ -36,7 +36,7 @@ function OrgsDirectoryPage() {
     <div className="relative flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        <div className="wrap max-w-5xl flex flex-col gap-8 py-10">
+        <div className="wrap flex max-w-5xl flex-col gap-8 py-10">
           <div className="flex flex-col gap-2">
             <h1 className="text-3xl font-bold tracking-tight">Organizations</h1>
             <p className="text-muted-foreground text-sm">
@@ -88,9 +88,9 @@ function OrgsDirectoryContent() {
           <li key={org.id}>
             <Link
               href={`/org/${org.slug}`}
-              className="block h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl"
+              className="focus-visible:ring-ring block h-full rounded-xl focus:outline-none focus-visible:ring-2"
             >
-              <Card className="h-full transition-colors hover:bg-muted/30">
+              <Card className="hover:bg-muted/30 h-full transition-colors">
                 <CardHeader className="flex flex-row items-center gap-3">
                   <UserAvatar
                     src={org.image}

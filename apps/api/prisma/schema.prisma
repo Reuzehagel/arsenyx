@@ -191,8 +191,7 @@ model Build {
   partnerBuilds Build[]         @relation("PartnerBuilds")
   partneredBy   Build[]         @relation("PartnerBuilds")
 
-  buildGuide      BuildGuide?
-  generatedImages GeneratedImage[]
+  buildGuide BuildGuide?
 
   @@index([userId])
   @@index([itemUniqueName])
@@ -326,21 +325,19 @@ model ApiKeyRateLimitWindow {
   @@map("api_key_rate_limit_windows")
 }
 
-model GeneratedImage {
-  id String @id @default(cuid())
+// Per-user rate-limit windows for cookie-session mutations. Bucketed by action
+// kind ("mutate", "social", "import") so different tiers share one table.
+// Pruned opportunistically by the limiter middleware (see api-key-auth.ts
+// pattern). Same best-effort, racy semantics — fine for abuse throttling, not
+// for hard quotas.
+model UserRateLimitWindow {
+  userId      String
+  bucket      String
+  windowStart DateTime
 
-  buildId  String
-  build    Build  @relation(fields: [buildId], references: [id], onDelete: Cascade)
-  template String
-  options  Json?
+  requestCount Int @default(0)
 
-  imageUrl String
-  width    Int
-  height   Int
-
-  createdAt DateTime @default(now())
-  expiresAt DateTime
-
-  @@unique([buildId, template, options])
-  @@map("generated_images")
+  @@id([userId, bucket, windowStart])
+  @@index([windowStart])
+  @@map("user_rate_limit_windows")
 }

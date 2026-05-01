@@ -9,11 +9,7 @@ const API_KEY_PREFIX_LENGTH = 16
 
 export const SCOPE_BUILD_READ = "build:read"
 export const SCOPE_BUILD_WRITE = "build:write"
-export const SCOPE_IMAGE_GENERATE = "image:generate"
-export type ApiKeyScope =
-  | typeof SCOPE_BUILD_READ
-  | typeof SCOPE_BUILD_WRITE
-  | typeof SCOPE_IMAGE_GENERATE
+export type ApiKeyScope = typeof SCOPE_BUILD_READ | typeof SCOPE_BUILD_WRITE
 
 export const DEFAULT_API_KEY_SCOPES: readonly ApiKeyScope[] = [
   SCOPE_BUILD_READ,
@@ -22,11 +18,8 @@ export const DEFAULT_API_KEY_SCOPES: readonly ApiKeyScope[] = [
 export const ALL_API_KEY_SCOPES: readonly ApiKeyScope[] = [
   SCOPE_BUILD_READ,
   SCOPE_BUILD_WRITE,
-  SCOPE_IMAGE_GENERATE,
 ]
-export const PRIVILEGED_API_KEY_SCOPES: readonly ApiKeyScope[] = [
-  SCOPE_IMAGE_GENERATE,
-]
+export const PRIVILEGED_API_KEY_SCOPES: readonly ApiKeyScope[] = []
 export const DEFAULT_API_KEY_RATE_LIMIT = 60
 export const MAX_ACTIVE_API_KEYS_PER_USER = 10
 

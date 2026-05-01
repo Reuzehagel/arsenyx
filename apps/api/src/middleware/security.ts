@@ -20,8 +20,7 @@ function safeOrigin(value: string | undefined): string | null {
 export const originGuard: MiddlewareHandler = async (c, next) => {
   if (SAFE_METHODS.has(c.req.method)) return next()
 
-  const origin =
-    c.req.header("origin") ?? safeOrigin(c.req.header("referer"))
+  const origin = c.req.header("origin") ?? safeOrigin(c.req.header("referer"))
   if (!origin || !webOrigins.includes(origin)) {
     return c.json({ error: "forbidden_origin" }, 403)
   }

@@ -44,6 +44,72 @@ export const LIST_SELECT = {
 
 export type ListRow = Prisma.BuildGetPayload<{ select: typeof LIST_SELECT }>
 
+export const DETAIL_INCLUDE = {
+  user: {
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      displayUsername: true,
+      image: true,
+    },
+  },
+  organization: {
+    select: { id: true, name: true, slug: true, image: true },
+  },
+  buildGuide: {
+    select: { summary: true, description: true, updatedAt: true },
+  },
+} as const
+
+export type DetailRow = Prisma.BuildGetPayload<{
+  include: typeof DETAIL_INCLUDE
+}>
+
+export type ViewerState = {
+  isOwner: boolean
+  hasLiked: boolean
+  hasBookmarked: boolean
+}
+
+// Single source of truth for the build-detail JSON shape, used by both the
+// session-cookie route (`GET /builds/:slug`) and the public PAT route
+// (`GET /api/v1/builds/:slug`). Pass `viewer` for the session route; omit
+// for the public API which doesn't have viewer-specific fields.
+export function serializeBuildDetail(b: DetailRow, viewer: ViewerState | null) {
+  const base = {
+    id: b.id,
+    slug: b.slug,
+    name: b.name,
+    description: b.description,
+    visibility: b.visibility,
+    item: {
+      uniqueName: b.itemUniqueName,
+      category: b.itemCategory,
+      name: b.itemName,
+      imageName: b.itemImageName,
+    },
+    buildData: b.buildData,
+    hasShards: b.hasShards,
+    hasGuide: b.hasGuide,
+    likeCount: b.likeCount,
+    bookmarkCount: b.bookmarkCount,
+    viewCount: b.viewCount,
+    createdAt: b.createdAt,
+    updatedAt: b.updatedAt,
+    user: b.user,
+    organization: b.organization,
+    guide: b.buildGuide,
+  }
+  if (!viewer) return base
+  return {
+    ...base,
+    isOwner: viewer.isOwner,
+    viewerHasLiked: viewer.hasLiked,
+    viewerHasBookmarked: viewer.hasBookmarked,
+  }
+}
+
 export function serializeListRow(b: ListRow) {
   return {
     id: b.id,
