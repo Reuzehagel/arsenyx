@@ -1,13 +1,13 @@
+import type { Context } from "hono"
 import { describe, expect, it } from "vitest"
 
 import { MAX_JSON_BYTES, parseJsonBody, trimToMax } from "./validate"
 
-// Minimal Hono Context shim — parseJsonBody only touches `req.header()` and
-// `req.raw.body`. Avoids spinning up a real Hono app for unit tests.
+// Minimal Context shim — parseJsonBody only touches `req.header()` and `req.raw.body`.
 function fakeContext(init: {
   body: BodyInit | null
   contentLength?: string | null
-}) {
+}): Context {
   const req = new Request("https://test.local/", {
     method: "POST",
     headers: init.contentLength
@@ -22,7 +22,7 @@ function fakeContext(init: {
       header: (name: string) => req.headers.get(name) ?? undefined,
       raw: req,
     },
-  } as unknown as Parameters<typeof parseJsonBody>[0]
+  } as unknown as Context
 }
 
 function streamOfSize(bytes: number): ReadableStream<Uint8Array> {
