@@ -60,6 +60,19 @@ export function rateLimitUser(bucket: RateLimitBucket): MiddlewareHandler {
     c.header("X-RateLimit-Reset", String(resetSeconds))
 
     if (used > limit) {
+      // Don't keep inflating the counter on requests we're already rejecting —
+      // the upsert above already incremented, so we decrement back. Best-effort:
+      // a concurrent request from the same isolate may race, but that's the
+      // same racy semantics as the rest of this limiter.
+      registerBackgroundWork(
+        prisma.userRateLimitWindow.update({
+          where: {
+            userId_bucket_windowStart: { userId, bucket, windowStart },
+          },
+          data: { requestCount: { decrement: 1 } },
+          select: { requestCount: true },
+        }),
+      )
       c.header("Retry-After", String(resetSeconds))
       return c.json({ error: "rate_limited" }, 429)
     }

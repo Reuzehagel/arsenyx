@@ -41,6 +41,7 @@ model User {
   bookmarks               BuildBookmark[]
   apiKeys                 ApiKey[]
   organizationMemberships OrganizationMember[]
+  rateLimitWindows        UserRateLimitWindow[]
 
   @@map("users")
 }
@@ -336,6 +337,8 @@ model UserRateLimitWindow {
   windowStart DateTime
 
   requestCount Int @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, bucket, windowStart])
   @@index([windowStart])

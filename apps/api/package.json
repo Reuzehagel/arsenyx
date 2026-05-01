@@ -8,6 +8,7 @@
     "db:push": "bunx prisma db push",
     "db:studio": "bunx prisma studio",
     "db:generate": "bunx prisma generate",
+    "test": "vitest run",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -25,6 +26,7 @@
     "dotenv": "^16.4.7",
     "prisma": "^7.5.0",
     "typescript": "^5.7.2",
+    "vitest": "^4.1.5",
     "wrangler": "^4.84.0"
   }
 }

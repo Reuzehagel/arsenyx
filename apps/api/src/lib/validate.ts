@@ -16,6 +16,49 @@ function jsonError(code: string, status: 400 | 413): Response {
   })
 }
 
+// Stream the request body, aborting as soon as the byte counter exceeds `max`.
+// `c.req.text()` would buffer the full body first — a chunked transfer with no
+// Content-Length header could allocate up to the Workers per-request limit
+// (~100MB) before any size check ran. Streaming caps memory at `max` bytes.
+async function readBodyCapped(
+  body: ReadableStream<Uint8Array>,
+  max: number,
+): Promise<
+  | { ok: true; bytes: Uint8Array }
+  | { ok: false; reason: "too_large" | "stream_error" }
+> {
+  const reader = body.getReader()
+  const chunks: Uint8Array[] = []
+  let total = 0
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      if (!value) continue
+      total += value.byteLength
+      if (total > max) {
+        try {
+          await reader.cancel()
+        } catch {
+          // Ignore — the request is already being rejected.
+        }
+        return { ok: false, reason: "too_large" }
+      }
+      chunks.push(value)
+    }
+  } catch {
+    return { ok: false, reason: "stream_error" }
+  }
+
+  const merged = new Uint8Array(total)
+  let offset = 0
+  for (const chunk of chunks) {
+    merged.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return { ok: true, bytes: merged }
+}
+
 export async function parseJsonBody(
   c: Context,
   opts: { maxBytes?: number } = {},
@@ -30,15 +73,24 @@ export async function parseJsonBody(
     }
   }
 
-  let raw: string
-  try {
-    raw = await c.req.text()
-  } catch {
+  const stream = c.req.raw.body
+  if (!stream) {
     return { ok: false, response: jsonError("invalid_body", 400) }
   }
 
-  if (raw.length > max) {
-    return { ok: false, response: jsonError("body_too_large", 413) }
+  const read = await readBodyCapped(stream, max)
+  if (!read.ok) {
+    if (read.reason === "too_large") {
+      return { ok: false, response: jsonError("body_too_large", 413) }
+    }
+    return { ok: false, response: jsonError("invalid_body", 400) }
+  }
+
+  let raw: string
+  try {
+    raw = new TextDecoder("utf-8", { fatal: true }).decode(read.bytes)
+  } catch {
+    return { ok: false, response: jsonError("invalid_body", 400) }
   }
 
   let body: unknown
