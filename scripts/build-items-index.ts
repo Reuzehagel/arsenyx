@@ -205,9 +205,7 @@ async function loadAllItems(): Promise<BrowseableItem[]> {
 
 // Atmospheric Archguns (deployed on the ground via Archgun Deployer) lose
 // their innate elemental damage. WFCD only models the Archwing-mission
-// profile, so we curate the divergent variants here. Currently just Corvas
-// and Corvas Prime — they shed innate Heat. Extend if more arch-guns gain
-// context-dependent stats upstream.
+// profile, so we curate divergent variants here.
 const ATMOSPHERIC_OVERRIDES: Record<string, { strip: ReadonlyArray<string> }> =
   {
     Corvas: { strip: ["heat"] },
@@ -227,7 +225,7 @@ type WeaponLike = {
 }
 
 function patchAtmosphericArchgunVariants(items: BrowseableItem[]): void {
-  for (const item of items as unknown as WeaponLike[]) {
+  for (const item of items as WeaponLike[]) {
     const override = ATMOSPHERIC_OVERRIDES[item.name]
     if (!override) continue
     if (!item.damage) continue

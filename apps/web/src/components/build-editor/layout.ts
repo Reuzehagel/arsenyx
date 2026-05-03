@@ -5,7 +5,7 @@ import type { BrowseCategory, DetailItem } from "@/lib/warframe"
  * archwing suits and arch-melee weapons have none. */
 export function getArcaneSlotCount(
   category: BrowseCategory,
-  item: Pick<DetailItem, "type">,
+  itemType: DetailItem["type"],
 ): number {
   switch (category) {
     case "warframes":
@@ -15,7 +15,7 @@ export function getArcaneSlotCount(
     case "melee":
       return 1
     case "archwing":
-      return item.type === "Arch-Gun" ? 2 : 0
+      return itemType === "Arch-Gun" ? 2 : 0
     default:
       return 0
   }

@@ -10,10 +10,11 @@ import {
   isRivenEligible,
   isRivenMod,
 } from "@arsenyx/shared/warframe/rivens"
-import type {
-  DeploymentContext,
-  LichBonusElement,
-  Mod,
+import {
+  DEFAULT_DEPLOYMENT_CONTEXT,
+  type DeploymentContext,
+  type LichBonusElement,
+  type Mod,
 } from "@arsenyx/shared/warframe/types"
 import {
   isZawStrike,
@@ -229,7 +230,7 @@ function EditorShell() {
     slots,
     layout: { normalSlotCount, auraSlotCount, showExilus },
   })
-  const arcaneCount = getArcaneSlotCount(category, item)
+  const arcaneCount = getArcaneSlotCount(category, item.type)
   const arcanes = useArcaneSlots(arcaneCount, savedData.arcanes)
   const arcaneOptions = useMemo(
     () => getArcanesForCategory(allArcanes, category),
@@ -373,10 +374,8 @@ function EditorShell() {
     () => savedData.incarnonPerks ?? [],
   )
 
-  // Atmospheric is the default for arch-guns with a divergent variant — it's
-  // the modding context most users care about.
   const [deploymentContext, setDeploymentContext] = useState<DeploymentContext>(
-    () => savedData.deploymentContext ?? "atmospheric",
+    () => savedData.deploymentContext ?? DEFAULT_DEPLOYMENT_CONTEXT,
   )
   const setIncarnonPerkAt = (tierIndex: number, perk: string | null) => {
     setIncarnonPerks((prev) => {

@@ -1,6 +1,10 @@
 import { getArcanesForCategory } from "@arsenyx/shared/warframe/arcanes"
 import { slugify } from "@arsenyx/shared/warframe/slugs"
-import type { Arcane, Mod } from "@arsenyx/shared/warframe/types"
+import {
+  DEFAULT_DEPLOYMENT_CONTEXT,
+  type Arcane,
+  type Mod,
+} from "@arsenyx/shared/warframe/types"
 import { useSuspenseQuery } from "@tanstack/react-query"
 import {
   createFileRoute,
@@ -310,7 +314,7 @@ function BuildViewerBodyInner({
     CATEGORIES.find((c) => c.id === category)?.label ?? category
   const isCompanion = category === "companions"
   const normalSlotCount = getNormalSlotCount(category)
-  const arcaneCount = getArcaneSlotCount(category, item)
+  const arcaneCount = getArcaneSlotCount(category, item.type)
 
   const arcaneOptions = useMemo(
     () => getArcanesForCategory(allArcanes, category),
@@ -333,7 +337,8 @@ function BuildViewerBodyInner({
   const lichBonusElement = saved.lichBonusElement ?? null
   const incarnonEnabled = saved.incarnonEnabled ?? false
   const incarnonPerks = saved.incarnonPerks ?? []
-  const deploymentContext = saved.deploymentContext ?? "atmospheric"
+  const deploymentContext =
+    saved.deploymentContext ?? DEFAULT_DEPLOYMENT_CONTEXT
 
   const auraInnates = useMemo(
     () => getAuraPolarities(item, auraSlotCount),

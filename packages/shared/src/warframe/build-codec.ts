@@ -1,6 +1,7 @@
 import { normalizePolarity } from "./mods"
 import { RIVEN_IMAGE_NAME, RIVEN_UNIQUE_NAME } from "./rivens"
 import { SHARD_COLORS, getStatByIndex, getStatIndex } from "./shards"
+import { DEFAULT_DEPLOYMENT_CONTEXT } from "./types"
 import type {
   BrowseCategory,
   BuildState,
@@ -136,7 +137,10 @@ export function encodeBuild(state: BuildState): string {
     if (hasPickedPerks) encoded.ic.p = state.incarnonPerks
   }
 
-  if (state.deploymentContext) {
+  if (
+    state.deploymentContext &&
+    state.deploymentContext !== DEFAULT_DEPLOYMENT_CONTEXT
+  ) {
     encoded.dc = state.deploymentContext
   }
 

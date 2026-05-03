@@ -5,6 +5,7 @@ import {
   type IncarnonEvolution,
 } from "@arsenyx/shared/warframe/incarnon-data"
 import {
+  DEFAULT_DEPLOYMENT_CONTEXT,
   LICH_BONUS_ELEMENTS,
   type DeploymentContext,
   type Gun,
@@ -186,18 +187,16 @@ export function ItemSidebar({
 
   const showIncarnon = isWeapon && hasIncarnon(item.name)
 
-  // Atmospheric Archguns (Corvas / Corvas Prime) lose innate elemental
-  // damage when deployed on the ground. The toggle is shown only for
-  // arch-guns whose data carries an explicit atmospheric variant; default
-  // is "atmospheric" (the more common modding context).
+  // Atmospheric Archguns lose innate elemental damage when deployed on the
+  // ground, so the toggle only appears for arch-guns with an explicit
+  // atmospheric variant. Non-arch-guns are pinned to "archwing".
   const hasAtmosphericVariant =
     isWeapon &&
     category === "archwing" &&
     item.type === "Arch-Gun" &&
     item.atmosphericDamage !== undefined
-  const showDeploymentToggle = hasAtmosphericVariant
   const effectiveDeploymentContext: DeploymentContext = hasAtmosphericVariant
-    ? (deploymentContext ?? "atmospheric")
+    ? (deploymentContext ?? DEFAULT_DEPLOYMENT_CONTEXT)
     : "archwing"
 
   const modList = useMemo(
@@ -427,7 +426,7 @@ export function ItemSidebar({
                 />
               </div>
             )}
-            {showDeploymentToggle && (
+            {hasAtmosphericVariant && (
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">Deployment</span>
                 <Select
