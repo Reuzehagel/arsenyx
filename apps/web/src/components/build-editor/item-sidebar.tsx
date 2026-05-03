@@ -91,6 +91,11 @@ import { ZawComponentSelector } from "./zaw-component-selector"
 
 const SHARD_SLOTS = 5
 
+const DEPLOYMENT_ITEMS: { value: DeploymentContext; label: string }[] = [
+  { value: "atmospheric", label: "Atmospheric" },
+  { value: "archwing", label: "Archwing" },
+]
+
 function itemHasWeaponData(item: DetailItem): boolean {
   if (item.totalDamage !== undefined) return true
   const attacks = (item as { attacks?: unknown[] }).attacks
@@ -430,6 +435,7 @@ export function ItemSidebar({
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">Deployment</span>
                 <Select
+                  items={DEPLOYMENT_ITEMS}
                   value={effectiveDeploymentContext}
                   onValueChange={(v) =>
                     onSetDeploymentContext?.(v as DeploymentContext)
@@ -441,8 +447,11 @@ export function ItemSidebar({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      <SelectItem value="atmospheric">Atmospheric</SelectItem>
-                      <SelectItem value="archwing">Archwing</SelectItem>
+                      {DEPLOYMENT_ITEMS.map((it) => (
+                        <SelectItem key={it.value} value={it.value}>
+                          {it.label}
+                        </SelectItem>
+                      ))}
                     </SelectGroup>
                   </SelectContent>
                 </Select>
