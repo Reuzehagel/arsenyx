@@ -6,6 +6,7 @@ import {
 } from "@arsenyx/shared/warframe/incarnon-data"
 import {
   LICH_BONUS_ELEMENTS,
+  type DeploymentContext,
   type Gun,
   type LichBonusElement,
   type Melee,
@@ -114,6 +115,12 @@ export interface ItemSidebarProps {
   onToggleIncarnon?: () => void
   incarnonPerks?: (string | null)[]
   onSetIncarnonPerk?: (tierIndex: number, perkName: string | null) => void
+  /**
+   * Arch-Gun deployment context. Defaults to `"atmospheric"` when the item
+   * has an atmospheric variant; otherwise the toggle is hidden.
+   */
+  deploymentContext?: DeploymentContext
+  onSetDeploymentContext?: (value: DeploymentContext) => void
   placedMods: Partial<Record<SlotId, PlacedMod>>
   placedArcanes: (PlacedArcane | null)[]
   readOnly?: boolean
@@ -145,6 +152,8 @@ export function ItemSidebar({
   onToggleIncarnon,
   incarnonPerks,
   onSetIncarnonPerk,
+  deploymentContext,
+  onSetDeploymentContext,
   placedMods,
   placedArcanes,
   readOnly = false,
@@ -176,6 +185,20 @@ export function ItemSidebar({
   const boosterLabel = isWarframe ? "Reactor" : "Catalyst"
 
   const showIncarnon = isWeapon && hasIncarnon(item.name)
+
+  // Atmospheric Archguns (Corvas / Corvas Prime) lose innate elemental
+  // damage when deployed on the ground. The toggle is shown only for
+  // arch-guns whose data carries an explicit atmospheric variant; default
+  // is "atmospheric" (the more common modding context).
+  const hasAtmosphericVariant =
+    isWeapon &&
+    category === "archwing" &&
+    item.type === "Arch-Gun" &&
+    item.atmosphericDamage !== undefined
+  const showDeploymentToggle = hasAtmosphericVariant
+  const effectiveDeploymentContext: DeploymentContext = hasAtmosphericVariant
+    ? (deploymentContext ?? "atmospheric")
+    : "archwing"
 
   const modList = useMemo(
     () =>
@@ -236,6 +259,7 @@ export function ItemSidebar({
       mods: modList,
       arcanes: arcaneList,
       showMaxStacks,
+      deploymentContext: effectiveDeploymentContext,
     })
     // The Incarnon Form alt-fire is only available with the adapter installed.
     if (showIncarnon && !incarnonEnabled) {
@@ -257,6 +281,7 @@ export function ItemSidebar({
     showMaxStacks,
     showIncarnon,
     incarnonEnabled,
+    effectiveDeploymentContext,
   ])
 
   const companionStats = useMemo<CompanionStats | null>(() => {
@@ -400,6 +425,28 @@ export function ItemSidebar({
                   checked={showMaxStacks}
                   onCheckedChange={setShowMaxStacks}
                 />
+              </div>
+            )}
+            {showDeploymentToggle && (
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Deployment</span>
+                <Select
+                  value={effectiveDeploymentContext}
+                  onValueChange={(v) =>
+                    onSetDeploymentContext?.(v as DeploymentContext)
+                  }
+                  disabled={readOnly}
+                >
+                  <SelectTrigger size="sm" className="h-7 w-32 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="atmospheric">Atmospheric</SelectItem>
+                      <SelectItem value="archwing">Archwing</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
               </div>
             )}
             {showLichBonus && (

@@ -1,7 +1,12 @@
 import type { BrowseCategory, DetailItem } from "@/lib/warframe"
 
-/** Arcane slot count per category, mirroring legacy `src/lib/builds/layout.ts`. */
-export function getArcaneSlotCount(category: BrowseCategory): number {
+/** Arcane slot count per category. Within `archwing`, only arch-guns
+ * have arcane slots (top = Primary Arcane, bottom = Secondary Arcane);
+ * archwing suits and arch-melee weapons have none. */
+export function getArcaneSlotCount(
+  category: BrowseCategory,
+  item: Pick<DetailItem, "type">,
+): number {
   switch (category) {
     case "warframes":
       return 2
@@ -9,14 +14,21 @@ export function getArcaneSlotCount(category: BrowseCategory): number {
     case "secondary":
     case "melee":
       return 1
+    case "archwing":
+      return item.type === "Arch-Gun" ? 2 : 0
     default:
       return 0
   }
 }
 
-/** Categories that have an Exilus slot. Necramechs and companions don't. */
+/** Categories that have an Exilus slot. Necramechs, companions, and every
+ * archwing-category item (suits, arch-guns, arch-melee) don't. */
 export function hasExilusSlot(category: BrowseCategory): boolean {
-  return category !== "necramechs" && category !== "companions"
+  return (
+    category !== "necramechs" &&
+    category !== "companions" &&
+    category !== "archwing"
+  )
 }
 
 /**

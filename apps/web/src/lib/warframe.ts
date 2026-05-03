@@ -92,6 +92,18 @@ export interface DetailItem extends BrowseItem {
   magazineSize?: number
   reloadTime?: number
   range?: number
+  // Arch-gun atmospheric damage variant — only present when it differs from
+  // the default Archwing-mission profile (currently Corvas / Corvas Prime).
+  atmosphericDamage?: Record<string, number | undefined>
+  atmosphericTotalDamage?: number
+  atmosphericAttacks?: Array<{
+    name: string
+    speed?: number
+    crit_chance?: number
+    crit_mult?: number
+    status_chance?: number
+    damage?: Record<string, number | undefined> | string
+  }>
 }
 
 export const CATEGORIES: { id: BrowseCategory; label: string }[] = [

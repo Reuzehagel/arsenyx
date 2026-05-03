@@ -3,6 +3,7 @@ import type {
   Arcane,
   BrowseCategory,
   BuildState,
+  DeploymentContext,
   LichBonusElement,
   Mod,
   ModSlot,
@@ -30,6 +31,7 @@ type EditorState = {
   lichBonusElement?: LichBonusElement
   incarnonEnabled?: boolean
   incarnonPerks?: (string | null)[]
+  deploymentContext?: DeploymentContext
   normalSlotCount: number
   auraSlotCount: number
 }
@@ -170,6 +172,7 @@ export function savedDataToBuildState(state: EditorState): BuildState {
     lichBonusElement: state.lichBonusElement,
     incarnonEnabled: state.incarnonEnabled,
     incarnonPerks: state.incarnonPerks,
+    deploymentContext: state.deploymentContext,
   }
 }
 
@@ -232,6 +235,7 @@ export function buildStateToSavedData(
       lichBonusElement: state.lichBonusElement,
       incarnonEnabled: state.incarnonEnabled,
       incarnonPerks: state.incarnonPerks,
+      deploymentContext: state.deploymentContext,
     },
     buildName: state.buildName,
   }

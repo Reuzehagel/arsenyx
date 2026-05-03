@@ -1,5 +1,7 @@
 import type {
+  Attack,
   DamageTypes,
+  DeploymentContext,
   Gun,
   Melee,
   Weapon,
@@ -31,10 +33,17 @@ export interface WeaponCalcInput {
   mods: PlacedModInput[]
   arcanes: PlacedArcaneInput[]
   showMaxStacks?: boolean
+  /**
+   * Deployment context for arch-guns. When `"atmospheric"` and the weapon
+   * carries `atmosphericDamage`/`atmosphericAttacks` overrides, those
+   * replace the default Archwing-mission profile. Ignored for any weapon
+   * without atmospheric overrides.
+   */
+  deploymentContext?: DeploymentContext
 }
 
 export function calculateWeaponStats(input: WeaponCalcInput): WeaponStats {
-  const { weapon } = input
+  const weapon = applyDeploymentContext(input.weapon, input.deploymentContext)
   const stats = collectSourcedStats(input.mods, input.arcanes, {
     showMaxStacks: input.showMaxStacks,
   })
@@ -488,6 +497,27 @@ export function sumDamage(d: DamageTypes): number {
   let sum = 0
   for (const v of Object.values(d)) sum += v ?? 0
   return sum
+}
+
+interface AtmosphericVariant {
+  atmosphericDamage?: DamageTypes
+  atmosphericTotalDamage?: number
+  atmosphericAttacks?: Attack[]
+}
+
+function applyDeploymentContext<T extends Gun | Melee | Weapon>(
+  weapon: T,
+  context: DeploymentContext | undefined,
+): T {
+  if (context !== "atmospheric") return weapon
+  const variant = weapon as T & AtmosphericVariant
+  if (!variant.atmosphericDamage && !variant.atmosphericAttacks) return weapon
+  return {
+    ...weapon,
+    damage: variant.atmosphericDamage ?? weapon.damage,
+    totalDamage: variant.atmosphericTotalDamage ?? weapon.totalDamage,
+    attacks: variant.atmosphericAttacks ?? weapon.attacks,
+  }
 }
 
 function normalizeRate(v: number | undefined): number {

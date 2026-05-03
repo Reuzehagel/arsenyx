@@ -199,7 +199,68 @@ async function loadAllItems(): Promise<BrowseableItem[]> {
     const items = JSON.parse(body) as BrowseableItem[]
     all.push(...items)
   }
+  patchAtmosphericArchgunVariants(all)
   return all
+}
+
+// Atmospheric Archguns (deployed on the ground via Archgun Deployer) lose
+// their innate elemental damage. WFCD only models the Archwing-mission
+// profile, so we curate the divergent variants here. Currently just Corvas
+// and Corvas Prime — they shed innate Heat. Extend if more arch-guns gain
+// context-dependent stats upstream.
+const ATMOSPHERIC_OVERRIDES: Record<string, { strip: ReadonlyArray<string> }> =
+  {
+    Corvas: { strip: ["heat"] },
+    "Corvas Prime": { strip: ["heat"] },
+  }
+
+type WeaponLike = {
+  name: string
+  damage?: Record<string, number | undefined>
+  totalDamage?: number
+  attacks?: Array<{ damage?: Record<string, number | undefined> | string }>
+  atmosphericDamage?: Record<string, number | undefined>
+  atmosphericTotalDamage?: number
+  atmosphericAttacks?: Array<{
+    damage?: Record<string, number | undefined> | string
+  }>
+}
+
+function patchAtmosphericArchgunVariants(items: BrowseableItem[]): void {
+  for (const item of items as unknown as WeaponLike[]) {
+    const override = ATMOSPHERIC_OVERRIDES[item.name]
+    if (!override) continue
+    if (!item.damage) continue
+
+    const damage = { ...item.damage }
+    let removed = 0
+    for (const key of override.strip) {
+      removed += damage[key] ?? 0
+      damage[key] = 0
+    }
+    // `damage.total` is a precomputed sum, not a damage type — keep it
+    // consistent with the per-type fields we just zeroed.
+    if (typeof damage.total === "number") {
+      damage.total = damage.total - removed
+    }
+    item.atmosphericDamage = damage
+    item.atmosphericTotalDamage =
+      item.totalDamage !== undefined
+        ? item.totalDamage - removed
+        : Object.values(damage).reduce<number>(
+            (s, v) => s + (typeof v === "number" ? v : 0),
+            0,
+          )
+
+    if (Array.isArray(item.attacks)) {
+      item.atmosphericAttacks = item.attacks.map((attack) => {
+        if (typeof attack.damage !== "object" || !attack.damage) return attack
+        const next = { ...attack.damage }
+        for (const key of override.strip) next[key] = 0
+        return { ...attack, damage: next }
+      })
+    }
+  }
 }
 
 async function loadAllMods(): Promise<Mod[]> {
@@ -310,9 +371,7 @@ async function main() {
   }
   const incarnonBody = JSON.stringify(INCARNON_EVOLUTIONS)
   await writeFile(INCARNON_OUT, incarnonBody, "utf8")
-  const incarnonKb = (
-    Buffer.byteLength(incarnonBody, "utf8") / 1024
-  ).toFixed(1)
+  const incarnonKb = (Buffer.byteLength(incarnonBody, "utf8") / 1024).toFixed(1)
   console.log(
     `✓ wrote ${evolutionKeys.length} incarnon evolutions → incarnon-evolutions.json (${incarnonKb} KB)`,
   )

@@ -310,7 +310,7 @@ function BuildViewerBodyInner({
     CATEGORIES.find((c) => c.id === category)?.label ?? category
   const isCompanion = category === "companions"
   const normalSlotCount = getNormalSlotCount(category)
-  const arcaneCount = getArcaneSlotCount(category)
+  const arcaneCount = getArcaneSlotCount(category, item)
 
   const arcaneOptions = useMemo(
     () => getArcanesForCategory(allArcanes, category),
@@ -333,6 +333,7 @@ function BuildViewerBodyInner({
   const lichBonusElement = saved.lichBonusElement ?? null
   const incarnonEnabled = saved.incarnonEnabled ?? false
   const incarnonPerks = saved.incarnonPerks ?? []
+  const deploymentContext = saved.deploymentContext ?? "atmospheric"
 
   const auraInnates = useMemo(
     () => getAuraPolarities(item, auraSlotCount),
@@ -401,6 +402,7 @@ function BuildViewerBodyInner({
     lichBonusElement,
     incarnonEnabled,
     incarnonPerks,
+    deploymentContext,
     placedMods: slots.placed,
     placedArcanes: arcanes.placed,
     readOnly: true as const,

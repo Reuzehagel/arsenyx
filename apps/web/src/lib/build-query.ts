@@ -1,4 +1,8 @@
-import type { LichBonusElement, Polarity } from "@arsenyx/shared/warframe/types"
+import type {
+  DeploymentContext,
+  LichBonusElement,
+  Polarity,
+} from "@arsenyx/shared/warframe/types"
 import { queryOptions } from "@tanstack/react-query"
 import { notFound } from "@tanstack/react-router"
 
@@ -20,6 +24,7 @@ export type SavedBuildData = {
   lichBonusElement?: LichBonusElement
   incarnonEnabled?: boolean
   incarnonPerks?: (string | null)[]
+  deploymentContext?: DeploymentContext
 }
 
 export type BuildDetail = {

@@ -10,7 +10,11 @@ import {
   isRivenEligible,
   isRivenMod,
 } from "@arsenyx/shared/warframe/rivens"
-import type { LichBonusElement, Mod } from "@arsenyx/shared/warframe/types"
+import type {
+  DeploymentContext,
+  LichBonusElement,
+  Mod,
+} from "@arsenyx/shared/warframe/types"
 import {
   isZawStrike,
   ZAW_DEFAULT_GRIP,
@@ -225,7 +229,7 @@ function EditorShell() {
     slots,
     layout: { normalSlotCount, auraSlotCount, showExilus },
   })
-  const arcaneCount = getArcaneSlotCount(category)
+  const arcaneCount = getArcaneSlotCount(category, item)
   const arcanes = useArcaneSlots(arcaneCount, savedData.arcanes)
   const arcaneOptions = useMemo(
     () => getArcanesForCategory(allArcanes, category),
@@ -368,6 +372,12 @@ function EditorShell() {
   const [incarnonPerks, setIncarnonPerks] = useState<(string | null)[]>(
     () => savedData.incarnonPerks ?? [],
   )
+
+  // Atmospheric is the default for arch-guns with a divergent variant — it's
+  // the modding context most users care about.
+  const [deploymentContext, setDeploymentContext] = useState<DeploymentContext>(
+    () => savedData.deploymentContext ?? "atmospheric",
+  )
   const setIncarnonPerkAt = (tierIndex: number, perk: string | null) => {
     setIncarnonPerks((prev) => {
       const next = [...prev]
@@ -444,6 +454,7 @@ function EditorShell() {
       lichBonusElement: lichBonusElement ?? undefined,
       incarnonEnabled,
       incarnonPerks,
+      deploymentContext,
       normalSlotCount,
       auraSlotCount,
     })
@@ -492,6 +503,7 @@ function EditorShell() {
           lichBonusElement: lichBonusElement ?? undefined,
           incarnonEnabled,
           incarnonPerks,
+          deploymentContext,
         },
         guide: {
           summary: guideSummary.trim() || null,
@@ -603,6 +615,8 @@ function EditorShell() {
               onToggleIncarnon={() => setIncarnonEnabled((v) => !v)}
               incarnonPerks={incarnonPerks}
               onSetIncarnonPerk={setIncarnonPerkAt}
+              deploymentContext={deploymentContext}
+              onSetDeploymentContext={setDeploymentContext}
               placedMods={slots.placed}
               placedArcanes={arcanes.placed}
             />
@@ -638,6 +652,8 @@ function EditorShell() {
               onToggleIncarnon={() => setIncarnonEnabled((v) => !v)}
               incarnonPerks={incarnonPerks}
               onSetIncarnonPerk={setIncarnonPerkAt}
+              deploymentContext={deploymentContext}
+              onSetDeploymentContext={setDeploymentContext}
               placedMods={slots.placed}
               placedArcanes={arcanes.placed}
             />
