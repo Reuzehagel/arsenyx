@@ -59,22 +59,22 @@ body {
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 
-  /* Warframe damage type colors */
-  --color-wf-impact: oklch(0.707 0.165 254.624);
-  --color-wf-puncture: oklch(0.707 0 0);
-  --color-wf-slash: oklch(0.704 0.191 22.216);
-  --color-wf-heat: oklch(0.75 0.183 55.934);
-  --color-wf-cold: oklch(0.789 0.154 211.527);
-  --color-wf-electricity: oklch(0.809 0.105 251.813);
-  --color-wf-toxin: oklch(0.792 0.209 151.711);
-  --color-wf-blast: oklch(0.795 0.184 86.047);
-  --color-wf-radiation: oklch(0.879 0.169 91.605);
-  --color-wf-gas: oklch(0.897 0.196 126.665);
-  --color-wf-magnetic: oklch(0.714 0.203 305.504);
-  --color-wf-viral: oklch(0.777 0.152 181.912);
-  --color-wf-corrosive: oklch(0.852 0.199 91.936);
-  --color-wf-void: oklch(1 0 0);
-  --color-wf-tau: oklch(0.865 0.127 207.078);
+  /* Warframe damage type colors (in-game text colors) */
+  --color-wf-impact: #80c4c4;
+  --color-wf-puncture: #c6b098;
+  --color-wf-slash: #e69ca0;
+  --color-wf-heat: #fb9733;
+  --color-wf-cold: #5bbcec;
+  --color-wf-electricity: #b37fe7;
+  --color-wf-toxin: #00cc22;
+  --color-wf-blast: #dd704e;
+  --color-wf-radiation: #ceac49;
+  --color-wf-gas: #00cc66;
+  --color-wf-magnetic: #9797e6;
+  --color-wf-viral: #f093b9;
+  --color-wf-corrosive: #93c203;
+  --color-wf-void: #15c8ab;
+  --color-wf-tau: #f06666;
 
   /* Warframe mod rarity border colors */
   --color-wf-rarity-common: oklch(0.555 0.163 67.059);

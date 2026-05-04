@@ -15,8 +15,6 @@ import {
   Bookmark,
   Check,
   Code2,
-  Diamond,
-  Gem,
   GitFork,
   Heart,
   Link2,
@@ -550,7 +548,12 @@ function ViewerHeader({
                 variant="secondary"
                 className="bg-muted/50 hover:bg-muted gap-1.5 px-2 py-0.5 text-xs font-semibold"
               >
-                <Diamond className="size-3 fill-current" />
+                <img
+                  src="/icons/currency/Endo.png"
+                  alt=""
+                  aria-hidden
+                  className="size-4"
+                />
                 {totalEndoCost.toLocaleString("en-US")}
               </Badge>
               {formaCount > 0 && (
@@ -558,7 +561,12 @@ function ViewerHeader({
                   variant="secondary"
                   className="bg-muted/50 hover:bg-muted gap-1.5 px-2 py-0.5 text-xs font-semibold"
                 >
-                  <Gem className="size-3" />
+                  <img
+                    src="/icons/currency/Forma.png"
+                    alt=""
+                    aria-hidden
+                    className="size-[18px] object-contain"
+                  />
                   {formaCount}
                 </Badge>
               )}

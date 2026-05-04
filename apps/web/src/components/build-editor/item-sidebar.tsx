@@ -63,6 +63,7 @@ import {
   calculateCompanionStats,
   calculateWarframeStats,
   calculateWeaponStats,
+  DAMAGE_TYPE_ICON,
   DAMAGE_TYPE_LABELS,
   DAMAGE_TYPE_STYLE,
   formatWithSign,
@@ -70,6 +71,7 @@ import {
   type AttackModeStats,
   type CompanionStats,
   type DamageEntry,
+  type DamageType,
   type StatContribution,
   type StatValue,
   type WarframeStats,
@@ -773,6 +775,18 @@ function DamageSectionHeader({ label }: { label: string }) {
   )
 }
 
+function DamageTypeIcon({ type }: { type: DamageType }) {
+  const icon = DAMAGE_TYPE_ICON[type]
+  if (icon) {
+    return (
+      <img src={icon} alt="" aria-hidden className="size-3.5 shrink-0" />
+    )
+  }
+  return (
+    <span className={cn("size-1.5 rounded-full", DAMAGE_TYPE_STYLE[type].bg)} />
+  )
+}
+
 function DamageRow({
   entry,
   multishot,
@@ -784,12 +798,7 @@ function DamageRow({
   const row = (
     <div className="flex cursor-help items-baseline justify-between">
       <span className="flex items-center gap-1.5">
-        <span
-          className={cn(
-            "size-1.5 rounded-full",
-            DAMAGE_TYPE_STYLE[entry.type].bg,
-          )}
-        />
+        <DamageTypeIcon type={entry.type} />
         <span className={cn(DAMAGE_TYPE_STYLE[entry.type].text)}>
           {DAMAGE_TYPE_LABELS[entry.type]}
         </span>
@@ -821,13 +830,21 @@ function DamageFormula({
   const scaled = entry.value * multishot
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex items-baseline justify-between">
-        <span
-          className={cn("font-semibold", DAMAGE_TYPE_STYLE[entry.type].text)}
-        >
-          {DAMAGE_TYPE_LABELS[entry.type]}
+      <div className="flex items-center justify-between">
+        <span className="flex items-center gap-1.5">
+          <DamageTypeIcon type={entry.type} />
+          <span
+            className={cn("font-semibold", DAMAGE_TYPE_STYLE[entry.type].text)}
+          >
+            {DAMAGE_TYPE_LABELS[entry.type]}
+          </span>
         </span>
-        <span className="font-semibold tabular-nums">
+        <span
+          className={cn(
+            "font-semibold tabular-nums",
+            DAMAGE_TYPE_STYLE[entry.type].text,
+          )}
+        >
           {formatStat(scaled, 1)}
         </span>
       </div>
