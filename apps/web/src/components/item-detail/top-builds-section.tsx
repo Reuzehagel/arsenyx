@@ -4,8 +4,11 @@ import { BuildCard, BuildCardSkeleton } from "@/components/builds/build-card"
 import { publicBuildsQuery } from "@/lib/builds-list-query"
 import type { DetailItem } from "@/lib/warframe"
 
-const GRID_CLASS =
-  "grid gap-3 grid-cols-[repeat(auto-fit,minmax(190px,1fr))] [&>*]:max-w-[240px]"
+// Flex-wrap with fixed-width cards so a small number of builds (e.g. 2)
+// don't get stretched across the full row by `1fr` grid tracks. Cards
+// align left, wrap to fill rows, and leave natural unused space on the
+// right rather than ballooning each card.
+const GRID_CLASS = "flex flex-wrap gap-3 [&>*]:w-[240px] [&>*]:max-w-full"
 
 const TOP_BUILDS_LIMIT = 6
 
