@@ -1,5 +1,6 @@
 import { Icons } from "@/components/icons"
 import { Link } from "@/components/link"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { Separator } from "@/components/ui/separator"
 import { SITE_CONFIG, FOOTER_LINKS } from "@/lib/constants"
 import type { NavLink } from "@/lib/types"
@@ -48,11 +49,13 @@ export function Footer() {
     <footer className="bg-background border-t">
       <div className="wrap py-10">
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-          {/* Brand */}
           <div className="flex flex-col gap-4">
-            <h3 className="text-lg font-semibold tracking-tight">
-              {SITE_CONFIG.name}
-            </h3>
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-lg font-semibold tracking-tight">
+                {SITE_CONFIG.name}
+              </h3>
+              <ThemeToggle />
+            </div>
             <p className="text-muted-foreground text-sm leading-relaxed">
               {SITE_CONFIG.description}
             </p>

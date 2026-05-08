@@ -82,7 +82,7 @@ import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard"
 import { authorName, formatVisibility } from "@/lib/user-display"
 import { cn } from "@/lib/utils"
 import {
-  CATEGORIES,
+  getCategoryLabel,
   getImageUrl,
   isValidCategory,
   type BrowseCategory,
@@ -308,8 +308,7 @@ function BuildViewerBodyInner({
     [build.buildData, allMods, allArcanes, helminthAbilities],
   )
 
-  const categoryLabel =
-    CATEGORIES.find((c) => c.id === category)?.label ?? category
+  const categoryLabel = getCategoryLabel(category)
   const isCompanion = category === "companions"
   const normalSlotCount = getNormalSlotCount(category)
   const arcaneCount = getArcaneSlotCount(category, item.type)
@@ -723,9 +722,7 @@ function ShareMenu({ slug }: { slug: string }) {
         ) : (
           <Share2 data-icon="inline-start" />
         )}
-        <span className="inline-block w-[3.25rem] text-center">
-          {copied ? "Copied!" : "Share"}
-        </span>
+        {copied ? "Copied!" : "Share"}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-44">
         <DropdownMenuItem onClick={onCopyLink}>

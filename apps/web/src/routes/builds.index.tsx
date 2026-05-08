@@ -1,5 +1,4 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
-import { Suspense } from "react"
 
 import {
   BuildsListView,
@@ -31,24 +30,6 @@ export const Route = createFileRoute("/builds/")({
 })
 
 function BuildsIndexPage() {
-  return (
-    <div className="relative flex min-h-screen flex-col">
-      <Header />
-      <main className="flex-1">
-        <div className="wrap flex flex-col gap-6 py-6">
-          <Suspense
-            fallback={<p className="text-muted-foreground">Loading builds…</p>}
-          >
-            <BuildsIndexContent />
-          </Suspense>
-        </div>
-      </main>
-      <Footer />
-    </div>
-  )
-}
-
-function BuildsIndexContent() {
   const search = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
   const page = search.page ?? 1
@@ -62,41 +43,49 @@ function BuildsIndexContent() {
     navigate({ search: nextBuildsListSearch(next, "newest"), replace: true })
 
   return (
-    <BuildsListView
-      title="Community Builds"
-      description="Discover builds created by the community."
-      query={publicBuildsQuery({
-        page,
-        sort,
-        q: q || undefined,
-        category,
-        hasGuide: hasGuide || undefined,
-        hasShards: hasShards || undefined,
-      })}
-      page={page}
-      sort={sort}
-      q={q}
-      category={category}
-      hasGuide={hasGuide}
-      hasShards={hasShards}
-      onUpdateSearch={onUpdateSearch}
-      showFilters
-      emptyState={
-        <>
-          <p className="text-muted-foreground">No builds match.</p>
-          <p className="text-muted-foreground mt-2 text-sm">
-            Try a different search, or head to{" "}
-            <Link
-              to="/browse"
-              search={{ category: "warframes" }}
-              className="text-primary underline"
-            >
-              Browse
-            </Link>{" "}
-            to publish one.
-          </p>
-        </>
-      }
-    />
+    <div className="relative flex min-h-screen flex-col">
+      <Header />
+      <main className="flex-1">
+        <div className="wrap flex flex-col gap-6 py-6">
+          <BuildsListView
+            title="Community Builds"
+            description="Discover builds created by the community."
+            query={publicBuildsQuery({
+              page,
+              sort,
+              q: q || undefined,
+              category,
+              hasGuide: hasGuide || undefined,
+              hasShards: hasShards || undefined,
+            })}
+            page={page}
+            sort={sort}
+            q={q}
+            category={category}
+            hasGuide={hasGuide}
+            hasShards={hasShards}
+            onUpdateSearch={onUpdateSearch}
+            showFilters
+            emptyState={
+              <>
+                <p className="text-muted-foreground">No builds match.</p>
+                <p className="text-muted-foreground mt-2 text-sm">
+                  Try a different search, or head to{" "}
+                  <Link
+                    to="/browse"
+                    search={{ category: "warframes" }}
+                    className="text-primary underline"
+                  >
+                    Browse
+                  </Link>{" "}
+                  to publish one.
+                </p>
+              </>
+            }
+          />
+        </div>
+      </main>
+      <Footer />
+    </div>
   )
 }

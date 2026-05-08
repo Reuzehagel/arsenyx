@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import {
-  Book,
   Compass,
   Hammer,
   LayoutGrid,
@@ -27,9 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { authClient } from "@/lib/auth-client"
-import { publicBuildsQuery, type BuildListItem } from "@/lib/builds-list-query"
 import { itemsIndexQuery } from "@/lib/items-index-query"
-import { authorName } from "@/lib/user-display"
 import { CATEGORIES, getImageUrl, type BrowseItem } from "@/lib/warframe"
 
 const SEARCH_DEBOUNCE_MS = 200
@@ -64,14 +61,6 @@ export function CommandPalette({
   }, [query, open])
 
   const { data: items } = useQuery({ ...itemsIndexQuery, enabled: open })
-  const builds = useQuery({
-    ...publicBuildsQuery({
-      page: 1,
-      sort: "newest",
-      q: debouncedQuery,
-    }),
-    enabled: open && debouncedQuery.length > 0,
-  })
 
   const allItems = useMemo<ItemEntry[]>(() => {
     if (!items) return []
@@ -97,8 +86,6 @@ export function CommandPalette({
     fn()
   }
 
-  const hasBuildResults = (builds.data?.builds.length ?? 0) > 0
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -107,20 +94,16 @@ export function CommandPalette({
       >
         <DialogTitle className="sr-only">Search</DialogTitle>
         <DialogDescription className="sr-only">
-          Jump to items, builds, or pages.
+          Jump to items or pages.
         </DialogDescription>
         <Command shouldFilter={false}>
           <CommandInput
-            placeholder="Search items, builds, or pages…"
+            placeholder="Search items or pages…"
             value={query}
             onValueChange={setQuery}
           />
           <CommandList>
-            <CommandEmpty>
-              {builds.isFetching && debouncedQuery.length > 0
-                ? "Searching…"
-                : "No results."}
-            </CommandEmpty>
+            <CommandEmpty>No results.</CommandEmpty>
 
             {!debouncedQuery && (
               <>
@@ -208,28 +191,6 @@ export function CommandPalette({
               </CommandGroup>
             ) : null}
 
-            {debouncedQuery && hasBuildResults ? (
-              <>
-                {filteredItems.length > 0 ? <CommandSeparator /> : null}
-                <CommandGroup heading="Builds">
-                  {builds.data!.builds.slice(0, 8).map((b) => (
-                    <BuildRow
-                      key={b.id}
-                      build={b}
-                      onSelect={() =>
-                        go(() =>
-                          navigate({
-                            to: "/builds/$slug",
-                            params: { slug: b.slug },
-                          }),
-                        )
-                      }
-                    />
-                  ))}
-                </CommandGroup>
-              </>
-            ) : null}
-
             {debouncedQuery ? (
               <>
                 <CommandSeparator />
@@ -278,28 +239,6 @@ function ItemRow({
       />
       <span>{item.name}</span>
       <CommandShortcut>{item.categoryLabel}</CommandShortcut>
-    </CommandItem>
-  )
-}
-
-function BuildRow({
-  build,
-  onSelect,
-}: {
-  build: BuildListItem
-  onSelect: () => void
-}) {
-  return (
-    <CommandItem
-      value={`build:${build.slug}`}
-      keywords={[build.name, build.item.name, authorName(build.user, "")]}
-      onSelect={onSelect}
-    >
-      <Book />
-      <span className="truncate">{build.name}</span>
-      <CommandShortcut>
-        {build.item.name} · {authorName(build.user, "—")}
-      </CommandShortcut>
     </CommandItem>
   )
 }

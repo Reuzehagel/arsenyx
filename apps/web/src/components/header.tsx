@@ -1,7 +1,6 @@
 import { Keyboard, Menu, Search } from "lucide-react"
-import { useState } from "react"
+import { lazy, Suspense, useState } from "react"
 
-import { CommandPalette } from "@/components/command-palette"
 import { openHotkeyCheatSheet } from "@/components/hotkey-cheat-sheet"
 import { Link } from "@/components/link"
 import { Button } from "@/components/ui/button"
@@ -16,6 +15,12 @@ import {
 import { UserMenu } from "@/components/user-menu"
 import { SITE_CONFIG, NAV_ITEMS, ROUTES } from "@/lib/constants"
 import { useHotkey } from "@/lib/hotkeys"
+
+const CommandPalette = lazy(() =>
+  import("@/components/command-palette").then((m) => ({
+    default: m.CommandPalette,
+  })),
+)
 
 export function Header() {
   const [paletteOpen, setPaletteOpen] = useState(false)
@@ -116,7 +121,11 @@ export function Header() {
           <UserMenu />
         </div>
       </div>
-      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+      {paletteOpen ? (
+        <Suspense fallback={null}>
+          <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+        </Suspense>
+      ) : null}
     </header>
   )
 }

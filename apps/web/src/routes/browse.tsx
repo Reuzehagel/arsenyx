@@ -1,19 +1,20 @@
 import { hasIncarnon } from "@arsenyx/shared/warframe/incarnon-data"
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { Suspense, useDeferredValue, useMemo, useRef } from "react"
+import { useDeferredValue, useMemo, useRef } from "react"
 
 import { CategoryTabs } from "@/components/browse/category-tabs"
 import {
   FilterDropdown,
   MASTERY_MAX,
 } from "@/components/browse/filter-dropdown"
-import { ItemCard } from "@/components/browse/item-card"
+import { ItemCard, ItemCardSkeleton } from "@/components/browse/item-card"
 import {
   SortDropdown,
   SORT_VALUES,
   type SortOption,
 } from "@/components/browse/sort-dropdown"
+import { DelayedSuspense } from "@/components/delayed-fallback"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import {
@@ -25,13 +26,16 @@ import { Kbd } from "@/components/ui/kbd"
 import { useHotkey } from "@/lib/hotkeys"
 import { itemsIndexQuery } from "@/lib/items-index-query"
 import {
+  CATEGORIES,
   isValidCategory,
   type BrowseCategory,
   type BrowseItem,
 } from "@/lib/warframe"
 
+type BrowseFilter = BrowseCategory | "all"
+
 type BrowseSearch = {
-  category: BrowseCategory
+  category: BrowseFilter
   q?: string
   sort?: SortOption
   mastery?: number
@@ -42,10 +46,12 @@ type BrowseSearch = {
 
 export const Route = createFileRoute("/browse")({
   validateSearch: (search: Record<string, unknown>): BrowseSearch => {
-    const category =
-      typeof search.category === "string" && isValidCategory(search.category)
-        ? search.category
-        : "warframes"
+    const category: BrowseFilter =
+      search.category === "all"
+        ? "all"
+        : typeof search.category === "string" && isValidCategory(search.category)
+          ? search.category
+          : "warframes"
     const q =
       typeof search.q === "string" && search.q.length > 0 ? search.q : undefined
     const sort =
@@ -92,14 +98,28 @@ function BrowsePage() {
               builds.
             </p>
           </div>
-          <Suspense
-            fallback={<p className="text-muted-foreground">Loading items…</p>}
-          >
+          <DelayedSuspense fallback={<BrowseSkeleton />}>
             <BrowseContent />
-          </Suspense>
+          </DelayedSuspense>
         </div>
       </main>
       <Footer />
+    </div>
+  )
+}
+
+function BrowseSkeleton() {
+  return (
+    <div
+      role="status"
+      aria-busy="true"
+      aria-live="polite"
+      className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+    >
+      <span className="sr-only">Loading items…</span>
+      {Array.from({ length: 18 }).map((_, i) => (
+        <ItemCardSkeleton key={i} />
+      ))}
     </div>
   )
 }
@@ -124,7 +144,13 @@ function BrowseContent() {
     searchRef.current?.select()
   })
 
-  const items = useMemo(() => data[category] ?? [], [data, category])
+  const items = useMemo(
+    () =>
+      category === "all"
+        ? CATEGORIES.flatMap((c) => data[c.id] ?? [])
+        : (data[category] ?? []),
+    [data, category],
+  )
 
   const visible = useMemo(
     () =>
@@ -197,7 +223,7 @@ function BrowseContent() {
         activeCategory={category}
         onChange={(next) =>
           navigate({
-            search: (s) => ({ ...s, category: next, q: undefined }),
+            search: (s) => ({ ...s, category: next }),
           })
         }
       />

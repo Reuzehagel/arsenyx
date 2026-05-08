@@ -4,23 +4,16 @@ import {
   notFound,
   Link as RouterLink,
 } from "@tanstack/react-router"
-import { Suspense } from "react"
 
+import { DelayedSuspense } from "@/components/delayed-fallback"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
-import { Badge } from "@/components/ui/badge"
+import { ItemDetailContent } from "@/components/item-detail/content"
+import { ItemDetailFrame } from "@/components/item-detail/frame"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
+import { Skeleton } from "@/components/ui/skeleton"
 import { itemQuery } from "@/lib/item-query"
-import {
-  CATEGORIES,
-  formatPct,
-  formatStat,
-  getImageUrl,
-  isValidCategory,
-  type BrowseCategory,
-} from "@/lib/warframe"
+import { isValidCategory, type BrowseCategory } from "@/lib/warframe"
 
 export const Route = createFileRoute("/browse_/$category/$slug")({
   beforeLoad: ({ params }) => {
@@ -35,208 +28,78 @@ export const Route = createFileRoute("/browse_/$category/$slug")({
 })
 
 function ItemDetailPage() {
+  const { category, slug } = Route.useParams()
+  const cat = category as BrowseCategory
   return (
-    <div className="relative flex min-h-screen flex-col">
-      <Header />
-      <main className="flex-1">
-        <div className="wrap flex flex-col gap-8 py-6">
-          <Suspense
-            fallback={<p className="text-muted-foreground">Loading item…</p>}
-          >
-            <ItemDetailContent />
-          </Suspense>
-        </div>
-      </main>
-      <Footer />
-    </div>
+    <DelayedSuspense
+      fallback={
+        <ItemDetailFrame category={cat}>
+          <ItemDetailSkeleton />
+        </ItemDetailFrame>
+      }
+    >
+      <ItemDetailView category={cat} slug={slug} />
+    </DelayedSuspense>
   )
 }
 
-function ItemDetailContent() {
-  const { category, slug } = Route.useParams()
-  const cat = category as BrowseCategory
-  const { data: item } = useSuspenseQuery(itemQuery(cat, slug))
-  const categoryLabel = CATEGORIES.find((c) => c.id === cat)?.label ?? cat
-
-  const isWarframe = cat === "warframes" || cat === "necramechs"
-  const isWeapon =
-    cat === "primary" ||
-    cat === "secondary" ||
-    cat === "melee" ||
-    cat === "companion-weapons" ||
-    cat === "archwing" ||
-    cat === "exalted-weapons"
-  const isMelee = cat === "melee"
-
+function ItemDetailView({
+  category,
+  slug,
+}: {
+  category: BrowseCategory
+  slug: string
+}) {
+  const { data: item } = useSuspenseQuery(itemQuery(category, slug))
   return (
-    <>
-      <nav className="text-muted-foreground flex items-center gap-2 text-sm">
-        <RouterLink
-          to="/browse"
-          search={{ category: "warframes" }}
-          className="hover:text-foreground transition-colors"
-        >
-          Browse
-        </RouterLink>
-        <span>/</span>
-        <RouterLink
-          to="/browse"
-          search={{ category: cat }}
-          className="hover:text-foreground transition-colors"
-        >
-          {categoryLabel}
-        </RouterLink>
-        <span>/</span>
-        <span className="text-foreground">{item.name}</span>
-      </nav>
+    <ItemDetailFrame category={category} itemName={item.name}>
+      <ItemDetailContent item={item} category={category} slug={slug} />
+    </ItemDetailFrame>
+  )
+}
 
-      <div className="flex flex-col gap-8 md:flex-row">
-        <div className="shrink-0">
-          <div className="bg-muted/30 relative flex size-48 items-center justify-center rounded-xl border md:h-64 md:w-64">
-            <img
-              src={getImageUrl(item.imageName)}
-              alt={item.name}
-              width={256}
-              height={256}
-              className="object-contain"
-            />
-          </div>
-        </div>
-
-        <div className="flex flex-1 flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-3xl font-bold tracking-tight">{item.name}</h1>
-              {item.vaulted && <Badge variant="outline">Vaulted</Badge>}
+function ItemDetailSkeleton() {
+  return (
+    <div
+      role="status"
+      aria-busy="true"
+      aria-live="polite"
+      className="flex flex-col gap-8"
+    >
+      <span className="sr-only">Loading item…</span>
+      <div className="border-border/50 relative isolate overflow-hidden rounded-2xl border">
+        <div className="relative flex flex-col gap-6 p-8 md:flex-row md:items-center md:gap-8 md:p-12">
+          <Skeleton className="size-40 shrink-0 self-center rounded-xl md:size-56 md:self-auto" />
+          <div className="flex min-w-0 flex-1 flex-col gap-3">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-12 w-2/3 md:h-16" />
+            <Skeleton className="h-4 w-full max-w-2xl" />
+            <Skeleton className="h-4 w-4/5 max-w-2xl" />
+            <div className="flex flex-wrap gap-2 pt-1">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-7 w-20 rounded-full" />
+              ))}
             </div>
-            {item.description && (
-              <p className="text-muted-foreground max-w-2xl">
-                {item.description}
-              </p>
-            )}
-          </div>
-
-          <div className="flex flex-wrap gap-4 text-sm">
-            {item.masteryReq !== undefined && item.masteryReq > 0 && (
-              <div className="flex items-center gap-1">
-                <span className="text-muted-foreground">Mastery:</span>
-                <span className="font-medium">MR {item.masteryReq}</span>
-              </div>
-            )}
-            {item.type && (
-              <div className="flex items-center gap-1">
-                <span className="text-muted-foreground">Type:</span>
-                <span className="font-medium">{item.type}</span>
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-wrap gap-3 pt-4">
-            <Button
-              size="lg"
-              render={
-                <RouterLink
-                  to="/create"
-                  search={{ item: slug, category: cat }}
-                />
-              }
-            >
-              Create Build
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-8 w-32 rounded-full" />
+              ))}
+            </div>
+            <div className="flex items-center gap-4 pt-2">
+              <Skeleton className="h-10 w-32" />
+            </div>
           </div>
         </div>
       </div>
-
-      <Separator />
-
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {isWarframe && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Base Stats</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <dl className="grid grid-cols-2 gap-3 text-sm">
-                <StatItem label="Health" value={item.health} />
-                <StatItem label="Shield" value={item.shield} />
-                <StatItem label="Armor" value={item.armor} />
-                <StatItem label="Energy" value={item.power} />
-                <StatItem label="Sprint" value={item.sprintSpeed} />
-              </dl>
-            </CardContent>
-          </Card>
-        )}
-
-        {isWeapon && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Weapon Stats</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <dl className="grid grid-cols-2 gap-3 text-sm">
-                <StatItem label="Damage" value={item.totalDamage} />
-                <StatItem
-                  label="Crit Chance"
-                  value={formatPct(item.criticalChance)}
-                />
-                <StatItem
-                  label="Crit Multi"
-                  value={
-                    item.criticalMultiplier !== undefined
-                      ? `${item.criticalMultiplier}x`
-                      : undefined
-                  }
-                />
-                <StatItem label="Status" value={formatPct(item.procChance)} />
-                <StatItem
-                  label="Fire Rate"
-                  value={
-                    item.fireRate !== undefined
-                      ? formatStat(item.fireRate, 3)
-                      : undefined
-                  }
-                />
-                <StatItem label="Magazine" value={item.magazineSize} />
-                <StatItem
-                  label="Reload"
-                  value={
-                    item.reloadTime !== undefined
-                      ? `${formatStat(item.reloadTime)}s`
-                      : undefined
-                  }
-                />
-                {isMelee && <StatItem label="Range" value={item.range} />}
-              </dl>
-            </CardContent>
-          </Card>
-        )}
-
-        {isWarframe && item.abilities && item.abilities.length > 0 && (
-          <Card className="md:col-span-2 lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-lg">Abilities</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {item.abilities.map((ability, index) => (
-                  <div key={ability.uniqueName} className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground text-xs">
-                        {index + 1}
-                      </span>
-                      <span className="font-medium">{ability.name}</span>
-                    </div>
-                    <p className="text-muted-foreground line-clamp-2 text-sm">
-                      {ability.description}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-6 w-56" />
+        <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(190px,1fr))] [&>*]:max-w-[240px]">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="aspect-[3/4] w-full" />
+          ))}
+        </div>
       </div>
-    </>
+    </div>
   )
 }
 
@@ -260,23 +123,6 @@ function ItemNotFound() {
         </div>
       </main>
       <Footer />
-    </div>
-  )
-}
-
-function StatItem({
-  label,
-  value,
-}: {
-  label: string
-  value: string | number | undefined
-}) {
-  if (value === undefined || value === null || value === "") return null
-  const display = typeof value === "number" ? formatStat(value) : value
-  return (
-    <div className="flex flex-col">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="font-medium tabular-nums">{display}</dd>
     </div>
   )
 }

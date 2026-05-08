@@ -96,7 +96,7 @@ import { padShards, type PlacedShard } from "@/lib/shards"
 import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard"
 import { formatVisibility } from "@/lib/user-display"
 import {
-  CATEGORIES,
+  getCategoryLabel,
   getImageUrl,
   isValidCategory,
   type BrowseCategory,
@@ -211,8 +211,7 @@ function EditorShell() {
     helminthAbilities,
   ])
 
-  const categoryLabel =
-    CATEGORIES.find((c) => c.id === category)?.label ?? category
+  const categoryLabel = getCategoryLabel(category)
 
   const isCompanion = category === "companions"
   const normalSlotCount = getNormalSlotCount(category)

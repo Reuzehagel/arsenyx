@@ -1,7 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { Settings } from "lucide-react"
-import { Suspense } from "react"
 
 import {
   BuildsListView,
@@ -10,6 +9,7 @@ import {
   parseBuildsListSearch,
   type BuildsListSearch,
 } from "@/components/builds/builds-list-view"
+import { DelayedSuspense } from "@/components/delayed-fallback"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { Link } from "@/components/link"
@@ -48,13 +48,13 @@ function OrgPage() {
       <Header />
       <main className="flex-1">
         <div className="wrap flex flex-col gap-6 py-6">
-          <Suspense
+          <DelayedSuspense
             fallback={
               <p className="text-muted-foreground">Loading organization…</p>
             }
           >
             <OrgContent />
-          </Suspense>
+          </DelayedSuspense>
         </div>
       </main>
       <Footer />
@@ -84,33 +84,29 @@ function OrgContent() {
       <OrgMembers org={org} />
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold">Builds</h2>
-        <Suspense
-          fallback={<p className="text-muted-foreground">Loading builds…</p>}
-        >
-          <BuildsListView
-            query={orgBuildsQuery(slug, {
-              page,
-              sort,
-              q,
-              category,
-              hasGuide: hasGuide || undefined,
-              hasShards: hasShards || undefined,
-            })}
-            page={page}
-            sort={sort}
-            q={q}
-            category={category}
-            hasGuide={hasGuide}
-            hasShards={hasShards}
-            onUpdateSearch={onUpdateSearch}
-            showFilters
-            emptyState={
-              <p className="text-muted-foreground">
-                No public builds yet under this organization.
-              </p>
-            }
-          />
-        </Suspense>
+        <BuildsListView
+          query={orgBuildsQuery(slug, {
+            page,
+            sort,
+            q,
+            category,
+            hasGuide: hasGuide || undefined,
+            hasShards: hasShards || undefined,
+          })}
+          page={page}
+          sort={sort}
+          q={q}
+          category={category}
+          hasGuide={hasGuide}
+          hasShards={hasShards}
+          onUpdateSearch={onUpdateSearch}
+          showFilters
+          emptyState={
+            <p className="text-muted-foreground">
+              No public builds yet under this organization.
+            </p>
+          }
+        />
       </section>
     </>
   )

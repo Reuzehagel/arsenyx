@@ -1,6 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { Suspense } from "react"
 
 import {
   BuildsListView,
@@ -9,6 +8,7 @@ import {
   parseBuildsListSearch,
   type BuildsListSearch,
 } from "@/components/builds/builds-list-view"
+import { DelayedSuspense } from "@/components/delayed-fallback"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { Badge } from "@/components/ui/badge"
@@ -51,11 +51,13 @@ function ProfilePage() {
       <Header />
       <main className="flex-1">
         <div className="wrap flex flex-col gap-6 py-6">
-          <Suspense
-            fallback={<p className="text-muted-foreground">Loading profile…</p>}
+          <DelayedSuspense
+            fallback={
+              <p className="text-muted-foreground">Loading profile…</p>
+            }
           >
             <ProfileContent />
-          </Suspense>
+          </DelayedSuspense>
         </div>
       </main>
       <Footer />
@@ -82,33 +84,29 @@ function ProfileContent() {
   return (
     <>
       <ProfileHeader profile={profile} />
-      <Suspense
-        fallback={<p className="text-muted-foreground">Loading builds…</p>}
-      >
-        <BuildsListView
-          title="Public builds"
-          description={`Builds shared by ${profile.displayUsername ?? profile.username ?? "this user"}.`}
-          query={profileBuildsQuery(username, {
-            page,
-            sort,
-            q,
-            category,
-            hasGuide: hasGuide || undefined,
-            hasShards: hasShards || undefined,
-          })}
-          page={page}
-          sort={sort}
-          q={q}
-          category={category}
-          hasGuide={hasGuide}
-          hasShards={hasShards}
-          onUpdateSearch={onUpdateSearch}
-          showFilters
-          emptyState={
-            <p className="text-muted-foreground">No public builds yet.</p>
-          }
-        />
-      </Suspense>
+      <BuildsListView
+        title="Public builds"
+        description={`Builds shared by ${profile.displayUsername ?? profile.username ?? "this user"}.`}
+        query={profileBuildsQuery(username, {
+          page,
+          sort,
+          q,
+          category,
+          hasGuide: hasGuide || undefined,
+          hasShards: hasShards || undefined,
+        })}
+        page={page}
+        sort={sort}
+        q={q}
+        category={category}
+        hasGuide={hasGuide}
+        hasShards={hasShards}
+        onUpdateSearch={onUpdateSearch}
+        showFilters
+        emptyState={
+          <p className="text-muted-foreground">No public builds yet.</p>
+        }
+      />
     </>
   )
 }

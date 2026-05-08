@@ -1,6 +1,7 @@
 import { Link } from "@/components/link"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { getImageUrl, getItemUrl, type BrowseItem } from "@/lib/warframe"
 
@@ -14,7 +15,7 @@ export function ItemCard({ item, index }: ItemCardProps) {
     <Link
       href={getItemUrl(item.category, item.slug)}
       data-index={index}
-      className="group focus-visible:ring-ring rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+      className="group focus-visible:ring-ring rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-offset-2 [content-visibility:auto] [contain-intrinsic-size:auto_280px]"
     >
       <Card className="hover:border-primary/50 group-focus-visible:border-primary/50 relative h-full gap-0 overflow-hidden py-0 transition-[box-shadow,border-color] duration-200 hover:shadow-md">
         {item.vaulted && (
@@ -53,5 +54,20 @@ export function ItemCard({ item, index }: ItemCardProps) {
         </div>
       </Card>
     </Link>
+  )
+}
+
+export function ItemCardSkeleton() {
+  return (
+    <Card className="relative h-full gap-0 overflow-hidden py-0">
+      <Skeleton className="aspect-square w-full rounded-none" />
+      <div className="flex flex-col gap-1 p-3">
+        <Skeleton className="h-[1rem] w-3/4" />
+        <div className="flex items-center justify-between pt-0.5">
+          <Skeleton className="h-3 w-1/2" />
+          <Skeleton className="h-3 w-10" />
+        </div>
+      </div>
+    </Card>
   )
 }

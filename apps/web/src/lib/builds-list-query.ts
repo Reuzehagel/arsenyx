@@ -1,6 +1,10 @@
-import { queryOptions } from "@tanstack/react-query"
+import { keepPreviousData, queryOptions } from "@tanstack/react-query"
 
 import { API_URL } from "@/lib/constants"
+
+/** Mirrors LIST_LIMIT in apps/api/src/routes/_build-list.ts. Skeleton bone
+ *  counts use this so the placeholder grid matches the loaded grid. */
+export const LIST_PAGE_SIZE = 24
 
 export type BuildListSort =
   | "newest"
@@ -14,6 +18,8 @@ export type BuildListParams = {
   sort: BuildListSort
   q?: string
   category?: string
+  item?: string
+  limit?: number
   hasGuide?: boolean
   hasShards?: boolean
 }
@@ -63,6 +69,8 @@ function buildQueryString(params: BuildListParams, defaultSort: BuildListSort) {
   if (params.sort !== defaultSort) q.set("sort", params.sort)
   if (params.q) q.set("q", params.q)
   if (params.category) q.set("category", params.category)
+  if (params.item) q.set("item", params.item)
+  if (params.limit) q.set("limit", String(params.limit))
   if (params.hasGuide) q.set("hasGuide", "1")
   if (params.hasShards) q.set("hasShards", "1")
   const str = q.toString()
@@ -80,6 +88,7 @@ export const publicBuildsQuery = (params: BuildListParams) =>
       if (!r.ok) throw new Error("failed to load builds")
       return r.json()
     },
+    placeholderData: keepPreviousData,
   })
 
 export const myBuildsQuery = (params: BuildListParams) =>
@@ -94,6 +103,7 @@ export const myBuildsQuery = (params: BuildListParams) =>
       if (!r.ok) throw new Error("failed to load builds")
       return r.json()
     },
+    placeholderData: keepPreviousData,
     retry: false,
   })
 
@@ -109,5 +119,6 @@ export const bookmarkedBuildsQuery = (params: BuildListParams) =>
       if (!r.ok) throw new Error("failed to load builds")
       return r.json()
     },
+    placeholderData: keepPreviousData,
     retry: false,
   })

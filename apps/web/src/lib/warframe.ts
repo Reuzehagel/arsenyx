@@ -121,3 +121,7 @@ export const CATEGORIES: { id: BrowseCategory; label: string }[] = [
 export function isValidCategory(value: string): value is BrowseCategory {
   return CATEGORIES.some((c) => c.id === value)
 }
+
+export function getCategoryLabel(category: string): string {
+  return CATEGORIES.find((c) => c.id === category)?.label ?? category
+}

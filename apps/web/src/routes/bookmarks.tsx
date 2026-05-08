@@ -4,7 +4,6 @@ import {
   redirect,
   useNavigate,
 } from "@tanstack/react-router"
-import { Suspense } from "react"
 
 import {
   BuildsListView,
@@ -46,24 +45,6 @@ export const Route = createFileRoute("/bookmarks")({
 })
 
 function BookmarksPage() {
-  return (
-    <div className="relative flex min-h-screen flex-col">
-      <Header />
-      <main className="flex-1">
-        <div className="wrap flex flex-col gap-6 py-6">
-          <Suspense
-            fallback={<p className="text-muted-foreground">Loading builds…</p>}
-          >
-            <BookmarksContent />
-          </Suspense>
-        </div>
-      </main>
-      <Footer />
-    </div>
-  )
-}
-
-function BookmarksContent() {
   const search = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
   const page = search.page ?? 1
@@ -77,39 +58,47 @@ function BookmarksContent() {
     navigate({ search: nextBuildsListSearch(next, "newest"), replace: true })
 
   return (
-    <BuildsListView
-      title="My Bookmarks"
-      description="Builds you've bookmarked."
-      query={bookmarkedBuildsQuery({
-        page,
-        sort,
-        q,
-        category,
-        hasGuide: hasGuide || undefined,
-        hasShards: hasShards || undefined,
-      })}
-      page={page}
-      sort={sort}
-      q={q}
-      category={category}
-      hasGuide={hasGuide}
-      hasShards={hasShards}
-      onUpdateSearch={onUpdateSearch}
-      showFilters
-      emptyState={
-        <>
-          <p className="text-muted-foreground">
-            You haven't bookmarked any builds yet.
-          </p>
-          <p className="text-muted-foreground mt-2 text-sm">
-            Browse{" "}
-            <Link to="/builds" className="text-primary underline">
-              public builds
-            </Link>{" "}
-            and tap the bookmark icon to save them here.
-          </p>
-        </>
-      }
-    />
+    <div className="relative flex min-h-screen flex-col">
+      <Header />
+      <main className="flex-1">
+        <div className="wrap flex flex-col gap-6 py-6">
+          <BuildsListView
+            title="My Bookmarks"
+            description="Builds you've bookmarked."
+            query={bookmarkedBuildsQuery({
+              page,
+              sort,
+              q,
+              category,
+              hasGuide: hasGuide || undefined,
+              hasShards: hasShards || undefined,
+            })}
+            page={page}
+            sort={sort}
+            q={q}
+            category={category}
+            hasGuide={hasGuide}
+            hasShards={hasShards}
+            onUpdateSearch={onUpdateSearch}
+            showFilters
+            emptyState={
+              <>
+                <p className="text-muted-foreground">
+                  You haven't bookmarked any builds yet.
+                </p>
+                <p className="text-muted-foreground mt-2 text-sm">
+                  Browse{" "}
+                  <Link to="/builds" className="text-primary underline">
+                    public builds
+                  </Link>{" "}
+                  and tap the bookmark icon to save them here.
+                </p>
+              </>
+            }
+          />
+        </div>
+      </main>
+      <Footer />
+    </div>
   )
 }

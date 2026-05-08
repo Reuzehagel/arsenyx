@@ -135,9 +135,11 @@ export function serializeListRow(b: ListRow) {
 
 export type ListFilters = {
   page: number
+  limit: number
   sort: ListSort | undefined
   q: string | undefined
   category: string | undefined
+  item: string | undefined
   hasGuide: boolean
   hasShards: boolean
 }
@@ -157,9 +159,16 @@ export function parseListQuery(c: {
   const q = qRaw && qRaw.length > 0 ? qRaw.slice(0, 200) : undefined
   const catRaw = c.req.query("category")
   const category = catRaw && isValidCategory(catRaw) ? catRaw : undefined
+  const itemRaw = c.req.query("item")?.trim()
+  const item = itemRaw && itemRaw.length > 0 ? itemRaw.slice(0, 200) : undefined
+  const limitRaw = parseInt(c.req.query("limit") ?? "", 10)
+  const limit =
+    Number.isFinite(limitRaw) && limitRaw > 0
+      ? Math.min(limitRaw, LIST_LIMIT)
+      : LIST_LIMIT
   const hasGuide = c.req.query("hasGuide") === "1"
   const hasShards = c.req.query("hasShards") === "1"
-  return { page, sort, q, category, hasGuide, hasShards }
+  return { page, limit, sort, q, category, item, hasGuide, hasShards }
 }
 
 function orderByForSort(sort: ListSort) {
@@ -204,6 +213,7 @@ function tiebreakerSql(sort: ListSort) {
 async function searchBuildIds(params: {
   q: string
   category: string | undefined
+  item: string | undefined
   hasGuide: boolean
   hasShards: boolean
   baseFilter: Prisma.Sql
@@ -211,11 +221,39 @@ async function searchBuildIds(params: {
   skip: number
   take: number
 }): Promise<{ ids: string[]; total: number }> {
-  const { q, category, hasGuide, hasShards, baseFilter, sort, skip, take } =
-    params
-  const query = Prisma.sql`websearch_to_tsquery('english', ${q})`
+  const {
+    q,
+    category,
+    item,
+    hasGuide,
+    hasShards,
+    baseFilter,
+    sort,
+    skip,
+    take,
+  } = params
+  const tokens = q.toLowerCase().match(/[a-z0-9]+/g) ?? []
+  if (tokens.length === 0) {
+    return { ids: [], total: 0 }
+  }
+  const tsqueryStr = tokens.map((t) => `${t}:*`).join(" & ")
+  const query = Prisma.sql`to_tsquery('english', ${tsqueryStr})`
+  // ILIKE fallback only fires when searchVector is NULL (fresh dev DBs whose
+  // trigger hasn't run). In production every row has a vector, so the planner
+  // can use the GIN index on `searchVector` without an unindexed OR branch.
+  const ilikeMatch = Prisma.sql`(${Prisma.join(
+    tokens.map(
+      (t) =>
+        Prisma.sql`("name" ILIKE ${`%${t}%`} OR "itemName" ILIKE ${`%${t}%`} OR "description" ILIKE ${`%${t}%`})`,
+    ),
+    " AND ",
+  )})`
+  const matchFilter = Prisma.sql`("searchVector" @@ ${query} OR ("searchVector" IS NULL AND ${ilikeMatch}))`
   const categoryFilter = category
     ? Prisma.sql`AND "itemCategory" = ${category}`
+    : Prisma.empty
+  const itemFilter = item
+    ? Prisma.sql`AND "itemUniqueName" = ${item}`
     : Prisma.empty
   const guideFilter = hasGuide
     ? Prisma.sql`AND "hasGuide" = true`
@@ -229,20 +267,22 @@ async function searchBuildIds(params: {
     prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
       SELECT id
       FROM builds
-      WHERE "searchVector" @@ ${query}
+      WHERE ${matchFilter}
         AND ${baseFilter}
         ${categoryFilter}
+        ${itemFilter}
         ${guideFilter}
         ${shardsFilter}
-      ORDER BY ts_rank("searchVector", ${query}) DESC, ${tiebreaker}
+      ORDER BY ts_rank(COALESCE("searchVector", ''::tsvector), ${query}) DESC, ${tiebreaker}
       LIMIT ${take} OFFSET ${skip}
     `),
     prisma.$queryRaw<{ n: number }[]>(Prisma.sql`
       SELECT COUNT(*)::int AS n
       FROM builds
-      WHERE "searchVector" @@ ${query}
+      WHERE ${matchFilter}
         AND ${baseFilter}
         ${categoryFilter}
+        ${itemFilter}
         ${guideFilter}
         ${shardsFilter}
     `),
@@ -261,12 +301,13 @@ export async function runList({
   baseFilter: Prisma.Sql
   defaultSort: ListSort
 }) {
-  const { page, q, category, hasGuide, hasShards } = filters
+  const { page, limit, q, category, item, hasGuide, hasShards } = filters
   const sort: ListSort = filters.sort ?? defaultSort
-  const skip = (page - 1) * LIST_LIMIT
+  const skip = (page - 1) * limit
 
   const where: Record<string, unknown> = { ...baseWhere }
   if (category) where.itemCategory = category
+  if (item) where.itemUniqueName = item
   if (hasGuide) where.hasGuide = true
   if (hasShards) where.hasShards = true
 
@@ -274,15 +315,16 @@ export async function runList({
     const { ids, total } = await searchBuildIds({
       q,
       category,
+      item,
       hasGuide,
       hasShards,
       baseFilter,
       sort,
       skip,
-      take: LIST_LIMIT,
+      take: limit,
     })
     if (ids.length === 0) {
-      return { builds: [], total, page, limit: LIST_LIMIT }
+      return { builds: [], total, page, limit }
     }
     const rows = await prisma.build.findMany({
       where: { id: { in: ids } },
@@ -296,7 +338,7 @@ export async function runList({
       builds: ordered.map(serializeListRow),
       total,
       page,
-      limit: LIST_LIMIT,
+      limit,
     }
   }
 
@@ -305,7 +347,7 @@ export async function runList({
       where,
       orderBy: orderByForSort(sort),
       skip,
-      take: LIST_LIMIT,
+      take: limit,
       select: LIST_SELECT,
     }),
     prisma.build.count({ where }),
@@ -315,6 +357,6 @@ export async function runList({
     builds: rows.map(serializeListRow),
     total,
     page,
-    limit: LIST_LIMIT,
+    limit,
   }
 }

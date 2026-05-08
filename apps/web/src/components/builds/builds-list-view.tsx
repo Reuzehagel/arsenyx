@@ -1,8 +1,8 @@
-import { useSuspenseQuery } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { Filter } from "lucide-react"
-import { useEffect, useRef, useState, type ReactNode } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 
-import { BuildCard } from "@/components/builds/build-card"
+import { BuildCard, BuildCardSkeleton } from "@/components/builds/build-card"
 import { BuildsCategoryTabs } from "@/components/builds/builds-category-tabs"
 import { BuildsSortDropdown } from "@/components/builds/builds-sort-dropdown"
 import { Badge } from "@/components/ui/badge"
@@ -18,8 +18,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
-import { publicBuildsQuery, type BuildListSort } from "@/lib/builds-list-query"
+import {
+  LIST_PAGE_SIZE,
+  publicBuildsQuery,
+  type BuildListSort,
+} from "@/lib/builds-list-query"
+import { cn } from "@/lib/utils"
 import { isValidCategory, type BrowseCategory } from "@/lib/warframe"
 
 import { SORT_VALUES } from "./builds-sort-dropdown"
@@ -103,6 +109,9 @@ export function nextBuildsListSearch(
 
 const SEARCH_DEBOUNCE_MS = 200
 
+export const BUILDS_GRID_CLASS =
+  "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+
 export function BuildsListView({
   title,
   description,
@@ -130,21 +139,15 @@ export function BuildsListView({
   emptyState: ReactNode
   showFilters: boolean
 }) {
-  const { data } = useSuspenseQuery(query)
-  const totalPages = Math.max(1, Math.ceil(data.total / data.limit))
-
   const [qLocal, setQLocal] = useState(q)
   useEffect(() => setQLocal(q), [q])
-
-  const latest = useRef({ sort, category, onUpdateSearch })
-  latest.current = { sort, category, onUpdateSearch }
 
   useEffect(() => {
     if (qLocal === q) return
     const t = setTimeout(() => {
-      latest.current.onUpdateSearch({
-        sort: latest.current.sort,
-        category: latest.current.category,
+      onUpdateSearch({
+        sort,
+        category,
         q: qLocal || undefined,
         page: undefined,
         hasGuide: hasGuide || undefined,
@@ -152,7 +155,7 @@ export function BuildsListView({
       })
     }, SEARCH_DEBOUNCE_MS)
     return () => clearTimeout(t)
-  }, [qLocal, q, hasGuide, hasShards])
+  }, [qLocal, q, sort, category, hasGuide, hasShards, onUpdateSearch])
 
   const activeFilterCount = (hasGuide ? 1 : 0) + (hasShards ? 1 : 0)
 
@@ -264,6 +267,50 @@ export function BuildsListView({
         />
       ) : null}
 
+      <Results
+        query={query}
+        page={page}
+        q={q}
+        sort={sort}
+        category={category}
+        hasGuide={hasGuide}
+        hasShards={hasShards}
+        onUpdateSearch={onUpdateSearch}
+        emptyState={emptyState}
+      />
+    </div>
+  )
+}
+
+function Results({
+  query,
+  page,
+  q,
+  sort,
+  category,
+  hasGuide,
+  hasShards,
+  onUpdateSearch,
+  emptyState,
+}: {
+  query: BuildsQuery
+  page: number
+  q: string
+  sort: BuildListSort
+  category: BrowseCategory | undefined
+  hasGuide: boolean
+  hasShards: boolean
+  onUpdateSearch: (next: BuildsListSearch) => void
+  emptyState: ReactNode
+}) {
+  const { data, isPending, isFetching } = useQuery(query)
+
+  if (isPending || !data) return <ResultsSkeleton />
+
+  const totalPages = Math.max(1, Math.ceil(data.total / data.limit))
+
+  return (
+    <>
       <div className="text-muted-foreground text-sm">
         {data.total} {data.total === 1 ? "build" : "builds"}
         {q ? ` matching "${q}"` : ""}
@@ -272,7 +319,14 @@ export function BuildsListView({
       {data.builds.length === 0 ? (
         <div className="py-16 text-center">{emptyState}</div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div
+          aria-busy={isFetching}
+          className={cn(
+            BUILDS_GRID_CLASS,
+            "transition-opacity",
+            isFetching && "opacity-60",
+          )}
+        >
           {data.builds.map((b) => (
             <BuildCard key={b.id} build={b} />
           ))}
@@ -322,6 +376,65 @@ export function BuildsListView({
           ) : null}
         </div>
       ) : null}
+    </>
+  )
+}
+
+function ResultsSkeleton() {
+  return (
+    <div
+      role="status"
+      aria-busy="true"
+      aria-live="polite"
+      className="flex flex-col gap-6"
+    >
+      <span className="sr-only">Loading builds…</span>
+      <Skeleton className="h-4 w-32" />
+      <div className={BUILDS_GRID_CLASS}>
+        {Array.from({ length: LIST_PAGE_SIZE }).map((_, i) => (
+          <BuildCardSkeleton key={i} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/** Full-page builds list skeleton (chrome + results). */
+export function BuildsListSkeleton({
+  showFilters = true,
+  showHeader = true,
+}: {
+  showFilters?: boolean
+  showHeader?: boolean
+}) {
+  return (
+    <div
+      role="status"
+      aria-busy="true"
+      aria-live="polite"
+      className="flex flex-col gap-6"
+    >
+      <span className="sr-only">Loading builds…</span>
+      {showHeader && (
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-9 w-64" />
+          <Skeleton className="h-5 w-80" />
+        </div>
+      )}
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <Skeleton className="h-9 flex-1" />
+        <div className="flex gap-3">
+          <Skeleton className="h-9 w-32" />
+          {showFilters && <Skeleton className="h-9 w-24" />}
+        </div>
+      </div>
+      {showFilters && <Skeleton className="h-8 w-full max-w-md" />}
+      <Skeleton className="h-4 w-32" />
+      <div className={BUILDS_GRID_CLASS}>
+        {Array.from({ length: LIST_PAGE_SIZE }).map((_, i) => (
+          <BuildCardSkeleton key={i} />
+        ))}
+      </div>
     </div>
   )
 }

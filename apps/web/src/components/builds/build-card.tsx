@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router"
 import { Eye, Heart } from "lucide-react"
 
+import { Skeleton } from "@/components/ui/skeleton"
 import type { BuildListItem } from "@/lib/builds-list-query"
 import { relativeTime } from "@/lib/relative-time"
 import { authorName } from "@/lib/user-display"
@@ -50,5 +51,22 @@ export function BuildCard({ build }: { build: BuildListItem }) {
         </div>
       </div>
     </Link>
+  )
+}
+
+export function BuildCardSkeleton() {
+  return (
+    <div className="bg-card block overflow-hidden rounded-lg border">
+      <Skeleton className="aspect-video w-full rounded-none" />
+      <div className="flex flex-col gap-1 p-3">
+        <Skeleton className="h-[1.125rem] w-3/4" />
+        <Skeleton className="h-[0.875rem] w-1/2" />
+        <Skeleton className="h-[0.875rem] w-2/5" />
+        <div className="flex items-center justify-between pt-0.5">
+          <Skeleton className="h-3 w-16" />
+          <Skeleton className="h-3 w-10" />
+        </div>
+      </div>
+    </div>
   )
 }
