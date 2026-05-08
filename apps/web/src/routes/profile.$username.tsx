@@ -69,12 +69,7 @@ function ProfileContent() {
   const { username } = Route.useParams()
   const search = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
-  const page = search.page ?? 1
-  const sort = search.sort ?? "newest"
-  const q = search.q ?? ""
-  const category = search.category
-  const hasGuide = search.hasGuide === true
-  const hasShards = search.hasShards === true
+  const params = buildsListLoaderDeps(search, "newest")
 
   const { data: profile } = useSuspenseQuery(profileQuery(username))
 
@@ -87,20 +82,13 @@ function ProfileContent() {
       <BuildsListView
         title="Public builds"
         description={`Builds shared by ${profile.displayUsername ?? profile.username ?? "this user"}.`}
-        query={profileBuildsQuery(username, {
-          page,
-          sort,
-          q,
-          category,
-          hasGuide: hasGuide || undefined,
-          hasShards: hasShards || undefined,
-        })}
-        page={page}
-        sort={sort}
-        q={q}
-        category={category}
-        hasGuide={hasGuide}
-        hasShards={hasShards}
+        query={profileBuildsQuery(username, params)}
+        page={params.page}
+        sort={params.sort}
+        q={params.q}
+        category={params.category}
+        hasGuide={params.hasGuide}
+        hasShards={params.hasShards}
         onUpdateSearch={onUpdateSearch}
         showFilters
         emptyState={

@@ -44,12 +44,7 @@ export const Route = createFileRoute("/builds/mine")({
 function MineBuildsPage() {
   const search = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
-  const page = search.page ?? 1
-  const sort = search.sort ?? "updated"
-  const q = search.q ?? ""
-  const category = search.category
-  const hasGuide = search.hasGuide === true
-  const hasShards = search.hasShards === true
+  const params = buildsListLoaderDeps(search, "updated")
 
   const onUpdateSearch = (next: BuildsListSearch) =>
     navigate({ search: nextBuildsListSearch(next, "updated"), replace: true })
@@ -62,20 +57,13 @@ function MineBuildsPage() {
           <BuildsListView
             title="My Builds"
             description="Builds you've authored."
-            query={myBuildsQuery({
-              page,
-              sort,
-              q,
-              category,
-              hasGuide: hasGuide || undefined,
-              hasShards: hasShards || undefined,
-            })}
-            page={page}
-            sort={sort}
-            q={q}
-            category={category}
-            hasGuide={hasGuide}
-            hasShards={hasShards}
+            query={myBuildsQuery(params)}
+            page={params.page}
+            sort={params.sort}
+            q={params.q}
+            category={params.category}
+            hasGuide={params.hasGuide}
+            hasShards={params.hasShards}
             onUpdateSearch={onUpdateSearch}
             showFilters
             emptyState={

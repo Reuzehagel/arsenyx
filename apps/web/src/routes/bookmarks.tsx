@@ -47,12 +47,7 @@ export const Route = createFileRoute("/bookmarks")({
 function BookmarksPage() {
   const search = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
-  const page = search.page ?? 1
-  const sort = search.sort ?? "newest"
-  const q = search.q ?? ""
-  const category = search.category
-  const hasGuide = search.hasGuide === true
-  const hasShards = search.hasShards === true
+  const params = buildsListLoaderDeps(search, "newest")
 
   const onUpdateSearch = (next: BuildsListSearch) =>
     navigate({ search: nextBuildsListSearch(next, "newest"), replace: true })
@@ -65,20 +60,13 @@ function BookmarksPage() {
           <BuildsListView
             title="My Bookmarks"
             description="Builds you've bookmarked."
-            query={bookmarkedBuildsQuery({
-              page,
-              sort,
-              q,
-              category,
-              hasGuide: hasGuide || undefined,
-              hasShards: hasShards || undefined,
-            })}
-            page={page}
-            sort={sort}
-            q={q}
-            category={category}
-            hasGuide={hasGuide}
-            hasShards={hasShards}
+            query={bookmarkedBuildsQuery(params)}
+            page={params.page}
+            sort={params.sort}
+            q={params.q}
+            category={params.category}
+            hasGuide={params.hasGuide}
+            hasShards={params.hasShards}
             onUpdateSearch={onUpdateSearch}
             showFilters
             emptyState={
