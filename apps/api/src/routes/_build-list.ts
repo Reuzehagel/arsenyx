@@ -232,7 +232,11 @@ async function searchBuildIds(params: {
     skip,
     take,
   } = params
-  const tokens = q.toLowerCase().match(/[a-z0-9]+/g) ?? []
+  // Cap at 8 tokens × 64 chars to bound query work on pathological input.
+  // `[a-z0-9]+` already strips punctuation that would break to_tsquery syntax.
+  const tokens = (q.toLowerCase().match(/[a-z0-9]+/g) ?? [])
+    .slice(0, 8)
+    .map((t) => t.slice(0, 64))
   if (tokens.length === 0) {
     return { ids: [], total: 0 }
   }

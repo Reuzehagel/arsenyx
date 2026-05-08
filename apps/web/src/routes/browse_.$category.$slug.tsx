@@ -9,7 +9,10 @@ import { DelayedSuspense } from "@/components/delayed-fallback"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { ItemDetailContent } from "@/components/item-detail/content"
-import { ItemDetailFrame } from "@/components/item-detail/frame"
+import {
+  ItemDetailBreadcrumb,
+  ItemDetailFrame,
+} from "@/components/item-detail/frame"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { itemQuery } from "@/lib/item-query"
@@ -31,15 +34,18 @@ function ItemDetailPage() {
   const { category, slug } = Route.useParams()
   const cat = category as BrowseCategory
   return (
-    <DelayedSuspense
-      fallback={
-        <ItemDetailFrame category={cat}>
-          <ItemDetailSkeleton />
-        </ItemDetailFrame>
-      }
-    >
-      <ItemDetailView category={cat} slug={slug} />
-    </DelayedSuspense>
+    <ItemDetailFrame>
+      <DelayedSuspense
+        fallback={
+          <>
+            <ItemDetailBreadcrumb category={cat} />
+            <ItemDetailSkeleton />
+          </>
+        }
+      >
+        <ItemDetailView category={cat} slug={slug} />
+      </DelayedSuspense>
+    </ItemDetailFrame>
   )
 }
 
@@ -52,9 +58,10 @@ function ItemDetailView({
 }) {
   const { data: item } = useSuspenseQuery(itemQuery(category, slug))
   return (
-    <ItemDetailFrame category={category} itemName={item.name}>
+    <>
+      <ItemDetailBreadcrumb category={category} itemName={item.name} />
       <ItemDetailContent item={item} category={category} slug={slug} />
-    </ItemDetailFrame>
+    </>
   )
 }
 
