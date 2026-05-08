@@ -553,6 +553,17 @@ function ViewerHeader({
                 >
                   {build.organization.name}
                 </RouterLink>
+              ) : build.user.username ? (
+                <>
+                  by{" "}
+                  <RouterLink
+                    to="/profile/$username"
+                    params={{ username: build.user.username }}
+                    className="text-[#a78bfa] hover:underline"
+                  >
+                    {author}
+                  </RouterLink>
+                </>
               ) : (
                 <>by {author}</>
               )}
