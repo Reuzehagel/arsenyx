@@ -529,7 +529,22 @@ function ViewerHeader({
               {build.name}
             </h1>
             <span className="text-muted-foreground text-sm">
-              {build.item.name} · {categoryLabel} ·{" "}
+              <RouterLink
+                to="/browse/$category/$slug"
+                params={{ category, slug: itemSlug }}
+                className="hover:text-foreground hover:underline"
+              >
+                {build.item.name}
+              </RouterLink>
+              {" · "}
+              <RouterLink
+                to="/browse"
+                search={{ category }}
+                className="hover:text-foreground hover:underline"
+              >
+                {categoryLabel}
+              </RouterLink>
+              {" · "}
               {build.organization ? (
                 <RouterLink
                   to="/org/$slug"
