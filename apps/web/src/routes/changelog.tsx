@@ -14,6 +14,131 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-05-08",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Item detail pages have been redesigned, and browse lists and loading skeletons got an overhaul to feel snappier.",
+      },
+      {
+        type: "fix",
+        description:
+          "Builds list no longer flashes empty on navigation — the prefetched data is reused correctly now.",
+      },
+    ],
+  },
+  {
+    date: "2026-05-05",
+    changes: [
+      {
+        type: "chore",
+        description:
+          "Game data updated to Warframe 42.0.9 (wfcd/items 1.1274.12).",
+      },
+    ],
+  },
+  {
+    date: "2026-05-04",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Damage types and currency now use in-game icons instead of generic badges.",
+      },
+      {
+        type: "fix",
+        description:
+          "Zaw images load again — refreshed to the latest canonical names.",
+      },
+      {
+        type: "fix",
+        description:
+          "Zaw selector no longer flickers along the right edge on hover.",
+      },
+    ],
+  },
+  {
+    date: "2026-05-03",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Arch-guns now show their atmospheric deployment context where it applies.",
+      },
+      {
+        type: "fix",
+        description:
+          "Deployment toggle now shows the selected option's label instead of its raw value.",
+      },
+    ],
+  },
+  {
+    date: "2026-05-01",
+    changes: [
+      {
+        type: "refactor",
+        description:
+          "Hardened API mutations and retired the standalone screenshot service.",
+      },
+    ],
+  },
+  {
+    date: "2026-04-30",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Redesigned landing page built around real game data instead of placeholder content.",
+      },
+      {
+        type: "feat",
+        description:
+          "Unified keyboard shortcut system, with a cheat-sheet (press ?) so you can discover what's available.",
+      },
+      {
+        type: "feat",
+        description:
+          "Embed mode improvements and a broader responsiveness pass.",
+      },
+      {
+        type: "feat",
+        description:
+          "profit-taker.com can now embed Arsenyx builds.",
+      },
+      {
+        type: "fix",
+        description:
+          "Builds sidebar scrolls again, and the embed button has been folded into a single share menu.",
+      },
+      {
+        type: "refactor",
+        description:
+          "Security fixes across authorization, XSS, and CSRF, plus dependency advisory cleanup.",
+      },
+    ],
+  },
+  {
+    date: "2026-04-29",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Added a favicon and Apple touch icon so Arsenyx looks right in tabs and on home screens.",
+      },
+      {
+        type: "fix",
+        description:
+          "Saved builds with stale wfcd image names now self-heal instead of showing broken cards.",
+      },
+      {
+        type: "fix",
+        description:
+          "Innate exilus polarity is now counted toward forma usage and mod capacity.",
+      },
+    ],
+  },
+  {
     date: "2026-04-25",
     changes: [
       {
