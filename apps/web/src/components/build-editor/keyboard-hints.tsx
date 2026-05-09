@@ -22,7 +22,7 @@ export function KeyboardHintsStrip({ className }: { className?: string }) {
       )}
     >
       <Hint keys={["↑", "↓", "←", "→"]} label="navigate" />
-      <Hint keys={["−", "="]} label="rank" />
+      <Hint keys={["−", "+"]} label="rank" />
       <Hint keys={["/"]} label="search mods" />
       <Hint keys={["Esc"]} label="deselect" />
       <button
@@ -71,7 +71,7 @@ export function KeyboardHintBanner() {
   return (
     <div className="bg-muted/30 flex items-center gap-3 rounded-md border border-dashed px-3 py-2 text-sm">
       <span className="text-muted-foreground">
-        Keyboard-first: arrows move between slots, <Kbd>−</Kbd> / <Kbd>=</Kbd>{" "}
+        Keyboard-first: arrows move between slots, <Kbd>−</Kbd> / <Kbd>+</Kbd>{" "}
         rank a mod, <Kbd>/</Kbd> opens mod search. Press <Kbd>?</Kbd> any time
         for the full list.
       </span>

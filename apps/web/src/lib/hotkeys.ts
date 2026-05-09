@@ -48,7 +48,7 @@ export const HOTKEYS: readonly Hotkey[] = [
   },
   {
     scope: "Build editor",
-    keys: ["−", "="],
+    keys: ["−", "+"],
     description: "Lower or raise the rank of the selected mod / arcane",
   },
   {
