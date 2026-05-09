@@ -65,6 +65,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { arcanesQuery } from "@/lib/arcanes-query"
 import { authClient } from "@/lib/auth-client"
 import { useDeleteBuild, useForkBuild } from "@/lib/build-actions"
@@ -77,6 +82,7 @@ import { useToggleBookmark, useToggleLike } from "@/lib/build-social"
 import { helminthQuery, type HelminthAbility } from "@/lib/helminth-query"
 import { itemQuery } from "@/lib/item-query"
 import { modsQuery } from "@/lib/mods-query"
+import { formatAbsoluteTime, relativeTime } from "@/lib/relative-time"
 import { padShards } from "@/lib/shards"
 import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard"
 import { authorName, formatVisibility } from "@/lib/user-display"
@@ -598,6 +604,18 @@ function ViewerHeader({
               <Badge variant="outline" className="text-xs">
                 {build.likeCount} likes · {build.viewCount} views
               </Badge>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Badge variant="outline" className="text-xs">
+                      Updated {relativeTime(build.updatedAt)}
+                    </Badge>
+                  }
+                />
+                <TooltipContent>
+                  Updated {formatAbsoluteTime(build.updatedAt)}
+                </TooltipContent>
+              </Tooltip>
               {build.visibility !== "PUBLIC" ? (
                 <Badge variant="secondary" className="text-xs">
                   {formatVisibility(build.visibility)}

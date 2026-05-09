@@ -2,8 +2,13 @@ import { Link } from "@tanstack/react-router"
 import { Eye, Heart } from "lucide-react"
 
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import type { BuildListItem } from "@/lib/builds-list-query"
-import { relativeTime } from "@/lib/relative-time"
+import { formatAbsoluteTime, relativeTime } from "@/lib/relative-time"
 import { authorName } from "@/lib/user-display"
 import { getImageUrl } from "@/lib/warframe"
 
@@ -47,7 +52,12 @@ export function BuildCard({ build }: { build: BuildListItem }) {
               {build.viewCount}
             </span>
           </span>
-          <span>{timeAgo}</span>
+          <Tooltip>
+            <TooltipTrigger render={<span>{timeAgo}</span>} />
+            <TooltipContent>
+              Updated {formatAbsoluteTime(build.updatedAt)}
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
     </Link>
