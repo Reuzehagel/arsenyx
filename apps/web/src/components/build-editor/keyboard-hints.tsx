@@ -3,6 +3,7 @@ import { useState } from "react"
 
 import { openHotkeyCheatSheet } from "@/components/hotkey-cheat-sheet"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
+import { KbdKey } from "@/components/kbd-key"
 import { cn } from "@/lib/utils"
 
 const STORAGE_KEY = "arsenyx.hotkeyHintDismissed"
@@ -42,7 +43,7 @@ function Hint({ keys, label }: { keys: string[]; label: string }) {
     <span className="inline-flex items-baseline gap-1">
       <KbdGroup>
         {keys.map((k, i) => (
-          <Kbd key={i}>{k}</Kbd>
+          <KbdKey key={i}>{k}</KbdKey>
         ))}
       </KbdGroup>
       <span>{label}</span>

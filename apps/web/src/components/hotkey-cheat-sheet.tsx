@@ -7,7 +7,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Kbd, KbdGroup } from "@/components/ui/kbd"
+import { KbdGroup } from "@/components/ui/kbd"
+import { KbdKey } from "@/components/kbd-key"
 import { HOTKEYS, HOTKEY_SCOPES, useHotkey } from "@/lib/hotkeys"
 
 const OPEN_EVENT = "arsenyx:open-cheat-sheet"
@@ -64,7 +65,7 @@ export function HotkeyCheatSheet() {
                       <span className="text-foreground">{row.description}</span>
                       <KbdGroup className="shrink-0">
                         {row.keys.map((k, j) => (
-                          <Kbd key={j}>{k}</Kbd>
+                          <KbdKey key={j}>{k}</KbdKey>
                         ))}
                       </KbdGroup>
                     </li>
