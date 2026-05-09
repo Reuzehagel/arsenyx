@@ -47,22 +47,25 @@ export function getExilusInnatePolarity(
 }
 
 export function ArcaneRow({
-  count,
   arcanes,
   options,
+  labels,
   readOnly = false,
 }: {
-  count: number
   arcanes: ArcaneSlotsState
-  options: Arcane[]
+  /** Per-slot picker options. Slot count = `options.length`. */
+  options: Arcane[][]
+  /** Optional per-slot placeholder labels. */
+  labels?: string[]
   readOnly?: boolean
 }) {
   return (
     <div className="flex w-full items-start justify-center gap-3 sm:gap-6">
-      {Array.from({ length: count }).map((_, i) => (
+      {options.map((slotOptions, i) => (
         <ArcaneSlot
           key={i}
-          options={options}
+          options={slotOptions}
+          label={labels?.[i]}
           placed={arcanes.placed[i]}
           usedNames={arcanes.usedNames}
           selected={arcanes.selected === i}

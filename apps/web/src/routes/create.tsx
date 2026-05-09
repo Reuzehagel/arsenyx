@@ -1,4 +1,3 @@
-import { getArcanesForCategory } from "@arsenyx/shared/warframe/arcanes"
 import { decodeBuild, encodeBuild } from "@arsenyx/shared/warframe/build-codec"
 import {
   getIncarnonGenesisImage,
@@ -47,6 +46,7 @@ import {
   calculateCapacity,
   calculateFormaCount,
   calculateTotalEndoCost,
+  getArcaneSlotConfig,
   getArcaneSlotCount,
   getAuraPolarities,
   getAuraSlotCount,
@@ -229,9 +229,9 @@ function EditorShell() {
   })
   const arcaneCount = getArcaneSlotCount(category, item.type)
   const arcanes = useArcaneSlots(arcaneCount, savedData.arcanes)
-  const arcaneOptions = useMemo(
-    () => getArcanesForCategory(allArcanes, category),
-    [allArcanes, category],
+  const arcaneConfig = useMemo(
+    () => getArcaneSlotConfig(allArcanes, category, arcaneCount),
+    [allArcanes, category, arcaneCount],
   )
 
   // Escape deselects the active mod/arcane slot, mirroring the
@@ -663,9 +663,9 @@ function EditorShell() {
               arcaneRow={
                 arcaneCount > 0 ? (
                   <ArcaneRow
-                    count={arcaneCount}
                     arcanes={arcanes}
-                    options={arcaneOptions}
+                    options={arcaneConfig.options}
+                    labels={arcaneConfig.labels}
                   />
                 ) : undefined
               }

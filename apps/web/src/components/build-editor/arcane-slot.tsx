@@ -22,6 +22,8 @@ import type { PlacedArcane } from "./use-arcane-slots"
 interface ArcaneSlotProps {
   options: Arcane[]
   placed?: PlacedArcane | null
+  /** Placeholder text shown when the slot is empty. Defaults to "Arcane". */
+  label?: string
   /** Names of arcanes already placed in sibling slots — dimmed in the picker. */
   usedNames?: Set<string>
   selected?: boolean
@@ -35,6 +37,7 @@ interface ArcaneSlotProps {
 export function ArcaneSlot({
   options,
   placed,
+  label = "Arcane",
   usedNames,
   selected,
   onSelect,
@@ -97,7 +100,7 @@ export function ArcaneSlot({
           <>
             <Plus className="text-muted-foreground/15 group-hover:text-muted-foreground/30 size-6 transition-colors" />
             <span className="text-muted-foreground/30 mt-1 font-mono text-[10px] tracking-wide uppercase">
-              Arcane
+              {label}
             </span>
           </>
         )}

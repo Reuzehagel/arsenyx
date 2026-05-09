@@ -15,6 +15,7 @@ export {
   calculateTotalEndoCost,
 } from "./calculations"
 export {
+  getArcaneSlotConfig,
   getArcaneSlotCount,
   getAuraSlotCount,
   getMaxLevelCap,

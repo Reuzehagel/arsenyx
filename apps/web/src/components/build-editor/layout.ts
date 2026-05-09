@@ -1,8 +1,15 @@
+import {
+  getArcanesForCategory,
+  getArcanesForSlot,
+} from "@arsenyx/shared/warframe/arcanes"
+import type { Arcane } from "@arsenyx/shared/warframe/types"
+
 import type { BrowseCategory, DetailItem } from "@/lib/warframe"
 
 /** Arcane slot count per category. Within `archwing`, only arch-guns
- * have arcane slots (top = Primary Arcane, bottom = Secondary Arcane);
- * archwing suits and arch-melee weapons have none. */
+ * have arcane slots (slot 0 = Primary Arcane, slot 1 = Secondary Arcane —
+ * matches the in-game arsenal); archwing suits and arch-melee weapons
+ * have none. */
 export function getArcaneSlotCount(
   category: BrowseCategory,
   itemType: DetailItem["type"],
@@ -19,6 +26,33 @@ export function getArcaneSlotCount(
     default:
       return 0
   }
+}
+
+/** Per-slot arcane picker config. Arch-guns get typed slots (one primary,
+ * one secondary, with matching labels); every other category gets the
+ * same shared option list across all slots and no custom labels. */
+export interface ArcaneSlotConfig {
+  options: Arcane[][]
+  labels?: string[]
+}
+
+export function getArcaneSlotConfig(
+  allArcanes: Arcane[],
+  category: BrowseCategory,
+  count: number,
+): ArcaneSlotConfig {
+  if (count === 0) return { options: [] }
+  if (category === "archwing") {
+    return {
+      options: [
+        getArcanesForSlot(allArcanes, "primary"),
+        getArcanesForSlot(allArcanes, "secondary"),
+      ],
+      labels: ["Primary Arcane", "Secondary Arcane"],
+    }
+  }
+  const shared = getArcanesForCategory(allArcanes, category)
+  return { options: Array.from({ length: count }, () => shared) }
 }
 
 /** Categories that have an Exilus slot. Necramechs, companions, and every

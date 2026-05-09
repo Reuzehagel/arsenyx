@@ -1,8 +1,6 @@
-import { getArcanesForCategory } from "@arsenyx/shared/warframe/arcanes"
 import { slugify } from "@arsenyx/shared/warframe/slugs"
 import {
   DEFAULT_DEPLOYMENT_CONTEXT,
-  type Arcane,
   type Mod,
 } from "@arsenyx/shared/warframe/types"
 import { useSuspenseQuery } from "@tanstack/react-query"
@@ -32,6 +30,7 @@ import {
   calculateCapacity,
   calculateFormaCount,
   calculateTotalEndoCost,
+  getArcaneSlotConfig,
   getArcaneSlotCount,
   getAuraPolarities,
   getAuraSlotCount,
@@ -319,9 +318,9 @@ function BuildViewerBodyInner({
   const normalSlotCount = getNormalSlotCount(category)
   const arcaneCount = getArcaneSlotCount(category, item.type)
 
-  const arcaneOptions = useMemo(
-    () => getArcanesForCategory(allArcanes, category),
-    [allArcanes, category],
+  const arcaneConfig = useMemo(
+    () => getArcaneSlotConfig(allArcanes, category, arcaneCount),
+    [allArcanes, category, arcaneCount],
   )
 
   const auraSlotCount = getAuraSlotCount(category, item)
@@ -470,9 +469,9 @@ function BuildViewerBodyInner({
               arcaneRow={
                 arcaneCount > 0 ? (
                   <ArcaneRow
-                    count={arcaneCount}
                     arcanes={arcanes}
-                    options={arcaneOptions}
+                    options={arcaneConfig.options}
+                    labels={arcaneConfig.labels}
                     readOnly
                   />
                 ) : undefined
