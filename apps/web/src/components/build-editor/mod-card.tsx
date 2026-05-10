@@ -23,6 +23,22 @@ import {
 
 const NUMBER_PATTERN = /(\d+(\.\d+)?)/g
 
+// `Background` and `LowerTab` PNGs are only referenced by the expanded card,
+// so on first hover the browser fetches them cold — visible as a delay before
+// the lower stat panel paints. Warm them up as soon as a compact card of a
+// given rarity mounts, so they're in the HTTP cache by the time the user
+// hovers. Module-level set dedupes across all card instances.
+const preloadedRarities = new Set<ModRarity>()
+
+function preloadExpandedAssets(rarity: ModRarity) {
+  if (preloadedRarities.has(rarity)) return
+  preloadedRarities.add(rarity)
+  for (const asset of ["Background", "LowerTab"] as const) {
+    const img = new Image()
+    img.src = getModAssetUrl(rarity, asset)
+  }
+}
+
 // Stats where a "positive" riven roll is semantically a debuff — we invert the
 // displayed sign so the number reads the way the in-game arsenal shows it.
 const INVERTED_RIVEN_STATS = new Set(["Zoom"])
@@ -150,6 +166,10 @@ function CompactModCard({
   const drain =
     drainOverride ??
     (mod.rivenStats ? (mod.baseDrain ?? 0) : (mod.baseDrain ?? 0) + rank)
+
+  useEffect(() => {
+    preloadExpandedAssets(rarity)
+  }, [rarity])
 
   return (
     <ModCardFrame rarity={rarity} variant="compact" vtPrefix={vtPrefix}>
