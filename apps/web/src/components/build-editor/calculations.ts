@@ -138,6 +138,7 @@ export interface CapacityInput {
   formaPolarities: Partial<Record<SlotId, Polarity>>
   auraInnates: (Polarity | undefined)[]
   exilusInnate?: Polarity
+  stanceInnate?: Polarity
   normalInnates: (Polarity | undefined)[]
   hasReactor: boolean
   maxLevelCap?: number
@@ -156,6 +157,7 @@ export function calculateCapacity(input: CapacityInput): CapacityResult {
     formaPolarities,
     auraInnates,
     exilusInnate,
+    stanceInnate,
     normalInnates,
     hasReactor,
     maxLevelCap,
@@ -185,6 +187,14 @@ export function calculateCapacity(input: CapacityInput): CapacityResult {
       effectivePolarity(exilusInnate, formaPolarities.exilus),
     )
   }
+  const stance = placed.stance
+  if (stance) {
+    used += effectiveDrainForMod(
+      stance.mod,
+      stance.rank,
+      effectivePolarity(stanceInnate, formaPolarities.stance),
+    )
+  }
   for (let i = 0; i < normalInnates.length; i++) {
     const id = `normal-${i}` as SlotId
     const p = placed[id]
@@ -202,12 +212,19 @@ export function calculateCapacity(input: CapacityInput): CapacityResult {
 export interface FormaCountInput {
   auraInnates: (Polarity | undefined)[]
   exilusInnate?: Polarity
+  stanceInnate?: Polarity
   normalInnates: (Polarity | undefined)[]
   formaPolarities: Partial<Record<SlotId, Polarity>>
 }
 
 export function calculateFormaCount(input: FormaCountInput): number {
-  const { auraInnates, exilusInnate, normalInnates, formaPolarities } = input
+  const {
+    auraInnates,
+    exilusInnate,
+    stanceInnate,
+    normalInnates,
+    formaPolarities,
+  } = input
   let total = 0
 
   for (let i = 0; i < auraInnates.length; i++) {
@@ -217,6 +234,7 @@ export function calculateFormaCount(input: FormaCountInput): number {
     )
   }
   total += singleSlotForma(exilusInnate, formaPolarities.exilus)
+  total += singleSlotForma(stanceInnate, formaPolarities.stance)
 
   const normalSlots: NormalSlotEntry[] = normalInnates.map((innate, i) => ({
     innate,

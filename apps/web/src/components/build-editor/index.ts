@@ -21,12 +21,14 @@ export {
   getMaxLevelCap,
   getNormalSlotCount,
   hasExilusSlot,
+  hasStanceSlot,
   isLichWeapon,
 } from "./layout"
 export {
   ArcaneRow,
   getAuraPolarities,
   getExilusInnatePolarity,
+  getStanceInnatePolarity,
   ModGrid,
   toPolarity,
 } from "./mod-grid"

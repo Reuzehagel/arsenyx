@@ -9,6 +9,7 @@ import {
   getAuraSlotCount,
   getExilusInnatePolarity,
   getNormalSlotCount,
+  getStanceInnatePolarity,
   toPolarity,
 } from "@/components/build-editor"
 import { Footer } from "@/components/footer"
@@ -255,6 +256,7 @@ function ImportPage() {
                                 ),
                               ),
                               exilusInnate: getExilusInnatePolarity(detailItem),
+                              stanceInnate: getStanceInnatePolarity(detailItem),
                               normalInnates: Array.from(
                                 {
                                   length: getNormalSlotCount(

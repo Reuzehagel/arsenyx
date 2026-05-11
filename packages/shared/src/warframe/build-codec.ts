@@ -25,6 +25,7 @@ interface EncodedBuild {
   a?: EncodedSlot
   A?: EncodedSlot[]
   e?: EncodedSlot
+  st?: EncodedSlot
   s: EncodedSlot[]
   ar?: EncodedArcane[]
   sh?: number[]
@@ -83,6 +84,10 @@ export function encodeBuild(state: BuildState): string {
 
   if (state.exilusSlot?.mod || state.exilusSlot?.formaPolarity) {
     encoded.e = encodeSlot(state.exilusSlot)
+  }
+
+  if (state.stanceSlot?.mod || state.stanceSlot?.formaPolarity) {
+    encoded.st = encodeSlot(state.stanceSlot)
   }
 
   if (state.arcaneSlots?.length > 0) {
@@ -245,6 +250,10 @@ export function decodeBuild(base64String: string): Partial<BuildState> | null {
       state.exilusSlot = decodeSlot(encoded.e, "exilus", "exilus-0")
     }
 
+    if (encoded.st) {
+      state.stanceSlot = decodeSlot(encoded.st, "stance", "stance")
+    }
+
     if (encoded.s) {
       state.normalSlots = encoded.s.map((s, i) =>
         decodeSlot(s, "normal", `normal-${i}`),
@@ -305,7 +314,7 @@ export function decodeBuild(base64String: string): Partial<BuildState> | null {
 
 function decodeSlot(
   encoded: EncodedSlot,
-  type: "aura" | "exilus" | "normal",
+  type: "aura" | "exilus" | "stance" | "normal",
   id: string,
 ): ModSlot {
   const slot: ModSlot = { id, type }

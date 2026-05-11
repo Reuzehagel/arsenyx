@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 import type { BrowseCategory, DetailItem } from "@/lib/warframe"
 
 import { ArcaneSlot } from "./arcane-slot"
-import { getAuraSlotCount, hasExilusSlot } from "./layout"
+import { getAuraSlotCount, hasExilusSlot, hasStanceSlot } from "./layout"
 import { ModSlot } from "./mod-slot"
 import { CANONICAL_POLARITIES } from "./polarity-picker"
 import type { ArcaneSlotsState } from "./use-arcane-slots"
@@ -44,6 +44,12 @@ export function getExilusInnatePolarity(
   item: Pick<DetailItem, "exilusPolarity">,
 ): Polarity | undefined {
   return toPolarity(item.exilusPolarity)
+}
+
+export function getStanceInnatePolarity(
+  item: Pick<DetailItem, "stancePolarity">,
+): Polarity | undefined {
+  return toPolarity(item.stancePolarity)
 }
 
 export function ArcaneRow({
@@ -103,6 +109,7 @@ export function ModGrid({
 }) {
   const auraSlotCount = getAuraSlotCount(category, item)
   const showExilus = hasExilusSlot(category)
+  const showStance = hasStanceSlot(item)
 
   const auraPolarities = getAuraPolarities(item, auraSlotCount)
   const polarities = item.polarities ?? []
@@ -139,7 +146,7 @@ export function ModGrid({
   // count before the next reflow.
   return (
     <div className="flex flex-col gap-6">
-      {(auraSlotCount > 0 || showExilus) && (
+      {(auraSlotCount > 0 || showExilus || showStance) && (
         <div className="flex w-full flex-wrap justify-center gap-4">
           {auraSlotCount > 0 && (
             <ModSlot
@@ -151,6 +158,12 @@ export function ModGrid({
             <ModSlot
               kind="exilus"
               {...slotProps("exilus", getExilusInnatePolarity(item))}
+            />
+          )}
+          {showStance && (
+            <ModSlot
+              kind="stance"
+              {...slotProps("stance", getStanceInnatePolarity(item))}
             />
           )}
           {Array.from({ length: Math.max(0, auraSlotCount - 1) }, (_, i) => {

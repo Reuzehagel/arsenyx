@@ -270,7 +270,7 @@ export interface Arcane {
 // BUILD STATE TYPES
 // =============================================================================
 
-export type SlotType = "aura" | "exilus" | "normal" | "arcane"
+export type SlotType = "aura" | "exilus" | "stance" | "normal" | "arcane"
 
 export interface ModSlot {
   id: string
@@ -330,6 +330,7 @@ export interface BuildState {
   // Mod slots
   auraSlots: ModSlot[] // Warframes: 1 slot (2 for Jade)
   exilusSlot?: ModSlot
+  stanceSlot?: ModSlot
   normalSlots: ModSlot[] // 8 slots (12 for Necramechs)
   arcaneSlots: (PlacedArcane | null)[] // Warframes: 2 slots, Weapons: 1 slot
 

@@ -21,7 +21,7 @@ import { PolarityIcon } from "./polarity-icon"
 import { PolarityPicker } from "./polarity-picker"
 import { useRankHotkey } from "./use-rank-hotkey"
 
-export type ModSlotKind = "normal" | "aura" | "exilus"
+export type ModSlotKind = "normal" | "aura" | "exilus" | "stance"
 
 interface ModSlotProps {
   kind?: ModSlotKind
@@ -53,6 +53,7 @@ const KIND_LABEL: Record<ModSlotKind, string> = {
   normal: "",
   aura: "Aura",
   exilus: "Exilus",
+  stance: "Stance",
 }
 
 export function ModSlot({

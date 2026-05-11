@@ -75,6 +75,7 @@ export interface DetailItem extends BrowseItem {
   aura?: string | string[]
   polarities?: string[]
   exilusPolarity?: string
+  stancePolarity?: string
   // warframe
   health?: number
   shield?: number

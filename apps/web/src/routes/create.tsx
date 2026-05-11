@@ -31,14 +31,7 @@ import {
   Link as RouterLink,
   useNavigate,
 } from "@tanstack/react-router"
-import {
-  Check,
-  Pencil,
-  Settings2,
-  Share2,
-  UploadCloud,
-  X,
-} from "lucide-react"
+import { Check, Pencil, Settings2, Share2, UploadCloud, X } from "lucide-react"
 import { Suspense, useEffect, useMemo, useRef, useState } from "react"
 
 import {
@@ -51,10 +44,12 @@ import {
   getAuraPolarities,
   getAuraSlotCount,
   getExilusInnatePolarity,
+  getStanceInnatePolarity,
   getMaxLevelCap,
   getNormalSlotCount,
   GuideEditor,
   hasExilusSlot,
+  hasStanceSlot,
   ItemSidebar,
   ItemSidebarPopover,
   KeyboardHintBanner,
@@ -217,15 +212,17 @@ function EditorShell() {
   const normalSlotCount = getNormalSlotCount(category)
   const auraSlotCount = getAuraSlotCount(category, item)
   const showExilus = hasExilusSlot(category)
+  const showStance = hasStanceSlot(item)
   const slots = useBuildSlots(normalSlotCount, {
     placed: savedData.slots,
     formaPolarities: savedData.formaPolarities,
     auraSlotCount,
     showExilus,
+    showStance,
   })
   useSlotKeyboardNav({
     slots,
-    layout: { normalSlotCount, auraSlotCount, showExilus },
+    layout: { normalSlotCount, auraSlotCount, showExilus, showStance },
   })
   const arcaneCount = getArcaneSlotCount(category, item.type)
   const arcanes = useArcaneSlots(arcaneCount, savedData.arcanes)
@@ -406,6 +403,7 @@ function EditorShell() {
     [item, auraSlotCount],
   )
   const exilusInnate = useMemo(() => getExilusInnatePolarity(item), [item])
+  const stanceInnate = useMemo(() => getStanceInnatePolarity(item), [item])
   const normalInnates = useMemo(
     () =>
       Array.from({ length: normalSlotCount }, (_, i) =>
@@ -423,10 +421,17 @@ function EditorShell() {
       calculateFormaCount({
         auraInnates,
         exilusInnate,
+        stanceInnate,
         normalInnates,
         formaPolarities: slots.formaPolarities,
       }),
-    [auraInnates, exilusInnate, normalInnates, slots.formaPolarities],
+    [
+      auraInnates,
+      exilusInnate,
+      stanceInnate,
+      normalInnates,
+      slots.formaPolarities,
+    ],
   )
   const isUpdate = !!existingBuild && existingBuild.isOwner
 
@@ -453,6 +458,7 @@ function EditorShell() {
       deploymentContext,
       normalSlotCount,
       auraSlotCount,
+      showStance,
     })
     const encoded = encodeBuild(state)
     const url = `${window.location.origin}/create?item=${encodeURIComponent(slug)}&category=${encodeURIComponent(category)}&share=${encodeURIComponent(encoded)}`
@@ -546,6 +552,7 @@ function EditorShell() {
         formaPolarities: slots.formaPolarities,
         auraInnates,
         exilusInnate,
+        stanceInnate,
         normalInnates,
         hasReactor,
         maxLevelCap: getMaxLevelCap(category, item),
@@ -555,6 +562,7 @@ function EditorShell() {
       slots.formaPolarities,
       auraInnates,
       exilusInnate,
+      stanceInnate,
       normalInnates,
       hasReactor,
       category,

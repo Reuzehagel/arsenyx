@@ -15,12 +15,13 @@ const COLS = 4
 
 function buildGrid(layout: SlotLayout): (SlotId | null)[][] {
   const grid: (SlotId | null)[][] = []
-  const { auraSlotCount, showExilus } = layout
-  if (auraSlotCount > 0 || showExilus) {
-    // Reading order: aura-0, exilus?, aura-1..N-1
+  const { auraSlotCount, showExilus, showStance } = layout
+  if (auraSlotCount > 0 || showExilus || showStance) {
+    // Reading order: aura-0, exilus?, stance?, aura-1..N-1
     const topOrder: SlotId[] = []
     if (auraSlotCount > 0) topOrder.push("aura-0" as SlotId)
     if (showExilus) topOrder.push("exilus")
+    if (showStance) topOrder.push("stance")
     for (let i = 1; i < auraSlotCount; i++) {
       topOrder.push(`aura-${i}` as SlotId)
     }

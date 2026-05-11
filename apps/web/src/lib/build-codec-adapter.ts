@@ -34,6 +34,7 @@ type EditorState = {
   deploymentContext?: DeploymentContext
   normalSlotCount: number
   auraSlotCount: number
+  showStance: boolean
 }
 
 function toSharedPlacedMod(p: PlacedMod): SharedPlacedMod {
@@ -89,7 +90,7 @@ function toEditorPlacedMod(
 
 function buildSlot(
   id: string,
-  type: "aura" | "exilus" | "normal",
+  type: "aura" | "exilus" | "stance" | "normal",
   placed: PlacedMod | undefined,
   forma: Polarity | undefined,
 ): ModSlot {
@@ -113,6 +114,14 @@ export function savedDataToBuildState(state: EditorState): BuildState {
     state.slots.exilus,
     state.formaPolarities.exilus,
   )
+  const stanceSlot = state.showStance
+    ? buildSlot(
+        "stance",
+        "stance",
+        state.slots.stance,
+        state.formaPolarities.stance,
+      )
+    : undefined
   const normalSlots: ModSlot[] = Array.from(
     { length: state.normalSlotCount },
     (_, i) => {
@@ -160,6 +169,7 @@ export function savedDataToBuildState(state: EditorState): BuildState {
     hasReactor: state.hasReactor,
     auraSlots,
     exilusSlot,
+    stanceSlot,
     normalSlots,
     arcaneSlots,
     shardSlots: state.shards,
@@ -201,6 +211,7 @@ export function buildStateToSavedData(
   const auraSlotsIn = state.auraSlots ?? (auraFallback ? [auraFallback] : [])
   auraSlotsIn.forEach((s, i) => assign(`aura-${i}` as SlotId, s))
   assign("exilus", state.exilusSlot)
+  assign("stance", state.stanceSlot)
   state.normalSlots?.forEach((s, i) => assign(`normal-${i}` as SlotId, s))
 
   const arcanesOut: (PlacedArcane | null)[] = (state.arcaneSlots ?? []).map(
