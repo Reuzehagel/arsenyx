@@ -1,3 +1,4 @@
+import { isStanceMod } from "@arsenyx/shared/warframe/mods"
 import { isRivenMod } from "@arsenyx/shared/warframe/rivens"
 import type { Mod, Polarity } from "@arsenyx/shared/warframe/types"
 import { Search, X } from "lucide-react"
@@ -165,7 +166,8 @@ interface ModSearchGridProps {
 function slotKindPredicate(kind: ModSlotKind | undefined) {
   if (!kind || kind === "normal") return null
   if (kind === "aura") return (m: Mod) => isAuraMod(m)
-  return (m: Mod) => !isAuraMod(m) && isExilusCompatible(m)
+  if (kind === "stance") return (m: Mod) => isStanceMod(m)
+  return (m: Mod) => !isAuraMod(m) && !isStanceMod(m) && isExilusCompatible(m)
 }
 
 export function ModSearchGrid({

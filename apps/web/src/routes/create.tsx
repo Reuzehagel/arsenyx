@@ -689,11 +689,7 @@ function EditorShell() {
             usedModNames={slots.usedNames}
             onSelect={handleModSelect}
             helminth={helminth}
-            selectedSlotKind={
-              slots.selected === "aura" || slots.selected === "exilus"
-                ? slots.selected
-                : undefined
-            }
+            selectedSlotKind={selectedSlotKind(slots.selected)}
           />
         </div>
 
@@ -933,6 +929,14 @@ function EditorHeader({
       </div>
     </div>
   )
+}
+
+function selectedSlotKind(id: SlotId | null): ModSlotKind | undefined {
+  if (!id) return undefined
+  if (id === "exilus") return "exilus"
+  if (id === "stance") return "stance"
+  if (id.startsWith("aura-")) return "aura"
+  return undefined
 }
 
 function SearchPanel({

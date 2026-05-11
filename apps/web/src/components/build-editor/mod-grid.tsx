@@ -154,16 +154,16 @@ export function ModGrid({
               {...slotProps("aura-0" as SlotId, auraPolarities[0])}
             />
           )}
-          {showExilus && (
-            <ModSlot
-              kind="exilus"
-              {...slotProps("exilus", getExilusInnatePolarity(item))}
-            />
-          )}
           {showStance && (
             <ModSlot
               kind="stance"
               {...slotProps("stance", getStanceInnatePolarity(item))}
+            />
+          )}
+          {showExilus && (
+            <ModSlot
+              kind="exilus"
+              {...slotProps("exilus", getExilusInnatePolarity(item))}
             />
           )}
           {Array.from({ length: Math.max(0, auraSlotCount - 1) }, (_, i) => {

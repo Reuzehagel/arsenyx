@@ -63,13 +63,13 @@ export interface SlotLayout {
 
 /**
  * Ordered list of visible slots in reading order:
- * aura-0, exilus?, stance?, aura-1..N-1, normal-0..N.
+ * aura-0, stance?, exilus?, aura-1..N-1, normal-0..N.
  */
 export function getVisibleSlots(layout: SlotLayout): SlotId[] {
   const out: SlotId[] = []
   if (layout.auraSlotCount > 0) out.push("aura-0")
-  if (layout.showExilus) out.push("exilus")
   if (layout.showStance) out.push("stance")
+  if (layout.showExilus) out.push("exilus")
   for (let i = 1; i < layout.auraSlotCount; i++) {
     out.push(`aura-${i}` as SlotId)
   }
