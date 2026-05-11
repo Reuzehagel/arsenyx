@@ -175,11 +175,18 @@ const CATEGORY_TO_COMPAT: Record<string, ModCompatibility[]> = {
  * normalized via `normalizeMods`.
  */
 export function getModsForItem(
-  item: { type?: string; category?: string; name?: string; trigger?: string },
+  item: {
+    type?: string
+    category?: string
+    name?: string
+    trigger?: string
+    meleeClass?: string
+  },
   mods: Mod[],
 ): Mod[] {
   const itemType = item.type
   const itemName = item.name
+  const meleeClass = item.meleeClass
 
   if (!itemType) {
     const category = item.category?.toLowerCase()
@@ -220,6 +227,12 @@ export function getModsForItem(
     }
 
     if (itemTypeLower === "melee") {
+      // Stance mods are class-specific (Polearms, Glaives, ...). When we know
+      // the weapon's class, only offer stances matching it; fail open if not.
+      if (modType === "stance mod") {
+        if (!meleeClass) return true
+        return mod.compatName === meleeClass
+      }
       if (
         modType.includes("melee") &&
         compatName &&

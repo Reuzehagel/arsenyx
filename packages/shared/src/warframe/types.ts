@@ -125,6 +125,13 @@ export interface Gun extends Weapon {
 // Melee-specific
 export interface Melee extends Weapon {
   stancePolarity?: string
+  /**
+   * Canonical stance compat-name for this melee (e.g. "Polearms"). Matches
+   * stance mod `compatName` so the picker can filter stances per weapon.
+   * Currently absent from WFCD upstream — when populated, `getModsForItem`
+   * filters stance mods; while missing, the picker shows every stance mod.
+   */
+  meleeClass?: string
   blockingAngle?: number
   comboDuration?: number
   followThrough?: number
