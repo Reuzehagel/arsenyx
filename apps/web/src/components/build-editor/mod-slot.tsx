@@ -1,8 +1,7 @@
 import { isRivenMod } from "@arsenyx/shared/warframe/rivens"
 import type { Mod, Polarity } from "@arsenyx/shared/warframe/types"
-import { useDraggable, useDroppable } from "@dnd-kit/core"
 import { Pencil, Plus, X, type LucideIcon } from "lucide-react"
-import { useState, type MouseEvent } from "react"
+import { useState, type MouseEvent, type PointerEvent } from "react"
 
 import {
   Popover,
@@ -17,9 +16,17 @@ import {
   effectivePolarity,
   getMatchState,
 } from "./calculations"
+import {
+  DROP_SLOT_ATTR,
+  useIsAnyDragActive,
+  useIsDragSourceSlot,
+  useIsDropTarget,
+  useStartDrag,
+} from "./drag-controller"
 import { ModCard } from "./mod-card"
 import { PolarityIcon } from "./polarity-icon"
 import { PolarityPicker } from "./polarity-picker"
+import type { SlotId } from "./use-build-slots"
 import { useRankHotkey } from "./use-rank-hotkey"
 
 export type ModSlotKind = "normal" | "aura" | "exilus"
@@ -80,27 +87,17 @@ export function ModSlot({
   const effective = effectivePolarity(slotPolarity, formaPolarity)
   const [hovered, setHovered] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
-  // dnd-kit needs a stable id; only enable drag/drop wiring when one is
-  // provided. The standalone (non-grid) preview paths pass no slotId and
-  // get the original non-draggable behavior.
-  const dndId = slotId ?? ""
-  const dndEnabled = slotId != null
-  const {
-    attributes,
-    listeners,
-    setNodeRef: setDragRef,
-    isDragging,
-  } = useDraggable({
-    id: dndId,
-    disabled: !dndEnabled || !mod || readOnly || kind === "aura",
-  })
-  const { setNodeRef: setDropRef, isOver } = useDroppable({
-    id: dndId,
-    disabled: !dndEnabled,
-  })
-  const setDndRef = (node: HTMLElement | null) => {
-    setDragRef(node)
-    setDropRef(node)
+  // Drag-and-drop subscriptions. `useIsDropTarget` / `useIsDragSourceSlot`
+  // only flip when *this* slot is the over/source slot, so each slot
+  // re-renders at most twice per drag (becoming over, leaving over).
+  const startDrag = useStartDrag()
+  const isOver = useIsDropTarget(slotId as SlotId | undefined)
+  const isDragging = useIsDragSourceSlot(slotId as SlotId | undefined)
+  const isAnyDragging = useIsAnyDragActive()
+  const canDrag = !readOnly && !!mod && !!slotId && kind !== "aura"
+  const onDragPointerDown = (e: PointerEvent) => {
+    if (!canDrag || !startDrag || !mod) return
+    startDrag({ kind: "slot", slotId: slotId as SlotId, mod, rank }, e)
   }
   // The picker can only be open while this slot is the selected one. Tying
   // open-state to `selected` lets arrow-key nav implicitly close the popover
@@ -120,8 +117,13 @@ export function ModSlot({
     }
   }
 
+  // Drop-target attribute marks this slot for `document.elementFromPoint`
+  // resolution in the drag controller. Empty string when no slotId so the
+  // attribute is absent in non-grid uses.
+  const dropAttr = slotId ? { [DROP_SLOT_ATTR]: slotId as string } : undefined
+
   return (
-    <div ref={setDndRef} className="relative">
+    <div className="relative" {...dropAttr}>
       <Popover open={popoverOpen} onOpenChange={setPickerOpen}>
         <PopoverTrigger
           nativeButton={false}
@@ -133,8 +135,16 @@ export function ModSlot({
           data-build-slot
           onClick={readOnly ? undefined : onClick}
           onContextMenu={handleContextMenu}
-          onMouseEnter={readOnly ? undefined : () => setHovered(true)}
-          onMouseLeave={readOnly ? undefined : () => setHovered(false)}
+          onPointerDown={canDrag ? onDragPointerDown : undefined}
+          // Suppress hover state during any active drag — keeps the
+          // rank-hotkey enabled flag from flipping (and re-rendering this
+          // slot) as the drag ghost sweeps across slots.
+          onMouseEnter={
+            readOnly || isAnyDragging ? undefined : () => setHovered(true)
+          }
+          onMouseLeave={
+            readOnly || isAnyDragging ? undefined : () => setHovered(false)
+          }
           className={cn(
             // Fixed 184×100 to match the underlying ModCard (mod-card-config.ts
             // DISPLAY_SIZE). The grid auto-rearranges its column count based on
@@ -174,24 +184,17 @@ export function ModSlot({
         >
           {mod && !isDragging ? (
             <>
-              <span
-                {...attributes}
-                {...listeners}
-                className="contents"
-                data-mod-drag-handle
-              >
-                <ModCard
-                  mod={mod}
-                  rank={rank}
-                  disableHover={popoverOpen}
-                  drainOverride={
-                    kind === "aura"
-                      ? auraBonusForMod(mod, rank, effective)
-                      : effectiveDrainForMod(mod, rank, effective)
-                  }
-                  matchState={getMatchState(mod.polarity, effective)}
-                />
-              </span>
+              <ModCard
+                mod={mod}
+                rank={rank}
+                disableHover={popoverOpen || isAnyDragging}
+                drainOverride={
+                  kind === "aura"
+                    ? auraBonusForMod(mod, rank, effective)
+                    : effectiveDrainForMod(mod, rank, effective)
+                }
+                matchState={getMatchState(mod.polarity, effective)}
+              />
               {!readOnly && (onRemove || (isRivenMod(mod) && onEditRiven)) && (
                 // Mobile: always visible (no hover). Desktop: appear on slot
                 // hover via CSS group-hover (parent has `group`) so we don't
@@ -261,8 +264,8 @@ function SlotIconButton({
       type="button"
       aria-label={label}
       onPointerDown={(e) => {
-        // Keep dnd-kit's PointerSensor from interpreting a button press
-        // as drag-intent on the parent slot.
+        // Stop the slot wrapper's pointerdown from arming a drag when
+        // the user is pressing the remove / edit-riven button.
         e.stopPropagation()
       }}
       onClick={(e) => {

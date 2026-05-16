@@ -1,6 +1,5 @@
 import { isRivenMod } from "@arsenyx/shared/warframe/rivens"
 import type { Mod, Polarity } from "@arsenyx/shared/warframe/types"
-import { useDraggable } from "@dnd-kit/core"
 import { Search, X } from "lucide-react"
 import {
   memo,
@@ -9,6 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type PointerEvent,
 } from "react"
 
 import {
@@ -34,7 +34,7 @@ import {
 } from "@/lib/stats/types"
 import { cn } from "@/lib/utils"
 
-import { poolDragId } from "./build-dnd"
+import { useStartDrag } from "./drag-controller"
 import { ModCard } from "./mod-card"
 import type { ModSlotKind } from "./mod-slot"
 import { isAuraMod, isExilusCompatible } from "./use-build-slots"
@@ -520,52 +520,50 @@ const PoolCardCell = memo(function PoolCardCell({
   onSelect,
   onKeyDown,
 }: PoolCardCellProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef: setDragRef,
-    isDragging,
-  } = useDraggable({
-    id: poolDragId(mod),
-    data: { mod },
-    disabled: !draggable || !isFocusable,
-  })
-  const setRefs = useCallback(
-    (el: HTMLDivElement | null) => {
-      registerRef(mod.uniqueName, el)
-      setDragRef(el)
-    },
-    [mod.uniqueName, registerRef, setDragRef],
+  // No drag state subscription here — the drag controller adds an
+  // `is-drag-source` class directly to this element when activation
+  // fires, and source-styling is driven from CSS. That way 200 pool
+  // cards never re-render mid-drag.
+  const startDrag = useStartDrag()
+  const setRef = useCallback(
+    (el: HTMLDivElement | null) => registerRef(mod.uniqueName, el),
+    [mod.uniqueName, registerRef],
   )
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => onKeyDown(mod, e),
     [mod, onKeyDown],
   )
   const handleClick = useCallback(() => onSelect?.(mod), [mod, onSelect])
+  const handlePointerDown = useCallback(
+    (e: PointerEvent<HTMLDivElement>) => {
+      if (!startDrag || !draggable || !isFocusable) return
+      startDrag({ kind: "pool", mod }, e)
+    },
+    [startDrag, draggable, isFocusable, mod],
+  )
   return (
     <div
-      ref={setRefs}
+      ref={setRef}
       tabIndex={-1}
       onKeyDown={isFocusable ? handleKeyDown : undefined}
-      {...attributes}
-      {...listeners}
+      onPointerDown={handlePointerDown}
       className={cn(
         "outline-none",
         isFocusable && "focus-visible:brightness-125",
-        isFocusable &&
-          draggable &&
-          (isDragging ? "cursor-grabbing" : "cursor-grab"),
+        // Drag source styling is applied by the drag controller via the
+        // `is-drag-source` class on this element — see globals.css. Using
+        // a class avoids the re-render storm that came with subscribing
+        // every pool card to drag state.
+        isFocusable && draggable && "cursor-grab active:cursor-grabbing",
       )}
     >
       <ModCard
         mod={mod}
         onClick={onSelect && !isUsed ? handleClick : undefined}
-        disableHover={isDragging}
         className={cn(
           "transition-opacity duration-150",
           !isMatch && "pointer-events-none opacity-20 saturate-0",
           isUsed && "pointer-events-none opacity-30 grayscale",
-          isDragging && "opacity-30",
         )}
       />
     </div>

@@ -36,7 +36,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react"
 
 import {
   ArcaneRow,
-  BuildDndProvider,
+  DragController,
   calculateCapacity,
   calculateFormaCount,
   calculateTotalEndoCost,
@@ -582,7 +582,7 @@ function EditorShell() {
         shareCopied={shareCopied}
       />
 
-      <BuildDndProvider slots={slots}>
+      <DragController slots={slots}>
         <div className="flex flex-col gap-4">
           <KeyboardHintBanner />
           <div className="flex flex-col gap-4 xl:relative xl:block">
@@ -694,7 +694,7 @@ function EditorShell() {
             />
           </div>
         </div>
-      </BuildDndProvider>
+      </DragController>
 
       <PublishDialog
         open={publishDialogOpen}
