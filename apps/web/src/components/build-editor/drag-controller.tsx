@@ -239,6 +239,12 @@ export function DragController({
     // Defer touch — touch-scroll inside the pool grid needs the gesture
     // for itself. Click-to-place / arrow-key nav still cover touch users.
     if (e.pointerType === "touch") return
+    // Suppress the browser's native pointerdown side effects: text
+    // selection, drag-to-select, and the default image-drag (mod cards
+    // contain <img> elements). Without this, a previous selection or
+    // image-drag will hijack the gesture and our pointer-based drag
+    // never gets clean signals.
+    e.preventDefault()
     const el = e.currentTarget as HTMLElement
     pendingRef.current = {
       source,

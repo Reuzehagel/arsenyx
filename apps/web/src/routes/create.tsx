@@ -583,7 +583,13 @@ function EditorShell() {
       />
 
       <DragController slots={slots}>
-        <div className="flex flex-col gap-4">
+        {/*
+          `select-none` on the editor body prevents the browser's native
+          text-selection / image-drag from hijacking pointer gestures that
+          aren't on a draggable mod. The guide editor below opts back in
+          via `select-text` so the markdown textarea behaves normally.
+        */}
+        <div className="flex flex-col gap-4 select-none">
           <KeyboardHintBanner />
           <div className="flex flex-col gap-4 xl:relative xl:block">
             <div className="flex w-full flex-col sm:hidden xl:absolute xl:top-0 xl:bottom-0 xl:left-0 xl:flex xl:w-[260px]">
@@ -684,7 +690,7 @@ function EditorShell() {
             />
           </div>
 
-          <div className="bg-card rounded-lg border p-4">
+          <div className="bg-card rounded-lg border p-4 select-text">
             <GuideEditor
               summary={guideSummary}
               onSummaryChange={setGuideSummary}
