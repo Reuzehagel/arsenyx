@@ -1,13 +1,35 @@
-import { ChevronDown, Link2 } from "lucide-react"
-import { useRef } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { ChevronDown, Link2, X } from "lucide-react"
+import { useRef, useState } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 
 import { Button } from "@/components/ui/button"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  partnerBuildsQuery,
+  useBuildSearch,
+  useLinkPartner,
+  useUnlinkPartner,
+  type PartnerBuild,
+} from "@/lib/partner-builds-query"
+import { getImageUrl } from "@/lib/warframe"
 
 const SUMMARY_MAX = 160
 
@@ -16,11 +38,18 @@ export function GuideEditor({
   onSummaryChange,
   description,
   onDescriptionChange,
+  buildSlug,
 }: {
   summary: string
   onSummaryChange: (v: string) => void
   description: string
   onDescriptionChange: (v: string) => void
+  /**
+   * If provided, the editor renders the partner-builds picker bound to
+   * this slug. Omitted for unsaved builds — partners can only be linked
+   * after the build exists server-side.
+   */
+  buildSlug?: string
 }) {
   return (
     <div className="flex flex-col gap-6">
@@ -84,22 +113,148 @@ export function GuideEditor({
         <Label>Partner builds</Label>
         <p className="text-muted-foreground text-xs">
           Link related builds — exalted weapons, companion loadouts, alt
-          variants. Available once save support lands.
+          variants. Linked builds show up on both sides.
         </p>
-        <Button
-          type="button"
-          variant="outline"
-          disabled
-          className="h-9 w-full justify-between font-normal"
+        {buildSlug ? (
+          <PartnerBuildsField buildSlug={buildSlug} />
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            disabled
+            className="h-9 w-full justify-between font-normal"
+          >
+            <span className="inline-flex items-center gap-2">
+              <Link2 className="size-4" />
+              Save the build to link partners…
+            </span>
+            <ChevronDown className="size-4 opacity-50" />
+          </Button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function PartnerBuildsField({ buildSlug }: { buildSlug: string }) {
+  const { data: partners = [] } = useQuery(partnerBuildsQuery(buildSlug))
+  const link = useLinkPartner(buildSlug)
+  const unlink = useUnlinkPartner(buildSlug)
+  const [open, setOpen] = useState(false)
+  const [q, setQ] = useState("")
+  const search = useBuildSearch(q)
+
+  const linkedSlugs = new Set(partners.map((p) => p.slug))
+  const candidates = (search.data ?? []).filter(
+    (b) => b.slug !== buildSlug && !linkedSlugs.has(b.slug),
+  )
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger
+          render={
+            <Button
+              type="button"
+              variant="outline"
+              className="h-9 w-full justify-between font-normal"
+            />
+          }
         >
           <span className="inline-flex items-center gap-2">
             <Link2 className="size-4" />
             Search builds to link…
           </span>
           <ChevronDown className="size-4 opacity-50" />
-        </Button>
-      </div>
+        </PopoverTrigger>
+        <PopoverContent className="w-[var(--anchor-width)] p-0" align="start">
+          <Command shouldFilter={false}>
+            <CommandInput
+              placeholder="Type a build or item name…"
+              value={q}
+              onValueChange={setQ}
+            />
+            <CommandList>
+              {q.trim().length < 2 ? (
+                <CommandEmpty>Type at least 2 characters.</CommandEmpty>
+              ) : search.isLoading ? (
+                <CommandEmpty>Searching…</CommandEmpty>
+              ) : candidates.length === 0 ? (
+                <CommandEmpty>No matches.</CommandEmpty>
+              ) : (
+                <CommandGroup>
+                  {candidates.map((b) => (
+                    <CommandItem
+                      key={b.id}
+                      value={b.id}
+                      onSelect={() => {
+                        link.mutate(b)
+                        setOpen(false)
+                        setQ("")
+                      }}
+                    >
+                      <PartnerThumb build={b} />
+                      <div className="flex min-w-0 flex-col">
+                        <span className="truncate text-sm">{b.name}</span>
+                        <span className="text-muted-foreground truncate text-xs">
+                          {b.item.name}
+                        </span>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+
+      {partners.length > 0 && (
+        <ul className="flex flex-wrap gap-2">
+          {partners.map((p) => (
+            <li key={p.id}>
+              <PartnerChip build={p} onRemove={() => unlink.mutate(p.slug)} />
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
+  )
+}
+
+function PartnerThumb({ build }: { build: PartnerBuild }) {
+  const src = build.item.imageName ? getImageUrl(build.item.imageName) : null
+  return (
+    <div className="bg-muted flex size-6 shrink-0 items-center justify-center overflow-hidden rounded">
+      {src ? (
+        <img src={src} alt="" className="size-full object-cover" />
+      ) : (
+        <Link2 className="text-muted-foreground size-4" />
+      )}
+    </div>
+  )
+}
+
+function PartnerChip({
+  build,
+  onRemove,
+}: {
+  build: PartnerBuild
+  onRemove: () => void
+}) {
+  return (
+    <span className="bg-muted/40 inline-flex items-center gap-2 rounded-full border py-1 pr-1 pl-2 text-xs">
+      <PartnerThumb build={build} />
+      <span className="max-w-[14ch] truncate">{build.name}</span>
+      <button
+        type="button"
+        aria-label={`Unlink ${build.name}`}
+        onClick={onRemove}
+        className="hover:bg-accent text-muted-foreground hover:text-accent-foreground flex size-5 items-center justify-center rounded-full"
+      >
+        <X className="size-3" />
+      </button>
+    </span>
   )
 }
 

@@ -111,6 +111,7 @@ export function ModGrid({
     const placed = slots.placed[id]
     const forma = slots.formaPolarities[id]
     return {
+      slotId: id,
       slotPolarity: innate,
       formaPolarity: forma,
       mod: placed?.mod,
@@ -137,6 +138,9 @@ export function ModGrid({
   // the column count is what changes, not the slot size. Buffers between
   // breakpoints leave breathing room when resizing inside a given column
   // count before the next reflow.
+  // DnD-kit context lives in BuildDndProvider, which wraps both this grid
+  // and the mod-search-grid in the editor shell — letting users drag from
+  // either source into a slot.
   return (
     <div className="flex flex-col gap-6">
       {(auraSlotCount > 0 || showExilus) && (

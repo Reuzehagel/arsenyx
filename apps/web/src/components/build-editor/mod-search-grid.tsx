@@ -1,7 +1,15 @@
 import { isRivenMod } from "@arsenyx/shared/warframe/rivens"
 import type { Mod, Polarity } from "@arsenyx/shared/warframe/types"
+import { useDraggable } from "@dnd-kit/core"
 import { Search, X } from "lucide-react"
-import { useDeferredValue, useMemo, useRef, useState } from "react"
+import {
+  memo,
+  useCallback,
+  useDeferredValue,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
 import {
   InputGroup,
@@ -26,6 +34,7 @@ import {
 } from "@/lib/stats/types"
 import { cn } from "@/lib/utils"
 
+import { poolDragId } from "./build-dnd"
 import { ModCard } from "./mod-card"
 import type { ModSlotKind } from "./mod-slot"
 import { isAuraMod, isExilusCompatible } from "./use-build-slots"
@@ -282,46 +291,99 @@ export function ModSearchGrid({
   // Navigate in visual 2D, skipping dimmed/used cards by continuing in the
   // same direction until a focusable card is found (or clamp at the edge).
   const GRID_ROWS = 2
-  const moveFromDisplayedIndex = (from: number, dir: Dir): number | null => {
-    const row = from % GRID_ROWS
-    const focusable = (i: number) =>
-      i >= 0 &&
-      i < displayed.length &&
-      matches.has(displayed[i].uniqueName) &&
-      !(usedModNames?.has(displayed[i].name) ?? false)
 
-    if (dir === "up") {
-      if (row === 0) return null
-      return focusable(from - 1) ? from - 1 : null
-    }
-    if (dir === "down") {
-      if (row === GRID_ROWS - 1) return null
-      return focusable(from + 1) ? from + 1 : null
-    }
-    // left/right: step by one column; if the landing cell isn't focusable,
-    // keep walking in the same direction until one is found or we run out.
-    const step = dir === "right" ? GRID_ROWS : -GRID_ROWS
-    for (let i = from + step; i >= 0 && i < displayed.length; i += step) {
-      // Stay in the same row — column stepping already preserves it, but the
-      // column count implied by displayed.length can leave a "hole" at the
-      // last partial column, which we skip over transparently.
-      if (i % GRID_ROWS !== row) continue
-      if (focusable(i)) return i
-    }
-    return null
-  }
+  // Latest-values refs so the per-cell key handler can stay referentially
+  // stable — otherwise every parent render hands all ~200 memoized cells a
+  // new function prop and bypasses the memo.
+  const navRef = useRef({ displayed, matches, usedModNames })
+  navRef.current = { displayed, matches, usedModNames }
 
-  const focusDisplayedIndex = (i: number) => {
-    const un = displayed[i]?.uniqueName
+  const moveFromDisplayedIndex = useCallback(
+    (from: number, dir: Dir): number | null => {
+      const { displayed: cur, matches: m, usedModNames: u } = navRef.current
+      const row = from % GRID_ROWS
+      const focusable = (i: number) =>
+        i >= 0 &&
+        i < cur.length &&
+        m.has(cur[i].uniqueName) &&
+        !(u?.has(cur[i].name) ?? false)
+
+      if (dir === "up") {
+        if (row === 0) return null
+        return focusable(from - 1) ? from - 1 : null
+      }
+      if (dir === "down") {
+        if (row === GRID_ROWS - 1) return null
+        return focusable(from + 1) ? from + 1 : null
+      }
+      const step = dir === "right" ? GRID_ROWS : -GRID_ROWS
+      for (let i = from + step; i >= 0 && i < cur.length; i += step) {
+        if (i % GRID_ROWS !== row) continue
+        if (focusable(i)) return i
+      }
+      return null
+    },
+    [],
+  )
+
+  const focusDisplayedIndex = useCallback((i: number) => {
+    const un = navRef.current.displayed[i]?.uniqueName
     if (!un) return
     const el = cardRefs.current.get(un)
     if (!el) return
-    // `preventScroll` stops the browser from scrolling the page vertically
-    // to the focused card; we still want the horizontal overflow container
-    // to follow focus, so do that explicitly with `block: "nearest"`.
     el.focus({ preventScroll: true })
     el.scrollIntoView({ block: "nearest", inline: "nearest" })
-  }
+  }, [])
+
+  const registerCardRef = useCallback(
+    (uniqueName: string, el: HTMLDivElement | null) => {
+      cardRefs.current.set(uniqueName, el)
+    },
+    [],
+  )
+
+  const onSelectRef = useRef(onSelect)
+  onSelectRef.current = onSelect
+
+  // Stable wrapper so memoized cells don't re-render when the parent passes
+  // a fresh `onSelect` closure each render. `null` keeps the cell aware
+  // that placement is disabled (read-only view).
+  const handleSelect = useCallback((mod: Mod) => onSelectRef.current?.(mod), [])
+  const cellOnSelect = onSelect ? handleSelect : undefined
+
+  // Stable per-cell key handler. Reads the live `displayed` from the ref so
+  // we don't have to rebuild the function (and re-render every cell) when
+  // filters narrow the list.
+  const handlePoolKeyDown = useCallback(
+    (mod: Mod, e: React.KeyboardEvent<HTMLDivElement>) => {
+      const cur = navRef.current.displayed
+      const idx = cur.findIndex((m) => m.uniqueName === mod.uniqueName)
+      if (idx === -1) return
+      switch (e.key) {
+        case "ArrowLeft":
+        case "ArrowRight":
+        case "ArrowUp":
+        case "ArrowDown": {
+          e.preventDefault()
+          const next = moveFromDisplayedIndex(idx, DIR_BY_KEY[e.key])
+          if (next !== null) focusDisplayedIndex(next)
+          break
+        }
+        case "Enter":
+        case " ":
+          if (!onSelectRef.current) return
+          e.preventDefault()
+          onSelectRef.current(mod)
+          focusInput()
+          break
+        case "Escape":
+          e.preventDefault()
+          focusInput()
+          break
+      }
+    },
+    [moveFromDisplayedIndex, focusDisplayedIndex],
+  )
 
   return (
     <div className="flex flex-col gap-3">
@@ -419,70 +481,93 @@ export function ModSearchGrid({
           const isMatch = matches.has(mod.uniqueName)
           const isFocusable = isMatch && !isUsed
           return (
-            <div
+            <PoolCardCell
               key={mod.uniqueName}
-              ref={(el) => {
-                cardRefs.current.set(mod.uniqueName, el)
-              }}
-              tabIndex={-1}
-              onKeyDown={
-                isFocusable
-                  ? (e) => {
-                      const idx = displayed.findIndex(
-                        (m) => m.uniqueName === mod.uniqueName,
-                      )
-                      if (idx === -1) return
-                      switch (e.key) {
-                        case "ArrowLeft":
-                        case "ArrowRight":
-                        case "ArrowUp":
-                        case "ArrowDown": {
-                          // Always swallow the event so the page doesn't
-                          // scroll when arrows hit a grid edge.
-                          e.preventDefault()
-                          const next = moveFromDisplayedIndex(
-                            idx,
-                            DIR_BY_KEY[e.key],
-                          )
-                          if (next !== null) focusDisplayedIndex(next)
-                          break
-                        }
-                        case "Enter":
-                        case " ":
-                          if (!onSelect) return
-                          e.preventDefault()
-                          onSelect(mod)
-                          focusInput()
-                          break
-                        case "Escape":
-                          e.preventDefault()
-                          focusInput()
-                          break
-                      }
-                    }
-                  : undefined
-              }
-              className={cn(
-                "outline-none",
-                // Matches the visual language of a selected mod slot in the
-                // editor grid — brightness lift instead of a ring, so the
-                // stylized card shape isn't boxed in by a rectangle.
-                isFocusable && "focus-visible:brightness-125",
-              )}
-            >
-              <ModCard
-                mod={mod}
-                onClick={onSelect && !isUsed ? () => onSelect(mod) : undefined}
-                className={cn(
-                  "transition-opacity duration-150",
-                  !isMatch && "pointer-events-none opacity-20 saturate-0",
-                  isUsed && "pointer-events-none opacity-30 grayscale",
-                )}
-              />
-            </div>
+              mod={mod}
+              isMatch={isMatch}
+              isUsed={isUsed}
+              isFocusable={isFocusable}
+              draggable={!!onSelect}
+              registerRef={registerCardRef}
+              onSelect={cellOnSelect}
+              onKeyDown={handlePoolKeyDown}
+            />
           )
         })}
       </div>
     </div>
   )
 }
+
+interface PoolCardCellProps {
+  mod: Mod
+  isMatch: boolean
+  isUsed: boolean
+  isFocusable: boolean
+  draggable: boolean
+  registerRef: (uniqueName: string, el: HTMLDivElement | null) => void
+  onSelect?: (mod: Mod) => void
+  onKeyDown: (mod: Mod, e: React.KeyboardEvent<HTMLDivElement>) => void
+}
+
+const PoolCardCell = memo(function PoolCardCell({
+  mod,
+  isMatch,
+  isUsed,
+  isFocusable,
+  draggable,
+  registerRef,
+  onSelect,
+  onKeyDown,
+}: PoolCardCellProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setDragRef,
+    isDragging,
+  } = useDraggable({
+    id: poolDragId(mod),
+    data: { mod },
+    disabled: !draggable || !isFocusable,
+  })
+  const setRefs = useCallback(
+    (el: HTMLDivElement | null) => {
+      registerRef(mod.uniqueName, el)
+      setDragRef(el)
+    },
+    [mod.uniqueName, registerRef, setDragRef],
+  )
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => onKeyDown(mod, e),
+    [mod, onKeyDown],
+  )
+  const handleClick = useCallback(() => onSelect?.(mod), [mod, onSelect])
+  return (
+    <div
+      ref={setRefs}
+      tabIndex={-1}
+      onKeyDown={isFocusable ? handleKeyDown : undefined}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        "outline-none",
+        isFocusable && "focus-visible:brightness-125",
+        isFocusable &&
+          draggable &&
+          (isDragging ? "cursor-grabbing" : "cursor-grab"),
+      )}
+    >
+      <ModCard
+        mod={mod}
+        onClick={onSelect && !isUsed ? handleClick : undefined}
+        disableHover={isDragging}
+        className={cn(
+          "transition-opacity duration-150",
+          !isMatch && "pointer-events-none opacity-20 saturate-0",
+          isUsed && "pointer-events-none opacity-30 grayscale",
+          isDragging && "opacity-30",
+        )}
+      />
+    </div>
+  )
+})

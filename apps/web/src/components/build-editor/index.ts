@@ -1,4 +1,5 @@
 export { ArcaneCard } from "./arcane-card"
+export { BuildDndProvider } from "./build-dnd"
 export { ArcaneSlot } from "./arcane-slot"
 export {
   useArcaneSlots,

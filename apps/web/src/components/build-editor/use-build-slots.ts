@@ -24,7 +24,7 @@ function slotKind(id: SlotId): ModSlotKind {
   return "normal"
 }
 
-function canPlaceIn(mod: Mod, id: SlotId): boolean {
+export function canPlaceIn(mod: Mod, id: SlotId): boolean {
   switch (slotKind(id)) {
     case "aura":
       return isAuraMod(mod)
@@ -93,6 +93,14 @@ export interface BuildSlotsState {
    * slot (overrides innate). Pass `null` to revert to innate (no forma).
    */
   setForma: (id: SlotId, polarity: Polarity | null) => void
+  /**
+   * Swap or move a placed mod between two slots. If the destination is
+   * empty, this is a move. If both slots are filled, mods exchange places.
+   * Forma polarities stay with the slot, not the mod — matching how the
+   * game treats forma. Rejects swaps that would violate slot-kind
+   * compatibility on either side.
+   */
+  swap: (from: SlotId, to: SlotId) => void
 }
 
 export function useBuildSlots(
@@ -179,6 +187,24 @@ export function useBuildSlots(
     })
   }, [])
 
+  const swap = useCallback((from: SlotId, to: SlotId) => {
+    if (from === to) return
+    setPlaced((prev) => {
+      const a = prev[from]
+      const b = prev[to]
+      if (!a) return prev
+      if (!canPlaceIn(a.mod, to)) return prev
+      if (b && !canPlaceIn(b.mod, from)) return prev
+      const next = { ...prev, [to]: a }
+      if (b) {
+        next[from] = b
+      } else {
+        delete next[from]
+      }
+      return next
+    })
+  }, [])
+
   const select = useCallback((id: SlotId | null) => {
     setSelected((prev) => (prev === id ? null : id))
   }, [])
@@ -220,5 +246,6 @@ export function useBuildSlots(
     select,
     setRank,
     setForma,
+    swap,
   }
 }

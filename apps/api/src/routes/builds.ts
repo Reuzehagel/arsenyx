@@ -12,9 +12,11 @@ import { hasPrismaCode, parseJsonBody, trimToMax } from "../lib/validate"
 import { rateLimitUser } from "../middleware/rate-limit"
 import {
   DETAIL_INCLUDE,
+  LIST_SELECT,
   parseListQuery,
   runList,
   serializeBuildDetail,
+  serializeListRow,
 } from "./_build-list"
 
 export const builds = new Hono()
@@ -304,6 +306,172 @@ builds.get("/", async (c) => {
   })
   return c.json(result)
 })
+
+// Lightweight typeahead for the partner-builds picker. Returns up to
+// `limit` builds visible to the requester, matched against name or item
+// name. Distinct from `runList` because we don't need pagination, sort
+// options, or facets — just enough to populate a combobox.
+const SEARCH_DEFAULT_LIMIT = 10
+const SEARCH_MAX_LIMIT = 20
+
+builds.get("/search", async (c) => {
+  const session = await getSession(c)
+  const viewerId = session?.user.id
+  const q = (c.req.query("q") ?? "").trim().slice(0, 200)
+  if (q.length < 2) return c.json({ builds: [] })
+  const limitRaw = parseInt(c.req.query("limit") ?? "", 10)
+  const limit =
+    Number.isFinite(limitRaw) && limitRaw > 0
+      ? Math.min(limitRaw, SEARCH_MAX_LIMIT)
+      : SEARCH_DEFAULT_LIMIT
+
+  const visibility: BuildVisibility[] = [
+    BuildVisibility.PUBLIC,
+    BuildVisibility.UNLISTED,
+  ]
+  // Owners can also link their own private builds; OR'd in below.
+  const rows = await prisma.build.findMany({
+    where: {
+      AND: [
+        {
+          OR: [
+            { name: { contains: q, mode: "insensitive" } },
+            { itemName: { contains: q, mode: "insensitive" } },
+          ],
+        },
+        viewerId
+          ? { OR: [{ visibility: { in: visibility } }, { userId: viewerId }] }
+          : { visibility: { in: visibility } },
+      ],
+    },
+    orderBy: [{ likeCount: "desc" }, { createdAt: "desc" }],
+    take: limit,
+    select: LIST_SELECT,
+  })
+  return c.json({ builds: rows.map(serializeListRow) })
+})
+
+async function loadPartnerContext(slug: string, partnerSlug: string) {
+  const [own, partner] = await Promise.all([
+    prisma.build.findUnique({
+      where: { slug },
+      select: { id: true, userId: true, organizationId: true },
+    }),
+    prisma.build.findUnique({
+      where: { slug: partnerSlug },
+      select: {
+        id: true,
+        userId: true,
+        visibility: true,
+        organizationId: true,
+      },
+    }),
+  ])
+  return { own, partner }
+}
+
+builds.get("/:slug/partners", async (c) => {
+  const slug = c.req.param("slug")
+  const session = await getSession(c)
+  const viewerId = session?.user.id
+
+  const build = await prisma.build.findUnique({
+    where: { slug },
+    select: {
+      id: true,
+      userId: true,
+      visibility: true,
+      organizationId: true,
+      partnerBuilds: { select: LIST_SELECT },
+    },
+  })
+  if (!build) return c.json({ error: "not_found" }, 404)
+  if (!(await canViewerSeeBuild(build, viewerId ?? ""))) {
+    return c.json({ error: "not_found" }, 404)
+  }
+
+  // Filter private partners out for everyone but their owner. Public /
+  // unlisted partners are always returned — being linked from a visible
+  // build is functionally identical to sharing the URL.
+  const visible = build.partnerBuilds.filter((p) => {
+    if (p.visibility === "PUBLIC" || p.visibility === "UNLISTED") return true
+    return viewerId != null && p.user.id === viewerId
+  })
+  return c.json({ builds: visible.map(serializeListRow) })
+})
+
+builds.put(
+  "/:slug/partners/:partnerSlug",
+  rateLimitUser("mutate"),
+  async (c) => {
+    const session = await getSession(c)
+    if (!session?.user) return c.json({ error: "unauthorized" }, 401)
+    const viewerId = session.user.id
+
+    const slug = c.req.param("slug")
+    const partnerSlug = c.req.param("partnerSlug")
+    if (slug === partnerSlug) {
+      return c.json({ error: "cannot_link_to_self" }, 400)
+    }
+
+    const { own, partner } = await loadPartnerContext(slug, partnerSlug)
+    if (!own || !partner) return c.json({ error: "not_found" }, 404)
+    if (!(await canMutateBuild(own, viewerId))) {
+      return c.json({ error: "forbidden" }, 403)
+    }
+    if (!(await canViewerSeeBuild(partner, viewerId))) {
+      return c.json({ error: "not_found" }, 404)
+    }
+
+    // Prisma's implicit self-many-to-many writes only one side of the join
+    // row, so we mirror the connect in the same transaction. Connect is
+    // idempotent — repeating it is a no-op (prisma#14370).
+    await prisma.$transaction([
+      prisma.build.update({
+        where: { id: own.id },
+        data: { partnerBuilds: { connect: { id: partner.id } } },
+      }),
+      prisma.build.update({
+        where: { id: partner.id },
+        data: { partnerBuilds: { connect: { id: own.id } } },
+      }),
+    ])
+    return c.body(null, 204)
+  },
+)
+
+builds.delete(
+  "/:slug/partners/:partnerSlug",
+  rateLimitUser("mutate"),
+  async (c) => {
+    const session = await getSession(c)
+    if (!session?.user) return c.json({ error: "unauthorized" }, 401)
+    const viewerId = session.user.id
+
+    const slug = c.req.param("slug")
+    const partnerSlug = c.req.param("partnerSlug")
+    const { own, partner } = await loadPartnerContext(slug, partnerSlug)
+    if (!own || !partner) return c.json({ error: "not_found" }, 404)
+    // Either owner can sever the link.
+    const isOwnOwner = await canMutateBuild(own, viewerId)
+    const isPartnerOwner = await canMutateBuild(partner, viewerId)
+    if (!isOwnOwner && !isPartnerOwner) {
+      return c.json({ error: "forbidden" }, 403)
+    }
+
+    await prisma.$transaction([
+      prisma.build.update({
+        where: { id: own.id },
+        data: { partnerBuilds: { disconnect: { id: partner.id } } },
+      }),
+      prisma.build.update({
+        where: { id: partner.id },
+        data: { partnerBuilds: { disconnect: { id: own.id } } },
+      }),
+    ])
+    return c.body(null, 204)
+  },
+)
 
 builds.get("/mine", async (c) => {
   const session = await getSession(c)

@@ -4,6 +4,7 @@ import {
   type Mod,
 } from "@arsenyx/shared/warframe/types"
 import { useSuspenseQuery } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import {
   createFileRoute,
   Link as RouterLink,
@@ -81,6 +82,10 @@ import { useToggleBookmark, useToggleLike } from "@/lib/build-social"
 import { helminthQuery, type HelminthAbility } from "@/lib/helminth-query"
 import { itemQuery } from "@/lib/item-query"
 import { modsQuery } from "@/lib/mods-query"
+import {
+  partnerBuildsQuery,
+  type PartnerBuild,
+} from "@/lib/partner-builds-query"
 import { formatAbsoluteTime, relativeTime } from "@/lib/relative-time"
 import { padShards } from "@/lib/shards"
 import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard"
@@ -494,8 +499,55 @@ function BuildViewerBodyInner({
             ) : null}
           </div>
         ) : null}
+
+        {!embed ? <RelatedBuildsStrip slug={build.slug} /> : null}
       </div>
     </>
+  )
+}
+
+function RelatedBuildsStrip({ slug }: { slug: string }) {
+  const { data: partners } = useQuery(partnerBuildsQuery(slug))
+  if (!partners || partners.length === 0) return null
+  return (
+    <div className="flex flex-col gap-2">
+      <h2 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+        Related builds
+      </h2>
+      <ul className="flex flex-wrap gap-2">
+        {partners.map((p) => (
+          <li key={p.id}>
+            <RelatedBuildChip build={p} />
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function RelatedBuildChip({ build }: { build: PartnerBuild }) {
+  return (
+    <RouterLink
+      to="/builds/$slug"
+      params={{ slug: build.slug }}
+      className="bg-card hover:bg-card/70 inline-flex items-center gap-2 rounded-md border py-1 pr-3 pl-1 transition-colors"
+    >
+      <span className="bg-muted/40 flex size-8 shrink-0 items-center justify-center overflow-hidden rounded">
+        <img
+          src={getImageUrl(build.item.imageName ?? undefined)}
+          alt=""
+          className="size-full object-contain"
+        />
+      </span>
+      <span className="flex min-w-0 flex-col leading-tight">
+        <span className="max-w-[20ch] truncate text-xs font-medium">
+          {build.name}
+        </span>
+        <span className="text-muted-foreground max-w-[20ch] truncate text-[11px]">
+          {build.item.name}
+        </span>
+      </span>
+    </RouterLink>
   )
 }
 
