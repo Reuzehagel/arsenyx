@@ -325,11 +325,10 @@ builds.get("/search", async (c) => {
       ? Math.min(limitRaw, SEARCH_MAX_LIMIT)
       : SEARCH_DEFAULT_LIMIT
 
-  const visibility: BuildVisibility[] = [
-    BuildVisibility.PUBLIC,
-    BuildVisibility.UNLISTED,
-  ]
-  // Owners can also link their own private builds; OR'd in below.
+  // PUBLIC only — UNLISTED is "accessible by URL, not enumerable", and a
+  // typeahead is enumeration. Viewers can additionally find their own
+  // builds regardless of visibility so they can link private/unlisted
+  // ones from the editor.
   const rows = await prisma.build.findMany({
     where: {
       AND: [
@@ -340,8 +339,13 @@ builds.get("/search", async (c) => {
           ],
         },
         viewerId
-          ? { OR: [{ visibility: { in: visibility } }, { userId: viewerId }] }
-          : { visibility: { in: visibility } },
+          ? {
+              OR: [
+                { visibility: BuildVisibility.PUBLIC },
+                { userId: viewerId },
+              ],
+            }
+          : { visibility: BuildVisibility.PUBLIC },
       ],
     },
     orderBy: [{ likeCount: "desc" }, { createdAt: "desc" }],
@@ -394,7 +398,11 @@ builds.get("/:slug/partners", async (c) => {
       userId: true,
       visibility: true,
       organizationId: true,
-      partnerBuilds: { where: partnerVisibility, select: LIST_SELECT },
+      partnerBuilds: {
+        where: partnerVisibility,
+        take: 50,
+        select: LIST_SELECT,
+      },
     },
   })
   if (!build) return c.json({ error: "not_found" }, 404)

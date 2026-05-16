@@ -189,6 +189,10 @@ model Build {
   bookmarks     BuildBookmark[]
   linkedFrom    BuildLink[]     @relation("LinkedFromBuild")
   linkedTo      BuildLink[]     @relation("LinkedToBuild")
+  // Symmetric self-M:N. Prisma requires declaring both sides of a self
+  // relation; the app maintains symmetry by writing both directions on
+  // every connect / disconnect (see partner routes in builds.ts), so
+  // `partneredBy` is intentionally unused at the query layer.
   partnerBuilds Build[]         @relation("PartnerBuilds")
   partneredBy   Build[]         @relation("PartnerBuilds")
 
