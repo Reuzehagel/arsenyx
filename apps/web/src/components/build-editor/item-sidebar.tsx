@@ -778,9 +778,7 @@ function DamageSectionHeader({ label }: { label: string }) {
 function DamageTypeIcon({ type }: { type: DamageType }) {
   const icon = DAMAGE_TYPE_ICON[type]
   if (icon) {
-    return (
-      <img src={icon} alt="" aria-hidden className="size-3.5 shrink-0" />
-    )
+    return <img src={icon} alt="" aria-hidden className="size-3.5 shrink-0" />
   }
   return (
     <span className={cn("size-1.5 rounded-full", DAMAGE_TYPE_STYLE[type].bg)} />

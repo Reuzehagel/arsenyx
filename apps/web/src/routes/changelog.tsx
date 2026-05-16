@@ -128,8 +128,7 @@ const CHANGELOG: ChangelogEntry[] = [
       },
       {
         type: "feat",
-        description:
-          "profit-taker.com can now embed Arsenyx builds.",
+        description: "profit-taker.com can now embed Arsenyx builds.",
       },
       {
         type: "fix",

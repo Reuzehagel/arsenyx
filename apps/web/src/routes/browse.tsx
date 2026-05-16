@@ -49,7 +49,8 @@ export const Route = createFileRoute("/browse")({
     const category: BrowseFilter =
       search.category === "all"
         ? "all"
-        : typeof search.category === "string" && isValidCategory(search.category)
+        : typeof search.category === "string" &&
+            isValidCategory(search.category)
           ? search.category
           : "warframes"
     const q =

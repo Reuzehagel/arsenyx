@@ -2,7 +2,10 @@ import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp } from "lucide-react"
 
 import { Kbd } from "@/components/ui/kbd"
 
-const ARROW_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+const ARROW_ICONS: Record<
+  string,
+  React.ComponentType<{ className?: string }>
+> = {
   "↑": ArrowUp,
   "↓": ArrowDown,
   "←": ArrowLeft,

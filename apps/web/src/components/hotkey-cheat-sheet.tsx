@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 
+import { KbdKey } from "@/components/kbd-key"
 import {
   Dialog,
   DialogContent,
@@ -8,7 +9,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { KbdGroup } from "@/components/ui/kbd"
-import { KbdKey } from "@/components/kbd-key"
 import { HOTKEYS, HOTKEY_SCOPES, useHotkey } from "@/lib/hotkeys"
 
 const OPEN_EVENT = "arsenyx:open-cheat-sheet"

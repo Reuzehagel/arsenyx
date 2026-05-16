@@ -1,12 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
-import {
-  Compass,
-  Hammer,
-  LayoutGrid,
-  ScrollText,
-  User,
-} from "lucide-react"
+import { Compass, Hammer, LayoutGrid, ScrollText, User } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import {

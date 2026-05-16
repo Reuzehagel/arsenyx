@@ -33,12 +33,8 @@ export type ModSlotKind = "normal" | "aura" | "exilus"
 
 interface ModSlotProps {
   kind?: ModSlotKind
-  /**
-   * Stable identifier for the slot — required so drag-and-drop knows which
-   * slot is the source and destination. Format mirrors `SlotId` from
-   * `use-build-slots.ts` (typed as `string` here to avoid an import cycle).
-   */
-  slotId?: string
+  /** Stable identifier for the slot — required for drag-and-drop. */
+  slotId?: SlotId
   slotPolarity?: Polarity
   /**
    * Forma polarity. `undefined` → use innate. `"universal"` → explicitly
@@ -91,13 +87,13 @@ export function ModSlot({
   // only flip when *this* slot is the over/source slot, so each slot
   // re-renders at most twice per drag (becoming over, leaving over).
   const startDrag = useStartDrag()
-  const isOver = useIsDropTarget(slotId as SlotId | undefined)
-  const isDragging = useIsDragSourceSlot(slotId as SlotId | undefined)
+  const isOver = useIsDropTarget(slotId)
+  const isDragging = useIsDragSourceSlot(slotId)
   const isAnyDragging = useIsAnyDragActive()
   const canDrag = !readOnly && !!mod && !!slotId && kind !== "aura"
   const onDragPointerDown = (e: PointerEvent) => {
-    if (!canDrag || !startDrag || !mod) return
-    startDrag({ kind: "slot", slotId: slotId as SlotId, mod, rank }, e)
+    if (!canDrag || !startDrag || !mod || !slotId) return
+    startDrag({ kind: "slot", slotId, mod, rank }, e)
   }
   // The picker can only be open while this slot is the selected one. Tying
   // open-state to `selected` lets arrow-key nav implicitly close the popover
@@ -117,10 +113,8 @@ export function ModSlot({
     }
   }
 
-  // Drop-target attribute marks this slot for `document.elementFromPoint`
-  // resolution in the drag controller. Empty string when no slotId so the
-  // attribute is absent in non-grid uses.
-  const dropAttr = slotId ? { [DROP_SLOT_ATTR]: slotId as string } : undefined
+  // Absent when slotId is missing so non-grid uses don't get a stray attr.
+  const dropAttr = slotId ? { [DROP_SLOT_ATTR]: slotId } : undefined
 
   return (
     <div className="relative" {...dropAttr}>

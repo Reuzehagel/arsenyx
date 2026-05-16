@@ -114,6 +114,18 @@ export function DragController({
 
   const cleanup = useCallback(() => {
     pendingRef.current = null
+    // Disarm any still-armed click-swallow after the trailing click has
+    // had a chance to fire. Without this the listener leaks if no click
+    // follows pointerup (e.g., release over a pointer-events:none element).
+    if (clickSwallowRef.current) {
+      const fn = clickSwallowRef.current
+      setTimeout(() => {
+        if (clickSwallowRef.current === fn) {
+          document.removeEventListener("click", fn, true)
+          clickSwallowRef.current = null
+        }
+      }, 0)
+    }
     if (sourceElRef.current) {
       sourceElRef.current.classList.remove(SOURCE_CLASS)
       sourceElRef.current = null
@@ -136,6 +148,11 @@ export function DragController({
   }, [])
 
   useEffect(() => {
+    let rafId = 0
+    let lastX = 0
+    let lastY = 0
+    let pendingMove = false
+
     const findSlotAt = (x: number, y: number): SlotId | null => {
       const el = document.elementFromPoint(x, y)
       if (!el) return null
@@ -153,6 +170,18 @@ export function DragController({
       g.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%) rotate(-2deg)`
     }
 
+    const flushMove = () => {
+      rafId = 0
+      pendingMove = false
+      if (!activeRef.current) return
+      positionGhost(lastX, lastY)
+      const next = findSlotAt(lastX, lastY)
+      if (next !== targetRef.current) {
+        targetRef.current = next
+        setTarget(next)
+      }
+    }
+
     const onPointerMove = (e: PointerEvent) => {
       const pending = pendingRef.current
       if (pending && !activeRef.current) {
@@ -162,26 +191,27 @@ export function DragController({
         if (dx * dx + dy * dy < ACTIVATION_DISTANCE * ACTIVATION_DISTANCE) {
           return
         }
-        // Activate.
         sourceElRef.current = pending.sourceEl
         pending.sourceEl.classList.add(SOURCE_CLASS)
         activeRef.current = pending.source
         const t = findSlotAt(e.clientX, e.clientY)
         targetRef.current = t
+        lastX = e.clientX
+        lastY = e.clientY
         setActiveSource(pending.source)
         setTarget(t)
         armClickSwallow()
-        // Position the ghost on the next frame, after the portal mounts.
-        requestAnimationFrame(() => positionGhost(e.clientX, e.clientY))
+        requestAnimationFrame(() => positionGhost(lastX, lastY))
         return
       }
       if (!activeRef.current) return
-      positionGhost(e.clientX, e.clientY)
-      const next = findSlotAt(e.clientX, e.clientY)
-      if (next !== targetRef.current) {
-        targetRef.current = next
-        setTarget(next)
-      }
+      // rAF-coalesce: pointermove can fire 500+/sec on high-Hz devices, but
+      // we only need to update ghost position and target slot once per frame.
+      lastX = e.clientX
+      lastY = e.clientY
+      if (pendingMove) return
+      pendingMove = true
+      rafId = requestAnimationFrame(flushMove)
     }
 
     const commitDrop = (source: Source, targetSlot: SlotId) => {
@@ -203,9 +233,6 @@ export function DragController({
       if (a) {
         const t = targetRef.current
         if (t) commitDrop(a, t)
-      } else {
-        // Pointer released without ever activating a drag — no click swallow
-        // to disarm, the trailing click fires normally.
       }
       cleanup()
     }
@@ -222,7 +249,7 @@ export function DragController({
       }
     }
 
-    window.addEventListener("pointermove", onPointerMove)
+    window.addEventListener("pointermove", onPointerMove, { passive: true })
     window.addEventListener("pointerup", onPointerUp)
     window.addEventListener("pointercancel", onPointerCancel)
     window.addEventListener("keydown", onKeyDown)
@@ -231,6 +258,7 @@ export function DragController({
       window.removeEventListener("pointerup", onPointerUp)
       window.removeEventListener("pointercancel", onPointerCancel)
       window.removeEventListener("keydown", onKeyDown)
+      if (rafId) cancelAnimationFrame(rafId)
     }
   }, [cleanup, armClickSwallow, disarmClickSwallow])
 

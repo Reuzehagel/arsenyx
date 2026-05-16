@@ -3,8 +3,7 @@ import {
   DEFAULT_DEPLOYMENT_CONTEXT,
   type Mod,
 } from "@arsenyx/shared/warframe/types"
-import { useSuspenseQuery } from "@tanstack/react-query"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
 import {
   createFileRoute,
   Link as RouterLink,

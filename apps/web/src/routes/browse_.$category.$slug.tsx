@@ -100,7 +100,7 @@ function ItemDetailSkeleton() {
       </div>
       <div className="flex flex-col gap-3">
         <Skeleton className="h-6 w-56" />
-        <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(190px,1fr))] [&>*]:max-w-[240px]">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-3 [&>*]:max-w-[240px]">
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="aspect-[3/4] w-full" />
           ))}

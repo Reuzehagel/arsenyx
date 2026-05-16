@@ -375,6 +375,18 @@ builds.get("/:slug/partners", async (c) => {
   const session = await getSession(c)
   const viewerId = session?.user.id
 
+  // Filter private partners in the DB rather than fetching all rows and
+  // filtering in JS — keeps us from over-selecting joined user/org/counts
+  // for partners the viewer can't see.
+  const partnerVisibility: Prisma.BuildWhereInput = viewerId
+    ? {
+        OR: [
+          { visibility: { in: [BuildVisibility.PUBLIC, BuildVisibility.UNLISTED] } },
+          { userId: viewerId },
+        ],
+      }
+    : { visibility: { in: [BuildVisibility.PUBLIC, BuildVisibility.UNLISTED] } }
+
   const build = await prisma.build.findUnique({
     where: { slug },
     select: {
@@ -382,7 +394,7 @@ builds.get("/:slug/partners", async (c) => {
       userId: true,
       visibility: true,
       organizationId: true,
-      partnerBuilds: { select: LIST_SELECT },
+      partnerBuilds: { where: partnerVisibility, select: LIST_SELECT },
     },
   })
   if (!build) return c.json({ error: "not_found" }, 404)
@@ -390,14 +402,7 @@ builds.get("/:slug/partners", async (c) => {
     return c.json({ error: "not_found" }, 404)
   }
 
-  // Filter private partners out for everyone but their owner. Public /
-  // unlisted partners are always returned — being linked from a visible
-  // build is functionally identical to sharing the URL.
-  const visible = build.partnerBuilds.filter((p) => {
-    if (p.visibility === "PUBLIC" || p.visibility === "UNLISTED") return true
-    return viewerId != null && p.user.id === viewerId
-  })
-  return c.json({ builds: visible.map(serializeListRow) })
+  return c.json({ builds: build.partnerBuilds.map(serializeListRow) })
 })
 
 builds.put(
@@ -453,8 +458,10 @@ builds.delete(
     const { own, partner } = await loadPartnerContext(slug, partnerSlug)
     if (!own || !partner) return c.json({ error: "not_found" }, 404)
     // Either owner can sever the link.
-    const isOwnOwner = await canMutateBuild(own, viewerId)
-    const isPartnerOwner = await canMutateBuild(partner, viewerId)
+    const [isOwnOwner, isPartnerOwner] = await Promise.all([
+      canMutateBuild(own, viewerId),
+      canMutateBuild(partner, viewerId),
+    ])
     if (!isOwnOwner && !isPartnerOwner) {
       return c.json({ error: "forbidden" }, 403)
     }
