@@ -65,8 +65,12 @@ export function AbilityIcon({
           </p>
         </TooltipContent>
       </Tooltip>
-      {canSubsume && (
-        <PopoverContent side="bottom" align="center" className="w-72">
+      <PopoverContent
+        side="bottom"
+        align="center"
+        className={canSubsume ? "w-72" : "max-w-xs p-3"}
+      >
+        {canSubsume ? (
           <Suspense
             fallback={<p className="text-muted-foreground text-xs">Loading…</p>}
           >
@@ -78,8 +82,18 @@ export function AbilityIcon({
               }}
             />
           </Suspense>
-        </PopoverContent>
-      )}
+        ) : (
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-semibold">{ability.name}</p>
+            {isHelminth && (
+              <p className="text-destructive text-xs">(Helminth)</p>
+            )}
+            <p className="text-muted-foreground text-xs whitespace-pre-line">
+              {ability.description}
+            </p>
+          </div>
+        )}
+      </PopoverContent>
     </Popover>
   )
 }

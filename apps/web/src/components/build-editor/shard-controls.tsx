@@ -57,11 +57,18 @@ export function ShardSlot({
   )
 
   return (
-    <Popover open={open} onOpenChange={readOnly ? undefined : setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={!readOnly || shard ? setOpen : undefined}
+    >
       <Tooltip>
         <TooltipTrigger
           render={
-            readOnly ? triggerButton : <PopoverTrigger render={triggerButton} />
+            !readOnly || shard ? (
+              <PopoverTrigger render={triggerButton} />
+            ) : (
+              triggerButton
+            )
           }
         />
         <TooltipContent side="bottom">
@@ -78,19 +85,36 @@ export function ShardSlot({
           )}
         </TooltipContent>
       </Tooltip>
-      {!readOnly && (
+      {(!readOnly || shard) && (
         <PopoverContent side="right" align="start" className="w-72">
-          <ShardPicker
-            current={shard}
-            onPick={(s) => {
-              onPick(s)
-              setOpen(false)
-            }}
-            onClear={() => {
-              onPick(null)
-              setOpen(false)
-            }}
-          />
+          {readOnly && shard ? (
+            <div className="flex items-center gap-2.5">
+              <img
+                src={getShardImageUrl(shard.color, shard.tauforged)}
+                alt=""
+                className="size-10 shrink-0"
+              />
+              <div>
+                <p className="text-sm font-semibold">
+                  {SHARD_COLOR_NAMES[shard.color]}
+                  {shard.tauforged ? " (Tauforged)" : ""}
+                </p>
+                <p className="text-muted-foreground text-xs">{shard.stat}</p>
+              </div>
+            </div>
+          ) : (
+            <ShardPicker
+              current={shard}
+              onPick={(s) => {
+                onPick(s)
+                setOpen(false)
+              }}
+              onClear={() => {
+                onPick(null)
+                setOpen(false)
+              }}
+            />
+          )}
         </PopoverContent>
       )}
     </Popover>

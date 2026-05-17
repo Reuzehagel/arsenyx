@@ -48,6 +48,15 @@ export function ArcaneSlot({
 }: ArcaneSlotProps) {
   const [open, setOpen] = useState(false)
 
+  const arcaneStats: string[] =
+    placed && placed.arcane.levelStats && placed.arcane.levelStats.length > 0
+      ? (
+          placed.arcane.levelStats[
+            Math.min(placed.rank, placed.arcane.levelStats.length - 1)
+          ]?.stats ?? []
+        ).map((s) => s.replace(/\\n/g, "\n"))
+      : []
+
   const handleContextMenu = (e: MouseEvent) => {
     if (readOnly) return
     if (placed && onRemove) {
@@ -57,7 +66,10 @@ export function ArcaneSlot({
   }
 
   return (
-    <Popover open={open} onOpenChange={readOnly ? undefined : setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={readOnly && !placed ? undefined : setOpen}
+    >
       <PopoverTrigger
         nativeButton={false}
         // Same reasoning as mod-slot.tsx: arrow-key nav drives selection,
@@ -67,7 +79,9 @@ export function ArcaneSlot({
         data-build-slot
         onClick={
           readOnly
-            ? undefined
+            ? placed
+              ? () => setOpen(true)
+              : undefined
             : () => {
                 onSelect?.()
                 setOpen(true)
@@ -78,7 +92,7 @@ export function ArcaneSlot({
           "group relative flex h-[80px] w-full max-w-[140px] flex-col items-center justify-center transition-colors",
           "sm:h-[90px] sm:w-[120px] sm:flex-none md:h-[100px] md:w-[140px]",
           "outline-none",
-          !readOnly && "cursor-pointer",
+          (!readOnly || !!placed) && "cursor-pointer",
           !placed && "rounded-md border",
           !placed &&
             !readOnly &&
@@ -105,16 +119,39 @@ export function ArcaneSlot({
           </>
         )}
       </PopoverTrigger>
-      {!readOnly && (
+      {(!readOnly || placed) && (
         <PopoverContent className="w-auto p-3" align="center">
-          <ArcanePicker
-            options={options}
-            usedNames={usedNames}
-            onPick={(a) => {
-              onPick(a)
-              setOpen(false)
-            }}
-          />
+          {readOnly && placed ? (
+            <div className="flex flex-col gap-2" style={{ maxWidth: 280 }}>
+              <div className="flex items-center gap-3">
+                <img
+                  src={getArcaneImageUrl(placed.arcane.name)}
+                  alt=""
+                  className="size-12 shrink-0 rounded object-cover"
+                />
+                <div>
+                  <p className="text-sm font-semibold">{placed.arcane.name}</p>
+                  <p className="text-muted-foreground text-[10px] uppercase">
+                    {placed.arcane.rarity} · Rank {placed.rank}
+                  </p>
+                </div>
+              </div>
+              {arcaneStats.length > 0 && (
+                <p className="text-xs leading-relaxed whitespace-pre-wrap opacity-80">
+                  {arcaneStats.join("\n")}
+                </p>
+              )}
+            </div>
+          ) : (
+            <ArcanePicker
+              options={options}
+              usedNames={usedNames}
+              onPick={(a) => {
+                onPick(a)
+                setOpen(false)
+              }}
+            />
+          )}
         </PopoverContent>
       )}
     </Popover>
