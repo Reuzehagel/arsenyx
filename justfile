@@ -1,5 +1,6 @@
 set dotenv-load := true
-set shell := ["pwsh", "-NoLogo", "-Command"]
+# Windows uses PowerShell; other platforms fall back to the default `sh`.
+set windows-shell := ["pwsh", "-NoLogo", "-Command"]
 
 # Run API + web together (default).
 [parallel]
@@ -26,6 +27,19 @@ build-items-index:
     bun run build:items
 
 # Kill dev servers on ports 5173 (Vite), 8787 (Hono).
+[unix]
+stop:
+    #!/usr/bin/env sh
+    for port in 5173 8787; do
+        if fuser -k "$port/tcp" >/dev/null 2>&1; then
+            echo "Stopped port $port"
+        else
+            echo "Port $port already free"
+        fi
+    done
+
+# Kill dev servers on ports 5173 (Vite), 8787 (Hono).
+[windows]
 stop:
     @foreach ($port in 5173, 8787) { $pids = (Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue).OwningProcess | Select-Object -Unique; if ($pids) { Write-Host "Stopping port $port (PID $($pids -join ', '))"; $pids | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue } } else { Write-Host "Port $port already free" } }
 

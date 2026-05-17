@@ -1162,8 +1162,12 @@ function AbilityIcon({
           </p>
         </TooltipContent>
       </Tooltip>
-      {canSubsume && (
-        <PopoverContent side="bottom" align="center" className="w-72">
+      <PopoverContent
+        side="bottom"
+        align="center"
+        className={canSubsume ? "w-72" : "max-w-xs p-3"}
+      >
+        {canSubsume ? (
           <Suspense
             fallback={<p className="text-muted-foreground text-xs">Loading…</p>}
           >
@@ -1175,8 +1179,18 @@ function AbilityIcon({
               }}
             />
           </Suspense>
-        </PopoverContent>
-      )}
+        ) : (
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-semibold">{ability.name}</p>
+            {isHelminth && (
+              <p className="text-destructive text-xs">(Helminth)</p>
+            )}
+            <p className="text-muted-foreground text-xs whitespace-pre-line">
+              {ability.description}
+            </p>
+          </div>
+        )}
+      </PopoverContent>
     </Popover>
   )
 }
@@ -1472,11 +1486,18 @@ function ShardSlot({
   )
 
   return (
-    <Popover open={open} onOpenChange={readOnly ? undefined : setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={!readOnly || shard ? setOpen : undefined}
+    >
       <Tooltip>
         <TooltipTrigger
           render={
-            readOnly ? triggerButton : <PopoverTrigger render={triggerButton} />
+            !readOnly || shard ? (
+              <PopoverTrigger render={triggerButton} />
+            ) : (
+              triggerButton
+            )
           }
         />
         <TooltipContent side="bottom">
@@ -1493,19 +1514,36 @@ function ShardSlot({
           )}
         </TooltipContent>
       </Tooltip>
-      {!readOnly && (
+      {(!readOnly || shard) && (
         <PopoverContent side="right" align="start" className="w-72">
-          <ShardPicker
-            current={shard}
-            onPick={(s) => {
-              onPick(s)
-              setOpen(false)
-            }}
-            onClear={() => {
-              onPick(null)
-              setOpen(false)
-            }}
-          />
+          {readOnly && shard ? (
+            <div className="flex items-center gap-2.5">
+              <img
+                src={getShardImageUrl(shard.color, shard.tauforged)}
+                alt=""
+                className="size-10 shrink-0"
+              />
+              <div>
+                <p className="text-sm font-semibold">
+                  {SHARD_COLOR_NAMES[shard.color]}
+                  {shard.tauforged ? " (Tauforged)" : ""}
+                </p>
+                <p className="text-muted-foreground text-xs">{shard.stat}</p>
+              </div>
+            </div>
+          ) : (
+            <ShardPicker
+              current={shard}
+              onPick={(s) => {
+                onPick(s)
+                setOpen(false)
+              }}
+              onClear={() => {
+                onPick(null)
+                setOpen(false)
+              }}
+            />
+          )}
         </PopoverContent>
       )}
     </Popover>

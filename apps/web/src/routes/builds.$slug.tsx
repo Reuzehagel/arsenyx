@@ -13,13 +13,16 @@ import {
   Bookmark,
   Check,
   Code2,
+  ExternalLink,
   GitFork,
   Heart,
   Link2,
   MoreHorizontal,
   Pencil,
+  Plus,
   Share2,
   Trash2,
+  Zap,
 } from "lucide-react"
 import { Suspense, useEffect, useMemo, useRef, useState } from "react"
 import ReactMarkdown from "react-markdown"
@@ -65,6 +68,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -86,7 +94,15 @@ import {
   type PartnerBuild,
 } from "@/lib/partner-builds-query"
 import { formatAbsoluteTime, relativeTime } from "@/lib/relative-time"
-import { padShards } from "@/lib/shards"
+import {
+  formatStatValue,
+  getShardImageUrl,
+  padShards,
+  SHARD_COLOR_NAMES,
+  SHARD_CSS_COLORS,
+  SHARD_STATS,
+  type PlacedShard,
+} from "@/lib/shards"
 import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard"
 import { authorName, formatVisibility } from "@/lib/user-display"
 import { cn } from "@/lib/utils"
@@ -434,6 +450,16 @@ function BuildViewerBodyInner({
       )}
 
       <div className="flex flex-col gap-4">
+        {embed && category === "warframes" && (
+          <EmbedWarframeStrip
+            abilities={item.abilities ?? []}
+            helminth={helminth}
+            shards={shards}
+            slug={build.slug}
+            itemName={item.name}
+            itemImageName={item.imageName}
+          />
+        )}
         <div
           className={cn(
             "flex flex-col gap-4",
@@ -882,6 +908,215 @@ function SocialActions({ build }: { build: BuildDetail }) {
         <span className="tabular-nums">{build.bookmarkCount}</span>
       </Button>
     </>
+  )
+}
+
+function EmbedWarframeStrip({
+  abilities,
+  helminth,
+  shards,
+  slug,
+  itemName,
+  itemImageName,
+}: {
+  abilities: Array<{ name: string; description: string; imageName?: string }>
+  helminth: Record<number, HelminthAbility>
+  shards: (PlacedShard | null)[]
+  slug: string
+  itemName: string
+  itemImageName?: string
+}) {
+  const buildUrl = `${window.location.origin}/builds/${slug}`
+  const hasAbilities = abilities.length > 0
+  const hasShards = shards.some(Boolean)
+  if (!hasAbilities && !hasShards) return null
+
+  return (
+    <div className="bg-card flex flex-col items-center gap-3 rounded-lg border p-3 md:flex-row">
+      <div className="flex shrink-0 items-center gap-2">
+        <div className="bg-muted/10 relative flex size-8 shrink-0 overflow-hidden rounded">
+          <img
+            src={getImageUrl(itemImageName)}
+            alt={itemName}
+            className="h-full w-full object-cover"
+          />
+        </div>
+        <span className="max-w-[120px] truncate text-sm font-semibold">
+          {itemName}
+        </span>
+      </div>
+      <div className="flex w-full flex-wrap items-center justify-center gap-x-3 gap-y-2 md:w-auto md:flex-1">
+        {hasAbilities && (
+          <div className="flex shrink-0 items-center gap-1.5">
+            {abilities.slice(0, 4).map((a, i) => {
+              const replaced = helminth[i]
+              const displayed = replaced
+                ? {
+                    name: replaced.name,
+                    description: replaced.description,
+                    imageName: replaced.imageName,
+                  }
+                : a
+              return (
+                <EmbedAbilityIcon
+                  key={i}
+                  ability={displayed}
+                  isHelminth={Boolean(replaced)}
+                />
+              )
+            })}
+          </div>
+        )}
+        <div className="flex shrink-0 items-center gap-1.5">
+          {shards.slice(0, 5).map((shard, i) => (
+            <EmbedShardSlot key={i} shard={shard} />
+          ))}
+        </div>
+      </div>
+      <a
+        href={buildUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-muted-foreground hover:bg-accent/40 hover:text-foreground inline-flex shrink-0 items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs transition-colors"
+      >
+        View on Arsenyx
+        <ExternalLink className="size-3" />
+      </a>
+    </div>
+  )
+}
+
+function EmbedAbilityIcon({
+  ability,
+  isHelminth,
+}: {
+  ability: { name: string; description: string; imageName?: string }
+  isHelminth: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const triggerEl = (
+    <button
+      type="button"
+      className={cn(
+        "bg-muted relative size-10 overflow-hidden rounded-sm border",
+        isHelminth ? "border-destructive/60" : "border-border",
+      )}
+    >
+      {ability.imageName ? (
+        <img
+          src={getImageUrl(ability.imageName)}
+          alt={ability.name}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <div className="text-muted-foreground flex h-full w-full items-center justify-center">
+          <Zap className="size-4" />
+        </div>
+      )}
+    </button>
+  )
+  const tooltipContent = (
+    <>
+      <p className="font-semibold">
+        {ability.name}
+        {isHelminth && (
+          <span className="text-destructive ml-1 text-[10px]">(Helminth)</span>
+        )}
+      </p>
+      <p className="text-muted-foreground mt-0.5 text-xs">
+        {ability.description}
+      </p>
+    </>
+  )
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <Tooltip>
+        <TooltipTrigger render={<PopoverTrigger render={triggerEl} />} />
+        <TooltipContent side="bottom" className="max-w-xs">
+          {tooltipContent}
+        </TooltipContent>
+      </Tooltip>
+      <PopoverContent side="bottom" align="center" className="max-w-xs p-3">
+        {tooltipContent}
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+function EmbedShardSlot({ shard }: { shard: PlacedShard | null }) {
+  const [open, setOpen] = useState(false)
+  const stat = shard
+    ? (SHARD_STATS[shard.color].find((s) => s.name === shard.stat) ?? null)
+    : null
+  const triggerEl = (
+    <div
+      className={cn(
+        "relative flex size-10 items-center justify-center rounded-sm border",
+        shard
+          ? "bg-muted/40 border-border"
+          : "border-muted-foreground/10 border-dashed",
+      )}
+    >
+      {shard ? (
+        <img
+          src={getShardImageUrl(shard.color, shard.tauforged)}
+          alt=""
+          className="size-9"
+        />
+      ) : (
+        <Plus className="text-muted-foreground/20 size-4" />
+      )}
+    </div>
+  )
+  return (
+    <Popover open={open} onOpenChange={shard ? setOpen : undefined}>
+      <Tooltip>
+        <TooltipTrigger
+          render={shard ? <PopoverTrigger render={triggerEl} /> : triggerEl}
+        />
+        <TooltipContent side="bottom">
+          {shard ? (
+            <>
+              <p className="font-semibold">
+                {shard.tauforged ? "Tauforged " : ""}
+                <span style={{ color: SHARD_CSS_COLORS[shard.color] }}>
+                  {SHARD_COLOR_NAMES[shard.color]}
+                </span>
+              </p>
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                {shard.stat}
+                {stat ? ` · ${formatStatValue(stat, shard.tauforged)}` : ""}
+              </p>
+            </>
+          ) : (
+            <span className="text-muted-foreground">Empty shard slot</span>
+          )}
+        </TooltipContent>
+      </Tooltip>
+      {shard && (
+        <PopoverContent side="bottom" align="center" className="w-64 p-3">
+          <div className="flex items-center gap-2.5">
+            <img
+              src={getShardImageUrl(shard.color, shard.tauforged)}
+              alt=""
+              className="size-10 shrink-0"
+            />
+            <div>
+              <p className="text-sm font-semibold">
+                {shard.tauforged ? "Tauforged " : ""}
+                <span style={{ color: SHARD_CSS_COLORS[shard.color] }}>
+                  {SHARD_COLOR_NAMES[shard.color]}
+                </span>
+              </p>
+              <p className="text-muted-foreground text-xs">
+                {shard.stat}
+                {stat ? ` · ${formatStatValue(stat, shard.tauforged)}` : ""}
+              </p>
+            </div>
+          </div>
+        </PopoverContent>
+      )}
+    </Popover>
   )
 }
 
