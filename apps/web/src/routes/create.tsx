@@ -209,8 +209,8 @@ function EditorShell() {
   const arcaneCount = getArcaneSlotCount(category, item.type)
   const arcanes = useArcaneSlots(arcaneCount, savedData.arcanes)
   const arcaneConfig = useMemo(
-    () => getArcaneSlotConfig(allArcanes, category, arcaneCount),
-    [allArcanes, category, arcaneCount],
+    () => getArcaneSlotConfig(allArcanes, category, arcaneCount, item),
+    [allArcanes, category, arcaneCount, item],
   )
 
   // Escape deselects the active mod/arcane slot, mirroring the

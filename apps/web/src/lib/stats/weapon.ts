@@ -331,7 +331,18 @@ function calcDamageBreakdown(
   if (baseDamage.puncture) makePhysical("puncture", baseDamage.puncture)
   if (baseDamage.slash) makePhysical("slash", baseDamage.slash)
 
-  const totalModdedBase = physical.reduce((s, e) => s + e.value, 0)
+  // Innate base-element damage scales with base-damage mods (Serration etc.)
+  // and acts as the base for modded elementals on weapons with no physical
+  // damage (e.g. Balefire Charger's pure-electricity shots). Include it in
+  // totalModdedBase so elemental mod percentages have something to multiply.
+  let innateElementalBase = 0
+  for (const [type, value] of Object.entries(baseDamage)) {
+    if (BASE_ELEMENTS.includes(type as DamageType) && value && value > 0) {
+      innateElementalBase += value
+    }
+  }
+  const totalModdedBase =
+    physical.reduce((s, e) => s + e.value, 0) + innateElementalBase * baseMult
 
   // Collect elemental mods grouped by type, preserving source attribution.
   const elementalMods: {
@@ -358,10 +369,13 @@ function calcDamageBreakdown(
     elementalMods.push({ type, value: sum, sources })
   }
 
-  // Innate base elements come FIRST in the combination order.
+  // Innate base elements come FIRST in the combination order. Encode them
+  // as a percentage of totalModdedBase so combineElements' shared
+  // `totalModdedBase * pct / 100` formula recovers `value * baseMult`.
   for (const [type, value] of Object.entries(baseDamage)) {
     if (BASE_ELEMENTS.includes(type as DamageType) && value && value > 0) {
-      const pctEquivalent = (value / (totalModdedBase || 1)) * 100
+      const pctEquivalent =
+        totalModdedBase > 0 ? ((value * baseMult) / totalModdedBase) * 100 : 0
       elementalMods.unshift({
         type: type as DamageType,
         value: pctEquivalent,

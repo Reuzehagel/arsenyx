@@ -346,8 +346,8 @@ function BuildViewerBodyInner({
   const arcaneCount = getArcaneSlotCount(category, item.type)
 
   const arcaneConfig = useMemo(
-    () => getArcaneSlotConfig(allArcanes, category, arcaneCount),
-    [allArcanes, category, arcaneCount],
+    () => getArcaneSlotConfig(allArcanes, category, arcaneCount, item),
+    [allArcanes, category, arcaneCount, item],
   )
 
   const auraSlotCount = getAuraSlotCount(category, item)

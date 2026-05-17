@@ -76,6 +76,7 @@ export interface DetailItem extends BrowseItem {
   abilities?: ItemAbility[]
   // weapon
   maxLevelCap?: number
+  trigger?: string
   totalDamage?: number
   criticalChance?: number
   criticalMultiplier?: number
