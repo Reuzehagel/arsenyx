@@ -7,7 +7,7 @@ import { queryOptions } from "@tanstack/react-query"
 import { notFound } from "@tanstack/react-router"
 
 import type { PlacedArcane, PlacedMod, SlotId } from "@/components/build-editor"
-import { API_URL } from "@/lib/constants"
+import { apiFetch, ApiError } from "@/lib/api-client"
 import type { HelminthAbility } from "@/lib/helminth-query"
 import type { PlacedShard } from "@/lib/shards"
 
@@ -74,11 +74,13 @@ export const buildQuery = (slug: string) =>
   queryOptions({
     queryKey: ["build", slug],
     queryFn: async (): Promise<BuildDetail> => {
-      const r = await fetch(`${API_URL}/builds/${encodeURIComponent(slug)}`, {
-        credentials: "include",
-      })
-      if (r.status === 404) throw notFound()
-      if (!r.ok) throw new Error("failed to load build")
-      return r.json()
+      try {
+        return await apiFetch<BuildDetail>(
+          `/builds/${encodeURIComponent(slug)}`,
+        )
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 404) throw notFound()
+        throw err
+      }
     },
   })

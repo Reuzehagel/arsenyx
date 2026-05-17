@@ -75,15 +75,21 @@ export function DragController({
   // Latest-slots ref so the drop handler doesn't re-bind window listeners
   // every render.
   const slotsRef = useRef(slots)
-  slotsRef.current = slots
 
   const [activeSource, setActiveSource] = useState<Source | null>(null)
   const [target, setTarget] = useState<SlotId | null>(null)
 
   const activeRef = useRef<Source | null>(null)
-  activeRef.current = activeSource
   const targetRef = useRef<SlotId | null>(null)
-  targetRef.current = target
+
+  // Sync refs after every render. The refs feed pointer-event listeners
+  // attached on drag activation; those listeners always fire after this
+  // effect has committed, so they see fresh values without re-binding.
+  useEffect(() => {
+    slotsRef.current = slots
+    activeRef.current = activeSource
+    targetRef.current = target
+  })
 
   const pendingRef = useRef<PendingDrag | null>(null)
   const sourceElRef = useRef<HTMLElement | null>(null)

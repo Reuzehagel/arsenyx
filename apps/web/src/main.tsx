@@ -54,7 +54,8 @@ const queryClient = new QueryClient({
 const router = createRouter({
   routeTree,
   defaultPreload: "intent",
-  defaultPreloadStaleTime: 0,
+  // No defaultPreloadStaleTime: per-query staleTime governs preloads (static
+  // game-data queries use Infinity; user data uses the QueryClient default).
   context: { queryClient },
 })
 

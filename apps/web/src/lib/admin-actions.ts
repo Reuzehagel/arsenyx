@@ -4,27 +4,25 @@ import {
   useQueryClient,
 } from "@tanstack/react-query"
 
-import { API_URL } from "@/lib/constants"
+import {
+  apiErrorMessage,
+  apiFetch,
+  ApiError,
+  type ApiFetchInit,
+} from "@/lib/api-client"
 
-async function adminFetch(
+async function adminCall<T = unknown>(
   path: string,
-  opts: RequestInit = {},
-): Promise<Response> {
-  const r = await fetch(`${API_URL}${path}`, {
-    credentials: "include",
-    ...opts,
-  })
-  if (!r.ok) {
-    let msg = `http_${r.status}`
-    try {
-      const j = (await r.json()) as { error?: string }
-      if (j.error) msg = j.error
-    } catch {
-      /* ignore */
+  opts: ApiFetchInit = {},
+): Promise<T> {
+  try {
+    return await apiFetch<T>(path, opts)
+  } catch (err) {
+    if (err instanceof ApiError) {
+      throw new Error(apiErrorMessage(err, `http_${err.status}`))
     }
-    throw new Error(msg)
+    throw err
   }
-  return r
 }
 
 function listQuery(params: {
@@ -75,29 +73,21 @@ export type AdminUsersResponse = {
 export const adminUsersQuery = (params: { page: number; q: string }) =>
   queryOptions({
     queryKey: ["admin", "users", params],
-    queryFn: async (): Promise<AdminUsersResponse> => {
-      const r = await adminFetch(`/admin/users${listQuery(params)}`)
-      return r.json()
-    },
+    queryFn: () =>
+      adminCall<AdminUsersResponse>(`/admin/users${listQuery(params)}`),
   })
 
 export function useAdminPatchUser() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (input: {
+    mutationFn: (input: {
       id: string
       patch: Partial<Record<AdminUserFlag, boolean>>
-    }) => {
-      const r = await adminFetch(
-        `/admin/users/${encodeURIComponent(input.id)}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(input.patch),
-        },
-      )
-      return r.json()
-    },
+    }) =>
+      adminCall(`/admin/users/${encodeURIComponent(input.id)}`, {
+        method: "PATCH",
+        json: input.patch,
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "users"] })
     },
@@ -107,11 +97,10 @@ export function useAdminPatchUser() {
 export function useAdminDeleteUser() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (id: string) => {
-      await adminFetch(`/admin/users/${encodeURIComponent(id)}`, {
+    mutationFn: (id: string) =>
+      adminCall<void>(`/admin/users/${encodeURIComponent(id)}`, {
         method: "DELETE",
-      })
-    },
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "users"] })
       qc.invalidateQueries({ queryKey: ["admin", "stats"] })
@@ -161,20 +150,17 @@ export const adminBuildsQuery = (params: {
 }) =>
   queryOptions({
     queryKey: ["admin", "builds", params],
-    queryFn: async (): Promise<AdminBuildsResponse> => {
-      const r = await adminFetch(`/admin/builds${listQuery(params)}`)
-      return r.json()
-    },
+    queryFn: () =>
+      adminCall<AdminBuildsResponse>(`/admin/builds${listQuery(params)}`),
   })
 
 export function useAdminDeleteBuild() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (slug: string) => {
-      await adminFetch(`/admin/builds/${encodeURIComponent(slug)}`, {
+    mutationFn: (slug: string) =>
+      adminCall<void>(`/admin/builds/${encodeURIComponent(slug)}`, {
         method: "DELETE",
-      })
-    },
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "builds"] })
       qc.invalidateQueries({ queryKey: ["admin", "stats"] })
@@ -206,20 +192,17 @@ export type AdminOrgsResponse = {
 export const adminOrgsQuery = (params: { page: number; q: string }) =>
   queryOptions({
     queryKey: ["admin", "orgs", params],
-    queryFn: async (): Promise<AdminOrgsResponse> => {
-      const r = await adminFetch(`/admin/orgs${listQuery(params)}`)
-      return r.json()
-    },
+    queryFn: () =>
+      adminCall<AdminOrgsResponse>(`/admin/orgs${listQuery(params)}`),
   })
 
 export function useAdminDeleteOrg() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (slug: string) => {
-      await adminFetch(`/admin/orgs/${encodeURIComponent(slug)}`, {
+    mutationFn: (slug: string) =>
+      adminCall<void>(`/admin/orgs/${encodeURIComponent(slug)}`, {
         method: "DELETE",
-      })
-    },
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "orgs"] })
       qc.invalidateQueries({ queryKey: ["admin", "stats"] })
@@ -242,8 +225,5 @@ export type AdminStats = {
 export const adminStatsQuery = () =>
   queryOptions({
     queryKey: ["admin", "stats"],
-    queryFn: async (): Promise<AdminStats> => {
-      const r = await adminFetch(`/admin/stats`)
-      return r.json()
-    },
+    queryFn: () => adminCall<AdminStats>(`/admin/stats`),
   })

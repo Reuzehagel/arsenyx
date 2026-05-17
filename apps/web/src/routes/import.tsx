@@ -15,8 +15,8 @@ import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { apiErrorMessage, apiFetch, ApiError } from "@/lib/api-client"
 import { arcanesQuery } from "@/lib/arcanes-query"
-import { API_URL } from "@/lib/constants"
 import { helminthQuery } from "@/lib/helminth-query"
 import { saveDraft } from "@/lib/import-draft"
 import { itemQuery } from "@/lib/item-query"
@@ -42,21 +42,16 @@ export const Route = createFileRoute("/import")({
 })
 
 async function postOverframeImport(url: string): Promise<ScrapeResponse> {
-  const r = await fetch(`${API_URL}/imports/overframe`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ url }),
-  })
-  if (!r.ok) {
-    const body = await r.json().catch(() => ({}))
-    throw new Error(
-      (body as { error?: string; details?: string }).details ??
-        (body as { error?: string }).error ??
-        `Import failed: ${r.status}`,
-    )
+  try {
+    return await apiFetch<ScrapeResponse>(`/imports/overframe`, {
+      method: "POST",
+      json: { url },
+    })
+  } catch (err) {
+    const fallback =
+      err instanceof ApiError ? `Import failed: ${err.status}` : "Import failed"
+    throw new Error(apiErrorMessage(err, fallback))
   }
-  return r.json()
 }
 
 function ImportPage() {

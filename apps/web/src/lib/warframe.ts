@@ -4,6 +4,9 @@
  * needs enough to render cards and link to detail pages.
  */
 
+import type { BrowseCategory } from "@arsenyx/shared/warframe/types"
+export type { BrowseCategory } from "@arsenyx/shared/warframe/types"
+
 const WFCD_CDN_BASE = "https://cdn.warframestat.us/img"
 
 const PLACEHOLDER_URL =
@@ -33,17 +36,6 @@ export function formatPct(
   if (v === undefined) return undefined
   return `${(v * 100).toFixed(digits)}%`
 }
-
-export type BrowseCategory =
-  | "warframes"
-  | "primary"
-  | "secondary"
-  | "melee"
-  | "necramechs"
-  | "companions"
-  | "companion-weapons"
-  | "exalted-weapons"
-  | "archwing"
 
 export interface BrowseItem {
   uniqueName: string

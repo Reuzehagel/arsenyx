@@ -134,6 +134,12 @@ admin.patch("/users/:id", async (c) => {
         isBanned: true,
       },
     })
+    // Better Auth caches `isBanned` in the session cookie for up to 60s
+    // (auth.ts), so a ban only takes effect on cookie refresh. Delete the
+    // user's sessions to force re-auth on the next request.
+    if (data.isBanned === true) {
+      await prisma.session.deleteMany({ where: { userId: targetId } })
+    }
     return c.json(updated)
   } catch (err) {
     if (isPrismaNotFound(err)) return c.json({ error: "not_found" }, 404)

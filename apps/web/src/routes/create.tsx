@@ -3,12 +3,7 @@ import {
   getIncarnonGenesisImage,
   isInnateIncarnon,
 } from "@arsenyx/shared/warframe/incarnon-data"
-import { getModsForItem } from "@arsenyx/shared/warframe/mods"
-import {
-  createSyntheticRiven,
-  isRivenEligible,
-  isRivenMod,
-} from "@arsenyx/shared/warframe/rivens"
+import { isRivenMod } from "@arsenyx/shared/warframe/rivens"
 import {
   DEFAULT_DEPLOYMENT_CONTEXT,
   type DeploymentContext,
@@ -28,11 +23,9 @@ import {
 import {
   createFileRoute,
   redirect,
-  Link as RouterLink,
   useNavigate,
 } from "@tanstack/react-router"
-import { Check, Pencil, Settings2, Share2, UploadCloud, X } from "lucide-react"
-import { Suspense, useEffect, useMemo, useRef, useState } from "react"
+import { Suspense, useEffect, useMemo, useState } from "react"
 
 import {
   ArcaneRow,
@@ -54,23 +47,19 @@ import {
   KeyboardHintBanner,
   KeyboardHintsStrip,
   ModGrid,
-  ModSearchGrid,
   PublishDialog,
-  RivenDialog,
   type PublishVisibility,
   toPolarity,
   useArcaneSlots,
   useBuildSlots,
   useSlotKeyboardNav,
-  type ModSlotKind,
-  type RivenDialogValues,
-  type SlotId,
 } from "@/components/build-editor"
+import { EditorHeader } from "@/components/create-editor/editor-header"
+import { SearchPanel } from "@/components/create-editor/search-panel"
+import { useRivenDialog } from "@/components/create-editor/use-riven-dialog"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { apiErrorMessage, apiFetch } from "@/lib/api-client"
 import { arcanesQuery } from "@/lib/arcanes-query"
 import { authClient } from "@/lib/auth-client"
 import {
@@ -79,7 +68,6 @@ import {
   savedDataToBuildState,
 } from "@/lib/build-codec-adapter"
 import { buildQuery, type SavedBuildData } from "@/lib/build-query"
-import { API_URL } from "@/lib/constants"
 import { helminthQuery, type HelminthAbility } from "@/lib/helminth-query"
 import { useHotkey } from "@/lib/hotkeys"
 import { consumeDraft } from "@/lib/import-draft"
@@ -88,13 +76,10 @@ import { modsQuery } from "@/lib/mods-query"
 import { myOrgsQuery } from "@/lib/org-query"
 import { padShards, type PlacedShard } from "@/lib/shards"
 import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard"
-import { formatVisibility } from "@/lib/user-display"
 import {
   getCategoryLabel,
-  getImageUrl,
   isValidCategory,
   type BrowseCategory,
-  type DetailItem,
 } from "@/lib/warframe"
 
 type CreateSearch = {
@@ -282,46 +267,11 @@ function EditorShell() {
     })
   }
 
-  const [rivenEdit, setRivenEdit] = useState<{
-    slotId: SlotId
-    initial?: Partial<RivenDialogValues>
-  } | null>(null)
-
-  const openRivenForPlacement = () => {
-    const target = findFreeNormalSlot(slots, normalSlotCount)
-    if (!target) return
-    setRivenEdit({ slotId: target, initial: undefined })
-  }
-
-  const openRivenForEdit = (slotId: SlotId) => {
-    const placed = slots.placed[slotId]
-    if (!placed) return
-    setRivenEdit({
-      slotId,
-      initial: {
-        polarity: placed.mod.polarity,
-        drain: placed.mod.baseDrain,
-        rivenStats: placed.mod.rivenStats,
-      },
-    })
-  }
-
-  const confirmRiven = (values: RivenDialogValues) => {
-    if (!rivenEdit) return
-    const base = createSyntheticRiven()
-    const mod: Mod = {
-      ...base,
-      polarity: values.polarity,
-      baseDrain: values.drain,
-      rivenStats: values.rivenStats,
-    }
-    slots.placeAt(rivenEdit.slotId, mod, base.fusionLimit)
-    setRivenEdit(null)
-  }
+  const riven = useRivenDialog({ slots, normalSlotCount, category })
 
   const handleModSelect = (mod: Mod) => {
     if (isRivenMod(mod)) {
-      openRivenForPlacement()
+      riven.openForPlacement()
       return
     }
     slots.place(mod)
@@ -511,25 +461,18 @@ function EditorShell() {
               itemName: item.name,
             }),
       }
-      const url = isUpdate
-        ? `${API_URL}/builds/${existingBuild!.slug}`
-        : `${API_URL}/builds`
-      const r = await fetch(url, {
+      const path = isUpdate
+        ? `/builds/${existingBuild!.slug}`
+        : `/builds`
+      const { slug } = await apiFetch<{ id: string; slug: string }>(path, {
         method: isUpdate ? "PATCH" : "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        json: body,
       })
-      if (!r.ok) {
-        const err = await r.json().catch(() => ({ error: "save_failed" }))
-        throw new Error(err.error ?? "save_failed")
-      }
-      const { slug } = (await r.json()) as { id: string; slug: string }
       await queryClient.invalidateQueries({ queryKey: ["build", slug] })
       navigate({ to: "/builds/$slug", params: { slug } })
     } catch (err) {
       setSaveStatus("error")
-      setSaveError(err instanceof Error ? err.message : "save_failed")
+      setSaveError(apiErrorMessage(err, "save_failed"))
     }
   }
 
@@ -660,7 +603,7 @@ function EditorShell() {
                 isCompanion={isCompanion}
                 normalSlotCount={normalSlotCount}
                 slots={slots}
-                onEditRiven={openRivenForEdit}
+                onEditRiven={riven.openForEdit}
                 arcaneRow={
                   arcaneCount > 0 ? (
                     <ArcaneRow
@@ -724,284 +667,7 @@ function EditorShell() {
         }}
       />
 
-      {rivenEdit && (
-        <RivenDialog
-          key={rivenEdit.slotId}
-          open={true}
-          onOpenChange={(o) => {
-            if (!o) setRivenEdit(null)
-          }}
-          category={category}
-          initialValues={rivenEdit.initial}
-          onConfirm={confirmRiven}
-        />
-      )}
+      {riven.dialog}
     </>
   )
-}
-
-function EditorHeader({
-  item,
-  category,
-  slug,
-  buildSlug,
-  categoryLabel,
-  totalEndoCost,
-  formaCount,
-  buildName,
-  displayImageName,
-  onBuildNameChange,
-  onSave,
-  saveStatus,
-  saveError,
-  isSignedIn,
-  settings,
-  onShare,
-  shareCopied,
-}: {
-  item: DetailItem
-  category: BrowseCategory
-  slug: string
-  buildSlug?: string
-  categoryLabel: string
-  totalEndoCost: number
-  formaCount: number
-  buildName: string
-  displayImageName?: string
-  onBuildNameChange: (name: string) => void
-  onSave: () => void
-  saveStatus: "idle" | "saving" | "error"
-  saveError: string | null
-  isSignedIn: boolean
-  settings?: { visibility: PublishVisibility; onEdit: () => void }
-  onShare: () => void
-  shareCopied: boolean
-}) {
-  const [editing, setEditing] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  const startEdit = () => {
-    setEditing(true)
-    requestAnimationFrame(() => {
-      inputRef.current?.focus()
-      inputRef.current?.select()
-    })
-  }
-  const commit = () => {
-    const trimmed = buildName.trim()
-    onBuildNameChange(trimmed || item.name)
-    setEditing(false)
-  }
-  return (
-    <div className="bg-card mb-4 rounded-lg border p-4">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex min-w-0 flex-1 items-center gap-4">
-          <div className="bg-muted/10 relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-md md:size-24">
-            <img
-              src={getImageUrl(displayImageName ?? item.imageName)}
-              alt={item.name}
-              className="h-full w-full object-cover"
-            />
-          </div>
-          <div className="flex min-w-0 flex-col justify-center gap-2">
-            <div className="flex items-center gap-2">
-              {editing ? (
-                <Input
-                  ref={inputRef}
-                  value={buildName}
-                  onChange={(e) => onBuildNameChange(e.target.value)}
-                  onBlur={commit}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") commit()
-                    else if (e.key === "Escape") setEditing(false)
-                  }}
-                  className="h-8 text-xl font-bold tracking-tight md:text-2xl"
-                />
-              ) : (
-                <>
-                  <h1 className="truncate text-xl leading-tight font-bold tracking-tight md:text-2xl">
-                    {buildName}
-                  </h1>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    title="Rename build"
-                    onClick={startEdit}
-                  >
-                    <Pencil />
-                  </Button>
-                </>
-              )}
-            </div>
-            <span className="text-muted-foreground text-sm">
-              {item.name} · {categoryLabel}
-            </span>
-            <div className="flex items-center gap-3">
-              <Badge
-                variant="secondary"
-                className="bg-muted/50 hover:bg-muted gap-1.5 px-2 py-0.5 text-xs font-semibold"
-              >
-                <img
-                  src="/icons/currency/Endo.png"
-                  alt=""
-                  aria-hidden
-                  className="size-4"
-                />
-                {totalEndoCost.toLocaleString("en-US")}
-              </Badge>
-              {formaCount > 0 && (
-                <Badge
-                  variant="secondary"
-                  className="bg-muted/50 hover:bg-muted gap-1.5 px-2 py-0.5 text-xs font-semibold"
-                >
-                  <img
-                    src="/icons/currency/Forma.png"
-                    alt=""
-                    aria-hidden
-                    className="size-[18px] object-contain"
-                  />
-                  {formaCount}
-                </Badge>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {saveStatus === "error" && saveError ? (
-            <span className="text-destructive text-xs">{saveError}</span>
-          ) : null}
-          {settings && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={settings.onEdit}
-              title="Build settings"
-            >
-              <Settings2 data-icon="inline-start" />
-              {formatVisibility(settings.visibility)}
-            </Button>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onShare}
-            title="Copy shareable link"
-          >
-            {shareCopied ? (
-              <>
-                <Check data-icon="inline-start" />
-                Copied
-              </>
-            ) : (
-              <>
-                <Share2 data-icon="inline-start" />
-                Share
-              </>
-            )}
-          </Button>
-          <Button size="sm" onClick={onSave} disabled={saveStatus === "saving"}>
-            <UploadCloud data-icon="inline-start" />
-            {saveStatus === "saving"
-              ? "Saving…"
-              : isSignedIn
-                ? "Save"
-                : "Save (sign in)"}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            render={
-              buildSlug ? (
-                <RouterLink to="/builds/$slug" params={{ slug: buildSlug }} />
-              ) : (
-                <RouterLink
-                  to="/browse/$category/$slug"
-                  params={{ category, slug }}
-                />
-              )
-            }
-          >
-            <X data-icon="inline-start" />
-            Cancel
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function SearchPanel({
-  item,
-  category,
-  usedModNames,
-  onSelect,
-  selectedSlotKind,
-  helminth,
-}: {
-  item: DetailItem
-  category: BrowseCategory
-  usedModNames: Set<string>
-  onSelect: (mod: Mod) => void
-  selectedSlotKind?: ModSlotKind
-  helminth: Record<number, HelminthAbility>
-}) {
-  const { data: allMods } = useSuspenseQuery(modsQuery)
-  const compatible = useMemo(() => {
-    const base = getModsForItem(
-      {
-        type: item.type,
-        category: item.category,
-        name: item.name,
-      },
-      allMods,
-    )
-    // Augments for subsumed abilities belong to a different warframe's
-    // `compatName`, so `getModsForItem` filters them out. Stitch them back
-    // in by matching source warframe + "<Ability> Augment:" description prefix.
-    const extras: Mod[] = []
-    for (const ability of Object.values(helminth)) {
-      const source = ability.source.toLowerCase()
-      const prefix = `${ability.name.toLowerCase()} augment:`
-      for (const m of allMods) {
-        if (!m.isAugment) continue
-        if ((m.compatName ?? "").toLowerCase() !== source) continue
-        const desc = (m.levelStats?.[0]?.stats?.[0] ?? "").toLowerCase()
-        if (!desc.startsWith(prefix)) continue
-        extras.push(m)
-      }
-    }
-    const mods = [...base, ...extras]
-    if (isRivenEligible(category, item)) {
-      return [createSyntheticRiven(), ...mods]
-    }
-    return mods
-  }, [allMods, item, category, helminth])
-
-  return (
-    <ModSearchGrid
-      mods={compatible}
-      usedModNames={usedModNames}
-      onSelect={onSelect}
-      selectedSlotKind={selectedSlotKind}
-    />
-  )
-}
-
-function findFreeNormalSlot(
-  slots: import("@/components/build-editor").BuildSlotsState,
-  normalSlotCount: number,
-): SlotId | null {
-  if (
-    slots.selected &&
-    slots.selected !== "aura" &&
-    slots.selected !== "exilus" &&
-    !slots.placed[slots.selected]
-  ) {
-    return slots.selected
-  }
-  for (let i = 0; i < normalSlotCount; i++) {
-    const id = `normal-${i}` as SlotId
-    if (!slots.placed[id]) return id
-  }
-  return null
 }

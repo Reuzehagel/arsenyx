@@ -5,6 +5,7 @@ import {
   memo,
   useCallback,
   useDeferredValue,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -294,9 +295,17 @@ export function ModSearchGrid({
 
   // Latest-values refs so the per-cell key handler can stay referentially
   // stable — otherwise every parent render hands all ~200 memoized cells a
-  // new function prop and bypasses the memo.
-  const navRef = useRef({ displayed, matches, usedModNames })
-  navRef.current = { displayed, matches, usedModNames }
+  // new function prop and bypasses the memo. The `index` map turns the
+  // per-keystroke uniqueName → position lookup from O(n) findIndex to O(1).
+  const index = useMemo(() => {
+    const m = new Map<string, number>()
+    for (let i = 0; i < displayed.length; i++) m.set(displayed[i].uniqueName, i)
+    return m
+  }, [displayed])
+  const navRef = useRef({ displayed, matches, usedModNames, index })
+  useEffect(() => {
+    navRef.current = { displayed, matches, usedModNames, index }
+  }, [displayed, matches, usedModNames, index])
 
   const moveFromDisplayedIndex = useCallback(
     (from: number, dir: Dir): number | null => {
@@ -356,8 +365,7 @@ export function ModSearchGrid({
   // filters narrow the list.
   const handlePoolKeyDown = useCallback(
     (mod: Mod, e: React.KeyboardEvent<HTMLDivElement>) => {
-      const cur = navRef.current.displayed
-      const idx = cur.findIndex((m) => m.uniqueName === mod.uniqueName)
+      const idx = navRef.current.index.get(mod.uniqueName) ?? -1
       if (idx === -1) return
       switch (e.key) {
         case "ArrowLeft":
