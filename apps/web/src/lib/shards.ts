@@ -1,21 +1,20 @@
+import {
+  SHARD_COLORS,
+  SHARD_STATS,
+  getStatIndex,
+  getStatByIndex,
+  type ShardColor,
+  type ShardStat,
+  type PlacedShard,
+} from "@arsenyx/shared/warframe"
+
 export {
   SHARD_COLORS,
   SHARD_STATS,
   getStatIndex,
   getStatByIndex,
-} from "@arsenyx/shared/warframe/shards"
-export type {
-  ShardColor,
-  ShardStat,
-  PlacedShard,
-} from "@arsenyx/shared/warframe/types"
-
-import {
-  SHARD_STATS,
-  type ShardColor,
-  type ShardStat,
-  type PlacedShard,
-} from "@arsenyx/shared/warframe"
+}
+export type { ShardColor, ShardStat, PlacedShard }
 
 export const SHARD_COLOR_NAMES: Record<ShardColor, string> = {
   crimson: "Crimson",

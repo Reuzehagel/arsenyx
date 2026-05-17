@@ -37,11 +37,28 @@ type EditorState = {
 }
 
 function toSharedPlacedMod(p: PlacedMod): SharedPlacedMod {
-  // Mod has a few fields PlacedMod doesn't (description, tradable, isAugment,
-  // isPrime); strip them so the literal satisfies excess-property checks.
-  const { description: _d, tradable: _t, isAugment: _a, isPrime: _p, ...rest } =
-    p.mod
-  return { ...rest, rank: p.rank }
+  // Explicit field list (rather than spread) so a future `Mod` field doesn't
+  // silently leak into the saved payload — TS will fail to compile if a
+  // required `SharedPlacedMod` field is missing here.
+  const m = p.mod
+  return {
+    uniqueName: m.uniqueName,
+    name: m.name,
+    imageName: m.imageName,
+    polarity: m.polarity,
+    baseDrain: m.baseDrain,
+    fusionLimit: m.fusionLimit,
+    rank: p.rank,
+    rarity: m.rarity,
+    compatName: m.compatName,
+    type: m.type,
+    levelStats: m.levelStats,
+    modSet: m.modSet,
+    modSetStats: m.modSetStats,
+    isExilus: m.isExilus,
+    isUtility: m.isUtility,
+    rivenStats: m.rivenStats,
+  }
 }
 
 function toEditorPlacedMod(

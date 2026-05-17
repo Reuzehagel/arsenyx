@@ -14,9 +14,9 @@ export function useDeleteBuild(slug: string) {
         })
       } catch (err) {
         if (err instanceof ApiError) {
-          if (err.status === 401) throw new Error("unauthorized")
-          if (err.status === 403) throw new Error("forbidden")
-          throw new Error("failed_delete")
+          if (err.status === 401) throw new Error("unauthorized", { cause: err })
+          if (err.status === 403) throw new Error("forbidden", { cause: err })
+          throw new Error("failed_delete", { cause: err })
         }
         throw err
       }
@@ -39,9 +39,9 @@ export function useForkBuild(slug: string) {
         )
       } catch (err) {
         if (err instanceof ApiError) {
-          if (err.status === 401) throw new Error("unauthorized")
-          if (err.status === 404) throw new Error("not_found")
-          throw new Error("failed_fork")
+          if (err.status === 401) throw new Error("unauthorized", { cause: err })
+          if (err.status === 404) throw new Error("not_found", { cause: err })
+          throw new Error("failed_fork", { cause: err })
         }
         throw err
       }

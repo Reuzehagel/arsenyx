@@ -573,24 +573,26 @@ builds.post("/:slug/like", rateLimitUser("social"), async (c) => {
     return c.json({ error: "cannot_like_own_build" }, 400)
   }
 
-  // Atomic insert avoids the findUnique+create race on rapid double-click.
-  // The @@unique([userId, buildId]) index guarantees no duplicate rows; the
-  // counter UPDATE only fires when a row was actually inserted.
-  const inserted = await prisma.$queryRaw<{ id: string }[]>`
-    INSERT INTO build_likes (id, "userId", "buildId", value, "createdAt")
-    VALUES (${nanoid()}, ${userId}, ${build.id}, 1, NOW())
-    ON CONFLICT ("userId", "buildId") DO NOTHING
-    RETURNING id
+  // Single-statement CTE: INSERT … ON CONFLICT DO NOTHING avoids the
+  // findUnique+create race on rapid double-click, while the same statement
+  // bumps the counter by the number of rows actually inserted (0 or 1).
+  // Atomic — no partial-state on connection drop.
+  const rows = await prisma.$queryRaw<{ likeCount: number }[]>`
+    WITH inserted AS (
+      INSERT INTO build_likes (id, "userId", "buildId", value, "createdAt")
+      VALUES (${nanoid()}, ${userId}, ${build.id}, 1, NOW())
+      ON CONFLICT ("userId", "buildId") DO NOTHING
+      RETURNING 1
+    )
+    UPDATE builds
+    SET "likeCount" = "likeCount" + (SELECT count(*)::int FROM inserted)
+    WHERE id = ${build.id}
+    RETURNING "likeCount"
   `
-
-  let likeCount = build.likeCount
-  if (inserted.length === 1) {
-    const rows = await prisma.$queryRaw<{ likeCount: number }[]>`
-      UPDATE builds SET "likeCount" = "likeCount" + 1 WHERE id = ${build.id} RETURNING "likeCount"
-    `
-    likeCount = rows[0]?.likeCount ?? build.likeCount + 1
-  }
-  return c.json({ hasLiked: true, likeCount })
+  return c.json({
+    hasLiked: true,
+    likeCount: rows[0]?.likeCount ?? build.likeCount,
+  })
 })
 
 builds.delete("/:slug/like", rateLimitUser("social"), async (c) => {
@@ -601,20 +603,21 @@ builds.delete("/:slug/like", rateLimitUser("social"), async (c) => {
   const build = await getBuildForSocial(c.req.param("slug"))
   if (!build) return c.json({ error: "not_found" }, 404)
 
-  const deleted = await prisma.$queryRaw<{ id: string }[]>`
-    DELETE FROM build_likes
-    WHERE "userId" = ${userId} AND "buildId" = ${build.id}
-    RETURNING id
+  const rows = await prisma.$queryRaw<{ likeCount: number }[]>`
+    WITH deleted AS (
+      DELETE FROM build_likes
+      WHERE "userId" = ${userId} AND "buildId" = ${build.id}
+      RETURNING 1
+    )
+    UPDATE builds
+    SET "likeCount" = GREATEST(0, "likeCount" - (SELECT count(*)::int FROM deleted))
+    WHERE id = ${build.id}
+    RETURNING "likeCount"
   `
-
-  let likeCount = build.likeCount
-  if (deleted.length === 1) {
-    const rows = await prisma.$queryRaw<{ likeCount: number }[]>`
-      UPDATE builds SET "likeCount" = "likeCount" - 1 WHERE id = ${build.id} RETURNING "likeCount"
-    `
-    likeCount = rows[0]?.likeCount ?? Math.max(0, build.likeCount - 1)
-  }
-  return c.json({ hasLiked: false, likeCount })
+  return c.json({
+    hasLiked: false,
+    likeCount: rows[0]?.likeCount ?? build.likeCount,
+  })
 })
 
 builds.post("/:slug/bookmark", rateLimitUser("social"), async (c) => {
@@ -628,21 +631,22 @@ builds.post("/:slug/bookmark", rateLimitUser("social"), async (c) => {
     return c.json({ error: "not_found" }, 404)
   }
 
-  const inserted = await prisma.$queryRaw<{ id: string }[]>`
-    INSERT INTO build_bookmarks (id, "userId", "buildId", "createdAt")
-    VALUES (${nanoid()}, ${userId}, ${build.id}, NOW())
-    ON CONFLICT ("userId", "buildId") DO NOTHING
-    RETURNING id
+  const rows = await prisma.$queryRaw<{ bookmarkCount: number }[]>`
+    WITH inserted AS (
+      INSERT INTO build_bookmarks (id, "userId", "buildId", "createdAt")
+      VALUES (${nanoid()}, ${userId}, ${build.id}, NOW())
+      ON CONFLICT ("userId", "buildId") DO NOTHING
+      RETURNING 1
+    )
+    UPDATE builds
+    SET "bookmarkCount" = "bookmarkCount" + (SELECT count(*)::int FROM inserted)
+    WHERE id = ${build.id}
+    RETURNING "bookmarkCount"
   `
-
-  let bookmarkCount = build.bookmarkCount
-  if (inserted.length === 1) {
-    const rows = await prisma.$queryRaw<{ bookmarkCount: number }[]>`
-      UPDATE builds SET "bookmarkCount" = "bookmarkCount" + 1 WHERE id = ${build.id} RETURNING "bookmarkCount"
-    `
-    bookmarkCount = rows[0]?.bookmarkCount ?? build.bookmarkCount + 1
-  }
-  return c.json({ hasBookmarked: true, bookmarkCount })
+  return c.json({
+    hasBookmarked: true,
+    bookmarkCount: rows[0]?.bookmarkCount ?? build.bookmarkCount,
+  })
 })
 
 builds.delete("/:slug/bookmark", rateLimitUser("social"), async (c) => {
@@ -653,20 +657,21 @@ builds.delete("/:slug/bookmark", rateLimitUser("social"), async (c) => {
   const build = await getBuildForSocial(c.req.param("slug"))
   if (!build) return c.json({ error: "not_found" }, 404)
 
-  const deleted = await prisma.$queryRaw<{ id: string }[]>`
-    DELETE FROM build_bookmarks
-    WHERE "userId" = ${userId} AND "buildId" = ${build.id}
-    RETURNING id
+  const rows = await prisma.$queryRaw<{ bookmarkCount: number }[]>`
+    WITH deleted AS (
+      DELETE FROM build_bookmarks
+      WHERE "userId" = ${userId} AND "buildId" = ${build.id}
+      RETURNING 1
+    )
+    UPDATE builds
+    SET "bookmarkCount" = GREATEST(0, "bookmarkCount" - (SELECT count(*)::int FROM deleted))
+    WHERE id = ${build.id}
+    RETURNING "bookmarkCount"
   `
-
-  let bookmarkCount = build.bookmarkCount
-  if (deleted.length === 1) {
-    const rows = await prisma.$queryRaw<{ bookmarkCount: number }[]>`
-      UPDATE builds SET "bookmarkCount" = "bookmarkCount" - 1 WHERE id = ${build.id} RETURNING "bookmarkCount"
-    `
-    bookmarkCount = rows[0]?.bookmarkCount ?? Math.max(0, build.bookmarkCount - 1)
-  }
-  return c.json({ hasBookmarked: false, bookmarkCount })
+  return c.json({
+    hasBookmarked: false,
+    bookmarkCount: rows[0]?.bookmarkCount ?? build.bookmarkCount,
+  })
 })
 
 builds.get("/:slug", async (c) => {

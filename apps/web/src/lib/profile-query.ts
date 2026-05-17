@@ -43,7 +43,7 @@ export const profileQuery = (username: string) =>
         )
       } catch (err) {
         if (err instanceof ApiError && err.status === 404) throw notFound()
-        throw new Error("failed to load profile")
+        throw new Error("failed to load profile", { cause: err })
       }
     },
   })
@@ -62,8 +62,8 @@ export const profileBuildsQuery = (username: string, params: BuildListParams) =>
         return await apiFetch<BuildListResponse>(
           `/users/${encodeURIComponent(username)}/builds${qs}`,
         )
-      } catch {
-        throw new Error("failed to load builds")
+      } catch (err) {
+        throw new Error("failed to load builds", { cause: err })
       }
     },
   })

@@ -8,7 +8,7 @@ import { webOrigins } from "./env"
 const githubId = process.env.GITHUB_CLIENT_ID?.trim()
 const githubSecret = process.env.GITHUB_CLIENT_SECRET?.trim()
 if (!githubId || !githubSecret) {
-  console.warn(
+  console.info(
     "auth: GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET missing — GitHub OAuth is disabled.",
   )
 }

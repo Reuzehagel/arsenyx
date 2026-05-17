@@ -85,8 +85,8 @@ async function loadBuilds(
     return await apiFetch<BuildListResponse>(path)
   } catch (err) {
     if (authRequired && err instanceof ApiError && err.status === 401)
-      throw new Error("unauthorized")
-    throw new Error("failed to load builds")
+      throw new Error("unauthorized", { cause: err })
+    throw new Error("failed to load builds", { cause: err })
   }
 }
 

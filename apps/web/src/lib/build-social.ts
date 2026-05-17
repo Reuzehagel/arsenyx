@@ -18,8 +18,8 @@ async function send<T>(
     )
   } catch (err) {
     if (err instanceof ApiError && err.status === 401)
-      throw new Error("unauthorized")
-    if (err instanceof ApiError) throw new Error(`failed_${kind}`)
+      throw new Error("unauthorized", { cause: err })
+    if (err instanceof ApiError) throw new Error(`failed_${kind}`, { cause: err })
     throw err
   }
 }

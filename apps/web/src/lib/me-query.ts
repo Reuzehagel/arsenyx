@@ -51,8 +51,8 @@ export const myApiKeysQuery = () =>
         return await apiFetch<MyApiKeysResponse>(`/me/api-keys`)
       } catch (err) {
         if (err instanceof ApiError && err.status === 401)
-          throw new Error("unauthorized")
-        throw new Error("failed to load API keys")
+          throw new Error("unauthorized", { cause: err })
+        throw new Error("failed to load API keys", { cause: err })
       }
     },
     retry: false,

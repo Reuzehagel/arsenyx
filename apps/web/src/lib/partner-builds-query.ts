@@ -22,8 +22,8 @@ export const partnerBuildsQuery = (slug: string) =>
           `/builds/${encodeURIComponent(slug)}/partners`,
         )
         return data.builds
-      } catch {
-        throw new Error("failed_load_partners")
+      } catch (err) {
+        throw new Error("failed_load_partners", { cause: err })
       }
     },
   })
@@ -37,8 +37,8 @@ export function useBuildSearch(q: string) {
           `/builds/search?q=${encodeURIComponent(q)}`,
         )
         return data.builds
-      } catch {
-        throw new Error("failed_search")
+      } catch (err) {
+        throw new Error("failed_search", { cause: err })
       }
     },
     enabled: q.trim().length >= 2,
@@ -91,8 +91,8 @@ export function useUnlinkPartner(ownerSlug: string) {
           `/builds/${encodeURIComponent(ownerSlug)}/partners/${encodeURIComponent(partnerSlug)}`,
           { method: "DELETE" },
         )
-      } catch {
-        throw new Error("failed_unlink")
+      } catch (err) {
+        throw new Error("failed_unlink", { cause: err })
       }
     },
     onMutate: async (partnerSlug) => {

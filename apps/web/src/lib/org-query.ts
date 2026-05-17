@@ -76,8 +76,8 @@ export const orgsDirectoryQuery = (page: number) =>
       const qs = page > 1 ? `?page=${page}` : ""
       try {
         return await apiFetch<OrgDirectoryResponse>(`/orgs/public${qs}`)
-      } catch {
-        throw new Error("failed to load organizations")
+      } catch (err) {
+        throw new Error("failed to load organizations", { cause: err })
       }
     },
   })
@@ -90,7 +90,7 @@ export const orgQuery = (slug: string) =>
         return await apiFetch<OrgProfile>(`/orgs/${encodeURIComponent(slug)}`)
       } catch (err) {
         if (err instanceof ApiError && err.status === 404) throw notFound()
-        throw new Error("failed to load organization")
+        throw new Error("failed to load organization", { cause: err })
       }
     },
   })
@@ -111,8 +111,8 @@ export const orgBuildsQuery = (slug: string, params: BuildListParams) =>
         return await apiFetch<BuildListResponse>(
           `/orgs/${encodeURIComponent(slug)}/builds${qs}`,
         )
-      } catch {
-        throw new Error("failed to load builds")
+      } catch (err) {
+        throw new Error("failed to load builds", { cause: err })
       }
     },
   })
@@ -125,8 +125,8 @@ export const myOrgsQuery = () =>
         return await apiFetch<MyOrgsResponse>(`/orgs`)
       } catch (err) {
         if (err instanceof ApiError && err.status === 401)
-          throw new Error("unauthorized")
-        throw new Error("failed to load organizations")
+          throw new Error("unauthorized", { cause: err })
+        throw new Error("failed to load organizations", { cause: err })
       }
     },
     retry: false,
