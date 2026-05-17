@@ -51,6 +51,11 @@ export function normalizeMods(rawMods: Mod[]): Mod[] {
         return false
       if (uniqueName.includes("/Nemesis/")) return false
       if (uniqueName.endsWith("SubMod")) return false
+      // Unused upstream entry that ships as a second "Pressure Point" with
+      // +200% Melee Damage + +120% combo count chance. Not a real in-game
+      // mod; @wfcd/items keeps it for parity with the game files.
+      if (uniqueName === "/Lotus/Upgrades/Mods/Melee/WeaponMeleeDamageOnHeavyKillMod")
+        return false
 
       return true
     })
@@ -109,6 +114,8 @@ export function isStanceMod(mod: Pick<Mod, "type">): boolean {
 }
 
 function isMeleeCompat(compatName: string, modType: string) {
+  // Arch-Melee shares the substring "melee" but uses its own mod pool.
+  if (compatName === "archmelee" || modType.includes("arch-melee")) return false
   return (
     compatName === "melee" ||
     modType.includes("melee") ||

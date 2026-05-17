@@ -96,16 +96,16 @@ export function getModAssetUrl(rarity: ModRarity, asset: AssetKind): string {
   const config = RARITY_CONFIG[rarity]
 
   if (asset === "RankCompleteLine") {
-    return `/mod-components/${config.folder}/RankCompleteLine.png`
+    return `/mod-components/${config.folder}/RankCompleteLine.webp`
   }
 
   // Amalgam borrows Legendary corner/side lights and Silver lower tab/backer.
   if (rarity === "Amalgam") {
     if (asset === "CornerLights" || asset === "SideLight") {
-      return `/mod-components/${config.folder}/Legendary${asset}.png`
+      return `/mod-components/${config.folder}/Legendary${asset}.webp`
     }
     if (asset === "LowerTab" || asset === "TopRightBacker") {
-      return `/mod-components/${config.folder}/Silver${asset}.png`
+      return `/mod-components/${config.folder}/Silver${asset}.webp`
     }
   }
 
@@ -114,15 +114,15 @@ export function getModAssetUrl(rarity: ModRarity, asset: AssetKind): string {
     rarity === "Galvanized" &&
     (asset === "LowerTab" || asset === "TopRightBacker")
   ) {
-    return `/mod-components/${config.folder}/Silver${asset}.png`
+    return `/mod-components/${config.folder}/Silver${asset}.webp`
   }
 
   // Riven uses Silver background texture.
   if (rarity === "Riven" && asset === "Background") {
-    return `/mod-components/${config.folder}/SilverBackground.png`
+    return `/mod-components/${config.folder}/SilverBackground.webp`
   }
 
-  return `/mod-components/${config.folder}/${config.prefix}${asset}.png`
+  return `/mod-components/${config.folder}/${config.prefix}${asset}.webp`
 }
 
 export function getRarityColor(rarity: ModRarity): string {

@@ -204,6 +204,19 @@ export function DragController({
         targetRef.current = t
         lastX = e.clientX
         lastY = e.clientY
+        // Take pointer capture only once the drag actually activates.
+        // Capturing on pointerdown redirects the synthesized click to the
+        // wrapper element, bypassing the inner ModCard's onClick — which
+        // is exactly what broke click-to-place after the drag PR landed.
+        try {
+          pending.sourceEl.setPointerCapture(pending.pointerId)
+          captureRef.current = {
+            el: pending.sourceEl,
+            pointerId: pending.pointerId,
+          }
+        } catch {
+          // Capture is best-effort; window listeners still receive events.
+        }
         setActiveSource(pending.source)
         setTarget(t)
         armClickSwallow()
@@ -273,12 +286,11 @@ export function DragController({
     // Defer touch — touch-scroll inside the pool grid needs the gesture
     // for itself. Click-to-place / arrow-key nav still cover touch users.
     if (e.pointerType === "touch") return
-    // Suppress the browser's native pointerdown side effects: text
-    // selection, drag-to-select, and the default image-drag (mod cards
-    // contain <img> elements). Without this, a previous selection or
-    // image-drag will hijack the gesture and our pointer-based drag
-    // never gets clean signals.
-    e.preventDefault()
+    // Don't preventDefault here — doing so on pointerdown suppresses the
+    // synthesized click event (per the Pointer Events spec), which breaks
+    // click-to-place when the gesture stays under the activation distance.
+    // Native image-drag is suppressed via `onDragStart` on the source
+    // wrappers; text selection is held off by `select-none` on the editor.
     const el = e.currentTarget as HTMLElement
     pendingRef.current = {
       source,
@@ -287,14 +299,9 @@ export function DragController({
       startY: e.clientY,
       pointerId: e.pointerId,
     }
-    // Capture so pointerup fires reliably even if the user releases
-    // outside the source element or window.
-    try {
-      el.setPointerCapture(e.pointerId)
-      captureRef.current = { el, pointerId: e.pointerId }
-    } catch {
-      // Capture is best-effort; window listeners still receive events.
-    }
+    // Pointer capture is deferred to drag activation (see onPointerMove).
+    // Window-level pointermove/pointerup listeners cover the pre-activation
+    // window without redirecting the click target.
   }, [])
 
   const activeSourceSlot =

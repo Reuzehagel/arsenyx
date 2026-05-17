@@ -131,6 +131,10 @@ export function ModSlot({
           onClick={readOnly ? undefined : onClick}
           onContextMenu={handleContextMenu}
           onPointerDown={canDrag ? onDragPointerDown : undefined}
+          // Mod cards contain <img> elements which the browser starts a
+          // native drag-and-drop on by default; suppress it so our
+          // pointer-based drag controller owns the gesture.
+          onDragStart={(e) => e.preventDefault()}
           // Suppress hover state during any active drag — keeps the
           // rank-hotkey enabled flag from flipping (and re-rendering this
           // slot) as the drag ghost sweeps across slots.
@@ -184,7 +188,7 @@ export function ModSlot({
                 rank={rank}
                 disableHover={popoverOpen || isAnyDragging}
                 drainOverride={
-                  kind === "aura"
+                  kind === "aura" || kind === "stance"
                     ? auraBonusForMod(mod, rank, effective)
                     : effectiveDrainForMod(mod, rank, effective)
                 }

@@ -64,7 +64,15 @@ const STAT_NAME_MAP: Record<string, StatType> = {
   magnetic: "magnetic",
   viral: "viral",
   corrosive: "corrosive",
-  "melee damage": "melee_damage",
+  // Weapon-type-specific base-damage stats (Pressure Point, Sniper Rifle
+  // damage rivens, etc.) act as the generic base-damage multiplier for
+  // their weapon class. The mod search pool already gates compatibility,
+  // so aliasing to "damage" can't leak across weapon types.
+  "melee damage": "damage",
+  "rifle damage": "damage",
+  "shotgun damage": "damage",
+  "pistol damage": "damage",
+  "sniper rifle damage": "damage",
   "tau resistance": "tau_resistance",
   "status duration": "status_duration",
   "damage to grineer": "damage_vs_grineer",

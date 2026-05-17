@@ -23,19 +23,40 @@ import {
 
 const NUMBER_PATTERN = /(\d+(\.\d+)?)/g
 
-// `Background` and `LowerTab` PNGs are only referenced by the expanded card,
-// so on first hover the browser fetches them cold — visible as a delay before
-// the lower stat panel paints. Warm them up as soon as a compact card of a
-// given rarity mounts, so they're in the HTTP cache by the time the user
-// hovers. Module-level set dedupes across all card instances.
-const preloadedRarities = new Set<ModRarity>()
+// Frame PNGs (FrameTop/Bottom + the expanded-only Background/LowerTab) get
+// fetched cold the first time a card of a given rarity renders, which shows
+// up as a visible "frame pops in" delay. Warm them up the moment any card
+// mounts, regardless of rarity — the user is in the editor, so all eight
+// rarity sets are likely to appear within seconds.
+const ALL_RARITIES: ModRarity[] = [
+  "Common",
+  "Uncommon",
+  "Rare",
+  "Legendary",
+  "Peculiar",
+  "Riven",
+  "Amalgam",
+  "Galvanized",
+]
 
-function preloadExpandedAssets(rarity: ModRarity) {
-  if (preloadedRarities.has(rarity)) return
-  preloadedRarities.add(rarity)
-  for (const asset of ["Background", "LowerTab"] as const) {
-    const img = new Image()
-    img.src = getModAssetUrl(rarity, asset)
+const FRAME_ASSETS = [
+  "FrameTop",
+  "FrameBottom",
+  "Background",
+  "LowerTab",
+  "TopRightBacker",
+] as const
+
+let allRaritiesPreloaded = false
+
+function preloadAllRarityFrames() {
+  if (allRaritiesPreloaded) return
+  allRaritiesPreloaded = true
+  for (const rarity of ALL_RARITIES) {
+    for (const asset of FRAME_ASSETS) {
+      const img = new Image()
+      img.src = getModAssetUrl(rarity, asset)
+    }
   }
 }
 
@@ -168,8 +189,8 @@ function CompactModCard({
     (mod.rivenStats ? (mod.baseDrain ?? 0) : (mod.baseDrain ?? 0) + rank)
 
   useEffect(() => {
-    preloadExpandedAssets(rarity)
-  }, [rarity])
+    preloadAllRarityFrames()
+  }, [])
 
   return (
     <ModCardFrame rarity={rarity} variant="compact" vtPrefix={vtPrefix}>

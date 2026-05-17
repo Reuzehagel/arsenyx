@@ -149,6 +149,7 @@ export interface CapacityResult {
   max: number
   base: number
   auraBonus: number
+  stanceBonus: number
 }
 
 export function calculateCapacity(input: CapacityInput): CapacityResult {
@@ -187,9 +188,13 @@ export function calculateCapacity(input: CapacityInput): CapacityResult {
       effectivePolarity(exilusInnate, formaPolarities.exilus),
     )
   }
+  // Stances act like auras: their drain is negative, surfaced as a capacity
+  // bonus rather than a cost. At max rank: +5 with no/universal polarity,
+  // +10 on matching polarity, +4 on mismatch — same scaling as aura mods.
+  let stanceBonus = 0
   const stance = placed.stance
   if (stance) {
-    used += effectiveDrainForMod(
+    stanceBonus = auraBonusForMod(
       stance.mod,
       stance.rank,
       effectivePolarity(stanceInnate, formaPolarities.stance),
@@ -206,7 +211,13 @@ export function calculateCapacity(input: CapacityInput): CapacityResult {
     )
   }
 
-  return { used, max: base + auraBonus, base, auraBonus }
+  return {
+    used,
+    max: base + auraBonus + stanceBonus,
+    base,
+    auraBonus,
+    stanceBonus,
+  }
 }
 
 export interface FormaCountInput {

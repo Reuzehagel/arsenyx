@@ -557,6 +557,10 @@ const PoolCardCell = memo(function PoolCardCell({
       tabIndex={-1}
       onKeyDown={isFocusable ? handleKeyDown : undefined}
       onPointerDown={handlePointerDown}
+      // Mod cards contain <img> elements which the browser will start a
+      // native drag-and-drop on by default. We suppress that here so our
+      // pointer-based drag controller owns the gesture cleanly.
+      onDragStart={(e) => e.preventDefault()}
       className={cn(
         "outline-none",
         isFocusable && "focus-visible:brightness-125",

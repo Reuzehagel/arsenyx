@@ -26,11 +26,11 @@ deploy-api:
 build-items-index:
     bun run build:items
 
-# Kill dev servers on ports 5173 (Vite), 8787 (Hono).
+# Kill dev servers on ports 5173/5174 (Vite + fallback), 8787 (Hono).
 [unix]
 stop:
     #!/usr/bin/env sh
-    for port in 5173 8787; do
+    for port in 5173 5174 8787; do
         if fuser -k "$port/tcp" >/dev/null 2>&1; then
             echo "Stopped port $port"
         else
@@ -38,10 +38,10 @@ stop:
         fi
     done
 
-# Kill dev servers on ports 5173 (Vite), 8787 (Hono).
+# Kill dev servers on ports 5173/5174 (Vite + fallback), 8787 (Hono).
 [windows]
 stop:
-    @foreach ($port in 5173, 8787) { $pids = (Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue).OwningProcess | Select-Object -Unique; if ($pids) { Write-Host "Stopping port $port (PID $($pids -join ', '))"; $pids | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue } } else { Write-Host "Port $port already free" } }
+    @foreach ($port in 5173, 5174, 8787) { $pids = (Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue).OwningProcess | Select-Object -Unique; if ($pids) { Write-Host "Stopping port $port (PID $($pids -join ', '))"; $pids | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue } } else { Write-Host "Port $port already free" } }
 
 # Interactive first-run setup. Asks for a Neon DATABASE_URL, generates a
 # BETTER_AUTH_SECRET, pushes the schema, and seeds an admin@admin.com / admin
