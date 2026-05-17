@@ -149,7 +149,6 @@ export interface CapacityResult {
   max: number
   base: number
   auraBonus: number
-  stanceBonus: number
 }
 
 export function calculateCapacity(input: CapacityInput): CapacityResult {
@@ -216,7 +215,6 @@ export function calculateCapacity(input: CapacityInput): CapacityResult {
     max: base + auraBonus + stanceBonus,
     base,
     auraBonus,
-    stanceBonus,
   }
 }
 
