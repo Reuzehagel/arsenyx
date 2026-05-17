@@ -61,6 +61,7 @@ import {
   type PublishVisibility,
   toPolarity,
   useArcaneSlots,
+  slotKind,
   useBuildSlots,
   useSlotKeyboardNav,
   type ModSlotKind,
@@ -212,7 +213,7 @@ function EditorShell() {
   const normalSlotCount = getNormalSlotCount(category)
   const auraSlotCount = getAuraSlotCount(category, item)
   const showExilus = hasExilusSlot(category)
-  const showStance = hasStanceSlot(item)
+  const showStance = hasStanceSlot(item, category)
   const slots = useBuildSlots(normalSlotCount, {
     placed: savedData.slots,
     formaPolarities: savedData.formaPolarities,
@@ -689,7 +690,9 @@ function EditorShell() {
             usedModNames={slots.usedNames}
             onSelect={handleModSelect}
             helminth={helminth}
-            selectedSlotKind={selectedSlotKind(slots.selected)}
+            selectedSlotKind={
+              slots.selected ? slotKind(slots.selected) : undefined
+            }
           />
         </div>
 
@@ -929,14 +932,6 @@ function EditorHeader({
       </div>
     </div>
   )
-}
-
-function selectedSlotKind(id: SlotId | null): ModSlotKind | undefined {
-  if (!id) return undefined
-  if (id === "exilus") return "exilus"
-  if (id === "stance") return "stance"
-  if (id.startsWith("aura-")) return "aura"
-  return undefined
 }
 
 function SearchPanel({

@@ -186,7 +186,7 @@ export function getModsForItem(
 ): Mod[] {
   const itemType = item.type
   const itemName = item.name
-  const meleeClass = item.meleeClass
+  const meleeClass = item.meleeClass?.toLowerCase()
 
   if (!itemType) {
     const category = item.category?.toLowerCase()
@@ -231,7 +231,7 @@ export function getModsForItem(
       // the weapon's class, only offer stances matching it; fail open if not.
       if (modType === "stance mod") {
         if (!meleeClass) return true
-        return mod.compatName === meleeClass
+        return compatName === meleeClass
       }
       if (
         modType.includes("melee") &&

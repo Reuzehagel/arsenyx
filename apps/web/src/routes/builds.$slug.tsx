@@ -326,7 +326,7 @@ function BuildViewerBodyInner({
   )
 
   const auraSlotCount = getAuraSlotCount(category, item)
-  const showStance = hasStanceSlot(item)
+  const showStance = hasStanceSlot(item, category)
   const slots = useBuildSlots(normalSlotCount, {
     placed: saved.slots,
     formaPolarities: saved.formaPolarities,

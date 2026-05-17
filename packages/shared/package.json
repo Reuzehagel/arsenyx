@@ -7,5 +7,11 @@
     ".": "./src/index.ts",
     "./warframe": "./src/warframe/index.ts",
     "./warframe/*": "./src/warframe/*.ts"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.5"
   }
 }

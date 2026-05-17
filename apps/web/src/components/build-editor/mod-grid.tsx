@@ -109,7 +109,7 @@ export function ModGrid({
 }) {
   const auraSlotCount = getAuraSlotCount(category, item)
   const showExilus = hasExilusSlot(category)
-  const showStance = hasStanceSlot(item)
+  const showStance = hasStanceSlot(item, category)
 
   const auraPolarities = getAuraPolarities(item, auraSlotCount)
   const polarities = item.polarities ?? []

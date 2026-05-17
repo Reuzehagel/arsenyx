@@ -19,7 +19,7 @@ export function isExilusCompatible(mod: Mod): boolean {
   return Boolean(mod.isExilus || mod.isUtility)
 }
 
-function slotKind(id: SlotId): ModSlotKind {
+export function slotKind(id: SlotId): ModSlotKind {
   if (id.startsWith("aura-")) return "aura"
   if (id === "exilus") return "exilus"
   if (id === "stance") return "stance"
