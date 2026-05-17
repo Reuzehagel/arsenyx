@@ -147,11 +147,15 @@ export function useHotkey(
   // Without this, callers like `useRankHotkey` (whose `enabled` flips on
   // hover) would attach/detach window listeners on every mouse-enter/leave.
   const handlerRef = useRef(handler)
-  handlerRef.current = handler
   const matcherRef = useRef(matcher)
-  matcherRef.current = matcher
   const optsRef = useRef({ enabled, allowInEditable, preventDefault })
-  optsRef.current = { enabled, allowInEditable, preventDefault }
+  // React 19 forbids ref writes during render; the listener below only reads
+  // these refs inside event callbacks, which always fire after this commit.
+  useEffect(() => {
+    handlerRef.current = handler
+    matcherRef.current = matcher
+    optsRef.current = { enabled, allowInEditable, preventDefault }
+  })
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
-import { API_URL } from "@/lib/constants"
+import { apiErrorMessage, apiFetch } from "@/lib/api-client"
 import type { OrgProfile, OrgRole } from "@/lib/org-query"
 
 type CreateOrgInput = {
@@ -12,27 +12,20 @@ type CreateOrgInput = {
 
 type CreateOrgResponse = { id: string; slug: string }
 
-async function readError(r: Response): Promise<string> {
-  try {
-    const j = (await r.json()) as { error?: string }
-    return j.error ?? `http_${r.status}`
-  } catch {
-    return `http_${r.status}`
-  }
-}
+const orgError = (err: unknown) => apiErrorMessage(err, "http_unknown")
 
 export function useCreateOrg() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (input: CreateOrgInput): Promise<CreateOrgResponse> => {
-      const r = await fetch(`${API_URL}/orgs`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(input),
-      })
-      if (!r.ok) throw new Error(await readError(r))
-      return r.json()
+      try {
+        return await apiFetch<CreateOrgResponse>(`/orgs`, {
+          method: "POST",
+          json: input,
+        })
+      } catch (err) {
+        throw new Error(orgError(err))
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["orgs", "mine"] })
@@ -51,14 +44,14 @@ export function useUpdateOrg(slug: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (input: UpdateOrgInput): Promise<CreateOrgResponse> => {
-      const r = await fetch(`${API_URL}/orgs/${encodeURIComponent(slug)}`, {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(input),
-      })
-      if (!r.ok) throw new Error(await readError(r))
-      return r.json()
+      try {
+        return await apiFetch<CreateOrgResponse>(
+          `/orgs/${encodeURIComponent(slug)}`,
+          { method: "PATCH", json: input },
+        )
+      } catch (err) {
+        throw new Error(orgError(err))
+      }
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["org", slug.toLowerCase()] })
@@ -74,11 +67,13 @@ export function useDeleteOrg(slug: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (): Promise<void> => {
-      const r = await fetch(`${API_URL}/orgs/${encodeURIComponent(slug)}`, {
-        method: "DELETE",
-        credentials: "include",
-      })
-      if (!r.ok && r.status !== 204) throw new Error(await readError(r))
+      try {
+        await apiFetch<void>(`/orgs/${encodeURIComponent(slug)}`, {
+          method: "DELETE",
+        })
+      } catch (err) {
+        throw new Error(orgError(err))
+      }
     },
     onSuccess: () => {
       qc.removeQueries({ queryKey: ["org", slug.toLowerCase()] })
@@ -92,16 +87,14 @@ export function useAddOrgMember(slug: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (username: string): Promise<void> => {
-      const r = await fetch(
-        `${API_URL}/orgs/${encodeURIComponent(slug)}/members`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username }),
-        },
-      )
-      if (!r.ok) throw new Error(await readError(r))
+      try {
+        await apiFetch<void>(
+          `/orgs/${encodeURIComponent(slug)}/members`,
+          { method: "POST", json: { username } },
+        )
+      } catch (err) {
+        throw new Error(orgError(err))
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["org", slug.toLowerCase()] })
@@ -117,16 +110,14 @@ export function useUpdateOrgMemberRole(slug: string) {
       userId: string
       role: OrgRole
     }): Promise<void> => {
-      const r = await fetch(
-        `${API_URL}/orgs/${encodeURIComponent(slug)}/members/${encodeURIComponent(input.userId)}`,
-        {
-          method: "PATCH",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ role: input.role }),
-        },
-      )
-      if (!r.ok) throw new Error(await readError(r))
+      try {
+        await apiFetch<void>(
+          `/orgs/${encodeURIComponent(slug)}/members/${encodeURIComponent(input.userId)}`,
+          { method: "PATCH", json: { role: input.role } },
+        )
+      } catch (err) {
+        throw new Error(orgError(err))
+      }
     },
     onMutate: async (input) => {
       await qc.cancelQueries({ queryKey: key })
@@ -154,11 +145,14 @@ export function useRemoveOrgMember(slug: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (userId: string): Promise<void> => {
-      const r = await fetch(
-        `${API_URL}/orgs/${encodeURIComponent(slug)}/members/${encodeURIComponent(userId)}`,
-        { method: "DELETE", credentials: "include" },
-      )
-      if (!r.ok && r.status !== 204) throw new Error(await readError(r))
+      try {
+        await apiFetch<void>(
+          `/orgs/${encodeURIComponent(slug)}/members/${encodeURIComponent(userId)}`,
+          { method: "DELETE" },
+        )
+      } catch (err) {
+        throw new Error(orgError(err))
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["org", slug.toLowerCase()] })

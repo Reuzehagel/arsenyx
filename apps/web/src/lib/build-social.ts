@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
+import { apiFetch, ApiError } from "@/lib/api-client"
 import type { BuildDetail } from "@/lib/build-query"
-import { API_URL } from "@/lib/constants"
 
 type LikeResponse = { hasLiked: boolean; likeCount: number }
 type BookmarkResponse = { hasBookmarked: boolean; bookmarkCount: number }
@@ -11,13 +11,17 @@ async function send<T>(
   kind: "like" | "bookmark",
   method: "POST" | "DELETE",
 ): Promise<T> {
-  const r = await fetch(
-    `${API_URL}/builds/${encodeURIComponent(slug)}/${kind}`,
-    { method, credentials: "include" },
-  )
-  if (r.status === 401) throw new Error("unauthorized")
-  if (!r.ok) throw new Error(`failed_${kind}`)
-  return r.json()
+  try {
+    return await apiFetch<T>(
+      `/builds/${encodeURIComponent(slug)}/${kind}`,
+      { method },
+    )
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401)
+      throw new Error("unauthorized", { cause: err })
+    if (err instanceof ApiError) throw new Error(`failed_${kind}`, { cause: err })
+    throw err
+  }
 }
 
 export function useToggleLike(slug: string) {

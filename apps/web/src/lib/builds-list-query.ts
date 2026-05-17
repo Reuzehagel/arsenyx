@@ -1,6 +1,6 @@
 import { keepPreviousData, queryOptions } from "@tanstack/react-query"
 
-import { API_URL } from "@/lib/constants"
+import { apiFetch, ApiError } from "@/lib/api-client"
 
 /** Mirrors LIST_LIMIT in apps/api/src/routes/_build-list.ts. Skeleton bone
  *  counts use this so the placeholder grid matches the loaded grid. */
@@ -77,32 +77,32 @@ function buildQueryString(params: BuildListParams, defaultSort: BuildListSort) {
   return str ? `?${str}` : ""
 }
 
+async function loadBuilds(
+  path: string,
+  authRequired: boolean,
+): Promise<BuildListResponse> {
+  try {
+    return await apiFetch<BuildListResponse>(path)
+  } catch (err) {
+    if (authRequired && err instanceof ApiError && err.status === 401)
+      throw new Error("unauthorized", { cause: err })
+    throw new Error("failed to load builds", { cause: err })
+  }
+}
+
 export const publicBuildsQuery = (params: BuildListParams) =>
   queryOptions({
     queryKey: ["builds", "public", params],
-    queryFn: async (): Promise<BuildListResponse> => {
-      const r = await fetch(
-        `${API_URL}/builds${buildQueryString(params, "newest")}`,
-        { credentials: "include" },
-      )
-      if (!r.ok) throw new Error("failed to load builds")
-      return r.json()
-    },
+    queryFn: () =>
+      loadBuilds(`/builds${buildQueryString(params, "newest")}`, false),
     placeholderData: keepPreviousData,
   })
 
 export const myBuildsQuery = (params: BuildListParams) =>
   queryOptions({
     queryKey: ["builds", "mine", params],
-    queryFn: async (): Promise<BuildListResponse> => {
-      const r = await fetch(
-        `${API_URL}/builds/mine${buildQueryString(params, "updated")}`,
-        { credentials: "include" },
-      )
-      if (r.status === 401) throw new Error("unauthorized")
-      if (!r.ok) throw new Error("failed to load builds")
-      return r.json()
-    },
+    queryFn: () =>
+      loadBuilds(`/builds/mine${buildQueryString(params, "updated")}`, true),
     placeholderData: keepPreviousData,
     retry: false,
   })
@@ -110,15 +110,11 @@ export const myBuildsQuery = (params: BuildListParams) =>
 export const bookmarkedBuildsQuery = (params: BuildListParams) =>
   queryOptions({
     queryKey: ["builds", "bookmarks", params],
-    queryFn: async (): Promise<BuildListResponse> => {
-      const r = await fetch(
-        `${API_URL}/builds/bookmarks${buildQueryString(params, "newest")}`,
-        { credentials: "include" },
-      )
-      if (r.status === 401) throw new Error("unauthorized")
-      if (!r.ok) throw new Error("failed to load builds")
-      return r.json()
-    },
+    queryFn: () =>
+      loadBuilds(
+        `/builds/bookmarks${buildQueryString(params, "newest")}`,
+        true,
+      ),
     placeholderData: keepPreviousData,
     retry: false,
   })

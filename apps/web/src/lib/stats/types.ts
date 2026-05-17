@@ -189,6 +189,15 @@ export const BASE_ELEMENTS: DamageType[] = [
   "toxin",
 ]
 
+export const COMBINED_ELEMENTS: DamageType[] = [
+  "blast",
+  "radiation",
+  "gas",
+  "magnetic",
+  "viral",
+  "corrosive",
+]
+
 export const DAMAGE_TYPE_LABELS: Record<DamageType, string> = {
   impact: "Impact",
   puncture: "Puncture",

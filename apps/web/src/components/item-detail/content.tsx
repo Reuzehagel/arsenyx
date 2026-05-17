@@ -57,7 +57,7 @@ export function ItemDetailContent({
               />
             </div>
             <div className="flex min-w-0 flex-1 flex-col gap-3">
-              <div className="text-muted-foreground text-xs uppercase tracking-[0.2em]">
+              <div className="text-muted-foreground text-xs tracking-[0.2em] uppercase">
                 {getCategoryLabel(category)}
               </div>
               <div className="flex flex-wrap items-center gap-3">
@@ -179,10 +179,7 @@ function ItemMeta({ item }: { item: DetailItem }) {
   )
 }
 
-const WARFRAME_CATEGORIES = new Set<BrowseCategory>([
-  "warframes",
-  "necramechs",
-])
+const WARFRAME_CATEGORIES = new Set<BrowseCategory>(["warframes", "necramechs"])
 const WEAPON_CATEGORIES = new Set<BrowseCategory>([
   "primary",
   "secondary",

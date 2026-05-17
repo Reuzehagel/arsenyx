@@ -1,11 +1,11 @@
 import { queryOptions } from "@tanstack/react-query"
 import { notFound } from "@tanstack/react-router"
 
+import { apiFetch, ApiError } from "@/lib/api-client"
 import {
   type BuildListParams,
   type BuildListResponse,
 } from "@/lib/builds-list-query"
-import { API_URL } from "@/lib/constants"
 
 export type OrgRole = "ADMIN" | "MEMBER"
 
@@ -74,11 +74,11 @@ export const orgsDirectoryQuery = (page: number) =>
     queryKey: ["orgs", "directory", page],
     queryFn: async (): Promise<OrgDirectoryResponse> => {
       const qs = page > 1 ? `?page=${page}` : ""
-      const r = await fetch(`${API_URL}/orgs/public${qs}`, {
-        credentials: "include",
-      })
-      if (!r.ok) throw new Error("failed to load organizations")
-      return r.json()
+      try {
+        return await apiFetch<OrgDirectoryResponse>(`/orgs/public${qs}`)
+      } catch (err) {
+        throw new Error("failed to load organizations", { cause: err })
+      }
     },
   })
 
@@ -86,12 +86,12 @@ export const orgQuery = (slug: string) =>
   queryOptions({
     queryKey: ["org", slug.toLowerCase()],
     queryFn: async (): Promise<OrgProfile> => {
-      const r = await fetch(`${API_URL}/orgs/${encodeURIComponent(slug)}`, {
-        credentials: "include",
-      })
-      if (r.status === 404) throw notFound()
-      if (!r.ok) throw new Error("failed to load organization")
-      return r.json()
+      try {
+        return await apiFetch<OrgProfile>(`/orgs/${encodeURIComponent(slug)}`)
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 404) throw notFound()
+        throw new Error("failed to load organization", { cause: err })
+      }
     },
   })
 
@@ -107,12 +107,13 @@ export const orgBuildsQuery = (slug: string, params: BuildListParams) =>
       if (params.hasGuide) q.set("hasGuide", "1")
       if (params.hasShards) q.set("hasShards", "1")
       const qs = q.toString() ? `?${q.toString()}` : ""
-      const r = await fetch(
-        `${API_URL}/orgs/${encodeURIComponent(slug)}/builds${qs}`,
-        { credentials: "include" },
-      )
-      if (!r.ok) throw new Error("failed to load builds")
-      return r.json()
+      try {
+        return await apiFetch<BuildListResponse>(
+          `/orgs/${encodeURIComponent(slug)}/builds${qs}`,
+        )
+      } catch (err) {
+        throw new Error("failed to load builds", { cause: err })
+      }
     },
   })
 
@@ -120,10 +121,13 @@ export const myOrgsQuery = () =>
   queryOptions({
     queryKey: ["orgs", "mine"],
     queryFn: async (): Promise<MyOrgsResponse> => {
-      const r = await fetch(`${API_URL}/orgs`, { credentials: "include" })
-      if (r.status === 401) throw new Error("unauthorized")
-      if (!r.ok) throw new Error("failed to load organizations")
-      return r.json()
+      try {
+        return await apiFetch<MyOrgsResponse>(`/orgs`)
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401)
+          throw new Error("unauthorized", { cause: err })
+        throw new Error("failed to load organizations", { cause: err })
+      }
     },
     retry: false,
   })

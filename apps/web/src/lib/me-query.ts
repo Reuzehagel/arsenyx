@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query"
 
+import { apiErrorMessage, apiFetch, ApiError } from "@/lib/api-client"
 import { API_URL } from "@/lib/constants"
 
 export async function downloadMyBuildsExport(): Promise<void> {
@@ -42,25 +43,17 @@ export type CreateApiKeyResponse = {
   apiKey: ApiKeySummary
 }
 
-async function readError(r: Response): Promise<string> {
-  try {
-    const data = (await r.json()) as { error?: string; message?: string }
-    return data.message ?? data.error ?? `Request failed (${r.status})`
-  } catch {
-    return `Request failed (${r.status})`
-  }
-}
-
 export const myApiKeysQuery = () =>
   queryOptions({
     queryKey: ["me", "api-keys"],
     queryFn: async (): Promise<MyApiKeysResponse> => {
-      const r = await fetch(`${API_URL}/me/api-keys`, {
-        credentials: "include",
-      })
-      if (r.status === 401) throw new Error("unauthorized")
-      if (!r.ok) throw new Error("failed to load API keys")
-      return r.json()
+      try {
+        return await apiFetch<MyApiKeysResponse>(`/me/api-keys`)
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401)
+          throw new Error("unauthorized", { cause: err })
+        throw new Error("failed to load API keys", { cause: err })
+      }
     },
     retry: false,
   })
@@ -70,20 +63,22 @@ export async function createApiKey(input: {
   expiresAt: string | null
   scopes?: string[]
 }): Promise<CreateApiKeyResponse> {
-  const r = await fetch(`${API_URL}/me/api-keys`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  })
-  if (!r.ok) throw new Error(await readError(r))
-  return r.json()
+  try {
+    return await apiFetch<CreateApiKeyResponse>(`/me/api-keys`, {
+      method: "POST",
+      json: input,
+    })
+  } catch (err) {
+    throw new Error(apiErrorMessage(err, "Request failed"))
+  }
 }
 
 export async function revokeApiKey(id: string): Promise<void> {
-  const r = await fetch(`${API_URL}/me/api-keys/${encodeURIComponent(id)}`, {
-    method: "DELETE",
-    credentials: "include",
-  })
-  if (!r.ok) throw new Error(await readError(r))
+  try {
+    await apiFetch<void>(`/me/api-keys/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    })
+  } catch (err) {
+    throw new Error(apiErrorMessage(err, "Request failed"))
+  }
 }

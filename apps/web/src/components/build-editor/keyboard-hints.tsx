@@ -2,8 +2,8 @@ import { X } from "lucide-react"
 import { useState } from "react"
 
 import { openHotkeyCheatSheet } from "@/components/hotkey-cheat-sheet"
-import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import { KbdKey } from "@/components/kbd-key"
+import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import { cn } from "@/lib/utils"
 
 const STORAGE_KEY = "arsenyx.hotkeyHintDismissed"

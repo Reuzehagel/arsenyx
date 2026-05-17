@@ -1,10 +1,23 @@
 import {
   getArcanesForCategory,
   getArcanesForSlot,
+  type ArcaneSlotType,
 } from "@arsenyx/shared/warframe/arcanes"
 import type { Arcane } from "@arsenyx/shared/warframe/types"
 
 import type { BrowseCategory, DetailItem } from "@/lib/warframe"
+
+/** Resolve which arcane pool an exalted weapon draws from. Mirrors the
+ * mod-pool logic in `getModsForItem`: bows take primary arcanes,
+ * trigger-bearing weapons (Balefire/Regulators) take secondary, everything
+ * else (Exalted Blade etc.) takes melee. */
+function getExaltedArcaneSlot(
+  item: Pick<DetailItem, "name" | "trigger">,
+): ArcaneSlotType {
+  if (item.name?.toLowerCase().includes("bow")) return "primary"
+  if (item.trigger) return "secondary"
+  return "melee"
+}
 
 /** Arcane slot count per category. Within `archwing`, only arch-guns
  * have arcane slots (slot 0 = Primary Arcane, slot 1 = Secondary Arcane —
@@ -20,6 +33,7 @@ export function getArcaneSlotCount(
     case "primary":
     case "secondary":
     case "melee":
+    case "exalted-weapons":
       return 1
     case "archwing":
       return itemType === "Arch-Gun" ? 2 : 0
@@ -40,6 +54,7 @@ export function getArcaneSlotConfig(
   allArcanes: Arcane[],
   category: BrowseCategory,
   count: number,
+  item?: Pick<DetailItem, "name" | "trigger">,
 ): ArcaneSlotConfig {
   if (count === 0) return { options: [] }
   if (category === "archwing") {
@@ -50,6 +65,10 @@ export function getArcaneSlotConfig(
       ],
       labels: ["Primary Arcane", "Secondary Arcane"],
     }
+  }
+  if (category === "exalted-weapons" && item) {
+    const slot = getExaltedArcaneSlot(item)
+    return { options: [getArcanesForSlot(allArcanes, slot)] }
   }
   const shared = getArcanesForCategory(allArcanes, category)
   return { options: Array.from({ length: count }, () => shared) }

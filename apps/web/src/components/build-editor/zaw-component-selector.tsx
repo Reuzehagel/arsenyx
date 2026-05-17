@@ -79,7 +79,7 @@ function ZawPartCard({
         "bg-card/80 relative flex flex-col items-center overflow-hidden rounded-md select-none",
         "h-[90px] w-[100px]",
         !readOnly &&
-          "ring-1 ring-transparent cursor-pointer transition-[box-shadow,color] hover:ring-primary/50",
+          "hover:ring-primary/50 cursor-pointer ring-1 ring-transparent transition-[box-shadow,color]",
         open && "ring-primary ring-offset-background ring-2 ring-offset-1",
       )}
     >

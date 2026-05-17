@@ -1,4 +1,5 @@
 export { ArcaneCard } from "./arcane-card"
+export { DragController } from "./drag-controller"
 export { ArcaneSlot } from "./arcane-slot"
 export {
   useArcaneSlots,

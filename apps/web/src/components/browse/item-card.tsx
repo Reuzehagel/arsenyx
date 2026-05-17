@@ -15,7 +15,7 @@ export function ItemCard({ item, index }: ItemCardProps) {
     <Link
       href={getItemUrl(item.category, item.slug)}
       data-index={index}
-      className="group focus-visible:ring-ring rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-offset-2 [content-visibility:auto] [contain-intrinsic-size:auto_280px]"
+      className="group focus-visible:ring-ring rounded-xl outline-none [contain-intrinsic-size:auto_280px] [content-visibility:auto] focus-visible:ring-2 focus-visible:ring-offset-2"
     >
       <Card className="hover:border-primary/50 group-focus-visible:border-primary/50 relative h-full gap-0 overflow-hidden py-0 transition-[box-shadow,border-color] duration-200 hover:shadow-md">
         {item.vaulted && (

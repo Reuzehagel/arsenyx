@@ -118,6 +118,7 @@ export function ModGrid({
     const placed = slots.placed[id]
     const forma = slots.formaPolarities[id]
     return {
+      slotId: id,
       slotPolarity: innate,
       formaPolarity: forma,
       mod: placed?.mod,

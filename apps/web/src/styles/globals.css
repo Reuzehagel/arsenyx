@@ -231,3 +231,11 @@ body {
     animation: none;
   }
 }
+
+/* Drag controller: the source element of an active drag is dimmed so the
+ * user sees the card has been "lifted" while the ghost follows the
+ * cursor. Applied directly via JS class mutation to avoid re-rendering
+ * 200 pool cards through React state. */
+.is-drag-source {
+  opacity: 0.3;
+}

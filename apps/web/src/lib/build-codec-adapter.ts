@@ -38,6 +38,9 @@ type EditorState = {
 }
 
 function toSharedPlacedMod(p: PlacedMod): SharedPlacedMod {
+  // Explicit field list (rather than spread) so a future `Mod` field doesn't
+  // silently leak into the saved payload — TS will fail to compile if a
+  // required `SharedPlacedMod` field is missing here.
   const m = p.mod
   return {
     uniqueName: m.uniqueName,

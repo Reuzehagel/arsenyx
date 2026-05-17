@@ -16,6 +16,7 @@ import {
 } from "./parser"
 import {
   BASE_ELEMENTS,
+  COMBINED_ELEMENTS,
   DAMAGE_TYPE_LABELS,
   ELEMENTAL_COMBINATIONS,
   type AttackModeStats,
@@ -330,7 +331,18 @@ function calcDamageBreakdown(
   if (baseDamage.puncture) makePhysical("puncture", baseDamage.puncture)
   if (baseDamage.slash) makePhysical("slash", baseDamage.slash)
 
-  const totalModdedBase = physical.reduce((s, e) => s + e.value, 0)
+  // Innate base-element damage scales with base-damage mods (Serration etc.)
+  // and acts as the base for modded elementals on weapons with no physical
+  // damage (e.g. Balefire Charger's pure-electricity shots). Include it in
+  // totalModdedBase so elemental mod percentages have something to multiply.
+  let innateElementalBase = 0
+  for (const [type, value] of Object.entries(baseDamage)) {
+    if (BASE_ELEMENTS.includes(type as DamageType) && value && value > 0) {
+      innateElementalBase += value
+    }
+  }
+  const totalModdedBase =
+    physical.reduce((s, e) => s + e.value, 0) + innateElementalBase * baseMult
 
   // Collect elemental mods grouped by type, preserving source attribution.
   const elementalMods: {
@@ -357,10 +369,13 @@ function calcDamageBreakdown(
     elementalMods.push({ type, value: sum, sources })
   }
 
-  // Innate base elements come FIRST in the combination order.
+  // Innate base elements come FIRST in the combination order. Encode them
+  // as a percentage of totalModdedBase so combineElements' shared
+  // `totalModdedBase * pct / 100` formula recovers `value * baseMult`.
   for (const [type, value] of Object.entries(baseDamage)) {
     if (BASE_ELEMENTS.includes(type as DamageType) && value && value > 0) {
-      const pctEquivalent = (value / (totalModdedBase || 1)) * 100
+      const pctEquivalent =
+        totalModdedBase > 0 ? ((value * baseMult) / totalModdedBase) * 100 : 0
       elementalMods.unshift({
         type: type as DamageType,
         value: pctEquivalent,
@@ -376,16 +391,28 @@ function calcDamageBreakdown(
     baseDamageContribs,
   )
 
+  // Combined-element stats from mods/rivens/arcanes (e.g. a Riven rolling
+  // +Magnetic Damage). These don't combine further, so emit them directly.
+  const combinedByType = new Map<
+    DamageType,
+    { name: string; value: number }[]
+  >()
+  for (const s of stats) {
+    if (s.operation !== "percent_add") continue
+    if (!COMBINED_ELEMENTS.includes(s.type as DamageType)) continue
+    const t = s.type as DamageType
+    if (!combinedByType.has(t)) combinedByType.set(t, [])
+    combinedByType.get(t)!.push({ name: s.sourceName, value: s.value })
+  }
+  for (const [type, sources] of combinedByType) {
+    elemental.push(
+      makeUncombinedEntry(type, sources, totalModdedBase, baseDamageContribs),
+    )
+  }
+
   // Innate combined elementals (e.g. innate Blast on some weapons).
   for (const [type, value] of Object.entries(baseDamage)) {
-    if (
-      (type as DamageType) !== "impact" &&
-      (type as DamageType) !== "puncture" &&
-      (type as DamageType) !== "slash" &&
-      !BASE_ELEMENTS.includes(type as DamageType) &&
-      value &&
-      value > 0
-    ) {
+    if (COMBINED_ELEMENTS.includes(type as DamageType) && value && value > 0) {
       const contribs: StatContribution[] = [...baseDamageContribs]
       contribs.unshift({
         name: "Innate",
@@ -471,26 +498,38 @@ function combineElements(
       }
     }
     if (!combined) {
-      const value = (totalModdedBase * first.value) / 100
-      const contribs: StatContribution[] = [...baseDamageContribs]
-      for (const src of first.sources) {
-        contribs.push({
-          name: src.name,
-          amount: src.value,
-          operation: "percent_add",
-          group: DAMAGE_TYPE_LABELS[first.type],
-        })
-      }
-      result.push({
-        type: first.type,
-        value: round1(value),
-        base: 0,
-        contributions: contribs,
-      })
+      result.push(
+        makeUncombinedEntry(
+          first.type,
+          first.sources,
+          totalModdedBase,
+          baseDamageContribs,
+        ),
+      )
     }
   }
 
   return result
+}
+
+function makeUncombinedEntry(
+  type: DamageType,
+  sources: { name: string; value: number }[],
+  totalModdedBase: number,
+  baseDamageContribs: StatContribution[],
+): DamageEntry {
+  const sum = sources.reduce((t, s) => t + s.value, 0)
+  const value = (totalModdedBase * sum) / 100
+  const contribs: StatContribution[] = [...baseDamageContribs]
+  for (const src of sources) {
+    contribs.push({
+      name: src.name,
+      amount: src.value,
+      operation: "percent_add",
+      group: DAMAGE_TYPE_LABELS[type],
+    })
+  }
+  return { type, value: round1(value), base: 0, contributions: contribs }
 }
 
 export function sumDamage(d: DamageTypes): number {

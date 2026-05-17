@@ -52,9 +52,7 @@ function ProfilePage() {
       <main className="flex-1">
         <div className="wrap flex flex-col gap-6 py-6">
           <DelayedSuspense
-            fallback={
-              <p className="text-muted-foreground">Loading profile…</p>
-            }
+            fallback={<p className="text-muted-foreground">Loading profile…</p>}
           >
             <ProfileContent />
           </DelayedSuspense>

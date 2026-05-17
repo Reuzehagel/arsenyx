@@ -7,6 +7,11 @@ import { webOrigins } from "./env"
 
 const githubId = process.env.GITHUB_CLIENT_ID?.trim()
 const githubSecret = process.env.GITHUB_CLIENT_SECRET?.trim()
+if (!githubId || !githubSecret) {
+  console.info(
+    "auth: GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET missing — GitHub OAuth is disabled.",
+  )
+}
 
 // Drive cookie flags off BETTER_AUTH_URL's scheme, not NODE_ENV. If NODE_ENV
 // were ever missing/unset in prod, the old check silently dropped Secure +

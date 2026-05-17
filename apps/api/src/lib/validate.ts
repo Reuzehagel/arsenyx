@@ -40,9 +40,9 @@ export async function parseJsonBody(
   }
 
   const reader = stream.getReader()
-  const decoder = new TextDecoder("utf-8", { fatal: true })
-  let raw = ""
+  const chunks: Uint8Array[] = []
   let total = 0
+  let raw: string
   try {
     while (true) {
       const { done, value } = await reader.read()
@@ -53,11 +53,19 @@ export async function parseJsonBody(
         void reader.cancel()
         return { ok: false, response: jsonError("body_too_large", 413) }
       }
-      raw += decoder.decode(value, { stream: true })
+      chunks.push(value)
     }
-    raw += decoder.decode()
+    const merged = new Uint8Array(total)
+    let offset = 0
+    for (const chunk of chunks) {
+      merged.set(chunk, offset)
+      offset += chunk.byteLength
+    }
+    raw = new TextDecoder("utf-8", { fatal: true }).decode(merged)
   } catch {
     return { ok: false, response: jsonError("invalid_body", 400) }
+  } finally {
+    reader.releaseLock()
   }
 
   let body: unknown
