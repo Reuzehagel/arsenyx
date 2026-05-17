@@ -90,12 +90,17 @@ export function hasExilusSlot(category: BrowseCategory): boolean {
  * Arch-melee weapons do not carry stancePolarity and so get no slot.
  * Exalted melees have a stance pre-applied in-game and the player cannot
  * swap it, so we skip the slot entirely for the `exalted-weapons` category.
+ *
+ * Zaw strike components are user-built melees that carry no stancePolarity
+ * on the strike entry but absolutely do equip a stance in-game — always
+ * surface the slot (innate polarity unknown; user can forma).
  */
 export function hasStanceSlot(
-  item: Pick<DetailItem, "stancePolarity">,
+  item: Pick<DetailItem, "stancePolarity" | "type">,
   category: BrowseCategory,
 ): boolean {
   if (category === "exalted-weapons") return false
+  if (item.type === "Zaw Component") return true
   return Boolean(item.stancePolarity)
 }
 
