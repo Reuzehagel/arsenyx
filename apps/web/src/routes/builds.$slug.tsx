@@ -260,6 +260,7 @@ function BuildViewer({ embed = false }: { embed?: boolean }) {
   return (
     <Suspense fallback={<p className="text-muted-foreground">Loading item…</p>}>
       <BuildViewerBody
+        key={slug}
         build={build}
         category={category}
         itemSlug={itemSlug}
