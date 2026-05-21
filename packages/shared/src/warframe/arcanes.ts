@@ -25,40 +25,31 @@ export type ArcaneSlotType =
   | "melee"
   | "weapon"
 
+// "Zaw Arcane" covers Exodia arcanes (Zaw-only in-game, surfaced for any
+// melee here to match the rest of the permissive pool).
+const PRIMARY_TOKENS = ["primary", "residua", "fractal"] as const
+const SECONDARY_TOKENS = ["secondary", "pax"] as const
+const MELEE_TOKENS = ["melee", "zaw"] as const
+
+const SLOT_TOKENS: Record<ArcaneSlotType, readonly string[]> = {
+  warframe: [], // exact-match below
+  operator: ["magus", "operator"],
+  primary: PRIMARY_TOKENS,
+  secondary: SECONDARY_TOKENS,
+  melee: MELEE_TOKENS,
+  weapon: [...PRIMARY_TOKENS, ...SECONDARY_TOKENS, ...MELEE_TOKENS],
+}
+
 export function getArcanesForSlot(
   arcanes: Arcane[],
   slotType: ArcaneSlotType,
 ): Arcane[] {
   return arcanes.filter((arcane) => {
     const type = arcane.type?.toLowerCase() ?? ""
-    switch (slotType) {
-      case "warframe":
-        return type === "arcane" || type === "warframe arcane"
-      case "operator":
-        return type.includes("magus") || type.includes("operator")
-      case "primary":
-        return (
-          type.includes("primary") ||
-          type.includes("residua") ||
-          type.includes("fractal")
-        )
-      case "secondary":
-        return type.includes("secondary") || type.includes("pax")
-      case "melee":
-        return type.includes("melee") || type.includes("exodia")
-      case "weapon":
-        return (
-          type.includes("primary") ||
-          type.includes("residua") ||
-          type.includes("fractal") ||
-          type.includes("secondary") ||
-          type.includes("pax") ||
-          type.includes("melee") ||
-          type.includes("exodia")
-        )
-      default:
-        return false
+    if (slotType === "warframe") {
+      return type === "arcane" || type === "warframe arcane"
     }
+    return SLOT_TOKENS[slotType].some((t) => type.includes(t))
   })
 }
 

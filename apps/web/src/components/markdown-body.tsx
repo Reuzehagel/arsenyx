@@ -1,0 +1,101 @@
+import type { ElementContent } from "hast"
+import { useMemo } from "react"
+import ReactMarkdown, { type Components } from "react-markdown"
+import remarkGfm from "remark-gfm"
+
+import { getVideoEmbed } from "@/lib/video-embed"
+
+/**
+ * Renders user-authored markdown for build guides. Bare YouTube/Vimeo URLs
+ * on their own line are upgraded to embedded iframes; inline links stay
+ * regular anchors. Raw HTML in the source is escaped — no rehype-raw.
+ */
+export function MarkdownBody({
+  source,
+  className,
+}: {
+  source: string
+  className?: string
+}) {
+  const prepared = useMemo(() => isolateVideoLines(source), [source])
+  return (
+    <div className={className}>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+        {prepared}
+      </ReactMarkdown>
+    </div>
+  )
+}
+
+/**
+ * Wraps lines that consist solely of a recognized video URL with blank
+ * lines so markdown treats them as their own paragraph. Without this,
+ * `Hi\nhttps://youtu.be/...\nTesting` would be one paragraph and the
+ * embed check would miss it.
+ */
+function isolateVideoLines(source: string): string {
+  const lines = source.split(/\r?\n/)
+  const out: string[] = []
+  for (const line of lines) {
+    const trimmed = line.trim()
+    const isVideo =
+      /^https?:\/\/\S+$/.test(trimmed) && getVideoEmbed(trimmed) !== null
+    if (isVideo) {
+      if (out.length > 0 && out[out.length - 1].trim() !== "") out.push("")
+      out.push(trimmed)
+      out.push("")
+    } else {
+      out.push(line)
+    }
+  }
+  return out.join("\n")
+}
+
+function soloVideoHref(kids: ElementContent[]): string | null {
+  if (kids.length !== 1) return null
+  const only = kids[0]
+  if (only.type !== "element" || only.tagName !== "a") return null
+  const href = only.properties?.href
+  return typeof href === "string" ? href : null
+}
+
+const components: Components = {
+  p({ node, children, ...rest }) {
+    const href = soloVideoHref(node?.children ?? [])
+    const embed = href ? getVideoEmbed(href) : null
+    if (embed) return <VideoEmbed {...embed} />
+    return <p {...rest}>{children}</p>
+  },
+}
+
+function VideoEmbed({
+  src,
+  title,
+  aspect,
+}: {
+  src: string
+  title: string
+  aspect: "16/9" | "9/16"
+}) {
+  const portrait = aspect === "9/16"
+  return (
+    <div
+      className="bg-muted relative my-3 w-full overflow-hidden rounded-lg border"
+      style={{
+        aspectRatio: portrait ? "9 / 16" : "16 / 9",
+        maxWidth: portrait ? "min(100%, 320px)" : "min(100%, 560px)",
+      }}
+    >
+      {/* oxlint-disable-next-line react/iframe-missing-sandbox -- trusted video provider; sandbox would break the player */}
+      <iframe
+        src={src}
+        title={title}
+        loading="lazy"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowFullScreen
+        referrerPolicy="strict-origin-when-cross-origin"
+        className="absolute inset-0 size-full"
+      />
+    </div>
+  )
+}

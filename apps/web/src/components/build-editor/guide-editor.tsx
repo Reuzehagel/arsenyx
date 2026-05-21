@@ -1,9 +1,8 @@
 import { useQuery } from "@tanstack/react-query"
 import { ChevronDown, Link2, X } from "lucide-react"
 import { useRef, useState } from "react"
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
 
+import { MarkdownBody } from "@/components/markdown-body"
 import { Button } from "@/components/ui/button"
 import {
   Command,
@@ -92,7 +91,7 @@ export function GuideEditor({
             <MarkdownTextarea
               value={description}
               onChange={onDescriptionChange}
-              placeholder="Write your build guide in markdown — headings, lists, links, code blocks all work."
+              placeholder="Write your build guide in markdown — headings, lists, links, code blocks all work. Paste a YouTube or Vimeo link on its own line to embed the video."
             />
           </TabsContent>
           <TabsContent value="preview">
@@ -393,10 +392,9 @@ function MarkdownTextarea({
 
 function MarkdownPreview({ source }: { source: string }) {
   return (
-    <div className="prose prose-sm dark:prose-invert [&_a]:text-primary [&_code]:bg-muted [&_pre]:bg-muted [&_blockquote]:border-border [&_blockquote]:text-muted-foreground [&_th]:border-border [&_td]:border-border max-w-none [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_code]:rounded [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-xs [&_h1]:mt-0 [&_h1]:mb-2 [&_h1]:text-xl [&_h1]:font-bold [&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:mt-3 [&_h3]:mb-1 [&_h3]:font-semibold [&_li]:ml-4 [&_li]:list-disc [&_ol]:mb-2 [&_ol]:list-decimal [&_ol]:pl-4 [&_ol_li]:list-decimal [&_p]:mb-2 [&_pre]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded [&_pre]:p-2 [&_pre]:text-xs [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_table]:w-full [&_td]:border [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:px-2 [&_th]:py-1 [&_ul]:mb-2 [&_ul]:list-disc [&_ul]:pl-4">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[]}>
-        {source}
-      </ReactMarkdown>
-    </div>
+    <MarkdownBody
+      source={source}
+      className="prose prose-sm dark:prose-invert [&_a]:text-primary [&_code]:bg-muted [&_pre]:bg-muted [&_blockquote]:border-border [&_blockquote]:text-muted-foreground [&_th]:border-border [&_td]:border-border max-w-none [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_code]:rounded [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-xs [&_h1]:mt-0 [&_h1]:mb-2 [&_h1]:text-xl [&_h1]:font-bold [&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:mt-3 [&_h3]:mb-1 [&_h3]:font-semibold [&_li]:ml-4 [&_li]:list-disc [&_ol]:mb-2 [&_ol]:list-decimal [&_ol]:pl-4 [&_ol_li]:list-decimal [&_p]:mb-2 [&_pre]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded [&_pre]:p-2 [&_pre]:text-xs [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_table]:w-full [&_td]:border [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:px-2 [&_th]:py-1 [&_ul]:mb-2 [&_ul]:list-disc [&_ul]:pl-4"
+    />
   )
 }

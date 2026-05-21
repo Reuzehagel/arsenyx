@@ -31,8 +31,6 @@ import {
   Zap,
 } from "lucide-react"
 import { Suspense, useEffect, useMemo, useRef, useState } from "react"
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
 
 import {
   ArcaneRow,
@@ -58,6 +56,7 @@ import {
 } from "@/components/build-editor"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
+import { MarkdownBody } from "@/components/markdown-body"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -567,11 +566,10 @@ function BuildViewerBodyInner({
               <p className="mb-3 font-medium">{build.guide.summary}</p>
             ) : null}
             {build.guide.description ? (
-              <div className="prose prose-sm dark:prose-invert max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {build.guide.description}
-                </ReactMarkdown>
-              </div>
+              <MarkdownBody
+                source={build.guide.description}
+                className="prose prose-sm dark:prose-invert max-w-none"
+              />
             ) : null}
           </div>
         ) : null}
