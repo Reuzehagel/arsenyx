@@ -24,6 +24,7 @@ export {
   hasExilusSlot,
   hasStanceSlot,
   isLichWeapon,
+  resolveInitialArcanes,
 } from "./layout"
 export {
   ArcaneRow,

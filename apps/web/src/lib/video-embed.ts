@@ -35,7 +35,8 @@ export function getVideoEmbed(rawUrl: string): VideoEmbed | null {
     host === "m.youtube.com" ||
     host === "youtube-nocookie.com"
   ) {
-    if (url.pathname === "/watch") return ytEmbed(url.searchParams.get("v"), start)
+    if (url.pathname === "/watch")
+      return ytEmbed(url.searchParams.get("v"), start)
     const shorts = url.pathname.match(/^\/shorts\/([^/]+)/)
     if (shorts) return ytEmbed(shorts[1], start, "9/16")
     const embed = url.pathname.match(/^\/embed\/([^/]+)/)

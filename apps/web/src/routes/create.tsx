@@ -47,6 +47,7 @@ import {
   ModGrid,
   PublishDialog,
   type PublishVisibility,
+  resolveInitialArcanes,
   toPolarity,
   useArcaneSlots,
   slotKind,
@@ -208,7 +209,10 @@ function EditorShell() {
     layout: { normalSlotCount, auraSlotCount, showExilus, showStance },
   })
   const arcaneCount = getArcaneSlotCount(category, item.type)
-  const arcanes = useArcaneSlots(arcaneCount, savedData.arcanes)
+  const arcanes = useArcaneSlots(
+    arcaneCount,
+    resolveInitialArcanes(item, savedData.arcanes),
+  )
   const arcaneConfig = useMemo(
     () => getArcaneSlotConfig(allArcanes, category, arcaneCount, item),
     [allArcanes, category, arcaneCount, item],

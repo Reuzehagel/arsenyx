@@ -1,11 +1,18 @@
 import {
   getArcanesForCategory,
   getArcanesForSlot,
+  isZawArcane,
   type ArcaneSlotType,
 } from "@arsenyx/shared/warframe/arcanes"
 import type { Arcane } from "@arsenyx/shared/warframe/types"
 
 import type { BrowseCategory, DetailItem } from "@/lib/warframe"
+
+import type { PlacedArcane } from "./use-arcane-slots"
+
+function isZawComponent(itemType: DetailItem["type"]): boolean {
+  return itemType === "Zaw Component"
+}
 
 /** Resolve which arcane pool an exalted weapon draws from. Mirrors the
  * mod-pool logic in `getModsForItem`: bows take primary arcanes,
@@ -30,9 +37,12 @@ export function getArcaneSlotCount(
   switch (category) {
     case "warframes":
       return 2
+    case "melee":
+      // Zaws have a dedicated Exodia slot in addition to the regular Melee
+      // Arcane slot — both can be active simultaneously in-game.
+      return isZawComponent(itemType) ? 2 : 1
     case "primary":
     case "secondary":
-    case "melee":
     case "exalted-weapons":
       return 1
     case "archwing":
@@ -54,7 +64,7 @@ export function getArcaneSlotConfig(
   allArcanes: Arcane[],
   category: BrowseCategory,
   count: number,
-  item?: Pick<DetailItem, "name" | "trigger">,
+  item?: Pick<DetailItem, "name" | "trigger" | "type">,
 ): ArcaneSlotConfig {
   if (count === 0) return { options: [] }
   if (category === "archwing") {
@@ -70,8 +80,36 @@ export function getArcaneSlotConfig(
     const slot = getExaltedArcaneSlot(item)
     return { options: [getArcanesForSlot(allArcanes, slot)] }
   }
+  if (category === "melee" && item && isZawComponent(item.type)) {
+    const regular: Arcane[] = []
+    const exodia: Arcane[] = []
+    for (const a of getArcanesForSlot(allArcanes, "melee")) {
+      ;(isZawArcane(a) ? exodia : regular).push(a)
+    }
+    return { options: [regular, exodia], labels: ["Melee Arcane", "Exodia"] }
+  }
   const shared = getArcanesForCategory(allArcanes, category)
   return { options: Array.from({ length: count }, () => shared) }
+}
+
+/**
+ * Initial arcane placement for the editor hook. For Zaws, routes a saved
+ * Exodia to slot 1 and regular melee arcanes to slot 0 — older Zaw builds
+ * were saved with a single melee arcane slot, so the saved index is no
+ * longer authoritative.
+ */
+export function resolveInitialArcanes(
+  item: Pick<DetailItem, "type">,
+  arcanes: (PlacedArcane | null)[] | undefined,
+): (PlacedArcane | null)[] | undefined {
+  if (!isZawComponent(item.type) || !arcanes) return arcanes
+  const out: (PlacedArcane | null)[] = [null, null]
+  for (const a of arcanes) {
+    if (!a) continue
+    const idx = isZawArcane(a.arcane) ? 1 : 0
+    if (!out[idx]) out[idx] = a
+  }
+  return out
 }
 
 /** Categories that have an Exilus slot. Necramechs, companions, and every
@@ -100,7 +138,7 @@ export function hasStanceSlot(
   category: BrowseCategory,
 ): boolean {
   if (category === "exalted-weapons") return false
-  if (item.type === "Zaw Component") return true
+  if (isZawComponent(item.type)) return true
   return Boolean(item.stancePolarity)
 }
 

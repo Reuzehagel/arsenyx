@@ -40,6 +40,11 @@ const SLOT_TOKENS: Record<ArcaneSlotType, readonly string[]> = {
   weapon: [...PRIMARY_TOKENS, ...SECONDARY_TOKENS, ...MELEE_TOKENS],
 }
 
+/** Exodia / Zaw-only arcane (WFCD type "Zaw Arcane"). */
+export function isZawArcane(arcane: Arcane): boolean {
+  return (arcane.type?.toLowerCase() ?? "").includes("zaw")
+}
+
 export function getArcanesForSlot(
   arcanes: Arcane[],
   slotType: ArcaneSlotType,

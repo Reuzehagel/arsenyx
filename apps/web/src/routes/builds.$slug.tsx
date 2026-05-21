@@ -50,6 +50,7 @@ import {
   ItemSidebar,
   ItemSidebarPopover,
   ModGrid,
+  resolveInitialArcanes,
   toPolarity,
   useArcaneSlots,
   useBuildSlots,
@@ -362,7 +363,10 @@ function BuildViewerBodyInner({
     showStance,
     initialSelected: null,
   })
-  const arcanes = useArcaneSlots(arcaneCount, saved.arcanes)
+  const arcanes = useArcaneSlots(
+    arcaneCount,
+    resolveInitialArcanes(item, saved.arcanes),
+  )
   const shards = useMemo(() => padShards(saved.shards), [saved.shards])
   const helminth = saved.helminth ?? {}
   const hasReactor = saved.hasReactor ?? true
