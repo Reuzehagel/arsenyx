@@ -589,9 +589,9 @@ function RelatedBuildsStrip({ slug }: { slug: string }) {
       <h2 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
         Related builds
       </h2>
-      <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:thin]">
         {partners.map((p) => (
-          <li key={p.id} className="min-w-0">
+          <li key={p.id} className="shrink-0">
             <RelatedBuildChip build={p} />
           </li>
         ))}
@@ -605,7 +605,8 @@ function RelatedBuildChip({ build }: { build: PartnerBuild }) {
     <RouterLink
       to="/builds/$slug"
       params={{ slug: build.slug }}
-      className="bg-card hover:bg-card/70 flex w-full items-center gap-3 rounded-md border py-2 pr-4 pl-2 transition-colors"
+      title={build.name}
+      className="bg-card hover:bg-card/70 flex w-80 items-center gap-3 rounded-md border py-2 pr-4 pl-2 transition-colors"
     >
       <span className="bg-muted/40 flex size-12 shrink-0 items-center justify-center overflow-hidden rounded">
         <img
