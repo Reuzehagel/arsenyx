@@ -1,6 +1,11 @@
 import { useHotkey } from "@/lib/hotkeys"
 
-import type { BuildSlotsState, SlotId, SlotLayout } from "./use-build-slots"
+import {
+  getVisibleSlots,
+  type BuildSlotsState,
+  type SlotId,
+  type SlotLayout,
+} from "./use-build-slots"
 
 export type Dir = "left" | "right" | "up" | "down"
 
@@ -130,6 +135,18 @@ export function useSlotKeyboardNav({
       }
       const next = move(slots.selected, dir, layout)
       if (next !== slots.selected) slots.select(next)
+    },
+    { enabled },
+  )
+
+  useHotkey(
+    "`",
+    (e) => {
+      const t = e.target as HTMLElement | null
+      if (t?.closest("[data-mod-search-grid]")) return
+      const list = getVisibleSlots(layout)
+      const firstEmpty = list.find((id) => !slots.placed[id])
+      if (firstEmpty && firstEmpty !== slots.selected) slots.select(firstEmpty)
     },
     { enabled },
   )

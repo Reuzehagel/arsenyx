@@ -19,6 +19,7 @@ import {
 import { cn } from "@/lib/utils"
 import { formatStat } from "@/lib/warframe"
 
+import { useAbilityStatReorder } from "./ability-stat-reorder"
 import {
   ContribRow,
   formatContribAmount,
@@ -26,6 +27,10 @@ import {
   groupContributions,
   StatLine,
 } from "./stat-display"
+import {
+  useAbilityStatOrder,
+  type AbilityStatKey,
+} from "./use-ability-stat-order"
 
 export function CompanionStatsPanel({ stats }: { stats: CompanionStats }) {
   return (
@@ -47,6 +52,16 @@ export function CompanionStatsPanel({ stats }: { stats: CompanionStats }) {
 }
 
 export function WarframeStatsPanel({ stats }: { stats: WarframeStats }) {
+  const [order, setOrder] = useAbilityStatOrder()
+  const reorder = useAbilityStatReorder(order, setOrder)
+
+  const rows: Record<AbilityStatKey, { label: string; value: StatValue }> = {
+    strength: { label: "Strength", value: stats.abilityStrength },
+    duration: { label: "Duration", value: stats.abilityDuration },
+    efficiency: { label: "Efficiency", value: stats.abilityEfficiency },
+    range: { label: "Range", value: stats.abilityRange },
+  }
+
   return (
     <>
       <div className="flex flex-col gap-1 text-xs">
@@ -60,31 +75,28 @@ export function WarframeStatsPanel({ stats }: { stats: WarframeStats }) {
       <Separator />
 
       <div className="flex flex-col gap-1 text-xs">
-        <StatLine
-          label="Strength"
-          value={stats.abilityStrength}
-          unit="%"
-          digits={1}
-        />
-        <StatLine
-          label="Duration"
-          value={stats.abilityDuration}
-          unit="%"
-          digits={1}
-        />
-        <StatLine
-          label="Efficiency"
-          value={stats.abilityEfficiency}
-          unit="%"
-          digits={1}
-        />
-        <StatLine
-          label="Range"
-          value={stats.abilityRange}
-          unit="%"
-          digits={1}
-        />
+        {order.map((key) => {
+          const row = rows[key]
+          return (
+            <div
+              key={key}
+              {...reorder.rowProps(
+                key,
+                row.label,
+                `${formatStat(row.value.modified, 1)}%`,
+              )}
+            >
+              <StatLine
+                label={row.label}
+                value={row.value}
+                unit="%"
+                digits={1}
+              />
+            </div>
+          )
+        })}
       </div>
+      {reorder.ghost}
     </>
   )
 }

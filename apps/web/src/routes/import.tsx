@@ -51,7 +51,7 @@ async function postOverframeImport(url: string): Promise<ScrapeResponse> {
   } catch (err) {
     const fallback =
       err instanceof ApiError ? `Import failed: ${err.status}` : "Import failed"
-    throw new Error(apiErrorMessage(err, fallback))
+    throw new Error(apiErrorMessage(err, fallback), { cause: err })
   }
 }
 

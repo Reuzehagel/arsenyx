@@ -7,10 +7,7 @@ import { type Mod } from "@arsenyx/shared/warframe/types"
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 
-import {
-  ModSearchGrid,
-  type ModSlotKind,
-} from "@/components/build-editor"
+import { ModSearchGrid, type ModSlotKind } from "@/components/build-editor"
 import { type HelminthAbility } from "@/lib/helminth-query"
 import { modsQuery } from "@/lib/mods-query"
 import { type BrowseCategory, type DetailItem } from "@/lib/warframe"

@@ -38,9 +38,7 @@ export const profileQuery = (username: string) =>
     queryKey: ["profile", username.toLowerCase()],
     queryFn: async (): Promise<Profile> => {
       try {
-        return await apiFetch<Profile>(
-          `/users/${encodeURIComponent(username)}`,
-        )
+        return await apiFetch<Profile>(`/users/${encodeURIComponent(username)}`)
       } catch (err) {
         if (err instanceof ApiError && err.status === 404) throw notFound()
         throw new Error("failed to load profile", { cause: err })

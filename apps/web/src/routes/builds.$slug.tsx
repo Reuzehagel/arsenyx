@@ -1,5 +1,5 @@
-import { slugify } from "@arsenyx/shared/warframe/slugs"
 import { getIncarnonBaseName } from "@arsenyx/shared/warframe/incarnon-data"
+import { slugify } from "@arsenyx/shared/warframe/slugs"
 import {
   DEFAULT_DEPLOYMENT_CONTEXT,
   type LichBonusElement,
@@ -1235,7 +1235,7 @@ function EmbedZawPart({ name, type }: { name: string; type: "Grip" | "Link" }) {
           className="h-full w-full object-contain"
         />
       ) : (
-        <span className="text-muted-foreground px-0.5 text-center text-[9px] font-medium leading-tight">
+        <span className="text-muted-foreground px-0.5 text-center text-[9px] leading-tight font-medium">
           {name}
         </span>
       )}
@@ -1301,7 +1301,11 @@ function EmbedIncarnonStrip({
             tier.perks.find((p) => p.name === (perks[tier.tier - 1] ?? null)) ??
             null
           return (
-            <EmbedIncarnonTier key={tier.tier} tier={tier.tier} picked={picked} />
+            <EmbedIncarnonTier
+              key={tier.tier}
+              tier={tier.tier}
+              picked={picked}
+            />
           )
         })}
       </div>
@@ -1344,7 +1348,9 @@ function EmbedIncarnonTier({
   const tooltipContent = picked ? (
     <>
       <p className="font-semibold">{picked.name}</p>
-      <p className="text-muted-foreground mt-0.5 text-xs">{picked.description}</p>
+      <p className="text-muted-foreground mt-0.5 text-xs">
+        {picked.description}
+      </p>
     </>
   ) : (
     <span className="text-muted-foreground">Tier {tier} — not selected</span>

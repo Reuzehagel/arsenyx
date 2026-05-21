@@ -57,9 +57,10 @@ export function useLinkPartner(ownerSlug: string) {
         )
       } catch (err) {
         if (err instanceof ApiError) {
-          if (err.status === 401) throw new Error("unauthorized")
-          if (err.status === 403) throw new Error("forbidden")
-          throw new Error("failed_link")
+          if (err.status === 401)
+            throw new Error("unauthorized", { cause: err })
+          if (err.status === 403) throw new Error("forbidden", { cause: err })
+          throw new Error("failed_link", { cause: err })
         }
         throw err
       }

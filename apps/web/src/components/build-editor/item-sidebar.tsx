@@ -46,10 +46,7 @@ import { adjustStrikeForZaw } from "@/lib/zaw-stats"
 
 import { AbilityIcon } from "./ability-icon"
 import { CapacityBar } from "./capacity-bar"
-import {
-  IncarnonTierGrid,
-  IncarnonTierGridSkeleton,
-} from "./incarnon-controls"
+import { IncarnonTierGrid, IncarnonTierGridSkeleton } from "./incarnon-controls"
 import { isLichWeapon } from "./layout"
 import { LichBonusElementPicker } from "./lich-bonus-picker"
 import { ShardSlot } from "./shard-controls"

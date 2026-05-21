@@ -43,6 +43,11 @@ export const HOTKEYS: readonly Hotkey[] = [
   },
   {
     scope: "Build editor",
+    keys: ["`"],
+    description: "Select the first empty slot",
+  },
+  {
+    scope: "Build editor",
     keys: ["↑", "↓", "←", "→"],
     description: "Move between slots",
   },

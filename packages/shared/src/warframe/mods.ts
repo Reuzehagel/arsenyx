@@ -54,7 +54,10 @@ export function normalizeMods(rawMods: Mod[]): Mod[] {
       // Unused upstream entry that ships as a second "Pressure Point" with
       // +200% Melee Damage + +120% combo count chance. Not a real in-game
       // mod; @wfcd/items keeps it for parity with the game files.
-      if (uniqueName === "/Lotus/Upgrades/Mods/Melee/WeaponMeleeDamageOnHeavyKillMod")
+      if (
+        uniqueName ===
+        "/Lotus/Upgrades/Mods/Melee/WeaponMeleeDamageOnHeavyKillMod"
+      )
         return false
 
       return true

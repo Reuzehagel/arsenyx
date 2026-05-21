@@ -384,7 +384,11 @@ builds.get("/:slug/partners", async (c) => {
   const partnerVisibility: Prisma.BuildWhereInput = viewerId
     ? {
         OR: [
-          { visibility: { in: [BuildVisibility.PUBLIC, BuildVisibility.UNLISTED] } },
+          {
+            visibility: {
+              in: [BuildVisibility.PUBLIC, BuildVisibility.UNLISTED],
+            },
+          },
           { userId: viewerId },
         ],
       }

@@ -20,11 +20,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query"
-import {
-  createFileRoute,
-  redirect,
-  useNavigate,
-} from "@tanstack/react-router"
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import { Suspense, useEffect, useMemo, useState } from "react"
 
 import {
@@ -475,9 +471,7 @@ function EditorShell() {
               itemName: item.name,
             }),
       }
-      const path = isUpdate
-        ? `/builds/${existingBuild!.slug}`
-        : `/builds`
+      const path = isUpdate ? `/builds/${existingBuild!.slug}` : `/builds`
       const { slug } = await apiFetch<{ id: string; slug: string }>(path, {
         method: isUpdate ? "PATCH" : "POST",
         json: body,

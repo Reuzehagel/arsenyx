@@ -19,7 +19,9 @@ async function adminCall<T = unknown>(
     return await apiFetch<T>(path, opts)
   } catch (err) {
     if (err instanceof ApiError) {
-      throw new Error(apiErrorMessage(err, `http_${err.status}`))
+      throw new Error(apiErrorMessage(err, `http_${err.status}`), {
+        cause: err,
+      })
     }
     throw err
   }

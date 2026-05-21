@@ -69,7 +69,7 @@ export async function createApiKey(input: {
       json: input,
     })
   } catch (err) {
-    throw new Error(apiErrorMessage(err, "Request failed"))
+    throw new Error(apiErrorMessage(err, "Request failed"), { cause: err })
   }
 }
 
@@ -79,6 +79,6 @@ export async function revokeApiKey(id: string): Promise<void> {
       method: "DELETE",
     })
   } catch (err) {
-    throw new Error(apiErrorMessage(err, "Request failed"))
+    throw new Error(apiErrorMessage(err, "Request failed"), { cause: err })
   }
 }

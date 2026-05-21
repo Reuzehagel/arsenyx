@@ -87,6 +87,25 @@ export function getNextSlot(current: SlotId, layout: SlotLayout): SlotId {
   return list[idx + 1]
 }
 
+/**
+ * Next empty slot in reading order after `current`. Returns null when
+ * every slot from `current` onward is occupied. Cursor skips filled
+ * slots so rapid mod-clicking doesn't overwrite a user's arrangement.
+ */
+export function getNextEmptySlot(
+  current: SlotId,
+  layout: SlotLayout,
+  placed: Partial<Record<SlotId, PlacedMod>>,
+): SlotId | null {
+  const list = getVisibleSlots(layout)
+  const start = list.indexOf(current)
+  if (start === -1) return null
+  for (let i = start + 1; i < list.length; i++) {
+    if (!placed[list[i]]) return list[i]
+  }
+  return null
+}
+
 export interface BuildSlotsState {
   placed: Partial<Record<SlotId, PlacedMod>>
   usedNames: Set<string>
@@ -156,7 +175,7 @@ export function useBuildSlots(
         }
 
         if (selected && canPlaceIn(mod, selected)) {
-          setSelected(getNextSlot(selected, layout))
+          setSelected(getNextEmptySlot(selected, layout, prev))
           return { ...prev, [selected]: { mod, rank: maxRank(mod) } }
         }
 
@@ -172,7 +191,7 @@ export function useBuildSlots(
 
         for (const id of tryIds) {
           if (!prev[id] && canPlaceIn(mod, id)) {
-            setSelected(getNextSlot(id, layout))
+            setSelected(getNextEmptySlot(id, layout, prev))
             return { ...prev, [id]: { mod, rank: maxRank(mod) } }
           }
         }

@@ -24,7 +24,7 @@ export function useCreateOrg() {
           json: input,
         })
       } catch (err) {
-        throw new Error(orgError(err))
+        throw new Error(orgError(err), { cause: err })
       }
     },
     onSuccess: () => {
@@ -50,7 +50,7 @@ export function useUpdateOrg(slug: string) {
           { method: "PATCH", json: input },
         )
       } catch (err) {
-        throw new Error(orgError(err))
+        throw new Error(orgError(err), { cause: err })
       }
     },
     onSuccess: (data) => {
@@ -72,7 +72,7 @@ export function useDeleteOrg(slug: string) {
           method: "DELETE",
         })
       } catch (err) {
-        throw new Error(orgError(err))
+        throw new Error(orgError(err), { cause: err })
       }
     },
     onSuccess: () => {
@@ -88,12 +88,12 @@ export function useAddOrgMember(slug: string) {
   return useMutation({
     mutationFn: async (username: string): Promise<void> => {
       try {
-        await apiFetch<void>(
-          `/orgs/${encodeURIComponent(slug)}/members`,
-          { method: "POST", json: { username } },
-        )
+        await apiFetch<void>(`/orgs/${encodeURIComponent(slug)}/members`, {
+          method: "POST",
+          json: { username },
+        })
       } catch (err) {
-        throw new Error(orgError(err))
+        throw new Error(orgError(err), { cause: err })
       }
     },
     onSuccess: () => {
@@ -116,7 +116,7 @@ export function useUpdateOrgMemberRole(slug: string) {
           { method: "PATCH", json: { role: input.role } },
         )
       } catch (err) {
-        throw new Error(orgError(err))
+        throw new Error(orgError(err), { cause: err })
       }
     },
     onMutate: async (input) => {
@@ -151,7 +151,7 @@ export function useRemoveOrgMember(slug: string) {
           { method: "DELETE" },
         )
       } catch (err) {
-        throw new Error(orgError(err))
+        throw new Error(orgError(err), { cause: err })
       }
     },
     onSuccess: () => {

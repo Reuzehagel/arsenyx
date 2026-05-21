@@ -23,12 +23,7 @@ export class ApiError extends Error {
  *  it isn't an `ApiError` or the body has no message field. */
 export function apiErrorMessage(err: unknown, fallback: string): string {
   if (!(err instanceof ApiError)) return fallback
-  return (
-    err.body?.message ??
-    err.body?.error ??
-    err.body?.details ??
-    fallback
-  )
+  return err.body?.message ?? err.body?.error ?? err.body?.details ?? fallback
 }
 
 export interface ApiFetchInit extends Omit<RequestInit, "body"> {

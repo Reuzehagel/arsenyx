@@ -12,14 +12,14 @@ async function send<T>(
   method: "POST" | "DELETE",
 ): Promise<T> {
   try {
-    return await apiFetch<T>(
-      `/builds/${encodeURIComponent(slug)}/${kind}`,
-      { method },
-    )
+    return await apiFetch<T>(`/builds/${encodeURIComponent(slug)}/${kind}`, {
+      method,
+    })
   } catch (err) {
     if (err instanceof ApiError && err.status === 401)
       throw new Error("unauthorized", { cause: err })
-    if (err instanceof ApiError) throw new Error(`failed_${kind}`, { cause: err })
+    if (err instanceof ApiError)
+      throw new Error(`failed_${kind}`, { cause: err })
     throw err
   }
 }
