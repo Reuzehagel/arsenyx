@@ -1,26 +1,30 @@
 set dotenv-load := true
 # Windows uses PowerShell; other platforms fall back to the default `sh`.
-set windows-shell := ["pwsh", "-NoLogo", "-Command"]
+set windows-shell := ["pwsh", "-NoLogo", "-NoProfile", "-Command"]
 
-# Run API + web together (default).
-[parallel]
-dev: api web
+# Run API + web together (default). Uses concurrently for clean Ctrl+C on Windows.
+dev:
+    bunx concurrently -k -n api,web -c blue,green "just api" "just web"
 
 # Run only the Hono API. Expects DATABASE_URL in apps/api/.env to point at a Neon branch.
+[working-directory('apps/api')]
 api:
-    cd apps/api; bun run dev
+    bun run dev
 
 # Run only the Vite SPA frontend.
+[working-directory('apps/web')]
 web:
-    cd apps/web; bun run dev
+    bun run dev
 
 # Deploy the web app to Cloudflare Workers (Static Assets). Requires `wrangler login`.
+[working-directory('apps/web')]
 deploy-web:
-    cd apps/web; bun run deploy
+    bun run deploy
 
 # Deploy the API Worker.
+[working-directory('apps/api')]
 deploy-api:
-    cd apps/api; bun run deploy
+    bun run deploy
 
 # Regenerate the static browse data (items-index.json + per-item JSON).
 build-items-index:
