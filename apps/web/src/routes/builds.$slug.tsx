@@ -605,9 +605,9 @@ function RelatedBuildChip({ build }: { build: PartnerBuild }) {
     <RouterLink
       to="/builds/$slug"
       params={{ slug: build.slug }}
-      className="bg-card hover:bg-card/70 inline-flex items-center gap-2 rounded-md border py-1 pr-3 pl-1 transition-colors"
+      className="bg-card hover:bg-card/70 inline-flex w-80 items-center gap-3 rounded-md border py-2 pr-4 pl-2 transition-colors"
     >
-      <span className="bg-muted/40 flex size-8 shrink-0 items-center justify-center overflow-hidden rounded">
+      <span className="bg-muted/40 flex size-12 shrink-0 items-center justify-center overflow-hidden rounded">
         <img
           src={getImageUrl(build.item.imageName ?? undefined)}
           alt=""
@@ -615,10 +615,10 @@ function RelatedBuildChip({ build }: { build: PartnerBuild }) {
         />
       </span>
       <span className="flex min-w-0 flex-col leading-tight">
-        <span className="max-w-[20ch] truncate text-xs font-medium">
+        <span className="max-w-[28ch] truncate text-sm font-medium">
           {build.name}
         </span>
-        <span className="text-muted-foreground max-w-[20ch] truncate text-[11px]">
+        <span className="text-muted-foreground max-w-[28ch] truncate text-xs">
           {build.item.name}
         </span>
       </span>

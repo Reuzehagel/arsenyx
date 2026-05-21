@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react"
 
 export const ABILITY_STAT_KEYS = [
-  "strength",
   "duration",
   "efficiency",
   "range",
+  "strength",
 ] as const
 export type AbilityStatKey = (typeof ABILITY_STAT_KEYS)[number]
 
