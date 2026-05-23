@@ -66,6 +66,35 @@ const components: Components = {
     if (embed) return <VideoEmbed {...embed} />
     return <p {...rest}>{children}</p>
   },
+  img({ node: _node, src, ...rest }) {
+    const { src: cleanSrc, width } = parseSizedSrc(src)
+    return (
+      <img
+        {...rest}
+        src={cleanSrc}
+        loading="lazy"
+        style={width ? { width, maxWidth: "100%" } : undefined}
+        className="my-2 h-auto max-w-full rounded-md border object-contain"
+      />
+    )
+  },
+}
+
+/**
+ * Parses a custom `url|<width>` suffix on image URLs. The width can be a
+ * bare number (treated as px) or include a unit (`200px`, `50%`). Anything
+ * else is left alone so real `|` characters in URLs still work.
+ */
+function parseSizedSrc(src: string | Blob | undefined): {
+  src: string | undefined
+  width: string | undefined
+} {
+  if (typeof src !== "string") return { src: undefined, width: undefined }
+  // Match a trailing `|<size>` or `%7C<size>` (remark URL-encodes `|`).
+  const m = src.match(/(?:\||%7C)(\d+)(px|%|%25)?$/i)
+  if (!m) return { src, width: undefined }
+  const unit = m[2]?.toLowerCase() === "%25" ? "%" : (m[2] ?? "px")
+  return { src: src.slice(0, m.index), width: `${m[1]}${unit}` }
 }
 
 function VideoEmbed({

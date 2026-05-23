@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
-import { ChevronDown, Link2, X } from "lucide-react"
-import { useRef, useState } from "react"
+import { ChevronDown, Link2, TriangleAlert, X } from "lucide-react"
+import { useMemo, useRef, useState } from "react"
 
 import { MarkdownBody } from "@/components/markdown-body"
 import { Button } from "@/components/ui/button"
@@ -93,6 +93,7 @@ export function GuideEditor({
               onChange={onDescriptionChange}
               placeholder="Write your build guide in markdown — headings, lists, links, code blocks all work. Paste a YouTube or Vimeo link on its own line to embed the video."
             />
+            <DiscordImageWarning source={description} />
           </TabsContent>
           <TabsContent value="preview">
             <div className="border-input min-h-64 rounded-lg border px-3 py-2">
@@ -387,6 +388,33 @@ function MarkdownTextarea({
       placeholder={placeholder}
       className="min-h-64 font-mono text-sm [font-variant-ligatures:none]"
     />
+  )
+}
+
+function DiscordImageWarning({ source }: { source: string }) {
+  const hasDiscordUrl = useMemo(() => {
+    return /https?:\/\/(?:cdn\.discordapp\.com|media\.discordapp\.net|discord\.com\/channels)\/\S+/i.test(
+      source,
+    )
+  }, [source])
+  if (!hasDiscordUrl) return null
+  return (
+    <div className="text-foreground/90 mt-2 flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs">
+      <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-500" />
+      <p>
+        Discord image links expire and will eventually 404 for other viewers.
+        Re-upload images to{" "}
+        <a
+          href="https://imgur.com/upload"
+          target="_blank"
+          rel="noreferrer"
+          className="underline"
+        >
+          Imgur
+        </a>{" "}
+        or another permanent host instead.
+      </p>
+    </div>
   )
 }
 
