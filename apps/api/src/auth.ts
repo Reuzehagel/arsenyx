@@ -81,11 +81,19 @@ export const auth = betterAuth({
   user: {
     deleteUser: { enabled: true },
     additionalFields: {
-      isVerified: { type: "boolean", defaultValue: false },
-      isCommunityLeader: { type: "boolean", defaultValue: false },
-      isModerator: { type: "boolean", defaultValue: false },
-      isAdmin: { type: "boolean", defaultValue: false },
-      isBanned: { type: "boolean", defaultValue: false },
+      // `input: false` is load-bearing — without it, /auth/update-user
+      // accepts these fields from the request body and a logged-in user
+      // can self-promote to admin / clear their own ban. Privileged flags
+      // are mutated only through the admin routes.
+      isVerified: { type: "boolean", defaultValue: false, input: false },
+      isCommunityLeader: {
+        type: "boolean",
+        defaultValue: false,
+        input: false,
+      },
+      isModerator: { type: "boolean", defaultValue: false, input: false },
+      isAdmin: { type: "boolean", defaultValue: false, input: false },
+      isBanned: { type: "boolean", defaultValue: false, input: false },
       defaultBuildVisibility: { type: "string", defaultValue: "PUBLIC" },
     },
   },

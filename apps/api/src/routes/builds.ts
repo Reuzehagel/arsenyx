@@ -481,11 +481,16 @@ builds.put(
 
     const { own, partner } = await loadPartnerContext(slug, partnerSlug)
     if (!own || !partner) return c.json({ error: "not_found" }, 404)
-    if (!(await canMutateBuild(own, viewerId))) {
+    // Both sides require mutate rights: the write is symmetric (mirrored
+    // below), so a viewer-only check on `partner` would let any user attach
+    // their own build to a third party's PUBLIC build and ride its
+    // reputation. Mutual ownership is the consent gate.
+    const [canMutateOwn, canMutatePartner] = await Promise.all([
+      canMutateBuild(own, viewerId),
+      canMutateBuild(partner, viewerId),
+    ])
+    if (!canMutateOwn || !canMutatePartner) {
       return c.json({ error: "forbidden" }, 403)
-    }
-    if (!(await canViewerSeeBuild(partner, viewerId))) {
-      return c.json({ error: "not_found" }, 404)
     }
 
     // Prisma's implicit self-many-to-many writes only one side of the join
