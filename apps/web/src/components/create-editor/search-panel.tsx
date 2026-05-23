@@ -36,6 +36,7 @@ export function SearchPanel({
   usedModNames,
   onSelect,
   selectedSlotKind,
+  selectedSlot,
   selectedPlexusGroup,
   selectedIsPlexusAura,
   plexusFillCounts,
@@ -46,8 +47,12 @@ export function SearchPanel({
   usedModNames: Set<string>
   onSelect: (mod: Mod) => void
   selectedSlotKind?: ModSlotKind
+  /** Active slot id (or null). Drives the tab auto-sync — depending on
+   * the id (not the derived group) lets us re-sync when the user moves
+   * between same-group slots after a manual tab override. */
+  selectedSlot?: string | null
   /** Slot-derived hint for the active Plexus tab. Aura slot maps to
-   * `"integrated"`. Drives the tab strip's auto-sync on slot click. */
+   * `"integrated"`. */
   selectedPlexusGroup?: PlexusSlotKind
   /** When the Aura slot is the active slot on the Integrated tab, narrow
    * the visible mods to Aura/Matrix only. */
@@ -66,10 +71,14 @@ export function SearchPanel({
     selectedPlexusGroup ?? "integrated",
   )
   useEffect(() => {
+    // Depend on the slot id (not the derived group) so that re-selecting
+    // a different slot in the same group after a manual tab override
+    // still re-syncs the tab.
     if (category === "railjack" && selectedPlexusGroup) {
       setPlexusTab(selectedPlexusGroup)
     }
-  }, [category, selectedPlexusGroup])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [category, selectedSlot])
 
   const compatible = useMemo(() => {
     const base = getModsForItem(

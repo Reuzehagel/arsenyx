@@ -204,13 +204,19 @@ export function getPlexusSlotKind(mod: Mod): PlexusSlotKind | null {
   return null
 }
 
+/** True when the mod is a Plexus (Railjack) mod. Use this everywhere
+ * instead of `mod.type === "Plexus Mod"` so the picker, placement gate,
+ * and slot-kind helpers can't drift on a casing change in WFCD data. */
+export function isPlexusMod(mod: Pick<Mod, "type">): boolean {
+  return mod.type?.toLowerCase() === "plexus mod"
+}
+
 /** Identifies the "Aura"/Matrix mods that only fit the Plexus Aura slot.
  * WFCD distinguishes them by a negative `baseDrain` (they add capacity
  * when equipped instead of consuming it). Matrix-named mods (Ironclad,
- * Indomitable, Orgone Tuning, Onslaught, Raider) and Unfused Artifacts
- * all carry baseDrain: -2. */
+ * Indomitable, Orgone Tuning, Onslaught, Raider) carry baseDrain: -2. */
 export function isPlexusAuraMod(mod: Mod): boolean {
-  return mod.type?.toLowerCase() === "plexus mod" && mod.baseDrain < 0
+  return isPlexusMod(mod) && mod.baseDrain < 0
 }
 
 const CATEGORY_TO_COMPAT: Record<string, ModCompatibility[]> = {

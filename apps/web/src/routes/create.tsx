@@ -688,6 +688,7 @@ function EditorShell() {
                     ? slotKind(slots.selected)
                     : undefined
               }
+              selectedSlot={slots.selected}
               selectedPlexusGroup={(() => {
                 if (category !== "railjack" || !slots.selected) return undefined
                 // Aura slot lives inside the Integrated tab.
