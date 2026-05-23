@@ -349,7 +349,10 @@ export function getModsForItem(
       // stance slot in-game so exclude stance mods to keep the picker clean.
       // Sweeper(/Prime) is a shotgun → shotgun mods. Everything else
       // (Verglas, Vulklok, Deth Machine Rifle, Burst Laser, etc.) → rifle.
-      if (item.uniqueName?.includes("SentGlaiveWeapon")) {
+      // Match on name prefix rather than uniqueName — Deconstructor and
+      // Deconstructor Prime live under different uniqueName paths
+      // (.../SentGlaiveWeapon vs .../DeconstructorPrime/PrimeHeliosGlaiveWeapon).
+      if (itemNameLower.startsWith("deconstructor")) {
         if (modType === "stance mod") return false
         return isMeleeCompat(compatName, modType)
       }
