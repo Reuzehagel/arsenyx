@@ -1,10 +1,10 @@
 import {
-  decodeBuild,
   decodeBuildDoc,
   encodeBuild,
   encodeBuildDoc,
 } from "@arsenyx/shared/warframe/build-codec"
 import {
+  MAX_VARIANTS,
   projectVariant,
   type BuildDoc,
 } from "@arsenyx/shared/warframe/build-doc"
@@ -48,6 +48,7 @@ import {
   getNormalSlotCount,
   getPlexusGroupForIndex,
   GuideEditor,
+  type GuideScope,
   hasExilusSlot,
   hasStanceSlot,
   ItemSidebar,
@@ -76,20 +77,18 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { apiErrorMessage, apiFetch } from "@/lib/api-client"
 import { arcanesQuery } from "@/lib/arcanes-query"
 import { authClient } from "@/lib/auth-client"
 import {
   buildStateToSavedData,
   getVariants,
+  isSyntheticVariant,
   normalizeBuildData,
   savedDataToBuildState,
   selectVariant,
+  SYNTHETIC_VARIANT_ID,
+  SYNTHETIC_VARIANT_LABEL,
 } from "@/lib/build-codec-adapter"
 import {
   buildQuery,
@@ -281,12 +280,7 @@ function EditorShell() {
       })
       return { data: { ...activeData, variants: savedVariants } }
     }
-    // Last-ditch: try the v1 decoder directly in case decodeBuildDoc
-    // rejects the payload (e.g. unknown version added later by a
-    // newer client).
-    const decoded = decodeBuild(shareEncoded)
-    if (!decoded) return null
-    return buildStateToSavedData(decoded, allMods, allArcanes)
+    return null
   })
   // Full normalized saved data (all variants intact); used when persisting.
   const savedDataAll: SavedBuildData = useMemo(() => {
@@ -501,6 +495,11 @@ function EditorShell() {
     () =>
       cachedShared?.guideDescription ?? existingBuild?.guide?.description ?? "",
   )
+  // Scope of the GuideEditor — build-wide vs a specific variant. Resets
+  // to "build" on EditorShell remount (variant switches) which keeps the
+  // UX predictable: switching variants doesn't silently change what
+  // guide you're editing.
+  const [guideScope, setGuideScope] = useState<GuideScope>({ kind: "build" })
 
   const [zawComponents, setZawComponents] = useState<
     { grip: string; link: string } | undefined
@@ -543,34 +542,36 @@ function EditorShell() {
     () => savedData.deploymentContext ?? DEFAULT_DEPLOYMENT_CONTEXT,
   )
 
-  // Sync shared field edits into the module cache so they survive
-  // the EditorShell remount that fires on every variant switch.
-  // Per-variant fields (slots/arcanes/incarnon/dc/helminth) live in
-  // the variants array; these effects only mirror build-wide state.
+  // Sync shared field edits into the module cache so they survive the
+  // EditorShell remount on every variant switch. Per-variant fields
+  // (slots/arcanes/incarnon/dc/helminth) live in the variants array;
+  // this only mirrors build-wide state. One effect with a fresh patch
+  // each render — React shallow-compares deps, so unchanged fields
+  // no-op cheaply.
   useEffect(() => {
-    writeShared({ hasReactor })
-  }, [hasReactor]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    writeShared({ shards })
-  }, [shards]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    writeShared({ zawComponents })
-  }, [zawComponents]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    writeShared({ lichBonusElement })
-  }, [lichBonusElement]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    writeShared({ buildName })
-  }, [buildName]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    writeShared({ guideSummary })
-  }, [guideSummary]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    writeShared({ guideDescription })
-  }, [guideDescription]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    writeShared({ formaPolarities: slots.formaPolarities })
-  }, [slots.formaPolarities]) // eslint-disable-line react-hooks/exhaustive-deps
+    writeShared({
+      hasReactor,
+      shards,
+      zawComponents,
+      lichBonusElement,
+      buildName,
+      guideSummary,
+      guideDescription,
+      formaPolarities: slots.formaPolarities,
+    })
+    // writeShared closes over storeKey; intentionally excluded — storeKey
+    // changes trigger a full EditorShell remount, not a re-sync.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    hasReactor,
+    shards,
+    zawComponents,
+    lichBonusElement,
+    buildName,
+    guideSummary,
+    guideDescription,
+    slots.formaPolarities,
+  ])
   const setIncarnonPerkAt = (tierIndex: number, perk: string | null) => {
     setIncarnonPerks((prev) => {
       const next = [...prev]
@@ -783,12 +784,10 @@ function EditorShell() {
           deploymentContext,
           // Emit `variants` whenever there's more than one OR the single
           // remaining variant has a user-assigned label/id — otherwise the
-          // synthetic "Main"/"v0" from getVariants() would silently
+          // synthetic placeholder from getVariants() would silently
           // overwrite the user's label after delete-down-to-one.
           ...((nextVariants.length > 1 ||
-            (nextVariants.length === 1 &&
-              (nextVariants[0].label !== "Main" ||
-                nextVariants[0].id !== "v0"))) && {
+            !isSyntheticVariant(nextVariants[0])) && {
             variants: nextVariants,
           }),
         },
@@ -892,16 +891,24 @@ function EditorShell() {
   // the URL ?v=N — the remount on the new key reinitializes hooks from
   // the new variant's data. Unsaved per-variant edits live in `variants`
   // until the next save.
-  const captureActiveSnapshot = (): SavedVariant => ({
-    id: variants[clampedActiveIndex]?.id ?? "v0",
-    label: variants[clampedActiveIndex]?.label ?? "Main",
-    slots: slots.placed,
-    arcanes: arcanes.placed,
-    helminth,
-    incarnonEnabled,
-    incarnonPerks,
-    deploymentContext,
-  })
+  const captureActiveSnapshot = (): SavedVariant => {
+    const existing = variants[clampedActiveIndex]
+    return {
+      id: existing?.id ?? SYNTHETIC_VARIANT_ID,
+      label: existing?.label ?? SYNTHETIC_VARIANT_LABEL,
+      slots: slots.placed,
+      arcanes: arcanes.placed,
+      helminth,
+      incarnonEnabled,
+      incarnonPerks,
+      deploymentContext,
+      // Per-variant guide fields are owned by `variants[i]` directly
+      // (GuideEditor writes through setVariants). Preserve them on
+      // snapshot so a save while editing build-wide doesn't wipe them.
+      guideSummary: existing?.guideSummary,
+      guideDescription: existing?.guideDescription,
+    }
+  }
 
   const newVariantId = () =>
     `v${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`
@@ -921,8 +928,7 @@ function EditorShell() {
   }
 
   const addVariant = () => {
-    const MAX = 4
-    if (variants.length >= MAX) return
+    if (variants.length >= MAX_VARIANTS) return
     const snapshot = captureActiveSnapshot()
     const seeded = variants.map((v, idx) =>
       idx === clampedActiveIndex ? snapshot : v,
@@ -943,8 +949,7 @@ function EditorShell() {
   }
 
   const duplicateActive = () => {
-    const MAX = 4
-    if (variants.length >= MAX) return
+    if (variants.length >= MAX_VARIANTS) return
     const snapshot = captureActiveSnapshot()
     const dup: SavedVariant = {
       ...snapshot,
@@ -1154,11 +1159,54 @@ function EditorShell() {
 
           <div className="bg-card rounded-lg border p-4 select-text">
             <GuideEditor
-              summary={guideSummary}
-              onSummaryChange={setGuideSummary}
-              description={guideDescription}
-              onDescriptionChange={setGuideDescription}
+              summary={
+                guideScope.kind === "build"
+                  ? guideSummary
+                  : (variants[guideScope.index]?.guideSummary ?? "")
+              }
+              onSummaryChange={(v) => {
+                if (guideScope.kind === "build") {
+                  setGuideSummary(v)
+                  return
+                }
+                const idx = guideScope.index
+                setVariants((prev) =>
+                  prev.map((sv, i) =>
+                    i === idx ? { ...sv, guideSummary: v } : sv,
+                  ),
+                )
+              }}
+              description={
+                guideScope.kind === "build"
+                  ? guideDescription
+                  : (variants[guideScope.index]?.guideDescription ?? "")
+              }
+              onDescriptionChange={(v) => {
+                if (guideScope.kind === "build") {
+                  setGuideDescription(v)
+                  return
+                }
+                const idx = guideScope.index
+                setVariants((prev) =>
+                  prev.map((sv, i) =>
+                    i === idx ? { ...sv, guideDescription: v } : sv,
+                  ),
+                )
+              }}
               buildSlug={isUpdate ? existingBuild?.slug : undefined}
+              scopes={variants.map((v) => ({
+                id: v.id,
+                label: v.label,
+                hasContent: Boolean(
+                  (v.guideSummary && v.guideSummary.trim()) ||
+                  (v.guideDescription && v.guideDescription.trim()),
+                ),
+              }))}
+              activeScope={guideScope}
+              onScopeChange={setGuideScope}
+              buildScopeHasContent={Boolean(
+                guideSummary.trim() || guideDescription.trim(),
+              )}
             />
           </div>
         </div>
@@ -1190,8 +1238,6 @@ function EditorShell() {
     </>
   )
 }
-
-const MAX_EDITOR_VARIANTS = 4
 
 function EditorVariantBar({
   variants,
@@ -1228,7 +1274,7 @@ function EditorVariantBar({
     )
   }
   const active = variants[activeIndex]
-  const atCap = variants.length >= MAX_EDITOR_VARIANTS
+  const atCap = variants.length >= MAX_VARIANTS
   return (
     <EditorVariantBarMulti
       variants={variants}
@@ -1268,7 +1314,6 @@ function EditorVariantBarMulti({
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [labelDraft, setLabelDraft] = useState(active.label)
   const inputRef = useRef<HTMLInputElement>(null)
-  const onlyVariant = variants.length <= 1
   // Mirror renameActive's fallback so the input shows the normalized value
   // after blur — otherwise clearing the input and tabbing away leaves an
   // empty draft in the popover while the underlying variant has "Variant N".
@@ -1360,36 +1405,24 @@ function EditorVariantBarMulti({
                         disabled={atCap}
                         title={
                           atCap
-                            ? "Maximum of 4 variants per build"
+                            ? `Maximum of ${MAX_VARIANTS} variants per build`
                             : "Duplicate this variant"
                         }
                         className="flex-1"
                       >
                         Duplicate
                       </Button>
-                      <Tooltip>
-                        <TooltipTrigger
-                          render={
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => {
-                                onDelete()
-                                setSettingsOpen(false)
-                              }}
-                              disabled={onlyVariant}
-                              className="flex-1"
-                            />
-                          }
-                        >
-                          Delete
-                        </TooltipTrigger>
-                        {onlyVariant ? (
-                          <TooltipContent>
-                            Can't delete the last variant
-                          </TooltipContent>
-                        ) : null}
-                      </Tooltip>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => {
+                          onDelete()
+                          setSettingsOpen(false)
+                        }}
+                        className="flex-1"
+                      >
+                        Delete
+                      </Button>
                     </div>
                   </div>
                 </PopoverContent>
@@ -1403,7 +1436,7 @@ function EditorVariantBarMulti({
         onClick={onAdd}
         disabled={atCap}
         title={
-          atCap ? "Maximum of 4 variants per build" : "Add a build variant"
+          atCap ? `Maximum of ${MAX_VARIANTS} variants per build` : "Add a build variant"
         }
         className={cn(
           "rounded-md border border-dashed px-2.5 py-1 text-sm",

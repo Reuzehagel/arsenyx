@@ -6,7 +6,7 @@ export {
   type ArcaneSlotsState,
   type PlacedArcane,
 } from "./use-arcane-slots"
-export { GuideEditor } from "./guide-editor"
+export { GuideEditor, type GuideScope } from "./guide-editor"
 export { KeyboardHintBanner, KeyboardHintsStrip } from "./keyboard-hints"
 export { ItemSidebar, ItemSidebarPopover } from "./item-sidebar"
 export {

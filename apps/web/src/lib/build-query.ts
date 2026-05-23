@@ -28,6 +28,11 @@ export type SavedVariant = {
   incarnonEnabled?: boolean
   incarnonPerks?: (string | null)[]
   deploymentContext?: DeploymentContext
+  /** Optional per-variant guide. When absent, the viewer falls back to
+   *  the build-wide guide from BuildDetail.guide. Stored inside
+   *  `buildData.variants[i]` (JSON column) — no separate DB row. */
+  guideSummary?: string
+  guideDescription?: string
 }
 
 /** Shape stored in `Build.buildData` (Prisma JSON). */

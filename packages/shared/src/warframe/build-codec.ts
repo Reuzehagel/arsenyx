@@ -2,7 +2,7 @@ import type { BuildDoc, BuildVariant } from "./build-doc"
 import { normalizePolarity } from "./mods"
 import { RIVEN_IMAGE_NAME, RIVEN_UNIQUE_NAME } from "./rivens"
 import { SHARD_COLORS, getStatByIndex, getStatIndex } from "./shards"
-import { DEFAULT_DEPLOYMENT_CONTEXT } from "./types"
+import { DEFAULT_DEPLOYMENT_CONTEXT, LICH_BONUS_ELEMENTS } from "./types"
 import type {
   BrowseCategory,
   BuildState,
@@ -13,6 +13,13 @@ import type {
   PlacedMod,
   PlacedShard,
 } from "./types"
+
+function parseLichBonusElement(raw: unknown): LichBonusElement | undefined {
+  return typeof raw === "string" &&
+    (LICH_BONUS_ELEMENTS as readonly string[]).includes(raw)
+    ? (raw as LichBonusElement)
+    : undefined
+}
 
 declare const Buffer: {
   from(data: string, encoding: string): { toString(encoding: string): string }
@@ -294,9 +301,8 @@ export function decodeBuild(base64String: string): Partial<BuildState> | null {
       }
     }
 
-    if (encoded.lb) {
-      state.lichBonusElement = encoded.lb as LichBonusElement
-    }
+    const lb = parseLichBonusElement(encoded.lb)
+    if (lb) state.lichBonusElement = lb
 
     if (encoded.ic) {
       state.incarnonEnabled = encoded.ic.e
@@ -354,6 +360,10 @@ function decodeSlot(
 // V2 — multi-variant share links
 // =============================================================================
 
+// v2 intentionally drops `itemName` / `itemImageName` from the payload — the
+// receiving client re-fetches them via `itemQuery(category, uniqueName)`
+// when rendering, so encoding them would just bloat the URL. v1 carried
+// them (`state.itemName`) for the same reason — also unused on decode.
 interface EncodedBuildV2 {
   v: 2
   i: string
@@ -530,7 +540,7 @@ function decodeV2(encoded: EncodedBuildV2): BuildDoc {
     zawComponents: encoded.zc
       ? { grip: encoded.zc.g, link: encoded.zc.l }
       : undefined,
-    lichBonusElement: encoded.lb as BuildDoc["lichBonusElement"],
+    lichBonusElement: parseLichBonusElement(encoded.lb),
     buildName: encoded.n,
     variants: encoded.vs.map(decodeVariant),
   }

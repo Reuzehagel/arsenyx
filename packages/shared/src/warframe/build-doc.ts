@@ -8,7 +8,7 @@ import type {
   PlacedShard,
 } from "./types"
 
-export const MAX_VARIANTS = 4
+export const MAX_VARIANTS = 5
 
 /**
  * Per-variant slice of a build. Mods/arcanes/incarnon perks/deployment

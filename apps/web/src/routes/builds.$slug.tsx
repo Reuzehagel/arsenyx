@@ -639,19 +639,40 @@ function BuildViewerBodyInner({
 
         {!embed ? <RelatedBuildsStrip slug={build.slug} /> : null}
 
-        {!embed && (build.guide?.description || build.guide?.summary) ? (
-          <div className="bg-card rounded-lg border p-4">
-            {build.guide.summary ? (
-              <p className="mb-3 font-medium">{build.guide.summary}</p>
-            ) : null}
-            {build.guide.description ? (
-              <MarkdownBody
-                source={build.guide.description}
-                className="prose prose-sm dark:prose-invert max-w-none"
-              />
-            ) : null}
-          </div>
-        ) : null}
+        {!embed &&
+          (() => {
+            // Per-variant guide overrides the build-wide one when present.
+            // Empty per-variant guide = use the build-wide as the default
+            // for that variant (mirrors how per-variant loadout fields
+            // already fall back to shared state).
+            const activeVariantGuide = variants[activeIndex]
+            const variantSummary = activeVariantGuide?.guideSummary?.trim()
+            const variantDescription =
+              activeVariantGuide?.guideDescription?.trim()
+            const hasVariantGuide = Boolean(
+              variantSummary || variantDescription,
+            )
+            const effectiveSummary = hasVariantGuide
+              ? (variantSummary ?? "")
+              : (build.guide?.summary ?? "")
+            const effectiveDescription = hasVariantGuide
+              ? (variantDescription ?? "")
+              : (build.guide?.description ?? "")
+            if (!effectiveSummary && !effectiveDescription) return null
+            return (
+              <div className="bg-card rounded-lg border p-4">
+                {effectiveSummary ? (
+                  <p className="mb-3 font-medium">{effectiveSummary}</p>
+                ) : null}
+                {effectiveDescription ? (
+                  <MarkdownBody
+                    source={effectiveDescription}
+                    className="prose prose-sm dark:prose-invert max-w-none"
+                  />
+                ) : null}
+              </div>
+            )
+          })()}
       </div>
     </>
   )

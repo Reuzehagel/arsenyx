@@ -28,9 +28,12 @@ import {
   useUnlinkPartner,
   type PartnerBuild,
 } from "@/lib/partner-builds-query"
+import { cn } from "@/lib/utils"
 import { getImageUrl } from "@/lib/warframe"
 
 const SUMMARY_MAX = 160
+
+export type GuideScope = { kind: "build" } | { kind: "variant"; index: number }
 
 export function GuideEditor({
   summary,
@@ -38,6 +41,10 @@ export function GuideEditor({
   description,
   onDescriptionChange,
   buildSlug,
+  scopes,
+  activeScope,
+  onScopeChange,
+  buildScopeHasContent,
 }: {
   summary: string
   onSummaryChange: (v: string) => void
@@ -49,7 +56,27 @@ export function GuideEditor({
    * after the build exists server-side.
    */
   buildSlug?: string
+  /**
+   * Variant scopes available for per-variant guides. When omitted (or
+   * length <= 1), the chip row is hidden and the editor behaves as a
+   * single build-wide guide editor.
+   */
+  scopes?: { id: string; label: string; hasContent: boolean }[]
+  /**
+   * Currently-edited scope. `build` edits the build-wide guide;
+   * `variant` edits the per-variant guide at the given index.
+   */
+  activeScope?: GuideScope
+  onScopeChange?: (scope: GuideScope) => void
+  /** Whether the build-wide guide has any content — drives the
+   *  build-wide chip's content indicator dot. */
+  buildScopeHasContent?: boolean
 }) {
+  const showScopeChips =
+    scopes !== undefined &&
+    scopes.length > 1 &&
+    activeScope !== undefined &&
+    onScopeChange !== undefined
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -60,9 +87,35 @@ export function GuideEditor({
           </span>
         </h2>
         <p className="text-muted-foreground text-sm">
-          A short summary and a markdown write-up about your build.
+          {showScopeChips
+            ? "Build-wide is shown for every variant unless that variant has its own guide. Pick a variant below to write one just for it."
+            : "A short summary and a markdown write-up about your build."}
         </p>
       </div>
+
+      {showScopeChips ? (
+        <div
+          role="tablist"
+          aria-label="Guide scope"
+          className="flex flex-wrap items-center gap-1.5"
+        >
+          <ScopeChip
+            label="Build-wide"
+            active={activeScope.kind === "build"}
+            hasContent={buildScopeHasContent ?? false}
+            onClick={() => onScopeChange({ kind: "build" })}
+          />
+          {scopes.map((s, i) => (
+            <ScopeChip
+              key={s.id || i}
+              label={s.label || `Variant ${i + 1}`}
+              active={activeScope.kind === "variant" && activeScope.index === i}
+              hasContent={s.hasContent}
+              onClick={() => onScopeChange({ kind: "variant", index: i })}
+            />
+          ))}
+        </div>
+      ) : null}
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
@@ -133,6 +186,44 @@ export function GuideEditor({
         )}
       </div>
     </div>
+  )
+}
+
+function ScopeChip({
+  label,
+  active,
+  hasContent,
+  onClick,
+}: {
+  label: string
+  active: boolean
+  hasContent: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs transition-colors",
+        active
+          ? "border-primary bg-primary text-primary-foreground"
+          : "bg-muted/30 hover:bg-muted text-muted-foreground hover:text-foreground border-transparent",
+      )}
+    >
+      <span>{label}</span>
+      {hasContent ? (
+        <span
+          aria-hidden
+          className={cn(
+            "size-1.5 rounded-full",
+            active ? "bg-primary-foreground/80" : "bg-emerald-500",
+          )}
+        />
+      ) : null}
+    </button>
   )
 }
 

@@ -280,6 +280,16 @@ export function normalizeBuildData(
   return refreshHelminthImage(base, helminthAbilities)
 }
 
+// Synthetic single-variant identity used when a legacy / single-loadout build
+// has no `variants` array. Save logic compares against these to decide whether
+// emitting `variants` would just re-persist the synthetic placeholder.
+export const SYNTHETIC_VARIANT_ID = "v0"
+export const SYNTHETIC_VARIANT_LABEL = "Main"
+
+export function isSyntheticVariant(v: SavedVariant): boolean {
+  return v.id === SYNTHETIC_VARIANT_ID && v.label === SYNTHETIC_VARIANT_LABEL
+}
+
 /**
  * Returns the variants array, or a single synthetic "Main" variant
  * synthesized from the top-level fields when the build has no
@@ -289,8 +299,8 @@ export function getVariants(data: SavedBuildData): SavedVariant[] {
   if (data.variants && data.variants.length > 0) return data.variants
   return [
     {
-      id: "v0",
-      label: "Main",
+      id: SYNTHETIC_VARIANT_ID,
+      label: SYNTHETIC_VARIANT_LABEL,
       slots: data.slots ?? {},
       arcanes: data.arcanes ?? [],
       helminth: data.helminth,

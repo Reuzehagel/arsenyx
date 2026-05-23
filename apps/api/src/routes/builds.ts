@@ -1,3 +1,4 @@
+import { MAX_VARIANTS } from "@arsenyx/shared/warframe/build-doc"
 import { isValidCategory } from "@arsenyx/shared/warframe/categories"
 import { Hono, type Context } from "hono"
 import { getCookie, setCookie } from "hono/cookie"
@@ -42,6 +43,15 @@ function isVisibility(v: unknown): v is BuildVisibility {
     typeof v === "string" &&
     Object.values(BuildVisibility).includes(v as BuildVisibility)
   )
+}
+
+// Defense in depth: the editor caps `variants` at MAX_VARIANTS, but a
+// crafted request could send more. Persisting an unbounded array would
+// bloat the Build.buildData JSON column.
+function variantsOverCap(buildData: unknown): boolean {
+  if (!buildData || typeof buildData !== "object") return false
+  const variants = (buildData as Record<string, unknown>).variants
+  return Array.isArray(variants) && variants.length > MAX_VARIANTS
 }
 
 function hasShardsInBuildData(buildData: unknown): boolean {
@@ -94,6 +104,9 @@ builds.post("/", rateLimitUser("mutate"), async (c) => {
     return c.json({ error: "invalid_name" }, 400)
   if (!b.buildData || typeof b.buildData !== "object") {
     return c.json({ error: "invalid_build_data" }, 400)
+  }
+  if (variantsOverCap(b.buildData)) {
+    return c.json({ error: "too_many_variants" }, 400)
   }
 
   const buildData = b.buildData as InputJsonValue
@@ -189,6 +202,9 @@ builds.patch("/:slug", rateLimitUser("mutate"), async (c) => {
     data.organizationId = orgResult.value
   }
   if (b.buildData && typeof b.buildData === "object") {
+    if (variantsOverCap(b.buildData)) {
+      return c.json({ error: "too_many_variants" }, 400)
+    }
     data.buildData = b.buildData as InputJsonValue
     data.hasShards = hasShardsInBuildData(b.buildData)
   }
