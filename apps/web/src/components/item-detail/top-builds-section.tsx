@@ -1,14 +1,20 @@
 import { useQuery } from "@tanstack/react-query"
 
-import { BuildCard, BuildCardSkeleton } from "@/components/builds/build-card"
+import {
+  BuildCard,
+  BuildCardSkeleton,
+  BuildRow,
+  BuildRowSkeleton,
+} from "@/components/builds/build-card"
 import { publicBuildsQuery } from "@/lib/builds-list-query"
+import { useBuildLayout } from "@/lib/use-build-layout"
 import type { DetailItem } from "@/lib/warframe"
 
-// Flex-wrap with fixed-width cards so a small number of builds (e.g. 2)
-// don't get stretched across the full row by `1fr` grid tracks. Cards
-// align left, wrap to fill rows, and leave natural unused space on the
-// right rather than ballooning each card.
-const GRID_CLASS = "flex flex-wrap gap-3 [&>*]:w-[240px] [&>*]:max-w-full"
+// Cards: flex-wrap with fixed-width tiles so a small number of builds (e.g. 2)
+// don't get stretched across the full row by `1fr` grid tracks. They align
+// left, wrap, and leave natural unused space on the right.
+const CARDS_CLASS = "flex flex-wrap gap-3 [&>*]:w-[240px] [&>*]:max-w-full"
+const ROWS_CLASS = "flex flex-col gap-2"
 
 const TOP_BUILDS_LIMIT = 6
 
@@ -21,6 +27,8 @@ export function TopBuildsSection({ item }: { item: DetailItem }) {
       limit: TOP_BUILDS_LIMIT,
     }),
   )
+  const [layout] = useBuildLayout()
+  const containerClass = layout === "rows" ? ROWS_CLASS : CARDS_CLASS
 
   if (isLoading) {
     return (
@@ -28,12 +36,16 @@ export function TopBuildsSection({ item }: { item: DetailItem }) {
         role="status"
         aria-busy="true"
         aria-live="polite"
-        className={GRID_CLASS}
+        className={containerClass}
       >
         <span className="sr-only">Loading top builds…</span>
-        {Array.from({ length: TOP_BUILDS_LIMIT }).map((_, i) => (
-          <BuildCardSkeleton key={i} />
-        ))}
+        {Array.from({ length: TOP_BUILDS_LIMIT }).map((_, i) =>
+          layout === "rows" ? (
+            <BuildRowSkeleton key={i} />
+          ) : (
+            <BuildCardSkeleton key={i} />
+          ),
+        )}
       </div>
     )
   }
@@ -54,10 +66,14 @@ export function TopBuildsSection({ item }: { item: DetailItem }) {
   }
 
   return (
-    <div className={GRID_CLASS}>
-      {builds.map((b) => (
-        <BuildCard key={b.id} build={b} />
-      ))}
+    <div className={containerClass}>
+      {builds.map((b) =>
+        layout === "rows" ? (
+          <BuildRow key={b.id} build={b} />
+        ) : (
+          <BuildCard key={b.id} build={b} />
+        ),
+      )}
     </div>
   )
 }

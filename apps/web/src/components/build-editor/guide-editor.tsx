@@ -385,7 +385,7 @@ function MarkdownTextarea({
       onKeyDown={onKeyDown}
       onPaste={onPaste}
       placeholder={placeholder}
-      className="min-h-64 font-mono text-sm"
+      className="min-h-64 font-mono text-sm [font-variant-ligatures:none]"
     />
   )
 }

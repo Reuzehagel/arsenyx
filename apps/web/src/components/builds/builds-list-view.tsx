@@ -2,9 +2,18 @@ import { useQuery } from "@tanstack/react-query"
 import { Filter } from "lucide-react"
 import { useEffect, useState, type ReactNode } from "react"
 
-import { BuildCard, BuildCardSkeleton } from "@/components/builds/build-card"
+import {
+  BuildCard,
+  BuildCardSkeleton,
+  BuildRow,
+  BuildRowSkeleton,
+} from "@/components/builds/build-card"
 import { BuildsCategoryTabs } from "@/components/builds/builds-category-tabs"
 import { BuildsSortDropdown } from "@/components/builds/builds-sort-dropdown"
+import {
+  BuildsLayoutToggle,
+  buildLayoutClass,
+} from "@/components/builds/layout-toggle"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -25,6 +34,7 @@ import {
   publicBuildsQuery,
   type BuildListSort,
 } from "@/lib/builds-list-query"
+import { useBuildLayout } from "@/lib/use-build-layout"
 import { cn } from "@/lib/utils"
 import { isValidCategory, type BrowseCategory } from "@/lib/warframe"
 
@@ -109,8 +119,7 @@ export function nextBuildsListSearch(
 
 const SEARCH_DEBOUNCE_MS = 200
 
-export const BUILDS_GRID_CLASS =
-  "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+export const BUILDS_GRID_CLASS = buildLayoutClass("cards")
 
 export function BuildsListView({
   title,
@@ -190,6 +199,7 @@ export function BuildsListView({
           <div className="flex-1" />
         )}
         <div className="flex gap-3">
+          <BuildsLayoutToggle />
           <BuildsSortDropdown
             value={sort}
             onChange={(value) =>
@@ -304,6 +314,7 @@ function Results({
   emptyState: ReactNode
 }) {
   const { data, isPending, isFetching } = useQuery(query)
+  const [layout] = useBuildLayout()
 
   if (isPending || !data) return <ResultsSkeleton />
 
@@ -322,14 +333,18 @@ function Results({
         <div
           aria-busy={isFetching}
           className={cn(
-            BUILDS_GRID_CLASS,
+            buildLayoutClass(layout),
             "transition-opacity",
             isFetching && "opacity-60",
           )}
         >
-          {data.builds.map((b) => (
-            <BuildCard key={b.id} build={b} />
-          ))}
+          {data.builds.map((b) =>
+            layout === "rows" ? (
+              <BuildRow key={b.id} build={b} />
+            ) : (
+              <BuildCard key={b.id} build={b} />
+            ),
+          )}
         </div>
       )}
 
@@ -381,6 +396,7 @@ function Results({
 }
 
 function ResultsSkeleton() {
+  const [layout] = useBuildLayout()
   return (
     <div
       role="status"
@@ -390,10 +406,14 @@ function ResultsSkeleton() {
     >
       <span className="sr-only">Loading builds…</span>
       <Skeleton className="h-4 w-32" />
-      <div className={BUILDS_GRID_CLASS}>
-        {Array.from({ length: LIST_PAGE_SIZE }).map((_, i) => (
-          <BuildCardSkeleton key={i} />
-        ))}
+      <div className={buildLayoutClass(layout)}>
+        {Array.from({ length: LIST_PAGE_SIZE }).map((_, i) =>
+          layout === "rows" ? (
+            <BuildRowSkeleton key={i} />
+          ) : (
+            <BuildCardSkeleton key={i} />
+          ),
+        )}
       </div>
     </div>
   )
@@ -407,6 +427,7 @@ export function BuildsListSkeleton({
   showFilters?: boolean
   showHeader?: boolean
 }) {
+  const [layout] = useBuildLayout()
   return (
     <div
       role="status"
@@ -424,16 +445,21 @@ export function BuildsListSkeleton({
       <div className="flex flex-col gap-3 sm:flex-row">
         <Skeleton className="h-9 flex-1" />
         <div className="flex gap-3">
+          <Skeleton className="h-9 w-20" />
           <Skeleton className="h-9 w-32" />
           {showFilters && <Skeleton className="h-9 w-24" />}
         </div>
       </div>
       {showFilters && <Skeleton className="h-8 w-full max-w-md" />}
       <Skeleton className="h-4 w-32" />
-      <div className={BUILDS_GRID_CLASS}>
-        {Array.from({ length: LIST_PAGE_SIZE }).map((_, i) => (
-          <BuildCardSkeleton key={i} />
-        ))}
+      <div className={buildLayoutClass(layout)}>
+        {Array.from({ length: LIST_PAGE_SIZE }).map((_, i) =>
+          layout === "rows" ? (
+            <BuildRowSkeleton key={i} />
+          ) : (
+            <BuildCardSkeleton key={i} />
+          ),
+        )}
       </div>
     </div>
   )
