@@ -45,10 +45,7 @@ function ToggleButton({
       aria-label={label}
       aria-pressed={active}
       onClick={onClick}
-      className={cn(
-        "h-7 w-8 px-0",
-        active && "bg-muted text-foreground",
-      )}
+      className={cn("h-7 w-8 px-0", active && "bg-muted text-foreground")}
     >
       {children}
     </Button>

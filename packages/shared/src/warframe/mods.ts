@@ -277,7 +277,9 @@ export function getModsForItem(
   // Necramechs carry `type: "Warframe"` in WFCD data; intercept before the
   // warframe branch so they get necramech mods, not warframe mods.
   if (isNecramechItem(itemName)) {
-    return mods.filter((m) => (m.type?.toLowerCase() ?? "").includes("necramech"))
+    return mods.filter((m) =>
+      (m.type?.toLowerCase() ?? "").includes("necramech"),
+    )
   }
 
   if (!itemType) {

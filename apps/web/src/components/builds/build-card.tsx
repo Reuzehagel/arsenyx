@@ -91,7 +91,7 @@ export function BuildRow({ build }: { build: BuildListItem }) {
           <span className="line-clamp-1">{build.item.name}</span>
           <span aria-hidden>·</span>
           {build.organization ? (
-            <span className="text-[#a78bfa] line-clamp-1">
+            <span className="line-clamp-1 text-[#a78bfa]">
               {build.organization.name}
             </span>
           ) : (
@@ -110,7 +110,11 @@ export function BuildRow({ build }: { build: BuildListItem }) {
         </span>
         <Tooltip>
           <TooltipTrigger
-            render={<span className="hidden w-12 text-right sm:inline">{timeAgo}</span>}
+            render={
+              <span className="hidden w-12 text-right sm:inline">
+                {timeAgo}
+              </span>
+            }
           />
           <TooltipContent>
             Updated {formatAbsoluteTime(build.updatedAt)}

@@ -29,18 +29,18 @@ function AboutPage() {
           <article className="prose prose-neutral dark:prose-invert max-w-none">
             <h2>How it started</h2>
             <p>
-              Arsenyx exists because the other planners weren&apos;t open
-              source and didn&apos;t look the way I wanted them to. It was
-              built first with the Profit-Taker Community &mdash; they helped
-              test it, shaped early decisions, and pushed it past being just a
-              loadout tool. From there it grew into a whole platform.
+              Arsenyx exists because the other planners weren&apos;t open source
+              and didn&apos;t look the way I wanted them to. It was built first
+              with the Profit-Taker Community &mdash; they helped test it,
+              shaped early decisions, and pushed it past being just a loadout
+              tool. From there it grew into a whole platform.
             </p>
 
             <h2>Who&apos;s behind it</h2>
             <p>
               It&apos;s just me. No team, no company, no roadmap meetings
-              &mdash; just one Tenno building the tool I wished existed, for
-              the love of the game.
+              &mdash; just one Tenno building the tool I wished existed, for the
+              love of the game.
             </p>
 
             <h2>Open Source</h2>
