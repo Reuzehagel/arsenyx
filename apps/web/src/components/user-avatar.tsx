@@ -1,6 +1,17 @@
+import { proxyImage } from "@/lib/image-proxy"
 import { cn } from "@/lib/utils"
 
 type AvatarShape = "circle" | "square" | "rounded"
+
+// Tailwind size-N is N * 0.25rem (4px). CSS pixel size feeds CF resize.
+const SIZE_TO_PX: Record<number, number> = {
+  6: 24,
+  7: 28,
+  8: 32,
+  9: 36,
+  10: 40,
+  20: 80,
+}
 
 const SIZE_CLASSES: Record<number, string> = {
   6: "size-6 text-xs",
@@ -31,6 +42,8 @@ export function UserAvatar({
   className?: string
 }) {
   const initial = fallback.charAt(0).toUpperCase()
+  const px = SIZE_TO_PX[size]
+  const proxied = proxyImage(src, { width: px, height: px, fit: "cover" })
   return (
     <div
       className={cn(
@@ -40,8 +53,8 @@ export function UserAvatar({
         className,
       )}
     >
-      {src ? (
-        <img src={src} alt="" className="h-full w-full object-cover" />
+      {proxied ? (
+        <img src={proxied} alt="" className="h-full w-full object-cover" />
       ) : (
         <span>{initial}</span>
       )}

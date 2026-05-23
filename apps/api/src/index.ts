@@ -4,6 +4,7 @@ import { cors } from "hono/cors"
 import { auth } from "./auth"
 import { withPrisma } from "./db"
 import { webOrigins } from "./env"
+import { rateLimitAnonRead } from "./middleware/rate-limit"
 import { banGuard, originGuard } from "./middleware/security"
 import { isPrismaNotFound } from "./routes/_admin"
 import { admin } from "./routes/admin"
@@ -44,6 +45,14 @@ app.use("/me/*", originGuard, banGuard)
 app.use("/orgs/*", originGuard, banGuard)
 app.use("/users/*", originGuard, banGuard)
 app.use("/admin/*", originGuard, banGuard)
+
+// Edge-side anon throttle on the public read surfaces. Authenticated traffic
+// short-circuits inside the middleware; signed-in users are still bound by
+// rateLimitUser on mutations.
+const anonRead = rateLimitAnonRead()
+app.use("/builds/*", anonRead)
+app.use("/orgs/*", anonRead)
+app.use("/users/*", anonRead)
 
 app.route("/admin", admin)
 app.route("/builds", builds)

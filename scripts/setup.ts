@@ -168,15 +168,31 @@ DATABASE_URL
   await run(["bun", "run", "db:push"], API_DIR, { DATABASE_URL: dbUrl! })
 
   console.log("\n› seeding admin user\n")
+  // Generate fresh credentials per setup so the seeded admin never has the
+  // historical hardcoded "admin/admin" defaults. Printed once; not persisted.
+  const adminEmail = "admin@local.dev"
+  const adminUsername = "admin"
+  const { customAlphabet } = await import("nanoid")
+  const genPw = customAlphabet(
+    "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789",
+    20,
+  )
+  const adminPassword = genPw()
   await run(["bun", "run", "scripts/seed-admin.ts"], API_DIR, {
     DATABASE_URL: dbUrl!,
     BETTER_AUTH_SECRET: secret,
     NODE_ENV: "development",
+    SEED_ADMIN_EMAIL: adminEmail,
+    SEED_ADMIN_USERNAME: adminUsername,
+    SEED_ADMIN_PASSWORD: adminPassword,
   })
 
   console.log(`
 All set — run \`just dev\`.
-Sign in at http://localhost:5173 with admin@admin.com / admin.
+Sign in at http://localhost:5173 with:
+  email:    ${adminEmail}
+  password: ${adminPassword}
+(Re-run \`just setup\` to rotate; not stored anywhere.)
 `)
 }
 

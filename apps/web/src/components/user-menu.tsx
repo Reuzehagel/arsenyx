@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { authClient } from "@/lib/auth-client"
 import { ROUTES } from "@/lib/constants"
+import { proxyImage } from "@/lib/image-proxy"
 
 export function UserMenu() {
   const { data: session, isPending } = authClient.useSession()
@@ -63,7 +64,7 @@ export function UserMenu() {
         >
           {user.image ? (
             <img
-              src={user.image}
+              src={proxyImage(user.image, { width: 28, height: 28 }) ?? ""}
               alt=""
               className="size-7 rounded-full object-cover"
             />

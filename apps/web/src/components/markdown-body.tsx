@@ -3,6 +3,7 @@ import { useMemo } from "react"
 import ReactMarkdown, { type Components } from "react-markdown"
 import remarkGfm from "remark-gfm"
 
+import { proxyImage } from "@/lib/image-proxy"
 import { getVideoEmbed } from "@/lib/video-embed"
 
 /**
@@ -68,11 +69,17 @@ const components: Components = {
   },
   img({ node: _node, src, ...rest }) {
     const { src: cleanSrc, width } = parseSizedSrc(src)
+    // Route every markdown image through CF Image Resizing so the visitor's
+    // browser never fetches a third-party URL directly. Without this, a
+    // malicious guide author can dox every visitor (IP + Referer = build
+    // slug) by embedding `![x](https://attacker.com/p.png)`.
+    const proxied = proxyImage(cleanSrc, { width: 1200, fit: "scale-down" })
     return (
       <img
         {...rest}
-        src={cleanSrc}
+        src={proxied ?? undefined}
         loading="lazy"
+        referrerPolicy="no-referrer"
         style={width ? { width, maxWidth: "100%" } : undefined}
         className="my-2 h-auto max-w-full rounded-md border object-contain"
       />

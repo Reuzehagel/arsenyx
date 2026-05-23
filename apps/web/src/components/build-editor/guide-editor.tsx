@@ -156,8 +156,7 @@ export function GuideEditor({
                     key={s.id || i}
                     label={s.label || `Variant ${i + 1}`}
                     active={
-                      activeScope.kind === "variant" &&
-                      activeScope.index === i
+                      activeScope.kind === "variant" && activeScope.index === i
                     }
                     hasContent={s.hasContent}
                     onClick={() => onScopeChange({ kind: "variant", index: i })}

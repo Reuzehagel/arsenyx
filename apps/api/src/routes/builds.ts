@@ -4,6 +4,7 @@ import { Hono, type Context } from "hono"
 import { getCookie, setCookie } from "hono/cookie"
 import { customAlphabet, nanoid } from "nanoid"
 
+import type { Bindings } from "../bindings"
 import { prisma, registerBackgroundWork } from "../db"
 import { Prisma } from "../generated/prisma/client"
 import { BuildVisibility } from "../generated/prisma/enums"
@@ -329,46 +330,78 @@ builds.get("/", async (c) => {
 const SEARCH_DEFAULT_LIMIT = 10
 const SEARCH_MAX_LIMIT = 20
 
-builds.get("/search", async (c) => {
-  const session = await getSession(c)
-  const viewerId = session?.user.id
-  const q = (c.req.query("q") ?? "").trim().slice(0, 200)
-  if (q.length < 2) return c.json({ builds: [] })
-  const limitRaw = parseInt(c.req.query("limit") ?? "", 10)
-  const limit =
-    Number.isFinite(limitRaw) && limitRaw > 0
-      ? Math.min(limitRaw, SEARCH_MAX_LIMIT)
-      : SEARCH_DEFAULT_LIMIT
+builds.get(
+  "/search",
+  rateLimitUser("search", { includeSafeMethods: true }),
+  async (c) => {
+    const session = await getSession(c)
+    const viewerId = session?.user.id
+    const q = (c.req.query("q") ?? "").trim().slice(0, 200)
+    if (q.length < 2) return c.json({ builds: [] })
 
-  // PUBLIC only — UNLISTED is "accessible by URL, not enumerable", and a
-  // typeahead is enumeration. Viewers can additionally find their own
-  // builds regardless of visibility so they can link private/unlisted
-  // ones from the editor.
-  const rows = await prisma.build.findMany({
-    where: {
-      AND: [
-        {
-          OR: [
-            { name: { contains: q, mode: "insensitive" } },
-            { itemName: { contains: q, mode: "insensitive" } },
-          ],
-        },
-        viewerId
-          ? {
-              OR: [
-                { visibility: BuildVisibility.PUBLIC },
-                { userId: viewerId },
-              ],
-            }
-          : { visibility: BuildVisibility.PUBLIC },
-      ],
-    },
-    orderBy: [{ likeCount: "desc" }, { createdAt: "desc" }],
-    take: limit,
-    select: LIST_SELECT,
-  })
-  return c.json({ builds: rows.map(serializeListRow) })
-})
+    // Anon traffic isn't keyed by the DB-backed `rateLimitUser` middleware
+    // (it short-circuits with no session). Throttle per-IP via the Workers
+    // Rate Limiting API binding — runs at the edge before we touch the DB.
+    //
+    // In production the binding is the only anon defence, so a missing
+    // binding (typo in wrangler.toml, removed [[unsafe.bindings]] block) is
+    // an operational bug we want to scream about rather than silently
+    // open-fail. Outside production we tolerate absence so dev/test don't
+    // need the binding wired up.
+    if (!viewerId) {
+      const limiter = (c.env as Bindings | undefined)?.ANON_SEARCH_LIMITER
+      if (limiter) {
+        // Without cf-connecting-ip every caller shares the literal key
+        // "unknown", which collapses the global anon population into one
+        // bucket. That's a fail-closed outcome (the bucket trips fast) so
+        // it's preferable to fail-open, but log once so it's diagnosable.
+        const ip = c.req.header("cf-connecting-ip")
+        if (!ip) console.warn("rate-limit: missing cf-connecting-ip header")
+        const { success } = await limiter.limit({ key: ip ?? "unknown" })
+        if (!success) return c.json({ error: "rate_limited" }, 429)
+      } else if (process.env.NODE_ENV === "production") {
+        console.error(
+          "rate-limit: ANON_SEARCH_LIMITER binding missing in production — anon /builds/search is unthrottled",
+        )
+      }
+    }
+
+    const limitRaw = parseInt(c.req.query("limit") ?? "", 10)
+    const limit =
+      Number.isFinite(limitRaw) && limitRaw > 0
+        ? Math.min(limitRaw, SEARCH_MAX_LIMIT)
+        : SEARCH_DEFAULT_LIMIT
+
+    // PUBLIC only — UNLISTED is "accessible by URL, not enumerable", and a
+    // typeahead is enumeration. Viewers can additionally find their own
+    // builds regardless of visibility so they can link private/unlisted
+    // ones from the editor.
+    const rows = await prisma.build.findMany({
+      where: {
+        AND: [
+          {
+            OR: [
+              { name: { contains: q, mode: "insensitive" } },
+              { itemName: { contains: q, mode: "insensitive" } },
+            ],
+          },
+          viewerId
+            ? {
+                OR: [
+                  { visibility: BuildVisibility.PUBLIC },
+                  { userId: viewerId },
+                ],
+              }
+            : { visibility: BuildVisibility.PUBLIC },
+        ],
+      },
+      orderBy: [{ likeCount: "desc" }, { createdAt: "desc" }],
+      take: limit,
+      select: LIST_SELECT,
+    })
+    return c.json({ builds: rows.map(serializeListRow) })
+  },
+)
 
 async function loadPartnerContext(slug: string, partnerSlug: string) {
   const [own, partner] = await Promise.all([

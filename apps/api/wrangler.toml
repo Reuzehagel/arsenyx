@@ -21,5 +21,25 @@ BETTER_AUTH_URL = "https://api.arsenyx.com"
 WEB_ORIGIN = "https://www.arsenyx.com,https://arsenyx.com"
 NODE_ENV = "production"
 
+# Workers Rate Limiting API binding — keyed per IP at the edge, free and
+# cheap because the cap is enforced before our handler runs any DB work.
+# Used for anon `/builds/search` traffic where there's no session to key on.
+# Authenticated users go through the DB-backed UserRateLimitWindow limiter.
+[[unsafe.bindings]]
+name = "ANON_SEARCH_LIMITER"
+type = "ratelimit"
+namespace_id = 1001
+simple = { limit = 30, period = 60 }
+
+# Broader anon-read throttle for public list/detail endpoints — generous cap
+# because a normal page view triggers several requests (list + detail +
+# partners). Sized to comfortably accommodate genuine browsing while still
+# capping scraper-style enumeration.
+[[unsafe.bindings]]
+name = "ANON_READ_LIMITER"
+type = "ratelimit"
+namespace_id = 1002
+simple = { limit = 120, period = 60 }
+
 [observability]
 enabled = true

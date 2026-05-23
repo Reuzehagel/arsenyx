@@ -4,7 +4,12 @@ import { prisma } from "../db"
 import { Prisma } from "../generated/prisma/client"
 import { BuildVisibility, OrgRole } from "../generated/prisma/enums"
 import { getSession } from "../lib/session"
-import { hasPrismaCode, parseJsonBody, trimToMax } from "../lib/validate"
+import {
+  hasPrismaCode,
+  parseJsonBody,
+  trimToMax,
+  validateExternalUrl,
+} from "../lib/validate"
 import { rateLimitUser } from "../middleware/rate-limit"
 import { parseListQuery, runList } from "./_build-list"
 import { parsePage, trimQ } from "./_query"
@@ -93,7 +98,18 @@ orgs.post("/", rateLimitUser("mutate"), async (c) => {
   const name = trimToMax(b.name, MAX_NAME)
   const slugRaw = trimToMax(b.slug, MAX_SLUG)?.toLowerCase() ?? null
   const description = trimToMax(b.description, MAX_DESCRIPTION)
-  const image = trimToMax(b.image, 500)
+  // Reject anything that's not a parseable absolute https:// URL with a
+  // public hostname. A null/empty input is fine (no image); anything else
+  // goes through validateExternalUrl, which enforces the 500-char cap —
+  // truncating first would silently chop a long signed query token and
+  // store a still-parseable but broken URL.
+  const image =
+    typeof b.image === "string" && b.image.trim().length > 0
+      ? validateExternalUrl(b.image)
+      : null
+  if (typeof b.image === "string" && b.image.trim().length > 0 && !image) {
+    return c.json({ error: "invalid_image_url" }, 400)
+  }
 
   if (!name) return c.json({ error: "invalid_name" }, 400)
   if (!slugRaw || !SLUG_RE.test(slugRaw)) {
@@ -299,7 +315,17 @@ orgs.patch("/:slug", rateLimitUser("mutate"), async (c) => {
     data.description = trimToMax(b.description, MAX_DESCRIPTION)
   }
   if (typeof b.image === "string" || b.image === null) {
-    data.image = trimToMax(b.image, 500)
+    // Validate before any truncation — see POST handler above for rationale.
+    if (
+      b.image === null ||
+      (typeof b.image === "string" && b.image.trim() === "")
+    ) {
+      data.image = null
+    } else {
+      const validated = validateExternalUrl(b.image)
+      if (!validated) return c.json({ error: "invalid_image_url" }, 400)
+      data.image = validated
+    }
   }
 
   try {

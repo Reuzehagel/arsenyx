@@ -19,13 +19,10 @@ export async function handleOverframeImport(c: Context) {
     const result = await scrapeOverframeBuild(url)
     return c.json(result)
   } catch (err) {
-    return c.json(
-      {
-        error: "scrape_failed",
-        details: err instanceof Error ? err.message : String(err),
-      },
-      500,
-    )
+    // Log full error server-side for debugging; the raw message can leak
+    // internal hostnames, IPs, or stack traces if echoed back to the client.
+    console.error("overframe scrape failed:", err)
+    return c.json({ error: "scrape_failed" }, 500)
   }
 }
 
