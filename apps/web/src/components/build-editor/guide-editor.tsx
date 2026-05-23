@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { ChevronDown, Link2, TriangleAlert, X } from "lucide-react"
-import { useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 
 import { MarkdownBody } from "@/components/markdown-body"
 import { Button } from "@/components/ui/button"
@@ -19,6 +19,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -44,7 +45,6 @@ export function GuideEditor({
   scopes,
   activeScope,
   onScopeChange,
-  buildScopeHasContent,
 }: {
   summary: string
   onSummaryChange: (v: string) => void
@@ -68,15 +68,46 @@ export function GuideEditor({
    */
   activeScope?: GuideScope
   onScopeChange?: (scope: GuideScope) => void
-  /** Whether the build-wide guide has any content — drives the
-   *  build-wide chip's content indicator dot. */
-  buildScopeHasContent?: boolean
 }) {
-  const showScopeChips =
+  const hasMultipleVariants =
     scopes !== undefined &&
     scopes.length > 1 &&
     activeScope !== undefined &&
     onScopeChange !== undefined
+  // Auto-on if any variant already has guide content, or if we land on the
+  // editor with a variant scope active — otherwise default to off so single-
+  // guide authors don't see chips they don't need.
+  const anyVariantHasContent = scopes?.some((s) => s.hasContent) ?? false
+  const [perVariantEnabled, setPerVariantEnabled] = useState<boolean>(
+    () => anyVariantHasContent || activeScope?.kind === "variant",
+  )
+  // Remember the last variant index the user was editing so toggling the
+  // switch off and on returns to it (instead of always snapping to 0).
+  const [lastVariantIndex, setLastVariantIndex] = useState<number>(() =>
+    activeScope?.kind === "variant" ? activeScope.index : 0,
+  )
+  useEffect(() => {
+    if (activeScope?.kind === "variant") setLastVariantIndex(activeScope.index)
+  }, [activeScope])
+  const showScopeChips = hasMultipleVariants && perVariantEnabled
+
+  // Initial auto-on path: if the editor mounts with per-variant enabled but
+  // the active scope still says `build`, route to the first variant so a
+  // chip is selected. Without this the chip row renders with nothing active.
+  useEffect(() => {
+    if (
+      perVariantEnabled &&
+      hasMultipleVariants &&
+      activeScope?.kind === "build" &&
+      scopes &&
+      scopes.length > 0
+    ) {
+      const idx = Math.min(lastVariantIndex, scopes.length - 1)
+      onScopeChange?.({ kind: "variant", index: Math.max(0, idx) })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -87,33 +118,54 @@ export function GuideEditor({
           </span>
         </h2>
         <p className="text-muted-foreground text-sm">
-          {showScopeChips
-            ? "Build-wide is shown for every variant unless that variant has its own guide. Pick a variant below to write one just for it."
-            : "A short summary and a markdown write-up about your build."}
+          A short summary and a markdown write-up about your build.
         </p>
       </div>
 
-      {showScopeChips ? (
-        <div
-          role="tablist"
-          aria-label="Guide scope"
-          className="flex flex-wrap items-center gap-1.5"
-        >
-          <ScopeChip
-            label="Build-wide"
-            active={activeScope.kind === "build"}
-            hasContent={buildScopeHasContent ?? false}
-            onClick={() => onScopeChange({ kind: "build" })}
-          />
-          {scopes.map((s, i) => (
-            <ScopeChip
-              key={s.id || i}
-              label={s.label || `Variant ${i + 1}`}
-              active={activeScope.kind === "variant" && activeScope.index === i}
-              hasContent={s.hasContent}
-              onClick={() => onScopeChange({ kind: "variant", index: i })}
+      {hasMultipleVariants ? (
+        <div className="bg-muted/30 flex flex-col gap-2 rounded-md border p-3">
+          <label className="flex items-center gap-3">
+            <Switch
+              checked={perVariantEnabled}
+              onCheckedChange={(checked) => {
+                setPerVariantEnabled(checked)
+                if (!checked) {
+                  onScopeChange({ kind: "build" })
+                  return
+                }
+                const idx = Math.min(lastVariantIndex, scopes.length - 1)
+                onScopeChange({ kind: "variant", index: Math.max(0, idx) })
+              }}
             />
-          ))}
+            <span className="text-sm font-medium">
+              Write a separate guide per variant
+            </span>
+          </label>
+          {showScopeChips ? (
+            <div className="flex flex-col gap-1.5 pt-1">
+              <span className="text-muted-foreground text-xs">
+                Editing guide for:
+              </span>
+              <div
+                role="tablist"
+                aria-label="Guide scope"
+                className="flex flex-wrap items-center gap-1.5"
+              >
+                {scopes.map((s, i) => (
+                  <ScopeChip
+                    key={s.id || i}
+                    label={s.label || `Variant ${i + 1}`}
+                    active={
+                      activeScope.kind === "variant" &&
+                      activeScope.index === i
+                    }
+                    hasContent={s.hasContent}
+                    onClick={() => onScopeChange({ kind: "variant", index: i })}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
 

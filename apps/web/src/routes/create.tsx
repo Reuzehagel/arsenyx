@@ -1206,9 +1206,6 @@ function EditorShell() {
               }))}
               activeScope={guideScope}
               onScopeChange={setGuideScope}
-              buildScopeHasContent={Boolean(
-                guideSummary.trim() || guideDescription.trim(),
-              )}
             />
           </div>
         </div>

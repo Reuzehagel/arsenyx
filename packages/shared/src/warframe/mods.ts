@@ -343,6 +343,21 @@ export function getModsForItem(
     if (itemTypeLower === "archwing")
       return compatName === "archwing" || modType.includes("archwing")
 
+    if (itemTypeLower === "companion weapon") {
+      // Sentinel weapons share mod pools with their primary-weapon analogues.
+      // Deconstructor(/Prime) is a thrown glaive → melee mods, but it has no
+      // stance slot in-game so exclude stance mods to keep the picker clean.
+      // Sweeper(/Prime) is a shotgun → shotgun mods. Everything else
+      // (Verglas, Vulklok, Deth Machine Rifle, Burst Laser, etc.) → rifle.
+      if (item.uniqueName?.includes("SentGlaiveWeapon")) {
+        if (modType === "stance mod") return false
+        return isMeleeCompat(compatName, modType)
+      }
+      if (itemNameLower.startsWith("sweeper"))
+        return compatName === "shotgun" || modType.includes("shotgun")
+      return isPrimaryMod(compatName, modType, "rifle")
+    }
+
     if (itemTypeLower === "exalted weapon") {
       // Necramech exalteds use Archgun/Archmelee mods (Arquebex → Archgun,
       // Ironbride → Archmelee), routed by whether the weapon has a trigger.
