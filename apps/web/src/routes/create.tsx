@@ -1,4 +1,13 @@
-import { decodeBuild, encodeBuild } from "@arsenyx/shared/warframe/build-codec"
+import {
+  decodeBuild,
+  decodeBuildDoc,
+  encodeBuild,
+  encodeBuildDoc,
+} from "@arsenyx/shared/warframe/build-codec"
+import {
+  projectVariant,
+  type BuildDoc,
+} from "@arsenyx/shared/warframe/build-doc"
 import {
   getIncarnonGenesisImage,
   isInnateIncarnon,
@@ -21,7 +30,7 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query"
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
-import { Suspense, useEffect, useMemo, useState } from "react"
+import { Suspense, useEffect, useMemo, useRef, useState } from "react"
 
 import {
   ArcaneRow,
@@ -60,15 +69,33 @@ import { SearchPanel } from "@/components/create-editor/search-panel"
 import { useRivenDialog } from "@/components/create-editor/use-riven-dialog"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { apiErrorMessage, apiFetch } from "@/lib/api-client"
 import { arcanesQuery } from "@/lib/arcanes-query"
 import { authClient } from "@/lib/auth-client"
 import {
   buildStateToSavedData,
+  getVariants,
   normalizeBuildData,
   savedDataToBuildState,
+  selectVariant,
 } from "@/lib/build-codec-adapter"
-import { buildQuery, type SavedBuildData } from "@/lib/build-query"
+import {
+  buildQuery,
+  type SavedBuildData,
+  type SavedVariant,
+} from "@/lib/build-query"
 import { helminthQuery, type HelminthAbility } from "@/lib/helminth-query"
 import { useHotkey } from "@/lib/hotkeys"
 import { consumeDraft } from "@/lib/import-draft"
@@ -77,6 +104,7 @@ import { modsQuery } from "@/lib/mods-query"
 import { myOrgsQuery } from "@/lib/org-query"
 import { padShards, type PlacedShard } from "@/lib/shards"
 import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard"
+import { cn } from "@/lib/utils"
 import {
   getCategoryLabel,
   isValidCategory,
@@ -89,6 +117,9 @@ type CreateSearch = {
   build?: string
   draft?: string
   share?: string
+  /** Active variant index for multi-variant builds. 0 (or undefined) =
+   *  first variant. */
+  v?: number
 }
 
 export const Route = createFileRoute("/create")({
@@ -101,7 +132,24 @@ export const Route = createFileRoute("/create")({
     const build = typeof search.build === "string" ? search.build : undefined
     const draft = typeof search.draft === "string" ? search.draft : undefined
     const share = typeof search.share === "string" ? search.share : undefined
-    return { item, category, build, draft, share }
+    const rawV =
+      typeof search.v === "string"
+        ? Number(search.v)
+        : typeof search.v === "number"
+          ? search.v
+          : undefined
+    const v =
+      rawV !== undefined && Number.isFinite(rawV) && rawV >= 0
+        ? Math.min(50, Math.floor(rawV))
+        : undefined
+    return {
+      item,
+      category,
+      build,
+      draft,
+      share,
+      ...(v !== undefined && { v }),
+    }
   },
   beforeLoad: ({ search }) => {
     if (!search.item) {
@@ -131,6 +179,22 @@ export const Route = createFileRoute("/create")({
 })
 
 function CreatePage() {
+  // Re-key EditorShell on variant switch so the per-variant hooks
+  // (useBuildSlots / useArcaneSlots) re-initialize from the projected
+  // variant's data. Cheaper than extracting + threading callbacks for
+  // every per-variant setter through every subcomponent.
+  const { build: buildSlug, v } = Route.useSearch()
+  const variantKey = `${buildSlug ?? "new"}-${v ?? 0}`
+  // Drop the in-memory editor cache on every navigation away from
+  // /create (Cancel, route change). Without this, an unsaved variant
+  // added before Cancel would silently re-appear next time the user
+  // opened the same build's editor.
+  useEffect(
+    () => () => {
+      cachedVariants = null
+    },
+    [],
+  )
   return (
     <div className="relative flex min-h-screen flex-col">
       <Header />
@@ -139,7 +203,7 @@ function CreatePage() {
           <Suspense
             fallback={<p className="text-muted-foreground">Loading item…</p>}
           >
-            <EditorShell />
+            <EditorShell key={variantKey} />
           </Suspense>
         </div>
       </main>
@@ -148,6 +212,28 @@ function CreatePage() {
   )
 }
 
+// Survives EditorShell remounts (the editor is re-keyed on variant switch
+// so per-variant hooks can re-initialize from the new variant's data).
+// Single-entry cache keyed by buildSlug — replaced when editing a
+// different build. Cleared on successful save below.
+type SharedEditorOverrides = {
+  hasReactor?: boolean
+  shards?: (PlacedShard | null)[]
+  zawComponents?: { grip: string; link: string } | undefined
+  lichBonusElement?: LichBonusElement | null
+  formaPolarities?: Partial<
+    Record<string, import("@arsenyx/shared/warframe/types").Polarity>
+  >
+  buildName?: string
+  guideSummary?: string
+  guideDescription?: string
+}
+let cachedVariants: {
+  key: string
+  data: SavedVariant[]
+  shared?: SharedEditorOverrides
+} | null = null
+
 function EditorShell() {
   const {
     item: slug,
@@ -155,6 +241,7 @@ function EditorShell() {
     build: buildSlug,
     draft: draftId,
     share: shareEncoded,
+    v: activeVariantIndex = 0,
   } = Route.useSearch()
   const { data: item } = useSuspenseQuery(itemQuery(category, slug))
   const { data: existingBuild } = useQuery({
@@ -167,11 +254,42 @@ function EditorShell() {
   const [draft] = useState(() => consumeDraft(draftId))
   const [shareHydrated] = useState(() => {
     if (!shareEncoded) return null
+    // decodeBuildDoc handles both v1 (wrapped as single-variant doc) and v2.
+    const doc = decodeBuildDoc(shareEncoded)
+    if (doc) {
+      const activeIdx = 0
+      const activeState = projectVariant(doc, activeIdx)
+      const { data: activeData } = buildStateToSavedData(
+        activeState,
+        allMods,
+        allArcanes,
+      )
+      if (doc.variants.length === 1) return { data: activeData }
+      const savedVariants: SavedVariant[] = doc.variants.map((v, i) => {
+        const state = projectVariant(doc, i)
+        const { data } = buildStateToSavedData(state, allMods, allArcanes)
+        return {
+          id: v.id,
+          label: v.label,
+          slots: data.slots ?? {},
+          arcanes: data.arcanes ?? [],
+          helminth: data.helminth,
+          incarnonEnabled: data.incarnonEnabled,
+          incarnonPerks: data.incarnonPerks,
+          deploymentContext: data.deploymentContext,
+        }
+      })
+      return { data: { ...activeData, variants: savedVariants } }
+    }
+    // Last-ditch: try the v1 decoder directly in case decodeBuildDoc
+    // rejects the payload (e.g. unknown version added later by a
+    // newer client).
     const decoded = decodeBuild(shareEncoded)
     if (!decoded) return null
     return buildStateToSavedData(decoded, allMods, allArcanes)
   })
-  const savedData: SavedBuildData = useMemo(() => {
+  // Full normalized saved data (all variants intact); used when persisting.
+  const savedDataAll: SavedBuildData = useMemo(() => {
     if (draft) return draft.data
     if (existingBuild)
       return normalizeBuildData(
@@ -191,6 +309,93 @@ function EditorShell() {
     helminthAbilities,
   ])
 
+  // Track the variants list as mutable state so add/duplicate/delete can
+  // mutate it before save without round-tripping through the URL.
+  // EditorShell is re-keyed on variant switch, which would normally reset
+  // useState. The module-level cache below preserves the in-progress
+  // variants array across those remounts (keyed by buildSlug, single
+  // entry — replaced when switching to a different build).
+  // Include `item` and `category` so two consecutive new-build sessions on
+  // different items don't share the same cache bucket (the EditorShell isn't
+  // re-keyed on item change, but the cache lookup must still distinguish).
+  const storeKey = buildSlug ?? `__new_build__:${category}:${slug}`
+  const [variants, _setVariants] = useState<SavedVariant[]>(() => {
+    if (cachedVariants && cachedVariants.key === storeKey) {
+      return cachedVariants.data
+    }
+    const initial = getVariants(savedDataAll)
+    cachedVariants = { key: storeKey, data: initial }
+    return initial
+  })
+  const setVariants = (
+    next: SavedVariant[] | ((prev: SavedVariant[]) => SavedVariant[]),
+  ) => {
+    _setVariants((prev) => {
+      const value =
+        typeof next === "function"
+          ? (next as (p: SavedVariant[]) => SavedVariant[])(prev)
+          : next
+      // Preserve `shared` — setVariants only owns the variants array.
+      const sharedSlot =
+        cachedVariants?.key === storeKey ? cachedVariants.shared : undefined
+      cachedVariants = { key: storeKey, data: value, shared: sharedSlot }
+      return value
+    })
+  }
+  const clampedActiveIndex = Math.min(
+    Math.max(0, activeVariantIndex),
+    variants.length - 1,
+  )
+
+  // Slice projected for this variant — feeds the existing slot/arcane
+  // hooks below. EditorShell is re-keyed by activeIndex in CreatePage,
+  // so this useMemo only runs at mount (the right semantics). Reads
+  // from the in-memory `variants` state (which may contain unsaved
+  // add/duplicate/rename edits) rather than re-deriving from server
+  // data.
+  const savedData: SavedBuildData = useMemo(() => {
+    const active = variants[clampedActiveIndex]
+    if (!active) return selectVariant(savedDataAll, clampedActiveIndex)
+    // No fallback to savedDataAll for per-variant fields. savedDataAll's
+    // top-level mirrors the saved-active variant; falling back to it would
+    // pre-fill a freshly-added blank variant with the previous variant's
+    // helminth/incarnon/dc. Downstream useState initializers supply their
+    // own defaults (isInnateIncarnon, DEFAULT_DEPLOYMENT_CONTEXT, empty
+    // helminth) when these are undefined.
+    return {
+      ...savedDataAll,
+      slots: active.slots,
+      arcanes: active.arcanes,
+      helminth: active.helminth,
+      incarnonEnabled: active.incarnonEnabled,
+      incarnonPerks: active.incarnonPerks,
+      deploymentContext: active.deploymentContext,
+    }
+    // Read once at mount — EditorShell re-keys on switch, so reading
+    // stale variants[] state during this mount is the desired behavior.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Build-wide shared field overrides (not in variants[]). Persist
+  // across variant-switch remounts via the cache so unsaved edits to
+  // shards/forma/reactor/lich/zaw/buildName aren't lost.
+  const cachedShared =
+    cachedVariants?.key === storeKey ? cachedVariants.shared : undefined
+  const writeShared = (patch: Partial<SharedEditorOverrides>) => {
+    if (!cachedVariants || cachedVariants.key !== storeKey) {
+      // Key mismatch (or empty cache) means the previous bucket belongs to a
+      // different build — do NOT carry its shared overrides forward, that
+      // would leak forma/shards/buildName/etc. across builds.
+      cachedVariants = {
+        key: storeKey,
+        data: variants,
+        shared: { ...patch },
+      }
+      return
+    }
+    cachedVariants.shared = { ...(cachedVariants.shared ?? {}), ...patch }
+  }
+
   const categoryLabel = getCategoryLabel(category)
 
   const isCompanion = category === "companions"
@@ -200,7 +405,9 @@ function EditorShell() {
   const showStance = hasStanceSlot(item, category)
   const slots = useBuildSlots(normalSlotCount, {
     placed: savedData.slots,
-    formaPolarities: savedData.formaPolarities,
+    // Forma is build-wide (shared across variants); use the cached
+    // override so unsaved forma edits survive variant switches.
+    formaPolarities: cachedShared?.formaPolarities ?? savedData.formaPolarities,
     auraSlotCount,
     showExilus,
     showStance,
@@ -238,7 +445,11 @@ function EditorShell() {
   const { data: session } = authClient.useSession()
 
   const [buildName, setBuildName] = useState(
-    () => existingBuild?.name ?? draft?.buildName ?? item.name,
+    () =>
+      cachedShared?.buildName ??
+      existingBuild?.name ??
+      draft?.buildName ??
+      item.name,
   )
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "error">(
     "idle",
@@ -260,10 +471,10 @@ function EditorShell() {
   const organizations = myOrgs?.memberships.map((m) => m.organization) ?? []
 
   const [hasReactor, setHasReactor] = useState(
-    () => savedData.hasReactor ?? true,
+    () => cachedShared?.hasReactor ?? savedData.hasReactor ?? true,
   )
-  const [shards, setShards] = useState<(PlacedShard | null)[]>(() =>
-    padShards(savedData.shards),
+  const [shards, setShards] = useState<(PlacedShard | null)[]>(
+    () => cachedShared?.shards ?? padShards(savedData.shards),
   )
   const setShard = (i: number, s: PlacedShard | null) => {
     setShards((prev) => {
@@ -284,15 +495,19 @@ function EditorShell() {
   }
 
   const [guideSummary, setGuideSummary] = useState(
-    () => existingBuild?.guide?.summary ?? "",
+    () => cachedShared?.guideSummary ?? existingBuild?.guide?.summary ?? "",
   )
   const [guideDescription, setGuideDescription] = useState(
-    () => existingBuild?.guide?.description ?? "",
+    () =>
+      cachedShared?.guideDescription ?? existingBuild?.guide?.description ?? "",
   )
 
   const [zawComponents, setZawComponents] = useState<
     { grip: string; link: string } | undefined
   >(() => {
+    if (cachedShared && "zawComponents" in cachedShared) {
+      return cachedShared.zawComponents
+    }
     if (savedData.zawComponents) return savedData.zawComponents
     if (isZawStrike(item.name)) {
       return { grip: ZAW_DEFAULT_GRIP, link: ZAW_DEFAULT_LINK }
@@ -310,7 +525,10 @@ function EditorShell() {
   }, [item.name])
 
   const [lichBonusElement, setLichBonusElement] =
-    useState<LichBonusElement | null>(() => savedData.lichBonusElement ?? null)
+    useState<LichBonusElement | null>(
+      () =>
+        cachedShared?.lichBonusElement ?? savedData.lichBonusElement ?? null,
+    )
 
   // Innate incarnons (no separate Genesis adapter) default-on; Steel Path
   // Circuit weapons require installing the adapter, so default-off.
@@ -324,6 +542,35 @@ function EditorShell() {
   const [deploymentContext, setDeploymentContext] = useState<DeploymentContext>(
     () => savedData.deploymentContext ?? DEFAULT_DEPLOYMENT_CONTEXT,
   )
+
+  // Sync shared field edits into the module cache so they survive
+  // the EditorShell remount that fires on every variant switch.
+  // Per-variant fields (slots/arcanes/incarnon/dc/helminth) live in
+  // the variants array; these effects only mirror build-wide state.
+  useEffect(() => {
+    writeShared({ hasReactor })
+  }, [hasReactor]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    writeShared({ shards })
+  }, [shards]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    writeShared({ zawComponents })
+  }, [zawComponents]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    writeShared({ lichBonusElement })
+  }, [lichBonusElement]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    writeShared({ buildName })
+  }, [buildName]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    writeShared({ guideSummary })
+  }, [guideSummary]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    writeShared({ guideDescription })
+  }, [guideDescription]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    writeShared({ formaPolarities: slots.formaPolarities })
+  }, [slots.formaPolarities]) // eslint-disable-line react-hooks/exhaustive-deps
   const setIncarnonPerkAt = (tierIndex: number, perk: string | null) => {
     setIncarnonPerks((prev) => {
       const next = [...prev]
@@ -413,7 +660,73 @@ function EditorShell() {
       auraSlotCount,
       showStance,
     })
-    const encoded = encodeBuild(state)
+    let encoded: string
+    if (variants.length > 1) {
+      // Build a BuildDoc that mirrors the current editor state: shared
+      // fields from `state`, per-variant data from the in-memory variants
+      // array (with the active variant's slice replaced by the live
+      // editor state so unsaved tweaks make it into the share URL).
+      const activeSnapshot = captureActiveSnapshot()
+      const allVariants = variants.map((v, i) =>
+        i === clampedActiveIndex ? activeSnapshot : v,
+      )
+      const doc: BuildDoc = {
+        itemUniqueName: state.itemUniqueName,
+        itemName: state.itemName,
+        itemCategory: state.itemCategory,
+        itemImageName: state.itemImageName,
+        hasReactor: state.hasReactor,
+        shardSlots: state.shardSlots,
+        helminthAbility: state.helminthAbility,
+        zawComponents: state.zawComponents,
+        lichBonusElement: state.lichBonusElement,
+        buildName: state.buildName,
+        variants: allVariants.map((sv) => {
+          // Project each saved variant into a BuildVariant shape. The
+          // expensive slot reconstruction (ModSlot[]) is reused via
+          // savedDataToBuildState by overlaying the variant's slots
+          // onto the same shared editor state.
+          const variantState = savedDataToBuildState({
+            item: {
+              uniqueName: state.itemUniqueName,
+              name: state.itemName,
+              imageName: state.itemImageName,
+            },
+            category,
+            buildName: state.buildName,
+            hasReactor,
+            slots: sv.slots,
+            formaPolarities: slots.formaPolarities,
+            arcanes: sv.arcanes,
+            shards,
+            helminth,
+            zawComponents,
+            lichBonusElement: lichBonusElement ?? undefined,
+            incarnonEnabled: sv.incarnonEnabled ?? incarnonEnabled,
+            incarnonPerks: sv.incarnonPerks ?? incarnonPerks,
+            deploymentContext: sv.deploymentContext ?? deploymentContext,
+            normalSlotCount,
+            auraSlotCount,
+            showStance,
+          })
+          return {
+            id: sv.id,
+            label: sv.label,
+            auraSlots: variantState.auraSlots,
+            exilusSlot: variantState.exilusSlot,
+            stanceSlot: variantState.stanceSlot,
+            normalSlots: variantState.normalSlots,
+            arcaneSlots: variantState.arcaneSlots,
+            incarnonEnabled: variantState.incarnonEnabled,
+            incarnonPerks: variantState.incarnonPerks,
+            deploymentContext: variantState.deploymentContext,
+          }
+        }),
+      }
+      encoded = encodeBuildDoc(doc, clampedActiveIndex)
+    } else {
+      encoded = encodeBuild(state)
+    }
     const url = `${window.location.origin}/create?item=${encodeURIComponent(slug)}&category=${encodeURIComponent(category)}&share=${encodeURIComponent(encoded)}`
     void copyShare(url)
   }
@@ -442,6 +755,15 @@ function EditorShell() {
     setSaveStatus("saving")
     setSaveError(null)
     try {
+      // Snapshot the active variant's current editor state, then merge
+      // back into the full variants array. Single-variant builds emit
+      // a v1-shape payload (no `variants` field) for backwards-compat;
+      // multi-variant builds emit both top-level (mirroring active for
+      // legacy clients) and the variants array.
+      const activeSnapshot = captureActiveSnapshot()
+      const nextVariants = variants.map((v, i) =>
+        i === clampedActiveIndex ? activeSnapshot : v,
+      )
       const body = {
         name: buildName.trim() || item.name,
         visibility: nextVisibility,
@@ -459,6 +781,16 @@ function EditorShell() {
           incarnonEnabled,
           incarnonPerks,
           deploymentContext,
+          // Emit `variants` whenever there's more than one OR the single
+          // remaining variant has a user-assigned label/id — otherwise the
+          // synthetic "Main"/"v0" from getVariants() would silently
+          // overwrite the user's label after delete-down-to-one.
+          ...((nextVariants.length > 1 ||
+            (nextVariants.length === 1 &&
+              (nextVariants[0].label !== "Main" ||
+                nextVariants[0].id !== "v0"))) && {
+            variants: nextVariants,
+          }),
         },
         guide: {
           summary: guideSummary.trim() || null,
@@ -482,6 +814,9 @@ function EditorShell() {
         json: body,
       })
       await queryClient.invalidateQueries({ queryKey: ["build", slug] })
+      // Drop the in-memory variants cache so a follow-up edit re-hydrates
+      // from the persisted server state rather than stale local edits.
+      cachedVariants = null
       navigate({ to: "/builds/$slug", params: { slug } })
     } catch (err) {
       setSaveStatus("error")
@@ -551,6 +886,105 @@ function EditorShell() {
       normalSlotConsumesDrain,
     ],
   )
+
+  // ─── Variant management ────────────────────────────────────────────
+  // Switching captures the in-progress edits into `variants` and updates
+  // the URL ?v=N — the remount on the new key reinitializes hooks from
+  // the new variant's data. Unsaved per-variant edits live in `variants`
+  // until the next save.
+  const captureActiveSnapshot = (): SavedVariant => ({
+    id: variants[clampedActiveIndex]?.id ?? "v0",
+    label: variants[clampedActiveIndex]?.label ?? "Main",
+    slots: slots.placed,
+    arcanes: arcanes.placed,
+    helminth,
+    incarnonEnabled,
+    incarnonPerks,
+    deploymentContext,
+  })
+
+  const newVariantId = () =>
+    `v${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`
+
+  const switchVariant = (i: number) => {
+    if (i === clampedActiveIndex) return
+    const snapshot = captureActiveSnapshot()
+    const next = variants.map((v, idx) =>
+      idx === clampedActiveIndex ? snapshot : v,
+    )
+    setVariants(next)
+    navigate({
+      to: ".",
+      search: (s) => ({ ...s, v: i === 0 ? undefined : i }),
+      replace: true,
+    })
+  }
+
+  const addVariant = () => {
+    const MAX = 4
+    if (variants.length >= MAX) return
+    const snapshot = captureActiveSnapshot()
+    const seeded = variants.map((v, idx) =>
+      idx === clampedActiveIndex ? snapshot : v,
+    )
+    const blank: SavedVariant = {
+      id: newVariantId(),
+      label: `Variant ${seeded.length + 1}`,
+      slots: {},
+      arcanes: [],
+    }
+    const next = [...seeded, blank]
+    setVariants(next)
+    navigate({
+      to: ".",
+      search: (s) => ({ ...s, v: next.length - 1 }),
+      replace: true,
+    })
+  }
+
+  const duplicateActive = () => {
+    const MAX = 4
+    if (variants.length >= MAX) return
+    const snapshot = captureActiveSnapshot()
+    const dup: SavedVariant = {
+      ...snapshot,
+      id: newVariantId(),
+      label: `${snapshot.label} (copy)`,
+    }
+    const seeded = variants.map((v, idx) =>
+      idx === clampedActiveIndex ? snapshot : v,
+    )
+    const insertAt = clampedActiveIndex + 1
+    const next = [...seeded.slice(0, insertAt), dup, ...seeded.slice(insertAt)]
+    setVariants(next)
+    navigate({
+      to: ".",
+      search: (s) => ({ ...s, v: insertAt === 0 ? undefined : insertAt }),
+      replace: true,
+    })
+  }
+
+  const deleteActive = () => {
+    if (variants.length <= 1) return
+    const next = variants.filter((_, i) => i !== clampedActiveIndex)
+    setVariants(next)
+    const newIdx = Math.min(clampedActiveIndex, next.length - 1)
+    navigate({
+      to: ".",
+      search: (s) => ({ ...s, v: newIdx === 0 ? undefined : newIdx }),
+      replace: true,
+    })
+  }
+
+  const renameActive = (label: string) => {
+    const trimmed =
+      label.trim().slice(0, 24) || `Variant ${clampedActiveIndex + 1}`
+    setVariants((prev) =>
+      prev.map((v, i) =>
+        i === clampedActiveIndex ? { ...v, label: trimmed } : v,
+      ),
+    )
+  }
 
   return (
     <>
@@ -625,31 +1059,44 @@ function EditorShell() {
                 }
               }}
             >
-              <ItemSidebarPopover
-                className="hidden self-start sm:inline-flex xl:hidden"
-                item={item}
-                category={category}
-                capacityUsed={capacity.used}
-                capacityMax={capacity.max}
-                hasReactor={hasReactor}
-                onToggleReactor={() => setHasReactor((v) => !v)}
-                shards={shards}
-                onSetShard={setShard}
-                helminth={helminth}
-                onSetHelminth={setHelminthAt}
-                zawComponents={zawComponents}
-                onSetZawComponents={setZawComponents}
-                lichBonusElement={lichBonusElement}
-                onSetLichBonusElement={setLichBonusElement}
-                incarnonEnabled={incarnonEnabled}
-                onToggleIncarnon={() => setIncarnonEnabled((v) => !v)}
-                incarnonPerks={incarnonPerks}
-                onSetIncarnonPerk={setIncarnonPerkAt}
-                deploymentContext={deploymentContext}
-                onSetDeploymentContext={setDeploymentContext}
-                placedMods={slots.placed}
-                placedArcanes={arcanes.placed}
-              />
+              <div className="flex items-center gap-2">
+                <ItemSidebarPopover
+                  className="hidden shrink-0 sm:inline-flex xl:hidden"
+                  item={item}
+                  category={category}
+                  capacityUsed={capacity.used}
+                  capacityMax={capacity.max}
+                  hasReactor={hasReactor}
+                  onToggleReactor={() => setHasReactor((v) => !v)}
+                  shards={shards}
+                  onSetShard={setShard}
+                  helminth={helminth}
+                  onSetHelminth={setHelminthAt}
+                  zawComponents={zawComponents}
+                  onSetZawComponents={setZawComponents}
+                  lichBonusElement={lichBonusElement}
+                  onSetLichBonusElement={setLichBonusElement}
+                  incarnonEnabled={incarnonEnabled}
+                  onToggleIncarnon={() => setIncarnonEnabled((v) => !v)}
+                  incarnonPerks={incarnonPerks}
+                  onSetIncarnonPerk={setIncarnonPerkAt}
+                  deploymentContext={deploymentContext}
+                  onSetDeploymentContext={setDeploymentContext}
+                  placedMods={slots.placed}
+                  placedArcanes={arcanes.placed}
+                />
+                <div className="min-w-0 flex-1">
+                  <EditorVariantBar
+                    variants={variants}
+                    activeIndex={clampedActiveIndex}
+                    onSwitch={switchVariant}
+                    onAdd={addVariant}
+                    onDuplicate={duplicateActive}
+                    onDelete={deleteActive}
+                    onRename={renameActive}
+                  />
+                </div>
+              </div>
               <ModGrid
                 item={item}
                 category={category}
@@ -741,5 +1188,232 @@ function EditorShell() {
 
       {riven.dialog}
     </>
+  )
+}
+
+const MAX_EDITOR_VARIANTS = 4
+
+function EditorVariantBar({
+  variants,
+  activeIndex,
+  onSwitch,
+  onAdd,
+  onDuplicate,
+  onDelete,
+  onRename,
+}: {
+  variants: SavedVariant[]
+  activeIndex: number
+  onSwitch: (index: number) => void
+  onAdd: () => void
+  onDuplicate: () => void
+  onDelete: () => void
+  onRename: (label: string) => void
+}) {
+  // Hide the bar for single-variant builds until the user opts in via
+  // "+ Variant". Keeps the editor visually identical to before for
+  // anyone not using variants.
+  if (variants.length === 1) {
+    return (
+      <div className="flex items-center justify-end">
+        <button
+          type="button"
+          onClick={onAdd}
+          className="text-muted-foreground hover:text-foreground hover:bg-muted/40 rounded-md border border-dashed px-2 py-1 text-xs"
+          title="Add a build variant"
+        >
+          + Variant
+        </button>
+      </div>
+    )
+  }
+  const active = variants[activeIndex]
+  const atCap = variants.length >= MAX_EDITOR_VARIANTS
+  return (
+    <EditorVariantBarMulti
+      variants={variants}
+      activeIndex={activeIndex}
+      active={active}
+      atCap={atCap}
+      onSwitch={onSwitch}
+      onAdd={onAdd}
+      onDuplicate={onDuplicate}
+      onDelete={onDelete}
+      onRename={onRename}
+    />
+  )
+}
+
+function EditorVariantBarMulti({
+  variants,
+  activeIndex,
+  active,
+  atCap,
+  onSwitch,
+  onAdd,
+  onDuplicate,
+  onDelete,
+  onRename,
+}: {
+  variants: SavedVariant[]
+  activeIndex: number
+  active: SavedVariant
+  atCap: boolean
+  onSwitch: (index: number) => void
+  onAdd: () => void
+  onDuplicate: () => void
+  onDelete: () => void
+  onRename: (label: string) => void
+}) {
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [labelDraft, setLabelDraft] = useState(active.label)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const onlyVariant = variants.length <= 1
+  // Mirror renameActive's fallback so the input shows the normalized value
+  // after blur — otherwise clearing the input and tabbing away leaves an
+  // empty draft in the popover while the underlying variant has "Variant N".
+  const commitRename = () => {
+    const normalized =
+      labelDraft.trim().slice(0, 24) || `Variant ${activeIndex + 1}`
+    if (normalized !== labelDraft) setLabelDraft(normalized)
+    onRename(normalized)
+  }
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-1.5 pb-1">
+      {variants.map((v, i) => {
+        const isActive = i === activeIndex
+        return (
+          <div key={v.id || i} className="flex items-center gap-0.5">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => onSwitch(i)}
+              className={cn(
+                "rounded-l-md border px-3 py-1 text-sm transition-colors",
+                isActive
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "bg-muted/30 hover:bg-muted text-muted-foreground hover:text-foreground rounded-md border-transparent",
+              )}
+            >
+              {v.label || `Variant ${i + 1}`}
+            </button>
+            {isActive ? (
+              <Popover
+                open={settingsOpen}
+                onOpenChange={(o) => {
+                  setSettingsOpen(o)
+                  if (o) {
+                    setLabelDraft(active.label)
+                    requestAnimationFrame(() => {
+                      inputRef.current?.focus()
+                      inputRef.current?.select()
+                    })
+                  }
+                }}
+              >
+                <PopoverTrigger
+                  render={
+                    <button
+                      type="button"
+                      title="Variant settings"
+                      className="border-primary bg-primary text-primary-foreground rounded-r-md border border-l-0 px-1.5 py-1 text-sm"
+                    >
+                      ⚙
+                    </button>
+                  }
+                />
+                <PopoverContent
+                  side="bottom"
+                  align="center"
+                  className="w-64 p-3"
+                >
+                  <div className="flex flex-col gap-2">
+                    <label className="text-muted-foreground text-xs">
+                      Name
+                    </label>
+                    <Input
+                      ref={inputRef}
+                      value={labelDraft}
+                      maxLength={24}
+                      onChange={(e) => setLabelDraft(e.target.value)}
+                      onBlur={commitRename}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          commitRename()
+                          setSettingsOpen(false)
+                        } else if (e.key === "Escape") {
+                          setSettingsOpen(false)
+                        }
+                      }}
+                      className="h-8 text-sm"
+                    />
+                    <div className="mt-1 flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          commitRename()
+                          onDuplicate()
+                          setSettingsOpen(false)
+                        }}
+                        disabled={atCap}
+                        title={
+                          atCap
+                            ? "Maximum of 4 variants per build"
+                            : "Duplicate this variant"
+                        }
+                        className="flex-1"
+                      >
+                        Duplicate
+                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => {
+                                onDelete()
+                                setSettingsOpen(false)
+                              }}
+                              disabled={onlyVariant}
+                              className="flex-1"
+                            />
+                          }
+                        >
+                          Delete
+                        </TooltipTrigger>
+                        {onlyVariant ? (
+                          <TooltipContent>
+                            Can't delete the last variant
+                          </TooltipContent>
+                        ) : null}
+                      </Tooltip>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            ) : null}
+          </div>
+        )
+      })}
+      <button
+        type="button"
+        onClick={onAdd}
+        disabled={atCap}
+        title={
+          atCap ? "Maximum of 4 variants per build" : "Add a build variant"
+        }
+        className={cn(
+          "rounded-md border border-dashed px-2.5 py-1 text-sm",
+          atCap
+            ? "border-muted-foreground/20 text-muted-foreground/40 cursor-not-allowed"
+            : "border-muted-foreground/40 text-muted-foreground hover:bg-muted/40 hover:text-foreground",
+        )}
+      >
+        + Variant
+      </button>
+    </div>
   )
 }

@@ -1,5 +1,6 @@
 export * from "./arcanes"
 export * from "./build-codec"
+export * from "./build-doc"
 export * from "./categories"
 export * from "./categorize"
 export * from "./mods"

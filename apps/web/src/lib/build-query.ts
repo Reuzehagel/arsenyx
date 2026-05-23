@@ -11,6 +11,25 @@ import { apiFetch, ApiError } from "@/lib/api-client"
 import type { HelminthAbility } from "@/lib/helminth-query"
 import type { PlacedShard } from "@/lib/shards"
 
+/**
+ * Per-variant slice stored inside `SavedBuildData.variants`. When the
+ * `variants` array is present (length >= 1), the per-variant fields here
+ * supersede the legacy top-level `slots`/`arcanes`/`incarnon*`/
+ * `deploymentContext` fields. Top-level fields stay populated for the
+ * active variant so old clients that ignore `variants` still render the
+ * default loadout — graceful degradation, not a hard cutover.
+ */
+export type SavedVariant = {
+  id: string
+  label: string
+  slots: Partial<Record<SlotId, PlacedMod>>
+  arcanes: (PlacedArcane | null)[]
+  helminth?: Record<number, HelminthAbility>
+  incarnonEnabled?: boolean
+  incarnonPerks?: (string | null)[]
+  deploymentContext?: DeploymentContext
+}
+
 /** Shape stored in `Build.buildData` (Prisma JSON). */
 export type SavedBuildData = {
   version?: number
@@ -25,6 +44,11 @@ export type SavedBuildData = {
   incarnonEnabled?: boolean
   incarnonPerks?: (string | null)[]
   deploymentContext?: DeploymentContext
+
+  // Multi-variant support (added 2026-05-23). When present, length >= 1
+  // and the top-level mod/arcane fields mirror variants[0] for legacy
+  // viewer compatibility.
+  variants?: SavedVariant[]
 }
 
 export type BuildDetail = {

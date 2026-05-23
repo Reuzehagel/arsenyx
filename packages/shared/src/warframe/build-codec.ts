@@ -1,3 +1,4 @@
+import type { BuildDoc, BuildVariant } from "./build-doc"
 import { normalizePolarity } from "./mods"
 import { RIVEN_IMAGE_NAME, RIVEN_UNIQUE_NAME } from "./rivens"
 import { SHARD_COLORS, getStatByIndex, getStatIndex } from "./shards"
@@ -347,6 +348,248 @@ function decodeSlot(
   }
 
   return slot
+}
+
+// =============================================================================
+// V2 — multi-variant share links
+// =============================================================================
+
+interface EncodedBuildV2 {
+  v: 2
+  i: string
+  c: string
+  r: boolean
+  sh?: number[]
+  h?: EncodedHelminth
+  zc?: { g: string; l: string }
+  lb?: string
+  n?: string
+  ai?: number
+  vs: EncodedVariant[]
+}
+
+interface EncodedVariant {
+  l: string
+  id?: string
+  a?: EncodedSlot
+  A?: EncodedSlot[]
+  e?: EncodedSlot
+  st?: EncodedSlot
+  s: EncodedSlot[]
+  ar?: EncodedArcane[]
+  ic?: { e?: boolean; p?: (string | null)[] }
+  dc?: DeploymentContext
+}
+
+function encodeVariant(v: BuildVariant): EncodedVariant {
+  const ev: EncodedVariant = {
+    l: v.label,
+    id: v.id,
+    s: v.normalSlots.map(encodeSlot),
+  }
+  if (v.auraSlots.length === 1) ev.a = encodeSlot(v.auraSlots[0])
+  else if (v.auraSlots.length > 1) ev.A = v.auraSlots.map(encodeSlot)
+  if (v.exilusSlot?.mod || v.exilusSlot?.formaPolarity)
+    ev.e = encodeSlot(v.exilusSlot)
+  if (v.stanceSlot?.mod || v.stanceSlot?.formaPolarity)
+    ev.st = encodeSlot(v.stanceSlot)
+  const placedArcanes = (v.arcaneSlots ?? []).filter(
+    (a): a is PlacedArcane => a !== null,
+  )
+  if (placedArcanes.length > 0) {
+    ev.ar = placedArcanes.map((a) => ({ u: a.uniqueName, r: a.rank }))
+  }
+  const hasPickedPerks = v.incarnonPerks?.some((p) => p) ?? false
+  if (v.incarnonEnabled !== undefined || hasPickedPerks) {
+    ev.ic = {}
+    if (v.incarnonEnabled !== undefined) ev.ic.e = v.incarnonEnabled
+    if (hasPickedPerks) ev.ic.p = v.incarnonPerks
+  }
+  if (v.deploymentContext && v.deploymentContext !== DEFAULT_DEPLOYMENT_CONTEXT)
+    ev.dc = v.deploymentContext
+  return ev
+}
+
+function decodeVariant(ev: EncodedVariant, index: number): BuildVariant {
+  const variant: BuildVariant = {
+    id: ev.id ?? `v${index}`,
+    label: ev.l,
+    auraSlots: ev.A
+      ? ev.A.map((s, i) => decodeSlot(s, "aura", `aura-${i}`))
+      : ev.a
+        ? [decodeSlot(ev.a, "aura", "aura-0")]
+        : [],
+    exilusSlot: ev.e ? decodeSlot(ev.e, "exilus", "exilus-0") : undefined,
+    stanceSlot: ev.st ? decodeSlot(ev.st, "stance", "stance") : undefined,
+    normalSlots: ev.s.map((s, i) => decodeSlot(s, "normal", `normal-${i}`)),
+    arcaneSlots:
+      ev.ar && ev.ar.length > 0
+        ? ev.ar.map((a) => ({
+            uniqueName: a.u,
+            name: "",
+            rank: a.r,
+            rarity: "",
+          }))
+        : [],
+  }
+  if (ev.ic) {
+    variant.incarnonEnabled = ev.ic.e
+    variant.incarnonPerks = ev.ic.p
+  }
+  if (ev.dc) variant.deploymentContext = ev.dc
+  return variant
+}
+
+/**
+ * Encode a `BuildDoc` for a share link. Single-variant docs round-trip
+ * through the v1 encoder so existing URLs / outside consumers see no
+ * change. Multi-variant docs emit v2.
+ */
+export function encodeBuildDoc(doc: BuildDoc, activeIndex = 0): string {
+  if (doc.variants.length === 1) {
+    return encodeBuild(buildDocToBuildState(doc, 0))
+  }
+  const encoded: EncodedBuildV2 = {
+    v: 2,
+    i: doc.itemUniqueName,
+    c: doc.itemCategory,
+    r: doc.hasReactor,
+    vs: doc.variants.map(encodeVariant),
+  }
+  if (doc.shardSlots?.length > 0 && doc.shardSlots.some((s) => s !== null))
+    encoded.sh = encodeShards(doc.shardSlots)
+  if (doc.helminthAbility) {
+    encoded.h = {
+      si: doc.helminthAbility.slotIndex,
+      u: doc.helminthAbility.ability.uniqueName,
+      n: doc.helminthAbility.ability.name,
+      s: doc.helminthAbility.ability.source,
+      im: doc.helminthAbility.ability.imageName,
+      d: doc.helminthAbility.ability.description,
+    }
+  }
+  if (doc.zawComponents) {
+    encoded.zc = { g: doc.zawComponents.grip, l: doc.zawComponents.link }
+  }
+  if (doc.lichBonusElement) encoded.lb = doc.lichBonusElement
+  if (doc.buildName) encoded.n = doc.buildName
+  if (activeIndex > 0) encoded.ai = activeIndex
+
+  const jsonString = JSON.stringify(encoded)
+  if (typeof window !== "undefined") {
+    return btoa(encodeURIComponent(jsonString))
+  }
+  return Buffer.from(jsonString, "utf-8").toString("base64")
+}
+
+/**
+ * Decode a share link to a `BuildDoc`. Accepts both v1 (wrapped as a
+ * single-variant doc) and v2. Returns `null` on parse failure or an
+ * unsupported version, matching `decodeBuild`'s tolerant contract.
+ */
+export function decodeBuildDoc(base64String: string): BuildDoc | null {
+  try {
+    let jsonString: string
+    if (typeof window !== "undefined") {
+      jsonString = decodeURIComponent(atob(base64String))
+    } else {
+      jsonString = Buffer.from(base64String, "base64").toString("utf-8")
+    }
+    const raw = JSON.parse(jsonString) as { v?: number }
+    if (raw.v === 1) {
+      const v1 = decodeBuild(base64String)
+      if (!v1) return null
+      return buildStateToBuildDoc(v1)
+    }
+    if (raw.v === 2) return decodeV2(raw as unknown as EncodedBuildV2)
+    return null
+  } catch {
+    return null
+  }
+}
+
+function decodeV2(encoded: EncodedBuildV2): BuildDoc {
+  return {
+    itemUniqueName: encoded.i,
+    itemCategory: encoded.c as BrowseCategory,
+    itemName: "",
+    hasReactor: encoded.r,
+    shardSlots: encoded.sh ? decodeShards(encoded.sh) : [],
+    helminthAbility: encoded.h
+      ? {
+          slotIndex: encoded.h.si,
+          ability: {
+            uniqueName: encoded.h.u,
+            name: encoded.h.n,
+            source: encoded.h.s,
+            imageName: encoded.h.im,
+            description: encoded.h.d,
+          },
+        }
+      : undefined,
+    zawComponents: encoded.zc
+      ? { grip: encoded.zc.g, link: encoded.zc.l }
+      : undefined,
+    lichBonusElement: encoded.lb as BuildDoc["lichBonusElement"],
+    buildName: encoded.n,
+    variants: encoded.vs.map(decodeVariant),
+  }
+}
+
+function buildDocToBuildState(doc: BuildDoc, index: number): BuildState {
+  const v = doc.variants[index]
+  return {
+    itemUniqueName: doc.itemUniqueName,
+    itemName: doc.itemName,
+    itemCategory: doc.itemCategory,
+    itemImageName: doc.itemImageName,
+    hasReactor: doc.hasReactor,
+    shardSlots: doc.shardSlots,
+    helminthAbility: doc.helminthAbility,
+    zawComponents: doc.zawComponents,
+    lichBonusElement: doc.lichBonusElement,
+    buildName: doc.buildName,
+    auraSlots: v.auraSlots,
+    exilusSlot: v.exilusSlot,
+    stanceSlot: v.stanceSlot,
+    normalSlots: v.normalSlots,
+    arcaneSlots: v.arcaneSlots,
+    incarnonEnabled: v.incarnonEnabled,
+    incarnonPerks: v.incarnonPerks,
+    deploymentContext: v.deploymentContext,
+    baseCapacity: 0,
+    currentCapacity: 0,
+    formaCount: 0,
+  }
+}
+
+function buildStateToBuildDoc(state: Partial<BuildState>): BuildDoc {
+  return {
+    itemUniqueName: state.itemUniqueName ?? "",
+    itemName: state.itemName ?? "",
+    itemCategory: (state.itemCategory ?? "warframes") as BrowseCategory,
+    itemImageName: state.itemImageName,
+    hasReactor: state.hasReactor ?? false,
+    shardSlots: state.shardSlots ?? [],
+    helminthAbility: state.helminthAbility,
+    zawComponents: state.zawComponents,
+    lichBonusElement: state.lichBonusElement,
+    buildName: state.buildName,
+    variants: [
+      {
+        id: "v0",
+        label: "Main",
+        auraSlots: state.auraSlots ?? [],
+        exilusSlot: state.exilusSlot,
+        stanceSlot: state.stanceSlot,
+        normalSlots: state.normalSlots ?? [],
+        arcaneSlots: state.arcaneSlots ?? [],
+        incarnonEnabled: state.incarnonEnabled,
+        incarnonPerks: state.incarnonPerks,
+        deploymentContext: state.deploymentContext,
+      },
+    ],
+  }
 }
 
 export function generateBuildUrl(state: BuildState, baseUrl?: string): string {

@@ -90,8 +90,10 @@ import { arcanesQuery } from "@/lib/arcanes-query"
 import { authClient } from "@/lib/auth-client"
 import { useDeleteBuild, useForkBuild } from "@/lib/build-actions"
 import {
+  getVariants,
   isLegacyBuildData,
   normalizeBuildData,
+  selectVariant,
 } from "@/lib/build-codec-adapter"
 import { buildQuery, type BuildDetail } from "@/lib/build-query"
 import { useToggleBookmark, useToggleLike } from "@/lib/build-social"
@@ -133,6 +135,9 @@ interface BuildSearch {
   /** Optional background colour (CSS value without #, e.g. `22272e`).
    *  Applied to the iframe body so the embed blends with the host page. */
   bg?: string
+  /** Active variant index for multi-variant builds. Clamped to a valid
+   *  index by the viewer; omitted (default 0) for single-variant builds. */
+  v?: number
 }
 
 export const Route = createFileRoute("/builds/$slug")({
@@ -146,10 +151,19 @@ export const Route = createFileRoute("/builds/$slug")({
     const scale =
       rawScale !== undefined ? Math.min(2, Math.max(0.1, rawScale)) : undefined
     const bg = typeof s.bg === "string" && s.bg.length > 0 ? s.bg : undefined
+    const rawV = num(s.v)
+    // 0-indexed; default (undefined) means "first variant". Clamped to a
+    // generous upper bound here; the viewer further clamps to the actual
+    // variant count.
+    const v =
+      rawV !== undefined && rawV >= 0
+        ? Math.min(50, Math.floor(rawV))
+        : undefined
     return {
       ...(embed && { embed }),
       ...(scale !== undefined && { scale }),
       ...(bg !== undefined && { bg }),
+      ...(v !== undefined && { v }),
     }
   },
   loader: ({ context, params }) =>
@@ -251,6 +265,7 @@ function EmbedShell({
 
 function BuildViewer({ embed = false }: { embed?: boolean }) {
   const { slug } = Route.useParams()
+  const { v } = Route.useSearch()
   const { data: build } = useSuspenseQuery(buildQuery(slug))
 
   if (!isValidCategory(build.item.category)) {
@@ -259,10 +274,14 @@ function BuildViewer({ embed = false }: { embed?: boolean }) {
   const category = build.item.category as BrowseCategory
   const itemSlug = slugify(build.item.name)
 
+  // Re-key on variant switch so the per-variant hooks (useBuildSlots /
+  // useArcaneSlots) re-initialize from the new variant's projected
+  // data. Without this, the hooks keep their initial state across
+  // ?v= changes and the loadout grid stays frozen on variant 0.
   return (
     <Suspense fallback={<p className="text-muted-foreground">Loading item…</p>}>
       <BuildViewerBody
-        key={slug}
+        key={`${slug}-${v ?? 0}`}
         build={build}
         category={category}
         itemSlug={itemSlug}
@@ -332,8 +351,10 @@ function BuildViewerBodyInner({
   embed: boolean
 }) {
   const { data: item } = useSuspenseQuery(itemQuery(category, itemSlug))
+  const search = Route.useSearch()
+  const navigate = useNavigate()
 
-  const saved = useMemo(
+  const savedAll = useMemo(
     () =>
       normalizeBuildData(
         build.buildData,
@@ -343,6 +364,27 @@ function BuildViewerBodyInner({
       ),
     [build.buildData, allMods, allArcanes, helminthAbilities],
   )
+
+  const variants = useMemo(() => getVariants(savedAll), [savedAll])
+  const activeIndex = useMemo(() => {
+    const raw = search.v ?? 0
+    if (raw < 0) return 0
+    if (raw >= variants.length) return variants.length - 1
+    return raw
+  }, [search.v, variants.length])
+  const saved = useMemo(
+    () => selectVariant(savedAll, activeIndex),
+    [savedAll, activeIndex],
+  )
+
+  const setActiveIndex = (i: number) => {
+    navigate({
+      to: ".",
+      params: true,
+      search: (s) => (i === 0 ? { ...s, v: undefined } : { ...s, v: i }),
+      replace: true,
+    })
+  }
 
   const categoryLabel = getCategoryLabel(category)
   const isCompanion = category === "companions"
@@ -547,13 +589,33 @@ function BuildViewerBodyInner({
               !embed && "xl:ml-[calc(260px+1rem)]",
             )}
           >
-            <ItemSidebarPopover
-              {...sidebarProps}
-              className={cn(
-                "self-start",
-                !embed && "hidden sm:inline-flex xl:hidden",
-              )}
-            />
+            {variants.length > 1 ? (
+              // Stats popover absolutely positioned so it doesn't push
+              // the tabs off-center. Tabs are visually centered in the
+              // loadout container at every breakpoint.
+              <div className="relative flex min-h-8 items-center justify-center">
+                <ItemSidebarPopover
+                  {...sidebarProps}
+                  className={cn(
+                    "absolute top-0 left-0",
+                    !embed && "hidden sm:inline-flex xl:hidden",
+                  )}
+                />
+                <VariantTabs
+                  variants={variants}
+                  activeIndex={activeIndex}
+                  onSelect={setActiveIndex}
+                />
+              </div>
+            ) : (
+              <ItemSidebarPopover
+                {...sidebarProps}
+                className={cn(
+                  "self-start",
+                  !embed && "hidden sm:inline-flex xl:hidden",
+                )}
+              />
+            )}
             <ModGrid
               item={item}
               category={category}
@@ -575,6 +637,8 @@ function BuildViewerBodyInner({
           </div>
         </div>
 
+        {!embed ? <RelatedBuildsStrip slug={build.slug} /> : null}
+
         {!embed && (build.guide?.description || build.guide?.summary) ? (
           <div className="bg-card rounded-lg border p-4">
             {build.guide.summary ? (
@@ -588,10 +652,47 @@ function BuildViewerBodyInner({
             ) : null}
           </div>
         ) : null}
-
-        {!embed ? <RelatedBuildsStrip slug={build.slug} /> : null}
       </div>
     </>
+  )
+}
+
+function VariantTabs({
+  variants,
+  activeIndex,
+  onSelect,
+}: {
+  variants: { id: string; label: string }[]
+  activeIndex: number
+  onSelect: (index: number) => void
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label="Build variants"
+      className="flex flex-wrap items-center justify-center gap-1.5 pb-1"
+    >
+      {variants.map((v, i) => {
+        const active = i === activeIndex
+        return (
+          <button
+            key={v.id || i}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onSelect(i)}
+            className={cn(
+              "rounded-md border px-3 py-1 text-sm transition-colors",
+              active
+                ? "border-primary bg-primary text-primary-foreground"
+                : "bg-muted/30 hover:bg-muted text-muted-foreground hover:text-foreground border-transparent",
+            )}
+          >
+            {v.label || `Variant ${i + 1}`}
+          </button>
+        )
+      })}
+    </div>
   )
 }
 
