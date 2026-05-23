@@ -40,8 +40,8 @@ function OrgsDirectoryPage() {
           <div className="flex flex-col gap-2">
             <h1 className="text-3xl font-bold tracking-tight">Organizations</h1>
             <p className="text-muted-foreground text-sm">
-              Communities on Arsenyx. Join one to share builds under a shared
-              banner, or browse their public builds.
+              Communities on Arsenyx. Browse their public builds — joining is
+              invite-only.
             </p>
           </div>
           <Suspense

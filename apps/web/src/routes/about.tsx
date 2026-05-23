@@ -27,20 +27,19 @@ function AboutPage() {
           </div>
 
           <article className="prose prose-neutral dark:prose-invert max-w-none">
-            <h2>Our Mission</h2>
+            <h2>How it started</h2>
             <p>
-              Arsenyx was built with one goal in mind: to be the fastest, most
-              modern Warframe build planner. We believe that planning your
-              loadout should be as fluid and fast as the game itself. Focused on
-              keyboard-first navigation and immediate feedback, we&apos;re
-              rethinking how Tennos share and optimize their builds.
+              Arsenyx exists because the other planners weren&apos;t open
+              source and didn&apos;t look the way we wanted them to. It was
+              built first with the Profit-Taker Community &mdash; they helped
+              test it, shaped early decisions, and pushed it past being just a
+              loadout tool. From there it grew into a whole platform.
             </p>
 
             <h2>Open Source</h2>
             <p>
-              We believe in the power of community. That&apos;s why Arsenyx is
-              fully open source. Anyone can contribute code, suggest features,
-              or report bugs. We&apos;re building this together.
+              Arsenyx is fully open source. Anyone can contribute code, suggest
+              features, or report bugs.
             </p>
             <div className="not-prose">
               <Button

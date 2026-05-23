@@ -101,8 +101,11 @@ export function ModSlot({
   // on the previously-clicked slot without a separate close effect.
   const popoverOpen = pickerOpen && !!selected
 
+  // Enable on `selected` too, not just `hovered`: the picker popover steals
+  // hover when the user mouses onto it, and a clicked-but-not-hovered slot
+  // should still respond to -/+ for ranking down/up.
   useRankHotkey({
-    enabled: !readOnly && !!mod && hovered && !!onRankChange,
+    enabled: !readOnly && !!mod && (hovered || !!selected) && !!onRankChange,
     onDelta: (d) => onRankChange?.(d),
   })
 

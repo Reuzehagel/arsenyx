@@ -44,6 +44,9 @@ yarn-error.log*
 # prisma generated files
 /apps/api/src/generated/
 
+# rust crates (local experiments — dps-calc target, etc.)
+/crates/
+
 # claude temp files
 .claude/
 .agents/
