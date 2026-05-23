@@ -641,10 +641,14 @@ function BuildViewerBodyInner({
 
         {!embed &&
           (() => {
-            // Per-variant guide overrides the build-wide one when present.
-            // Empty per-variant guide = use the build-wide as the default
-            // for that variant (mirrors how per-variant loadout fields
-            // already fall back to shared state).
+            // Doc-level fallback: if the active variant has *any* per-variant
+            // guide content (summary OR description), that guide replaces the
+            // build-wide one wholesale — we don't mix-and-match fields.
+            // Rationale: a per-variant summary like "Use this for Steel Path"
+            // shouldn't get paired with the build-wide long description that
+            // describes the default variant's playstyle. Authors who want
+            // both showing should duplicate the build-wide text into the
+            // variant guide.
             const activeVariantGuide = variants[activeIndex]
             const variantSummary = activeVariantGuide?.guideSummary?.trim()
             const variantDescription =

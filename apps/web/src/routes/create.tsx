@@ -276,6 +276,8 @@ function EditorShell() {
           incarnonEnabled: data.incarnonEnabled,
           incarnonPerks: data.incarnonPerks,
           deploymentContext: data.deploymentContext,
+          guideSummary: v.guideSummary,
+          guideDescription: v.guideDescription,
         }
       })
       return { data: { ...activeData, variants: savedVariants } }
@@ -1436,7 +1438,9 @@ function EditorVariantBarMulti({
         onClick={onAdd}
         disabled={atCap}
         title={
-          atCap ? `Maximum of ${MAX_VARIANTS} variants per build` : "Add a build variant"
+          atCap
+            ? `Maximum of ${MAX_VARIANTS} variants per build`
+            : "Add a build variant"
         }
         className={cn(
           "rounded-md border border-dashed px-2.5 py-1 text-sm",

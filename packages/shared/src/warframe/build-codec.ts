@@ -389,6 +389,8 @@ interface EncodedVariant {
   ar?: EncodedArcane[]
   ic?: { e?: boolean; p?: (string | null)[] }
   dc?: DeploymentContext
+  gs?: string
+  gd?: string
 }
 
 function encodeVariant(v: BuildVariant): EncodedVariant {
@@ -417,6 +419,8 @@ function encodeVariant(v: BuildVariant): EncodedVariant {
   }
   if (v.deploymentContext && v.deploymentContext !== DEFAULT_DEPLOYMENT_CONTEXT)
     ev.dc = v.deploymentContext
+  if (v.guideSummary) ev.gs = v.guideSummary
+  if (v.guideDescription) ev.gd = v.guideDescription
   return ev
 }
 
@@ -447,6 +451,8 @@ function decodeVariant(ev: EncodedVariant, index: number): BuildVariant {
     variant.incarnonPerks = ev.ic.p
   }
   if (ev.dc) variant.deploymentContext = ev.dc
+  if (ev.gs) variant.guideSummary = ev.gs
+  if (ev.gd) variant.guideDescription = ev.gd
   return variant
 }
 

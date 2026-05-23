@@ -71,6 +71,25 @@ describe("encodeBuildDoc / decodeBuildDoc round-trip", () => {
     expect(decoded.variants[1].incarnonEnabled).toBe(false)
   })
 
+  it("round-trips per-variant guides on multi-variant docs", () => {
+    const doc = makeDoc([
+      makeVariant({
+        id: "a",
+        label: "A",
+        guideSummary: "use this for steel path",
+        guideDescription: "long-form notes\n\n- bullet",
+      }),
+      makeVariant({ id: "b", label: "B" }),
+    ])
+    const decoded = decodeBuildDoc(encodeBuildDoc(doc))!
+    expect(decoded.variants[0].guideSummary).toBe("use this for steel path")
+    expect(decoded.variants[0].guideDescription).toBe(
+      "long-form notes\n\n- bullet",
+    )
+    expect(decoded.variants[1].guideSummary).toBeUndefined()
+    expect(decoded.variants[1].guideDescription).toBeUndefined()
+  })
+
   it("rejects unknown lichBonusElement on v2 decode", () => {
     const doc = makeDoc([makeVariant(), makeVariant({ id: "v1", label: "B" })])
     const encoded = encodeBuildDoc({

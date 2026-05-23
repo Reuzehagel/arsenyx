@@ -31,6 +31,8 @@ export interface BuildVariant {
   incarnonEnabled?: boolean
   incarnonPerks?: (string | null)[]
   deploymentContext?: DeploymentContext
+  guideSummary?: string
+  guideDescription?: string
 }
 
 /**
