@@ -11,7 +11,7 @@ import { PrismaClient } from "./generated/prisma/client"
 // `prisma` proxy unchanged.
 
 type RequestScope = {
-  client: PrismaClient
+  client: PrismaClient | null
   pending: Set<Promise<unknown>>
 }
 
@@ -40,12 +40,22 @@ function currentScope(): RequestScope {
   return scope
 }
 
+function currentClient(): PrismaClient {
+  const scope = currentScope()
+  if (!scope.client) scope.client = createPrismaClient()
+  return scope.client
+}
+
 export function withPrisma<T>(
   ctx: ExecutionContext,
   fn: () => T | Promise<T>,
 ): Promise<T> {
+  // Lazy: the client (and its WASM query engine init) is only constructed
+  // when a route actually touches `prisma.*`. Requests that satisfy from
+  // Better Auth's cookieCache (the common /auth/get-session path) never
+  // pay the Prisma init cost.
   const scope: RequestScope = {
-    client: createPrismaClient(),
+    client: null,
     pending: new Set(),
   }
   return als.run(scope, async () => {
@@ -54,11 +64,14 @@ export function withPrisma<T>(
     } finally {
       // Keep the client alive until all background work registered via
       // registerBackgroundWork() settles, then disconnect.
-      ctx.waitUntil(
-        Promise.allSettled([...scope.pending]).then(() =>
-          scope.client.$disconnect(),
-        ),
-      )
+      const client = scope.client
+      if (client || scope.pending.size > 0) {
+        ctx.waitUntil(
+          Promise.allSettled([...scope.pending]).then(() =>
+            client?.$disconnect(),
+          ),
+        )
+      }
     }
   })
 }
@@ -79,6 +92,6 @@ export function registerBackgroundWork(promise: Promise<unknown>): void {
 
 export const prisma = new Proxy({} as PrismaClient, {
   get(_, prop) {
-    return Reflect.get(currentScope().client as object, prop)
+    return Reflect.get(currentClient() as object, prop)
   },
 })
