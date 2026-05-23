@@ -21,10 +21,14 @@ export {
   getAuraSlotCount,
   getMaxLevelCap,
   getNormalSlotCount,
+  getPlexusGroupForIndex,
   hasExilusSlot,
   hasStanceSlot,
   isLichWeapon,
+  PLEXUS_GROUPS,
   resolveInitialArcanes,
+  type PlexusGroup,
+  type PlexusGroupKind,
 } from "./layout"
 export {
   ArcaneRow,

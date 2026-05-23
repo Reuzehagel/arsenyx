@@ -57,6 +57,9 @@ interface ModSlotProps {
   onEditRiven?: () => void
   /** Disables click/hover/remove/picker/rank-hotkey. */
   readOnly?: boolean
+  /** Forward to ModCard — suppress the drain badge entirely. Used by
+   * Plexus Battle/Tactical slots whose mods don't draw capacity. */
+  hideDrain?: boolean
 }
 
 const KIND_LABEL: Record<ModSlotKind, string> = {
@@ -80,6 +83,7 @@ export function ModSlot({
   onRankChange,
   onEditRiven,
   readOnly = false,
+  hideDrain = false,
 }: ModSlotProps) {
   const effective = effectivePolarity(slotPolarity, formaPolarity)
   const [hovered, setHovered] = useState(false)
@@ -196,6 +200,7 @@ export function ModSlot({
                     : effectiveDrainForMod(mod, rank, effective)
                 }
                 matchState={getMatchState(mod.polarity, effective)}
+                hideDrain={hideDrain}
               />
               {!readOnly && (onRemove || (isRivenMod(mod) && onEditRiven)) && (
                 // Mobile: always visible (no hover). Desktop: appear on slot

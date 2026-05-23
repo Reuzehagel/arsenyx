@@ -11,6 +11,7 @@ export type BrowseCategory =
   | "companion-weapons"
   | "exalted-weapons"
   | "archwing"
+  | "railjack"
 
 export type WfcdCategory =
   | "Warframes"
@@ -422,6 +423,7 @@ export type ModCompatibility =
   | "Archgun"
   | "Archmelee"
   | "Necramech"
+  | "Plexus"
 
 // =============================================================================
 // ARCHON SHARD TYPES

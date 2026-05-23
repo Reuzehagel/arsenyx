@@ -112,13 +112,15 @@ export function resolveInitialArcanes(
   return out
 }
 
-/** Categories that have an Exilus slot. Necramechs, companions, and every
- * archwing-category item (suits, arch-guns, arch-melee) don't. */
+/** Categories that have an Exilus slot. Necramechs, companions, every
+ * archwing-category item (suits, arch-guns, arch-melee), and the railjack
+ * Plexus don't. */
 export function hasExilusSlot(category: BrowseCategory): boolean {
   return (
     category !== "necramechs" &&
     category !== "companions" &&
-    category !== "archwing"
+    category !== "archwing" &&
+    category !== "railjack"
   )
 }
 
@@ -138,6 +140,7 @@ export function hasStanceSlot(
   category: BrowseCategory,
 ): boolean {
   if (category === "exalted-weapons") return false
+  if (category === "railjack") return false
   if (isZawComponent(item.type)) return true
   return Boolean(item.stancePolarity)
 }
@@ -151,16 +154,59 @@ export function getAuraSlotCount(
   category: BrowseCategory,
   item: Pick<DetailItem, "aura">,
 ): number {
+  // Plexus has an Aura slot in the Integrated section — accepts any Plexus
+  // mod and inverts drain to a capacity bonus. The Plexus-mod placement
+  // override lives in `use-build-slots.ts` (canPlaceIn / candidateSlots);
+  // capacity math reuses `auraBonusForMod` without changes.
+  if (category === "railjack") return 1
   if (category !== "warframes") return 0
   if (Array.isArray(item.aura)) return item.aura.length
   return item.aura ? 1 : 0
 }
 
-/** Normal mod slot count. Companions have 10, necramechs have 12, everything else 8. */
+/** Normal mod slot count. Companions have 10, necramechs have 12, the
+ * Plexus has 14 (3 Battle + 3 Tactical + 8 Integrated; its 1 Aura is
+ * counted separately by `getAuraSlotCount`), everything else 8. */
 export function getNormalSlotCount(category: BrowseCategory): number {
   if (category === "companions") return 10
   if (category === "necramechs") return 12
+  if (category === "railjack") return 14
   return 8
+}
+
+// =============================================================================
+// PLEXUS SLOT GROUPS
+// =============================================================================
+
+export type PlexusGroupKind = "battle" | "tactical" | "integrated"
+
+export interface PlexusGroup {
+  kind: PlexusGroupKind
+  label: string
+  count: number
+}
+
+/** Plexus normal-slot layout in render order. Order mirrors the picker
+ * tabs (integrated → battle → tactical). Indices map left-to-right:
+ *  0..7 → integrated, 8..10 → battle, 11..13 → tactical. */
+export const PLEXUS_GROUPS: PlexusGroup[] = [
+  { kind: "integrated", label: "Integrated", count: 8 },
+  { kind: "battle", label: "Battle", count: 3 },
+  { kind: "tactical", label: "Tactical", count: 3 },
+]
+
+/** Group kind for a normal-slot index. Returns null for non-railjack items. */
+export function getPlexusGroupForIndex(
+  category: BrowseCategory,
+  index: number,
+): PlexusGroupKind | null {
+  if (category !== "railjack") return null
+  let acc = 0
+  for (const g of PLEXUS_GROUPS) {
+    if (index < acc + g.count) return g.kind
+    acc += g.count
+  }
+  return null
 }
 
 /**

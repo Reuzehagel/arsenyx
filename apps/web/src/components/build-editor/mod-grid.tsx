@@ -5,7 +5,12 @@ import { cn } from "@/lib/utils"
 import type { BrowseCategory, DetailItem } from "@/lib/warframe"
 
 import { ArcaneSlot } from "./arcane-slot"
-import { getAuraSlotCount, hasExilusSlot, hasStanceSlot } from "./layout"
+import {
+  getAuraSlotCount,
+  hasExilusSlot,
+  hasStanceSlot,
+  PLEXUS_GROUPS,
+} from "./layout"
 import { ModSlot } from "./mod-slot"
 import { CANONICAL_POLARITIES } from "./polarity-picker"
 import type { ArcaneSlotsState } from "./use-arcane-slots"
@@ -114,7 +119,11 @@ export function ModGrid({
   const auraPolarities = getAuraPolarities(item, auraSlotCount)
   const polarities = item.polarities ?? []
 
-  const slotProps = (id: SlotId, innate?: Polarity) => {
+  const slotProps = (
+    id: SlotId,
+    innate?: Polarity,
+    options?: { disableForma?: boolean; hideDrain?: boolean },
+  ) => {
     const placed = slots.placed[id]
     const forma = slots.formaPolarities[id]
     return {
@@ -126,7 +135,11 @@ export function ModGrid({
       selected: slots.selected === id,
       onClick: () => slots.select(id),
       onRemove: placed ? () => slots.remove(id) : undefined,
-      onPickPolarity: (p: Polarity) => slots.setForma(id, p),
+      // Plexus Battle/Tactical slots can't be forma'd in-game; suppressing
+      // the polarity picker is how the editor reflects that.
+      onPickPolarity: options?.disableForma
+        ? undefined
+        : (p: Polarity) => slots.setForma(id, p),
       onRankChange: placed
         ? (delta: number) => slots.setRank(id, placed.rank + delta)
         : undefined,
@@ -135,6 +148,7 @@ export function ModGrid({
           ? () => onEditRiven(id)
           : undefined,
       readOnly,
+      hideDrain: options?.hideDrain ?? false,
     }
   }
 
@@ -145,9 +159,15 @@ export function ModGrid({
   // the column count is what changes, not the slot size. Buffers between
   // breakpoints leave breathing room when resizing inside a given column
   // count before the next reflow.
+  // Plexus puts its aura inline at the start of the Integrated group rather
+  // than in the top-of-editor aura/exilus/stance row — suppress that row
+  // when we're rendering a Plexus build.
+  const showTopExtrasRow =
+    category !== "railjack" && (auraSlotCount > 0 || showExilus || showStance)
+
   return (
     <div className="flex flex-col gap-6">
-      {(auraSlotCount > 0 || showExilus || showStance) && (
+      {showTopExtrasRow && (
         <div className="flex w-full flex-wrap justify-center gap-4">
           {auraSlotCount > 0 && (
             <ModSlot
@@ -181,22 +201,79 @@ export function ModGrid({
         </div>
       )}
 
-      <div
-        className={cn(
-          // Fixed upper bound = max column count × card width + gaps.
-          // A single max-width means the grid never snaps wider — flex-wrap
-          // handles 2→3→4 reflow within the same boundary.
-          "mx-auto flex flex-wrap justify-center gap-x-4 gap-y-6",
-          isCompanion ? "max-w-[984px]" : "max-w-[784px]",
-        )}
-      >
-        {Array.from({ length: normalSlotCount }, (_, i) => {
-          const id: SlotId = `normal-${i}`
-          return (
-            <ModSlot key={i} {...slotProps(id, toPolarity(polarities[i]))} />
-          )
-        })}
-      </div>
+      {category === "railjack" ? (
+        // Cap at 784px so the 8 Integrated mods wrap into 4+4 rows (a
+        // single row of 5 felt cramped and unbalanced against the Aura
+        // slot above).
+        <div className="mx-auto flex w-full max-w-[784px] flex-col gap-6">
+          {(() => {
+            let offset = 0
+            return PLEXUS_GROUPS.map((group) => {
+              const start = offset
+              offset += group.count
+              // Battle/Tactical are unpolarized, can't be forma'd, and don't
+              // draw from the Integrated capacity pool — hide drain there too.
+              const disableForma = group.kind !== "integrated"
+              const hideDrain = group.kind !== "integrated"
+              return (
+                <div key={group.kind} className="flex flex-col gap-2">
+                  <div className="text-muted-foreground/70 px-1 font-mono text-[11px] tracking-wider uppercase">
+                    {group.label}
+                  </div>
+                  {/* gap-6 matches the gap-y-6 between wrapped mod rows so
+                      the Aura → row-1 spacing reads the same as row-1 →
+                      row-2 (the previous gap-2 felt cramped under Aura). */}
+                  <div className="flex flex-col gap-6">
+                    {/* Plexus Aura sits on its own row above the Integrated
+                        mods so the section reads as Aura · row · row
+                        (matches the in-game arsenal layout). */}
+                    {group.kind === "integrated" && auraSlotCount > 0 && (
+                      <div className="flex justify-center">
+                        <ModSlot
+                          kind="aura"
+                          {...slotProps("aura-0" as SlotId, auraPolarities[0])}
+                        />
+                      </div>
+                    )}
+                    <div className="flex flex-wrap justify-center gap-x-4 gap-y-6">
+                      {Array.from({ length: group.count }, (_, i) => {
+                        const idx = start + i
+                        const id: SlotId = `normal-${idx}`
+                        return (
+                          <ModSlot
+                            key={id}
+                            {...slotProps(id, toPolarity(polarities[idx]), {
+                              disableForma,
+                              hideDrain,
+                            })}
+                          />
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )
+            })
+          })()}
+        </div>
+      ) : (
+        <div
+          className={cn(
+            // Fixed upper bound = max column count × card width + gaps.
+            // A single max-width means the grid never snaps wider — flex-wrap
+            // handles 2→3→4 reflow within the same boundary.
+            "mx-auto flex flex-wrap justify-center gap-x-4 gap-y-6",
+            isCompanion ? "max-w-[984px]" : "max-w-[784px]",
+          )}
+        >
+          {Array.from({ length: normalSlotCount }, (_, i) => {
+            const id: SlotId = `normal-${i}`
+            return (
+              <ModSlot key={i} {...slotProps(id, toPolarity(polarities[i]))} />
+            )
+          })}
+        </div>
+      )}
 
       {arcaneRow}
     </div>

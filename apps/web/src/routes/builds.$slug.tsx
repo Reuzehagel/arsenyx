@@ -45,6 +45,7 @@ import {
   getMaxLevelCap,
   getStanceInnatePolarity,
   getNormalSlotCount,
+  getPlexusGroupForIndex,
   hasExilusSlot,
   hasStanceSlot,
   ItemSidebar,
@@ -412,6 +413,13 @@ function BuildViewerBodyInner({
       slots.formaPolarities,
     ],
   )
+  const normalSlotConsumesDrain = useMemo(() => {
+    if (category !== "railjack") return undefined
+    return Array.from({ length: normalSlotCount }, (_, i) => {
+      const group = getPlexusGroupForIndex(category, i)
+      return group === "integrated"
+    })
+  }, [category, normalSlotCount])
   const capacity = useMemo(
     () =>
       calculateCapacity({
@@ -423,6 +431,7 @@ function BuildViewerBodyInner({
         normalInnates,
         hasReactor,
         maxLevelCap: getMaxLevelCap(category, item),
+        normalSlotConsumesDrain,
       }),
     [
       slots.placed,
@@ -434,6 +443,7 @@ function BuildViewerBodyInner({
       hasReactor,
       category,
       item,
+      normalSlotConsumesDrain,
     ],
   )
 

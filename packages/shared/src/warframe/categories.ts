@@ -84,6 +84,17 @@ export const BROWSE_CATEGORIES: CategoryConfig[] = [
     description: "Archwings and their weapons for space combat",
     iconKey: "rocket",
   },
+  {
+    id: "railjack",
+    label: "Railjack",
+    labelPlural: "Railjack",
+    // Synthetic Plexus item is injected by the build script — no WFCD category
+    // contributes here. Listed empty so `mapWfcdCategory` won't accidentally
+    // route ship-related entries (e.g. Skins.json) into this bucket.
+    wfcdCategories: [],
+    description: "Plexus loadout for Railjack missions",
+    iconKey: "rocket",
+  },
 ]
 
 // Static lookup maps built once at module init

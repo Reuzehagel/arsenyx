@@ -271,6 +271,36 @@ async function loadAllArcanes(): Promise<Arcane[]> {
   return JSON.parse(body) as Arcane[]
 }
 
+// Synthetic Plexus item — DE doesn't export it as a standalone entry, so we
+// inject one. The detail file is written in `main` alongside the per-item
+// detail files. Keep the BrowseItem and BrowseableItem shapes in sync.
+const PLEXUS_UNIQUE_NAME = "/Lotus/Railjacks/Plexus"
+const PLEXUS_SLUG = "plexus"
+const PLEXUS_BROWSE_ITEM: BrowseItem = {
+  uniqueName: PLEXUS_UNIQUE_NAME,
+  name: "Plexus",
+  slug: PLEXUS_SLUG,
+  category: "railjack",
+  // Reuse the Caballero Railjack Skin asset (Skins.json) — closest available
+  // ship-themed image on the warframestat CDN for the Plexus entry.
+  imageName: "RailjackWrasseSkin.png",
+  isPrime: false,
+  type: "Plexus",
+}
+const PLEXUS_DETAIL = {
+  uniqueName: PLEXUS_UNIQUE_NAME,
+  name: "Plexus",
+  slug: PLEXUS_SLUG,
+  category: "railjack",
+  type: "Plexus",
+  imageName: "RailjackWrasseSkin.png",
+  description:
+    "Personal modular Railjack loadout. Houses Battle, Tactical, and Integrated mods that travel with you between ships.",
+  tradable: false,
+  // 1 Aura + 14 normal slots (3 Battle, 3 Tactical, 8 Integrated) are
+  // resolved by the build editor's layout helpers, not stored here.
+}
+
 async function main() {
   const [allItems, rawMods, rawArcanes, wfcd] = await Promise.all([
     loadAllItems(),
@@ -281,6 +311,7 @@ async function main() {
   const mods = normalizeMods(rawMods)
   const arcanes = normalizeArcanes(rawArcanes)
   const { byCategory, slugLookup } = buildIndex(allItems)
+  byCategory.railjack = [PLEXUS_BROWSE_ITEM, ...(byCategory.railjack ?? [])]
 
   await mkdir(dirname(INDEX_OUT), { recursive: true })
 
@@ -316,6 +347,18 @@ async function main() {
       detailCount++
       detailBytes += Buffer.byteLength(body, "utf8")
     }
+  }
+  // Synthetic Plexus detail file. Bypasses slimItemForClient because the
+  // entry isn't a WFCD BrowseableItem — its shape is hand-curated above.
+  {
+    const body = JSON.stringify(PLEXUS_DETAIL)
+    await writeFile(
+      resolve(DETAIL_DIR, "railjack", `${PLEXUS_SLUG}.json`),
+      body,
+      "utf8",
+    )
+    detailCount++
+    detailBytes += Buffer.byteLength(body, "utf8")
   }
   const detailMb = (detailBytes / 1024 / 1024).toFixed(2)
   console.log(

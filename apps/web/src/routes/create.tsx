@@ -37,6 +37,7 @@ import {
   getStanceInnatePolarity,
   getMaxLevelCap,
   getNormalSlotCount,
+  getPlexusGroupForIndex,
   GuideEditor,
   hasExilusSlot,
   hasStanceSlot,
@@ -488,6 +489,42 @@ function EditorShell() {
     }
   }
 
+  // Plexus Battle (normal-0..2) and Tactical (normal-3..5) mods don't draw
+  // from the Integrated capacity pool. Build a per-slot mask for railjack;
+  // omit it elsewhere so other categories keep counting every normal slot.
+  const normalSlotConsumesDrain = useMemo(() => {
+    if (category !== "railjack") return undefined
+    return Array.from({ length: normalSlotCount }, (_, i) => {
+      const group = getPlexusGroupForIndex(category, i)
+      return group === "integrated"
+    })
+  }, [category, normalSlotCount])
+
+  // Filled-vs-total counts per Plexus group for the picker's tab labels.
+  // Aura is bundled into Integrated since it lives in that section.
+  const plexusFillCounts = useMemo(() => {
+    if (category !== "railjack") return undefined
+    const counts = {
+      battle: { filled: 0, total: 0 },
+      tactical: { filled: 0, total: 0 },
+      integrated: { filled: 0, total: 0 },
+    }
+    for (let i = 0; i < normalSlotCount; i++) {
+      const group = getPlexusGroupForIndex(category, i)
+      if (!group) continue
+      counts[group].total += 1
+      if (slots.placed[`normal-${i}` as keyof typeof slots.placed])
+        counts[group].filled += 1
+    }
+    // The Aura slot is part of Integrated.
+    for (let i = 0; i < auraSlotCount; i++) {
+      counts.integrated.total += 1
+      if (slots.placed[`aura-${i}` as keyof typeof slots.placed])
+        counts.integrated.filled += 1
+    }
+    return counts
+  }, [category, normalSlotCount, auraSlotCount, slots.placed])
+
   const capacity = useMemo(
     () =>
       calculateCapacity({
@@ -499,6 +536,7 @@ function EditorShell() {
         normalInnates,
         hasReactor,
         maxLevelCap: getMaxLevelCap(category, item),
+        normalSlotConsumesDrain,
       }),
     [
       slots.placed,
@@ -510,6 +548,7 @@ function EditorShell() {
       hasReactor,
       category,
       item,
+      normalSlotConsumesDrain,
     ],
   )
 
@@ -640,7 +679,27 @@ function EditorShell() {
               onSelect={handleModSelect}
               helminth={helminth}
               selectedSlotKind={
-                slots.selected ? slotKind(slots.selected) : undefined
+                // Plexus slot pools are governed by `selectedPlexusGroup`,
+                // not by the generic aura/exilus/stance predicates — those
+                // would dim every Plexus mod (none carry compatName=AURA).
+                category === "railjack"
+                  ? undefined
+                  : slots.selected
+                    ? slotKind(slots.selected)
+                    : undefined
+              }
+              selectedPlexusGroup={(() => {
+                if (category !== "railjack" || !slots.selected) return undefined
+                // Aura slot lives inside the Integrated tab.
+                if (slots.selected.startsWith("aura-")) return "integrated"
+                const m = /^normal-(\d+)$/.exec(slots.selected)
+                if (!m) return undefined
+                const idx = Number(m[1])
+                return getPlexusGroupForIndex(category, idx) ?? undefined
+              })()}
+              plexusFillCounts={plexusFillCounts}
+              selectedIsPlexusAura={
+                category === "railjack" && !!slots.selected?.startsWith("aura-")
               }
             />
           </div>

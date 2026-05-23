@@ -111,6 +111,7 @@ export const CATEGORIES: { id: BrowseCategory; label: string }[] = [
   { id: "archwing", label: "Archwing" },
   { id: "necramechs", label: "Necramechs" },
   { id: "exalted-weapons", label: "Exalted" },
+  { id: "railjack", label: "Railjack" },
 ]
 
 export function isValidCategory(value: string): value is BrowseCategory {

@@ -142,6 +142,11 @@ export interface CapacityInput {
   normalInnates: (Polarity | undefined)[]
   hasReactor: boolean
   maxLevelCap?: number
+  /** Per-normal-slot flag: when set and the entry for slot `i` is false,
+   * that slot's drain is excluded from `used`. Used by the Plexus, whose
+   * Battle and Tactical mods don't consume the Integrated capacity pool.
+   * Length must equal `normalInnates.length`; defaults to all-true. */
+  normalSlotConsumesDrain?: boolean[]
 }
 
 export interface CapacityResult {
@@ -161,6 +166,7 @@ export function calculateCapacity(input: CapacityInput): CapacityResult {
     normalInnates,
     hasReactor,
     maxLevelCap,
+    normalSlotConsumesDrain,
   } = input
 
   const level = maxLevelCap ?? 30
@@ -203,6 +209,9 @@ export function calculateCapacity(input: CapacityInput): CapacityResult {
     const id = `normal-${i}` as SlotId
     const p = placed[id]
     if (!p) continue
+    if (normalSlotConsumesDrain && normalSlotConsumesDrain[i] === false) {
+      continue
+    }
     used += effectiveDrainForMod(
       p.mod,
       p.rank,

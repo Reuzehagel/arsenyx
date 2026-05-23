@@ -15,6 +15,17 @@ export function isAuraMod(mod: Mod): boolean {
   return mod.compatName?.toUpperCase() === "AURA"
 }
 
+export function isPlexusMod(mod: Mod): boolean {
+  return mod.type === "Plexus Mod"
+}
+
+/** Plexus Aura/Matrix mod — distinguished by negative baseDrain. These only
+ * fit the Plexus Aura slot (drain inverts to a capacity bonus); regular
+ * Plexus mods can't go there. */
+export function isPlexusAuraMod(mod: Mod): boolean {
+  return isPlexusMod(mod) && mod.baseDrain < 0
+}
+
 export function isExilusCompatible(mod: Mod): boolean {
   return Boolean(mod.isExilus || mod.isUtility)
 }
@@ -27,6 +38,14 @@ export function slotKind(id: SlotId): ModSlotKind {
 }
 
 export function canPlaceIn(mod: Mod, id: SlotId): boolean {
+  // Plexus mods don't carry `compatName: "AURA"`. Aura/Matrix mods (negative
+  // baseDrain) only fit the Aura slot; regular Plexus mods only fit normal
+  // slots. Neither ever goes in exilus/stance.
+  if (isPlexusMod(mod)) {
+    const k = slotKind(id)
+    if (isPlexusAuraMod(mod)) return k === "aura"
+    return k === "normal"
+  }
   switch (slotKind(id)) {
     case "aura":
       return isAuraMod(mod)
@@ -48,6 +67,11 @@ function candidateSlots(
   auraIds: SlotId[],
   normalIds: SlotId[],
 ): SlotId[] {
+  // Plexus mods route by sub-kind: Aura/Matrix → aura slot only, regular →
+  // normal slots only. (canPlaceIn enforces the same constraint.)
+  if (isPlexusMod(mod)) {
+    return isPlexusAuraMod(mod) ? auraIds : normalIds
+  }
   if (isAuraMod(mod)) return auraIds
   if (isStanceMod(mod)) return ["stance"]
   if (isExilusCompatible(mod)) return ["exilus", ...normalIds]

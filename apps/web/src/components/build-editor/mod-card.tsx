@@ -171,6 +171,10 @@ interface CompactProps {
   isMaxRank: boolean
   drainOverride?: number
   matchState?: DrainMatchState
+  /** Suppress the drain badge entirely — used by Plexus Battle/Tactical
+   * slots, which don't draw from the capacity pool so the number is
+   * meaningless on those cards. */
+  hideDrain?: boolean
   vtPrefix?: string
 }
 
@@ -181,6 +185,7 @@ function CompactModCard({
   isMaxRank,
   drainOverride,
   matchState = "neutral",
+  hideDrain = false,
   vtPrefix,
 }: CompactProps) {
   const maxRank = mod.fusionLimit ?? 0
@@ -194,13 +199,15 @@ function CompactModCard({
 
   return (
     <ModCardFrame rarity={rarity} variant="compact" vtPrefix={vtPrefix}>
-      <DrainBadge
-        drain={drain}
-        polarity={mod.polarity}
-        rarity={rarity}
-        matchState={matchState}
-        vtPrefix={vtPrefix}
-      />
+      {!hideDrain && (
+        <DrainBadge
+          drain={drain}
+          polarity={mod.polarity}
+          rarity={rarity}
+          matchState={matchState}
+          vtPrefix={vtPrefix}
+        />
+      )}
 
       <div
         className="pointer-events-none absolute top-[4px] right-[3px] -bottom-4 left-[3px] z-10 overflow-hidden rounded-b-[5px]"
@@ -267,6 +274,7 @@ function ExpandedModCard({
   setCount = 0,
   drainOverride,
   matchState = "neutral",
+  hideDrain = false,
   vtPrefix,
 }: ExpandedProps) {
   const stats = getModStats(mod, rank, setCount)
@@ -282,13 +290,15 @@ function ExpandedModCard({
 
   return (
     <ModCardFrame rarity={rarity} variant="expanded" vtPrefix={vtPrefix}>
-      <DrainBadge
-        drain={drain}
-        polarity={mod.polarity}
-        rarity={rarity}
-        matchState={matchState}
-        vtPrefix={vtPrefix}
-      />
+      {!hideDrain && (
+        <DrainBadge
+          drain={drain}
+          polarity={mod.polarity}
+          rarity={rarity}
+          matchState={matchState}
+          vtPrefix={vtPrefix}
+        />
+      )}
 
       <div
         className="absolute top-[4px] right-[3px] bottom-[4px] left-[3px] z-10 overflow-hidden"
@@ -369,6 +379,9 @@ export interface ModCardProps {
   setCount?: number
   drainOverride?: number
   matchState?: DrainMatchState
+  /** Suppress the drain badge — Plexus Battle/Tactical slots don't draw
+   * from the capacity pool so the drain number reads as noise. */
+  hideDrain?: boolean
   /** When true, always show the expanded variant (no hover behavior). */
   alwaysExpanded?: boolean
   /** When true, never show the expanded variant (used while dragging). */
@@ -388,6 +401,7 @@ export function ModCard({
   setCount = 0,
   drainOverride,
   matchState,
+  hideDrain = false,
   alwaysExpanded = false,
   disableHover = false,
   onClick,
@@ -438,6 +452,7 @@ export function ModCard({
           setCount={setCount}
           drainOverride={drainOverride}
           matchState={matchState}
+          hideDrain={hideDrain}
         />
       </div>
     )
@@ -490,6 +505,7 @@ export function ModCard({
           isMaxRank={isMaxRank}
           drainOverride={drainOverride}
           matchState={matchState}
+          hideDrain={hideDrain}
         />
       </div>
 

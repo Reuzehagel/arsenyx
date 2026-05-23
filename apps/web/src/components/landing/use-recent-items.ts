@@ -52,6 +52,8 @@ export function shortCategory(c: BrowseCategory): string {
       return "EXA"
     case "archwing":
       return "ARW"
+    case "railjack":
+      return "RJ"
     default:
       return assertNever(c)
   }
@@ -77,6 +79,8 @@ export function longCategory(c: BrowseCategory): string {
       return "exalted weapon"
     case "archwing":
       return "archwing"
+    case "railjack":
+      return "railjack"
     default:
       return assertNever(c)
   }

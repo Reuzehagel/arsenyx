@@ -43,6 +43,9 @@ export function normalizeMods(rawMods: Mod[]): Mod[] {
       if (mod.name.includes("Riven Mod")) return false
       if (!mod.compatName && !mod.type) return false
       if (mod.description?.includes("Conclave")) return false
+      // Plexus "Unfused Artifact" entries are pre-fusion placeholders with
+      // no stats; they're not buildable in-game.
+      if (mod.name === "Unfused Artifact") return false
 
       const uniqueName = mod.uniqueName ?? ""
       if (uniqueName.includes("/Beginner/")) return false
@@ -164,9 +167,50 @@ function modMatchesCompat(mod: Mod, compatibility: ModCompatibility): boolean {
       return compatName === "archmelee" || modType.includes("arch-melee")
     case "Archwing":
       return compatName === "archwing" || modType.includes("archwing")
+    case "Plexus":
+      // Every Plexus mod is `type: "Plexus Mod"` in WFCD — no need to inspect
+      // compatName or uniqueName path. Sub-slot kind (Battle/Tactical/
+      // Integrated) is resolved separately by `getPlexusSlotKind`.
+      return modType === "plexus mod"
     default:
       return false
   }
+}
+
+/** Sub-slot kind for a Plexus mod. Path segment after `/Railjack/` in the
+ * mod's uniqueName is the canonical taxonomy:
+ *   `Abilities`  → battle
+ *   `Tactical`   → tactical
+ *   `Engineering` | `Gunnery` | `Piloting` → integrated
+ *     (the `integrated` bucket further splits into `aura` (Matrix mods,
+ *     identified by negative baseDrain) and regular integrated slots.
+ *     `getPlexusSlotKind` returns `integrated` for both — call
+ *     `isPlexusAuraMod` to disambiguate.)
+ * Returns null for anything that isn't a Plexus mod. */
+export type PlexusSlotKind = "battle" | "tactical" | "integrated"
+
+export function getPlexusSlotKind(mod: Mod): PlexusSlotKind | null {
+  if (mod.type?.toLowerCase() !== "plexus mod") return null
+  const segment = mod.uniqueName.split("/Railjack/")[1]?.split("/")[0]
+  if (!segment) return null
+  if (segment === "Abilities") return "battle"
+  if (segment === "Tactical") return "tactical"
+  if (
+    segment === "Engineering" ||
+    segment === "Gunnery" ||
+    segment === "Piloting"
+  )
+    return "integrated"
+  return null
+}
+
+/** Identifies the "Aura"/Matrix mods that only fit the Plexus Aura slot.
+ * WFCD distinguishes them by a negative `baseDrain` (they add capacity
+ * when equipped instead of consuming it). Matrix-named mods (Ironclad,
+ * Indomitable, Orgone Tuning, Onslaught, Raider) and Unfused Artifacts
+ * all carry baseDrain: -2. */
+export function isPlexusAuraMod(mod: Mod): boolean {
+  return mod.type?.toLowerCase() === "plexus mod" && mod.baseDrain < 0
 }
 
 const CATEGORY_TO_COMPAT: Record<string, ModCompatibility[]> = {
@@ -178,6 +222,7 @@ const CATEGORY_TO_COMPAT: Record<string, ModCompatibility[]> = {
   necramechs: ["Necramech"],
   companions: ["Companion"],
   archwing: ["Archwing", "Archgun", "Archmelee"],
+  railjack: ["Plexus"],
 }
 
 /**
@@ -197,6 +242,12 @@ export function getModsForItem(
   const itemType = item.type
   const itemName = item.name
   const meleeClass = item.meleeClass?.toLowerCase()
+
+  // Railjack (Plexus) short-circuits ahead of the per-type pipeline because
+  // its synthetic item has no `type` matching any weapon/warframe branch.
+  if (item.category?.toLowerCase() === "railjack") {
+    return mods.filter((m) => modMatchesCompat(m, "Plexus"))
+  }
 
   if (!itemType) {
     const category = item.category?.toLowerCase()
