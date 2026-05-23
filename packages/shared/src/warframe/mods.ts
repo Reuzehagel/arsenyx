@@ -235,6 +235,24 @@ const CATEGORY_TO_COMPAT: Record<string, ModCompatibility[]> = {
  * Return the mods compatible with the given item. `mods` must already be
  * normalized via `normalizeMods`.
  */
+// Necramechs are categorized as `Warframes` in WFCD data — detect them by
+// name so we can route them to the necramech mod pool instead of the
+// warframe one. Mirrors `isNecramech` in categorize.ts.
+function isNecramechItem(name?: string): boolean {
+  if (!name) return false
+  return (
+    name.includes("Necramech") || name === "Bonewidow" || name === "Voidrig"
+  )
+}
+
+// Necramech exalted weapons (Arquebex, Ironbride) share `type: "Exalted
+// Weapon"` with warframe exalteds. Their uniqueName lives under the Entrati
+// NechroTech / EntratiMech paths, which is how we tell them apart.
+function isNecramechExalted(uniqueName?: string): boolean {
+  if (!uniqueName) return false
+  return uniqueName.includes("NechroTech") || uniqueName.includes("EntratiMech")
+}
+
 export function getModsForItem(
   item: {
     type?: string
@@ -242,6 +260,7 @@ export function getModsForItem(
     name?: string
     trigger?: string
     meleeClass?: string
+    uniqueName?: string
   },
   mods: Mod[],
 ): Mod[] {
@@ -253,6 +272,12 @@ export function getModsForItem(
   // its synthetic item has no `type` matching any weapon/warframe branch.
   if (item.category?.toLowerCase() === "railjack") {
     return mods.filter((m) => modMatchesCompat(m, "Plexus"))
+  }
+
+  // Necramechs carry `type: "Warframe"` in WFCD data; intercept before the
+  // warframe branch so they get necramech mods, not warframe mods.
+  if (isNecramechItem(itemName)) {
+    return mods.filter((m) => (m.type?.toLowerCase() ?? "").includes("necramech"))
   }
 
   if (!itemType) {
@@ -317,6 +342,13 @@ export function getModsForItem(
       return compatName === "archwing" || modType.includes("archwing")
 
     if (itemTypeLower === "exalted weapon") {
+      // Necramech exalteds use Archgun/Archmelee mods (Arquebex → Archgun,
+      // Ironbride → Archmelee), routed by whether the weapon has a trigger.
+      if (isNecramechExalted(item.uniqueName)) {
+        if (item.trigger)
+          return compatName === "archgun" || modType.includes("arch-gun")
+        return compatName === "archmelee" || modType.includes("arch-melee")
+      }
       if (itemNameLower.includes("bow"))
         return isPrimaryMod(compatName, modType, "bow")
       if (item.trigger) return isPistolMod(compatName, modType)

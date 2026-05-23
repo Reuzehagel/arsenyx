@@ -200,7 +200,28 @@ async function loadAllItems(): Promise<BrowseableItem[]> {
     all.push(...items)
   }
   patchAtmosphericArchgunVariants(all)
+  patchMissingAuras(all)
   return all
+}
+
+// WFCD omits the `aura` field entirely for a handful of warframes, which
+// hides the aura slot in the editor. The value `"aura"` represents the
+// universal/no-innate-polarity slot (matches Protea/Dante); specific
+// polarities are filled in for frames whose innate aura polarity is known.
+const MISSING_AURAS: Record<string, string> = {
+  Excalibur: "naramon",
+  Nekros: "aura",
+  "Nekros Prime": "aura",
+  Sevagoth: "aura",
+  "Sevagoth Prime": "aura",
+}
+
+function patchMissingAuras(items: BrowseableItem[]): void {
+  for (const item of items as Array<BrowseableItem & { aura?: string }>) {
+    if (item.aura) continue
+    const aura = MISSING_AURAS[item.name]
+    if (aura) item.aura = aura
+  }
 }
 
 // Atmospheric Archguns (deployed on the ground via Archgun Deployer) lose
