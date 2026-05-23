@@ -64,6 +64,20 @@ function AboutPage() {
               </Button>
             </div>
 
+            <h2>Shoutouts</h2>
+            <p>
+              Big thanks to{" "}
+              <Link
+                href="https://github.com/KalaayPT"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Kalaay
+              </Link>{" "}
+              for the help along the way &mdash; bouncing ideas around and
+              opening PRs that made Arsenyx better.
+            </p>
+
             <h2>Community Focused</h2>
             <p>
               From real-time stats updates to seamless sharing, every feature is
