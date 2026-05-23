@@ -14,6 +14,121 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-05-23",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Rank hotkeys now work while the mod picker is open instead of getting swallowed.",
+      },
+      {
+        type: "refactor",
+        description: "Refreshed the about and organizations copy.",
+      },
+    ],
+  },
+  {
+    date: "2026-05-21",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Zaws now have a dedicated Exodia arcane slot, separate from regular melee arcanes.",
+      },
+      {
+        type: "feat",
+        description:
+          "YouTube and Vimeo links in build guides now embed inline as players.",
+      },
+      {
+        type: "feat",
+        description:
+          "Ability stats are reorderable in the editor, and slots auto-advance/skip cleanly as you place mods.",
+      },
+      {
+        type: "feat",
+        description:
+          "Ability stat order now defaults to Duration / Efficiency / Range / Strength.",
+      },
+      {
+        type: "refactor",
+        description:
+          "Related-build chips are bigger and wider so titles get room to breathe.",
+      },
+      {
+        type: "fix",
+        description:
+          "Navigating between builds now resets viewer state instead of carrying over the previous build's selections.",
+      },
+    ],
+  },
+  {
+    date: "2026-05-17",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Melee weapons now have a dedicated Stance mod slot, and Zaw strikes surface their stance slot too.",
+      },
+      {
+        type: "feat",
+        description: "Embed mode improvements.",
+      },
+      {
+        type: "fix",
+        description:
+          "Exalted weapons now compute damage, mod pool, and arcane slot correctly.",
+      },
+      {
+        type: "fix",
+        description:
+          "Editor regressions fixed: click-to-place, stance capacity, weapon damage calc, and mod-pool leaks between slots.",
+      },
+      {
+        type: "chore",
+        description: "Game data updated to the latest @wfcd/items.",
+      },
+    ],
+  },
+  {
+    date: "2026-05-16",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Mods can now be reordered via drag-and-drop in the editor.",
+      },
+      {
+        type: "feat",
+        description: "Partner builds.",
+      },
+    ],
+  },
+  {
+    date: "2026-05-11",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Weapon damage summary now includes combined-element mods.",
+      },
+      {
+        type: "chore",
+        description: "Game data updated to the latest @wfcd/items.",
+      },
+    ],
+  },
+  {
+    date: "2026-05-10",
+    changes: [
+      {
+        type: "refactor",
+        description:
+          "Expanded mod card assets preload while you browse, so opening a card no longer waits on images.",
+      },
+    ],
+  },
+  {
     date: "2026-05-09",
     changes: [
       {
