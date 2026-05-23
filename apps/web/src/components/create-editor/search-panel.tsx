@@ -34,6 +34,8 @@ export function SearchPanel({
         type: item.type,
         category: item.category,
         name: item.name,
+        trigger: item.trigger,
+        meleeClass: item.meleeClass,
       },
       allMods,
     )
