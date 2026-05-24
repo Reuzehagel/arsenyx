@@ -1,5 +1,5 @@
 import { Check, Globe, Link2, Lock, Users, type LucideIcon } from "lucide-react"
-import { useState, type ReactNode } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -86,6 +86,17 @@ export function PublishDialog({
   // reads "Show me as the author" so it stays an opt-in affirmation.
   const [showAuthor, setShowAuthor] = useState(!initialHideAuthor)
 
+  // When the user picks a different org than the build's current one inside
+  // an open dialog, treat it as a fresh attribution: default to showing the
+  // author. Without this, an opt-out chosen for the previous org would bleed
+  // into the new org silently. Restoring the initial org restores the
+  // initial preference.
+  useEffect(() => {
+    setShowAuthor(
+      organizationId === initialOrganizationId ? !initialHideAuthor : true,
+    )
+  }, [organizationId, initialOrganizationId, initialHideAuthor])
+
   const handleOpenChange = (o: boolean) => {
     if (o) {
       setVisibility(initialVisibility)
@@ -114,7 +125,13 @@ export function PublishDialog({
                 key={value}
                 selected={visibility === value}
                 onSelect={() => setVisibility(value)}
-                leading={<Icon className="size-4 shrink-0" />}
+                leading={
+                  // Anchor the icon to the title's baseline so it stays
+                  // aligned when the subtitle wraps to two lines on narrow
+                  // viewports. The OptionCard wrapper centers single-line
+                  // entries (avatars in "Publish as") via items-center.
+                  <Icon className="mt-0.5 size-4 shrink-0 self-start" />
+                }
                 title={label}
                 subtitle={description}
               />
@@ -161,6 +178,7 @@ export function PublishDialog({
                 <Checkbox
                   checked={showAuthor}
                   onCheckedChange={(v) => setShowAuthor(v === true)}
+                  className="mt-0.5 self-start"
                   aria-label="Show me as the author alongside the org"
                 />
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">

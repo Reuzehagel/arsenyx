@@ -216,7 +216,14 @@ builds.patch("/:slug", rateLimitUser("mutate"), async (c) => {
         ? data.organizationId
         : existing.organizationId
     data.hideAuthor = effectiveOrgId !== null && b.hideAuthor === true
-  } else if (data.organizationId === null) {
+  } else if (
+    data.organizationId !== undefined &&
+    data.organizationId !== existing.organizationId
+  ) {
+    // The org is being changed in this PATCH and the client didn't supply
+    // a fresh hideAuthor. Reset to false so a flag chosen for the previous
+    // org (or no org) can't silently bleed into the new attribution — the
+    // publisher must re-opt in for each org.
     data.hideAuthor = false
   }
   if (b.buildData && typeof b.buildData === "object") {
