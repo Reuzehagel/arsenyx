@@ -243,22 +243,24 @@ export function calculateFormaCount(input: FormaCountInput): number {
     normalInnates,
     formaPolarities,
   } = input
-  let total = 0
 
-  for (let i = 0; i < auraInnates.length; i++) {
-    total += singleSlotForma(
-      auraInnates[i],
-      formaPolarities[`aura-${i}` as SlotId],
-    )
-  }
-  total += singleSlotForma(exilusInnate, formaPolarities.exilus)
-  total += singleSlotForma(stanceInnate, formaPolarities.stance)
+  // Aura, exilus, and normal slots share a single dedup pool: moving a
+  // polarity between them (e.g. exilus → normal) costs no net forma. Stance
+  // is separate — melee stance changes always cost forma.
+  const pool: NormalSlotEntry[] = [
+    ...auraInnates.map((innate, i) => ({
+      innate,
+      forma: formaPolarities[`aura-${i}` as SlotId],
+    })),
+    {
+      innate: exilusInnate,
+      forma: formaPolarities.exilus,
+    },
+    ...normalInnates.map((innate, i) => ({
+      innate,
+      forma: formaPolarities[`normal-${i}` as SlotId],
+    })),
+  ]
 
-  const normalSlots: NormalSlotEntry[] = normalInnates.map((innate, i) => ({
-    innate,
-    forma: formaPolarities[`normal-${i}` as SlotId],
-  }))
-  total += groupForma(normalSlots)
-
-  return total
+  return groupForma(pool) + singleSlotForma(stanceInnate, formaPolarities.stance)
 }
