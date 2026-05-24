@@ -70,8 +70,13 @@ export default {
     const ua = request.headers.get("user-agent") ?? ""
     if (!isUnfurlBot(ua)) return env.ASSETS.fetch(request)
 
+    // Workers Static Assets redirects `/index.html` → `/` by default
+    // (html_handling), so we ask for the original path and let the SPA
+    // fallback (`not_found_handling = "single-page-application"`) serve
+    // index.html with a 200. The ASSETS binding bypasses the Worker, so
+    // there's no infinite loop here.
     const [shellRes, build] = await Promise.all([
-      env.ASSETS.fetch(new Request(new URL("/index.html", url), request)),
+      env.ASSETS.fetch(request),
       fetchBuild(slug),
     ])
 
