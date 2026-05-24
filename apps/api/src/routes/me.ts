@@ -12,6 +12,7 @@ import {
 } from "../lib/api-keys"
 import { getSession } from "../lib/session"
 import { parseJsonBody } from "../lib/validate"
+import { rateLimitUser } from "../middleware/rate-limit"
 import { getUserRoles } from "./_admin"
 
 const KNOWN_SCOPES = new Set<string>(ALL_API_KEY_SCOPES)
@@ -93,7 +94,7 @@ me.get("/api-keys", async (c) => {
   return c.json({ apiKeys: keys.map(serializeApiKey) })
 })
 
-me.post("/api-keys", async (c) => {
+me.post("/api-keys", rateLimitUser("mutate"), async (c) => {
   const user = await requireSession(c)
   if (!user) return c.json({ error: "unauthorized" }, 401)
 
@@ -157,7 +158,7 @@ me.post("/api-keys", async (c) => {
   }
 })
 
-me.delete("/api-keys/:id", async (c) => {
+me.delete("/api-keys/:id", rateLimitUser("mutate"), async (c) => {
   const user = await requireSession(c)
   if (!user) return c.json({ error: "unauthorized" }, 401)
 

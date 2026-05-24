@@ -32,7 +32,20 @@ app.use(
 
 app.onError((err, c) => {
   if (isPrismaNotFound(err)) return c.json({ error: "not_found" }, 404)
-  console.error(err)
+  // Don't `console.error(err)` directly — for Prisma errors that drags in
+  // `meta` (column names plus the parameter-bearing context from the
+  // failing query) and dumps it into Workers logs verbatim. Keep just the
+  // structured shape we actually need for triage; stack traces stay in
+  // dev only since they can leak bundled paths / variable names.
+  const e = err as Error & { code?: string }
+  console.error("api error:", {
+    name: e?.name,
+    code: e?.code,
+    method: c.req.method,
+    path: c.req.path,
+    message: e?.message,
+    ...(process.env.NODE_ENV !== "production" ? { stack: e?.stack } : {}),
+  })
   return c.json({ error: "internal_error" }, 500)
 })
 

@@ -32,6 +32,10 @@ export function requireApiKey(requiredScope: ApiKeyScope): MiddlewareHandler {
         rateLimit: true,
         isActive: true,
         expiresAt: true,
+        // Cookie-session routes go through banGuard in security.ts; the
+        // PAT path needs the equivalent check or banned users keep API
+        // access after their sessions are revoked.
+        user: { select: { isBanned: true } },
       },
     })
 
@@ -40,6 +44,9 @@ export function requireApiKey(requiredScope: ApiKeyScope): MiddlewareHandler {
     }
     if (apiKey.expiresAt && apiKey.expiresAt.getTime() <= Date.now()) {
       return c.json({ error: "invalid_key" }, 401)
+    }
+    if (apiKey.user.isBanned) {
+      return c.json({ error: "banned" }, 403)
     }
     if (!apiKey.scopes.includes(requiredScope)) {
       return c.json(

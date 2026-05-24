@@ -3,6 +3,7 @@ import { Hono } from "hono"
 import { prisma } from "../db"
 import { Prisma } from "../generated/prisma/client"
 import { parseJsonBody } from "../lib/validate"
+import { rateLimitUser } from "../middleware/rate-limit"
 import { isPrismaNotFound, requireAdmin } from "./_admin"
 import { parseListQuery, runList } from "./_build-list"
 import { parsePage, trimQ } from "./_query"
@@ -20,7 +21,17 @@ type UserFlag = (typeof USER_FLAGS)[number]
 
 const LIST_PAGE = 24
 
-admin.get("/users", async (c) => {
+// Admin destructive ops + list/search are throttled with the same per-user
+// buckets the public surface uses. The cap is well above any plausible
+// admin workflow; the goal is to bound damage if a privileged session is
+// ever exfiltrated (stolen device, browser extension exfil, etc.) before
+// the admin notices and revokes. List/search uses `includeSafeMethods`
+// because the unindexed ILIKE %q% across four columns is the expensive
+// path here, not the writes.
+const adminMutateLimit = rateLimitUser("mutate")
+const adminSearchLimit = rateLimitUser("search", { includeSafeMethods: true })
+
+admin.get("/users", adminSearchLimit, async (c) => {
   const actor = await requireAdmin(c)
   if (actor instanceof Response) return actor
 
@@ -86,7 +97,7 @@ admin.get("/users", async (c) => {
   })
 })
 
-admin.patch("/users/:id", async (c) => {
+admin.patch("/users/:id", adminMutateLimit, async (c) => {
   const actor = await requireAdmin(c)
   if (actor instanceof Response) return actor
 
@@ -136,9 +147,19 @@ admin.patch("/users/:id", async (c) => {
     })
     // Better Auth caches `isBanned` in the session cookie for up to 60s
     // (auth.ts), so a ban only takes effect on cookie refresh. Delete the
-    // user's sessions to force re-auth on the next request.
+    // user's sessions to force re-auth on the next request. API keys are
+    // deactivated in the same step so a banned user can't keep hitting
+    // /api/v1 with a pre-existing PAT — requireApiKey checks isBanned on
+    // each call, but flipping isActive is the explicit, durable signal a
+    // moderator can see in the user's key list.
     if (data.isBanned === true) {
-      await prisma.session.deleteMany({ where: { userId: targetId } })
+      await Promise.all([
+        prisma.session.deleteMany({ where: { userId: targetId } }),
+        prisma.apiKey.updateMany({
+          where: { userId: targetId, isActive: true },
+          data: { isActive: false },
+        }),
+      ])
     }
     return c.json(updated)
   } catch (err) {
@@ -147,7 +168,7 @@ admin.patch("/users/:id", async (c) => {
   }
 })
 
-admin.delete("/users/:id", async (c) => {
+admin.delete("/users/:id", adminMutateLimit, async (c) => {
   const actor = await requireAdmin(c)
   if (actor instanceof Response) return actor
 
@@ -165,7 +186,7 @@ admin.delete("/users/:id", async (c) => {
   return c.body(null, 204)
 })
 
-admin.get("/builds", async (c) => {
+admin.get("/builds", adminSearchLimit, async (c) => {
   const actor = await requireAdmin(c)
   if (actor instanceof Response) return actor
 
@@ -178,7 +199,7 @@ admin.get("/builds", async (c) => {
   return c.json(result)
 })
 
-admin.delete("/builds/:slug", async (c) => {
+admin.delete("/builds/:slug", adminMutateLimit, async (c) => {
   const actor = await requireAdmin(c)
   if (actor instanceof Response) return actor
 
@@ -192,7 +213,7 @@ admin.delete("/builds/:slug", async (c) => {
   return c.body(null, 204)
 })
 
-admin.get("/orgs", async (c) => {
+admin.get("/orgs", adminSearchLimit, async (c) => {
   const actor = await requireAdmin(c)
   if (actor instanceof Response) return actor
 
@@ -245,7 +266,7 @@ admin.get("/orgs", async (c) => {
   })
 })
 
-admin.delete("/orgs/:slug", async (c) => {
+admin.delete("/orgs/:slug", adminMutateLimit, async (c) => {
   const actor = await requireAdmin(c)
   if (actor instanceof Response) return actor
 
