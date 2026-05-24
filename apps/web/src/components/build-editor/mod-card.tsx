@@ -1,5 +1,11 @@
 import type { Mod } from "@arsenyx/shared/warframe/types"
-import { Fragment, useEffect, useRef, useState } from "react"
+import {
+  Fragment,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react"
 import { createPortal } from "react-dom"
 
 import {
@@ -420,13 +426,53 @@ export function ModCard({
   const effectiveHover = isHovered && !disableHover
 
   // Scroll collapses the preview — otherwise the card can stay stuck open
-  // if its wrapper moves out from under the cursor silently.
+  // if its wrapper moves out from under the cursor silently. Same problem
+  // happens when the grid reflows (e.g. mod search filters): the DOM node
+  // shifts but no mouseleave fires, so we also re-check on pointermove.
   useEffect(() => {
     if (!isHovered) return
     const close = () => setIsHovered(false)
+    const checkPointer = (e: PointerEvent) => {
+      const r = compactRef.current?.getBoundingClientRect()
+      if (!r) return
+      if (
+        e.clientX < r.left ||
+        e.clientX > r.right ||
+        e.clientY < r.top ||
+        e.clientY > r.bottom + HOVER_OVERHANG
+      ) {
+        setIsHovered(false)
+      }
+    }
     window.addEventListener("scroll", close, { capture: true, passive: true })
-    return () => window.removeEventListener("scroll", close, { capture: true })
+    window.addEventListener("pointermove", checkPointer, { passive: true })
+    return () => {
+      window.removeEventListener("scroll", close, { capture: true })
+      window.removeEventListener("pointermove", checkPointer)
+    }
   }, [isHovered])
+
+  // Close when the card's layout shifts (e.g. mod search filters reorder
+  // the grid) — pointermove alone doesn't fire if the user types without
+  // moving the cursor.
+  const lastHoveredRect = useRef<DOMRect | null>(null)
+  useLayoutEffect(() => {
+    if (!isHovered) {
+      lastHoveredRect.current = null
+      return
+    }
+    const r = compactRef.current?.getBoundingClientRect()
+    if (!r) return
+    const prev = lastHoveredRect.current
+    if (
+      prev &&
+      (Math.abs(prev.left - r.left) > 4 || Math.abs(prev.top - r.top) > 4)
+    ) {
+      setIsHovered(false)
+      return
+    }
+    lastHoveredRect.current = r
+  })
 
   // alwaysExpanded skips all the hover machinery.
   if (alwaysExpanded) {
