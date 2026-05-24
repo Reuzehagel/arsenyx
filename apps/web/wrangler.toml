@@ -10,15 +10,23 @@ routes = [
   { pattern = "arsenyx.com", custom_domain = true },
 ]
 
-# Assets-only Worker — no `main` entry point. Workers Static Assets serves
-# everything under `dist/` directly and applies the `_headers` / `_redirects`
-# rules that ship in the build output (originally from `public/_headers`).
+# A tiny Worker (`worker/index.ts`) runs in front of Workers Static Assets so
+# that link-unfurl bots (Discord/Slack/Twitter/etc.) get build-specific OG
+# meta tags on /builds/:slug pages. Everything else — and every non-bot
+# request to /builds/* — falls straight through to the assets binding, which
+# applies the `_headers` / `_redirects` rules from `public/_headers`.
 #
 # `not_found_handling = "single-page-application"` makes any unmatched route
 # return `/index.html` with a 200, so TanStack Router can take over client-side.
+main = "./worker/index.ts"
+
 [assets]
 directory = "./dist"
+binding = "ASSETS"
 not_found_handling = "single-page-application"
+# Run the Worker first only for build detail pages; all other routes (assets,
+# data JSON, other SPA routes) bypass the Worker entirely.
+run_worker_first = ["/builds/*"]
 
 [observability]
 enabled = true

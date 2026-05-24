@@ -1,0 +1,269 @@
+// Bundled by wrangler (see wrangler.toml `main`). Runs only for paths matched
+// by `run_worker_first` — everything else is served by Workers Static Assets
+// directly. We use it to enrich link-unfurl meta tags for /builds/:slug pages
+// so Discord/Slack/Twitter previews show the build name + author + summary
+// instead of the generic site description from index.html.
+
+interface Env {
+  ASSETS: { fetch: (request: Request) => Promise<Response> }
+}
+
+const API_BASE = "https://api.arsenyx.com"
+const RESERVED_BUILD_SUBPATHS = new Set(["mine", "bookmarks", "new"])
+// Real slugs are nanoid(10) from a 56-char alphabet; 64 is a generous
+// upper bound that still cheaply rejects amplification attempts that try to
+// pin Postgres findUnique with megabyte-sized strings.
+const MAX_SLUG_LENGTH = 64
+
+// UA fragments for link-unfurl bots only. Deliberately excludes search
+// crawlers (googlebot/bingbot/applebot): serving them rewritten HTML that
+// real users never see is cloaking, and indexing UNLISTED build URLs would
+// defeat their "link-only" intent. Matching is case-insensitive substring.
+const BOT_UA_FRAGMENTS = [
+  "discordbot",
+  "slackbot-linkexpanding",
+  "slackbot ",
+  "twitterbot",
+  "facebookexternalhit",
+  "linkedinbot",
+  "telegrambot",
+  // WhatsApp's link-preview bot uses "WhatsApp/<ver>" with a trailing slash;
+  // the in-app browser uses bare "WhatsApp" mixed into a Chrome UA, which we
+  // do NOT want to route through the rewriter.
+  "whatsapp/",
+  "skypeuripreview",
+  "pinterest",
+  "redditbot",
+  "embedly",
+  "iframely",
+  "vkshare",
+  "tumblr",
+  "mastodon",
+]
+
+type BuildSummary = {
+  name: string
+  description: string | null
+  visibility: "PUBLIC" | "PRIVATE" | "UNLISTED"
+  hideAuthor: boolean
+  item: { name: string; category: string; imageName: string | null }
+  user: {
+    displayUsername: string | null
+    username: string | null
+    name: string | null
+  }
+  organization: { name: string } | null
+  guide: { summary: string | null } | null
+  likeCount: number
+  viewCount: number
+}
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url)
+
+    if (request.method !== "GET") return env.ASSETS.fetch(request)
+
+    const slug = extractSlug(url.pathname)
+    if (!slug) return env.ASSETS.fetch(request)
+
+    const ua = request.headers.get("user-agent") ?? ""
+    if (!isUnfurlBot(ua)) return env.ASSETS.fetch(request)
+
+    const [shellRes, build] = await Promise.all([
+      env.ASSETS.fetch(new Request(new URL("/index.html", url), request)),
+      fetchBuild(slug),
+    ])
+
+    // Only inject meta for PUBLIC builds. UNLISTED is "link-only, don't
+    // surface this anywhere" — we honour that by leaving the generic
+    // site-wide shell in place for unfurls of unlisted URLs.
+    if (!build || build.visibility !== "PUBLIC") return shellRes
+    const contentType = shellRes.headers.get("content-type") ?? ""
+    if (!shellRes.ok || !contentType.includes("text/html")) return shellRes
+
+    const canonical = new URL(`/builds/${slug}`, url).toString()
+    return rewriteMeta(shellRes, buildMeta(build, canonical))
+  },
+}
+
+function extractSlug(pathname: string): string | null {
+  if (!pathname.startsWith("/builds/")) return null
+  const rest = pathname.slice("/builds/".length)
+  const slug = rest.split("/")[0]
+  if (!slug || slug.length > MAX_SLUG_LENGTH) return null
+  if (RESERVED_BUILD_SUBPATHS.has(slug)) return null
+  return slug
+}
+
+function isUnfurlBot(ua: string): boolean {
+  const lower = ua.toLowerCase()
+  return BOT_UA_FRAGMENTS.some((frag) => lower.includes(frag))
+}
+
+async function fetchBuild(slug: string): Promise<BuildSummary | null> {
+  try {
+    // `embed=1` tells the API to skip maybeIncrementView — without it we'd
+    // bump viewCount on every Discord/Slack/Twitter scrape (the Worker never
+    // forwards the vw_<slug> cookie). It also keeps the API's response free
+    // of Set-Cookie so the cf.cacheTtl below actually engages.
+    const res = await fetch(
+      `${API_BASE}/builds/${encodeURIComponent(slug)}?embed=1`,
+      {
+        headers: { accept: "application/json" },
+        cf: { cacheTtl: 60, cacheEverything: true },
+      } as RequestInit,
+    )
+    if (!res.ok) return null
+    return (await res.json()) as BuildSummary
+  } catch {
+    return null
+  }
+}
+
+type Meta = {
+  title: string
+  description: string
+  image: string | null
+  url: string
+}
+
+function buildMeta(b: BuildSummary, url: string): Meta {
+  // `hideAuthor` means "this is an org build — don't reveal the underlying
+  // user, just show the org". Falling back to null when hideAuthor=true
+  // would drop the org credit entirely, which is the opposite of intent.
+  const author = b.hideAuthor
+    ? (b.organization?.name ?? null)
+    : (b.organization?.name ??
+      b.user.displayUsername ??
+      b.user.username ??
+      b.user.name)
+
+  const title = collapseWs(
+    author
+      ? `${b.item.name} build by ${author} — Arsenyx`
+      : `${b.item.name} build — Arsenyx`,
+  )
+
+  const summary = collapseWs(b.guide?.summary ?? b.description ?? "")
+  const stats = `${formatCount(b.likeCount)} likes · ${formatCount(b.viewCount)} views`
+  const category = prettyCategory(b.item.category)
+
+  const description = summary
+    ? clamp(`${summary} · ${stats}`, 280)
+    : `${b.item.name} (${category}) build on Arsenyx · ${stats}`
+
+  return { title, description, image: imageUrl(b.item.imageName), url }
+}
+
+// Collapse all whitespace (including embedded newlines / tabs) to single
+// spaces. Authored build names and guide summaries can contain literal
+// newlines; some unfurl scrapers split on those when reading a `content="…"`
+// attribute, mangling the preview.
+function collapseWs(s: string): string {
+  return s.replace(/\s+/g, " ").trim()
+}
+
+function imageUrl(imageName: string | null): string | null {
+  if (!imageName) return null
+  // If a future data refresh ever stores an absolute URL, honour it. Otherwise
+  // treat the value as a bare filename and join it under cdn.warframestat.us
+  // — leading slashes are stripped because URL() would otherwise resolve them
+  // against the host root and drop the `/img/` base path.
+  if (/^https?:\/\//i.test(imageName)) return imageName
+  const clean = imageName.replace(/^\/+/, "")
+  try {
+    return new URL(clean, "https://cdn.warframestat.us/img/").toString()
+  } catch {
+    return null
+  }
+}
+
+function formatCount(n: number): string {
+  if (n >= 10000) return `${Math.round(n / 1000)}k`
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
+  return String(n)
+}
+
+function prettyCategory(c: string): string {
+  if (!c) return ""
+  return c.charAt(0).toUpperCase() + c.slice(1).toLowerCase()
+}
+
+function clamp(s: string, max: number): string {
+  // Iterate by code point so we never split a UTF-16 surrogate pair
+  // (emoji, supplementary-plane CJK) and leave a lone surrogate before the
+  // ellipsis — some unfurl clients render that as U+FFFD.
+  const chars = Array.from(s)
+  if (chars.length <= max) return s
+  return `${chars.slice(0, max - 1).join("").trimEnd()}…`
+}
+
+function rewriteMeta(res: Response, meta: Meta): Response {
+  const esc = {
+    title: escapeAttr(meta.title),
+    description: escapeAttr(meta.description),
+    url: escapeAttr(meta.url),
+    image: meta.image ? escapeAttr(meta.image) : null,
+  }
+  const injected =
+    `<meta property="og:type" content="article" />` +
+    `<meta property="og:site_name" content="Arsenyx" />` +
+    `<meta property="og:title" content="${esc.title}" />` +
+    `<meta property="og:description" content="${esc.description}" />` +
+    `<meta property="og:url" content="${esc.url}" />` +
+    (esc.image ? `<meta property="og:image" content="${esc.image}" />` : "") +
+    `<meta name="twitter:card" content="summary" />` +
+    `<meta name="twitter:title" content="${esc.title}" />` +
+    `<meta name="twitter:description" content="${esc.description}" />` +
+    (esc.image ? `<meta name="twitter:image" content="${esc.image}" />` : "")
+
+  // `HTMLRewriter` is a workerd global; we don't pull in the full types here
+  // to keep this file dependency-free.
+  const Rewriter = (globalThis as { HTMLRewriter: HTMLRewriterCtor })
+    .HTMLRewriter
+  return new Rewriter()
+    .on("title", {
+      element(el) {
+        el.setInnerContent(meta.title)
+      },
+    })
+    .on('meta[name="description"]', {
+      element(el) {
+        el.setAttribute("content", meta.description)
+      },
+    })
+    .on("head", {
+      element(el) {
+        el.append(injected, { html: true })
+      },
+    })
+    .transform(res)
+}
+
+function escapeAttr(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+}
+
+// Minimal local typings for the HTMLRewriter we use. The full @cloudflare
+// types package isn't a dependency of apps/web — this file is bundled by
+// wrangler at deploy time, not by Vite.
+interface HTMLRewriterCtor {
+  new (): HTMLRewriterInst
+}
+interface HTMLRewriterInst {
+  on(selector: string, handlers: ElementHandlers): HTMLRewriterInst
+  transform(response: Response): Response
+}
+interface ElementHandlers {
+  element?(element: RewriterElement): void
+}
+interface RewriterElement {
+  setInnerContent(content: string, opts?: { html?: boolean }): RewriterElement
+  setAttribute(name: string, value: string): RewriterElement
+  append(content: string, opts?: { html?: boolean }): RewriterElement
+}
