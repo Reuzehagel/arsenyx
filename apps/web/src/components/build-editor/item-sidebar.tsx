@@ -234,6 +234,7 @@ export function ItemSidebar({
       arcanes: arcaneList,
       showMaxStacks,
       deploymentContext: effectiveDeploymentContext,
+      lichBonusElement,
     })
     // The Incarnon Form alt-fire is only available with the adapter installed.
     if (showIncarnon && !incarnonEnabled) {
@@ -256,6 +257,7 @@ export function ItemSidebar({
     showIncarnon,
     incarnonEnabled,
     effectiveDeploymentContext,
+    lichBonusElement,
   ])
 
   const companionStats = useMemo<CompanionStats | null>(() => {

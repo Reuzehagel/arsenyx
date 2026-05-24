@@ -3,6 +3,7 @@ import type {
   DamageTypes,
   DeploymentContext,
   Gun,
+  LichBonusElement,
   Melee,
   Weapon,
 } from "@arsenyx/shared/warframe/types"
@@ -41,6 +42,23 @@ export interface WeaponCalcInput {
    * without atmospheric overrides.
    */
   deploymentContext?: DeploymentContext
+  /**
+   * Kuva/Tenet progenitor bonus element. Adds a flat +60% of the chosen
+   * element as if it were a mod stat, so it combines with mod elements
+   * (e.g. Cold + bonus Toxin → Viral).
+   */
+  lichBonusElement?: LichBonusElement | null
+}
+
+const LICH_BONUS_PERCENT = 60
+
+function lichBonusStat(element: LichBonusElement): SourcedStat {
+  return {
+    type: element.toLowerCase() as SourcedStat["type"],
+    value: LICH_BONUS_PERCENT,
+    operation: "percent_add",
+    sourceName: "Bonus Element",
+  }
 }
 
 export function calculateWeaponStats(input: WeaponCalcInput): WeaponStats {
@@ -48,6 +66,9 @@ export function calculateWeaponStats(input: WeaponCalcInput): WeaponStats {
   const stats = collectSourcedStats(input.mods, input.arcanes, {
     showMaxStacks: input.showMaxStacks,
   })
+  if (input.lichBonusElement) {
+    stats.push(lichBonusStat(input.lichBonusElement))
+  }
 
   const multishot = calcStat("multishot", 1, stats)
   const hasAttacks = Boolean(weapon.attacks && weapon.attacks.length > 0)
@@ -387,8 +408,23 @@ function calcDamageBreakdown(
     }
   }
 
+  // Merge entries that share the same element type (e.g. innate Cold +
+  // modded Cold from Primed Cryo Rounds). Without this, combineElements
+  // emits two separate Cold rows because Cold+Cold isn't a valid pairing.
+  const mergedByType = new Map<DamageType, (typeof elementalMods)[number]>()
+  for (const entry of elementalMods) {
+    const existing = mergedByType.get(entry.type)
+    if (existing) {
+      existing.value += entry.value
+      existing.sources.push(...entry.sources)
+      if (!entry.isInnate) existing.isInnate = false
+    } else {
+      mergedByType.set(entry.type, { ...entry, sources: [...entry.sources] })
+    }
+  }
+
   const elemental = combineElements(
-    elementalMods,
+    Array.from(mergedByType.values()),
     totalModdedBase,
     baseDamageContribs,
   )
