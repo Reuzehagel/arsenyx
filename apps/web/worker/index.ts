@@ -103,14 +103,16 @@ function isUnfurlBot(ua: string): boolean {
 
 async function fetchBuild(slug: string): Promise<BuildSummary | null> {
   try {
-    // `embed=1` tells the API to skip maybeIncrementView — without it we'd
-    // bump viewCount on every Discord/Slack/Twitter scrape (the Worker never
-    // forwards the vw_<slug> cookie). It also keeps the API's response free
-    // of Set-Cookie so the cf.cacheTtl below actually engages.
+    // `embed=1` tells the API to return a slim payload and skip
+    // maybeIncrementView — otherwise every Discord/Slack/Twitter scrape would
+    // bump viewCount (the Worker never forwards the vw_<slug> cookie).
+    // The 2.5s abort keeps a slow API from blocking the unfurl past Discord's
+    // ~3-5s patience window — on timeout we fall back to the generic shell.
     const res = await fetch(
       `${API_BASE}/builds/${encodeURIComponent(slug)}?embed=1`,
       {
         headers: { accept: "application/json" },
+        signal: AbortSignal.timeout(2500),
         cf: { cacheTtl: 60, cacheEverything: true },
       } as RequestInit,
     )
