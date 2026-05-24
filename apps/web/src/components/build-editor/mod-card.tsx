@@ -464,9 +464,14 @@ export function ModCard({
     const r = compactRef.current?.getBoundingClientRect()
     if (!r) return
     const prev = lastHoveredRect.current
+    // Threshold of half a card width — only a genuine grid reorder will
+    // ever shift by this much. Smaller wobbles from scrollbar gutters,
+    // sibling state changes, or font-load reflow shouldn't dismiss hover.
+    const shiftThreshold = DISPLAY_SIZE.compact.width / 2
     if (
       prev &&
-      (Math.abs(prev.left - r.left) > 4 || Math.abs(prev.top - r.top) > 4)
+      (Math.abs(prev.left - r.left) > shiftThreshold ||
+        Math.abs(prev.top - r.top) > shiftThreshold)
     ) {
       setIsHovered(false)
       return

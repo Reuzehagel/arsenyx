@@ -97,6 +97,18 @@ function sanitizeUserData(
     }
   }
 
+  // displayUsername is what /profile/<slug> actually renders. better-auth's
+  // usernameValidator only fires on `username`, so a /update-user request
+  // that touches displayUsername alone bypasses the check. Block reserved
+  // values here independently.
+  if ("displayUsername" in out) {
+    const v = out.displayUsername
+    if (typeof v === "string" && isReservedUsername(v)) {
+      const { displayUsername: _du, ...rest } = out
+      out = rest
+    }
+  }
+
   return out
 }
 

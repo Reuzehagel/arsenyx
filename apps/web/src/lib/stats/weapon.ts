@@ -408,26 +408,35 @@ function calcDamageBreakdown(
     }
   }
 
-  // Merge entries that share the same element type (e.g. innate Cold +
-  // modded Cold from Primed Cryo Rounds). Without this, combineElements
-  // emits two separate Cold rows because Cold+Cold isn't a valid pairing.
-  const mergedByType = new Map<DamageType, (typeof elementalMods)[number]>()
-  for (const entry of elementalMods) {
-    const existing = mergedByType.get(entry.type)
-    if (existing) {
-      existing.value += entry.value
-      existing.sources.push(...entry.sources)
-      if (!entry.isInnate) existing.isInnate = false
-    } else {
-      mergedByType.set(entry.type, { ...entry, sources: [...entry.sources] })
-    }
-  }
-
   const elemental = combineElements(
-    Array.from(mergedByType.values()),
+    elementalMods,
     totalModdedBase,
     baseDamageContribs,
   )
+
+  // Dedupe entries of the same type that survived combineElements (e.g.
+  // innate Cold + modded Cold with no other element to pair with). Done
+  // post-combination so the "innates pair last with leftovers" ordering
+  // still applies: modded Cold + Heat → Blast first, then any leftover
+  // innate Cold gets merged with other Cold entries here.
+  const dedupedByType = new Map<DamageType, DamageEntry>()
+  const deduped: DamageEntry[] = []
+  for (const entry of elemental) {
+    const existing = dedupedByType.get(entry.type)
+    if (existing) {
+      existing.value = round1(existing.value + entry.value)
+      existing.contributions.push(...entry.contributions)
+    } else {
+      const cloned: DamageEntry = {
+        ...entry,
+        contributions: [...entry.contributions],
+      }
+      dedupedByType.set(entry.type, cloned)
+      deduped.push(cloned)
+    }
+  }
+  elemental.length = 0
+  elemental.push(...deduped)
 
   // Combined-element stats from mods/rivens/arcanes (e.g. a Riven rolling
   // +Magnetic Damage). These don't combine further, so emit them directly.
