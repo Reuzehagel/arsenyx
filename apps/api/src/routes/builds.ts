@@ -119,6 +119,9 @@ builds.post("/", rateLimitUser("mutate"), async (c) => {
   )
   if (!orgResult.ok) return c.json({ error: orgResult.error }, orgResult.status)
   const organizationId = orgResult.value
+  // Author can opt to suppress their handle on org-published builds.
+  // Always false when there's no org (no-op).
+  const hideAuthor = organizationId !== null && b.hideAuthor === true
 
   // Retry on the astronomically-unlikely slug collision.
   for (let attempt = 0; attempt < SLUG_COLLISION_RETRIES; attempt++) {
@@ -136,6 +139,7 @@ builds.post("/", rateLimitUser("mutate"), async (c) => {
           description,
           visibility,
           organizationId,
+          hideAuthor,
           buildData,
           hasShards: hasShardsInBuildData(buildData),
           hasGuide: guide?.hasGuide ?? false,
@@ -201,6 +205,19 @@ builds.patch("/:slug", rateLimitUser("mutate"), async (c) => {
     if (!orgResult.ok)
       return c.json({ error: orgResult.error }, orgResult.status)
     data.organizationId = orgResult.value
+  }
+  // hideAuthor only makes sense when the build is org-published. We use the
+  // effective org after this PATCH (incoming value if provided, else the
+  // existing one) so toggling org off forces hideAuthor back to false in the
+  // same write — no stale flag pointing at a now-null org.
+  if (typeof b.hideAuthor === "boolean") {
+    const effectiveOrgId =
+      data.organizationId !== undefined
+        ? data.organizationId
+        : existing.organizationId
+    data.hideAuthor = effectiveOrgId !== null && b.hideAuthor === true
+  } else if (data.organizationId === null) {
+    data.hideAuthor = false
   }
   if (b.buildData && typeof b.buildData === "object") {
     if (variantsOverCap(b.buildData)) {

@@ -71,6 +71,7 @@ export type BuildDetail = {
   buildData: unknown
   hasShards: boolean
   hasGuide: boolean
+  hideAuthor: boolean
   likeCount: number
   bookmarkCount: number
   viewCount: number

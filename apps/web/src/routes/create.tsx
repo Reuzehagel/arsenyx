@@ -458,6 +458,9 @@ function EditorShell() {
   const [organizationId, setOrganizationId] = useState<string | null>(
     () => existingBuild?.organization?.id ?? null,
   )
+  const [hideAuthor, setHideAuthor] = useState<boolean>(
+    () => existingBuild?.hideAuthor ?? false,
+  )
   const [publishDialogOpen, setPublishDialogOpen] = useState(false)
 
   const { data: myOrgs } = useQuery({
@@ -743,12 +746,13 @@ function EditorShell() {
       setPublishDialogOpen(true)
       return
     }
-    void performSave(visibility, organizationId)
+    void performSave(visibility, organizationId, hideAuthor)
   }
 
   const performSave = async (
     nextVisibility: PublishVisibility,
     nextOrganizationId: string | null,
+    nextHideAuthor: boolean,
   ) => {
     if (!session?.user) {
       navigate({ to: "/auth/signin" })
@@ -771,6 +775,7 @@ function EditorShell() {
         name: buildName.trim() || item.name,
         visibility: nextVisibility,
         organizationId: nextOrganizationId,
+        hideAuthor: nextHideAuthor,
         buildData: {
           version: 1,
           slots: slots.placed,
@@ -1216,6 +1221,7 @@ function EditorShell() {
         onOpenChange={setPublishDialogOpen}
         initialVisibility={visibility}
         initialOrganizationId={organizationId}
+        initialHideAuthor={hideAuthor}
         owner={{
           name: session?.user?.name ?? "You",
           username:
@@ -1225,11 +1231,16 @@ function EditorShell() {
         }}
         organizations={organizations}
         confirmLabel={isUpdate ? "Update settings" : "Save build"}
-        onConfirm={({ visibility: next, organizationId: nextOrgId }) => {
+        onConfirm={({
+          visibility: next,
+          organizationId: nextOrgId,
+          hideAuthor: nextHideAuthor,
+        }) => {
           setVisibility(next)
           setOrganizationId(nextOrgId)
+          setHideAuthor(nextHideAuthor)
           setPublishDialogOpen(false)
-          if (!isUpdate) void performSave(next, nextOrgId)
+          if (!isUpdate) void performSave(next, nextOrgId, nextHideAuthor)
         }}
       />
 

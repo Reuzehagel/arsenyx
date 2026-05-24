@@ -34,6 +34,7 @@ export type BuildListItem = {
   viewCount: number
   hasGuide: boolean
   hasShards: boolean
+  hideAuthor: boolean
   createdAt: string
   updatedAt: string
   item: {

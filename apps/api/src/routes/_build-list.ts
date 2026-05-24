@@ -23,6 +23,7 @@ export const LIST_SELECT = {
   viewCount: true,
   hasGuide: true,
   hasShards: true,
+  hideAuthor: true,
   createdAt: true,
   updatedAt: true,
   itemName: true,
@@ -92,6 +93,7 @@ export function serializeBuildDetail(b: DetailRow, viewer: ViewerState | null) {
     buildData: b.buildData,
     hasShards: b.hasShards,
     hasGuide: b.hasGuide,
+    hideAuthor: b.hideAuthor,
     likeCount: b.likeCount,
     bookmarkCount: b.bookmarkCount,
     viewCount: b.viewCount,
@@ -121,6 +123,7 @@ export function serializeListRow(b: ListRow) {
     viewCount: b.viewCount,
     hasGuide: b.hasGuide,
     hasShards: b.hasShards,
+    hideAuthor: b.hideAuthor,
     createdAt: b.createdAt.toISOString(),
     updatedAt: b.updatedAt.toISOString(),
     item: {

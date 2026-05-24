@@ -817,27 +817,32 @@ function ViewerHeader({
               </RouterLink>
               {" · "}
               {build.organization ? (
-                <RouterLink
-                  to="/org/$slug"
-                  params={{ slug: build.organization.slug }}
-                  className="text-[#a78bfa] hover:underline"
-                >
-                  {build.organization.name}
-                </RouterLink>
-              ) : build.user.username ? (
                 <>
-                  by{" "}
                   <RouterLink
-                    to="/profile/$username"
-                    params={{ username: build.user.username }}
-                    className="hover:text-foreground hover:underline"
+                    to="/org/$slug"
+                    params={{ slug: build.organization.slug }}
+                    className="text-[#a78bfa] hover:underline"
                   >
-                    {author}
+                    {build.organization.name}
                   </RouterLink>
+                  {!build.hideAuthor && " · "}
                 </>
-              ) : (
-                <>by {author}</>
-              )}
+              ) : null}
+              {(!build.organization || !build.hideAuthor) &&
+                (build.user.username ? (
+                  <>
+                    by{" "}
+                    <RouterLink
+                      to="/profile/$username"
+                      params={{ username: build.user.username }}
+                      className="hover:text-foreground hover:underline"
+                    >
+                      {author}
+                    </RouterLink>
+                  </>
+                ) : (
+                  <>by {author}</>
+                ))}
             </span>
             <div className="flex flex-wrap items-center gap-2">
               <Badge

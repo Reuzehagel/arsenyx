@@ -43,6 +43,16 @@ export function BuildCard({ build }: { build: BuildListItem }) {
             <>by {author}</>
           )}
         </p>
+        <p
+          className="text-muted-foreground line-clamp-1 text-xs"
+          aria-hidden={!build.organization || build.hideAuthor}
+        >
+          {build.organization && !build.hideAuthor ? (
+            <>by {author}</>
+          ) : (
+            <>&nbsp;</>
+          )}
+        </p>
         <div className="text-muted-foreground flex items-center justify-between text-xs">
           <span className="flex items-center gap-2">
             <span className="flex items-center gap-1">
@@ -91,9 +101,17 @@ export function BuildRow({ build }: { build: BuildListItem }) {
           <span className="line-clamp-1">{build.item.name}</span>
           <span aria-hidden>·</span>
           {build.organization ? (
-            <span className="line-clamp-1 text-[#a78bfa]">
-              {build.organization.name}
-            </span>
+            <>
+              <span className="line-clamp-1 text-[#a78bfa]">
+                {build.organization.name}
+              </span>
+              {!build.hideAuthor && (
+                <>
+                  <span aria-hidden>·</span>
+                  <span className="line-clamp-1">by {author}</span>
+                </>
+              )}
+            </>
           ) : (
             <span className="line-clamp-1">by {author}</span>
           )}
@@ -150,6 +168,7 @@ export function BuildCardSkeleton() {
         <Skeleton className="h-[1.125rem] w-3/4" />
         <Skeleton className="h-[0.875rem] w-1/2" />
         <Skeleton className="h-[0.875rem] w-2/5" />
+        <Skeleton className="h-[0.875rem] w-1/3" />
         <div className="flex items-center justify-between pt-0.5">
           <Skeleton className="h-3 w-16" />
           <Skeleton className="h-3 w-10" />

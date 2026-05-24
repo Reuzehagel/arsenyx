@@ -2,6 +2,7 @@ import { Check, Globe, Link2, Lock, Users, type LucideIcon } from "lucide-react"
 import { useState, type ReactNode } from "react"
 
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,7 @@ export type PublishVisibility = BuildDetail["visibility"]
 export type PublishDialogValues = {
   visibility: PublishVisibility
   organizationId: string | null
+  hideAuthor: boolean
 }
 
 type PublishDialogProps = {
@@ -27,6 +29,7 @@ type PublishDialogProps = {
   onOpenChange: (open: boolean) => void
   initialVisibility: PublishVisibility
   initialOrganizationId: string | null
+  initialHideAuthor: boolean
   owner: {
     name: string
     username: string | null
@@ -68,6 +71,7 @@ export function PublishDialog({
   onOpenChange,
   initialVisibility,
   initialOrganizationId,
+  initialHideAuthor,
   owner,
   organizations,
   confirmLabel = "Save build",
@@ -78,11 +82,15 @@ export function PublishDialog({
   const [organizationId, setOrganizationId] = useState<string | null>(
     initialOrganizationId,
   )
+  // UI state is the inverse of the persisted `hideAuthor` flag: the checkbox
+  // reads "Show me as the author" so it stays an opt-in affirmation.
+  const [showAuthor, setShowAuthor] = useState(!initialHideAuthor)
 
   const handleOpenChange = (o: boolean) => {
     if (o) {
       setVisibility(initialVisibility)
       setOrganizationId(initialOrganizationId)
+      setShowAuthor(!initialHideAuthor)
     }
     onOpenChange(o)
   }
@@ -106,7 +114,7 @@ export function PublishDialog({
                 key={value}
                 selected={visibility === value}
                 onSelect={() => setVisibility(value)}
-                leading={<Icon className="mt-0.5 size-4 shrink-0" />}
+                leading={<Icon className="size-4 shrink-0" />}
                 title={label}
                 subtitle={description}
               />
@@ -148,6 +156,34 @@ export function PublishDialog({
                 />
               ))
             )}
+            {organizationId !== null ? (
+              <label className="hover:bg-muted/40 mt-1 flex cursor-pointer items-center gap-3 rounded-md border border-dashed p-3 text-left">
+                <Checkbox
+                  checked={showAuthor}
+                  onCheckedChange={(v) => setShowAuthor(v === true)}
+                  aria-label="Show me as the author alongside the org"
+                />
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="text-sm leading-none font-medium">
+                    Show me as the author
+                  </span>
+                  <span className="text-muted-foreground text-xs leading-snug">
+                    {showAuthor ? (
+                      <>
+                        Build will be credited to{" "}
+                        <span className="text-foreground">{ownerHandle}</span>{" "}
+                        alongside the org.
+                      </>
+                    ) : (
+                      <>
+                        Only the org will be shown. Your handle won't appear on
+                        this build.
+                      </>
+                    )}
+                  </span>
+                </div>
+              </label>
+            ) : null}
           </Section>
         </div>
 
@@ -155,7 +191,18 @@ export function PublishDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={() => onConfirm({ visibility, organizationId })}>
+          <Button
+            onClick={() =>
+              onConfirm({
+                visibility,
+                organizationId,
+                // hideAuthor only persists meaningfully on org builds; flatten
+                // to false when no org is selected so we don't carry stale
+                // state through the save.
+                hideAuthor: organizationId !== null && !showAuthor,
+              })
+            }
+          >
             {confirmLabel}
           </Button>
         </DialogFooter>
@@ -191,7 +238,7 @@ function OptionCard({
   subtitle: string
 }) {
   const className = cn(
-    "flex items-start gap-3 rounded-md border p-3 text-left transition-colors",
+    "flex items-center gap-3 rounded-md border p-3 text-left transition-colors",
     disabled
       ? "border-dashed opacity-60"
       : "hover:bg-muted/40 focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",

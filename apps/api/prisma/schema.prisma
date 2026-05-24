@@ -155,6 +155,11 @@ model Build {
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 
+  // When true and the build is published under an organization, the
+  // author's handle is suppressed in card / detail UI. No effect on
+  // solo (no-org) builds — the author is the only attribution there.
+  hideAuthor Boolean @default(false)
+
   // Denormalized WFCD item reference
   itemUniqueName String
   itemCategory   String
