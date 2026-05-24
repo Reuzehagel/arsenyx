@@ -36,6 +36,8 @@ import type {
   Mod,
 } from "@arsenyx/shared/warframe/types"
 
+import { BEAST_CLAWS } from "./beast-claws"
+
 const require = createRequire(import.meta.url)
 const WFCD_PKG = dirname(require.resolve("@wfcd/items/package.json"))
 const WFCD_JSON = resolve(WFCD_PKG, "data/json")
@@ -201,6 +203,9 @@ async function loadAllItems(): Promise<BrowseableItem[]> {
   }
   patchAtmosphericArchgunVariants(all)
   patchMissingAuras(all)
+  // Beast claws (Adarza/Smeeta/Vasca/Kubrows/Vulpaphylas/Predasites) aren't
+  // in DE's PublicExport, so we inject hardcoded entries. See beast-claws.ts.
+  all.push(...BEAST_CLAWS)
   return all
 }
 

@@ -78,12 +78,17 @@ export const RIVEN_ELIGIBLE_CATEGORIES = new Set<BrowseCategory>([
 /** Riven-eligible weapons per the wiki: Primary, Secondary, Melee,
  * Arch-Guns, and Robotic (companion) weapons. The `archwing` browse
  * category lumps Arch-Guns with Arch-Melee and Archwing suits, so we
- * inspect the raw WFCD category for that case. */
+ * inspect the raw WFCD category for that case. Beast claws share the
+ * `companion-weapons` browse bucket with robotic companion weapons but
+ * are not riven-eligible. */
 export function isRivenEligible(
   category: BrowseCategory,
-  item: { category?: string },
+  item: { category?: string; type?: string },
 ): boolean {
-  if (RIVEN_ELIGIBLE_CATEGORIES.has(category)) return true
+  if (RIVEN_ELIGIBLE_CATEGORIES.has(category)) {
+    if (item.type === "Beast Weapon") return false
+    return true
+  }
   if (category === "archwing" && item.category === "Arch-Gun") return true
   return false
 }

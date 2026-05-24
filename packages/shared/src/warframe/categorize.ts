@@ -57,7 +57,11 @@ export function categorizeItem(item: BrowseableItem): BrowseCategory[] {
     return categories
   }
 
-  const isCompanionWeapon = itemType === "Companion Weapon"
+  // Hardcoded beast claws share the companion-weapons bucket with WFCD's
+  // sentinel weapons but carry a distinct type so the mod filter can route
+  // them to `compatName: "Claws"` mods instead of rifle mods.
+  const isCompanionWeapon =
+    itemType === "Companion Weapon" || itemType === "Beast Weapon"
 
   if (itemCategory === "Primary" && !isCompanionWeapon)
     categories.push("primary")

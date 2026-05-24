@@ -14,6 +14,12 @@ const PLACEHOLDER_URL =
 
 export function getImageUrl(imageName?: string): string {
   if (!imageName) return PLACEHOLDER_URL
+  // Locally-hosted icons (e.g. our hardcoded beast-claws icon) live under
+  // `/img/`. Anything else is treated as a WFCD CDN filename — including
+  // attacker-controlled inputs like `//evil.com/x` or `/api/anything`,
+  // which would otherwise short-circuit to a third-party / same-origin
+  // request when rendered into an <img src>.
+  if (imageName.startsWith("/img/")) return imageName
   return `${WFCD_CDN_BASE}/${imageName}`
 }
 
@@ -99,6 +105,9 @@ export interface DetailItem extends BrowseItem {
     status_chance?: number
     damage?: Record<string, number | undefined> | string
   }>
+  // Beast claws (hardcoded synthetic entries): lowercased compatNames the
+  // weapon accepts. Used by getModsForItem to pick claws/family/pet mods.
+  compatGroups?: string[]
 }
 
 export const CATEGORIES: { id: BrowseCategory; label: string }[] = [

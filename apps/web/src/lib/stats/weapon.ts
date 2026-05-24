@@ -369,14 +369,16 @@ function calcDamageBreakdown(
     elementalMods.push({ type, value: sum, sources })
   }
 
-  // Innate base elements come FIRST in the combination order. Encode them
-  // as a percentage of totalModdedBase so combineElements' shared
-  // `totalModdedBase * pct / 100` formula recovers `value * baseMult`.
+  // Innate base elements come LAST in the combination hierarchy: modded
+  // elements combine with each other first, and the innate only combines
+  // with whatever's left over. Encode as a percentage of totalModdedBase so
+  // combineElements' shared `totalModdedBase * pct / 100` formula recovers
+  // `value * baseMult`.
   for (const [type, value] of Object.entries(baseDamage)) {
     if (BASE_ELEMENTS.includes(type as DamageType) && value && value > 0) {
       const pctEquivalent =
         totalModdedBase > 0 ? ((value * baseMult) / totalModdedBase) * 100 : 0
-      elementalMods.unshift({
+      elementalMods.push({
         type: type as DamageType,
         value: pctEquivalent,
         sources: [{ name: "Innate", value: pctEquivalent }],

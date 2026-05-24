@@ -261,6 +261,9 @@ export function getModsForItem(
     trigger?: string
     meleeClass?: string
     uniqueName?: string
+    /** Lowercased compatNames a Beast Weapon accepts. Synthesized at
+     * build time in scripts/beast-claws.ts. */
+    compatGroups?: string[]
   },
   mods: Mod[],
 ): Mod[] {
@@ -342,6 +345,18 @@ export function getModsForItem(
       return compatName === "archmelee" || modType.includes("arch-melee")
     if (itemTypeLower === "archwing")
       return compatName === "archwing" || modType.includes("archwing")
+
+    if (itemTypeLower === "beast weapon") {
+      // Beast claws accept several compat groups: the generic "Claws"
+      // (Bite/Maul/stances/postures), per-pet finisher mods (Ferocity →
+      // "Sahasa Kubrow"), per-class mods (Swipe → "Kavat Claws"), per-family
+      // mods (Volatile Parasite → "Predasite"), and the lone Helminth Charger
+      // mod (Strain Fever → "Helminth Claws"). The weapon item carries a
+      // pre-resolved `compatGroups` list so this matcher is data-driven.
+      return Boolean(
+        item.compatGroups && compatName && item.compatGroups.includes(compatName),
+      )
+    }
 
     if (itemTypeLower === "companion weapon") {
       // Sentinel weapons share mod pools with their primary-weapon analogues.

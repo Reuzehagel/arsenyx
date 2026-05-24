@@ -89,6 +89,7 @@ export function SearchPanel({
         trigger: item.trigger,
         meleeClass: item.meleeClass,
         uniqueName: item.uniqueName,
+        compatGroups: item.compatGroups,
       },
       allMods,
     )
