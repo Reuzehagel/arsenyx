@@ -296,7 +296,10 @@ export function useBuildSlots(
       if (!a) return prev
       if (!canPlaceIn(a.mod, to)) return prev
       if (b && !canPlaceIn(b.mod, from)) return prev
-      const next = { ...prev, [to]: a }
+      // Annotate explicitly: spreading a Record keyed by template-literal
+      // SlotIds widens to only the literal keys, which then can't be indexed
+      // by an arbitrary SlotId below.
+      const next: Partial<Record<SlotId, PlacedMod>> = { ...prev, [to]: a }
       if (b) {
         next[from] = b
       } else {

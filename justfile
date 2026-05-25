@@ -57,8 +57,9 @@ setup:
 update-data:
     bun run update-data
 
-# Lint + format-check (oxlint + oxfmt) across apps/web, apps/api, packages/shared.
+# Typecheck + lint + format-check across apps/web, apps/api, packages/shared.
 check:
+    bun run typecheck
     bun run lint
     bun run fmt:check
 

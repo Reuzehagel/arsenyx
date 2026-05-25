@@ -3,6 +3,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type DragEvent as ReactDragEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react"
 import { createPortal } from "react-dom"
@@ -289,7 +290,7 @@ export function useAbilityStatReorder(
           startY: e.clientY,
         }
       },
-      onDragStart: (e: ReactPointerEvent<HTMLElement>) => e.preventDefault(),
+      onDragStart: (e: ReactDragEvent<HTMLElement>) => e.preventDefault(),
     }
   }
 

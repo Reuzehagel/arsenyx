@@ -874,7 +874,7 @@ async function maybeIncrementView(
   if (viewerId && viewerId === ownerId) return
   // The link-unfurl Worker (apps/web/worker/index.ts) appends ?embed=1 when it
   // hydrates OG meta tags for bot scrapes. Those calls forward no cookies, so
-  // without this guard every Discord/Slack/Twitter unfurl would inflate
+  // without this guard every Discord unfurl would inflate
   // viewCount — and the Set-Cookie we'd attach would also defeat the Worker's
   // edge cache. Skip the side effect (and the cookie) entirely.
   if (c.req.query("embed") === "1") return

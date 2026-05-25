@@ -1,4 +1,3 @@
-import type { ElementContent } from "hast"
 import { useMemo } from "react"
 import ReactMarkdown, { type Components } from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -52,7 +51,15 @@ function isolateVideoLines(source: string): string {
   return out.join("\n")
 }
 
-function soloVideoHref(kids: ElementContent[]): string | null {
+// react-markdown hands us hast nodes; we only read these few fields. Typed
+// locally so we don't depend on @types/hast just for one shape.
+type MarkdownNode = {
+  type: string
+  tagName?: string
+  properties?: Record<string, unknown>
+}
+
+function soloVideoHref(kids: MarkdownNode[]): string | null {
   if (kids.length !== 1) return null
   const only = kids[0]
   if (only.type !== "element" || only.tagName !== "a") return null

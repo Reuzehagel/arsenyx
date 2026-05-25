@@ -11,8 +11,8 @@ routes = [
 ]
 
 # A tiny Worker (`worker/index.ts`) runs in front of Workers Static Assets so
-# that link-unfurl bots (Discord/Slack/Twitter/etc.) get build-specific OG
-# meta tags on /builds/:slug pages. Everything else — and every non-bot
+# that Discord's link-unfurl bot gets build-specific OG meta tags on
+# /builds/:slug pages. Everything else — and every non-bot
 # request to /builds/* — falls straight through to the assets binding, which
 # applies the `_headers` / `_redirects` rules from `public/_headers`.
 #

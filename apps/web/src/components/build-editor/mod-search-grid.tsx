@@ -32,6 +32,7 @@ import { useHotkey } from "@/lib/hotkeys"
 import {
   BASE_ELEMENTS,
   DAMAGE_TYPE_COLORS,
+  type DamageType,
   ELEMENTAL_COMBINATIONS,
 } from "@/lib/stats/types"
 import { cn } from "@/lib/utils"
@@ -79,7 +80,7 @@ const UNCOMBINED_TAG_TO_COMBINED: ReadonlyArray<readonly [string, string[]]> =
     if (!BASE_ELEMENTS.includes(element)) return []
     const combos = BASE_ELEMENTS.filter((other) => other !== element)
       .map((other) => ELEMENTAL_COMBINATIONS[`${element}+${other}`])
-      .filter((c): c is string => Boolean(c))
+      .filter((c): c is DamageType => Boolean(c))
     return [[tag, [...new Set(combos)]] as const]
   })
 

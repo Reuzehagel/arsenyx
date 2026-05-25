@@ -9,9 +9,11 @@
     "./warframe/*": "./src/warframe/*.ts"
   },
   "scripts": {
+    "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "devDependencies": {
+    "typescript": "^5.7.2",
     "vitest": "^4.1.5"
   }
 }

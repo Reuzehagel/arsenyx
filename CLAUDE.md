@@ -28,8 +28,8 @@ Game data is static, user data is dynamic. If something is read-heavy and rarely
 ## Boundaries
 
 **Always**
-- `bun run build` in `apps/web/` and `bunx tsc --noEmit` in `apps/api/` before claiming done — dev servers hide type errors
-- `just check` (oxlint + oxfmt) touched files before committing; `just fix` auto-applies
+- `bun run typecheck` (web + api + shared) before claiming done — `vite build` and dev servers don't typecheck, so web/shared type errors hide otherwise
+- `just check` (typecheck + oxlint + oxfmt) touched files before committing; `just fix` auto-applies lint + format
 - Use `uv run python` instead of `python`/`python3`
 
 **Ask first**

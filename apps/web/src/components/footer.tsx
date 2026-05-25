@@ -5,7 +5,6 @@ import { Separator } from "@/components/ui/separator"
 import { SITE_CONFIG, FOOTER_LINKS } from "@/lib/constants"
 import type { NavLink } from "@/lib/types"
 
-// Footer link component
 function FooterLink({ label, href, external }: NavLink) {
   return (
     <li>
@@ -24,7 +23,6 @@ function FooterLink({ label, href, external }: NavLink) {
   )
 }
 
-// Footer link section component
 function FooterLinkSection({
   title,
   links,

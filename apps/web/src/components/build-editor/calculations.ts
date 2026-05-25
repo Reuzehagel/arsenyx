@@ -262,5 +262,7 @@ export function calculateFormaCount(input: FormaCountInput): number {
     })),
   ]
 
-  return groupForma(pool) + singleSlotForma(stanceInnate, formaPolarities.stance)
+  return (
+    groupForma(pool) + singleSlotForma(stanceInnate, formaPolarities.stance)
+  )
 }

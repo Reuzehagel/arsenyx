@@ -92,7 +92,7 @@ export interface BuiltIndex {
 
 export function buildIndex(allItems: BrowseableItem[]): BuiltIndex {
   const byCategory = Object.fromEntries(
-    BROWSE_CATEGORIES.map((c) => [c.id, []]),
+    BROWSE_CATEGORIES.map((c): [BrowseCategory, BrowseItem[]] => [c.id, []]),
   ) as Record<BrowseCategory, BrowseItem[]>
 
   const slugLookup = new Map<string, BrowseableItem>()

@@ -1,8 +1,8 @@
 // Bundled by wrangler (see wrangler.toml `main`). Runs only for paths matched
 // by `run_worker_first` — everything else is served by Workers Static Assets
 // directly. We use it to enrich link-unfurl meta tags for /builds/:slug pages
-// so Discord/Slack/Twitter previews show the build name + author + summary
-// instead of the generic site description from index.html.
+// so Discord previews show the build name + author + summary instead of the
+// generic site description from index.html.
 
 interface Env {
   ASSETS: { fetch: (request: Request) => Promise<Response> }
@@ -15,31 +15,11 @@ const RESERVED_BUILD_SUBPATHS = new Set(["mine", "bookmarks", "new"])
 // pin Postgres findUnique with megabyte-sized strings.
 const MAX_SLUG_LENGTH = 64
 
-// UA fragments for link-unfurl bots only. Deliberately excludes search
+// UA fragment for Discord's link-unfurl bot. Deliberately excludes search
 // crawlers (googlebot/bingbot/applebot): serving them rewritten HTML that
 // real users never see is cloaking, and indexing UNLISTED build URLs would
 // defeat their "link-only" intent. Matching is case-insensitive substring.
-const BOT_UA_FRAGMENTS = [
-  "discordbot",
-  "slackbot-linkexpanding",
-  "slackbot ",
-  "twitterbot",
-  "facebookexternalhit",
-  "linkedinbot",
-  "telegrambot",
-  // WhatsApp's link-preview bot uses "WhatsApp/<ver>" with a trailing slash;
-  // the in-app browser uses bare "WhatsApp" mixed into a Chrome UA, which we
-  // do NOT want to route through the rewriter.
-  "whatsapp/",
-  "skypeuripreview",
-  "pinterest",
-  "redditbot",
-  "embedly",
-  "iframely",
-  "vkshare",
-  "tumblr",
-  "mastodon",
-]
+const BOT_UA_FRAGMENTS = ["discordbot"]
 
 type BuildSummary = {
   name: string
@@ -109,8 +89,8 @@ function isUnfurlBot(ua: string): boolean {
 async function fetchBuild(slug: string): Promise<BuildSummary | null> {
   try {
     // `embed=1` tells the API to return a slim payload and skip
-    // maybeIncrementView — otherwise every Discord/Slack/Twitter scrape would
-    // bump viewCount (the Worker never forwards the vw_<slug> cookie).
+    // maybeIncrementView — otherwise every Discord scrape would bump viewCount
+    // (the Worker never forwards the vw_<slug> cookie).
     // The 2.5s abort keeps a slow API from blocking the unfurl past Discord's
     // ~3-5s patience window — on timeout we fall back to the generic shell.
     const res = await fetch(
@@ -223,11 +203,7 @@ function rewriteMeta(res: Response, meta: Meta): Response {
     `<meta property="og:title" content="${esc.title}" />` +
     `<meta property="og:description" content="${esc.description}" />` +
     `<meta property="og:url" content="${esc.url}" />` +
-    (esc.image ? `<meta property="og:image" content="${esc.image}" />` : "") +
-    `<meta name="twitter:card" content="summary" />` +
-    `<meta name="twitter:title" content="${esc.title}" />` +
-    `<meta name="twitter:description" content="${esc.description}" />` +
-    (esc.image ? `<meta name="twitter:image" content="${esc.image}" />` : "")
+    (esc.image ? `<meta property="og:image" content="${esc.image}" />` : "")
 
   // `HTMLRewriter` is a workerd global; we don't pull in the full types here
   // to keep this file dependency-free.

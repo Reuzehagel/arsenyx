@@ -48,6 +48,7 @@ function buildStateFixture(stanceSlot?: ModSlot): BuildState {
     shardSlots: [],
     baseCapacity: 30,
     currentCapacity: 30,
+    formaCount: 0,
     stanceSlot,
   }
 }

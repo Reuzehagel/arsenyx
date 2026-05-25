@@ -1,6 +1,7 @@
 import { getIncarnonBaseName } from "@arsenyx/shared/warframe/incarnon-data"
 import { slugify } from "@arsenyx/shared/warframe/slugs"
 import {
+  type Arcane,
   DEFAULT_DEPLOYMENT_CONTEXT,
   type LichBonusElement,
   type Mod,

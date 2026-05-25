@@ -1,11 +1,5 @@
 import type { Mod } from "@arsenyx/shared/warframe/types"
-import {
-  Fragment,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react"
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 
 import {
@@ -456,6 +450,11 @@ export function ModCard({
   // the grid) — pointermove alone doesn't fire if the user types without
   // moving the cursor.
   const lastHoveredRect = useRef<DOMRect | null>(null)
+  // No dep array on purpose: this must re-measure after every render to catch
+  // grid reorders that don't change isHovered. setIsHovered(false) fires only
+  // on a large shift, and the !isHovered guard below early-returns next run, so
+  // there's no update loop.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useLayoutEffect(() => {
     if (!isHovered) {
       lastHoveredRect.current = null
