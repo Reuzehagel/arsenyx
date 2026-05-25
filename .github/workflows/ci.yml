@@ -28,12 +28,15 @@ jobs:
       - name: Format check
         run: bun run fmt:check
 
-      - name: Type-check (all workspaces)
-        run: bun run typecheck
-
       - name: Build (web)
+        # Must run before typecheck — @tanstack/router-plugin generates
+        # apps/web/src/routeTree.gen.ts during vite build, and tsc fails
+        # in apps/web without it.
         working-directory: apps/web
         run: bun run build
+
+      - name: Type-check (all workspaces)
+        run: bun run typecheck
 
       - name: Test (all workspaces)
         run: bun --filter=arsenyx-web --filter=arsenyx-api --filter=@arsenyx/shared run test
