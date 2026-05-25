@@ -23,6 +23,7 @@ import { FieldError } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { UserAvatar } from "@/components/user-avatar"
+import { authClient } from "@/lib/auth-client"
 import {
   adminBuildsQuery,
   adminOrgsQuery,
@@ -36,7 +37,6 @@ import {
   useAdminDeleteUser,
   useAdminPatchUser,
 } from "@/lib/queries/admin-actions"
-import { authClient } from "@/lib/auth-client"
 import { authorName } from "@/lib/util/user-display"
 
 const TABS = ["users", "content", "orgs", "stats"] as const

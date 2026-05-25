@@ -13,8 +13,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { UserMenu } from "@/components/user-menu"
-import { SITE_CONFIG, NAV_ITEMS, ROUTES } from "@/lib/util/constants"
 import { useHotkey } from "@/lib/hooks/hotkeys"
+import { SITE_CONFIG, NAV_ITEMS, ROUTES } from "@/lib/util/constants"
 
 const CommandPalette = lazy(() =>
   import("@/components/command-palette").then((m) => ({

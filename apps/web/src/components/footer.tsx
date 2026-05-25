@@ -2,8 +2,8 @@ import { Icons } from "@/components/icons"
 import { Link } from "@/components/link"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Separator } from "@/components/ui/separator"
-import { SITE_CONFIG, FOOTER_LINKS } from "@/lib/util/constants"
 import type { NavLink } from "@/lib/types"
+import { SITE_CONFIG, FOOTER_LINKS } from "@/lib/util/constants"
 
 function FooterLink({ label, href, external }: NavLink) {
   return (

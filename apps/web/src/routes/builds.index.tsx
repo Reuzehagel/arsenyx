@@ -9,7 +9,10 @@ import {
 } from "@/components/builds/builds-list-view"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
-import { publicBuildsQuery, type BuildListSort } from "@/lib/queries/builds-list-query"
+import {
+  publicBuildsQuery,
+  type BuildListSort,
+} from "@/lib/queries/builds-list-query"
 import { type BrowseCategory } from "@/lib/warframe"
 
 type BuildsSearch = {

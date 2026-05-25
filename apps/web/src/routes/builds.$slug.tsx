@@ -88,18 +88,22 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { arcanesQuery } from "@/lib/queries/arcanes-query"
 import { authClient } from "@/lib/auth-client"
-import { useDeleteBuild, useForkBuild } from "@/lib/queries/build-actions"
 import {
   getVariants,
   isLegacyBuildData,
   normalizeBuildData,
   selectVariant,
 } from "@/lib/codec/build-codec-adapter"
+import { useCopyToClipboard } from "@/lib/hooks/use-copy-to-clipboard"
+import { arcanesQuery } from "@/lib/queries/arcanes-query"
+import { useDeleteBuild, useForkBuild } from "@/lib/queries/build-actions"
 import { buildQuery, type BuildDetail } from "@/lib/queries/build-query"
 import { useToggleBookmark, useToggleLike } from "@/lib/queries/build-social"
-import { helminthQuery, type HelminthAbility } from "@/lib/queries/helminth-query"
+import {
+  helminthQuery,
+  type HelminthAbility,
+} from "@/lib/queries/helminth-query"
 import { incarnonEvolutionsQuery } from "@/lib/queries/incarnon-query"
 import { itemQuery } from "@/lib/queries/item-query"
 import { modsQuery } from "@/lib/queries/mods-query"
@@ -107,9 +111,8 @@ import {
   partnerBuildsQuery,
   type PartnerBuild,
 } from "@/lib/queries/partner-builds-query"
-import { formatAbsoluteTime, relativeTime } from "@/lib/util/relative-time"
 import { padShards, type PlacedShard } from "@/lib/shards"
-import { useCopyToClipboard } from "@/lib/hooks/use-copy-to-clipboard"
+import { formatAbsoluteTime, relativeTime } from "@/lib/util/relative-time"
 import { authorName, formatVisibility } from "@/lib/util/user-display"
 import { cn } from "@/lib/util/utils"
 import {

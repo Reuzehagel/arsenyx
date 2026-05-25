@@ -20,13 +20,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { authClient } from "@/lib/auth-client"
+import { useCopyToClipboard } from "@/lib/hooks/use-copy-to-clipboard"
 import {
   type ApiKeySummary,
   createApiKey,
   myApiKeysQuery,
   revokeApiKey,
 } from "@/lib/queries/me-query"
-import { useCopyToClipboard } from "@/lib/hooks/use-copy-to-clipboard"
 
 import { SignedOutNotice } from "./shared"
 

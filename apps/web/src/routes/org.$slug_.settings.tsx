@@ -41,7 +41,11 @@ import {
   useUpdateOrg,
   useUpdateOrgMemberRole,
 } from "@/lib/queries/org-actions"
-import { orgQuery, type OrgProfile, type OrgRole } from "@/lib/queries/org-query"
+import {
+  orgQuery,
+  type OrgProfile,
+  type OrgRole,
+} from "@/lib/queries/org-query"
 import { authorName } from "@/lib/util/user-display"
 
 export const Route = createFileRoute("/org/$slug_/settings")({

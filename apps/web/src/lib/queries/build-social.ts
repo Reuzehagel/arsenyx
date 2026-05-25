@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
-import { apiFetch, ApiError } from "@/lib/util/api-client"
 import type { BuildDetail } from "@/lib/queries/build-query"
+import { apiFetch, ApiError } from "@/lib/util/api-client"
 
 type LikeResponse = { hasLiked: boolean; likeCount: number }
 type BookmarkResponse = { hasBookmarked: boolean; bookmarkCount: number }

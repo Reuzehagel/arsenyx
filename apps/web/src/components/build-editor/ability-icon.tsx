@@ -14,7 +14,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { helminthQuery, type HelminthAbility } from "@/lib/queries/helminth-query"
+import {
+  helminthQuery,
+  type HelminthAbility,
+} from "@/lib/queries/helminth-query"
 import { cn } from "@/lib/util/utils"
 import { getImageUrl } from "@/lib/warframe"
 

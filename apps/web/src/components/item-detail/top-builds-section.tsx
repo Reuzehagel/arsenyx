@@ -6,8 +6,8 @@ import {
   BuildRow,
   BuildRowSkeleton,
 } from "@/components/builds/build-card"
-import { publicBuildsQuery } from "@/lib/queries/builds-list-query"
 import { useBuildLayout } from "@/lib/hooks/use-build-layout"
+import { publicBuildsQuery } from "@/lib/queries/builds-list-query"
 import type { DetailItem } from "@/lib/warframe"
 
 // Cards: flex-wrap with fixed-width tiles so a small number of builds (e.g. 2)

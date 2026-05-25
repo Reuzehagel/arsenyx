@@ -78,8 +78,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { apiErrorMessage, apiFetch } from "@/lib/util/api-client"
-import { arcanesQuery } from "@/lib/queries/arcanes-query"
 import { authClient } from "@/lib/auth-client"
 import {
   buildStateToSavedData,
@@ -91,19 +89,24 @@ import {
   SYNTHETIC_VARIANT_ID,
   SYNTHETIC_VARIANT_LABEL,
 } from "@/lib/codec/build-codec-adapter"
+import { useHotkey } from "@/lib/hooks/hotkeys"
+import { useCopyToClipboard } from "@/lib/hooks/use-copy-to-clipboard"
+import { consumeDraft } from "@/lib/import-draft"
+import { arcanesQuery } from "@/lib/queries/arcanes-query"
 import {
   buildQuery,
   type SavedBuildData,
   type SavedVariant,
 } from "@/lib/queries/build-query"
-import { helminthQuery, type HelminthAbility } from "@/lib/queries/helminth-query"
-import { useHotkey } from "@/lib/hooks/hotkeys"
-import { consumeDraft } from "@/lib/import-draft"
+import {
+  helminthQuery,
+  type HelminthAbility,
+} from "@/lib/queries/helminth-query"
 import { itemQuery } from "@/lib/queries/item-query"
 import { modsQuery } from "@/lib/queries/mods-query"
 import { myOrgsQuery } from "@/lib/queries/org-query"
 import { padShards, type PlacedShard } from "@/lib/shards"
-import { useCopyToClipboard } from "@/lib/hooks/use-copy-to-clipboard"
+import { apiErrorMessage, apiFetch } from "@/lib/util/api-client"
 import { cn } from "@/lib/util/utils"
 import {
   getCategoryLabel,
