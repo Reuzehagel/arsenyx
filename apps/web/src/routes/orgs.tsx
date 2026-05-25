@@ -15,7 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { UserAvatar } from "@/components/user-avatar"
-import { orgsDirectoryQuery } from "@/lib/org-query"
+import { orgsDirectoryQuery } from "@/lib/queries/org-query"
 
 type OrgsSearch = { page?: number }
 

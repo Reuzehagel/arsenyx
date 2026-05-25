@@ -16,8 +16,8 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { authClient } from "@/lib/auth-client"
-import { downloadMyBuildsExport } from "@/lib/me-query"
-import { authorName } from "@/lib/user-display"
+import { downloadMyBuildsExport } from "@/lib/queries/me-query"
+import { authorName } from "@/lib/util/user-display"
 
 import { extras, SignedOutNotice } from "./shared"
 

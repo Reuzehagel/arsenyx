@@ -2,7 +2,7 @@ import { Link } from "@/components/link"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/util/utils"
 import { getImageUrl, getItemUrl, type BrowseItem } from "@/lib/warframe"
 
 interface ItemCardProps {

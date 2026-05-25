@@ -9,7 +9,7 @@ import {
   apiFetch,
   ApiError,
   type ApiFetchInit,
-} from "@/lib/api-client"
+} from "@/lib/util/api-client"
 
 async function adminCall<T = unknown>(
   path: string,

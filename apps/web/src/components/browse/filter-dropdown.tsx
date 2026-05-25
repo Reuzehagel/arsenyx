@@ -10,7 +10,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Slider } from "@/components/ui/slider"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/util/utils"
 
 export const MASTERY_MAX = 30
 

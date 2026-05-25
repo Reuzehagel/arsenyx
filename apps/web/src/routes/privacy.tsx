@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router"
 
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
-import { SITE_CONFIG } from "@/lib/constants"
+import { SITE_CONFIG } from "@/lib/util/constants"
 
 export const Route = createFileRoute("/privacy")({
   component: PrivacyPage,

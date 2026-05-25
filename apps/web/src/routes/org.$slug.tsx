@@ -17,9 +17,9 @@ import { RouteNotFound } from "@/components/route-not-found"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { UserAvatar } from "@/components/user-avatar"
-import { type BuildListSort } from "@/lib/builds-list-query"
-import { orgBuildsQuery, orgQuery, type OrgProfile } from "@/lib/org-query"
-import { authorName } from "@/lib/user-display"
+import { type BuildListSort } from "@/lib/queries/builds-list-query"
+import { orgBuildsQuery, orgQuery, type OrgProfile } from "@/lib/queries/org-query"
+import { authorName } from "@/lib/util/user-display"
 import { type BrowseCategory } from "@/lib/warframe"
 
 type OrgSearch = {

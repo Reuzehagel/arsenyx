@@ -6,7 +6,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { BuildListSort } from "@/lib/builds-list-query"
+import type { BuildListSort } from "@/lib/queries/builds-list-query"
 
 const SORT_ITEMS = [
   { value: "newest", label: "Newest" },

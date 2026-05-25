@@ -1,7 +1,7 @@
 import { queryOptions } from "@tanstack/react-query"
 
-import { apiErrorMessage, apiFetch, ApiError } from "@/lib/api-client"
-import { API_URL } from "@/lib/constants"
+import { apiErrorMessage, apiFetch, ApiError } from "@/lib/util/api-client"
+import { API_URL } from "@/lib/util/constants"
 
 export async function downloadMyBuildsExport(): Promise<void> {
   const r = await fetch(`${API_URL}/me/builds/export`, {

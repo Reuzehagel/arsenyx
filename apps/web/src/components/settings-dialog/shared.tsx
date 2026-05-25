@@ -1,5 +1,5 @@
 import { Field, FieldDescription, FieldGroup } from "@/components/ui/field"
-import type { BuildDetail } from "@/lib/build-query"
+import type { BuildDetail } from "@/lib/queries/build-query"
 
 export type BuildVisibility = BuildDetail["visibility"]
 

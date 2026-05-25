@@ -2,8 +2,8 @@ import { useMemo } from "react"
 import ReactMarkdown, { type Components } from "react-markdown"
 import remarkGfm from "remark-gfm"
 
-import { proxyImage } from "@/lib/image-proxy"
-import { getVideoEmbed } from "@/lib/video-embed"
+import { proxyImage } from "@/lib/util/image-proxy"
+import { getVideoEmbed } from "@/lib/util/video-embed"
 
 /**
  * Renders user-authored markdown for build guides. Bare YouTube/Vimeo URLs

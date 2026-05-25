@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
-import { apiFetch, ApiError } from "@/lib/api-client"
+import { apiFetch, ApiError } from "@/lib/util/api-client"
 
 type ForkResponse = { id: string; slug: string }
 

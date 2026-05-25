@@ -23,8 +23,8 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group"
 import { Kbd } from "@/components/ui/kbd"
-import { useHotkey } from "@/lib/hotkeys"
-import { itemsIndexQuery } from "@/lib/items-index-query"
+import { useHotkey } from "@/lib/hooks/hotkeys"
+import { itemsIndexQuery } from "@/lib/queries/items-index-query"
 import {
   CATEGORIES,
   isValidCategory,

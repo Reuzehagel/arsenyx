@@ -1,5 +1,5 @@
-import { proxyImage } from "@/lib/image-proxy"
-import { cn } from "@/lib/utils"
+import { proxyImage } from "@/lib/util/image-proxy"
+import { cn } from "@/lib/util/utils"
 
 type AvatarShape = "circle" | "square" | "rounded"
 

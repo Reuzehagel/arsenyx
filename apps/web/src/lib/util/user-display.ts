@@ -1,4 +1,4 @@
-import type { BuildDetail } from "@/lib/build-query"
+import type { BuildDetail } from "@/lib/queries/build-query"
 
 type UserLike = {
   name?: string | null

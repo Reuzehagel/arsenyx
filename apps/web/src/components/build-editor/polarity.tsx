@@ -2,7 +2,7 @@ import type { Polarity } from "@arsenyx/shared/warframe/types"
 import { X } from "lucide-react"
 
 import { getPolarityIconUrl } from "@/lib/mod-card-config"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/util/utils"
 
 /**
  * Polarity glyph, rendered via CSS mask of the SVG asset so we can recolor it.

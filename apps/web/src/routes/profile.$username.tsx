@@ -14,13 +14,13 @@ import { Header } from "@/components/header"
 import { RouteNotFound } from "@/components/route-not-found"
 import { Badge } from "@/components/ui/badge"
 import { UserAvatar } from "@/components/user-avatar"
-import { type BuildListSort } from "@/lib/builds-list-query"
+import { type BuildListSort } from "@/lib/queries/builds-list-query"
 import {
   profileBuildsQuery,
   profileQuery,
   type Profile,
-} from "@/lib/profile-query"
-import { authorName } from "@/lib/user-display"
+} from "@/lib/queries/profile-query"
+import { authorName } from "@/lib/util/user-display"
 import { type BrowseCategory } from "@/lib/warframe"
 
 type ProfileSearch = {

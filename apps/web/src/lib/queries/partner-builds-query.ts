@@ -5,7 +5,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query"
 
-import { apiFetch, ApiError } from "@/lib/api-client"
+import { apiFetch, ApiError } from "@/lib/util/api-client"
 
 import type { BuildListItem } from "./builds-list-query"
 

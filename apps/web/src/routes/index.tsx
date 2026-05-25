@@ -10,7 +10,7 @@ import {
 } from "@/components/landing/use-recent-items"
 import { Link } from "@/components/link"
 import { Kbd } from "@/components/ui/kbd"
-import { itemsIndexQuery } from "@/lib/items-index-query"
+import { itemsIndexQuery } from "@/lib/queries/items-index-query"
 import { getImageUrl, getItemUrl } from "@/lib/warframe"
 
 export const Route = createFileRoute("/")({

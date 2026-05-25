@@ -1,4 +1,4 @@
-import { useHotkey } from "@/lib/hotkeys"
+import { useHotkey } from "@/lib/hooks/hotkeys"
 
 import {
   getVisibleSlots,

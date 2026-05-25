@@ -78,8 +78,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { apiErrorMessage, apiFetch } from "@/lib/api-client"
-import { arcanesQuery } from "@/lib/arcanes-query"
+import { apiErrorMessage, apiFetch } from "@/lib/util/api-client"
+import { arcanesQuery } from "@/lib/queries/arcanes-query"
 import { authClient } from "@/lib/auth-client"
 import {
   buildStateToSavedData,
@@ -90,21 +90,21 @@ import {
   selectVariant,
   SYNTHETIC_VARIANT_ID,
   SYNTHETIC_VARIANT_LABEL,
-} from "@/lib/build-codec-adapter"
+} from "@/lib/codec/build-codec-adapter"
 import {
   buildQuery,
   type SavedBuildData,
   type SavedVariant,
-} from "@/lib/build-query"
-import { helminthQuery, type HelminthAbility } from "@/lib/helminth-query"
-import { useHotkey } from "@/lib/hotkeys"
+} from "@/lib/queries/build-query"
+import { helminthQuery, type HelminthAbility } from "@/lib/queries/helminth-query"
+import { useHotkey } from "@/lib/hooks/hotkeys"
 import { consumeDraft } from "@/lib/import-draft"
-import { itemQuery } from "@/lib/item-query"
-import { modsQuery } from "@/lib/mods-query"
-import { myOrgsQuery } from "@/lib/org-query"
+import { itemQuery } from "@/lib/queries/item-query"
+import { modsQuery } from "@/lib/queries/mods-query"
+import { myOrgsQuery } from "@/lib/queries/org-query"
 import { padShards, type PlacedShard } from "@/lib/shards"
-import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard"
-import { cn } from "@/lib/utils"
+import { useCopyToClipboard } from "@/lib/hooks/use-copy-to-clipboard"
+import { cn } from "@/lib/util/utils"
 import {
   getCategoryLabel,
   isValidCategory,

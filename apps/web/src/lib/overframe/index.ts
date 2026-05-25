@@ -9,8 +9,8 @@ import type { OverframeScrapeResponse } from "@arsenyx/shared/warframe/overframe
 import type { Arcane, Mod, Polarity } from "@arsenyx/shared/warframe/types"
 
 import type { SlotId } from "@/components/build-editor"
-import type { SavedBuildData } from "@/lib/build-query"
-import type { HelminthAbility } from "@/lib/helminth-query"
+import type { SavedBuildData } from "@/lib/queries/build-query"
+import type { HelminthAbility } from "@/lib/queries/helminth-query"
 import type {
   BrowseCategory,
   BrowseItem,

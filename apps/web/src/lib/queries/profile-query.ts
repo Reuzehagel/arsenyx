@@ -1,11 +1,11 @@
 import { queryOptions } from "@tanstack/react-query"
 import { notFound } from "@tanstack/react-router"
 
-import { apiFetch, ApiError } from "@/lib/api-client"
+import { apiFetch, ApiError } from "@/lib/util/api-client"
 import type {
   BuildListParams,
   BuildListResponse,
-} from "@/lib/builds-list-query"
+} from "@/lib/queries/builds-list-query"
 
 export type ProfileBadges = {
   verified: boolean

@@ -1,8 +1,8 @@
 import { LayoutGrid, Rows3 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { useBuildLayout, type BuildLayout } from "@/lib/use-build-layout"
-import { cn } from "@/lib/utils"
+import { useBuildLayout, type BuildLayout } from "@/lib/hooks/use-build-layout"
+import { cn } from "@/lib/util/utils"
 
 export function BuildsLayoutToggle() {
   const [layout, setLayout] = useBuildLayout()

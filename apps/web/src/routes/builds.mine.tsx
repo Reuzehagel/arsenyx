@@ -15,7 +15,7 @@ import {
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { authClient } from "@/lib/auth-client"
-import { myBuildsQuery, type BuildListSort } from "@/lib/builds-list-query"
+import { myBuildsQuery, type BuildListSort } from "@/lib/queries/builds-list-query"
 import { type BrowseCategory } from "@/lib/warframe"
 
 type MineSearch = {

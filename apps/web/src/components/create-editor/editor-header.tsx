@@ -6,7 +6,7 @@ import { type PublishVisibility } from "@/components/build-editor"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { formatVisibility } from "@/lib/user-display"
+import { formatVisibility } from "@/lib/util/user-display"
 import {
   getImageUrl,
   type BrowseCategory,

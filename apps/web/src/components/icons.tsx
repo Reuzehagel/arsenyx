@@ -26,7 +26,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/util/utils"
 
 export type Icon = LucideIcon
 

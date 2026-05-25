@@ -8,7 +8,7 @@ import {
   getPolarityIconUrl,
   getRarityColor,
 } from "@/lib/mod-card-config"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/util/utils"
 
 /**
  * Layered PNG frame composition for a mod card. Wraps children between top

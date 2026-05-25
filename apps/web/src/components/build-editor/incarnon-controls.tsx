@@ -17,8 +17,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { incarnonEvolutionsQuery } from "@/lib/incarnon-query"
-import { cn } from "@/lib/utils"
+import { incarnonEvolutionsQuery } from "@/lib/queries/incarnon-query"
+import { cn } from "@/lib/util/utils"
 
 export function IncarnonTierGridSkeleton() {
   return (

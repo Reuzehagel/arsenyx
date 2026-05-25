@@ -13,8 +13,8 @@ import type {
 } from "@arsenyx/shared/warframe/types"
 
 import type { PlacedArcane, PlacedMod, SlotId } from "@/components/build-editor"
-import type { SavedBuildData, SavedVariant } from "@/lib/build-query"
-import type { HelminthAbility } from "@/lib/helminth-query"
+import type { SavedBuildData, SavedVariant } from "@/lib/queries/build-query"
+import type { HelminthAbility } from "@/lib/queries/helminth-query"
 import type { PlacedShard } from "@/lib/shards"
 
 type EditorState = {

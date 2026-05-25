@@ -1,6 +1,6 @@
 import { keepPreviousData, queryOptions } from "@tanstack/react-query"
 
-import { apiFetch, ApiError } from "@/lib/api-client"
+import { apiFetch, ApiError } from "@/lib/util/api-client"
 
 /** Mirrors LIST_LIMIT in apps/api/src/routes/_build-list.ts. Skeleton bone
  *  counts use this so the placeholder grid matches the loaded grid. */

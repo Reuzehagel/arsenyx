@@ -9,7 +9,7 @@ import {
   getRarityColor,
   normalizeRarity,
 } from "@/lib/mod-card-config"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/util/utils"
 import { getImageUrl } from "@/lib/warframe"
 
 import {

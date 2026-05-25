@@ -10,7 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/util/utils"
 import { getImageUrl } from "@/lib/warframe"
 
 const GRIP_OPTIONS = ZAW_GRIPS.map((g) => ({

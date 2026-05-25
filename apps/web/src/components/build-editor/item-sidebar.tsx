@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
-import { type HelminthAbility } from "@/lib/helminth-query"
+import { type HelminthAbility } from "@/lib/queries/helminth-query"
 import { type PlacedShard } from "@/lib/shards"
 import {
   calculateCompanionStats,
@@ -40,7 +40,7 @@ import {
   type WarframeStats,
   type WeaponStats,
 } from "@/lib/stats"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/util/utils"
 import { type BrowseCategory, type DetailItem } from "@/lib/warframe"
 import { adjustStrikeForZaw } from "@/lib/zaw-stats"
 

@@ -19,8 +19,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { getArcaneImageUrl } from "@/lib/arcane-images"
-import { cn } from "@/lib/utils"
+import { getArcaneImageUrl } from "@/lib/util/arcane-images"
+import { cn } from "@/lib/util/utils"
 
 import type { PlacedArcane } from "./use-arcane-slots"
 import { useRankHotkey } from "./use-rank-hotkey"

@@ -40,9 +40,9 @@ import {
   useRemoveOrgMember,
   useUpdateOrg,
   useUpdateOrgMemberRole,
-} from "@/lib/org-actions"
-import { orgQuery, type OrgProfile, type OrgRole } from "@/lib/org-query"
-import { authorName } from "@/lib/user-display"
+} from "@/lib/queries/org-actions"
+import { orgQuery, type OrgProfile, type OrgRole } from "@/lib/queries/org-query"
+import { authorName } from "@/lib/util/user-display"
 
 export const Route = createFileRoute("/org/$slug_/settings")({
   beforeLoad: async ({ context, params }) => {

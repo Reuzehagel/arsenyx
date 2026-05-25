@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 
-import { itemsIndexQuery } from "@/lib/items-index-query"
+import { itemsIndexQuery } from "@/lib/queries/items-index-query"
 import type { BrowseCategory, BrowseItem } from "@/lib/warframe"
 
 export type RecentItem = BrowseItem & { category: BrowseCategory }

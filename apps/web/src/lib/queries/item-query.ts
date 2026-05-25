@@ -1,7 +1,7 @@
 import { queryOptions } from "@tanstack/react-query"
 import { notFound } from "@tanstack/react-router"
 
-import type { BrowseCategory, DetailItem } from "./warframe"
+import type { BrowseCategory, DetailItem } from "../warframe"
 
 export const itemQuery = (category: BrowseCategory, slug: string) =>
   queryOptions({

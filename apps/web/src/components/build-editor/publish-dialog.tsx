@@ -12,9 +12,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { UserAvatar } from "@/components/user-avatar"
-import type { BuildDetail } from "@/lib/build-query"
-import type { OrgSummary } from "@/lib/org-query"
-import { cn } from "@/lib/utils"
+import type { BuildDetail } from "@/lib/queries/build-query"
+import type { OrgSummary } from "@/lib/queries/org-query"
+import { cn } from "@/lib/util/utils"
 
 export type PublishVisibility = BuildDetail["visibility"]
 

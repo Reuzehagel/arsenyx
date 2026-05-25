@@ -28,8 +28,8 @@ import {
   useLinkPartner,
   useUnlinkPartner,
   type PartnerBuild,
-} from "@/lib/partner-builds-query"
-import { cn } from "@/lib/utils"
+} from "@/lib/queries/partner-builds-query"
+import { cn } from "@/lib/util/utils"
 import { getImageUrl } from "@/lib/warframe"
 
 const SUMMARY_MAX = 160

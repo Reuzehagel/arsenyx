@@ -8,7 +8,7 @@ import {
 } from "react"
 import { createPortal } from "react-dom"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/util/utils"
 
 import type { AbilityStatKey } from "./use-ability-stat-order"
 

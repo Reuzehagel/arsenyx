@@ -1,7 +1,7 @@
 import { isRivenMod } from "@arsenyx/shared/warframe/rivens"
 import type { Arcane, Polarity } from "@arsenyx/shared/warframe/types"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/util/utils"
 import type { BrowseCategory, DetailItem } from "@/lib/warframe"
 
 import { ArcaneSlot } from "./arcane"

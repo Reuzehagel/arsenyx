@@ -25,8 +25,8 @@ import {
   createApiKey,
   myApiKeysQuery,
   revokeApiKey,
-} from "@/lib/me-query"
-import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard"
+} from "@/lib/queries/me-query"
+import { useCopyToClipboard } from "@/lib/hooks/use-copy-to-clipboard"
 
 import { SignedOutNotice } from "./shared"
 

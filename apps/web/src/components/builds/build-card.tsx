@@ -7,9 +7,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import type { BuildListItem } from "@/lib/builds-list-query"
-import { formatAbsoluteTime, relativeTime } from "@/lib/relative-time"
-import { authorName } from "@/lib/user-display"
+import type { BuildListItem } from "@/lib/queries/builds-list-query"
+import { formatAbsoluteTime, relativeTime } from "@/lib/util/relative-time"
+import { authorName } from "@/lib/util/user-display"
 import { getImageUrl } from "@/lib/warframe"
 
 export function BuildCard({ build }: { build: BuildListItem }) {

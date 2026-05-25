@@ -14,8 +14,8 @@ import { useEffect, useMemo, useState } from "react"
 
 import { ModSearchGrid, type ModSlotKind } from "@/components/build-editor"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { type HelminthAbility } from "@/lib/helminth-query"
-import { modsQuery } from "@/lib/mods-query"
+import { type HelminthAbility } from "@/lib/queries/helminth-query"
+import { modsQuery } from "@/lib/queries/mods-query"
 import { type BrowseCategory, type DetailItem } from "@/lib/warframe"
 
 const PLEXUS_TABS: { value: PlexusSlotKind; label: string }[] = [

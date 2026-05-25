@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react"
 
-import { isEditableTarget } from "@/lib/utils"
+import { isEditableTarget } from "@/lib/util/utils"
 
 /**
  * Single source of truth for keyboard shortcuts. Adding an entry to `HOTKEYS`

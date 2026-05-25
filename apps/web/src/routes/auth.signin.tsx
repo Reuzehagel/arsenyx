@@ -7,7 +7,7 @@ import { Icons } from "@/components/icons"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { authClient } from "@/lib/auth-client"
-import { ROUTES, SITE_CONFIG } from "@/lib/constants"
+import { ROUTES, SITE_CONFIG } from "@/lib/util/constants"
 
 type SignInSearch = { redirect?: string }
 

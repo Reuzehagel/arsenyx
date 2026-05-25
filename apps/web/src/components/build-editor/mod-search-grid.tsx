@@ -28,14 +28,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useHotkey } from "@/lib/hotkeys"
+import { useHotkey } from "@/lib/hooks/hotkeys"
 import {
   BASE_ELEMENTS,
   DAMAGE_TYPE_COLORS,
   type DamageType,
   ELEMENTAL_COMBINATIONS,
 } from "@/lib/stats/types"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/util/utils"
 
 import { useStartDrag } from "./drag-controller"
 import { ModCard } from "./mod-card"

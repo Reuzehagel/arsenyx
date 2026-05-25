@@ -7,8 +7,8 @@ import { queryOptions } from "@tanstack/react-query"
 import { notFound } from "@tanstack/react-router"
 
 import type { PlacedArcane, PlacedMod, SlotId } from "@/components/build-editor"
-import { apiFetch, ApiError } from "@/lib/api-client"
-import type { HelminthAbility } from "@/lib/helminth-query"
+import { apiFetch, ApiError } from "@/lib/util/api-client"
+import type { HelminthAbility } from "@/lib/queries/helminth-query"
 import type { PlacedShard } from "@/lib/shards"
 
 /**

@@ -13,8 +13,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { UserAvatar } from "@/components/user-avatar"
 import { authClient } from "@/lib/auth-client"
-import { useCreateOrg } from "@/lib/org-actions"
-import { myOrgsQuery } from "@/lib/org-query"
+import { useCreateOrg } from "@/lib/queries/org-actions"
+import { myOrgsQuery } from "@/lib/queries/org-query"
 
 export function OrganizationsPanel({ onClose }: { onClose: () => void }) {
   const { data: session } = authClient.useSession()

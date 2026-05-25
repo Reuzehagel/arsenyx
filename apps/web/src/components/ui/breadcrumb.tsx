@@ -3,7 +3,7 @@ import { useRender } from "@base-ui/react/use-render"
 import { ChevronRightIcon, MoreHorizontalIcon } from "lucide-react"
 import * as React from "react"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/util/utils"
 
 function Breadcrumb({ className, ...props }: React.ComponentProps<"nav">) {
   return (

@@ -13,8 +13,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { authClient } from "@/lib/auth-client"
-import { ROUTES } from "@/lib/constants"
-import { proxyImage } from "@/lib/image-proxy"
+import { ROUTES } from "@/lib/util/constants"
+import { proxyImage } from "@/lib/util/image-proxy"
 
 export function UserMenu() {
   const { data: session, isPending } = authClient.useSession()

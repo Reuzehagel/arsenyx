@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { KbdGroup } from "@/components/ui/kbd"
-import { HOTKEYS, HOTKEY_SCOPES, useHotkey } from "@/lib/hotkeys"
+import { HOTKEYS, HOTKEY_SCOPES, useHotkey } from "@/lib/hooks/hotkeys"
 
 const OPEN_EVENT = "arsenyx:open-cheat-sheet"
 

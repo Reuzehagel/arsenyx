@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
-import { apiErrorMessage, apiFetch } from "@/lib/api-client"
-import type { OrgProfile, OrgRole } from "@/lib/org-query"
+import { apiErrorMessage, apiFetch } from "@/lib/util/api-client"
+import type { OrgProfile, OrgRole } from "@/lib/queries/org-query"
 
 type CreateOrgInput = {
   name: string

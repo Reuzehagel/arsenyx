@@ -16,7 +16,7 @@ import {
   type WarframeStats,
   type WeaponStats,
 } from "@/lib/stats"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/util/utils"
 import { formatStat } from "@/lib/warframe"
 
 import { useAbilityStatReorder } from "./ability-stat-reorder"

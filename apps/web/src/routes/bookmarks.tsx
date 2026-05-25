@@ -18,7 +18,7 @@ import { authClient } from "@/lib/auth-client"
 import {
   bookmarkedBuildsQuery,
   type BuildListSort,
-} from "@/lib/builds-list-query"
+} from "@/lib/queries/builds-list-query"
 import { type BrowseCategory } from "@/lib/warframe"
 
 type BookmarksSearch = {

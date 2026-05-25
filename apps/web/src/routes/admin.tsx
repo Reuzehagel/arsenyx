@@ -35,9 +35,9 @@ import {
   useAdminDeleteOrg,
   useAdminDeleteUser,
   useAdminPatchUser,
-} from "@/lib/admin-actions"
+} from "@/lib/queries/admin-actions"
 import { authClient } from "@/lib/auth-client"
-import { authorName } from "@/lib/user-display"
+import { authorName } from "@/lib/util/user-display"
 
 const TABS = ["users", "content", "orgs", "stats"] as const
 type AdminTab = (typeof TABS)[number]

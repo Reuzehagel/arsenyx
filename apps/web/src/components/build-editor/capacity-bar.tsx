@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/util/utils"
 
 export function CapacityBar({ used, max }: { used: number; max: number }) {
   const pctVal = max > 0 ? Math.min(100, (used / max) * 100) : 0

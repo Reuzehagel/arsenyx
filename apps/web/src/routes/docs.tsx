@@ -5,7 +5,7 @@ import { Header } from "@/components/header"
 import { Icons } from "@/components/icons"
 import { Link } from "@/components/link"
 import { Button } from "@/components/ui/button"
-import { EXTERNAL_LINKS, SITE_CONFIG } from "@/lib/constants"
+import { EXTERNAL_LINKS, SITE_CONFIG } from "@/lib/util/constants"
 
 export const Route = createFileRoute("/docs")({
   component: DocsPage,

@@ -14,7 +14,7 @@ import {
 import { RouteNotFound } from "@/components/route-not-found"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { itemQuery } from "@/lib/item-query"
+import { itemQuery } from "@/lib/queries/item-query"
 import { isValidCategory, type BrowseCategory } from "@/lib/warframe"
 
 export const Route = createFileRoute("/browse_/$category/$slug")({

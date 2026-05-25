@@ -1,4 +1,4 @@
-import type { SavedBuildData } from "@/lib/build-query"
+import type { SavedBuildData } from "@/lib/queries/build-query"
 
 const STORAGE_PREFIX = "arsenyx:import-draft:"
 

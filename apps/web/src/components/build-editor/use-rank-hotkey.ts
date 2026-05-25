@@ -1,4 +1,4 @@
-import { useHotkey } from "@/lib/hotkeys"
+import { useHotkey } from "@/lib/hooks/hotkeys"
 
 /**
  * Listen for `-`/`+` while `enabled`, firing `onDelta(-1)` or `onDelta(1)`.

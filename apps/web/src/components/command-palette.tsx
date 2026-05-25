@@ -20,7 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { authClient } from "@/lib/auth-client"
-import { itemsIndexQuery } from "@/lib/items-index-query"
+import { itemsIndexQuery } from "@/lib/queries/items-index-query"
 import { CATEGORIES, getImageUrl, type BrowseItem } from "@/lib/warframe"
 
 const SEARCH_DEBOUNCE_MS = 200

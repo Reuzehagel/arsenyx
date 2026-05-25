@@ -4,7 +4,7 @@ import { useState } from "react"
 import { openHotkeyCheatSheet } from "@/components/hotkey-cheat-sheet"
 import { KbdKey } from "@/components/kbd-key"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/util/utils"
 
 const STORAGE_KEY = "arsenyx.hotkeyHintDismissed"
 

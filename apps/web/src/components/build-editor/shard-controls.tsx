@@ -23,7 +23,7 @@ import {
   type PlacedShard,
   type ShardColor,
 } from "@/lib/shards"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/util/utils"
 
 export function ShardSlot({
   shard,
