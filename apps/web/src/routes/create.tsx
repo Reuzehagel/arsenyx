@@ -36,28 +36,16 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react"
 import {
   BuildSurface,
   DragController,
-  calculateCapacity,
-  calculateFormaCount,
-  calculateTotalEndoCost,
-  getArcaneSlotConfig,
-  getArcaneSlotCount,
-  getAuraPolarities,
-  getAuraSlotCount,
-  getExilusInnatePolarity,
-  getStanceInnatePolarity,
-  getMaxLevelCap,
-  getNormalSlotCount,
+  getBuildLayout,
   getPlexusGroupForIndex,
   GuideEditor,
   type GuideScope,
-  hasExilusSlot,
-  hasStanceSlot,
   KeyboardHintBanner,
   PublishDialog,
   type PublishVisibility,
   resolveInitialArcanes,
-  toPolarity,
   useArcaneSlots,
+  useBuildDerived,
   slotKind,
   useBuildSlots,
   useSlotKeyboardNav,
@@ -409,11 +397,15 @@ function EditorShell() {
 
   const categoryLabel = getCategoryLabel(category)
 
-  const isCompanion = category === "companions"
-  const normalSlotCount = getNormalSlotCount(category)
-  const auraSlotCount = getAuraSlotCount(category, item)
-  const showExilus = hasExilusSlot(category)
-  const showStance = hasStanceSlot(item, category)
+  const layout = useMemo(() => getBuildLayout(item, category), [item, category])
+  const {
+    isCompanion,
+    normalSlotCount,
+    auraSlotCount,
+    arcaneCount,
+    showExilus,
+    showStance,
+  } = layout
   const slots = useBuildSlots(normalSlotCount, {
     placed: savedData.slots,
     // Forma is build-wide (shared across variants); use the cached
@@ -427,14 +419,9 @@ function EditorShell() {
     slots,
     layout: { normalSlotCount, auraSlotCount, showExilus, showStance },
   })
-  const arcaneCount = getArcaneSlotCount(category, item.type)
   const arcanes = useArcaneSlots(
     arcaneCount,
     resolveInitialArcanes(item, savedData.arcanes),
-  )
-  const arcaneConfig = useMemo(
-    () => getArcaneSlotConfig(allArcanes, category, arcaneCount, item),
-    [allArcanes, category, arcaneCount, item],
   )
 
   // Escape deselects the active mod/arcane slot, mirroring the
@@ -619,41 +606,12 @@ function EditorShell() {
     })
   }
 
-  const auraInnates = useMemo(
-    () => getAuraPolarities(item, auraSlotCount),
-    [item, auraSlotCount],
-  )
-  const exilusInnate = useMemo(() => getExilusInnatePolarity(item), [item])
-  const stanceInnate = useMemo(() => getStanceInnatePolarity(item), [item])
-  const normalInnates = useMemo(
-    () =>
-      Array.from({ length: normalSlotCount }, (_, i) =>
-        toPolarity(item.polarities?.[i]),
-      ),
-    [item.polarities, normalSlotCount],
+  // Innates, endo/forma totals, capacity, and arcane picker config — same
+  // computation for view (`/builds/$slug`) and edit (`/create`).
+  const { arcaneConfig, totalEndoCost, formaCount, capacity } = useBuildDerived(
+    { item, category, layout, slots, allArcanes, hasReactor },
   )
 
-  const totalEndoCost = useMemo(
-    () => calculateTotalEndoCost(slots.placed),
-    [slots.placed],
-  )
-  const formaCount = useMemo(
-    () =>
-      calculateFormaCount({
-        auraInnates,
-        exilusInnate,
-        stanceInnate,
-        normalInnates,
-        formaPolarities: slots.formaPolarities,
-      }),
-    [
-      auraInnates,
-      exilusInnate,
-      stanceInnate,
-      normalInnates,
-      slots.formaPolarities,
-    ],
-  )
   const isUpdate = !!existingBuild && existingBuild.isOwner
 
   const { copied: shareCopied, copy: copyShare } = useCopyToClipboard()
@@ -845,17 +803,6 @@ function EditorShell() {
     }
   }
 
-  // Plexus Battle (normal-0..2) and Tactical (normal-3..5) mods don't draw
-  // from the Integrated capacity pool. Build a per-slot mask for railjack;
-  // omit it elsewhere so other categories keep counting every normal slot.
-  const normalSlotConsumesDrain = useMemo(() => {
-    if (category !== "railjack") return undefined
-    return Array.from({ length: normalSlotCount }, (_, i) => {
-      const group = getPlexusGroupForIndex(category, i)
-      return group === "integrated"
-    })
-  }, [category, normalSlotCount])
-
   // Filled-vs-total counts per Plexus group for the picker's tab labels.
   // Aura is bundled into Integrated since it lives in that section.
   const plexusFillCounts = useMemo(() => {
@@ -880,33 +827,6 @@ function EditorShell() {
     }
     return counts
   }, [category, normalSlotCount, auraSlotCount, slots.placed])
-
-  const capacity = useMemo(
-    () =>
-      calculateCapacity({
-        placed: slots.placed,
-        formaPolarities: slots.formaPolarities,
-        auraInnates,
-        exilusInnate,
-        stanceInnate,
-        normalInnates,
-        hasReactor,
-        maxLevelCap: getMaxLevelCap(category, item),
-        normalSlotConsumesDrain,
-      }),
-    [
-      slots.placed,
-      slots.formaPolarities,
-      auraInnates,
-      exilusInnate,
-      stanceInnate,
-      normalInnates,
-      hasReactor,
-      category,
-      item,
-      normalSlotConsumesDrain,
-    ],
-  )
 
   // ─── Variant management ────────────────────────────────────────────
   // Switching captures the in-progress edits into `variants` and updates

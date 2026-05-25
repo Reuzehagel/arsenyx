@@ -1,4 +1,10 @@
 export { ArcaneCard, ArcaneSlot } from "./arcane"
+export {
+  getBuildLayout,
+  useBuildDerived,
+  type BuildDerived,
+  type BuildLayout,
+} from "./build-derived"
 export { BuildSurface, type BuildSurfaceProps } from "./build-surface"
 export { DragController } from "./drag-controller"
 export {

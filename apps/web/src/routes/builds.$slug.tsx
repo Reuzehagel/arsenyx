@@ -34,23 +34,10 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react"
 
 import {
   BuildSurface,
-  calculateCapacity,
-  calculateFormaCount,
-  calculateTotalEndoCost,
-  getArcaneSlotConfig,
-  getArcaneSlotCount,
-  getAuraPolarities,
-  getAuraSlotCount,
-  getExilusInnatePolarity,
-  getMaxLevelCap,
-  getStanceInnatePolarity,
-  getNormalSlotCount,
-  getPlexusGroupForIndex,
-  hasExilusSlot,
-  hasStanceSlot,
+  getBuildLayout,
   resolveInitialArcanes,
-  toPolarity,
   useArcaneSlots,
+  useBuildDerived,
   useBuildSlots,
 } from "@/components/build-editor"
 import { ShardSlot } from "@/components/build-editor/shard-controls"
@@ -381,23 +368,15 @@ function BuildViewerBodyInner({
   }
 
   const categoryLabel = getCategoryLabel(category)
-  const isCompanion = category === "companions"
-  const normalSlotCount = getNormalSlotCount(category)
-  const arcaneCount = getArcaneSlotCount(category, item.type)
+  const layout = useMemo(() => getBuildLayout(item, category), [item, category])
+  const { isCompanion, normalSlotCount, auraSlotCount, arcaneCount } = layout
 
-  const arcaneConfig = useMemo(
-    () => getArcaneSlotConfig(allArcanes, category, arcaneCount, item),
-    [allArcanes, category, arcaneCount, item],
-  )
-
-  const auraSlotCount = getAuraSlotCount(category, item)
-  const showStance = hasStanceSlot(item, category)
   const slots = useBuildSlots(normalSlotCount, {
     placed: saved.slots,
     formaPolarities: saved.formaPolarities,
     auraSlotCount,
-    showExilus: hasExilusSlot(category),
-    showStance,
+    showExilus: layout.showExilus,
+    showStance: layout.showStance,
     initialSelected: null,
   })
   const arcanes = useArcaneSlots(
@@ -414,73 +393,8 @@ function BuildViewerBodyInner({
   const deploymentContext =
     saved.deploymentContext ?? DEFAULT_DEPLOYMENT_CONTEXT
 
-  const auraInnates = useMemo(
-    () => getAuraPolarities(item, auraSlotCount),
-    [item, auraSlotCount],
-  )
-  const exilusInnate = useMemo(() => getExilusInnatePolarity(item), [item])
-  const stanceInnate = useMemo(() => getStanceInnatePolarity(item), [item])
-  const normalInnates = useMemo(
-    () =>
-      Array.from({ length: normalSlotCount }, (_, i) =>
-        toPolarity(item.polarities?.[i]),
-      ),
-    [item.polarities, normalSlotCount],
-  )
-
-  const totalEndoCost = useMemo(
-    () => calculateTotalEndoCost(slots.placed),
-    [slots.placed],
-  )
-  const formaCount = useMemo(
-    () =>
-      calculateFormaCount({
-        auraInnates,
-        exilusInnate,
-        stanceInnate,
-        normalInnates,
-        formaPolarities: slots.formaPolarities,
-      }),
-    [
-      auraInnates,
-      exilusInnate,
-      stanceInnate,
-      normalInnates,
-      slots.formaPolarities,
-    ],
-  )
-  const normalSlotConsumesDrain = useMemo(() => {
-    if (category !== "railjack") return undefined
-    return Array.from({ length: normalSlotCount }, (_, i) => {
-      const group = getPlexusGroupForIndex(category, i)
-      return group === "integrated"
-    })
-  }, [category, normalSlotCount])
-  const capacity = useMemo(
-    () =>
-      calculateCapacity({
-        placed: slots.placed,
-        formaPolarities: slots.formaPolarities,
-        auraInnates,
-        exilusInnate,
-        stanceInnate,
-        normalInnates,
-        hasReactor,
-        maxLevelCap: getMaxLevelCap(category, item),
-        normalSlotConsumesDrain,
-      }),
-    [
-      slots.placed,
-      slots.formaPolarities,
-      auraInnates,
-      exilusInnate,
-      stanceInnate,
-      normalInnates,
-      hasReactor,
-      category,
-      item,
-      normalSlotConsumesDrain,
-    ],
+  const { arcaneConfig, totalEndoCost, formaCount, capacity } = useBuildDerived(
+    { item, category, layout, slots, allArcanes, hasReactor },
   )
 
   const author = authorName(build.user)
