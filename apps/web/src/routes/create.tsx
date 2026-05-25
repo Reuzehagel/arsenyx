@@ -4,6 +4,7 @@ import {
   encodeBuildDoc,
 } from "@arsenyx/shared/warframe/build-codec"
 import {
+  clampVariantIndex,
   MAX_VARIANTS,
   projectVariant,
   type BuildDoc,
@@ -121,6 +122,16 @@ type CreateSearch = {
   v?: number
 }
 
+// Decode a share link far enough to learn which variant it was generated on.
+// Pure + synchronous, so it's safe inside validateSearch. Returns undefined
+// for the default (variant 0) so the `v` search param stays absent.
+function activeVariantFromShare(share: string): number | undefined {
+  const doc = decodeBuildDoc(share)
+  if (!doc) return undefined
+  const idx = clampVariantIndex(doc, doc.activeIndex ?? 0)
+  return idx > 0 ? idx : undefined
+}
+
 export const Route = createFileRoute("/create")({
   validateSearch: (search: Record<string, unknown>): CreateSearch => {
     const item = typeof search.item === "string" ? search.item : ""
@@ -137,10 +148,15 @@ export const Route = createFileRoute("/create")({
         : typeof search.v === "number"
           ? search.v
           : undefined
+    // An explicit `?v` always wins. Otherwise, when opening a share link, seed
+    // the active variant from the index the link was generated on (v2 `ai`),
+    // so a multi-variant build opens on the variant the sharer was viewing.
     const v =
       rawV !== undefined && Number.isFinite(rawV) && rawV >= 0
         ? Math.min(50, Math.floor(rawV))
-        : undefined
+        : share
+          ? activeVariantFromShare(share)
+          : undefined
     return {
       item,
       category,

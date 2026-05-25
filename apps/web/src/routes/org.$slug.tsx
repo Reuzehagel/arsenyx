@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button"
 import { UserAvatar } from "@/components/user-avatar"
 import { type BuildListSort } from "@/lib/builds-list-query"
 import { orgBuildsQuery, orgQuery, type OrgProfile } from "@/lib/org-query"
+import { authorName } from "@/lib/user-display"
 import { type BrowseCategory } from "@/lib/warframe"
 
 type OrgSearch = {
@@ -153,8 +154,7 @@ function OrgMembers({ org }: { org: OrgProfile }) {
       <h2 className="text-lg font-semibold">Members</h2>
       <ul className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {org.members.map((m) => {
-          const label =
-            m.user.displayUsername ?? m.user.name ?? m.user.username ?? "Member"
+          const label = authorName(m.user, "Member")
           const cardContent = (
             <>
               <UserAvatar src={m.user.image} fallback={label} size={7} />

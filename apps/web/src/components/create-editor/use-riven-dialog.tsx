@@ -64,6 +64,9 @@ export function useRivenDialog({
       rivenStats: values.rivenStats,
     }
     slots.placeAt(rivenEdit.slotId, mod, base.fusionLimit)
+    // placeAt doesn't move the cursor; advance past the placed riven so the
+    // next mod click lands in an empty slot instead of overwriting it.
+    slots.selectNextEmpty(rivenEdit.slotId)
     setRivenEdit(null)
   }
 

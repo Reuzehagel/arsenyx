@@ -187,6 +187,7 @@ function imageUrl(imageName: string | null): string | null {
 }
 
 function formatCount(n: number): string {
+  if (!Number.isFinite(n) || n < 0) return "0"
   if (n >= 10000) return `${Math.round(n / 1000)}k`
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
   return String(n)
@@ -203,7 +204,10 @@ function clamp(s: string, max: number): string {
   // ellipsis — some unfurl clients render that as U+FFFD.
   const chars = Array.from(s)
   if (chars.length <= max) return s
-  return `${chars.slice(0, max - 1).join("").trimEnd()}…`
+  return `${chars
+    .slice(0, max - 1)
+    .join("")
+    .trimEnd()}…`
 }
 
 function rewriteMeta(res: Response, meta: Meta): Response {

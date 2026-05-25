@@ -42,6 +42,7 @@ import {
   useUpdateOrgMemberRole,
 } from "@/lib/org-actions"
 import { orgQuery, type OrgProfile, type OrgRole } from "@/lib/org-query"
+import { authorName } from "@/lib/user-display"
 
 export const Route = createFileRoute("/org/$slug_/settings")({
   beforeLoad: async ({ context, params }) => {
@@ -244,11 +245,7 @@ function MembersCard({ org }: { org: OrgProfile }) {
       <CardContent className="flex flex-col gap-4">
         <ul className="flex flex-col gap-2">
           {org.members.map((m) => {
-            const display =
-              m.user.displayUsername ??
-              m.user.username ??
-              m.user.name ??
-              "Member"
+            const display = authorName(m.user, "Member")
             return (
               <li
                 key={m.user.id}

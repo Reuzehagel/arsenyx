@@ -4,13 +4,11 @@ import {
   similarity,
   similarityNormalized,
 } from "@arsenyx/shared/warframe/name-match"
+import { decodeOverframeSlotId } from "@arsenyx/shared/warframe/overframe-slots"
+import type { OverframeScrapeResponse } from "@arsenyx/shared/warframe/overframe-wire"
 import type { Arcane, Mod, Polarity } from "@arsenyx/shared/warframe/types"
 
 import type { SlotId } from "@/components/build-editor"
-import {
-  getNormalSlotCount,
-  hasExilusSlot,
-} from "@/components/build-editor/layout"
 import type { SavedBuildData } from "@/lib/build-query"
 import type { HelminthAbility } from "@/lib/helminth-query"
 import type {
@@ -20,36 +18,8 @@ import type {
   ItemsIndex,
 } from "@/lib/warframe"
 
-export type OverframeRawSlot = {
-  slot_id: number
-  overframeId: string | null
-  overframeName?: string
-  rank: number
-  polarityCode: number
-  polarity?: string
-}
-
-export type OverframeWarning = {
-  type: string
-  message: string
-  details?: Record<string, unknown>
-}
-
-export type ScrapeResponse = {
-  source: {
-    url: string
-    pageTitle?: string
-    pageDescription?: string
-    guideDescription?: string
-    buildId?: string
-    buildString?: string
-  }
-  itemName?: string
-  formaCount: number | null
-  slots: OverframeRawSlot[]
-  helminthAbility?: { slotIndex: number; uniqueName: string }
-  warnings: OverframeWarning[]
-}
+// Scrape DTOs are defined once in @arsenyx/shared (the api produces them).
+export type ScrapeResponse = OverframeScrapeResponse
 
 export type ApplyWarning = {
   type:
@@ -126,47 +96,22 @@ function matchModByName(
 
 // ---------- slot_id interpretation ----------
 
-function isWarframeLike(category: BrowseCategory): boolean {
-  return category === "warframes" || category === "necramechs"
-}
-
 /**
- * Translate Overframe's slot_id (plus category context) into our SlotId /
- * arcane-slot representation. Returns null if the slot_id cannot be mapped.
+ * Adapt the shared Overframe slot mapping to our editor `SlotId` strings.
+ * Returns null if the slot_id can't be mapped.
  */
 function interpretSlot(
   slot_id: number,
   category: BrowseCategory,
 ): { kind: "mod"; id: SlotId } | { kind: "arcane"; index: number } | null {
-  // Highest slot_id is leftmost (normal-0), matching the warframe convention
-  // where slot_id 8 → normal-0; we just stretch the inversion to N.
-  if (!isWarframeLike(category) && !hasExilusSlot(category)) {
-    const normalCount = getNormalSlotCount(category)
-    if (slot_id >= 1 && slot_id <= normalCount) {
-      return { kind: "mod", id: `normal-${normalCount - slot_id}` as SlotId }
-    }
-    return null
-  }
-  if (slot_id >= 1 && slot_id <= 8) {
-    return { kind: "mod", id: `normal-${8 - slot_id}` as SlotId }
-  }
-  const warframeLike = isWarframeLike(category)
-  if (slot_id === 9) {
-    return warframeLike
-      ? { kind: "mod", id: "aura-0" }
-      : { kind: "mod", id: "exilus" }
-  }
-  if (slot_id === 10) {
-    return warframeLike
-      ? { kind: "mod", id: "exilus" }
-      : { kind: "arcane", index: 0 }
-  }
-  if (slot_id >= 11) {
-    return warframeLike
-      ? { kind: "arcane", index: slot_id - 11 }
-      : { kind: "arcane", index: slot_id - 10 }
-  }
-  return null
+  const mapping = decodeOverframeSlotId(slot_id, category)
+  if (!mapping) return null
+  if (mapping.kind === "arcane") return mapping
+  const id: SlotId =
+    mapping.slotType === "exilus"
+      ? "exilus"
+      : (`${mapping.slotType}-${mapping.slotIndex}` as SlotId)
+  return { kind: "mod", id }
 }
 
 function innatePolarityFor(

@@ -163,6 +163,13 @@ export interface BuildSlotsState {
    * usedNames dedupe check.
    */
   placeAt: (id: SlotId, mod: Mod, rank?: number) => void
+  /**
+   * Move the selected slot to the next empty one in reading order after
+   * `from`. `placeAt` deliberately doesn't advance the cursor (drag / arcane
+   * placement must stay put); the riven flow calls this after `placeAt` so a
+   * follow-up mod click doesn't overwrite the freshly placed riven.
+   */
+  selectNextEmpty: (from: SlotId) => void
   remove: (id: SlotId) => void
   select: (id: SlotId | null) => void
   setRank: (id: SlotId, rank: number) => void
@@ -261,6 +268,18 @@ export function useBuildSlots(
     }))
   }, [])
 
+  const selectNextEmpty = useCallback(
+    (from: SlotId) => {
+      // getNextEmptySlot scans forward from `from`, so a just-placed mod at
+      // `from` (not yet visible in this `placed` closure) doesn't matter.
+      setSelected(getNextEmptySlot(from, layout, placed))
+    },
+    // layout is derived from `initial` options that are stable per editor
+    // mount; `placed` is the meaningful dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [placed, normalSlotCount, auraSlotCount],
+  )
+
   const remove = useCallback((id: SlotId) => {
     setPlaced((prev) => {
       if (!prev[id]) return prev
@@ -324,6 +343,7 @@ export function useBuildSlots(
     formaPolarities,
     place,
     placeAt,
+    selectNextEmpty,
     remove,
     select,
     setRank,

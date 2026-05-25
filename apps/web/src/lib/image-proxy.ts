@@ -20,9 +20,9 @@ type ProxyOptions = {
 }
 
 function isProxyable(src: string): boolean {
-  // Only proxy absolute http(s) URLs. data:, blob:, and relative paths
-  // (e.g. local placeholders) pass through unchanged.
-  return /^https?:\/\//i.test(src)
+  // Absolute http(s) OR protocol-relative (`//host/...`) URLs get proxied.
+  // data:, blob:, and relative paths (e.g. local placeholders) pass through.
+  return /^(https?:)?\/\//i.test(src)
 }
 
 export function proxyImage(
@@ -31,5 +31,10 @@ export function proxyImage(
 ): string | null {
   if (!src) return null
   if (!isProxyable(src)) return src
-  return `${API_URL}/img?u=${encodeURIComponent(src)}`
+  // Normalize a protocol-relative URL (`//host/x`) to https before proxying.
+  // Left as-is, the browser resolves it against the page origin and fetches it
+  // directly — leaking the visitor's IP / Referer, the exact doxxing vector
+  // the proxy exists to close.
+  const absolute = src.startsWith("//") ? `https:${src}` : src
+  return `${API_URL}/img?u=${encodeURIComponent(absolute)}`
 }

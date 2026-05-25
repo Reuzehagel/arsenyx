@@ -37,6 +37,7 @@ import {
   useAdminPatchUser,
 } from "@/lib/admin-actions"
 import { authClient } from "@/lib/auth-client"
+import { authorName } from "@/lib/user-display"
 
 const TABS = ["users", "content", "orgs", "stats"] as const
 type AdminTab = (typeof TABS)[number]
@@ -216,8 +217,7 @@ function UsersTab({ page, q }: { page: number; q: string }) {
 function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
   const patch = useAdminPatchUser()
   const del = useAdminDeleteUser()
-  const display =
-    user.displayUsername ?? user.username ?? user.name ?? user.email
+  const display = authorName(user, user.email)
 
   function toggle(flag: AdminUserFlag) {
     patch.mutate({ id: user.id, patch: { [flag]: !user[flag] } })
@@ -383,8 +383,7 @@ function ContentTab({ page, q }: { page: number; q: string }) {
       ) : (
         <div className="flex flex-col gap-2">
           {data.builds.map((b) => {
-            const author =
-              b.user.displayUsername ?? b.user.username ?? b.user.name ?? "—"
+            const author = authorName(b.user, "—")
             return (
               <div
                 key={b.id}

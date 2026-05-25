@@ -19,6 +19,7 @@ import {
   profileQuery,
   type Profile,
 } from "@/lib/profile-query"
+import { authorName } from "@/lib/user-display"
 import { type BrowseCategory } from "@/lib/warframe"
 
 type ProfileSearch = {
@@ -98,8 +99,7 @@ function ProfileContent() {
 }
 
 function ProfileHeader({ profile }: { profile: Profile }) {
-  const display =
-    profile.displayUsername ?? profile.username ?? profile.name ?? "User"
+  const display = authorName(profile, "User")
   const handle = profile.username ? `@${profile.username}` : null
   const joined = new Date(profile.joinedAt).toLocaleDateString(undefined, {
     year: "numeric",

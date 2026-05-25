@@ -10,6 +10,14 @@ import type { BrowseCategory, DetailItem } from "@/lib/warframe"
 
 import type { PlacedArcane } from "./use-arcane-slots"
 
+// Category-only slot facts live in shared (the api Overframe importer needs
+// them too). Re-exported here so editor call sites keep importing from the
+// build-editor barrel.
+export {
+  getNormalSlotCount,
+  hasExilusSlot,
+} from "@arsenyx/shared/warframe/slot-layout"
+
 function isZawComponent(itemType: DetailItem["type"]): boolean {
   return itemType === "Zaw Component"
 }
@@ -112,18 +120,6 @@ export function resolveInitialArcanes(
   return out
 }
 
-/** Categories that have an Exilus slot. Necramechs, companions, every
- * archwing-category item (suits, arch-guns, arch-melee), and the railjack
- * Plexus don't. */
-export function hasExilusSlot(category: BrowseCategory): boolean {
-  return (
-    category !== "necramechs" &&
-    category !== "companions" &&
-    category !== "archwing" &&
-    category !== "railjack"
-  )
-}
-
 /**
  * Whether to render a Stance slot. Driven by the item carrying a
  * `stancePolarity` (set by WFCD on every melee and on some exalted melees).
@@ -162,16 +158,6 @@ export function getAuraSlotCount(
   if (category !== "warframes") return 0
   if (Array.isArray(item.aura)) return item.aura.length
   return item.aura ? 1 : 0
-}
-
-/** Normal mod slot count. Companions have 10, necramechs have 12, the
- * Plexus has 14 (3 Battle + 3 Tactical + 8 Integrated; its 1 Aura is
- * counted separately by `getAuraSlotCount`), everything else 8. */
-export function getNormalSlotCount(category: BrowseCategory): number {
-  if (category === "companions") return 10
-  if (category === "necramechs") return 12
-  if (category === "railjack") return 14
-  return 8
 }
 
 // =============================================================================
