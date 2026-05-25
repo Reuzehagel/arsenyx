@@ -16,12 +16,14 @@ Requires Bun 1.2+, [just](https://github.com/casey/just), and a free Neon Postgr
 
 ```bash
 bun install
-just setup    # interactive — asks for your Neon DATABASE_URL, generates
-              # an auth secret, pushes the schema, and seeds a dev user.
-just dev      # web on :5173, api on :8787
+just setup    # interactive — asks for your Neon DATABASE_URL (the unpooled
+              # one, ends in .neon.tech), generates an auth secret, pushes
+              # the schema, and seeds an admin user. Prints fresh credentials
+              # at the end — copy them.
+just dev      # web on :5173, api on :8787 (wrangler cold-start is ~10s)
 ```
 
-Sign in at `http://localhost:5173` with **`admin@admin.com`** / **`admin`**.
+Sign in at `http://localhost:5173` with the email + password the setup wizard printed (email is `admin@local.dev`, password is a fresh 20-char string).
 
 GitHub OAuth is optional locally — fill `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` in `apps/api/.env` if you want to test the real OAuth flow. **In production, GitHub OAuth is the only sign-in method**; email+password is dev-only.
 
@@ -29,4 +31,4 @@ The full command list is in the [justfile](justfile); [docs/commands.md](docs/co
 
 ## Agent-assisted work
 
-Start with [CLAUDE.md](CLAUDE.md) — it points to the per-app guides in [`apps/web/CLAUDE.md`](apps/web/CLAUDE.md) and [`apps/api/CLAUDE.md`](apps/api/CLAUDE.md). Open work is tracked in [TODO.md](TODO.md).
+Start with [CLAUDE.md](CLAUDE.md) — it points to the per-app guides in [`apps/web/CLAUDE.md`](apps/web/CLAUDE.md) and [`apps/api/CLAUDE.md`](apps/api/CLAUDE.md).

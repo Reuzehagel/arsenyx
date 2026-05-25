@@ -48,8 +48,8 @@ stop:
     @foreach ($port in 5173, 5174, 8787) { $pids = (Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue).OwningProcess | Select-Object -Unique; if ($pids) { Write-Host "Stopping port $port (PID $($pids -join ', '))"; $pids | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue } } else { Write-Host "Port $port already free" } }
 
 # Interactive first-run setup. Asks for a Neon DATABASE_URL, generates a
-# BETTER_AUTH_SECRET, pushes the schema, and seeds an admin@admin.com / admin
-# user. Safe to re-run.
+# BETTER_AUTH_SECRET, pushes the schema, and seeds an admin user with a fresh
+# random password (printed to stdout — copy it). Safe to re-run.
 setup:
     bun run scripts/setup.ts
 
@@ -67,3 +67,7 @@ check:
 fix:
     bun run lint:fix
     bun run fmt
+
+# Run vitest across all workspaces with tests. New workspaces must be added here.
+test:
+    bun --filter=arsenyx-web --filter=arsenyx-api --filter=@arsenyx/shared run test

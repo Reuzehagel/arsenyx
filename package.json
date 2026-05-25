@@ -6,9 +6,9 @@
     "packages/*"
   ],
   "scripts": {
-    "dev:web": "bun --cwd apps/web run dev",
-    "dev:api": "bun --cwd apps/api run dev",
-    "build:web": "bun --cwd apps/web run build",
+    "dev:web": "bun --filter=arsenyx-web run dev",
+    "dev:api": "bun --filter=arsenyx-api run dev",
+    "build:web": "bun --filter=arsenyx-web run build",
     "build:items": "bun run scripts/build-items-index.ts",
     "update-data": "bun update @wfcd/items && bun run build:items",
     "typecheck": "bun run --filter '*' typecheck",
@@ -19,13 +19,8 @@
   },
   "dependencies": {
     "@arsenyx/shared": "workspace:*",
-    "@prisma/client": "^7.8.0",
     "@wfcd/items": "^1.1274.29",
-    "better-auth": "^1.6.9",
-    "fast-xml-parser": "^5.7.2",
-    "nanoid": "^5.1.11",
-    "postcss": "^8.5.12",
-    "prisma": "^7.8.0"
+    "nanoid": "^5.1.11"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

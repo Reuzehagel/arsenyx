@@ -22,8 +22,6 @@
     "no-underscore-dangle": "off"
   },
   "ignorePatterns": [
-    ".next/",
-    "out/",
     "build/",
     "node_modules/",
     "src/generated/",

@@ -7,25 +7,26 @@ Bun only — never `npm` / `npx`.
 ```bash
 just dev                # web + api together (default)
 just web                # Vite SPA only (http://localhost:5173)
-just api                # Hono API only (http://localhost:8787), starts Postgres
-just legacy             # old Next.js app on :3000 (+ Postgres)
-just legacy-nodb        # legacy without Docker
-just stop               # kill dev servers on :5173 / :8787 / :3000
-just setup              # first-run: install, start Postgres, db:push
+just api                # Hono API only (http://localhost:8787)
+just stop               # kill dev servers on :5173 / :5174 / :8787
+just setup              # first-run wizard — see CONTRIBUTING.md
 ```
 
 ## Build / verify
 
 ```bash
-bun --cwd apps/web run build     # tsc -b && vite build — run before claiming done
-bunx --cwd apps/api tsc --noEmit # type-check api
-just check                       # oxlint + oxfmt --check across apps/web, apps/api, packages/shared
-just fix                         # oxlint --fix + oxfmt --write
+bun --cwd apps/web run build      # Vite production build — run before claiming done
+bunx --cwd apps/api tsc --noEmit  # type-check the API (no dev-server smoke)
+just check                        # oxlint + oxfmt --check across all three workspaces
+just fix                          # oxlint --fix + oxfmt --write
+just test                         # vitest across apps/web, apps/api, packages/shared
 ```
 
-Oxlint / oxfmt config live at the repo root (`.oxlintrc.json`, `.oxfmtrc.json`).
+Oxlint / oxfmt config lives at the repo root (`.oxlintrc.json`, `.oxfmtrc.json`).
 
 ## Database (apps/api)
+
+Postgres is on Neon — no local Postgres process. Connection string lives in `apps/api/.env`.
 
 ```bash
 bun --cwd apps/api run db:push     # dev: push schema without migrations
@@ -33,13 +34,11 @@ bun --cwd apps/api run db:studio   # Prisma Studio GUI
 bun --cwd apps/api run db:generate # regenerate Prisma client
 ```
 
-Local Postgres runs in Docker via `docker compose up -d postgres` (started by `just api`). Prod env (Neon) is injected by the host — same var names, don't branch on `NODE_ENV`.
-
 ## Data pipeline
 
 ```bash
-just build-items-index       # regenerate apps/web/public/data/ (items-index.json + per-item JSON)
-bun run build:items          # same, from repo root
+just build-items-index             # regenerate apps/web/public/data/ (items-index.json + per-item JSON)
+just update-data                   # bump @wfcd/items, then rebuild
 ```
 
 ## Shadcn (apps/web)
