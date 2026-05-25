@@ -86,7 +86,6 @@ export function ShardSlot({
               </p>
               <p className="text-muted-foreground mt-0.5 text-xs">
                 {shard.stat}
-                {stat ? ` · ${formatStatValue(stat, shard.tauforged)}` : ""}
               </p>
             </>
           ) : (
@@ -95,7 +94,11 @@ export function ShardSlot({
         </TooltipContent>
       </Tooltip>
       {(!readOnly || shard) && (
-        <PopoverContent side="right" align="start" className="w-72">
+        <PopoverContent
+          side={readOnly ? "bottom" : "right"}
+          align={readOnly ? "center" : "start"}
+          className={readOnly ? "w-64" : "w-72"}
+        >
           {readOnly && shard ? (
             <div className="flex items-center gap-2.5">
               <img
