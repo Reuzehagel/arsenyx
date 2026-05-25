@@ -1,6 +1,5 @@
-export { ArcaneCard } from "./arcane-card"
+export { ArcaneCard, ArcaneSlot } from "./arcane"
 export { DragController } from "./drag-controller"
-export { ArcaneSlot } from "./arcane-slot"
 export {
   useArcaneSlots,
   type ArcaneSlotsState,
@@ -47,8 +46,7 @@ export {
   type PublishVisibility,
 } from "./publish-dialog"
 export { ModSlot, type ModSlotKind } from "./mod-slot"
-export { PolarityIcon } from "./polarity-icon"
-export { CANONICAL_POLARITIES, PolarityPicker } from "./polarity-picker"
+export { CANONICAL_POLARITIES, PolarityIcon, PolarityPicker } from "./polarity"
 export {
   useBuildSlots,
   getNextSlot,

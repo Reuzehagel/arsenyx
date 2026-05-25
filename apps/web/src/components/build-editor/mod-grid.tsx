@@ -4,7 +4,7 @@ import type { Arcane, Polarity } from "@arsenyx/shared/warframe/types"
 import { cn } from "@/lib/utils"
 import type { BrowseCategory, DetailItem } from "@/lib/warframe"
 
-import { ArcaneSlot } from "./arcane-slot"
+import { ArcaneSlot } from "./arcane"
 import {
   getAuraSlotCount,
   hasExilusSlot,
@@ -12,7 +12,7 @@ import {
   PLEXUS_GROUPS,
 } from "./layout"
 import { ModSlot } from "./mod-slot"
-import { CANONICAL_POLARITIES } from "./polarity-picker"
+import { CANONICAL_POLARITIES } from "./polarity"
 import type { ArcaneSlotsState } from "./use-arcane-slots"
 import type { BuildSlotsState, SlotId } from "./use-build-slots"
 
