@@ -25,6 +25,7 @@
     "build/",
     "node_modules/",
     "src/generated/",
-    "src/components/ui/"
+    "src/components/ui/",
+    "**/*.gen.ts"
   ]
 }

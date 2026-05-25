@@ -17,7 +17,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.3.13
 
       - run: bun install --frozen-lockfile
         # Triggers apps/api's `postinstall: prisma generate` — no separate step needed.
@@ -39,4 +39,7 @@ jobs:
         run: bun run typecheck
 
       - name: Test (all workspaces)
+        # Workspace names hard-coded so a new workspace without a `test`
+        # script doesn't break CI. Keep in sync with the `test` recipe in
+        # `justfile` when adding a workspace.
         run: bun --filter=arsenyx-web --filter=arsenyx-api --filter=@arsenyx/shared run test

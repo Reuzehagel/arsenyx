@@ -68,6 +68,7 @@ fix:
     bun run lint:fix
     bun run fmt
 
-# Run vitest across all workspaces with tests. New workspaces must be added here.
+# Run vitest across all workspaces with tests. Keep this list in sync with the
+# Test step in .github/workflows/ci.yml when adding a workspace.
 test:
     bun --filter=arsenyx-web --filter=arsenyx-api --filter=@arsenyx/shared run test

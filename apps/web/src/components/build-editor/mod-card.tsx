@@ -448,7 +448,7 @@ export function ModCard({
 
   // Close when the card's layout shifts (e.g. mod search filters reorder
   // the grid) — pointermove alone doesn't fire if the user types without
-  // moving the cursor. Intentionally runs every render to sample the rect.
+  // moving the cursor.
   const lastHoveredRect = useRef<DOMRect | null>(null)
   // No dep array on purpose: this must re-measure after every render to catch
   // grid reorders that don't change isHovered. setIsHovered(false) fires only
