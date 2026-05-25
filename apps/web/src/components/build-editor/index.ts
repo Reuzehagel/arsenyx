@@ -1,4 +1,5 @@
 export { ArcaneCard, ArcaneSlot } from "./arcane"
+export { BuildSurface, type BuildSurfaceProps } from "./build-surface"
 export { DragController } from "./drag-controller"
 export {
   useArcaneSlots,

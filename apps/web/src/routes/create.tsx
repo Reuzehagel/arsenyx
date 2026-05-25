@@ -34,7 +34,7 @@ import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import { Suspense, useEffect, useMemo, useRef, useState } from "react"
 
 import {
-  ArcaneRow,
+  BuildSurface,
   DragController,
   calculateCapacity,
   calculateFormaCount,
@@ -52,11 +52,7 @@ import {
   type GuideScope,
   hasExilusSlot,
   hasStanceSlot,
-  ItemSidebar,
-  ItemSidebarPopover,
   KeyboardHintBanner,
-  KeyboardHintsStrip,
-  ModGrid,
   PublishDialog,
   type PublishVisibility,
   resolveInitialArcanes,
@@ -1052,102 +1048,54 @@ function EditorShell() {
         */}
         <div className="flex flex-col gap-4 select-none">
           <KeyboardHintBanner />
-          <div className="flex flex-col gap-4 xl:relative xl:block">
-            <div className="flex w-full flex-col sm:hidden xl:absolute xl:top-0 xl:bottom-0 xl:left-0 xl:flex xl:w-[260px]">
-              <ItemSidebar
-                item={item}
-                category={category}
-                capacityUsed={capacity.used}
-                capacityMax={capacity.max}
-                hasReactor={hasReactor}
-                onToggleReactor={() => setHasReactor((v) => !v)}
-                shards={shards}
-                onSetShard={setShard}
-                helminth={helminth}
-                onSetHelminth={setHelminthAt}
-                zawComponents={zawComponents}
-                onSetZawComponents={setZawComponents}
-                lichBonusElement={lichBonusElement}
-                onSetLichBonusElement={setLichBonusElement}
-                incarnonEnabled={incarnonEnabled}
-                onToggleIncarnon={() => setIncarnonEnabled((v) => !v)}
-                incarnonPerks={incarnonPerks}
-                onSetIncarnonPerk={setIncarnonPerkAt}
-                deploymentContext={deploymentContext}
-                onSetDeploymentContext={setDeploymentContext}
-                placedMods={slots.placed}
-                placedArcanes={arcanes.placed}
+          <BuildSurface
+            mode="edit"
+            item={item}
+            category={category}
+            isCompanion={isCompanion}
+            normalSlotCount={normalSlotCount}
+            arcaneCount={arcaneCount}
+            slots={slots}
+            arcanes={arcanes}
+            arcaneConfig={arcaneConfig}
+            sidebarProps={{
+              item,
+              category,
+              capacityUsed: capacity.used,
+              capacityMax: capacity.max,
+              hasReactor,
+              onToggleReactor: () => setHasReactor((v) => !v),
+              shards,
+              onSetShard: setShard,
+              helminth,
+              onSetHelminth: setHelminthAt,
+              zawComponents,
+              onSetZawComponents: setZawComponents,
+              lichBonusElement,
+              onSetLichBonusElement: setLichBonusElement,
+              incarnonEnabled,
+              onToggleIncarnon: () => setIncarnonEnabled((v) => !v),
+              incarnonPerks,
+              onSetIncarnonPerk: setIncarnonPerkAt,
+              deploymentContext,
+              onSetDeploymentContext: setDeploymentContext,
+              placedMods: slots.placed,
+              placedArcanes: arcanes.placed,
+            }}
+            topBarLayout="row"
+            topBar={
+              <EditorVariantBar
+                variants={variants}
+                activeIndex={clampedActiveIndex}
+                onSwitch={switchVariant}
+                onAdd={addVariant}
+                onDuplicate={duplicateActive}
+                onDelete={deleteActive}
+                onRename={renameActive}
               />
-            </div>
-
-            <div
-              className="bg-card @container/loadout flex min-w-0 flex-1 flex-col gap-3 overflow-hidden rounded-lg border p-2 sm:p-4 xl:ml-[calc(260px+1rem)]"
-              onClick={(e) => {
-                if (!(e.target instanceof HTMLElement)) return
-                if (!e.target.closest("[data-build-slot]")) {
-                  slots.select(null)
-                  arcanes.select(null)
-                }
-              }}
-            >
-              <div className="flex items-center gap-2">
-                <ItemSidebarPopover
-                  className="hidden shrink-0 sm:inline-flex xl:hidden"
-                  item={item}
-                  category={category}
-                  capacityUsed={capacity.used}
-                  capacityMax={capacity.max}
-                  hasReactor={hasReactor}
-                  onToggleReactor={() => setHasReactor((v) => !v)}
-                  shards={shards}
-                  onSetShard={setShard}
-                  helminth={helminth}
-                  onSetHelminth={setHelminthAt}
-                  zawComponents={zawComponents}
-                  onSetZawComponents={setZawComponents}
-                  lichBonusElement={lichBonusElement}
-                  onSetLichBonusElement={setLichBonusElement}
-                  incarnonEnabled={incarnonEnabled}
-                  onToggleIncarnon={() => setIncarnonEnabled((v) => !v)}
-                  incarnonPerks={incarnonPerks}
-                  onSetIncarnonPerk={setIncarnonPerkAt}
-                  deploymentContext={deploymentContext}
-                  onSetDeploymentContext={setDeploymentContext}
-                  placedMods={slots.placed}
-                  placedArcanes={arcanes.placed}
-                />
-                <div className="min-w-0 flex-1">
-                  <EditorVariantBar
-                    variants={variants}
-                    activeIndex={clampedActiveIndex}
-                    onSwitch={switchVariant}
-                    onAdd={addVariant}
-                    onDuplicate={duplicateActive}
-                    onDelete={deleteActive}
-                    onRename={renameActive}
-                  />
-                </div>
-              </div>
-              <ModGrid
-                item={item}
-                category={category}
-                isCompanion={isCompanion}
-                normalSlotCount={normalSlotCount}
-                slots={slots}
-                onEditRiven={riven.openForEdit}
-                arcaneRow={
-                  arcaneCount > 0 ? (
-                    <ArcaneRow
-                      arcanes={arcanes}
-                      options={arcaneConfig.options}
-                      labels={arcaneConfig.labels}
-                    />
-                  ) : undefined
-                }
-              />
-              <KeyboardHintsStrip />
-            </div>
-          </div>
+            }
+            onEditRiven={riven.openForEdit}
+          />
 
           <div className="bg-card rounded-lg border p-4">
             <SearchPanel

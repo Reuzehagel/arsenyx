@@ -33,7 +33,7 @@ import {
 import { Suspense, useEffect, useMemo, useRef, useState } from "react"
 
 import {
-  ArcaneRow,
+  BuildSurface,
   calculateCapacity,
   calculateFormaCount,
   calculateTotalEndoCost,
@@ -48,9 +48,6 @@ import {
   getPlexusGroupForIndex,
   hasExilusSlot,
   hasStanceSlot,
-  ItemSidebar,
-  ItemSidebarPopover,
-  ModGrid,
   resolveInitialArcanes,
   toPolarity,
   useArcaneSlots,
@@ -564,75 +561,29 @@ function BuildViewerBodyInner({
             slug={build.slug}
           />
         )}
-        <div
-          className={cn(
-            "flex flex-col gap-4",
-            // At xl, switch to block + relative so the sidebar can be absolutely
-            // positioned with top/bottom and inherit the loadout's height. That
-            // gives ItemSidebar's inner `h-full` something concrete to fill so
-            // its `xl:overflow-y-auto` triggers when stats are long.
-            !embed && "xl:relative xl:block",
-          )}
-        >
-          {!embed && (
-            <div className="flex w-full flex-col sm:hidden xl:absolute xl:top-0 xl:bottom-0 xl:left-0 xl:flex xl:w-[260px]">
-              <ItemSidebar {...sidebarProps} />
-            </div>
-          )}
-
-          <div
-            className={cn(
-              "bg-card @container/loadout flex min-w-0 flex-1 flex-col gap-3 overflow-hidden rounded-lg border p-[clamp(0.5rem,1.5vw,1rem)]",
-              !embed && "xl:ml-[calc(260px+1rem)]",
-            )}
-          >
-            {variants.length > 1 ? (
-              // Stats popover absolutely positioned so it doesn't push
-              // the tabs off-center. Tabs are visually centered in the
-              // loadout container at every breakpoint.
-              <div className="relative flex min-h-8 items-center justify-center">
-                <ItemSidebarPopover
-                  {...sidebarProps}
-                  className={cn(
-                    "absolute top-0 left-0",
-                    !embed && "hidden sm:inline-flex xl:hidden",
-                  )}
-                />
-                <VariantTabs
-                  variants={variants}
-                  activeIndex={activeIndex}
-                  onSelect={setActiveIndex}
-                />
-              </div>
-            ) : (
-              <ItemSidebarPopover
-                {...sidebarProps}
-                className={cn(
-                  "self-start",
-                  !embed && "hidden sm:inline-flex xl:hidden",
-                )}
+        <BuildSurface
+          mode="view"
+          embed={embed}
+          item={item}
+          category={category}
+          isCompanion={isCompanion}
+          normalSlotCount={normalSlotCount}
+          arcaneCount={arcaneCount}
+          slots={slots}
+          arcanes={arcanes}
+          arcaneConfig={arcaneConfig}
+          sidebarProps={sidebarProps}
+          topBarLayout={variants.length > 1 ? "centered" : "popover-only"}
+          topBar={
+            variants.length > 1 ? (
+              <VariantTabs
+                variants={variants}
+                activeIndex={activeIndex}
+                onSelect={setActiveIndex}
               />
-            )}
-            <ModGrid
-              item={item}
-              category={category}
-              isCompanion={isCompanion}
-              normalSlotCount={normalSlotCount}
-              slots={slots}
-              readOnly
-              arcaneRow={
-                arcaneCount > 0 ? (
-                  <ArcaneRow
-                    arcanes={arcanes}
-                    options={arcaneConfig.options}
-                    labels={arcaneConfig.labels}
-                    readOnly
-                  />
-                ) : undefined
-              }
-            />
-          </div>
-        </div>
+            ) : undefined
+          }
+        />
 
         {!embed ? <RelatedBuildsStrip slug={build.slug} /> : null}
 
