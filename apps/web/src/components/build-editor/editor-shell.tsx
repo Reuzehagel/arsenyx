@@ -116,6 +116,8 @@ export interface EditorShellSearch {
   build?: string
   draft?: string
   share?: string
+  /** Active variant index for multi-variant builds. 0 (or undefined) =
+   *  first variant. */
   v?: number
 }
 

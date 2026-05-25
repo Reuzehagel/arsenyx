@@ -1,4 +1,4 @@
-import type { Arcane, Polarity } from "@arsenyx/shared/warframe/types"
+import type { Arcane } from "@arsenyx/shared/warframe/types"
 import { useMemo } from "react"
 
 import type { BrowseCategory, DetailItem } from "@/lib/warframe"
@@ -54,21 +54,17 @@ export function getBuildLayout(
 }
 
 /**
- * Derived view state: arcane picker config, innate polarities per slot,
- * endo/forma totals, capacity. All inputs are read-only; the same
- * computation drives the editor and the viewer.
+ * Derived view state: arcane picker config, endo/forma totals, capacity.
+ * Inputs are read-only; the same computation drives editor and viewer.
+ *
+ * Innate polarities and the railjack `normalSlotConsumesDrain` mask are
+ * computed internally to feed `capacity` / `formaCount` but not surfaced —
+ * no caller has needed them yet. Pull them up if that changes.
  */
 export interface BuildDerived {
   arcaneConfig: ArcaneSlotConfig
-  auraInnates: (Polarity | undefined)[]
-  exilusInnate: Polarity | undefined
-  stanceInnate: Polarity | undefined
-  normalInnates: (Polarity | undefined)[]
   totalEndoCost: number
   formaCount: number
-  /** Railjack-only: per-slot mask for which normal slots feed Integrated
-   *  capacity. Undefined for non-Plexus categories. */
-  normalSlotConsumesDrain: boolean[] | undefined
   capacity: { used: number; max: number; base: number; auraBonus: number }
 }
 
@@ -161,13 +157,8 @@ export function useBuildDerived(input: {
 
   return {
     arcaneConfig,
-    auraInnates,
-    exilusInnate,
-    stanceInnate,
-    normalInnates,
     totalEndoCost,
     formaCount,
-    normalSlotConsumesDrain,
     capacity,
   }
 }

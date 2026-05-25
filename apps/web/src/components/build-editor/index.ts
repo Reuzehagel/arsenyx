@@ -20,7 +20,11 @@ export {
 } from "./use-arcane-slots"
 export { GuideEditor, type GuideScope } from "./guide-editor"
 export { KeyboardHintBanner, KeyboardHintsStrip } from "./keyboard-hints"
-export { ItemSidebar, ItemSidebarPopover } from "./item-sidebar"
+export {
+  ItemSidebar,
+  ItemSidebarPopover,
+  type ItemSidebarProps,
+} from "./item-sidebar"
 export {
   calculateCapacity,
   calculateFormaCount,
