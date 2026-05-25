@@ -100,16 +100,46 @@ describe("encodeBuildDoc / decodeBuildDoc round-trip", () => {
     expect(decoded.lichBonusElement).toBeUndefined()
   })
 
-  it("preserves activeIndex via the v2 `ai` field", () => {
+  it("round-trips activeIndex via the v2 `ai` field", () => {
+    const doc = makeDoc([
+      makeVariant({ id: "a", label: "A" }),
+      makeVariant({ id: "b", label: "B" }),
+      makeVariant({ id: "c", label: "C" }),
+    ])
+    expect(decodeBuildDoc(encodeBuildDoc(doc, 2))!.activeIndex).toBe(2)
+    // activeIndex 0 is the default → omitted → surfaces as undefined.
+    expect(decodeBuildDoc(encodeBuildDoc(doc, 0))!.activeIndex).toBeUndefined()
+  })
+
+  it("clamps an out-of-range activeIndex to the last variant", () => {
     const doc = makeDoc([
       makeVariant({ id: "a", label: "A" }),
       makeVariant({ id: "b", label: "B" }),
     ])
-    // ai is encoded but `decodeBuildDoc` doesn't surface it on the returned
-    // BuildDoc — the caller threads activeIndex separately. Smoke-test that
-    // the encoder produces something decodeBuildDoc accepts when ai > 0.
-    const encoded = encodeBuildDoc(doc, 1)
-    expect(decodeBuildDoc(encoded)).not.toBeNull()
+    expect(decodeBuildDoc(encodeBuildDoc(doc, 99))!.activeIndex).toBe(1)
+  })
+
+  it("omits the incarnon enabled flag when it was never set (v1 + v2)", () => {
+    // Single-variant → v1. Perks picked but enabled untouched → decodes back
+    // to undefined (the default-on heuristic owns it), NOT false.
+    const v1 = decodeBuildDoc(
+      encodeBuildDoc(
+        makeDoc([makeVariant({ incarnonPerks: [null, "Perk", null] })]),
+      ),
+    )!
+    expect(v1.variants[0].incarnonEnabled).toBeUndefined()
+    expect(v1.variants[0].incarnonPerks).toEqual([null, "Perk", null])
+
+    // Multi-variant → v2. Same contract.
+    const v2 = decodeBuildDoc(
+      encodeBuildDoc(
+        makeDoc([
+          makeVariant({ id: "a", label: "A", incarnonPerks: [null, "P"] }),
+          makeVariant({ id: "b", label: "B" }),
+        ]),
+      ),
+    )!
+    expect(v2.variants[0].incarnonEnabled).toBeUndefined()
   })
 
   it("returns null for garbage input", () => {

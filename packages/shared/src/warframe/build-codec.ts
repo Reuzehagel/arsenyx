@@ -1,7 +1,8 @@
 import type { BuildDoc, BuildVariant } from "./build-doc"
+import { projectVariant } from "./build-doc"
 import { normalizePolarity } from "./mods"
 import { RIVEN_IMAGE_NAME, RIVEN_UNIQUE_NAME } from "./rivens"
-import { SHARD_COLORS, getStatByIndex, getStatIndex } from "./shards"
+import { SHARD_COLORS, SHARD_STATS, getStatIndex } from "./shards"
 import { DEFAULT_DEPLOYMENT_CONTEXT, LICH_BONUS_ELEMENTS } from "./types"
 import type {
   BrowseCategory,
@@ -14,6 +15,15 @@ import type {
   PlacedShard,
 } from "./types"
 
+// The codec serializes a build to a compact JSON shape, base64'd into a share
+// link. Two wire versions exist: v1 (a single loadout, the original format)
+// and v2 (multi-variant). Both are produced from, and decoded back into, the
+// SAME set of primitives below — there is no per-version copy of the slot /
+// shard / incarnon / shared-metadata logic, so the two formats can't drift
+// (which is what previously lost `activeIndex` and desynced incarnon state).
+// v1 stays the emitted format for single-variant builds to keep those URLs
+// short; multi-variant builds emit v2. Decoding accepts both, forever.
+
 function parseLichBonusElement(raw: unknown): LichBonusElement | undefined {
   return typeof raw === "string" &&
     (LICH_BONUS_ELEMENTS as readonly string[]).includes(raw)
@@ -25,34 +35,20 @@ declare const Buffer: {
   from(data: string, encoding: string): { toString(encoding: string): string }
 }
 
-interface EncodedBuild {
-  v: number
-  i: string
-  c: string
-  r: boolean
-  a?: EncodedSlot
-  A?: EncodedSlot[]
-  e?: EncodedSlot
-  st?: EncodedSlot
-  s: EncodedSlot[]
-  ar?: EncodedArcane[]
-  sh?: number[]
-  n?: string
-  h?: EncodedHelminth
-  zc?: { g: string; l: string }
-  lb?: string
-  ic?: { e: boolean; p?: (string | null)[] }
-  dc?: DeploymentContext
+function toBase64(payload: unknown): string {
+  const json = JSON.stringify(payload)
+  if (typeof window !== "undefined") return btoa(encodeURIComponent(json))
+  return Buffer.from(json, "utf-8").toString("base64")
 }
 
-interface EncodedHelminth {
-  si: number
-  u: string
-  n: string
-  s: string
-  im?: string
-  d?: string
+function fromBase64(encoded: string): string {
+  if (typeof window !== "undefined") return decodeURIComponent(atob(encoded))
+  return Buffer.from(encoded, "base64").toString("utf-8")
 }
+
+// =============================================================================
+// Wire shapes
+// =============================================================================
 
 interface EncodedSlot {
   p?: string
@@ -75,111 +71,82 @@ interface EncodedArcane {
   r: number
 }
 
-export function encodeBuild(state: BuildState): string {
-  const encoded: EncodedBuild = {
-    v: 1,
-    i: state.itemUniqueName,
-    c: state.itemCategory,
-    r: state.hasReactor,
-    s: state.normalSlots.map(encodeSlot),
-  }
-
-  if (state.auraSlots.length === 1) {
-    encoded.a = encodeSlot(state.auraSlots[0])
-  } else if (state.auraSlots.length > 1) {
-    encoded.A = state.auraSlots.map(encodeSlot)
-  }
-
-  if (state.exilusSlot?.mod || state.exilusSlot?.formaPolarity) {
-    encoded.e = encodeSlot(state.exilusSlot)
-  }
-
-  if (state.stanceSlot?.mod || state.stanceSlot?.formaPolarity) {
-    encoded.st = encodeSlot(state.stanceSlot)
-  }
-
-  if (state.arcaneSlots?.length > 0) {
-    const placedArcanes = state.arcaneSlots.filter(
-      (a): a is PlacedArcane => a !== null,
-    )
-    if (placedArcanes.length > 0) {
-      encoded.ar = placedArcanes.map((a) => ({ u: a.uniqueName, r: a.rank }))
-    }
-  }
-
-  if (
-    state.shardSlots?.length > 0 &&
-    state.shardSlots.some((s) => s !== null)
-  ) {
-    encoded.sh = encodeShards(state.shardSlots)
-  }
-
-  if (state.helminthAbility) {
-    encoded.h = {
-      si: state.helminthAbility.slotIndex,
-      u: state.helminthAbility.ability.uniqueName,
-      n: state.helminthAbility.ability.name,
-      s: state.helminthAbility.ability.source,
-      im: state.helminthAbility.ability.imageName,
-      d: state.helminthAbility.ability.description,
-    }
-  }
-
-  if (state.buildName) {
-    encoded.n = state.buildName
-  }
-
-  if (state.zawComponents) {
-    encoded.zc = {
-      g: state.zawComponents.grip,
-      l: state.zawComponents.link,
-    }
-  }
-
-  if (state.lichBonusElement) {
-    encoded.lb = state.lichBonusElement
-  }
-
-  // Encode whenever the user touched any incarnon field. Encoding only on
-  // truthy values would lose "explicitly disabled" for innate incarnons,
-  // since the decoder re-applies a default-on heuristic when the field is
-  // missing.
-  const hasPickedPerks = state.incarnonPerks?.some((p) => p) ?? false
-  if (state.incarnonEnabled !== undefined || hasPickedPerks) {
-    encoded.ic = { e: state.incarnonEnabled ?? false }
-    if (hasPickedPerks) encoded.ic.p = state.incarnonPerks
-  }
-
-  if (
-    state.deploymentContext &&
-    state.deploymentContext !== DEFAULT_DEPLOYMENT_CONTEXT
-  ) {
-    encoded.dc = state.deploymentContext
-  }
-
-  const jsonString = JSON.stringify(encoded)
-
-  if (typeof window !== "undefined") {
-    return btoa(encodeURIComponent(jsonString))
-  }
-  return Buffer.from(jsonString, "utf-8").toString("base64")
+interface EncodedHelminth {
+  si: number
+  u: string
+  n: string
+  s: string
+  im?: string
+  d?: string
 }
+
+interface EncodedIncarnon {
+  e?: boolean
+  p?: (string | null)[]
+}
+
+/** The per-loadout slot fields, identical between v1 (top-level) and a v2
+ *  variant. */
+interface EncodedSlotGroup {
+  s: EncodedSlot[]
+  a?: EncodedSlot
+  A?: EncodedSlot[]
+  e?: EncodedSlot
+  st?: EncodedSlot
+  ar?: EncodedArcane[]
+}
+
+/** Build-level metadata shared across every variant, identical between v1 and
+ *  v2. */
+interface EncodedSharedMeta {
+  sh?: number[]
+  h?: EncodedHelminth
+  zc?: { g: string; l: string }
+  lb?: string
+  n?: string
+}
+
+interface EncodedBuild extends EncodedSlotGroup, EncodedSharedMeta {
+  v: 1
+  i: string
+  c: string
+  r: boolean
+  ic?: EncodedIncarnon
+  dc?: DeploymentContext
+}
+
+// v2 intentionally drops `itemName` / `itemImageName` from the payload — the
+// receiving client re-fetches them via `itemQuery(category, uniqueName)` when
+// rendering, so encoding them would just bloat the URL.
+interface EncodedBuildV2 extends EncodedSharedMeta {
+  v: 2
+  i: string
+  c: string
+  r: boolean
+  ai?: number
+  vs: EncodedVariant[]
+}
+
+interface EncodedVariant extends EncodedSlotGroup {
+  l: string
+  id?: string
+  ic?: EncodedIncarnon
+  dc?: DeploymentContext
+  gs?: string
+  gd?: string
+}
+
+// =============================================================================
+// Shared primitives (used by both wire versions)
+// =============================================================================
 
 function encodeSlot(slot: ModSlot): EncodedSlot {
   const encoded: EncodedSlot = {}
-
-  if (slot.formaPolarity) {
-    encoded.p = slot.formaPolarity
-  }
-
+  if (slot.formaPolarity) encoded.p = slot.formaPolarity
   if (slot.mod) {
-    const encodedMod: EncodedMod = {
-      u: slot.mod.uniqueName,
-      r: slot.mod.rank,
-    }
-
+    const m: EncodedMod = { u: slot.mod.uniqueName, r: slot.mod.rank }
     if (slot.mod.rivenStats) {
-      encodedMod.rv = {
+      m.rv = {
         p: slot.mod.rivenStats.positives.map((s) => ({
           s: s.stat,
           v: s.value,
@@ -192,11 +159,43 @@ function encodeSlot(slot: ModSlot): EncodedSlot {
         pol: slot.mod.polarity,
       }
     }
-
-    encoded.m = encodedMod
+    encoded.m = m
   }
-
   return encoded
+}
+
+function decodeSlot(
+  encoded: EncodedSlot,
+  type: "aura" | "exilus" | "stance" | "normal",
+  id: string,
+): ModSlot {
+  const slot: ModSlot = { id, type }
+  if (encoded.p) slot.formaPolarity = normalizePolarity(encoded.p)
+  if (encoded.m) {
+    const isRiven = encoded.m.u === RIVEN_UNIQUE_NAME
+    const mod: PlacedMod = {
+      uniqueName: encoded.m.u,
+      name: isRiven ? "Riven Mod" : "",
+      imageName: isRiven ? RIVEN_IMAGE_NAME : undefined,
+      polarity: normalizePolarity(encoded.m.rv?.pol),
+      baseDrain: encoded.m.rv?.d ?? 0,
+      fusionLimit: isRiven ? 8 : 0,
+      // Clamp to the absolute in-game rank ceiling. `fusionLimit` is 0 for
+      // non-rivens at decode time (we don't have the mod's data here), so it
+      // can't gate the rank — a crafted link must not be able to inject an
+      // arbitrary rank into capacity / endo math downstream.
+      rank: Math.max(0, Math.min(10, Math.floor(encoded.m.r ?? 0))),
+      rarity: isRiven ? "Riven" : "",
+    }
+    if (encoded.m.rv) {
+      mod.rivenStats = {
+        positives: encoded.m.rv.p.map((s) => ({ stat: s.s, value: s.v })),
+        negatives: encoded.m.rv.n.map((s) => ({ stat: s.s, value: s.v })),
+      }
+    }
+    slot.mod = mod
+  }
+  return slot
 }
 
 // Per slot: 0 = empty, or (colorIndex << 4) | (statIndex << 1) | tauforged
@@ -215,230 +214,76 @@ function decodeShards(encoded: number[]): (PlacedShard | null)[] {
     const colorIndex = (byte >> 4) - 1
     const statIndex = (byte >> 1) & 0x7
     const tauforged = (byte & 1) === 1
-
     if (colorIndex < 0 || colorIndex >= SHARD_COLORS.length) return null
-
     const color = SHARD_COLORS[colorIndex]
-    const stat = getStatByIndex(color, statIndex)
-
-    return { color, stat, tauforged }
+    const stats = SHARD_STATS[color]
+    // Out-of-range stat index (3 bits can address 0-7; colors define 4-5
+    // stats) → drop the shard rather than silently snap it to stats[0].
+    if (statIndex >= stats.length) return null
+    return { color, stat: stats[statIndex].name, tauforged }
   })
 }
 
-export function decodeBuild(base64String: string): Partial<BuildState> | null {
-  try {
-    let jsonString: string
-
-    if (typeof window !== "undefined") {
-      jsonString = decodeURIComponent(atob(base64String))
-    } else {
-      jsonString = Buffer.from(base64String, "base64").toString("utf-8")
-    }
-
-    const encoded: EncodedBuild = JSON.parse(jsonString)
-
-    if (encoded.v !== 1) return null
-
-    const state: Partial<BuildState> = {
-      itemUniqueName: encoded.i,
-      itemCategory: encoded.c as BrowseCategory,
-      hasReactor: encoded.r,
-      buildName: encoded.n,
-    }
-
-    if (encoded.A) {
-      state.auraSlots = encoded.A.map((s, i) =>
-        decodeSlot(s, "aura", `aura-${i}`),
-      )
-    } else if (encoded.a) {
-      state.auraSlots = [decodeSlot(encoded.a, "aura", "aura-0")]
-    }
-
-    if (encoded.e) {
-      state.exilusSlot = decodeSlot(encoded.e, "exilus", "exilus-0")
-    }
-
-    if (encoded.st) {
-      state.stanceSlot = decodeSlot(encoded.st, "stance", "stance")
-    }
-
-    if (encoded.s) {
-      state.normalSlots = encoded.s.map((s, i) =>
-        decodeSlot(s, "normal", `normal-${i}`),
-      )
-    }
-
-    if (encoded.ar && encoded.ar.length > 0) {
-      state.arcaneSlots = encoded.ar.map((a) => ({
-        uniqueName: a.u,
-        name: "",
-        rank: a.r,
-        rarity: "",
-      }))
-    }
-
-    if (encoded.sh) {
-      state.shardSlots = decodeShards(encoded.sh)
-    }
-
-    if (encoded.h) {
-      state.helminthAbility = {
-        slotIndex: encoded.h.si,
-        ability: {
-          uniqueName: encoded.h.u,
-          name: encoded.h.n,
-          source: encoded.h.s,
-          imageName: encoded.h.im,
-          description: encoded.h.d,
-        },
-      }
-    }
-
-    if (encoded.zc) {
-      state.zawComponents = {
-        grip: encoded.zc.g,
-        link: encoded.zc.l,
-      }
-    }
-
-    const lb = parseLichBonusElement(encoded.lb)
-    if (lb) state.lichBonusElement = lb
-
-    if (encoded.ic) {
-      state.incarnonEnabled = encoded.ic.e
-      state.incarnonPerks = encoded.ic.p
-    }
-
-    if (encoded.dc) {
-      state.deploymentContext = encoded.dc
-    }
-
-    return state
-  } catch {
-    return null
-  }
+// Encode whenever the user touched any incarnon field. We deliberately omit
+// the enabled flag (`e`) when it's `undefined` (untouched) so the decoder's
+// default-on heuristic can apply — and only write it when it was explicitly
+// set. Identical for v1 and v2.
+function encodeIncarnon(
+  enabled: boolean | undefined,
+  perks: (string | null)[] | undefined,
+): EncodedIncarnon | undefined {
+  const hasPickedPerks = perks?.some((p) => p) ?? false
+  if (enabled === undefined && !hasPickedPerks) return undefined
+  const ic: EncodedIncarnon = {}
+  if (enabled !== undefined) ic.e = enabled
+  if (hasPickedPerks) ic.p = perks
+  return ic
 }
 
-function decodeSlot(
-  encoded: EncodedSlot,
-  type: "aura" | "exilus" | "stance" | "normal",
-  id: string,
-): ModSlot {
-  const slot: ModSlot = { id, type }
-
-  if (encoded.p) {
-    slot.formaPolarity = normalizePolarity(encoded.p)
-  }
-
-  if (encoded.m) {
-    const isRiven = encoded.m.u === RIVEN_UNIQUE_NAME
-    const mod: PlacedMod = {
-      uniqueName: encoded.m.u,
-      name: isRiven ? "Riven Mod" : "",
-      imageName: isRiven ? RIVEN_IMAGE_NAME : undefined,
-      polarity: normalizePolarity(encoded.m.rv?.pol),
-      baseDrain: encoded.m.rv?.d ?? 0,
-      fusionLimit: isRiven ? 8 : 0,
-      rank: encoded.m.r,
-      rarity: isRiven ? "Riven" : "",
-    }
-
-    if (encoded.m.rv) {
-      mod.rivenStats = {
-        positives: encoded.m.rv.p.map((s) => ({ stat: s.s, value: s.v })),
-        negatives: encoded.m.rv.n.map((s) => ({ stat: s.s, value: s.v })),
-      }
-    }
-
-    slot.mod = mod
-  }
-
-  return slot
+function applyIncarnon(
+  target: { incarnonEnabled?: boolean; incarnonPerks?: (string | null)[] },
+  ic: EncodedIncarnon | undefined,
+): void {
+  if (!ic) return
+  target.incarnonEnabled = ic.e
+  target.incarnonPerks = ic.p
 }
 
-// =============================================================================
-// V2 — multi-variant share links
-// =============================================================================
+type SlotGroupSource = Pick<
+  BuildVariant,
+  "auraSlots" | "exilusSlot" | "stanceSlot" | "normalSlots" | "arcaneSlots"
+>
 
-// v2 intentionally drops `itemName` / `itemImageName` from the payload — the
-// receiving client re-fetches them via `itemQuery(category, uniqueName)`
-// when rendering, so encoding them would just bloat the URL. v1 carried
-// them (`state.itemName`) for the same reason — also unused on decode.
-interface EncodedBuildV2 {
-  v: 2
-  i: string
-  c: string
-  r: boolean
-  sh?: number[]
-  h?: EncodedHelminth
-  zc?: { g: string; l: string }
-  lb?: string
-  n?: string
-  ai?: number
-  vs: EncodedVariant[]
-}
-
-interface EncodedVariant {
-  l: string
-  id?: string
-  a?: EncodedSlot
-  A?: EncodedSlot[]
-  e?: EncodedSlot
-  st?: EncodedSlot
-  s: EncodedSlot[]
-  ar?: EncodedArcane[]
-  ic?: { e?: boolean; p?: (string | null)[] }
-  dc?: DeploymentContext
-  gs?: string
-  gd?: string
-}
-
-function encodeVariant(v: BuildVariant): EncodedVariant {
-  const ev: EncodedVariant = {
-    l: v.label,
-    id: v.id,
-    s: v.normalSlots.map(encodeSlot),
-  }
-  if (v.auraSlots.length === 1) ev.a = encodeSlot(v.auraSlots[0])
-  else if (v.auraSlots.length > 1) ev.A = v.auraSlots.map(encodeSlot)
-  if (v.exilusSlot?.mod || v.exilusSlot?.formaPolarity)
-    ev.e = encodeSlot(v.exilusSlot)
-  if (v.stanceSlot?.mod || v.stanceSlot?.formaPolarity)
-    ev.st = encodeSlot(v.stanceSlot)
-  const placedArcanes = (v.arcaneSlots ?? []).filter(
+function encodeSlotGroup(target: EncodedSlotGroup, src: SlotGroupSource): void {
+  target.s = src.normalSlots.map(encodeSlot)
+  if (src.auraSlots.length === 1) target.a = encodeSlot(src.auraSlots[0])
+  else if (src.auraSlots.length > 1) target.A = src.auraSlots.map(encodeSlot)
+  if (src.exilusSlot?.mod || src.exilusSlot?.formaPolarity)
+    target.e = encodeSlot(src.exilusSlot)
+  if (src.stanceSlot?.mod || src.stanceSlot?.formaPolarity)
+    target.st = encodeSlot(src.stanceSlot)
+  const placed = (src.arcaneSlots ?? []).filter(
     (a): a is PlacedArcane => a !== null,
   )
-  if (placedArcanes.length > 0) {
-    ev.ar = placedArcanes.map((a) => ({ u: a.uniqueName, r: a.rank }))
-  }
-  const hasPickedPerks = v.incarnonPerks?.some((p) => p) ?? false
-  if (v.incarnonEnabled !== undefined || hasPickedPerks) {
-    ev.ic = {}
-    if (v.incarnonEnabled !== undefined) ev.ic.e = v.incarnonEnabled
-    if (hasPickedPerks) ev.ic.p = v.incarnonPerks
-  }
-  if (v.deploymentContext && v.deploymentContext !== DEFAULT_DEPLOYMENT_CONTEXT)
-    ev.dc = v.deploymentContext
-  if (v.guideSummary) ev.gs = v.guideSummary
-  if (v.guideDescription) ev.gd = v.guideDescription
-  return ev
+  if (placed.length > 0)
+    target.ar = placed.map((a) => ({ u: a.uniqueName, r: a.rank }))
 }
 
-function decodeVariant(ev: EncodedVariant, index: number): BuildVariant {
-  const variant: BuildVariant = {
-    id: ev.id ?? `v${index}`,
-    label: ev.l,
-    auraSlots: ev.A
-      ? ev.A.map((s, i) => decodeSlot(s, "aura", `aura-${i}`))
-      : ev.a
-        ? [decodeSlot(ev.a, "aura", "aura-0")]
+function decodeSlotGroup(g: EncodedSlotGroup): SlotGroupSource {
+  return {
+    auraSlots: g.A
+      ? g.A.map((s, i) => decodeSlot(s, "aura", `aura-${i}`))
+      : g.a
+        ? [decodeSlot(g.a, "aura", "aura-0")]
         : [],
-    exilusSlot: ev.e ? decodeSlot(ev.e, "exilus", "exilus-0") : undefined,
-    stanceSlot: ev.st ? decodeSlot(ev.st, "stance", "stance") : undefined,
-    normalSlots: ev.s.map((s, i) => decodeSlot(s, "normal", `normal-${i}`)),
+    exilusSlot: g.e ? decodeSlot(g.e, "exilus", "exilus-0") : undefined,
+    stanceSlot: g.st ? decodeSlot(g.st, "stance", "stance") : undefined,
+    normalSlots: (g.s ?? []).map((s, i) =>
+      decodeSlot(s, "normal", `normal-${i}`),
+    ),
     arcaneSlots:
-      ev.ar && ev.ar.length > 0
-        ? ev.ar.map((a) => ({
+      g.ar && g.ar.length > 0
+        ? g.ar.map((a) => ({
             uniqueName: a.u,
             name: "",
             rank: a.r,
@@ -446,90 +291,47 @@ function decodeVariant(ev: EncodedVariant, index: number): BuildVariant {
           }))
         : [],
   }
-  if (ev.ic) {
-    variant.incarnonEnabled = ev.ic.e
-    variant.incarnonPerks = ev.ic.p
-  }
-  if (ev.dc) variant.deploymentContext = ev.dc
-  if (ev.gs) variant.guideSummary = ev.gs
-  if (ev.gd) variant.guideDescription = ev.gd
-  return variant
 }
 
-/**
- * Encode a `BuildDoc` for a share link. Single-variant docs round-trip
- * through the v1 encoder so existing URLs / outside consumers see no
- * change. Multi-variant docs emit v2.
- */
-export function encodeBuildDoc(doc: BuildDoc, activeIndex = 0): string {
-  if (doc.variants.length === 1) {
-    return encodeBuild(buildDocToBuildState(doc, 0))
-  }
-  const encoded: EncodedBuildV2 = {
-    v: 2,
-    i: doc.itemUniqueName,
-    c: doc.itemCategory,
-    r: doc.hasReactor,
-    vs: doc.variants.map(encodeVariant),
-  }
-  if (doc.shardSlots?.length > 0 && doc.shardSlots.some((s) => s !== null))
-    encoded.sh = encodeShards(doc.shardSlots)
-  if (doc.helminthAbility) {
-    encoded.h = {
-      si: doc.helminthAbility.slotIndex,
-      u: doc.helminthAbility.ability.uniqueName,
-      n: doc.helminthAbility.ability.name,
-      s: doc.helminthAbility.ability.source,
-      im: doc.helminthAbility.ability.imageName,
-      d: doc.helminthAbility.ability.description,
+type SharedMetaSource = Pick<
+  BuildDoc,
+  | "shardSlots"
+  | "helminthAbility"
+  | "zawComponents"
+  | "lichBonusElement"
+  | "buildName"
+>
+
+function encodeSharedMeta(
+  target: EncodedSharedMeta,
+  src: SharedMetaSource,
+): void {
+  if (
+    src.shardSlots &&
+    src.shardSlots.length > 0 &&
+    src.shardSlots.some((s) => s !== null)
+  )
+    target.sh = encodeShards(src.shardSlots)
+  if (src.helminthAbility) {
+    target.h = {
+      si: src.helminthAbility.slotIndex,
+      u: src.helminthAbility.ability.uniqueName,
+      n: src.helminthAbility.ability.name,
+      s: src.helminthAbility.ability.source,
+      im: src.helminthAbility.ability.imageName,
+      d: src.helminthAbility.ability.description,
     }
   }
-  if (doc.zawComponents) {
-    encoded.zc = { g: doc.zawComponents.grip, l: doc.zawComponents.link }
-  }
-  if (doc.lichBonusElement) encoded.lb = doc.lichBonusElement
-  if (doc.buildName) encoded.n = doc.buildName
-  if (activeIndex > 0) encoded.ai = activeIndex
-
-  const jsonString = JSON.stringify(encoded)
-  if (typeof window !== "undefined") {
-    return btoa(encodeURIComponent(jsonString))
-  }
-  return Buffer.from(jsonString, "utf-8").toString("base64")
+  if (src.zawComponents)
+    target.zc = { g: src.zawComponents.grip, l: src.zawComponents.link }
+  if (src.lichBonusElement) target.lb = src.lichBonusElement
+  if (src.buildName) target.n = src.buildName
 }
 
-/**
- * Decode a share link to a `BuildDoc`. Accepts both v1 (wrapped as a
- * single-variant doc) and v2. Returns `null` on parse failure or an
- * unsupported version, matching `decodeBuild`'s tolerant contract.
- */
-export function decodeBuildDoc(base64String: string): BuildDoc | null {
-  try {
-    let jsonString: string
-    if (typeof window !== "undefined") {
-      jsonString = decodeURIComponent(atob(base64String))
-    } else {
-      jsonString = Buffer.from(base64String, "base64").toString("utf-8")
-    }
-    const raw = JSON.parse(jsonString) as { v?: number }
-    if (raw.v === 1) {
-      const v1 = decodeBuild(base64String)
-      if (!v1) return null
-      return buildStateToBuildDoc(v1)
-    }
-    if (raw.v === 2) return decodeV2(raw as unknown as EncodedBuildV2)
-    return null
-  } catch {
-    return null
-  }
-}
-
-function decodeV2(encoded: EncodedBuildV2): BuildDoc {
+function decodeSharedMeta(encoded: EncodedSharedMeta): SharedMetaSource & {
+  shardSlots: (PlacedShard | null)[]
+} {
   return {
-    itemUniqueName: encoded.i,
-    itemCategory: encoded.c as BrowseCategory,
-    itemName: "",
-    hasReactor: encoded.r,
     shardSlots: encoded.sh ? decodeShards(encoded.sh) : [],
     helminthAbility: encoded.h
       ? {
@@ -548,35 +350,138 @@ function decodeV2(encoded: EncodedBuildV2): BuildDoc {
       : undefined,
     lichBonusElement: parseLichBonusElement(encoded.lb),
     buildName: encoded.n,
-    variants: encoded.vs.map(decodeVariant),
   }
 }
 
-function buildDocToBuildState(doc: BuildDoc, index: number): BuildState {
-  const v = doc.variants[index]
-  return {
-    itemUniqueName: doc.itemUniqueName,
-    itemName: doc.itemName,
-    itemCategory: doc.itemCategory,
-    itemImageName: doc.itemImageName,
-    hasReactor: doc.hasReactor,
-    shardSlots: doc.shardSlots,
-    helminthAbility: doc.helminthAbility,
-    zawComponents: doc.zawComponents,
-    lichBonusElement: doc.lichBonusElement,
-    buildName: doc.buildName,
-    auraSlots: v.auraSlots,
-    exilusSlot: v.exilusSlot,
-    stanceSlot: v.stanceSlot,
-    normalSlots: v.normalSlots,
-    arcaneSlots: v.arcaneSlots,
-    incarnonEnabled: v.incarnonEnabled,
-    incarnonPerks: v.incarnonPerks,
-    deploymentContext: v.deploymentContext,
-    baseCapacity: 0,
-    currentCapacity: 0,
-    formaCount: 0,
+// =============================================================================
+// v1 — single loadout (BuildState)
+// =============================================================================
+
+export function encodeBuild(state: BuildState): string {
+  const encoded: EncodedBuild = {
+    v: 1,
+    i: state.itemUniqueName,
+    c: state.itemCategory,
+    r: state.hasReactor,
+    s: [],
   }
+  encodeSlotGroup(encoded, state)
+  encodeSharedMeta(encoded, state)
+  const ic = encodeIncarnon(state.incarnonEnabled, state.incarnonPerks)
+  if (ic) encoded.ic = ic
+  if (
+    state.deploymentContext &&
+    state.deploymentContext !== DEFAULT_DEPLOYMENT_CONTEXT
+  )
+    encoded.dc = state.deploymentContext
+  return toBase64(encoded)
+}
+
+export function decodeBuild(base64String: string): Partial<BuildState> | null {
+  try {
+    const encoded: EncodedBuild = JSON.parse(fromBase64(base64String))
+    if (encoded.v !== 1) return null
+    const state: Partial<BuildState> = {
+      itemUniqueName: encoded.i,
+      itemCategory: encoded.c as BrowseCategory,
+      hasReactor: encoded.r,
+      ...decodeSlotGroup(encoded),
+      ...decodeSharedMeta(encoded),
+    }
+    applyIncarnon(state, encoded.ic)
+    if (encoded.dc) state.deploymentContext = encoded.dc
+    return state
+  } catch {
+    return null
+  }
+}
+
+// =============================================================================
+// v2 — multi-variant share links
+// =============================================================================
+
+function encodeVariant(v: BuildVariant): EncodedVariant {
+  const ev: EncodedVariant = { l: v.label, id: v.id, s: [] }
+  encodeSlotGroup(ev, v)
+  const ic = encodeIncarnon(v.incarnonEnabled, v.incarnonPerks)
+  if (ic) ev.ic = ic
+  if (v.deploymentContext && v.deploymentContext !== DEFAULT_DEPLOYMENT_CONTEXT)
+    ev.dc = v.deploymentContext
+  if (v.guideSummary) ev.gs = v.guideSummary
+  if (v.guideDescription) ev.gd = v.guideDescription
+  return ev
+}
+
+function decodeVariant(ev: EncodedVariant, index: number): BuildVariant {
+  const variant: BuildVariant = {
+    id: ev.id ?? `v${index}`,
+    label: ev.l,
+    ...decodeSlotGroup(ev),
+  }
+  applyIncarnon(variant, ev.ic)
+  if (ev.dc) variant.deploymentContext = ev.dc
+  if (ev.gs) variant.guideSummary = ev.gs
+  if (ev.gd) variant.guideDescription = ev.gd
+  return variant
+}
+
+/**
+ * Encode a `BuildDoc` for a share link. Single-variant docs round-trip through
+ * the v1 encoder so existing URLs / outside consumers see no change.
+ * Multi-variant docs emit v2.
+ */
+export function encodeBuildDoc(doc: BuildDoc, activeIndex = 0): string {
+  if (doc.variants.length === 1) {
+    return encodeBuild(projectVariant(doc, 0))
+  }
+  const encoded: EncodedBuildV2 = {
+    v: 2,
+    i: doc.itemUniqueName,
+    c: doc.itemCategory,
+    r: doc.hasReactor,
+    vs: doc.variants.map(encodeVariant),
+  }
+  encodeSharedMeta(encoded, doc)
+  const ai = Math.floor(activeIndex)
+  if (Number.isFinite(ai) && ai > 0) encoded.ai = ai
+  return toBase64(encoded)
+}
+
+/**
+ * Decode a share link to a `BuildDoc`. Accepts both v1 (wrapped as a
+ * single-variant doc) and v2. Returns `null` on parse failure or an
+ * unsupported version, matching `decodeBuild`'s tolerant contract.
+ */
+export function decodeBuildDoc(base64String: string): BuildDoc | null {
+  try {
+    const raw = JSON.parse(fromBase64(base64String)) as { v?: number }
+    if (raw.v === 1) {
+      const v1 = decodeBuild(base64String)
+      return v1 ? buildStateToBuildDoc(v1) : null
+    }
+    if (raw.v === 2) return decodeV2(raw as unknown as EncodedBuildV2)
+    return null
+  } catch {
+    return null
+  }
+}
+
+function decodeV2(encoded: EncodedBuildV2): BuildDoc {
+  const doc: BuildDoc = {
+    itemUniqueName: encoded.i,
+    itemCategory: encoded.c as BrowseCategory,
+    itemName: "",
+    hasReactor: encoded.r,
+    ...decodeSharedMeta(encoded),
+    variants: encoded.vs.map(decodeVariant),
+  }
+  if (typeof encoded.ai === "number") {
+    const ai = Math.floor(encoded.ai)
+    if (Number.isFinite(ai) && ai > 0) {
+      doc.activeIndex = Math.min(ai, doc.variants.length - 1)
+    }
+  }
+  return doc
 }
 
 function buildStateToBuildDoc(state: Partial<BuildState>): BuildDoc {
@@ -607,6 +512,10 @@ function buildStateToBuildDoc(state: Partial<BuildState>): BuildDoc {
     ],
   }
 }
+
+// =============================================================================
+// URL helpers
+// =============================================================================
 
 export function generateBuildUrl(state: BuildState, baseUrl?: string): string {
   const encoded = encodeBuild(state)

@@ -354,7 +354,9 @@ export function getModsForItem(
       // mod (Strain Fever → "Helminth Claws"). The weapon item carries a
       // pre-resolved `compatGroups` list so this matcher is data-driven.
       return Boolean(
-        item.compatGroups && compatName && item.compatGroups.includes(compatName),
+        item.compatGroups &&
+        compatName &&
+        item.compatGroups.includes(compatName),
       )
     }
 
@@ -387,6 +389,11 @@ export function getModsForItem(
       if (itemNameLower.includes("bow"))
         return isPrimaryMod(compatName, modType, "bow")
       if (item.trigger) return isPistolMod(compatName, modType)
+      // Exalted melees have a stance pre-applied in-game that the player can't
+      // swap, so they get no stance slot — exclude stance mods from the pool
+      // (otherwise `isMeleeCompat` lets them through). Mirrors the Deconstructor
+      // exclusion above.
+      if (modType === "stance mod") return false
       return isMeleeCompat(compatName, modType)
     }
 

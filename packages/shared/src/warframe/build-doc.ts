@@ -53,6 +53,11 @@ export interface BuildDoc {
   buildName?: string
 
   variants: BuildVariant[]
+
+  /** Variant the share link was generated on (v2 `ai`). Absent / 0 = first
+   *  variant. Surfaced by `decodeBuildDoc`; the editor clamps it against the
+   *  actual variant count via `clampVariantIndex`. */
+  activeIndex?: number
 }
 
 /**

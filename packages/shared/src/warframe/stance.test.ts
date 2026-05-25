@@ -137,4 +137,39 @@ describe("getModsForItem stance filtering", () => {
     expect(result).toContain(polearmStance)
     expect(result).not.toContain(heavyBladeStance)
   })
+
+  it("excludes stance mods from an exalted melee weapon's pool", () => {
+    // Exalted melees (Exalted Blade etc.) have no swappable stance slot.
+    const result = getModsForItem(
+      {
+        type: "Exalted Weapon",
+        name: "Exalted Blade",
+        uniqueName: "/Lotus/Powersuits/Excalibur/ExaltedBlade",
+      },
+      mods,
+    )
+    expect(result).toContain(meleeMod)
+    expect(result).not.toContain(polearmStance)
+    expect(result).not.toContain(heavyBladeStance)
+  })
+
+  it("routes a necramech exalted to arch-melee, never stance", () => {
+    const archMeleeMod = modFixture({
+      uniqueName: "/Lotus/Mods/ArchMelee/ArchMeleeDamageMod",
+      name: "Arch-Melee Damage",
+      type: "Arch-Melee Mod",
+      compatName: "ArchMelee",
+    })
+    const result = getModsForItem(
+      {
+        type: "Exalted Weapon",
+        name: "Ironbride",
+        uniqueName: "/Lotus/Powersuits/EntratiMech/Bonewidow/Ironbride",
+      },
+      [...mods, archMeleeMod],
+    )
+    expect(result).toContain(archMeleeMod)
+    expect(result).not.toContain(polearmStance)
+    expect(result).not.toContain(meleeMod)
+  })
 })
