@@ -8,6 +8,12 @@ export {
 export { BuildSurface, type BuildSurfaceProps } from "./build-surface"
 export { DragController } from "./drag-controller"
 export {
+  EditorShell,
+  resetEditorCache,
+  type EditorShellSearch,
+} from "./editor-shell"
+export { EditorVariantBar } from "./editor-variant-bar"
+export {
   useArcaneSlots,
   type ArcaneSlotsState,
   type PlacedArcane,

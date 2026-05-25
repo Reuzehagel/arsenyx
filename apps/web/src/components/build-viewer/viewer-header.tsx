@@ -1,0 +1,181 @@
+import { Link as RouterLink } from "@tanstack/react-router"
+import { Pencil } from "lucide-react"
+
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import type { BuildDetail } from "@/lib/queries/build-query"
+import { formatAbsoluteTime, relativeTime } from "@/lib/util/relative-time"
+import { formatVisibility } from "@/lib/util/user-display"
+import { getImageUrl, type BrowseCategory } from "@/lib/warframe"
+
+import { BuildActionsMenu } from "./build-actions-menu"
+import { ShareMenu } from "./share-menu"
+import { SocialActions } from "./social-actions"
+
+/**
+ * Read-only header for `/builds/$slug`. Owner sees an Edit button that
+ * jumps to `/create?build=<slug>`; everyone gets fork/delete via the
+ * actions menu and like/bookmark via social actions.
+ */
+export function ViewerHeader({
+  build,
+  categoryLabel,
+  author,
+  totalEndoCost,
+  formaCount,
+  category,
+  itemSlug,
+}: {
+  build: BuildDetail
+  categoryLabel: string
+  author: string
+  totalEndoCost: number
+  formaCount: number
+  category: BrowseCategory
+  itemSlug: string
+}) {
+  return (
+    <div className="bg-card mb-4 rounded-lg border p-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex min-w-0 flex-1 items-center gap-4">
+          <div className="bg-muted/10 relative flex size-[clamp(4rem,8vw,6rem)] shrink-0 items-center justify-center overflow-hidden rounded-md">
+            {build.item.imageName ? (
+              <img
+                src={getImageUrl(build.item.imageName)}
+                alt={build.item.name}
+                className="h-full w-full object-cover"
+              />
+            ) : null}
+          </div>
+          <div className="flex min-w-0 flex-col justify-center gap-2">
+            <h1 className="truncate text-[clamp(1.25rem,2vw,1.5rem)] leading-tight font-bold tracking-tight">
+              {build.name}
+            </h1>
+            <span className="text-muted-foreground text-sm">
+              <RouterLink
+                to="/browse/$category/$slug"
+                params={{ category, slug: itemSlug }}
+                className="hover:text-foreground hover:underline"
+              >
+                {build.item.name}
+              </RouterLink>
+              {" · "}
+              <RouterLink
+                to="/browse"
+                search={{ category }}
+                className="hover:text-foreground hover:underline"
+              >
+                {categoryLabel}
+              </RouterLink>
+              {" · "}
+              {build.organization ? (
+                <>
+                  <RouterLink
+                    to="/org/$slug"
+                    params={{ slug: build.organization.slug }}
+                    className="text-[#a78bfa] hover:underline"
+                  >
+                    {build.organization.name}
+                  </RouterLink>
+                  {!build.hideAuthor && " · "}
+                </>
+              ) : null}
+              {(!build.organization || !build.hideAuthor) &&
+                (build.user.username ? (
+                  <>
+                    by{" "}
+                    <RouterLink
+                      to="/profile/$username"
+                      params={{ username: build.user.username }}
+                      className="hover:text-foreground hover:underline"
+                    >
+                      {author}
+                    </RouterLink>
+                  </>
+                ) : (
+                  <>by {author}</>
+                ))}
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge
+                variant="secondary"
+                className="bg-muted/50 hover:bg-muted gap-1.5 px-2 py-0.5 text-xs font-semibold"
+              >
+                <img
+                  src="/icons/currency/Endo.png"
+                  alt=""
+                  aria-hidden
+                  className="size-4"
+                />
+                {totalEndoCost.toLocaleString("en-US")}
+              </Badge>
+              {formaCount > 0 && (
+                <Badge
+                  variant="secondary"
+                  className="bg-muted/50 hover:bg-muted gap-1.5 px-2 py-0.5 text-xs font-semibold"
+                >
+                  <img
+                    src="/icons/currency/Forma.png"
+                    alt=""
+                    aria-hidden
+                    className="size-[18px] object-contain"
+                  />
+                  {formaCount}
+                </Badge>
+              )}
+              <Badge variant="outline" className="text-xs">
+                {build.likeCount} likes · {build.viewCount} views
+              </Badge>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Badge variant="outline" className="text-xs">
+                      Updated {relativeTime(build.updatedAt)}
+                    </Badge>
+                  }
+                />
+                <TooltipContent>
+                  Updated {formatAbsoluteTime(build.updatedAt)}
+                </TooltipContent>
+              </Tooltip>
+              {build.visibility !== "PUBLIC" ? (
+                <Badge variant="secondary" className="text-xs">
+                  {formatVisibility(build.visibility)}
+                </Badge>
+              ) : null}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <SocialActions build={build} />
+          <ShareMenu slug={build.slug} />
+          {build.isOwner ? (
+            <Button
+              size="sm"
+              nativeButton={false}
+              render={
+                <RouterLink
+                  to="/create"
+                  search={{ category, item: itemSlug, build: build.slug }}
+                />
+              }
+            >
+              <Pencil data-icon="inline-start" />
+              Edit
+            </Button>
+          ) : null}
+          <BuildActionsMenu
+            slug={build.slug}
+            name={build.name}
+            isOwner={build.isOwner}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
