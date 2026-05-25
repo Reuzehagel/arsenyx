@@ -16,20 +16,12 @@ export interface OverframeBuildSource {
   buildString?: string
 }
 
-export interface OverframeImportWarning {
-  type:
-    | "invalid_url"
-    | "fetch_failed"
-    | "next_data_missing"
-    | "build_data_missing"
-    | "buildstring_missing"
-    | "buildstring_decode_failed"
-    | "item_not_found"
-    | "mod_not_found"
-    | "helminth_ability_not_found"
-  message: string
-  details?: Record<string, unknown>
-}
+// Canonical definition lives in @arsenyx/shared so the web consumer can't
+// drift from the api producer. Imported for use below + re-exported for
+// existing `./types` consumers.
+import type { OverframeImportWarning } from "@arsenyx/shared/warframe/overframe-wire"
+
+export type { OverframeImportWarning }
 
 export interface OverframeMatchedMod {
   overframeId: string

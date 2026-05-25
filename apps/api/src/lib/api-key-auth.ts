@@ -2,17 +2,12 @@ import type { MiddlewareHandler } from "hono"
 
 import { prisma, registerBackgroundWork } from "../db"
 import { type ApiKeyScope, hashApiKey } from "./api-keys"
-
-const PRUNE_PROBABILITY = 0.01
-const PRUNE_MAX_AGE_MS = 10 * 60_000
-
-function currentWindowStart(now = Date.now()): Date {
-  return new Date(Math.floor(now / 60_000) * 60_000)
-}
-
-function secondsUntilNextMinute(now = Date.now()): number {
-  return Math.max(1, 60 - Math.floor((now / 1000) % 60))
-}
+import {
+  PRUNE_MAX_AGE_MS,
+  PRUNE_PROBABILITY,
+  currentWindowStart,
+  secondsUntilNextMinute,
+} from "./rate-window"
 
 export function requireApiKey(requiredScope: ApiKeyScope): MiddlewareHandler {
   return async (c, next) => {

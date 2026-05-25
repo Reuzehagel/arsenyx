@@ -107,8 +107,11 @@ const LOCALHOST_RE = /^localhost$/i
 // link-local space. The trailing `\.\d` requirement rules out hostnames like
 // `127.example.com` (which the URL parser accepts as a regular DNS name) so
 // only real IPv4 literals are rejected.
+// `100.64.0.0/10` (2nd octet 64–127) is CGNAT space — routable on many
+// hosting networks and a valid SSRF target, so block it alongside the RFC1918
+// / loopback / link-local ranges.
 const PRIVATE_IP_RE =
-  /^(0|10|127|192\.168|169\.254|172\.(1[6-9]|2\d|3[01]))\.\d/
+  /^(0|10|127|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])|192\.168|169\.254|172\.(1[6-9]|2\d|3[01]))\.\d/
 // Anything that parses as a single integer or 0x… hex literal can resolve to
 // an arbitrary IPv4 (e.g. `2130706433` → 127.0.0.1, `0x7f000001` → 127.0.0.1).
 // Hostnames in legitimate image CDNs always contain at least one alphabetic
@@ -131,13 +134,17 @@ export function validateExternalUrl(v: unknown): string | null {
 
   if (parsed.protocol !== "https:") return null
   if (!parsed.hostname) return null
-  if (LOCALHOST_RE.test(parsed.hostname)) return null
-  if (PRIVATE_TLD_RE.test(parsed.hostname)) return null
-  if (PRIVATE_IP_RE.test(parsed.hostname)) return null
-  if (NUMERIC_HOST_RE.test(parsed.hostname)) return null
+  // Lowercase and strip a single trailing dot (the absolute-FQDN form, e.g.
+  // `localhost.`) before the guards — otherwise `https://localhost./` slips
+  // past the anchored localhost/private-TLD checks.
+  const host = parsed.hostname.toLowerCase().replace(/\.$/, "")
+  if (LOCALHOST_RE.test(host)) return null
+  if (PRIVATE_TLD_RE.test(host)) return null
+  if (PRIVATE_IP_RE.test(host)) return null
+  if (NUMERIC_HOST_RE.test(host)) return null
   // Bare IPv6 literals and userinfo (`user:pw@host`) aren't accepted — too
   // easy to use as a vector and no legitimate image host uses them.
-  if (parsed.hostname.startsWith("[")) return null
+  if (host.startsWith("[")) return null
   if (parsed.username || parsed.password) return null
 
   return parsed.toString()

@@ -1,5 +1,6 @@
 import { Hono } from "hono"
 
+import { SafeFetchError, safeFetch } from "../lib/safe-fetch"
 import { validateExternalUrl } from "../lib/validate"
 
 // Server-side image proxy. The browser hits api.arsenyx.com/img instead of
@@ -27,67 +28,30 @@ img.get("/", async (c) => {
   const validated = url ? validateExternalUrl(url) : null
   if (!validated) return c.json({ error: "invalid_url" }, 400)
 
-  const ctrl = new AbortController()
-  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS)
-
   let upstream: Response
   try {
-    upstream = await fetch(validated, {
-      signal: ctrl.signal,
-      // Manual redirect handling so we can re-validate each Location target —
-      // an attacker-controlled host could 302 us to a private IP otherwise.
-      redirect: "manual",
+    upstream = await safeFetch(validated, {
+      isAllowed: (u) => validateExternalUrl(u.href) !== null,
+      maxBytes: MAX_BYTES,
+      timeoutMs: TIMEOUT_MS,
+      maxRedirects: 3,
       headers: { accept: "image/*" },
       cf: { cacheTtl: 86400, cacheEverything: true },
-    } as RequestInit)
-  } catch {
-    clearTimeout(timer)
-    return c.json({ error: "upstream_failed" }, 502)
-  }
-  clearTimeout(timer)
-
-  // Follow up to 3 redirects manually, validating each hop.
-  let hops = 0
-  while (
-    upstream.status >= 300 &&
-    upstream.status < 400 &&
-    hops < 3
-  ) {
-    const loc = upstream.headers.get("location")
-    const next = loc ? validateExternalUrl(loc) : null
-    if (!next) return c.json({ error: "bad_redirect" }, 502)
-    hops += 1
-    const hopCtrl = new AbortController()
-    const hopTimer = setTimeout(() => hopCtrl.abort(), TIMEOUT_MS)
-    try {
-      upstream = await fetch(next, {
-        signal: hopCtrl.signal,
-        redirect: "manual",
-        headers: { accept: "image/*" },
-        cf: { cacheTtl: 86400, cacheEverything: true },
-      } as RequestInit)
-    } catch {
-      clearTimeout(hopTimer)
-      return c.json({ error: "upstream_failed" }, 502)
+    })
+  } catch (err) {
+    if (err instanceof SafeFetchError) {
+      if (err.code === "invalid_redirect")
+        return c.json({ error: "bad_redirect" }, 502)
+      if (err.code === "too_large") return c.json({ error: "too_large" }, 413)
+      if (err.code === "upstream_status")
+        return c.json({ error: "upstream_status", status: err.status }, 502)
     }
-    clearTimeout(hopTimer)
-  }
-
-  if (!upstream.ok) {
-    return c.json({ error: "upstream_status", status: upstream.status }, 502)
+    return c.json({ error: "upstream_failed" }, 502)
   }
 
   const contentType = upstream.headers.get("content-type") ?? ""
   if (!contentType.toLowerCase().startsWith("image/")) {
     return c.json({ error: "not_image" }, 415)
-  }
-
-  const declared = upstream.headers.get("content-length")
-  if (declared) {
-    const n = parseInt(declared, 10)
-    if (Number.isFinite(n) && n > MAX_BYTES) {
-      return c.json({ error: "too_large" }, 413)
-    }
   }
 
   const reader = upstream.body?.getReader()

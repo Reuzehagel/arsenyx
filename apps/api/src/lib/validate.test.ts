@@ -1,7 +1,12 @@
 import type { Context } from "hono"
 import { describe, expect, it } from "vitest"
 
-import { MAX_JSON_BYTES, parseJsonBody, trimToMax } from "./validate"
+import {
+  MAX_JSON_BYTES,
+  parseJsonBody,
+  trimToMax,
+  validateExternalUrl,
+} from "./validate"
 
 // Minimal Context shim — parseJsonBody only touches `req.header()` and `req.raw.body`.
 function fakeContext(init: {
@@ -152,5 +157,65 @@ describe("trimToMax", () => {
 
   it("preserves strings shorter than max", () => {
     expect(trimToMax("hi", 100)).toBe("hi")
+  })
+})
+
+describe("validateExternalUrl", () => {
+  it("accepts a normal https image URL", () => {
+    expect(validateExternalUrl("https://cdn.example.com/a.png")).toBe(
+      "https://cdn.example.com/a.png",
+    )
+  })
+
+  it("rejects non-https and non-strings", () => {
+    expect(validateExternalUrl("http://example.com/a.png")).toBeNull()
+    expect(validateExternalUrl("ftp://example.com/a.png")).toBeNull()
+    expect(validateExternalUrl(123)).toBeNull()
+    expect(validateExternalUrl("not a url")).toBeNull()
+  })
+
+  it("rejects the CGNAT range 100.64.0.0/10 but allows its neighbours", () => {
+    expect(validateExternalUrl("https://100.64.0.1/x.png")).toBeNull()
+    expect(validateExternalUrl("https://100.127.255.255/x.png")).toBeNull()
+    // Just outside the /10 on either side → public, allowed.
+    expect(validateExternalUrl("https://100.63.0.1/x.png")).toBe(
+      "https://100.63.0.1/x.png",
+    )
+    expect(validateExternalUrl("https://100.128.0.1/x.png")).toBe(
+      "https://100.128.0.1/x.png",
+    )
+  })
+
+  it("rejects RFC1918 / loopback / link-local literals", () => {
+    expect(validateExternalUrl("https://127.0.0.1/x.png")).toBeNull()
+    expect(validateExternalUrl("https://10.0.0.1/x.png")).toBeNull()
+    expect(validateExternalUrl("https://192.168.1.1/x.png")).toBeNull()
+    expect(validateExternalUrl("https://169.254.1.1/x.png")).toBeNull()
+    expect(validateExternalUrl("https://172.16.0.1/x.png")).toBeNull()
+  })
+
+  it("rejects localhost and private TLDs including the trailing-dot form", () => {
+    expect(validateExternalUrl("https://localhost/x.png")).toBeNull()
+    expect(validateExternalUrl("https://LOCALHOST/x.png")).toBeNull()
+    expect(validateExternalUrl("https://localhost./x.png")).toBeNull()
+    expect(validateExternalUrl("https://api.internal/x.png")).toBeNull()
+    expect(validateExternalUrl("https://api.internal./x.png")).toBeNull()
+    expect(validateExternalUrl("https://box.local/x.png")).toBeNull()
+  })
+
+  it("rejects numeric / userinfo / IPv6 hosts", () => {
+    expect(validateExternalUrl("https://2130706433/x.png")).toBeNull()
+    expect(validateExternalUrl("https://0x7f000001/x.png")).toBeNull()
+    expect(validateExternalUrl("https://user:pw@example.com/x.png")).toBeNull()
+    expect(validateExternalUrl("https://[::1]/x.png")).toBeNull()
+  })
+
+  it("does not over-block public hosts containing private-ish labels", () => {
+    expect(validateExternalUrl("https://cdn.local-cdn.example.com/x.png")).toBe(
+      "https://cdn.local-cdn.example.com/x.png",
+    )
+    expect(validateExternalUrl("https://localhost.example.com/x.png")).toBe(
+      "https://localhost.example.com/x.png",
+    )
   })
 })

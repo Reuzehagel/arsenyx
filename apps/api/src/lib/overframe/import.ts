@@ -1,8 +1,15 @@
+import { encodeOverframeSlotId } from "@arsenyx/shared/warframe/overframe-slots"
+import type {
+  OverframeImportWarning,
+  OverframeRawSlot,
+  OverframeScrapeResponse,
+} from "@arsenyx/shared/warframe/overframe-wire"
+
+import { SafeFetchError, safeFetch } from "../safe-fetch"
 import { decodeOverframeBuildString } from "./decode"
 import { getOverframeItemsMap } from "./items-map"
 import { extractOverframeDataFromHtml } from "./next-data"
 import { mapOverframePolarityCode } from "./polarity"
-import type { OverframeImportWarning } from "./types"
 
 export function isValidOverframeBuildUrl(value: string): boolean {
   try {
@@ -15,73 +22,52 @@ export function isValidOverframeBuildUrl(value: string): boolean {
   }
 }
 
-// Mirror of the hardening in routes/img.ts: cap fetch wall-time, cap response
-// size, follow redirects manually so a 3xx chain can't escape overframe.gg.
-// Without these, a logged-in user (or a banned holder of an old PAT) could
-// point this scrape at a page that streams forever, redirects to a private
-// host, or returns gigabytes of HTML.
+// Fetch wall-time / response-size / redirect caps. Without these a logged-in
+// user (or a banned holder of an old PAT) could point this scrape at a page
+// that streams forever, redirects to a private host, or returns gigabytes of
+// HTML. `safeFetch` enforces the timeout + per-hop allowlist; the byte cap is
+// re-applied while streaming the body below.
 const FETCH_TIMEOUT_MS = 8000
 const MAX_HTML_BYTES = 1024 * 1024 // 1 MB — Next.js pages are large but bounded.
 const MAX_REDIRECTS = 5
 
-async function fetchOverframeOnce(url: string): Promise<Response> {
-  const ctrl = new AbortController()
-  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS)
+function safeFetchMessage(err: SafeFetchError): string {
+  switch (err.code) {
+    case "invalid_redirect":
+      return "redirect off-host"
+    case "too_many_redirects":
+      return "too many redirects"
+    case "upstream_status":
+      return `HTTP ${err.status ?? "error"}`
+    case "too_large":
+      return "response too large"
+    case "fetch_failed":
+      return "request failed"
+  }
+}
+
+async function fetchOverframeHtml(url: string): Promise<string> {
+  let res: Response
   try {
-    return await fetch(url, {
-      signal: ctrl.signal,
-      // Manual so we can re-validate every Location against
-      // isValidOverframeBuildUrl. A `redirect: "follow"` here would let
-      // Overframe (or anyone they 302 to) reach an arbitrary host on our
-      // behalf — same threat the image proxy guards against.
-      redirect: "manual",
+    res = await safeFetch(url, {
+      // Each redirect target gets the same gate as the caller's initial URL.
+      isAllowed: (u) => isValidOverframeBuildUrl(u.href),
+      maxBytes: MAX_HTML_BYTES,
+      timeoutMs: FETCH_TIMEOUT_MS,
+      maxRedirects: MAX_REDIRECTS,
       headers: {
         "user-agent":
           "Mozilla/5.0 (compatible; ArsenyxBot/1.0; +https://arsenyx.com)",
         accept: "text/html,application/xhtml+xml",
       },
     })
-  } finally {
-    clearTimeout(timer)
-  }
-}
-
-async function fetchOverframeHtml(url: string): Promise<string> {
-  // Caller already validated `url` via isValidOverframeBuildUrl; each
-  // redirect target gets the same gate below.
-  let current = url
-  let res = await fetchOverframeOnce(current)
-
-  let hops = 0
-  while (res.status >= 300 && res.status < 400 && hops < MAX_REDIRECTS) {
-    const loc = res.headers.get("location")
-    let nextUrl: string
-    try {
-      nextUrl = new URL(loc ?? "", current).toString()
-    } catch {
-      throw new Error("Overframe fetch failed: bad redirect target")
+  } catch (err) {
+    if (err instanceof SafeFetchError) {
+      throw new Error(`Overframe fetch failed: ${safeFetchMessage(err)}`, {
+        cause: err,
+      })
     }
-    if (!isValidOverframeBuildUrl(nextUrl)) {
-      throw new Error("Overframe fetch failed: redirect off-host")
-    }
-    hops += 1
-    current = nextUrl
-    res = await fetchOverframeOnce(current)
-  }
-
-  if (res.status >= 300 && res.status < 400) {
-    throw new Error("Overframe fetch failed: too many redirects")
-  }
-  if (!res.ok) {
-    throw new Error(`Overframe fetch failed: ${res.status} ${res.statusText}`)
-  }
-
-  const declared = res.headers.get("content-length")
-  if (declared) {
-    const n = parseInt(declared, 10)
-    if (Number.isFinite(n) && n > MAX_HTML_BYTES) {
-      throw new Error("Overframe fetch failed: response too large")
-    }
+    throw err
   }
 
   const reader = res.body?.getReader()
@@ -127,21 +113,6 @@ type OverframeSlotLike = {
   polarity?: unknown
 }
 
-/**
- * Raw slot entry as emitted by Overframe. The client interprets slot_id
- * (1-8 = normal, 9/10 = aura/exilus or exilus/arcane depending on category,
- * 11+ = arcane) once it knows the matched item's category.
- */
-export interface OverframeRawSlot {
-  slot_id: number
-  overframeId: string | null
-  overframeName?: string
-  rank: number
-  polarityCode: number
-  /** Mapped Polarity string when code is known, else undefined. */
-  polarity?: string
-}
-
 function parseRawSlots(slots: unknown): OverframeRawSlot[] {
   if (!Array.isArray(slots)) return []
   const out: OverframeRawSlot[] = []
@@ -170,26 +141,6 @@ function parseRawSlots(slots: unknown): OverframeRawSlot[] {
     })
   }
   return out
-}
-
-/**
- * Raw scrape response. Client is responsible for matching item/mods/arcanes
- * against WFCD data and interpreting slot_id layout.
- */
-export interface OverframeScrapeResponse {
-  source: {
-    url: string
-    pageTitle?: string
-    pageDescription?: string
-    guideDescription?: string
-    buildId?: string
-    buildString?: string
-  }
-  itemName?: string
-  formaCount: number | null
-  slots: OverframeRawSlot[]
-  helminthAbility?: { slotIndex: number; uniqueName: string }
-  warnings: OverframeImportWarning[]
 }
 
 export async function scrapeOverframeBuild(
@@ -265,21 +216,13 @@ export async function scrapeOverframeBuild(
     try {
       const decoded = decodeOverframeBuildString(extracted.buildString)
       slots = decoded.slots.map((s) => {
-        // Map (slotType, slotIndex) back to slot_id for a uniform shape.
-        // TODO: warframe-shaped only — companion/necramech buildstring fallbacks
-        // will emit wrong slot_ids here. Mirror of the decoder in
-        // apps/web/src/lib/overframe/index.ts `interpretSlot`; share once a
-        // second case forces the abstraction. Related: #57.
-        const slot_id =
-          s.slotType === "normal"
-            ? 8 - s.slotIndex
-            : s.slotType === "aura"
-              ? 9
-              : s.slotType === "exilus"
-                ? 10
-                : 11 + s.slotIndex
+        // Map (slotType, slotIndex) back to a uniform slot_id via the shared,
+        // bidirectional mapping. The buildstring fallback can't know the item
+        // category yet (matching happens client-side), so it assumes the
+        // warframe layout — the same assumption this code always made, now
+        // single-sourced with the web interpreter via `encodeOverframeSlotId`.
         return {
-          slot_id,
+          slot_id: encodeOverframeSlotId(s.slotType, s.slotIndex, "warframes"),
           overframeId: s.overframeId,
           rank: s.rank,
           polarityCode: 0,
