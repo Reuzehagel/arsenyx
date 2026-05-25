@@ -17,7 +17,8 @@ just setup              # first-run wizard — see CONTRIBUTING.md
 ```bash
 bun --cwd apps/web run build      # Vite production build — run before claiming done
 bunx --cwd apps/api tsc --noEmit  # type-check the API (no dev-server smoke)
-just check                        # oxlint + oxfmt --check across all three workspaces
+just check                        # typecheck + oxlint + oxfmt --check (also generates routeTree.gen.ts if missing)
+just gen                          # generate apps/web/src/routeTree.gen.ts only (no-op if present)
 just fix                          # oxlint --fix + oxfmt --write
 just test                         # vitest across apps/web, apps/api, packages/shared
 ```

@@ -57,8 +57,21 @@ setup:
 update-data:
     bun run update-data
 
+# Ensure apps/web/src/routeTree.gen.ts exists. Vite's router-plugin
+# generates it during build, but `bun run typecheck` (and editors) need
+# it on a fresh checkout. No-op once present — first run takes ~8s.
+[unix]
+[working-directory('apps/web')]
+gen:
+    test -f src/routeTree.gen.ts || bun run build >/dev/null
+
+[windows]
+[working-directory('apps/web')]
+gen:
+    if (-not (Test-Path src/routeTree.gen.ts)) { bun run build | Out-Null }
+
 # Typecheck + lint + format-check across apps/web, apps/api, packages/shared.
-check:
+check: gen
     bun run typecheck
     bun run lint
     bun run fmt:check
