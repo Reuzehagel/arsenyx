@@ -77,7 +77,15 @@ export function encodeOverframeSlotId(
 ): number {
   const warframeLike = isWarframeLike(category)
   if (!warframeLike && !hasExilusSlot(category)) {
-    // companions / archwing / railjack — only normal slots are addressable.
+    // companions / archwing / railjack only have normal slots. Asking for an
+    // aura/exilus/arcane slot id on these categories is a programming error
+    // (the slot doesn't exist) — throw rather than silently return a bogus
+    // normal slot id from the math below.
+    if (slotType !== "normal") {
+      throw new Error(
+        `encodeOverframeSlotId: ${category} has no ${slotType} slot`,
+      )
+    }
     return getNormalSlotCount(category) - slotIndex
   }
   switch (slotType) {

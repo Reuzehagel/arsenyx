@@ -68,4 +68,14 @@ describe("overframe slot mapping round-trips", () => {
     // Companions have no aura/exilus, so slot_id 11 is unmapped.
     expect(decodeOverframeSlotId(11, "companions")).toBeNull()
   })
+
+  it("throws when asked to encode a non-existent slot type for a category", () => {
+    // Companions/archwing/railjack only have normal slots. Asking for aura/
+    // exilus/arcane is a programming error — must throw, not return garbage.
+    expect(() => encodeOverframeSlotId("arcane", 0, "companions")).toThrow()
+    expect(() => encodeOverframeSlotId("aura", 0, "archwing")).toThrow()
+    expect(() => encodeOverframeSlotId("exilus", 0, "railjack")).toThrow()
+    // Warframes still accept every slot type.
+    expect(() => encodeOverframeSlotId("arcane", 0, "warframes")).not.toThrow()
+  })
 })
