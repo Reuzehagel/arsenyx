@@ -10,14 +10,7 @@ import { API_URL } from "./constants"
 // arbitrary external URLs CF returns 403. We now route through a tiny Hono
 // handler at `${API_URL}/img?u=<encoded>` (see apps/api/src/routes/img.ts)
 // that fetches server-side, enforces a size cap, and refuses non-image
-// content types. The width/height/fit params are accepted for API stability
-// but currently unused — the proxy returns the source bytes verbatim.
-
-type ProxyOptions = {
-  width?: number
-  height?: number
-  fit?: "cover" | "contain" | "scale-down" | "crop"
-}
+// content types. The proxy returns the source bytes verbatim (no resizing).
 
 function isProxyable(src: string): boolean {
   // Absolute http(s) OR protocol-relative (`//host/...`) URLs get proxied.
@@ -25,10 +18,7 @@ function isProxyable(src: string): boolean {
   return /^(https?:)?\/\//i.test(src)
 }
 
-export function proxyImage(
-  src: string | null | undefined,
-  _opts: ProxyOptions = {},
-): string | null {
+export function proxyImage(src: string | null | undefined): string | null {
   if (!src) return null
   if (!isProxyable(src)) return src
   // Normalize a protocol-relative URL (`//host/x`) to https before proxying.

@@ -11,6 +11,7 @@ import {
 import { DelayedSuspense } from "@/components/delayed-fallback"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
+import { RouteNotFound } from "@/components/route-not-found"
 import { Badge } from "@/components/ui/badge"
 import { UserAvatar } from "@/components/user-avatar"
 import { type BuildListSort } from "@/lib/builds-list-query"
@@ -184,15 +185,9 @@ function ProfileBadges({ badges }: { badges: Profile["badges"] }) {
 
 function ProfileNotFound() {
   return (
-    <div className="relative flex min-h-screen flex-col">
-      <Header />
-      <main className="wrap flex flex-1 flex-col items-center justify-center gap-3 py-12">
-        <h1 className="text-2xl font-semibold">User not found</h1>
-        <p className="text-muted-foreground">
-          This profile may not exist or has been deleted.
-        </p>
-      </main>
-      <Footer />
-    </div>
+    <RouteNotFound
+      title="User not found"
+      message="This profile may not exist or has been deleted."
+    />
   )
 }

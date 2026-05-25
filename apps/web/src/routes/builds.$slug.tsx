@@ -59,6 +59,7 @@ import { ShardSlot } from "@/components/build-editor/shard-controls"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { MarkdownBody } from "@/components/markdown-body"
+import { RouteNotFound } from "@/components/route-not-found"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -1494,15 +1495,9 @@ function EmbedLichStrip({
 
 function BuildNotFound() {
   return (
-    <div className="relative flex min-h-screen flex-col">
-      <Header />
-      <main className="wrap flex flex-1 flex-col items-center justify-center gap-3 py-12">
-        <h1 className="text-2xl font-semibold">Build not found</h1>
-        <p className="text-muted-foreground">
-          This build may have been deleted or is private.
-        </p>
-      </main>
-      <Footer />
-    </div>
+    <RouteNotFound
+      title="Build not found"
+      message="This build may have been deleted or is private."
+    />
   )
 }

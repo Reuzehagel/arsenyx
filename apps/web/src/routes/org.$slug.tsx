@@ -13,6 +13,7 @@ import { DelayedSuspense } from "@/components/delayed-fallback"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { Link } from "@/components/link"
+import { RouteNotFound } from "@/components/route-not-found"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { UserAvatar } from "@/components/user-avatar"
@@ -203,15 +204,9 @@ function Stat({ label, value }: { label: string; value: number }) {
 
 function OrgNotFound() {
   return (
-    <div className="relative flex min-h-screen flex-col">
-      <Header />
-      <main className="wrap flex flex-1 flex-col items-center justify-center gap-3 py-12">
-        <h1 className="text-2xl font-semibold">Organization not found</h1>
-        <p className="text-muted-foreground">
-          This organization may not exist or has been deleted.
-        </p>
-      </main>
-      <Footer />
-    </div>
+    <RouteNotFound
+      title="Organization not found"
+      message="This organization may not exist or has been deleted."
+    />
   )
 }

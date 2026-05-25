@@ -73,7 +73,7 @@ const components: Components = {
     // browser never fetches a third-party URL directly. Without this, a
     // malicious guide author can dox every visitor (IP + Referer = build
     // slug) by embedding `![x](https://attacker.com/p.png)`.
-    const proxied = proxyImage(cleanSrc, { width: 1200, fit: "scale-down" })
+    const proxied = proxyImage(cleanSrc)
     return (
       <img
         {...rest}

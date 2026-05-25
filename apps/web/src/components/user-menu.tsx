@@ -64,7 +64,7 @@ export function UserMenu() {
         >
           {user.image ? (
             <img
-              src={proxyImage(user.image, { width: 28, height: 28 }) ?? ""}
+              src={proxyImage(user.image) ?? ""}
               alt=""
               className="size-7 rounded-full object-cover"
             />

@@ -6,13 +6,12 @@ import {
 } from "@tanstack/react-router"
 
 import { DelayedSuspense } from "@/components/delayed-fallback"
-import { Footer } from "@/components/footer"
-import { Header } from "@/components/header"
 import { ItemDetailContent } from "@/components/item-detail/content"
 import {
   ItemDetailBreadcrumb,
   ItemDetailFrame,
 } from "@/components/item-detail/frame"
+import { RouteNotFound } from "@/components/route-not-found"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { itemQuery } from "@/lib/item-query"
@@ -112,24 +111,18 @@ function ItemDetailSkeleton() {
 
 function ItemNotFound() {
   return (
-    <div className="relative flex min-h-screen flex-col">
-      <Header />
-      <main className="flex-1">
-        <div className="wrap flex flex-col items-center gap-4 py-20 text-center">
-          <h1 className="text-3xl font-bold tracking-tight">Item not found</h1>
-          <p className="text-muted-foreground">
-            We couldn't find an item at that path.
-          </p>
-          <Button
-            render={
-              <RouterLink to="/browse" search={{ category: "warframes" }} />
-            }
-          >
-            Back to Browse
-          </Button>
-        </div>
-      </main>
-      <Footer />
-    </div>
+    <RouteNotFound
+      title="Item not found"
+      message="We couldn't find an item at that path."
+      action={
+        <Button
+          render={
+            <RouterLink to="/browse" search={{ category: "warframes" }} />
+          }
+        >
+          Back to Browse
+        </Button>
+      }
+    />
   )
 }
