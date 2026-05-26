@@ -72,6 +72,7 @@ import { useBuildDerived, getBuildLayout } from "./build-derived"
 import { BuildSurface } from "./build-surface"
 import {
   computeMultiVariantPlan,
+  computeReactiveAutoFormaPlan,
   type FullAutoFormaPlan,
 } from "./multi-variant-auto-forma"
 import { DragController } from "./drag-controller"
@@ -509,18 +510,15 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     capacitySharedInputs,
   } = useBuildDerived({ item, category, layout, slots, allArcanes, hasReactor })
 
-  // Multi-variant auto-forma plan. Forma is build-wide in Warframe — a
-  // single `formaPolarities` assignment must satisfy every variant — so
-  // the planner overlays the active variant's live editor state onto the
-  // saved `variants[]` array and asks for a plan across the whole set.
+  // Reactive auto-forma plan — fast (stage 1 + greedy fallback only) so it
+  // runs on every render without blocking input. Stages 2/3 (rearrangement,
+  // Omni Forma) are kicked off lazily inside the click handler so the heavy
+  // search doesn't lag mod placement.
   //
-  // Stages, in escalation order:
-  //   1. forma-only, no movement — applies silently on click
-  //   2. forma + normal-slot rearrangement — confirms via dialog
-  //   3. + Omni Forma (`"any"`) — confirms via dialog with Omni callout
-  //
-  // Returns `null` when even stage 3 can't fit every variant (rare — usually
-  // a build that's fundamentally over-cap regardless of forma).
+  // Forma is build-wide in Warframe — every variant shares one
+  // `formaPolarities` — so the planner overlays the active variant's live
+  // editor state onto the saved `variants[]` array and considers the whole
+  // set.
   const allVariantSlots = useMemo(
     () =>
       variants.map((v, i) =>
@@ -528,21 +526,13 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       ),
     [variants, clampedActiveIndex, slots.placed],
   )
-  const autoFormaPlan = useMemo<FullAutoFormaPlan | null>(() => {
+  const reactiveAutoFormaPlan = useMemo<FullAutoFormaPlan | null>(() => {
     if (capacity.used <= capacity.max) return null
-    const plan = computeMultiVariantPlan({
+    return computeReactiveAutoFormaPlan({
       ...capacitySharedInputs,
       formaPolarities: slots.formaPolarities,
       variantSlots: allVariantSlots,
     })
-    if (!plan) return null
-    // Empty plan (stage 1 returned "already feasible") means no work to do —
-    // but capacity is over for the active variant, so this shouldn't happen.
-    // Defensive: drop the button rather than show "Auto-forma (0)".
-    if (plan.steps.length === 0 && plan.rearrangements.length === 0) {
-      return null
-    }
-    return plan
   }, [
     capacity.used,
     capacity.max,
@@ -552,6 +542,8 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   ])
 
   const [autoFormaDialogOpen, setAutoFormaDialogOpen] = useState(false)
+  const [pendingHeavyPlan, setPendingHeavyPlan] =
+    useState<FullAutoFormaPlan | null>(null)
 
   const applyAutoFormaPlan = (plan: FullAutoFormaPlan) => {
     // Apply forma changes first so the active-variant capacity computation
@@ -575,13 +567,21 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   }
 
   const handleAutoForma = () => {
-    if (!autoFormaPlan) return
-    if (autoFormaPlan.stage === 1) {
-      // Forma-only — silent apply, matches the original single-variant UX.
-      applyAutoFormaPlan(autoFormaPlan)
+    // Fast path: reactive plan exists → silent apply. Matches the single-
+    // variant UX where the button always applies forma-only improvements.
+    if (reactiveAutoFormaPlan && reactiveAutoFormaPlan.steps.length > 0) {
+      applyAutoFormaPlan(reactiveAutoFormaPlan)
       return
     }
-    // Stages 2/3 move user mods or burn Omni Forma — show a preview first.
+    // Reactive plan empty — run the full stages 1→2→3 cascade on click.
+    // Synchronous, but only at click time so it doesn't lag editing.
+    const plan = computeMultiVariantPlan({
+      ...capacitySharedInputs,
+      formaPolarities: slots.formaPolarities,
+      variantSlots: allVariantSlots,
+    })
+    if (!plan) return // No fix possible; could surface a toast later.
+    setPendingHeavyPlan(plan)
     setAutoFormaDialogOpen(true)
   }
 
@@ -968,8 +968,8 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
               category,
               capacityUsed: capacity.used,
               capacityMax: capacity.max,
-              autoFormaCount: autoFormaPlan?.steps.length ?? 0,
-              autoFormaStage: autoFormaPlan?.stage,
+              autoFormaCount: reactiveAutoFormaPlan?.steps.length ?? 0,
+              autoFormaStage: reactiveAutoFormaPlan?.stage,
               onAutoForma: handleAutoForma,
               hasReactor,
               onToggleReactor: () => setHasReactor((v) => !v),
@@ -1121,14 +1121,17 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
 
       {riven.dialog}
 
-      {autoFormaPlan && autoFormaPlan.stage !== 1 && (
+      {pendingHeavyPlan && (
         <AutoFormaDialog
           open={autoFormaDialogOpen}
-          onOpenChange={setAutoFormaDialogOpen}
-          plan={autoFormaPlan}
+          onOpenChange={(open) => {
+            setAutoFormaDialogOpen(open)
+            if (!open) setPendingHeavyPlan(null)
+          }}
+          plan={pendingHeavyPlan}
           variantLabels={variants.map((v) => v.label)}
           originalVariantSlots={allVariantSlots}
-          onApply={() => applyAutoFormaPlan(autoFormaPlan)}
+          onApply={() => applyAutoFormaPlan(pendingHeavyPlan)}
         />
       )}
     </>

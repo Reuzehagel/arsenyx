@@ -19,16 +19,20 @@ export function CapacityBar({
 }) {
   const pctVal = max > 0 ? Math.min(100, (used / max) * 100) : 0
   const over = used > max
-  const showAutoForma =
-    over && onAutoForma && autoFormaCount !== undefined && autoFormaCount > 0
-  const buttonLabel =
-    autoFormaStage === 1 || autoFormaStage === undefined
-      ? `Auto-forma (${autoFormaCount})`
-      : "Auto-fix…"
-  const buttonTitle =
-    autoFormaStage === 1 || autoFormaStage === undefined
-      ? "Apply forma to the most expensive slots until capacity fits"
-      : "Open a preview of the cross-variant fix (forma + rearrangement)"
+  // Show the button whenever capacity is over. If the cheap reactive
+  // planner found steps, label with the count and apply silently. If not,
+  // label as "Auto-fix…" — clicking kicks off the heavier multi-variant
+  // search (rearrangement + Omni Forma) and opens a preview dialog.
+  const showAutoForma = over && !!onAutoForma
+  const hasFastPlan = autoFormaCount !== undefined && autoFormaCount > 0
+  const buttonLabel = hasFastPlan
+    ? `Auto-forma (${autoFormaCount})`
+    : "Auto-fix…"
+  const buttonTitle = hasFastPlan
+    ? "Apply forma to the most expensive slots until capacity fits"
+    : "Open a preview of the cross-variant fix (forma + rearrangement)"
+  // Suppress an unused-prop warning until/unless we surface a stage badge.
+  void autoFormaStage
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between text-xs">

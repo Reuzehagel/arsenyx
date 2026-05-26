@@ -597,7 +597,11 @@ function searchWithRearrangement(
   // builds (≤ 10 contested slots, ≤ 3 variants, ≤ 8 normal mods each) in
   // well under a frame; pathological inputs that exceed it return null
   // promptly instead of locking the editor.
-  const budget: IterBudget = { count: 0, cap: 250_000 }
+  // Single shared budget across the outer forma-combo search and the inner
+  // per-variant permutation search. 50k operations covers realistic builds
+  // (≤ 6 mods per variant, ≤ 3 variants); pathological inputs return null
+  // in well under a frame instead of locking the editor on click.
+  const budget: IterBudget = { count: 0, cap: 50_000 }
   // Cap on the number of new formas we're willing to add. 5 is more than
   // any realistic Warframe build needs (most peak at 3); higher values
   // explode the combination space without practical benefit.
@@ -621,10 +625,138 @@ function searchWithRearrangement(
 }
 
 /**
- * Top-level auto-forma planner. Tries stages 1 → 2 → 3 in order; returns
- * the cheapest tier that produces a feasible plan, or `null` if even Omni
- * Forma can't make every variant fit (extremely rare — usually means the
- * build is fundamentally over capacity even with full half-drain bonuses).
+ * Greedy partial-fix fallback. Walks slot-by-slot, applies the single best
+ * forma that improves the worst variant's headroom without making any
+ * other variant worse, repeating until no slot helps. May return a plan
+ * that *improves* capacity without fully fitting it — matches the original
+ * single-variant auto-forma's UX, where the button shipped any reduction.
+ *
+ * O(slots² × variants × placed-mods) per slot examined, no permutation —
+ * safe to call on every render even for heavy builds.
+ */
+function computeBestEffortPlan(
+  input: MultiVariantInput,
+): FullAutoFormaPlan | null {
+  const shared = sharedFrom(input)
+  const formaPolarities: Partial<Record<SlotId, Polarity>> = {
+    ...input.formaPolarities,
+  }
+  const headroom = () => {
+    let worst = Infinity
+    for (const placed of input.variantSlots) {
+      const cap = calculateCapacity({ ...shared, placed, formaPolarities })
+      const h = cap.max - cap.used
+      if (h < worst) worst = h
+    }
+    return worst
+  }
+  const baseline = headroom()
+  if (baseline >= 0) return null // already fits
+
+  const steps: AutoFormaStep[] = []
+  // Per-variant baseline headroom — used to reject formas that make some
+  // other variant worse than it started.
+  const initialHeadrooms = input.variantSlots.map((placed) => {
+    const cap = calculateCapacity({
+      ...shared,
+      placed,
+      formaPolarities: input.formaPolarities,
+    })
+    return cap.max - cap.used
+  })
+
+  // Cap iterations to keep this strictly fast on the reactive path.
+  for (let pass = 0; pass < 12; pass++) {
+    const current = headroom()
+    if (current >= 0) break
+    let best:
+      | { id: SlotId; polarity: Polarity; headroom: number }
+      | null = null
+    // Consider forma-ing each placed mod's slot to its own polarity. Loop
+    // is O(variants × placed) and the trial capacity computation per
+    // candidate is cheap.
+    for (let v = 0; v < input.variantSlots.length; v++) {
+      for (const [rawId, mod] of Object.entries(input.variantSlots[v])) {
+        if (!mod) continue
+        const modPol = mod.mod.polarity
+        if (modPol === "any" || modPol === "universal") continue
+        const id = rawId as SlotId
+        if (formaPolarities[id] === modPol) continue
+        const trial: Partial<Record<SlotId, Polarity>> = {
+          ...formaPolarities,
+          [id]: modPol,
+        }
+        // Reject if any variant gets worse than its starting baseline.
+        let acceptable = true
+        let trialHeadroom = Infinity
+        for (let i = 0; i < input.variantSlots.length; i++) {
+          const cap = calculateCapacity({
+            ...shared,
+            placed: input.variantSlots[i],
+            formaPolarities: trial,
+          })
+          const h = cap.max - cap.used
+          if (h < initialHeadrooms[i]) {
+            acceptable = false
+            break
+          }
+          if (h < trialHeadroom) trialHeadroom = h
+        }
+        if (!acceptable) continue
+        if (trialHeadroom <= current) continue
+        if (!best || trialHeadroom > best.headroom) {
+          best = { id, polarity: modPol, headroom: trialHeadroom }
+        }
+      }
+    }
+    if (!best) break
+    formaPolarities[best.id] = best.polarity
+    steps.push({ id: best.id, polarity: best.polarity })
+  }
+
+  if (steps.length === 0) return null
+  return {
+    stage: 1,
+    formaPolarities,
+    steps,
+    rearrangements: [],
+    omniCount: 0,
+  }
+}
+
+/**
+ * Cheap reactive plan — runs stage 1 (exhaustive forma-only fit) first,
+ * falls back to a greedy partial fix if no full fit is possible. Safe to
+ * call on every render. Use `computeMultiVariantPlan` for the full
+ * stages 1→2→3 cascade (slow, only call on user click).
+ */
+export function computeReactiveAutoFormaPlan(
+  input: MultiVariantInput,
+): FullAutoFormaPlan | null {
+  const s1 = computeMultiVariantStage1Plan(input)
+  if (s1 && s1.steps.length > 0) {
+    return {
+      stage: 1,
+      formaPolarities: s1.formaPolarities,
+      steps: s1.steps,
+      rearrangements: [],
+      omniCount: 0,
+    }
+  }
+  // Stage 1 may have returned an empty-steps plan ("already feasible") —
+  // in that case we shouldn't fall back to best-effort.
+  if (s1) return null
+  return computeBestEffortPlan(input)
+}
+
+/**
+ * Full stages 1 → 2 → 3 cascade. Slow on infeasible inputs (up to a few
+ * hundred ms even with bounded search), so only invoke on a user click
+ * — not on every reactive render.
+ *
+ * Returns `null` when even Omni Forma can't make every variant fit
+ * (rare — usually a build that's fundamentally over capacity even with
+ * full half-drain bonuses everywhere).
  */
 export function computeMultiVariantPlan(
   input: MultiVariantInput,
