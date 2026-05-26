@@ -157,7 +157,10 @@ export const DAMAGE_TYPE_COLORS: Record<string, DamageType> = {
   DT_POISON_COLOR: "toxin",
   DT_TOXIN_COLOR: "toxin",
   DT_BLAST_COLOR: "blast",
+  DT_EXPLOSION_COLOR: "blast",
   DT_RADIATION_COLOR: "radiation",
+  // WFCD calls Void damage "radiant" in description tokens.
+  DT_RADIANT_COLOR: "void",
   DT_GAS_COLOR: "gas",
   DT_MAGNETIC_COLOR: "magnetic",
   DT_VIRAL_COLOR: "viral",

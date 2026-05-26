@@ -22,6 +22,7 @@ import {
 import { getArcaneImageUrl } from "@/lib/util/arcane-images"
 import { cn } from "@/lib/util/utils"
 
+import { StatText } from "../stat-text"
 import type { PlacedArcane } from "./use-arcane-slots"
 import { useRankHotkey } from "./use-rank-hotkey"
 
@@ -59,7 +60,7 @@ export function ArcaneCard({
   })
 
   const stats = statsAt(arcane, currentRank)
-  const formattedStats = stats.map((s) => s.replace(/\\n/g, "\n")).join("\n")
+  const formattedStats = stats.join("\n")
 
   const card = (
     <div
@@ -104,10 +105,10 @@ export function ArcaneCard({
           <div className="flex flex-col gap-2">
             <div className="font-medium">{arcane.name}</div>
             <div className="text-[10px] uppercase opacity-70">
-              {arcane.rarity} · Rank {currentRank}
+              Rank {currentRank}
             </div>
-            <div className="text-xs leading-relaxed whitespace-pre-wrap opacity-80">
-              {formattedStats}
+            <div className="text-xs leading-relaxed opacity-80">
+              <StatText text={formattedStats} />
             </div>
             {onRankChange && (
               <div className="border-t border-current/20 pt-1 text-[9px] opacity-50">
@@ -152,11 +153,9 @@ export function ArcaneSlot({
 
   const arcaneStats: string[] =
     placed && placed.arcane.levelStats && placed.arcane.levelStats.length > 0
-      ? (
-          placed.arcane.levelStats[
-            Math.min(placed.rank, placed.arcane.levelStats.length - 1)
-          ]?.stats ?? []
-        ).map((s) => s.replace(/\\n/g, "\n"))
+      ? (placed.arcane.levelStats[
+          Math.min(placed.rank, placed.arcane.levelStats.length - 1)
+        ]?.stats ?? [])
       : []
 
   const handleContextMenu = (e: MouseEvent) => {
@@ -234,13 +233,13 @@ export function ArcaneSlot({
                 <div>
                   <p className="text-sm font-semibold">{placed.arcane.name}</p>
                   <p className="text-muted-foreground text-[10px] uppercase">
-                    {placed.arcane.rarity} · Rank {placed.rank}
+                    Rank {placed.rank}
                   </p>
                 </div>
               </div>
               {arcaneStats.length > 0 && (
-                <p className="text-xs leading-relaxed whitespace-pre-wrap opacity-80">
-                  {arcaneStats.join("\n")}
+                <p className="text-xs leading-relaxed opacity-80">
+                  <StatText text={arcaneStats.join("\n")} />
                 </p>
               )}
             </div>

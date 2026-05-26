@@ -287,7 +287,6 @@ function decodeSlotGroup(g: EncodedSlotGroup): SlotGroupSource {
             uniqueName: a.u,
             name: "",
             rank: a.r,
-            rarity: "",
           }))
         : [],
   }

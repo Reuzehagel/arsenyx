@@ -145,7 +145,6 @@ export function savedDataToBuildState(state: EditorState): BuildState {
           name: a.arcane.name,
           imageName: a.arcane.imageName,
           rank: a.rank,
-          rarity: a.arcane.rarity,
         }
       : null,
   )

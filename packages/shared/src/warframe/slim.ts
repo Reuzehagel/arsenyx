@@ -122,7 +122,6 @@ const ARCANE_KEYS = [
   "uniqueName",
   "name",
   "imageName",
-  "rarity",
   "type",
   "tradable",
   "levelStats",

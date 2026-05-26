@@ -262,7 +262,6 @@ export interface Arcane {
   name: string
   description?: string
   imageName?: string
-  rarity: "Common" | "Uncommon" | "Rare" | "Legendary"
   type: string
   tradable: boolean
   levelStats?: Array<{ stats: string[] }>
@@ -322,7 +321,6 @@ export interface PlacedArcane {
   name: string
   imageName?: string
   rank: number
-  rarity?: string
 }
 
 export interface BuildState {
