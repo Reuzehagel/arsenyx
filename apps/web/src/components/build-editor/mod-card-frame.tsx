@@ -267,20 +267,17 @@ export function ModSlotBadge({
   slotKind,
   setIconUrl,
   rarity,
-  variant,
 }: {
   slotKind: SlotBadgeKind | null
   setIconUrl: string | null
   rarity: ModRarity
-  variant: CardVariant
 }) {
   if (!slotKind && !setIconUrl) return null
-  // The frame top is the same physical size in both variants, so keep the
-  // badge dimensions constant — otherwise the hover transition (compact →
-  // expanded) makes the icon jump in size, which reads as broken.
-  void variant
-
+  // Sizes intentionally don't depend on the parent card's compact/expanded
+  // variant: the frame top is the same physical size in both, and scaling
+  // the badge on hover would make it jump, which reads as broken.
   const slotSize = 20
+  // setSize:slotSize ≈ 3.4:1 matches the in-game ornament:glyph ratio.
   const setSize = 68
 
   return (

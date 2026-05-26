@@ -25,7 +25,11 @@ import {
   RankCompleteLine,
   RankDots,
 } from "./mod-card-frame"
-import { isAuraMod, isExilusCompatible } from "./use-build-slots"
+import {
+  isAuraMod,
+  isExilusCompatible,
+  isPlexusAuraMod,
+} from "./use-build-slots"
 
 /** Resolve which top-center badges to show on a mod card. Slot kind and
  * set crest are independent — a number of set mods are also exilus-
@@ -38,7 +42,10 @@ import { isAuraMod, isExilusCompatible } from "./use-build-slots"
  * the aura check must come first within the slot resolution. */
 function resolveSlotKind(mod: Mod): SlotBadgeKind | null {
   if (isStanceMod(mod)) return "stance"
-  if (isAuraMod(mod)) return "aura"
+  // Plexus aura mods occupy the railjack aura slot — they don't carry
+  // `compatName === "AURA"` (that's only on classic warframe auras), so
+  // they need the explicit plexus check or they'd render bare.
+  if (isAuraMod(mod) || isPlexusAuraMod(mod)) return "aura"
   if (isExilusCompatible(mod)) return "exilus"
   return null
 }
@@ -225,7 +232,6 @@ function CompactModCard({
         slotKind={badge.slotKind}
         setIconUrl={badge.setIconUrl}
         rarity={rarity}
-        variant="compact"
       />
 
       <div
@@ -324,7 +330,6 @@ function ExpandedModCard({
         slotKind={badge.slotKind}
         setIconUrl={badge.setIconUrl}
         rarity={rarity}
-        variant="expanded"
       />
 
       <div

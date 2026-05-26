@@ -13,6 +13,10 @@ unmodified silvery source.
 
 Re-run only when WFCD ships new crests:
     uv run --with pillow python scripts/tint-set-crests.py
+
+The per-pixel loop is interpreted Python — fine for the 18 small (128×64)
+icons here. If you ever want to tint a batch of larger sprites, rewrite
+with numpy array ops first; the current implementation will not scale.
 """
 
 from __future__ import annotations

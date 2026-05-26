@@ -14,5 +14,8 @@
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
+/mod-set-icons/*
+  Cache-Control: public, max-age=31536000, immutable
+
 /data/*
   Cache-Control: public, max-age=600, s-maxage=3600
