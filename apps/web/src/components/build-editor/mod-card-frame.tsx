@@ -254,16 +254,14 @@ export function DrainBadge({
 }
 
 /**
- * Small top-center badge marking a mod's slot type (Aura/Exilus/Stance) or
- * set membership. Renders the slot kind when present; otherwise renders the
- * set icon when `setIconUrl` is provided. Mirrors the in-game / Overframe
- * corner-icon convention (see issue #112).
+ * Top-center badges marking a mod's slot type (Aura/Exilus/Stance) and/or
+ * set membership. Both stack when both apply — the slot glyph sits inside
+ * the frame top while the set crest overlaps it above — mirroring the
+ * in-game / Overframe convention (see issue #112).
  *
- * Slot icons use `mask-image` so the source PNG color is discarded — we tint
- * to the mod's rarity color. Set icons render as a plain `<img>` because
- * each set crest is visually distinct (a mask would flatten that). The
- * `<img>` self-removes on 404 so missing wiki assets (Archon sets) don't
- * leave a broken-image glyph.
+ * Slot icons use `mask-image` so the source PNG color is discarded — we
+ * tint to the mod's rarity color. Set crest PNGs are pre-tinted offline
+ * by `scripts/tint-set-crests.py`, so they render as a plain `<img>`.
  */
 export function ModSlotBadge({
   slotKind,
@@ -282,61 +280,60 @@ export function ModSlotBadge({
   // expanded) makes the icon jump in size, which reads as broken.
   void variant
 
-  if (slotKind) {
-    const size = 20
-    return (
-      <div
-        className="pointer-events-none absolute left-1/2 z-30 -translate-x-1/2"
-        style={{ top: 7, width: size, height: size }}
-        aria-hidden
-      >
-        <div
-          className="h-full w-full"
-          style={{
-            backgroundColor: getRarityColor(rarity),
-            maskImage: `url(${getSlotBadgeUrl(slotKind)})`,
-            maskSize: "contain",
-            maskRepeat: "no-repeat",
-            maskPosition: "center",
-            WebkitMaskImage: `url(${getSlotBadgeUrl(slotKind)})`,
-            WebkitMaskSize: "contain",
-            WebkitMaskRepeat: "no-repeat",
-            WebkitMaskPosition: "center",
-            filter: "drop-shadow(0 0 2px rgba(0,0,0,0.9))",
-          }}
-        />
-      </div>
-    )
-  }
-
-  // Set crests are decorative ornaments — they sit prominently at the
-  // very top of the card, much larger than the slot-kind glyphs, and
-  // partly overlap the top edge of the frame the way they do in-game.
-  //
-  // The PNG is already in the right palette for this mod's rarity —
-  // `getSetIconUrl` picks between silver/bronze/gold variants, all
-  // pre-rendered offline by `scripts/tint-set-crests.py` so the source
-  // grayscale shading survives. No runtime tinting needed.
+  const slotSize = 20
   const setSize = 68
+
   return (
-    <div
-      className="pointer-events-none absolute left-1/2 z-30 -translate-x-1/2"
-      style={{ top: -26, width: setSize, height: setSize }}
-      aria-hidden
-    >
-      <img
-        src={setIconUrl ?? undefined}
-        alt=""
-        width={setSize}
-        height={setSize}
-        className="h-full w-full object-contain"
-        style={{ filter: "drop-shadow(0 0 3px rgba(0,0,0,0.95))" }}
-        onError={(e) => {
-          // Safety net for set codenames we haven't bundled yet.
-          ;(e.currentTarget as HTMLImageElement).style.display = "none"
-        }}
-      />
-    </div>
+    <>
+      {slotKind && (
+        <div
+          className="pointer-events-none absolute left-1/2 z-30 -translate-x-1/2"
+          style={{ top: 7, width: slotSize, height: slotSize }}
+          aria-hidden
+        >
+          <div
+            className="h-full w-full"
+            style={{
+              backgroundColor: getRarityColor(rarity),
+              maskImage: `url(${getSlotBadgeUrl(slotKind)})`,
+              maskSize: "contain",
+              maskRepeat: "no-repeat",
+              maskPosition: "center",
+              WebkitMaskImage: `url(${getSlotBadgeUrl(slotKind)})`,
+              WebkitMaskSize: "contain",
+              WebkitMaskRepeat: "no-repeat",
+              WebkitMaskPosition: "center",
+              filter: "drop-shadow(0 0 2px rgba(0,0,0,0.9))",
+            }}
+          />
+        </div>
+      )}
+      {setIconUrl && (
+        <div
+          className="pointer-events-none absolute left-1/2 z-30 -translate-x-1/2"
+          style={{ top: -26, width: setSize, height: setSize }}
+          aria-hidden
+        >
+          <img
+            src={setIconUrl}
+            alt=""
+            width={setSize}
+            height={setSize}
+            className="h-full w-full object-contain"
+            style={{ filter: "drop-shadow(0 0 3px rgba(0,0,0,0.95))" }}
+            onLoad={(e) => {
+              // Reset visibility in case a prior render's onError hid this
+              // same DOM node (React reuses the <img> across mod swaps).
+              ;(e.currentTarget as HTMLImageElement).style.display = ""
+            }}
+            onError={(e) => {
+              // Safety net for set codenames we haven't bundled yet.
+              ;(e.currentTarget as HTMLImageElement).style.display = "none"
+            }}
+          />
+        </div>
+      )}
+    </>
   )
 }
 

@@ -27,14 +27,15 @@ ICONS_DIR = ROOT / "apps" / "web" / "public" / "mod-set-icons"
 # Tint = the colour a fully-white source pixel becomes after multiply,
 # so darker pixels stay proportionally darker.
 #
-# These are deliberately a touch more saturated than the frame-bottom
-# specular highlights — sampling those directly (`#D7BFAA` / `#FAEFBF`)
-# gave a pale, washed-out crest because the source PNGs are mostly
-# midtones, not highlights. These richer tones keep the crest's body
-# warm without pushing the highlights into glowing territory.
+# Hue comes from the most-saturated bright pixel in the matching frame
+# bottom (BronzeFrameBottom.webp / GoldFrameBottom.webp): 23° for bronze,
+# 41° for gold — the "true" metal hue stripped of specular wash-out.
+# Saturation is moderated below the raw frame chroma (~0.5 vs 0.75-0.95)
+# so the crest reads as metal rather than neon, and value is lifted to
+# near-peak so multiplied highlights stay bright.
 TINTS: dict[str, tuple[int, int, int]] = {
-    "bronze": (0xC8, 0x99, 0x70),
-    "gold": (0xE7, 0xC7, 0x6B),
+    "bronze": (0xD8, 0x95, 0x6C),  # HSV(23°, 0.50, 0.85)
+    "gold": (0xED, 0xC1, 0x63),  # HSV(41°, 0.58, 0.93)
 }
 
 

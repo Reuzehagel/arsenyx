@@ -27,10 +27,22 @@ import {
 } from "./mod-card-frame"
 import { isAuraMod, isExilusCompatible } from "./use-build-slots"
 
-/** Resolve which top-center badge to show on a mod card. Slot type wins
- * over set membership — they don't overlap in practice, but the explicit
- * priority makes intent clear. Aura mods are also exilus-compatible per
- * the WFCD `isUtility` flag, so the aura check must come first. */
+/** Resolve which top-center badges to show on a mod card. Slot kind and
+ * set crest are independent — a number of set mods are also exilus-
+ * compatible (Aero Periphery, Vigilante Pursuit, the Archon Anguish set,
+ * etc.), and in-game both indicators appear together. The slot glyph sits
+ * inside the frame top (top: 7) and the set crest overlaps the frame top
+ * (top: -26), so they stack without visually colliding.
+ *
+ * Aura mods are also exilus-compatible per the WFCD `isUtility` flag, so
+ * the aura check must come first within the slot resolution. */
+function resolveSlotKind(mod: Mod): SlotBadgeKind | null {
+  if (isStanceMod(mod)) return "stance"
+  if (isAuraMod(mod)) return "aura"
+  if (isExilusCompatible(mod)) return "exilus"
+  return null
+}
+
 function resolveBadge(
   mod: Mod,
   rarity: ModRarity,
@@ -38,11 +50,8 @@ function resolveBadge(
   slotKind: SlotBadgeKind | null
   setIconUrl: string | null
 } {
-  if (isStanceMod(mod)) return { slotKind: "stance", setIconUrl: null }
-  if (isAuraMod(mod)) return { slotKind: "aura", setIconUrl: null }
-  if (isExilusCompatible(mod)) return { slotKind: "exilus", setIconUrl: null }
   return {
-    slotKind: null,
+    slotKind: resolveSlotKind(mod),
     setIconUrl: getSetIconUrl(getModSetCode(mod), rarity),
   }
 }
