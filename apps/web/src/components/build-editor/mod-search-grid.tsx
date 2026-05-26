@@ -103,6 +103,10 @@ const STAT_ALIASES: ReadonlyArray<readonly [string, string[]]> = [
 function getSearchable(mod: Mod): string {
   const name = mod.name.toLowerCase()
   const desc = mod.description?.toLowerCase() ?? ""
+  // Mod target metadata: `compatName` is the weapon class ("Rifle",
+  // "Shotgun", "Polearm") and `type` is the slot category ("Primary Mod",
+  // "Stance"). Both are what users actually type — see issue #160.
+  const target = `${mod.compatName ?? ""} ${mod.type ?? ""}`.toLowerCase()
   const rawStats = mod.levelStats?.[mod.levelStats.length - 1]?.stats ?? []
   const combined = new Set<string>()
   for (const stat of rawStats) {
@@ -120,7 +124,7 @@ function getSearchable(mod: Mod): string {
   }
   const combinedStr = combined.size > 0 ? ` ${[...combined].join(" ")}` : ""
   const aliasStr = aliases.size > 0 ? ` ${[...aliases].join(" ")}` : ""
-  return `${name} ${desc} ${stats}${combinedStr}${aliasStr}`
+  return `${name} ${desc} ${target} ${stats}${combinedStr}${aliasStr}`
 }
 
 function cap(s: string): string {
