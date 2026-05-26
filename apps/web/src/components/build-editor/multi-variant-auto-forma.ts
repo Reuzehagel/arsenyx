@@ -189,8 +189,10 @@ export function computeMultiVariantStage1Plan(
   if (specs.length === 0) return null
 
   const cur: Partial<Record<SlotId, Polarity>> = { ...input.formaPolarities }
-  let best: { formas: Partial<Record<SlotId, Polarity>>; count: number } | null =
-    null
+  let best: {
+    formas: Partial<Record<SlotId, Polarity>>
+    count: number
+  } | null = null
   // Hard cap on DFS iterations as a runaway safeguard. Realistic builds
   // have ≤ 10 contested slots with 2–3 candidates each, well under this.
   const ITER_CAP = 200_000
@@ -659,12 +661,12 @@ function searchWithKNewFormas(
   arrangements: (Partial<Record<SlotId, PlacedMod>> | null)[]
 } | null {
   const shared = sharedFrom(input)
-  const tryCombo = (combo: FormaSlotChoice[]):
-    | {
-        formaPolarities: Partial<Record<SlotId, Polarity>>
-        arrangements: (Partial<Record<SlotId, PlacedMod>> | null)[]
-      }
-    | null => {
+  const tryCombo = (
+    combo: FormaSlotChoice[],
+  ): {
+    formaPolarities: Partial<Record<SlotId, Polarity>>
+    arrangements: (Partial<Record<SlotId, PlacedMod>> | null)[]
+  } | null => {
     if (budget.count++ > budget.cap) return null
     // Reject combos that target the same slot twice.
     const seen = new Set<SlotId>()
@@ -821,9 +823,7 @@ function computeBestEffortPlan(
   for (let pass = 0; pass < 12; pass++) {
     const current = headroom()
     if (current >= 0) break
-    let best:
-      | { id: SlotId; polarity: Polarity; headroom: number }
-      | null = null
+    let best: { id: SlotId; polarity: Polarity; headroom: number } | null = null
     // Consider forma-ing each placed mod's slot to its own polarity. Loop
     // is O(variants × placed) and the trial capacity computation per
     // candidate is cheap.

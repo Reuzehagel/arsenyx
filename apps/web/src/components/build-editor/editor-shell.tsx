@@ -70,17 +70,17 @@ import { getCategoryLabel, type BrowseCategory } from "@/lib/warframe"
 import { AutoFormaDialog } from "./auto-forma-dialog"
 import { useBuildDerived, getBuildLayout } from "./build-derived"
 import { BuildSurface } from "./build-surface"
-import {
-  computeMultiVariantPlan,
-  computeReactiveAutoFormaPlan,
-  type FullAutoFormaPlan,
-} from "./multi-variant-auto-forma"
 import { DragController } from "./drag-controller"
 import { EditorVariantBar } from "./editor-variant-bar"
 import { GuideEditor, type GuideScope } from "./guide-editor"
 import { KeyboardHintBanner } from "./keyboard-hints"
 import { getPlexusGroupForIndex } from "./layout"
 import { resolveInitialArcanes } from "./layout"
+import {
+  computeMultiVariantPlan,
+  computeReactiveAutoFormaPlan,
+  type FullAutoFormaPlan,
+} from "./multi-variant-auto-forma"
 import { PublishDialog, type PublishVisibility } from "./publish-dialog"
 import { useArcaneSlots } from "./use-arcane-slots"
 import { useBuildSlots, slotKind } from "./use-build-slots"

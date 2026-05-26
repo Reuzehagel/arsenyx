@@ -195,9 +195,7 @@ describe("computeMultiVariantPlan (full cascade)", () => {
     const inputs = {
       ...emptyInputs(),
       hasReactor: false,
-      normalInnates: Array.from({ length: 4 }, () => undefined) as (
-        | undefined
-      )[],
+      normalInnates: Array.from({ length: 4 }, () => undefined) as undefined[],
       variantSlots: [v1, v2],
     }
     // Stage 1 truly fails — no per-slot polarity choice fits both
