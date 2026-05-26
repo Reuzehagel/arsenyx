@@ -92,12 +92,10 @@ describe("parseStatText", () => {
   })
 
   it("handles multiple DT spans on one line", () => {
-    const segs = parseStatText(
-      "<DT_FIRE_COLOR>Heat and <DT_FREEZING_COLOR>Cold",
-    )
+    const segs = parseStatText("<DT_FIRE_COLOR>Heat and <DT_FREEZE_COLOR>Cold")
     expect(segs).toEqual([
       { kind: "dt", token: "DT_FIRE_COLOR", text: "Heat and " },
-      { kind: "dt", token: "DT_FREEZING_COLOR", text: "Cold" },
+      { kind: "dt", token: "DT_FREEZE_COLOR", text: "Cold" },
     ])
   })
 
