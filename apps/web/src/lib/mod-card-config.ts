@@ -150,6 +150,53 @@ export function getPolarityIconUrl(polarity: Polarity): string {
   return `/focus-schools/${filename}`
 }
 
+// --- Slot-type and set badge icons (top-center of a mod card) ---
+
+export type SlotBadgeKind = "aura" | "exilus" | "stance"
+
+// Wiki CDN paths — same approach as arcane-images.ts. We render via
+// CSS mask-image so the icons take any color (rarity-tinted).
+const SLOT_BADGE_URL: Record<SlotBadgeKind, string> = {
+  // IconAura(xWhite) / IconStance(xWhite) — solid white silhouettes.
+  aura: "https://wiki.warframe.com/images/IconAura%28xWhite%29.png",
+  // The wiki only ships a black variant of the Exilus glyph; mask-image
+  // discards the source color so the black PNG still tints correctly.
+  exilus: "https://wiki.warframe.com/images/Exilus_icon%28xBlack%29.png",
+  stance: "https://wiki.warframe.com/images/IconStance%28xWhite%29.png",
+}
+
+export function getSlotBadgeUrl(kind: SlotBadgeKind): string {
+  return SLOT_BADGE_URL[kind]
+}
+
+/** Set crest URL — sourced from WFCD's `warframe-items/data/img/*Header.png`
+ * and bundled locally under `public/mod-set-icons/`. We ship the silver
+ * source plus pre-tinted bronze and gold variants (generated offline by
+ * `scripts/tint-set-crests.py`); a runtime `mask-image` tint would flatten
+ * the source's grayscale shading into a single colour and look terrible.
+ *
+ * The internal `modSet` codename (from `getModSetCode`) IS the filename
+ * stem (`Augur` → `AugurHeader.png`); the one alias is the Sacrificial
+ * set, which appears in mod data under both `Sacrifice` and `Umbra` but
+ * only ships as `UmbraHeader.png` upstream. */
+const SET_CODE_ALIASES: Record<string, string> = {
+  Sacrifice: "Umbra",
+}
+
+export function getSetIconUrl(
+  setCode: string | null,
+  rarity: ModRarity,
+): string | null {
+  if (!setCode) return null
+  const stem = SET_CODE_ALIASES[setCode] ?? setCode
+  // Silver source reads correctly on every rarity EXCEPT Common/Rare,
+  // where it clashes with the bronze/gold framing — use the pre-tinted
+  // variant for those two.
+  const suffix =
+    rarity === "Common" ? "-bronze" : rarity === "Rare" ? "-gold" : ""
+  return `/mod-set-icons/${stem}Header${suffix}.png`
+}
+
 export function normalizeRarity(rarity?: string): ModRarity {
   const valid: ModRarity[] = [
     "Common",
