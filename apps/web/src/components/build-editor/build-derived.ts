@@ -3,11 +3,11 @@ import { useMemo } from "react"
 
 import type { BrowseCategory, DetailItem } from "@/lib/warframe"
 
-import { computeAutoFormaPlan, type AutoFormaStep } from "./auto-forma"
 import {
   calculateCapacity,
   calculateFormaCount,
   calculateTotalEndoCost,
+  type CapacityInput,
 } from "./calculations"
 import {
   type ArcaneSlotConfig,
@@ -70,9 +70,10 @@ export interface BuildDerived {
   totalEndoCost: number
   formaCount: number
   capacity: { used: number; max: number; base: number; auraBonus: number }
-  /** Greedy plan to bring `used <= max`. Empty when capacity already fits or
-   * no forma-able slot remains. */
-  autoFormaPlan: AutoFormaStep[]
+  /** Shared (non-`placed`, non-`formaPolarities`) capacity inputs, exposed
+   * so multi-variant auto-forma planners can reuse the same memoized values
+   * — `placed` swaps per variant in that scenario. */
+  capacitySharedInputs: Omit<CapacityInput, "placed" | "formaPolarities">
 }
 
 export function useBuildDerived(input: {
@@ -135,10 +136,10 @@ export function useBuildDerived(input: {
     })
   }, [category, normalSlotCount])
 
-  const capacityInput = useMemo(
+  const capacitySharedInputs = useMemo<
+    Omit<CapacityInput, "placed" | "formaPolarities">
+  >(
     () => ({
-      placed: slots.placed,
-      formaPolarities: slots.formaPolarities,
       auraInnates,
       exilusInnate,
       stanceInnate,
@@ -148,8 +149,6 @@ export function useBuildDerived(input: {
       normalSlotConsumesDrain,
     }),
     [
-      slots.placed,
-      slots.formaPolarities,
       auraInnates,
       exilusInnate,
       stanceInnate,
@@ -161,12 +160,13 @@ export function useBuildDerived(input: {
     ],
   )
   const capacity = useMemo(
-    () => calculateCapacity(capacityInput),
-    [capacityInput],
-  )
-  const autoFormaPlan = useMemo(
-    () => (capacity.used > capacity.max ? computeAutoFormaPlan(capacityInput) : []),
-    [capacityInput, capacity.used, capacity.max],
+    () =>
+      calculateCapacity({
+        ...capacitySharedInputs,
+        placed: slots.placed,
+        formaPolarities: slots.formaPolarities,
+      }),
+    [capacitySharedInputs, slots.placed, slots.formaPolarities],
   )
 
   return {
@@ -174,6 +174,6 @@ export function useBuildDerived(input: {
     totalEndoCost,
     formaCount,
     capacity,
-    autoFormaPlan,
+    capacitySharedInputs,
   }
 }

@@ -69,6 +69,7 @@ import { getCategoryLabel, type BrowseCategory } from "@/lib/warframe"
 
 import { useBuildDerived, getBuildLayout } from "./build-derived"
 import { BuildSurface } from "./build-surface"
+import { computeMultiVariantStage1Plan } from "./multi-variant-auto-forma"
 import { DragController } from "./drag-controller"
 import { EditorVariantBar } from "./editor-variant-bar"
 import { GuideEditor, type GuideScope } from "./guide-editor"
@@ -496,10 +497,44 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
 
   // Innates, endo/forma totals, capacity, and arcane picker config — same
   // computation for view (`/builds/$slug`) and edit (`/create`).
-  const { arcaneConfig, totalEndoCost, formaCount, capacity, autoFormaPlan } =
-    useBuildDerived({ item, category, layout, slots, allArcanes, hasReactor })
+  const {
+    arcaneConfig,
+    totalEndoCost,
+    formaCount,
+    capacity,
+    capacitySharedInputs,
+  } = useBuildDerived({ item, category, layout, slots, allArcanes, hasReactor })
+
+  // Stage 1 multi-variant auto-forma. The planner considers every variant's
+  // `placed` map against a single shared `formaPolarities` (forma is build-
+  // wide in Warframe). Overlay the active variant's live editor state on top
+  // of the saved `variants` array so unsaved mod placements feed the plan.
+  // Returns `null` when no forma-only assignment satisfies every variant —
+  // in that case the button stays hidden (stages 2/3 with rearrangement +
+  // Omni Forma will fill that gap in follow-up commits).
+  const autoFormaPlan = useMemo(() => {
+    if (capacity.used <= capacity.max) return null
+    const allVariantSlots = variants.map((v, i) =>
+      i === clampedActiveIndex ? slots.placed : (v.slots ?? {}),
+    )
+    const plan = computeMultiVariantStage1Plan({
+      ...capacitySharedInputs,
+      formaPolarities: slots.formaPolarities,
+      variantSlots: allVariantSlots,
+    })
+    return plan?.steps.length ? plan.steps : null
+  }, [
+    capacity.used,
+    capacity.max,
+    capacitySharedInputs,
+    slots.formaPolarities,
+    slots.placed,
+    variants,
+    clampedActiveIndex,
+  ])
 
   const handleAutoForma = () => {
+    if (!autoFormaPlan) return
     for (const step of autoFormaPlan) {
       slots.setForma(step.id, step.polarity)
     }
@@ -888,7 +923,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
               category,
               capacityUsed: capacity.used,
               capacityMax: capacity.max,
-              autoFormaCount: autoFormaPlan.length,
+              autoFormaCount: autoFormaPlan?.length ?? 0,
               onAutoForma: handleAutoForma,
               hasReactor,
               onToggleReactor: () => setHasReactor((v) => !v),
