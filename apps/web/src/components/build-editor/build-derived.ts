@@ -3,8 +3,11 @@ import { useMemo } from "react"
 
 import type { BrowseCategory, DetailItem } from "@/lib/warframe"
 
-import { calculateCapacity, calculateTotalEndoCost } from "./calculations"
-import { calculateFormaCount } from "./calculations"
+import {
+  calculateCapacity,
+  calculateFormaCount,
+  calculateTotalEndoCost,
+} from "./calculations"
 import {
   type ArcaneSlotConfig,
   getArcaneSlotConfig,

@@ -755,7 +755,12 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     setVariants(next)
     navigate({
       to: ".",
-      search: (s) => ({ ...s, v: i === 0 ? undefined : i }),
+      // When `share` is in the URL, `v: undefined` lets validateSearch's
+      // `activeVariantFromShare` fallback re-derive v from the share's
+      // encoded activeIndex — which silently overrides the user's click
+      // back to variant 0. Emit explicit `v: 0` in that case so the user's
+      // choice wins. Clean `v: undefined` when share is absent.
+      search: (s) => ({ ...s, v: i === 0 && !s.share ? undefined : i }),
       replace: true,
     })
   }
@@ -809,7 +814,11 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     const newIdx = Math.min(clampedActiveIndex, next.length - 1)
     navigate({
       to: ".",
-      search: (s) => ({ ...s, v: newIdx === 0 ? undefined : newIdx }),
+      // Same share-aware fallback as switchVariant.
+      search: (s) => ({
+        ...s,
+        v: newIdx === 0 && !s.share ? undefined : newIdx,
+      }),
       replace: true,
     })
   }
