@@ -186,6 +186,13 @@ export interface BuildSlotsState {
    * compatibility on either side.
    */
   swap: (from: SlotId, to: SlotId) => void
+  /**
+   * Replace the entire placed-mod map. Used by auto-forma stages 2/3 to
+   * commit a planned rearrangement atomically — multiple `placeAt`/`remove`
+   * calls would batch React renders but still serialize through React's
+   * setState queue, which made the in-between states briefly visible.
+   */
+  setPlaced: (next: Partial<Record<SlotId, PlacedMod>>) => void
 }
 
 export function useBuildSlots(
@@ -339,6 +346,13 @@ export function useBuildSlots(
     [placed],
   )
 
+  const setPlacedAll = useCallback(
+    (next: Partial<Record<SlotId, PlacedMod>>) => {
+      setPlaced(next)
+    },
+    [],
+  )
+
   return {
     placed,
     usedNames,
@@ -352,5 +366,6 @@ export function useBuildSlots(
     setRank,
     setForma,
     swap,
+    setPlaced: setPlacedAll,
   }
 }

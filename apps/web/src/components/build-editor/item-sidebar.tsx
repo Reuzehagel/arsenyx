@@ -78,6 +78,9 @@ export interface ItemSidebarProps {
   capacityUsed: number
   capacityMax: number
   autoFormaCount?: number
+  /** Stage 1 = silent apply (button label "Auto-forma (N)"). Stages 2/3
+   * open a preview dialog before applying (label "Auto-fix…"). */
+  autoFormaStage?: 1 | 2 | 3
   onAutoForma?: () => void
   hasReactor: boolean
   onToggleReactor: () => void
@@ -117,6 +120,7 @@ export function ItemSidebar({
   capacityUsed,
   capacityMax,
   autoFormaCount,
+  autoFormaStage,
   onAutoForma,
   hasReactor,
   onToggleReactor,
@@ -391,6 +395,7 @@ export function ItemSidebar({
             used={capacityUsed}
             max={capacityMax}
             autoFormaCount={autoFormaCount}
+            autoFormaStage={autoFormaStage}
             onAutoForma={onAutoForma}
           />
         </div>

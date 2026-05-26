@@ -67,9 +67,13 @@ import { padShards, type PlacedShard } from "@/lib/shards"
 import { apiErrorMessage, apiFetch } from "@/lib/util/api-client"
 import { getCategoryLabel, type BrowseCategory } from "@/lib/warframe"
 
+import { AutoFormaDialog } from "./auto-forma-dialog"
 import { useBuildDerived, getBuildLayout } from "./build-derived"
 import { BuildSurface } from "./build-surface"
-import { computeMultiVariantStage1Plan } from "./multi-variant-auto-forma"
+import {
+  computeMultiVariantPlan,
+  type FullAutoFormaPlan,
+} from "./multi-variant-auto-forma"
 import { DragController } from "./drag-controller"
 import { EditorVariantBar } from "./editor-variant-bar"
 import { GuideEditor, type GuideScope } from "./guide-editor"
@@ -505,39 +509,80 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     capacitySharedInputs,
   } = useBuildDerived({ item, category, layout, slots, allArcanes, hasReactor })
 
-  // Stage 1 multi-variant auto-forma. The planner considers every variant's
-  // `placed` map against a single shared `formaPolarities` (forma is build-
-  // wide in Warframe). Overlay the active variant's live editor state on top
-  // of the saved `variants` array so unsaved mod placements feed the plan.
-  // Returns `null` when no forma-only assignment satisfies every variant —
-  // in that case the button stays hidden (stages 2/3 with rearrangement +
-  // Omni Forma will fill that gap in follow-up commits).
-  const autoFormaPlan = useMemo(() => {
+  // Multi-variant auto-forma plan. Forma is build-wide in Warframe — a
+  // single `formaPolarities` assignment must satisfy every variant — so
+  // the planner overlays the active variant's live editor state onto the
+  // saved `variants[]` array and asks for a plan across the whole set.
+  //
+  // Stages, in escalation order:
+  //   1. forma-only, no movement — applies silently on click
+  //   2. forma + normal-slot rearrangement — confirms via dialog
+  //   3. + Omni Forma (`"any"`) — confirms via dialog with Omni callout
+  //
+  // Returns `null` when even stage 3 can't fit every variant (rare — usually
+  // a build that's fundamentally over-cap regardless of forma).
+  const allVariantSlots = useMemo(
+    () =>
+      variants.map((v, i) =>
+        i === clampedActiveIndex ? slots.placed : (v.slots ?? {}),
+      ),
+    [variants, clampedActiveIndex, slots.placed],
+  )
+  const autoFormaPlan = useMemo<FullAutoFormaPlan | null>(() => {
     if (capacity.used <= capacity.max) return null
-    const allVariantSlots = variants.map((v, i) =>
-      i === clampedActiveIndex ? slots.placed : (v.slots ?? {}),
-    )
-    const plan = computeMultiVariantStage1Plan({
+    const plan = computeMultiVariantPlan({
       ...capacitySharedInputs,
       formaPolarities: slots.formaPolarities,
       variantSlots: allVariantSlots,
     })
-    return plan?.steps.length ? plan.steps : null
+    if (!plan) return null
+    // Empty plan (stage 1 returned "already feasible") means no work to do —
+    // but capacity is over for the active variant, so this shouldn't happen.
+    // Defensive: drop the button rather than show "Auto-forma (0)".
+    if (plan.steps.length === 0 && plan.rearrangements.length === 0) {
+      return null
+    }
+    return plan
   }, [
     capacity.used,
     capacity.max,
     capacitySharedInputs,
     slots.formaPolarities,
-    slots.placed,
-    variants,
-    clampedActiveIndex,
+    allVariantSlots,
   ])
+
+  const [autoFormaDialogOpen, setAutoFormaDialogOpen] = useState(false)
+
+  const applyAutoFormaPlan = (plan: FullAutoFormaPlan) => {
+    // Apply forma changes first so the active-variant capacity computation
+    // sees the new polarities by the time rearrangements land.
+    for (const step of plan.steps) {
+      slots.setForma(step.id, step.polarity)
+    }
+    // Apply per-variant rearrangements: active variant goes through the
+    // slots hook; the rest update the in-memory `variants[]` array directly.
+    for (const arr of plan.rearrangements) {
+      if (arr.variantIndex === clampedActiveIndex) {
+        slots.setPlaced(arr.placed)
+      } else {
+        setVariants((prev) =>
+          prev.map((v, i) =>
+            i === arr.variantIndex ? { ...v, slots: arr.placed } : v,
+          ),
+        )
+      }
+    }
+  }
 
   const handleAutoForma = () => {
     if (!autoFormaPlan) return
-    for (const step of autoFormaPlan) {
-      slots.setForma(step.id, step.polarity)
+    if (autoFormaPlan.stage === 1) {
+      // Forma-only — silent apply, matches the original single-variant UX.
+      applyAutoFormaPlan(autoFormaPlan)
+      return
     }
+    // Stages 2/3 move user mods or burn Omni Forma — show a preview first.
+    setAutoFormaDialogOpen(true)
   }
 
   const isUpdate = !!existingBuild && existingBuild.isOwner
@@ -923,7 +968,8 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
               category,
               capacityUsed: capacity.used,
               capacityMax: capacity.max,
-              autoFormaCount: autoFormaPlan?.length ?? 0,
+              autoFormaCount: autoFormaPlan?.steps.length ?? 0,
+              autoFormaStage: autoFormaPlan?.stage,
               onAutoForma: handleAutoForma,
               hasReactor,
               onToggleReactor: () => setHasReactor((v) => !v),
@@ -1074,6 +1120,17 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       />
 
       {riven.dialog}
+
+      {autoFormaPlan && autoFormaPlan.stage !== 1 && (
+        <AutoFormaDialog
+          open={autoFormaDialogOpen}
+          onOpenChange={setAutoFormaDialogOpen}
+          plan={autoFormaPlan}
+          variantLabels={variants.map((v) => v.label)}
+          originalVariantSlots={allVariantSlots}
+          onApply={() => applyAutoFormaPlan(autoFormaPlan)}
+        />
+      )}
     </>
   )
 }
