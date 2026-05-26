@@ -101,7 +101,7 @@ export function ApiKeysPanel() {
       <Field>
         <FieldLabel>API keys</FieldLabel>
         <FieldDescription>
-          Authenticate the Arsenyx public API from scripts or tools. Tokens are
+          Authenticate the Arsenyx public API from scripts or tools. Keys are
           shown once on creation — store them somewhere safe.
         </FieldDescription>
       </Field>
@@ -172,7 +172,7 @@ function CreateApiKeyForm({ disabled }: { disabled: boolean }) {
       <Field>
         <FieldLabel>New API key</FieldLabel>
         <FieldDescription>
-          Copy this token now. You won't be able to see it again.
+          Copy this key now. You won't be able to see it again.
         </FieldDescription>
         <div className="bg-muted/40 flex items-center gap-2 rounded-md border p-2">
           <code className="flex-1 truncate font-mono text-xs">
@@ -351,7 +351,7 @@ function ApiKeyRow({ apiKey }: { apiKey: ApiKeySummary }) {
         <span className="text-muted-foreground text-xs">
           Created {formatDate(apiKey.createdAt)} · Expires{" "}
           {formatDate(apiKey.expiresAt)} · Last used{" "}
-          {formatDate(apiKey.lastUsedAt)}
+          {formatDate(apiKey.lastUsedAt)} · {apiKey.rateLimit}/min
         </span>
       </div>
       {apiKey.isActive ? (

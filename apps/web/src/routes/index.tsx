@@ -142,8 +142,10 @@ function Home() {
               detail="Builds encode into a short URL. Drop it in chat. The reader sees the full editor without signing in."
               demo={
                 <div className="bg-background rounded-md border px-3 py-2 font-mono text-xs">
-                  <span className="text-muted-foreground">arsenyx.com/b/</span>
-                  <span className="text-foreground">v0r-prime-tank</span>
+                  <span className="text-muted-foreground">
+                    arsenyx.com/builds/
+                  </span>
+                  <span className="text-foreground">k7mQp3rTx9</span>
                 </div>
               }
             />

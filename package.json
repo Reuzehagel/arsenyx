@@ -1,6 +1,7 @@
 {
   "name": "arsenyx-monorepo",
   "private": true,
+  "license": "MIT",
   "workspaces": [
     "apps/*",
     "packages/*"
