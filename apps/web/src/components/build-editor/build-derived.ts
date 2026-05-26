@@ -3,6 +3,7 @@ import { useMemo } from "react"
 
 import type { BrowseCategory, DetailItem } from "@/lib/warframe"
 
+import { computeAutoFormaPlan, type AutoFormaStep } from "./auto-forma"
 import {
   calculateCapacity,
   calculateFormaCount,
@@ -69,6 +70,9 @@ export interface BuildDerived {
   totalEndoCost: number
   formaCount: number
   capacity: { used: number; max: number; base: number; auraBonus: number }
+  /** Greedy plan to bring `used <= max`. Empty when capacity already fits or
+   * no forma-able slot remains. */
+  autoFormaPlan: AutoFormaStep[]
 }
 
 export function useBuildDerived(input: {
@@ -131,19 +135,18 @@ export function useBuildDerived(input: {
     })
   }, [category, normalSlotCount])
 
-  const capacity = useMemo(
-    () =>
-      calculateCapacity({
-        placed: slots.placed,
-        formaPolarities: slots.formaPolarities,
-        auraInnates,
-        exilusInnate,
-        stanceInnate,
-        normalInnates,
-        hasReactor,
-        maxLevelCap: getMaxLevelCap(category, item),
-        normalSlotConsumesDrain,
-      }),
+  const capacityInput = useMemo(
+    () => ({
+      placed: slots.placed,
+      formaPolarities: slots.formaPolarities,
+      auraInnates,
+      exilusInnate,
+      stanceInnate,
+      normalInnates,
+      hasReactor,
+      maxLevelCap: getMaxLevelCap(category, item),
+      normalSlotConsumesDrain,
+    }),
     [
       slots.placed,
       slots.formaPolarities,
@@ -157,11 +160,20 @@ export function useBuildDerived(input: {
       normalSlotConsumesDrain,
     ],
   )
+  const capacity = useMemo(
+    () => calculateCapacity(capacityInput),
+    [capacityInput],
+  )
+  const autoFormaPlan = useMemo(
+    () => (capacity.used > capacity.max ? computeAutoFormaPlan(capacityInput) : []),
+    [capacityInput, capacity.used, capacity.max],
+  )
 
   return {
     arcaneConfig,
     totalEndoCost,
     formaCount,
     capacity,
+    autoFormaPlan,
   }
 }

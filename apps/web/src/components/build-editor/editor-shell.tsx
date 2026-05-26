@@ -496,9 +496,14 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
 
   // Innates, endo/forma totals, capacity, and arcane picker config — same
   // computation for view (`/builds/$slug`) and edit (`/create`).
-  const { arcaneConfig, totalEndoCost, formaCount, capacity } = useBuildDerived(
-    { item, category, layout, slots, allArcanes, hasReactor },
-  )
+  const { arcaneConfig, totalEndoCost, formaCount, capacity, autoFormaPlan } =
+    useBuildDerived({ item, category, layout, slots, allArcanes, hasReactor })
+
+  const handleAutoForma = () => {
+    for (const step of autoFormaPlan) {
+      slots.setForma(step.id, step.polarity)
+    }
+  }
 
   const isUpdate = !!existingBuild && existingBuild.isOwner
 
@@ -883,6 +888,8 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
               category,
               capacityUsed: capacity.used,
               capacityMax: capacity.max,
+              autoFormaCount: autoFormaPlan.length,
+              onAutoForma: handleAutoForma,
               hasReactor,
               onToggleReactor: () => setHasReactor((v) => !v),
               shards,

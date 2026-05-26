@@ -77,6 +77,8 @@ export interface ItemSidebarProps {
   category: BrowseCategory
   capacityUsed: number
   capacityMax: number
+  autoFormaCount?: number
+  onAutoForma?: () => void
   hasReactor: boolean
   onToggleReactor: () => void
   shards: (PlacedShard | null)[]
@@ -114,6 +116,8 @@ export function ItemSidebar({
   category,
   capacityUsed,
   capacityMax,
+  autoFormaCount,
+  onAutoForma,
   hasReactor,
   onToggleReactor,
   shards,
@@ -383,7 +387,12 @@ export function ItemSidebar({
             />
           </div>
 
-          <CapacityBar used={capacityUsed} max={capacityMax} />
+          <CapacityBar
+            used={capacityUsed}
+            max={capacityMax}
+            autoFormaCount={autoFormaCount}
+            onAutoForma={onAutoForma}
+          />
         </div>
 
         {/* `sm:flex` is unconditional so desktop visibility never depends on
