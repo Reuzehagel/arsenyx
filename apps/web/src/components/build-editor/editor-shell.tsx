@@ -232,11 +232,14 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   )
 
   // Slice projected for this variant — feeds the existing slot/arcane
-  // hooks below. EditorShell is re-keyed by activeIndex in CreatePage,
-  // so this useMemo only runs at mount (the right semantics). Reads
-  // from the in-memory `variants` state (which may contain unsaved
-  // add/duplicate/rename edits) rather than re-deriving from server
-  // data.
+  // hooks below. Reads from the in-memory `variants` state (which may
+  // contain unsaved add/duplicate/rename edits) rather than re-deriving
+  // from server data.
+  //
+  // PRECONDITION: EditorShell is re-keyed on `${build}-${v}` in
+  // routes/create.tsx, so this useMemo only runs at mount (the right
+  // semantics). If that key is ever dropped/changed, the empty-deps
+  // memo will silently freeze on first-mount data.
   const savedData: SavedBuildData = useMemo(() => {
     const active = variants[clampedActiveIndex]
     if (!active) return selectVariant(savedDataAll, clampedActiveIndex)
@@ -560,6 +563,9 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
             buildName: state.buildName,
             hasReactor,
             slots: sv.slots,
+            // Forma polarities are build-wide in Warframe (shared across
+            // variants), so passing the active variant's value to every
+            // per-variant projection is intentional.
             formaPolarities: slots.formaPolarities,
             arcanes: sv.arcanes,
             shards,
