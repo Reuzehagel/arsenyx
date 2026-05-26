@@ -11,10 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
-import type {
-  FullAutoFormaPlan,
-  VariantArrangement,
-} from "./multi-variant-auto-forma"
+import type { FullAutoFormaPlan } from "./multi-variant-auto-forma"
 import { PolarityIcon } from "./polarity"
 import type { PlacedMod, SlotId } from "./use-build-slots"
 
