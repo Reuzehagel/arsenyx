@@ -5,6 +5,7 @@ export function CapacityBar({
   max,
   autoFormaCount,
   autoFormaStage,
+  autoFormaNoFix,
   onAutoForma,
 }: {
   used: number
@@ -15,6 +16,9 @@ export function CapacityBar({
   /** Stage 1 = silent apply (label "Auto-forma (N)"). Stages 2/3 open a
    * confirm dialog (label "Auto-fix…"). */
   autoFormaStage?: 1 | 2 | 3
+  /** Set briefly to true after a fruitless click — flips the button into a
+   * "No fix found" state so the user sees something happen. */
+  autoFormaNoFix?: boolean
   onAutoForma?: () => void
 }) {
   const pctVal = max > 0 ? Math.min(100, (used / max) * 100) : 0
@@ -25,12 +29,16 @@ export function CapacityBar({
   // search (rearrangement + Omni Forma) and opens a preview dialog.
   const showAutoForma = over && !!onAutoForma
   const hasFastPlan = autoFormaCount !== undefined && autoFormaCount > 0
-  const buttonLabel = hasFastPlan
-    ? `Auto-forma (${autoFormaCount})`
-    : "Auto-fix…"
-  const buttonTitle = hasFastPlan
-    ? "Apply forma to the most expensive slots until capacity fits"
-    : "Open a preview of the cross-variant fix (forma + rearrangement)"
+  const buttonLabel = autoFormaNoFix
+    ? "No fix found"
+    : hasFastPlan
+      ? `Auto-forma (${autoFormaCount})`
+      : "Auto-fix…"
+  const buttonTitle = autoFormaNoFix
+    ? "Even rearrangement and Omni Forma can't fit every variant — try lowering ranks or removing a mod"
+    : hasFastPlan
+      ? "Apply forma to the most expensive slots until capacity fits"
+      : "Open a preview of the cross-variant fix (forma + rearrangement)"
   // Suppress an unused-prop warning until/unless we surface a stage badge.
   void autoFormaStage
   return (

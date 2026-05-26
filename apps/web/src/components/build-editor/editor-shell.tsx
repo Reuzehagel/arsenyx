@@ -566,6 +566,13 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     }
   }
 
+  // "No fix found" feedback — flips true briefly after a fruitless click so
+  // the button can hint at the result instead of looking broken.
+  const [noFixFound, setNoFixFound] = useState(false)
+  const flashNoFix = () => {
+    setNoFixFound(true)
+    window.setTimeout(() => setNoFixFound(false), 1800)
+  }
   const handleAutoForma = () => {
     // Fast path: reactive plan exists → silent apply. Matches the single-
     // variant UX where the button always applies forma-only improvements.
@@ -580,7 +587,17 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       formaPolarities: slots.formaPolarities,
       variantSlots: allVariantSlots,
     })
-    if (!plan) return // No fix possible; could surface a toast later.
+    if (!plan) {
+      flashNoFix()
+      return
+    }
+    if (plan.stage === 1) {
+      // Cascade found a stage-1 plan that the cheap reactive path missed
+      // (different search semantics — DFS vs greedy). Apply silently.
+      applyAutoFormaPlan(plan)
+      return
+    }
+    // Stages 2/3 move user mods or burn Omni Forma — show the preview.
     setPendingHeavyPlan(plan)
     setAutoFormaDialogOpen(true)
   }
@@ -970,6 +987,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
               capacityMax: capacity.max,
               autoFormaCount: reactiveAutoFormaPlan?.steps.length ?? 0,
               autoFormaStage: reactiveAutoFormaPlan?.stage,
+              autoFormaNoFix: noFixFound,
               onAutoForma: handleAutoForma,
               hasReactor,
               onToggleReactor: () => setHasReactor((v) => !v),

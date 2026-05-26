@@ -81,6 +81,10 @@ export interface ItemSidebarProps {
   /** Stage 1 = silent apply (button label "Auto-forma (N)"). Stages 2/3
    * open a preview dialog before applying (label "Auto-fix…"). */
   autoFormaStage?: 1 | 2 | 3
+  /** Transient flag set after a click that couldn't produce a plan. The
+   * button flips to a "No fix found" label briefly so the click isn't
+   * silently swallowed. */
+  autoFormaNoFix?: boolean
   onAutoForma?: () => void
   hasReactor: boolean
   onToggleReactor: () => void
@@ -121,6 +125,7 @@ export function ItemSidebar({
   capacityMax,
   autoFormaCount,
   autoFormaStage,
+  autoFormaNoFix,
   onAutoForma,
   hasReactor,
   onToggleReactor,
@@ -396,6 +401,7 @@ export function ItemSidebar({
             max={capacityMax}
             autoFormaCount={autoFormaCount}
             autoFormaStage={autoFormaStage}
+            autoFormaNoFix={autoFormaNoFix}
             onAutoForma={onAutoForma}
           />
         </div>
