@@ -130,7 +130,9 @@ export function StatText({ text, iconClassName }: StatTextProps) {
             rest = rest.slice(trailing[0].length)
           }
         } else {
-          const firstWord = seg.text.match(/^\S+/)
+          // Stop at whitespace or trailing punctuation so an unexpected
+          // "Heat," or "Heat:" doesn't fold the comma into the colored span.
+          const firstWord = seg.text.match(/^[^\s,.:;!?]+/)
           colored = firstWord ? firstWord[0] : seg.text
           rest = firstWord ? seg.text.slice(firstWord[0].length) : ""
         }
