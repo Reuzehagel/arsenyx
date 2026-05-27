@@ -41,27 +41,26 @@ const regularPistolMod: Mod = {
 
 describe("Tome mod gating", () => {
   it("excludes Tome mods from a regular pistol", () => {
-    const result = getModsForItem(
-      { name: "Lex", type: "Pistol" },
-      [tomeMod, regularPistolMod],
-    )
+    const result = getModsForItem({ name: "Lex", type: "Pistol" }, [
+      tomeMod,
+      regularPistolMod,
+    ])
     expect(result).toEqual([regularPistolMod])
   })
 
   it("includes Tome mods on Grimoire", () => {
-    const result = getModsForItem(
-      { name: "Grimoire", type: "Pistol" },
-      [tomeMod, regularPistolMod],
-    )
+    const result = getModsForItem({ name: "Grimoire", type: "Pistol" }, [
+      tomeMod,
+      regularPistolMod,
+    ])
     expect(result).toContain(tomeMod)
     expect(result).toContain(regularPistolMod)
   })
 
   it("includes Tome mods on a future Grimoire Prime variant", () => {
-    const result = getModsForItem(
-      { name: "Grimoire Prime", type: "Pistol" },
-      [tomeMod],
-    )
+    const result = getModsForItem({ name: "Grimoire Prime", type: "Pistol" }, [
+      tomeMod,
+    ])
     expect(result).toEqual([tomeMod])
   })
 
@@ -93,10 +92,9 @@ describe("Tome mod gating", () => {
   })
 
   it("includes Tome mods in the typeless fallback when the item is Grimoire", () => {
-    const result = getModsForItem(
-      { name: "Grimoire", category: "secondary" },
-      [tomeMod],
-    )
+    const result = getModsForItem({ name: "Grimoire", category: "secondary" }, [
+      tomeMod,
+    ])
     expect(result).toContain(tomeMod)
   })
 })
