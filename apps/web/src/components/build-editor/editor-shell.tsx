@@ -567,12 +567,16 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   }
 
   // "No fix found" feedback — flips true briefly after a fruitless click so
-  // the button can hint at the result instead of looking broken.
+  // the button can hint at the result instead of looking broken. The timer
+  // lives in an effect so we clear it on unmount (variant switch, route
+  // change) and avoid setState on a dead component.
   const [noFixFound, setNoFixFound] = useState(false)
-  const flashNoFix = () => {
-    setNoFixFound(true)
-    window.setTimeout(() => setNoFixFound(false), 1800)
-  }
+  useEffect(() => {
+    if (!noFixFound) return
+    const id = window.setTimeout(() => setNoFixFound(false), 1800)
+    return () => window.clearTimeout(id)
+  }, [noFixFound])
+  const flashNoFix = () => setNoFixFound(true)
   const handleAutoForma = () => {
     // Fast path: reactive plan exists → silent apply. Matches the single-
     // variant UX where the button always applies forma-only improvements.
@@ -986,7 +990,6 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
               capacityUsed: capacity.used,
               capacityMax: capacity.max,
               autoFormaCount: reactiveAutoFormaPlan?.steps.length ?? 0,
-              autoFormaStage: reactiveAutoFormaPlan?.stage,
               autoFormaNoFix: noFixFound,
               onAutoForma: handleAutoForma,
               hasReactor,

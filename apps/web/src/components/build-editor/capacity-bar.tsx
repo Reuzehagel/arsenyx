@@ -4,7 +4,6 @@ export function CapacityBar({
   used,
   max,
   autoFormaCount,
-  autoFormaStage,
   autoFormaNoFix,
   onAutoForma,
 }: {
@@ -13,9 +12,6 @@ export function CapacityBar({
   /** Number of formas the auto-forma planner would apply. When > 0 and the
    * build is over capacity, a one-click button is rendered. */
   autoFormaCount?: number
-  /** Stage 1 = silent apply (label "Auto-forma (N)"). Stages 2/3 open a
-   * confirm dialog (label "Auto-fix…"). */
-  autoFormaStage?: 1 | 2 | 3
   /** Set briefly to true after a fruitless click — flips the button into a
    * "No fix found" state so the user sees something happen. */
   autoFormaNoFix?: boolean
@@ -39,8 +35,6 @@ export function CapacityBar({
     : hasFastPlan
       ? "Apply forma to the most expensive slots until capacity fits"
       : "Open a preview of the cross-variant fix (forma + rearrangement)"
-  // Suppress an unused-prop warning until/unless we surface a stage badge.
-  void autoFormaStage
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between text-xs">

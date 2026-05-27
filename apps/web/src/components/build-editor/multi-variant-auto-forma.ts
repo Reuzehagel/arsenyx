@@ -182,7 +182,9 @@ export function computeMultiVariantStage1Plan(
   // when caller asked: the EditorShell still hides the button when active
   // variant fits.
   if (isFeasible(input.variantSlots, shared, input.formaPolarities)) {
-    return { formaPolarities: input.formaPolarities, steps: [] }
+    // Defensive copy — callers shouldn't be able to mutate the editor's
+    // forma map by reaching into the returned plan.
+    return { formaPolarities: { ...input.formaPolarities }, steps: [] }
   }
 
   const specs = gatherSlotSpecs(input)
@@ -746,11 +748,6 @@ function searchWithRearrangement(
   const buckets = gatherKindCandidates(input, allowOmni)
   const candidates = listFormaCandidates(input, buckets)
   const stage: AutoFormaStage = allowOmni ? 3 : 2
-  // Single shared budget across the outer forma-combo search and the inner
-  // per-variant permutation search. 250k operations covers realistic
-  // builds (≤ 10 contested slots, ≤ 3 variants, ≤ 8 normal mods each) in
-  // well under a frame; pathological inputs that exceed it return null
-  // promptly instead of locking the editor.
   // Single shared budget across the outer forma-combo search and the inner
   // per-variant permutation search. 50k operations covers realistic builds
   // (≤ 6 mods per variant, ≤ 3 variants); pathological inputs return null
