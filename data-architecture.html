@@ -1,0 +1,857 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Arsenyx — Data Pipeline (v3, empirically grounded)</title>
+<style>
+  :root {
+    --bg: #0b0d10;
+    --panel: #14171c;
+    --panel-2: #1b1f26;
+    --border: #262b33;
+    --text: #e6e8eb;
+    --muted: #8a93a0;
+    --accent: #7aa2f7;
+    --accent-2: #bb9af7;
+    --good: #9ece6a;
+    --warn: #e0af68;
+    --bad: #f7768e;
+    --mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box }
+  html, body { background: var(--bg); color: var(--text); margin: 0 }
+  body {
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 56px 32px 96px;
+  }
+  h1 { font-size: 30px; margin: 0 0 6px; letter-spacing: -0.01em }
+  h2 { font-size: 21px; margin: 48px 0 14px; letter-spacing: -0.01em; border-bottom: 1px solid var(--border); padding-bottom: 8px }
+  h3 { font-size: 16px; margin: 24px 0 8px; color: var(--accent) }
+  h4 { font-size: 13px; margin: 14px 0 6px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em }
+  p { margin: 0 0 12px; color: var(--text) }
+  .lead { color: var(--muted); margin-bottom: 32px; font-size: 16px }
+  code, .mono { font-family: var(--mono); font-size: 13px }
+  code { background: var(--panel-2); border: 1px solid var(--border); padding: 1px 6px; border-radius: 4px }
+  a { color: var(--accent); text-decoration: none }
+  a:hover { text-decoration: underline }
+  ul { margin: 8px 0 12px; padding-left: 22px }
+  li { margin: 4px 0 }
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(2, 1fr); margin: 14px 0 }
+  .grid-3 { display: grid; gap: 14px; grid-template-columns: repeat(3, 1fr); margin: 14px 0 }
+  @media (max-width: 820px) { .grid, .grid-3 { grid-template-columns: 1fr } }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .card h3 { margin-top: 0 }
+  .card .verdict { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-bottom: 10px }
+  .verdict.good { color: var(--good) }
+  .verdict.warn { color: var(--warn) }
+  .verdict.bad { color: var(--bad) }
+  .verdict.neutral { color: var(--muted) }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top }
+  th { background: var(--panel); color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em }
+  tr:hover td { background: var(--panel-2) }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase }
+  .pill.good { background: rgba(158, 206, 106, 0.12); color: var(--good); border: 1px solid rgba(158, 206, 106, 0.3) }
+  .pill.warn { background: rgba(224, 175, 104, 0.12); color: var(--warn); border: 1px solid rgba(224, 175, 104, 0.3) }
+  .pill.bad { background: rgba(247, 118, 142, 0.12); color: var(--bad); border: 1px solid rgba(247, 118, 142, 0.3) }
+  .callout {
+    background: var(--panel);
+    border-left: 3px solid var(--accent);
+    padding: 14px 18px;
+    border-radius: 6px;
+    margin: 16px 0;
+  }
+  .callout.warn { border-left-color: var(--warn) }
+  .callout.bad { border-left-color: var(--bad) }
+  .callout.good { border-left-color: var(--good) }
+  .callout strong { color: var(--accent) }
+  .callout.warn strong { color: var(--warn) }
+  .callout.bad strong { color: var(--bad) }
+  .callout.good strong { color: var(--good) }
+  hr { border: none; border-top: 1px solid var(--border); margin: 32px 0 }
+  .small { font-size: 13px; color: var(--muted) }
+
+  /* Mockups */
+  .mockup {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin: 18px 0;
+    overflow: hidden;
+  }
+  .mockup-head {
+    background: var(--panel-2);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 14px;
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .mockup-head .badge {
+    background: rgba(122, 162, 247, 0.12);
+    color: var(--accent);
+    border: 1px solid rgba(122, 162, 247, 0.3);
+    padding: 1px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+  }
+  .mockup-head .badge.verified { color: var(--good); background: rgba(158, 206, 106, 0.12); border-color: rgba(158, 206, 106, 0.3) }
+  .mockup-body { padding: 18px }
+  .code-block {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.6;
+    white-space: pre;
+    color: var(--text);
+    overflow-x: auto;
+  }
+  .code-block .k { color: var(--accent) }
+  .code-block .s { color: var(--good) }
+  .code-block .n { color: var(--warn) }
+  .code-block .b { color: var(--accent-2) }
+  .code-block .c { color: var(--muted); font-style: italic }
+  .code-block .kw { color: var(--accent-2); font-weight: 600 }
+  .code-block .del { color: var(--bad); text-decoration: line-through }
+  .code-block .add { color: var(--good); background: rgba(158, 206, 106, 0.08) }
+
+  /* Pipeline diagram */
+  .pipe { display: flex; align-items: stretch; gap: 8px; flex-wrap: wrap; margin: 18px 0 }
+  .pipe .stage {
+    flex: 1 1 0;
+    min-width: 150px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    position: relative;
+  }
+  .pipe .stage .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px }
+  .pipe .stage .name { font-weight: 600; font-size: 14px; margin-bottom: 4px }
+  .pipe .stage .desc { font-size: 12px; color: var(--muted); line-height: 1.45 }
+  .pipe .stage.src { border-color: rgba(122, 162, 247, 0.4) }
+  .pipe .stage.wiki { border-color: rgba(187, 154, 247, 0.5); background: rgba(187, 154, 247, 0.05) }
+  .pipe .stage.own { border-color: rgba(224, 175, 104, 0.4); background: rgba(224, 175, 104, 0.04) }
+  .pipe .stage.out { border-color: rgba(158, 206, 106, 0.4) }
+  .pipe .stage.dropped { opacity: 0.4; border-style: dashed }
+  .pipe .stage.dropped .name { text-decoration: line-through }
+  .pipe .arrow { display: flex; align-items: center; color: var(--muted); font-family: var(--mono); padding: 0 4px }
+
+  /* Item UI mockup */
+  .item-mock {
+    background: linear-gradient(180deg, #1a1f28 0%, #14171c 100%);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin: 14px 0;
+  }
+  .item-mock .name { font-size: 22px; font-weight: 700; letter-spacing: -0.01em }
+  .item-mock .class-line {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .item-mock .class-line .display { color: var(--accent) }
+  .item-mock .class-line .sep { opacity: 0.4 }
+  .item-mock .polarity-row { display: flex; gap: 6px; margin-top: 12px; align-items: center }
+  .item-mock .polarity-row .lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-right: 6px }
+  .item-mock .pol {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 4px;
+    font-family: var(--mono); font-size: 11px; font-weight: 700;
+    background: var(--panel-2); border: 1px solid var(--border);
+  }
+  .item-mock .pol.V { color: #ff6b6b; border-color: rgba(255,107,107,0.4) }
+  .item-mock .pol.D { color: #fbc02d; border-color: rgba(251,192,45,0.4) }
+  .item-mock .pol.exilus { color: #66bb6a; border-color: rgba(102,187,106,0.4); border-style: dashed }
+  .item-mock .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 14px }
+  .item-mock .stat { background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px }
+  .item-mock .stat .lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em }
+  .item-mock .stat .val { font-size: 16px; font-weight: 600; margin-top: 2px }
+
+  /* Loc bar */
+  .locbar { display: flex; height: 28px; border-radius: 6px; overflow: hidden; margin: 8px 0 4px; border: 1px solid var(--border) }
+  .locbar .seg { display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.85); white-space: nowrap; overflow: hidden }
+  .locbar .seg.del { background: rgba(247, 118, 142, 0.35) }
+  .locbar .seg.keep { background: rgba(224, 175, 104, 0.25); color: var(--warn) }
+  .locbar .seg.untouched { background: rgba(138, 147, 160, 0.15); color: var(--muted) }
+  .locbar-legend { display: flex; gap: 18px; font-size: 12px; color: var(--muted); margin-top: 6px }
+  .locbar-legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: middle }
+  .locbar-legend .sw.del { background: rgba(247, 118, 142, 0.6) }
+  .locbar-legend .sw.keep { background: rgba(224, 175, 104, 0.5) }
+  .locbar-legend .sw.untouched { background: rgba(138, 147, 160, 0.4) }
+
+  .verified-list { background: rgba(158, 206, 106, 0.06); border: 1px solid rgba(158, 206, 106, 0.2); border-radius: 8px; padding: 12px 16px; margin: 14px 0 }
+  .verified-list h4 { color: var(--good); margin-top: 0 }
+  .verified-list ul { margin: 4px 0 }
+</style>
+</head>
+<body>
+
+<h1>Arsenyx data pipeline — v3 (empirically grounded)</h1>
+<p class="lead">Rewrite of v2 after actually fetching DE PublicExport, the wiki Lua modules, and probing the wiki API. v2 was based on educated guesses about field shapes; several of those guesses were wrong. This version cites what we observed.</p>
+
+<div class="callout warn">
+  <p><strong>What changed since v2.</strong> Empirical fetches of <code>ExportWeapons_en.json</code>, <code>ExportUpgrades_en.json</code>, <code>Module:Weapons/data/primary</code>, and <code>Special:Version</code> showed: (1) DE has <em>no</em> <code>parentName</code> on weapons, <em>no</em> <code>compatibilityTags</code>, <em>no</em> polarities — the v2 "parentName walker" was fictitious; (2) DE <em>does</em> ship pre-computed mod <code>levelStats</code> — the "keep WFCD for levelStats math" justification is dead; (3) the wiki Lua modules already carry <code>Class</code>, <code>CompatibilityTags</code>, <code>Polarities</code>, <code>ExilusPolarity</code>, <code>Family</code>, <code>Slot</code>, <code>Traits</code> as clean separate fields — the v2 "displayClass + compatTags split" was reinventing what the wiki already does; (4) the wiki has no Cargo or Bucket query API populated (yet) — we fetch raw Lua and parse it.</p>
+</div>
+
+<h2>The architecture in one sentence</h2>
+<p>Two upstream sources, each authoritative within its lane: <strong>DE PublicExport for game numbers</strong>, <strong>wiki Lua modules for player-facing classification and polarities</strong>. We own the merge, the schema, and a small curated overrides layer. <code>@wfcd/items</code> drops out entirely.</p>
+
+<h2 id="verified">What we verified empirically</h2>
+<div class="verified-list">
+  <h4>Confirmed against live endpoints (2026-05-27)</h4>
+  <ul>
+    <li>DE <code>ExportWeapons_en.json</code> — 831 weapons, top-level fields: <code>name, uniqueName, codexSecret, damagePerShot[20], totalDamage, criticalChance, criticalMultiplier, procChance, fireRate, masteryReq, productCategory, omegaAttenuation</code> + category-conditional (<code>accuracy/trigger/reloadTime/multishot/magazineSize</code> for guns; <code>blockingAngle/comboDuration/slamAttack/...</code> for melee). <strong>No <code>parentName</code>, no <code>compatibilityTags</code>, no polarities, no exilus.</strong></li>
+    <li>DE <code>productCategory</code> has only 8 values across all 831 weapons: Pistols (327), Melee (221), LongGuns (192), SpecialItems (36), SentinelWeapons (24), SpaceGuns (22), SpaceMelee (8), OperatorAmps (1). <strong>Bubonico AND Hek AND every sniper rifle are all just <code>LongGuns</code>.</strong> DE makes no shotgun/rifle/sniper distinction.</li>
+    <li>DE <code>ExportUpgrades_en.json</code> (mods) ships fully-populated <code>levelStats</code> arrays — Serration's 11 ranks of <code>"+15% Damage" … "+165% Damage"</code> come straight from the export. <strong>No WFCD math required.</strong></li>
+    <li>DE clean English names: present inline in <code>_en.json</code>. <code>"name": "Coda Bubonico"</code>. PEP's <code>dict.en.json</code> split is a multi-locale dedup optimization we don't need (English only).</li>
+    <li>Wiki <code>Module:Weapons/data/primary</code> for "Coda Bubonico" carries: <code>Class = "Arm-Cannon"</code>, <code>CompatibilityTags = { "PROJECTILE", "AOE", "BATTERY" }</code>, <code>ExilusPolarity = "Madurai"</code>, <code>Family = "Bubonico"</code>, <code>Mastery = 17</code>, <code>Polarities = { "Naramon", "Madurai", "Naramon" }</code>, <code>Slot = "Primary"</code>, <code>Traits = { "Infested" }</code>. <strong>Everything DE doesn't have.</strong></li>
+    <li>Wiki API: <strong>no Cargo extension</strong> (74 extensions on <code>Special:Version</code>, zero <code>Cargo</code>). <strong>Bucket extension installed but unused</strong> — <code>action=bucket</code> is a real endpoint, but every bucket name returns <code>"Bucket X does not exist."</code> and no Module-namespace page calls <code>bucket(</code>. Gloop (the wiki host) has clearly provisioned Bucket for a future migration; it isn't live yet.</li>
+    <li>Wiki <code>ExportManifest.json</code> resolves icons by <code>uniqueName</code> → <code>textureLocation</code> like <code>/Lotus/Interface/Icons/StoreIcons/Weapons/PrimaryWeapons/Weapons/CodaBubonico.png!00_&lt;hash&gt;</code>. These are CDN-fetchable from <code>content.warframe.com/PublicExport/</code>. We can stop depending on <code>cdn.warframestat.us</code>.</li>
+  </ul>
+</div>
+
+<h2>Coverage across every moddable category</h2>
+<p>Pulled and inspected each DE export blob and the corresponding wiki module. Every category that can take a mod is reachable from one or both sources. No "we'll figure it out later" gaps.</p>
+
+<div class="mockup">
+  <div class="mockup-head">
+    <span>Coverage matrix (empirically verified 2026-05-27)</span>
+    <span><span class="badge verified">DE + wiki both fetched and inspected</span></span>
+  </div>
+  <div class="mockup-body" style="padding: 0">
+<table style="margin: 0">
+  <thead>
+    <tr>
+      <th style="width: 18%">Category</th>
+      <th style="width: 28%">DE Export</th>
+      <th style="width: 28%">Wiki Lua module</th>
+      <th>Polarities · Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Warframes</strong> (115)</td>
+      <td><code>ExportWarframes</code> · <code>Suits</code></td>
+      <td><code>Module:Warframes/data</code> → <code>Warframes</code></td>
+      <td>Wiki · <code>Polarities</code> + <code>AuraPolarity</code>. Nezha: <code>{ Vazarin, Madurai }</code> + <code>Naramon</code> aura. Abilities, Passive, Progenitor, Subsumed.</td>
+    </tr>
+    <tr>
+      <td><strong>Archwing frames</strong> (5)</td>
+      <td><code>ExportWarframes</code> · <code>SpaceSuits</code></td>
+      <td><code>Module:Warframes/data</code> → <code>Archwings</code></td>
+      <td>Wiki · Amesha, Itzal, Odonata, Elytron, Odonata Prime.</td>
+    </tr>
+    <tr>
+      <td><strong>Necramechs</strong> (2)</td>
+      <td><code>ExportWarframes</code> · <code>MechSuits</code></td>
+      <td><code>Module:Warframes/data</code> → <code>Necramechs</code></td>
+      <td>Wiki · Voidrig: <code>{ Madurai, Vazarin, Naramon }</code>. Bonewidow.</td>
+    </tr>
+    <tr>
+      <td><strong>Operators</strong></td>
+      <td><span class="pill bad">none</span></td>
+      <td><code>Module:Warframes/data</code> → <code>Operators</code></td>
+      <td>Wiki-only category. Wiki carries operators despite DE having no export for them.</td>
+    </tr>
+    <tr>
+      <td><strong>Primary weapons</strong> (192)</td>
+      <td><code>ExportWeapons</code> · <code>LongGuns</code></td>
+      <td><code>Module:Weapons/data/primary</code> (311 KB)</td>
+      <td>Wiki · ✓ verified Coda Bubonico</td>
+    </tr>
+    <tr>
+      <td><strong>Secondary weapons</strong> (327)</td>
+      <td><code>ExportWeapons</code> · <code>Pistols</code></td>
+      <td><code>Module:Weapons/data/secondary</code> (212 KB)</td>
+      <td>Wiki · includes Grimoires (Tomes), throwing knives</td>
+    </tr>
+    <tr>
+      <td><strong>Melee weapons</strong> (221)</td>
+      <td><code>ExportWeapons</code> · <code>Melee</code></td>
+      <td><code>Module:Weapons/data/melee</code> (429 KB)</td>
+      <td>Wiki</td>
+    </tr>
+    <tr>
+      <td><strong>Archwing weapons</strong> (30)</td>
+      <td><code>ExportWeapons</code> · <code>SpaceGuns</code> / <code>SpaceMelee</code></td>
+      <td><code>Module:Weapons/data/archwing</code> (dedicated subpage)</td>
+      <td>Wiki</td>
+    </tr>
+    <tr>
+      <td><strong>Sentinel weapons</strong> (24)</td>
+      <td><code>ExportWeapons</code> · <code>SentinelWeapons</code></td>
+      <td><code>Module:Weapons/data/companion</code> (flat keyed table; identify via <code>Class</code>)</td>
+      <td>Wiki · Artax, Sweeper, ...</td>
+    </tr>
+    <tr>
+      <td><strong>Sentinels</strong> (17)</td>
+      <td><code>ExportSentinels</code> · <code>Sentinels</code></td>
+      <td><code>Module:Companions/data</code></td>
+      <td>Wiki · Wyrm, Carrier, Helios, Diriga, ...</td>
+    </tr>
+    <tr>
+      <td><strong>Kubrows / Kavats / MOAs / Hounds / Vulpaphylas / Predasites</strong></td>
+      <td><code>ExportSentinels</code> · <code>KubrowPets</code> (only 15 — undercount)</td>
+      <td><code>Module:Companions/data</code> (71 KB) — full set</td>
+      <td>Wiki authoritative. DE undercounts; wiki has all breeds.</td>
+    </tr>
+    <tr>
+      <td><strong>Beast claws</strong> (Adarza, Smeeta, Sahasa, Sunika, Vasca, Vulpaphyla, Predasite)</td>
+      <td><span class="pill bad">none</span></td>
+      <td><code>Module:Weapons/data/companion</code> (flat table; <code>Class = "Claws (Beast)"</code> ✓ verified)</td>
+      <td>Wiki · <strong>The 321 LOC hardcoded <code>beast-claws.ts</code> table can be deleted.</strong></td>
+    </tr>
+    <tr>
+      <td><strong>Amps (Operator)</strong></td>
+      <td><code>ExportWeapons</code> · <code>OperatorAmps</code> (Mote only) + parts in <code>ExportRecipes</code> (22 recipes)</td>
+      <td><code>Module:Weapons/data/modular</code> (header section "Amps")</td>
+      <td>N/A · modular — composed from prism + scaffold + brace</td>
+    </tr>
+    <tr>
+      <td><strong>Operator abilities (Focus)</strong></td>
+      <td><code>ExportUpgrades.ExportFocusUpgrades</code> (105)</td>
+      <td><code>Module:Focus/data</code> (108 KB)</td>
+      <td>N/A · Naramon, Madurai, Vazarin, Unairu, Zenurik schools</td>
+    </tr>
+    <tr>
+      <td><strong>Zaws</strong> (modular melee)</td>
+      <td>parts in <code>ExportRecipes</code></td>
+      <td><code>Module:Modular/data</code> (28 KB) + <code>Module:Weapons/data/modular</code></td>
+      <td>N/A · composed from strike + grip + link</td>
+    </tr>
+    <tr>
+      <td><strong>Kitguns</strong> (modular pistols)</td>
+      <td>8 recipes in <code>ExportRecipes</code></td>
+      <td><code>Module:Modular/data</code> + <code>/data/modular</code></td>
+      <td>N/A · composed from chamber + grip + loader</td>
+    </tr>
+    <tr>
+      <td><strong>Mods (all kinds)</strong></td>
+      <td><code>ExportUpgrades.ExportUpgrades</code> (1595) — 232 distinct <code>compatName</code> values incl. Parazon (40), Necramech (28), Moa, Hound, per-breed Kavat/Kubrow, Tome, Robotic, Sentinel. <strong>Mixed case</strong> — normalize at build time.</td>
+      <td><code>Module:Mods/data</code> (933 KB)</td>
+      <td>DE · <code>polarity</code> on each mod</td>
+    </tr>
+    <tr>
+      <td><strong>Mod sets</strong> (Augur, Gladiator, ...)</td>
+      <td><code>ExportUpgrades.ExportModSet</code> (19)</td>
+      <td><code>Module:Mods/data</code></td>
+      <td>DE · set-bonus formulas included</td>
+    </tr>
+    <tr>
+      <td><strong>Avionics</strong> (Railjack mods)</td>
+      <td><code>ExportUpgrades.ExportAvionics</code> (82)</td>
+      <td><code>Module:Avionics/data</code> (14 KB)</td>
+      <td>DE · <code>polarity</code> per avionic</td>
+    </tr>
+    <tr>
+      <td><strong>Arcanes &amp; cosmetic enhancers</strong> (168 total; 67 "Arcane …" proper, plus Exodia / Theorem / Magus / Virtuos / Pax)</td>
+      <td><code>ExportRelicArcane_en.json</code> · filed under <code>/Lotus/Upgrades/CosmeticEnhancers/</code>. <strong><code>levelStats</code> pre-computed.</strong></td>
+      <td><code>Module:Arcane/data</code> (94 KB)</td>
+      <td>N/A · misleading DE filename (not just relics)</td>
+    </tr>
+    <tr>
+      <td><strong>Stances</strong></td>
+      <td><code>ExportUpgrades</code> (filter by compat)</td>
+      <td><code>Module:Stances/data</code> (222 KB — combos!)</td>
+      <td>DE · wiki ships combo sequences DE doesn't</td>
+    </tr>
+    <tr>
+      <td><strong>Parazon mods</strong></td>
+      <td><code>ExportUpgrades</code> · 40 mods with <code>compatName: Parazon</code></td>
+      <td><code>Module:Mods/data</code></td>
+      <td>DE · Parazon itself is a fixed weapon</td>
+    </tr>
+    <tr>
+      <td><strong>Liches / Coda / Kuva / Tenet variants</strong></td>
+      <td><code>ExportWeapons</code> — covered with base weapons (Coda Bubonico, Kuva Bramma, etc.)</td>
+      <td>Same wiki modules as base weapons; entries keyed by variant name</td>
+      <td>Wiki · variant <code>Family</code> field provides the linkage</td>
+    </tr>
+  </tbody>
+</table>
+  </div>
+</div>
+
+<h3>Surprises worth knowing</h3>
+<ul>
+  <li><strong>Arcanes live in <code>ExportRelicArcane_en.json</code></strong> despite the filename. 168 cosmetic-enhancer entries with <code>levelStats</code> already populated — 67 named <code>Arcane …</code> proper, plus Exodia, Theorem, Magus, Virtuos, Pax. Filed under <code>/Lotus/Upgrades/CosmeticEnhancers/</code> in the uniqueName tree — quirky DE choice.</li>
+  <li><strong>One wiki file covers four categories.</strong> <code>Module:Warframes/data</code> contains Warframes, Archwings, Necramechs, and Operators as named subtables. One fetch, four item types.</li>
+  <li><strong>DE's <code>ExportSentinels</code> undercounts pets</strong> — only 15 KubrowPets, vs the full menagerie on the wiki. Wiki is the authoritative source for companions.</li>
+  <li><strong>Modular weapons (Zaws / Kitguns / Amps) have no per-build DE entry</strong> — they're composed at runtime from parts. DE exports the parts; wiki documents valid combos and base-class stats. The planner has to either expose parts-as-components or list common preset combos as curated entries. This is a UX choice, not a coverage gap.</li>
+  <li><strong>Operators are wiki-only.</strong> No DE export. The wiki carries them in <code>Module:Warframes/data</code> → <code>Operators</code>. Fine for our purposes — operators don't have many mod-relevant fields anyway.</li>
+  <li><strong>Beast claws have <code>Class = "Claws (Beast)"</code> in <code>Module:Weapons/data/companion</code></strong> with full damage tables. Confirms <code>scripts/beast-claws.ts</code>'s 322 LOC of hardcoded data is now deletable.</li>
+</ul>
+
+<h2>Pipeline diagram</h2>
+
+<div class="pipe">
+  <div class="stage src">
+    <div class="label">Input · DE</div>
+    <div class="name">PublicExport</div>
+    <div class="desc">LZMA index → 16 <code>Export*.json</code> blobs. Stats, damage, fire rate, magazine, MR, uniqueName, clean English name, productCategory, pre-computed mod levelStats, manifest icon URLs.</div>
+  </div>
+  <div class="arrow">+</div>
+  <div class="stage wiki">
+    <div class="label">Input · Wiki</div>
+    <div class="name">Lua modules (15)</div>
+    <div class="desc"><code>Module:Weapons/data/{primary,secondary,melee,archwing,companion,railjack,modular,misc}</code> (8 subpages declared by the router), <code>Module:Warframes/data</code> (Warframes + Archwings + Necramechs + Operators in one), <code>Module:Companions/data</code>, <code>Module:Arcane/data</code>, <code>Module:Mods/data</code>, <code>Module:Stances/data</code>, <code>Module:Focus/data</code>, <code>Module:Avionics/data</code>. Class, CompatibilityTags, Polarities, ExilusPolarity, AuraPolarity, Family, Slot, Traits.</div>
+  </div>
+  <div class="arrow">+</div>
+  <div class="stage own">
+    <div class="label">Ours · checked in</div>
+    <div class="name">data/curated/*.yaml</div>
+    <div class="desc">Plexus (synthetic), atmospheric archgun split, missing-from-wiki overrides. Curated wins on conflict.</div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="stage out">
+    <div class="label">Output</div>
+    <div class="name">items-index.json<br/>mods-all.json</div>
+    <div class="desc">Same files the app already consumes. Our schema.</div>
+  </div>
+</div>
+
+<div class="pipe" style="margin-top: 24px">
+  <div class="stage dropped">
+    <div class="label">Dropped</div>
+    <div class="name">@wfcd/items</div>
+    <div class="desc">Both prior justifications gone — DE ships levelStats; wiki ships polarities. No reason to keep the dep.</div>
+  </div>
+  <div class="stage dropped">
+    <div class="label">Dropped</div>
+    <div class="name">PEP</div>
+    <div class="desc">Bus factor 1, opaque Pluto+WASM derivation, no weapon polarities. Same conclusion as v2.</div>
+  </div>
+  <div class="stage dropped">
+    <div class="label">Dropped</div>
+    <div class="name">cdn.warframestat.us</div>
+    <div class="desc">Icons resolve from DE <code>ExportManifest.json</code> + <code>content.warframe.com/PublicExport/</code>.</div>
+  </div>
+</div>
+
+<h2>Mockup: actual DE input (verified)</h2>
+<p>Real record from today's <code>ExportWeapons_en.json</code>. This is the entire shape — no truncation. Notice how thin it is.</p>
+
+<div class="mockup">
+  <div class="mockup-head">
+    <span>ExportWeapons_en.json — Coda Bubonico</span>
+    <span><span class="badge verified">fetched 2026-05-27</span> <span class="badge">content.warframe.com</span></span>
+  </div>
+  <div class="mockup-body">
+<div class="code-block">{
+  <span class="k">"name"</span>: <span class="s">"Coda Bubonico"</span>,
+  <span class="k">"uniqueName"</span>: <span class="s">"/Lotus/Weapons/Infested/InfestedLich/LongGuns/CodaBubonico/CodaBubonicoCannon"</span>,
+  <span class="k">"codexSecret"</span>: <span class="kw">false</span>,
+  <span class="k">"damagePerShot"</span>: [<span class="n">2</span>, <span class="n">13</span>, <span class="n">19</span>, <span class="n">0</span>, <span class="n">0</span>, <span class="n">0</span>, <span class="n">7</span>, <span class="n">0</span>, <span class="n">0</span>, <span class="n">0</span>, <span class="n">0</span>, <span class="n">0</span>, <span class="n">0</span>, <span class="n">0</span>, <span class="n">0</span>, <span class="n">0</span>, <span class="n">0</span>, <span class="n">0</span>, <span class="n">0</span>, <span class="n">0</span>],
+  <span class="k">"totalDamage"</span>: <span class="n">41</span>,
+  <span class="k">"description"</span>: <span class="s">"With increased magazine size, the Coda Bubonico was born of the Technocyte virus' need to spread infection..."</span>,
+  <span class="k">"criticalChance"</span>: <span class="n">0.27</span>,
+  <span class="k">"criticalMultiplier"</span>: <span class="n">2.3</span>,
+  <span class="k">"procChance"</span>: <span class="n">0.101</span>,
+  <span class="k">"fireRate"</span>: <span class="n">5.33</span>,
+  <span class="k">"masteryReq"</span>: <span class="n">17</span>,
+  <span class="k">"productCategory"</span>: <span class="s">"LongGuns"</span>,                  <span class="c">// ← coarse. Bubonico, Hek, Lanka all just "LongGuns"</span>
+  <span class="k">"slot"</span>: <span class="n">1</span>,
+  <span class="k">"accuracy"</span>: <span class="n">25</span>,
+  <span class="k">"omegaAttenuation"</span>: <span class="n">0.5</span>,
+  <span class="k">"maxLevelCap"</span>: <span class="n">40</span>,
+  <span class="k">"noise"</span>: <span class="s">"ALARMING"</span>,
+  <span class="k">"trigger"</span>: <span class="s">"AUTO"</span>,
+  <span class="k">"magazineSize"</span>: <span class="n">36</span>,
+  <span class="k">"reloadTime"</span>: <span class="n">5.5</span>,
+  <span class="k">"multishot"</span>: <span class="n">7</span>
+}
+<span class="c">// no parentName, no compatibilityTags, no polarities, no exilus, no Class</span></div>
+  </div>
+</div>
+
+<h2>Mockup: actual wiki Lua (verified)</h2>
+<p>Excerpt from <code>Module:Weapons/data/primary</code> for the same weapon. Carries everything DE doesn't.</p>
+
+<div class="mockup">
+  <div class="mockup-head">
+    <span>Module:Weapons/data/primary — ["Coda Bubonico"]</span>
+    <span><span class="badge verified">fetched 2026-05-27</span> <span class="badge">wiki.warframe.com</span></span>
+  </div>
+  <div class="mockup-body">
+<div class="code-block"><span class="kw">[</span><span class="s">"Coda Bubonico"</span><span class="kw">] = {</span>
+  <span class="k">Name</span>          <span class="kw">=</span> <span class="s">"Coda Bubonico"</span>,
+  <span class="k">Link</span>          <span class="kw">=</span> <span class="s">"Coda Bubonico"</span>,
+  <span class="k">Family</span>        <span class="kw">=</span> <span class="s">"Bubonico"</span>,                      <span class="c">-- variant linkage, no parentName needed</span>
+  <span class="k">Slot</span>          <span class="kw">=</span> <span class="s">"Primary"</span>,
+  <span class="k">Class</span>         <span class="kw">=</span> <span class="s">"Arm-Cannon"</span>,                    <span class="c">-- player-facing class</span>
+  <span class="k">CompatibilityTags</span> <span class="kw">=</span> <span class="kw">{</span> <span class="s">"PROJECTILE"</span>, <span class="s">"AOE"</span>, <span class="s">"BATTERY"</span> <span class="kw">}</span>,
+  <span class="k">Polarities</span>    <span class="kw">=</span> <span class="kw">{</span> <span class="s">"Naramon"</span>, <span class="s">"Madurai"</span>, <span class="s">"Naramon"</span> <span class="kw">}</span>,
+  <span class="k">ExilusPolarity</span> <span class="kw">=</span> <span class="s">"Madurai"</span>,
+  <span class="k">Traits</span>        <span class="kw">=</span> <span class="kw">{</span> <span class="s">"Infested"</span> <span class="kw">}</span>,
+  <span class="k">Mastery</span>       <span class="kw">=</span> <span class="n">17</span>,
+  <span class="k">MaxRank</span>       <span class="kw">=</span> <span class="n">40</span>,
+  <span class="k">Magazine</span>      <span class="kw">=</span> <span class="n">36</span>,                              <span class="c">-- duplicates DE; we prefer DE here</span>
+  <span class="k">Reload</span>        <span class="kw">=</span> <span class="n">5.5</span>,
+  <span class="c">-- + Attacks table with per-attack damage (we still prefer DE for raw numbers)</span>
+<span class="kw">}</span></div>
+  </div>
+</div>
+
+<h2>Mockup: the merge</h2>
+<p>Build script joins DE (by <code>uniqueName</code>) with wiki (by <code>name</code>) via a small alias table for known name diffs. Curated YAML wins ties.</p>
+
+<div class="mockup">
+  <div class="mockup-head">
+    <span>items-index.json — Coda Bubonico (merged output)</span>
+    <span><span class="badge">our schema</span></span>
+  </div>
+  <div class="mockup-body">
+<div class="code-block">{
+  <span class="k">"uniqueName"</span>: <span class="s">"/Lotus/Weapons/Infested/InfestedLich/LongGuns/CodaBubonico/CodaBubonicoCannon"</span>,
+  <span class="k">"slug"</span>: <span class="s">"coda-bubonico"</span>,
+  <span class="k">"name"</span>: <span class="s">"Coda Bubonico"</span>,
+  <span class="k">"category"</span>: <span class="s">"primary"</span>,                      <span class="c">// derived from wiki Slot</span>
+  <span class="add">  <span class="k">"class"</span>: <span class="s">"Arm-Cannon"</span>,                        <span class="c">// ← wiki Class (was the bug surface)</span></span>
+  <span class="add">  <span class="k">"compatTags"</span>: [<span class="s">"PROJECTILE"</span>, <span class="s">"AOE"</span>, <span class="s">"BATTERY"</span>],<span class="c">// ← wiki CompatibilityTags</span></span>
+  <span class="add">  <span class="k">"family"</span>: <span class="s">"Bubonico"</span>,                         <span class="c">// ← wiki, for variant grouping</span></span>
+  <span class="add">  <span class="k">"polarities"</span>: [<span class="s">"V"</span>, <span class="s">"D"</span>, <span class="s">"V"</span>],                <span class="c">// ← wiki Polarities (V=Naramon, D=Madurai)</span></span>
+  <span class="add">  <span class="k">"exilusPolarity"</span>: <span class="s">"D"</span>,                       <span class="c">// ← wiki ExilusPolarity</span></span>
+  <span class="add">  <span class="k">"traits"</span>: [<span class="s">"Infested"</span>],                       <span class="c">// ← wiki Traits</span></span>
+  <span class="k">"masteryReq"</span>: <span class="n">17</span>,                              <span class="c">// DE (wiki agrees)</span>
+  <span class="k">"productCategory"</span>: <span class="s">"LongGuns"</span>,                  <span class="c">// kept from DE for low-level routing</span>
+  <span class="k">"fireRate"</span>: <span class="n">5.33</span>,
+  <span class="k">"magazineSize"</span>: <span class="n">36</span>,
+  <span class="k">"totalDamage"</span>: <span class="n">41</span>,
+  <span class="k">"damagePerShot"</span>: [<span class="n">2</span>, <span class="n">13</span>, <span class="n">19</span>, ...],
+  <span class="k">"imageName"</span>: <span class="s">"CodaBubonico.png"</span>,               <span class="c">// from DE ExportManifest</span>
+  <span class="del">  <span class="k">"type"</span>: <span class="s">"Rifle"</span>                              <span class="c">// gone — was the bug</span></span>
+}</div>
+  </div>
+</div>
+
+<h2>Mockup: how it renders</h2>
+<p>One <code>class</code> field, displayed honestly. No two-field split, no synthetic display logic. The mod filter checks <code>compatTags</code> separately — UI never has to reconcile.</p>
+
+<div class="item-mock">
+  <div class="name">Coda Bubonico</div>
+  <div class="class-line">
+    <span class="display">Arm-Cannon</span>
+    <span class="sep">·</span>
+    <span>Infested</span>
+    <span class="sep">·</span>
+    <span>MR 17</span>
+  </div>
+  <div class="polarity-row">
+    <span class="lbl">Polarities</span>
+    <span class="pol V">V</span><span class="pol D">D</span><span class="pol V">V</span>
+    <span style="opacity: 0.4; margin: 0 8px">·</span>
+    <span class="lbl" style="margin-right: 0">Exilus</span>
+    <span class="pol D exilus">D</span>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="lbl">Damage</div><div class="val">41</div></div>
+    <div class="stat"><div class="lbl">Fire Rate</div><div class="val">5.33</div></div>
+    <div class="stat"><div class="lbl">Magazine</div><div class="val">36</div></div>
+    <div class="stat"><div class="lbl">Crit</div><div class="val">27%</div></div>
+  </div>
+</div>
+
+<h2>Mockup: the mod-compat rule (three fields, not one)</h2>
+<p>The earlier draft claimed a single <code>compatTags.includes(mod.compatName)</code> would do it. It won't — DE's <code>compatName</code> vocabulary (<code>Pistol</code>, <code>Rifle</code>, <code>Parazon</code>, <code>Necramech</code>, mixed case, slot/role) and wiki's <code>CompatibilityTags</code> (<code>PROJECTILE</code>, <code>AOE</code>, <code>HITSCAN</code>, <code>BATTERY</code> — uppercase capabilities) are different vocabularies. They compose, they don't substitute. So we carry <strong>three fields</strong> per weapon:</p>
+
+<table>
+  <thead><tr><th>Field</th><th>Source</th><th>Purpose</th><th>Bubonico example</th></tr></thead>
+  <tbody>
+    <tr><td><code>displayClass</code></td><td>Wiki <code>Class</code></td><td>User-facing label in the UI</td><td><code>"Arm-Cannon"</code></td></tr>
+    <tr><td><code>modPool</code></td><td>DE <code>productCategory</code> + <code>compatibilityTags</code> on the weapon, with wiki override when DE disagrees</td><td>Slot-level mod-pool routing (which <code>compatName</code> bucket the weapon draws from)</td><td><code>"Shotgun"</code></td></tr>
+    <tr><td><code>compatTags</code></td><td>Wiki <code>CompatibilityTags</code></td><td>Capability refinements (Cautious Shot only on <code>PROJECTILE+AOE</code>, etc.)</td><td><code>["PROJECTILE","AOE","BATTERY"]</code></td></tr>
+  </tbody>
+</table>
+
+<p>Bubonico is the canonical divergence: shown as Arm-Cannon, drawn from the Shotgun mod pool, refined by PROJECTILE/AOE/BATTERY. None of the three fields collapses into another — and that's exactly why WFCD's wiki-merge step broke when it dropped wiki <code>Class</code>.</p>
+
+<div class="mockup">
+  <div class="mockup-head">
+    <span>packages/shared/src/warframe/mods.ts — predicate</span>
+    <span>was ~80 LOC of string guessing</span>
+  </div>
+  <div class="mockup-body">
+<div class="code-block"><span class="c">// before: isPrimaryMod / isPistolMod / isMeleeCompat / modMatchesCompat (~80 LOC of name+category guessing)</span>
+
+<span class="c">// after: two structural checks, both reading data we own.</span>
+<span class="kw">function</span> <span class="b">weaponAcceptsMod</span>(weapon, mod) {
+  <span class="c">// 1. slot/class pool match — normalize DE's mixed-case compatName at build time</span>
+  <span class="kw">if</span> (weapon.modPool !== mod.compatName) <span class="kw">return</span> <span class="kw">false</span>;
+
+  <span class="c">// 2. capability refinement — mod may demand specific weapon tags</span>
+  <span class="kw">if</span> (mod.requiredTags?.some(t =&gt; !weapon.compatTags.includes(t))) <span class="kw">return</span> <span class="kw">false</span>;
+  <span class="kw">if</span> (mod.forbiddenTags?.some(t =&gt; weapon.compatTags.includes(t))) <span class="kw">return</span> <span class="kw">false</span>;
+
+  <span class="kw">return</span> <span class="kw">true</span>;
+}
+<span class="c">// Outer routing (necramech, plexus, railjack, stance-by-meleeClass) still wraps this.</span>
+<span class="c">// The bug surface that broke under WFCD is gone: modPool and compatTags are structural data,</span>
+<span class="c">// not derived guessing — and displayClass is decoupled from both.</span></div>
+  </div>
+</div>
+
+<h2>modPool source — one line plus a small override map</h2>
+<p>For the overwhelming majority of weapons, <code>modPool = displayClass</code>. Hek is class "Shotgun" and pulls from the Shotgun pool. Boltor is class "Rifle" and pulls from the Rifle pool. Etc. The interesting cases are the <strong>Arm-Cannon family</strong>, where display and pool diverge:</p>
+
+<div class="mockup">
+  <div class="mockup-head">
+    <span>data/curated/mod-pools.yaml — the entire file</span>
+    <span><span class="badge verified">scope verified 2026-05-27</span></span>
+  </div>
+  <div class="mockup-body">
+<div class="code-block"><span class="c"># Override map: weapon name → mod pool, when displayClass alone is wrong.</span>
+<span class="c"># Default rule (in build script): modPool = displayClass.</span>
+<span class="c"># This file lists only the exceptions.</span>
+
+Shedu:         Rifle      <span class="c"># Class="Arm-Cannon", rifle-pool</span>
+Bubonico:      Shotgun    <span class="c"># Class="Arm-Cannon", shotgun-pool</span>
+"Coda Bubonico": Shotgun
+Sepulcrum:     Pistol     <span class="c"># Class="Arm-Cannon" secondary variant</span>
+<span class="c"># …expected total: under 20 entries</span></div>
+  </div>
+</div>
+
+<p>Verified empirically: neither DE nor <code>Module:Weapons/data</code> distinguishes Shedu (rifle-pool) from Bubonico (shotgun-pool) — both are <code>Class = "Arm-Cannon"</code>, both <code>AmmoType = "None"</code>, both same top-level field set. <code>CompatibilityTags</code> differ (Shedu has <code>ASSAULT_AMMO</code>, Bubonico doesn't) but <code>ASSAULT_AMMO</code> is not a rifle/shotgun discriminator — Hek (shotgun) also has it. So there's no structural source. A small curated YAML is the answer: a few entries, reviewed against the wiki Arm-Cannon page on every data bump, fail-loud on any weapon whose <code>displayClass</code> isn't a known mod pool and isn't in the override map.</p>
+
+<h2>Mockup: build script entrypoint</h2>
+<p>Three reads, one merge, one emit. The whole thing fits on a screen.</p>
+
+<div class="mockup">
+  <div class="mockup-head">
+    <span>scripts/build-items-index.ts (sketch)</span>
+    <span><span class="badge">~150 LOC total</span></span>
+  </div>
+  <div class="mockup-body">
+<div class="code-block"><span class="kw">import</span> { fetchDE } <span class="kw">from</span> <span class="s">"./data/fetch-de"</span>;
+<span class="kw">import</span> { fetchWiki } <span class="kw">from</span> <span class="s">"./data/fetch-wiki"</span>;
+<span class="kw">import</span> { loadCurated } <span class="kw">from</span> <span class="s">"./data/curated"</span>;
+
+<span class="kw">const</span> de    = <span class="kw">await</span> fetchDE();      <span class="c">// LZMA decode + 16 JSON fetches, ~30 LOC</span>
+<span class="kw">const</span> wiki  = <span class="kw">await</span> fetchWiki();    <span class="c">// raw Lua + luaparse extraction, ~50 LOC</span>
+<span class="kw">const</span> ours  = loadCurated();          <span class="c">// YAML files, ~20 LOC</span>
+
+<span class="kw">const</span> items = <span class="kw">await</span> mergeWeapons(de.weapons, wiki.weapons, ours.weapons);
+<span class="kw">const</span> mods  = mergeMods(de.upgrades, wiki.mods, ours.mods);
+
+<span class="kw">await</span> writeIndex(items, mods);       <span class="c">// emits items-index.json + per-item detail files</span>
+
+<span class="c">// Curated wins. Unknown wiki Class → build fails loud and prints the uniqueName.</span></div>
+  </div>
+</div>
+
+<h2>Field-by-field responsibility map</h2>
+<table>
+  <thead>
+    <tr><th>Field</th><th>Source</th><th>Notes</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>uniqueName</code> · <code>name</code> · <code>description</code></td><td>DE PublicExport</td><td>Stable primary key. Clean English name inline in <code>_en.json</code>.</td></tr>
+    <tr><td>Damage tables · fire rate · magazine · MR · trigger</td><td>DE PublicExport</td><td>Direct game numbers, indexed by DT_* enum for <code>damagePerShot[20]</code>.</td></tr>
+    <tr><td>Mod <code>levelStats</code></td><td>DE PublicExport</td><td><strong>Already pre-computed</strong> in <code>ExportUpgrades</code>. No math needed.</td></tr>
+    <tr><td><code>productCategory</code></td><td>DE PublicExport</td><td>Coarse 8-value enum. Kept for internal routing (necramech detection, etc.), not user-facing.</td></tr>
+    <tr><td><code>imageName</code> / icon URL</td><td>DE <code>ExportManifest.json</code></td><td><code>textureLocation</code> → CDN-fetchable from <code>content.warframe.com/PublicExport/</code>. Drops dependency on <code>cdn.warframestat.us</code>.</td></tr>
+    <tr><td><code>displayClass</code> (Arm-Cannon, Sniper Rifle, …)</td><td>Wiki Lua <code>Class</code></td><td>The field WFCD's wiki-merge step drops. User-facing label. We read it directly.</td></tr>
+    <tr><td><code>modPool</code> (Pistol, Rifle, Shotgun, Parazon, Necramech, …)</td><td>Default <code>= displayClass</code>; overridden by <code>data/curated/mod-pools.yaml</code> for divergent weapons (Arm-Cannon family: Shedu→Rifle, Bubonico→Shotgun, Sepulcrum→Pistol, …). ~under 20 entries.</td><td>Drives slot-level mod-pool routing.</td></tr>
+    <tr><td><code>compatTags</code></td><td>Wiki Lua <code>CompatibilityTags</code></td><td>Array of uppercase capability tokens (PROJECTILE/AOE/HITSCAN/BATTERY). Refines compat <em>after</em> <code>modPool</code> matches.</td></tr>
+    <tr><td><code>polarities</code> · <code>exilusPolarity</code></td><td>Wiki Lua <code>Polarities</code> · <code>ExilusPolarity</code></td><td>Per-weapon, hand-curated by wiki editors. Source of truth.</td></tr>
+    <tr><td><code>family</code> (variant grouping)</td><td>Wiki Lua <code>Family</code></td><td>Replaces DE's missing <code>parentName</code>. Coda Bubonico → family "Bubonico".</td></tr>
+    <tr><td><code>slot</code> · <code>traits</code></td><td>Wiki Lua</td><td>"Primary"/"Secondary"/"Melee"; trait tags like "Infested", "Tenno", "Tennokai".</td></tr>
+    <tr><td>Prime <code>releaseDate</code> · <code>vaulted</code></td><td>Wiki Lua (page categories) or curated YAML</td><td>Wiki tracks vault state by category membership. Falls back to curated YAML if scraping is brittle.</td></tr>
+    <tr><td>Beast claws · Plexus · atmospheric archgun</td><td><code>data/curated/*.yaml</code></td><td>Synthetic or wiki-incomplete. Smaller than v2 estimated — wiki likely covers beast claws via <code>Module:Companions/data</code> (TBD verify in Phase 1).</td></tr>
+    <tr><td>@wfcd/items <em>anything</em></td><td><span class="pill bad">dropped</span></td><td>Both prior justifications (levelStats, polarities) sourced upstream.</td></tr>
+  </tbody>
+</table>
+
+<h2>What gets deleted / rewritten</h2>
+
+<div class="mockup">
+  <div class="mockup-head">
+    <span>LOC impact, honest</span>
+    <span>red = deleted, amber = rewritten same-shape, grey = untouched</span>
+  </div>
+  <div class="mockup-body">
+
+<h4>scripts/build-items-index.ts (~490 LOC today)</h4>
+<div class="locbar">
+  <div class="seg del" style="flex: 60">−60</div>
+  <div class="seg keep" style="flex: 150">±150 rewrite</div>
+  <div class="seg untouched" style="flex: 390">untouched</div>
+</div>
+<p class="small">All <code>patch*</code> functions go (variant types, missing auras — wiki has them now). Atmospheric archgun + Plexus move to <code>data/curated/</code> same-size. WFCD read loop replaced by DE-fetch + wiki-fetch + merge.</p>
+
+<h4>packages/shared/src/warframe/mods.ts (~450 LOC today)</h4>
+<div class="locbar">
+  <div class="seg del" style="flex: 80">−80</div>
+  <div class="seg keep" style="flex: 60">±60</div>
+  <div class="seg untouched" style="flex: 390">untouched</div>
+</div>
+<p class="small">Inner predicates (<code>isPrimaryMod</code>, <code>isPistolMod</code>, <code>isMeleeCompat</code>, <code>modMatchesCompat</code>) collapse into one <code>compatTags</code> check. Outer 8-way routing stays (necramech, plexus, railjack, stance-by-meleeClass — real game-mechanic facts, no tag can encode them).</p>
+
+<h4>scripts/beast-claws.ts (321 LOC)</h4>
+<div class="locbar">
+  <div class="seg del" style="flex: 321">−321 (confirmed)</div>
+</div>
+<p class="small"><strong>Verified 2026-05-27</strong>: <code>Module:Weapons/data/companion</code> contains all beast claws (Adarza, Smeeta, Sahasa, Sunika, ...) keyed by name in a flat table, with <code>Class = "Claws (Beast)"</code>, full damage tables, and attacks. The entire 321 LOC hardcoded file goes away.</p>
+
+<h4>@wfcd/items dependency</h4>
+<div class="locbar">
+  <div class="seg del" style="flex: 100">removed from package.json</div>
+</div>
+<p class="small">Drops a 20 MB+ package, eliminates the wiki-merge bug surface entirely, and removes the weekly auto-update workflow's primary trigger.</p>
+
+<div class="locbar-legend">
+  <span><span class="sw del"></span>Truly deleted</span>
+  <span><span class="sw keep"></span>Rewritten same shape</span>
+  <span><span class="sw untouched"></span>Unchanged</span>
+</div>
+
+<p style="margin-top: 18px"><strong>Real net: ~460+ LOC deleted (beast claws confirmed wiki-covered), ~210 LOC rewritten in place. The dep tree loses a whole package.</strong></p>
+  </div>
+</div>
+
+<h2>Mirror, don't fetch-at-build</h2>
+<p>Both upstreams get checked into the repo as raw snapshots. The build reads from disk, never from the network.</p>
+<div class="code-block" style="background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin: 10px 0">data/raw/de/         <span class="c">// LZMA-decoded JSON snapshots (16 files)</span>
+data/raw/wiki/       <span class="c">// raw .lua mirror, one file per module (15 files)</span>
+data/curated/        <span class="c">// our overrides
+data/PINS.json       // DE index hash (wiki pin is implicit — the files ARE the pin)</span></div>
+<p>Consequences: git diff <em>is</em> the wiki changelog; the auto-update bot's PRs show real data deltas alongside any code that has to absorb them; rollback is <code>git revert</code>; builds are reproducible from a repo clone with no network. Cost: ~17 MB of mirrored text in the repo (compresses well).</p>
+
+<h2>The Lua-parsing piece (only non-obvious bit)</h2>
+<p>Wiki has no Cargo and Bucket is unused. The update step fetches raw Lua via <code>?action=raw</code> and writes it to <code>data/raw/wiki/</code>. The build step reads those files and parses them with <code>luaparse</code> (pure-JS, well-maintained npm package). The <strong>subpages</strong> we actually consume are pure data — no functions, no <code>require</code>, no metatables — so we extract a single top-level table literal per file. ~50 LOC of glue.</p>
+
+<p class="small"><strong>Note on <code>Module:Weapons/data</code>:</strong> the parent module is a 157-line <em>router</em> that uses <code>mw.loadData</code>, metatables, and overridden <code>pairs</code> to lazily proxy to subpages. We do <strong>not</strong> parse the router — we only mirror and parse the 8 subpages it declares: <code>{ primary, secondary, melee, archwing, companion, railjack, modular, misc }</code>. The router's existence is what guarantees the subpages stay pure-data (Scribunto's <code>mw.loadData</code> contract forbids functions/metatables in the loaded module), which is what makes them safe to <code>luaparse</code>.</p>
+
+<p class="small"><strong>LZMA in Bun:</strong> Bun has no built-in LZMA. DE's <code>index_en.txt.lzma</code> is raw LZMA1 (not .xz). Pin a pure-JS package — <code>lzma</code> on npm works in Bun, ~10 LOC of glue. <code>lzma-native</code> is a node-gyp binary, avoid.</p>
+
+<div class="callout good">
+  <p><strong>Forward compatibility win.</strong> Gloop has installed the <code>Bucket</code> extension on <code>wiki.warframe.com</code> but hasn't populated any buckets yet. When they migrate Weapons/Mods to Bucket (probably in the next year — the extension's clearly there for that), we swap our <code>fetch-wiki.ts</code> from "raw Lua + parse" to "<code>action=bucket</code> JSON query," and the rest of the pipeline doesn't change. Free upgrade.</p>
+</div>
+
+<h2>Phases</h2>
+<table>
+  <thead><tr><th style="width: 22%">Phase</th><th>What lands</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>0. Decisions doc</td>
+      <td>Pin cadence (manual via <code>bun run data:bump</code>? cron?), confirm icon source switch to DE manifest, lock English-only with future-locale path under <code>public/data/en/</code>. <strong>Produce the closed sets the build asserts on:</strong> <code>KNOWN_WIKI_CLASSES</code> (enumerate every <code>Class</code> string seen across the 8 weapon subpages + companions today), <code>KNOWN_PRODUCT_CATEGORIES</code> (the 8 DE values). Seed <code>data/curated/mod-pools.yaml</code> with the Arm-Cannon overrides (~under 20 entries, default rule <code>modPool = displayClass</code> covers everything else).</td>
+    </tr>
+    <tr>
+      <td>1. DE mirror + decode</td>
+      <td>Bun script: download <code>index_en.txt.lzma</code>, pure-JS lzma decode, fetch each blob, sanitize (NUL bytes), write to <code>data/raw/de/</code> (checked in). Pin by index hash in <code>data/PINS.json</code>. Build reads from <code>data/raw/de/</code>, never from the network.</td>
+    </tr>
+    <tr>
+      <td>2. Wiki mirror + Lua parse</td>
+      <td>Fetch 15 modules and write them to <code>data/raw/wiki/</code> as raw <code>.lua</code> files: <code>Module:Weapons/data/{primary,secondary,melee,archwing,companion,railjack,modular,misc}</code> (8 subpages), <code>Module:Warframes/data</code> (4 categories in one), <code>Module:Companions/data</code>, <code>Module:Arcane/data</code>, <code>Module:Mods/data</code>, <code>Module:Stances/data</code>, <code>Module:Focus/data</code>, <code>Module:Avionics/data</code>. Build step reads from disk, parses with <code>luaparse</code>. <strong>Beast claws already verified in <code>/data/companion → Beasts</code> with <code>Class = "Claws (Beast)"</code>.</strong></td>
+    </tr>
+    <tr>
+      <td>3a. Harness baseline</td>
+      <td>Wire a snapshot harness against the <em>current</em> pipeline first (today's index diffed against itself → empty). Land the harness + golden file before the merge exists, so Phase 4 has something to diff into.</td>
+    </tr>
+    <tr>
+      <td>4. Merge + emit</td>
+      <td>Join DE by <code>uniqueName</code> + wiki by <code>name</code> with alias table. Curated YAML wins. <strong>Fail-loud on unknown wiki <code>Class</code></strong> (enumerated whitelist produced in Phase 0). <strong>Fail-loud on unknown DE <code>productCategory</code></strong> (assert against <code>KNOWN_PRODUCT_CATEGORIES</code>; current set: <code>Pistols, Melee, LongGuns, SpecialItems, SentinelWeapons, SpaceGuns, SpaceMelee, OperatorAmps</code>). Rewrite <code>build-items-index.ts</code>. Move atmospheric archgun + Plexus to <code>data/curated/</code>.</td>
+    </tr>
+    <tr>
+      <td>3b. Comparison diff</td>
+      <td>Per-item snapshot diff old vs new, per-item mod-set equality (for every item × every mod), polarity spot-check on 30 weapons vs wiki. Run on every PR from the update bot.</td>
+    </tr>
+    <tr>
+      <td>5. <code>type → class</code> consumer migration</td>
+      <td>7 web files read <code>item.type</code> today; 3 use it behaviorally (<code>getArcaneSlotCount</code>, <code>isZawComponent</code>, Arch-Gun branch). Rename and update string checks. Codec: keep <code>type</code> as a frozen-legacy alias for one release so existing shared-build URLs still decode.</td>
+    </tr>
+    <tr>
+      <td>6. Mod-routing refactor</td>
+      <td>Collapse inner predicate to <code>compatTags</code> check. Outer routing untouched. Update <code>tome-mods.test.ts</code>, <code>stance.test.ts</code>, <code>overframe-slots.test.ts</code>.</td>
+    </tr>
+    <tr>
+      <td>7. CI workflow rewrite</td>
+      <td><code>.github/workflows/update-warframe-data.yml</code> no longer driven by <code>bun update @wfcd/items</code>. Replace with: check DE index hash + wiki module revids; if either changed, run <code>bun run data:bump</code> and open a PR with the new <code>PINS.json</code> + regenerated index.</td>
+    </tr>
+    <tr>
+      <td>8. Drop <code>@wfcd/items</code></td>
+      <td>Remove from <code>package.json</code>. Audit comment-only references in <code>codec-adapter.ts</code>, <code>changelog.tsx</code>.</td>
+    </tr>
+  </tbody>
+</table>
+<p class="small">Net ~460+ LOC deleted (beast claws confirmed wiki-covered), one npm dep gone, all 12 moddable categories covered by DE + wiki + small curated overrides.</p>
+
+<h2>Risks and mitigations</h2>
+<div class="grid">
+  <div class="card">
+    <div class="verdict warn">Risk</div>
+    <h3>Wiki name doesn't match DE name</h3>
+    <p>DE: <code>"Coda Bubonico"</code>. Wiki module key: <code>"Coda Bubonico"</code>. Usually they match, but variants and rename events can diverge. Mitigation: alias table in <code>data/curated/wiki-aliases.yaml</code>; comparison harness reports unmatched DE entries.</p>
+  </div>
+  <div class="card">
+    <div class="verdict warn">Risk</div>
+    <h3>Wiki lag after game patches</h3>
+    <p>Wiki editors update within hours-to-days of a Warframe patch. Until they do, a new weapon has DE stats but no wiki Class. Mitigation: fail-loud on missing wiki record by default, with a <code>--allow-partial</code> dev flag that emits with <code>class: null</code> and a build-time warning.</p>
+  </div>
+  <div class="card">
+    <div class="verdict warn">Risk</div>
+    <h3>Lua parse breakage on syntax drift</h3>
+    <p>Wiki editors occasionally introduce Lua expressions <code>luaparse</code> doesn't handle (rare — modules are almost entirely table literals). Mitigation falls out of the mirror layout: the update-bot's PR fails CI, the bad <code>.lua</code> file never lands in <code>data/raw/wiki/</code>, and the build keeps using the last good snapshot until <code>luaparse</code> is fixed or a curated patch is added.</p>
+  </div>
+  <div class="card">
+    <div class="verdict good">Mitigation built in</div>
+    <h3>Future Bucket migration</h3>
+    <p>If Gloop migrates wiki to Bucket queries, <code>fetch-wiki.ts</code> swaps from raw-Lua to <code>action=bucket</code>. Rest of pipeline unchanged. We pre-design <code>fetch-wiki.ts</code> as a pure "module name → JS object" function so the swap is one file.</p>
+  </div>
+  <div class="card">
+    <div class="verdict warn">Risk</div>
+    <h3>Wiki content is CC-BY-SA</h3>
+    <p>Mirroring <code>.lua</code> files into the repo means we redistribute CC-BY-SA-licensed text. The license is fine for our use (commercial, donations, ads — all permitted; <code>warframe-items</code> does the same thing under MIT code). Obligations: attribute the wiki and note the license on the mirrored content. Mitigation: <code>data/raw/wiki/ATTRIBUTION.md</code> with source URLs + CC-BY-SA notice. Our code/site stays under its existing license — SA only attaches to derivatives of the SA'd <em>content</em>, not the surrounding code.</p>
+  </div>
+  <div class="card">
+    <div class="verdict warn">Risk</div>
+    <h3>DE <code>productCategory</code> enum drift</h3>
+    <p>DE has historically added new values (<code>MechSuits</code> shipped with Necramechs). The 8 values today: <code>Pistols, Melee, LongGuns, SpecialItems, SentinelWeapons, SpaceGuns, SpaceMelee, OperatorAmps</code>. Build step asserts against a frozen <code>KNOWN_PRODUCT_CATEGORIES</code> set and fails loud on unknown — silent miscategorization becomes impossible. When DE adds one, build fails on the next data bump, we update the set + the <code>productCategory → modPool</code> mapping in the same commit.</p>
+  </div>
+  <div class="card">
+    <div class="verdict warn">Risk</div>
+    <h3>Update bot blocks unrelated CI on new-weapon lag</h3>
+    <p>If DE ships a new weapon before wiki editors document it, fail-loud on missing wiki record would block any data bump. Mitigation: <code>data/curated/wiki-stubs.yaml</code> escape hatch — keys a weapon by <code>uniqueName</code> with a minimal hand-filled record and a <code>stubUntil</code> date. Build warns on every stub; CI fails if any stub is past its date. Forces stub cleanup without blocking the bot.</p>
+  </div>
+</div>
+
+<h2>What we explicitly aren't doing</h2>
+<ul>
+  <li><strong>Forking WFCD.</strong> Their value-add was the wiki-merge step; we go to the wiki directly and skip the buggy middleman entirely. Forking would inherit their bugs.</li>
+  <li><strong>Adopting PEP.</strong> Bus factor 1, no polarities anyway, opaque Pluto+WASM derivation. v2's rejection stands.</li>
+  <li><strong>Collapsing display/pool/refinement into one field.</strong> v2's <code>displayClass</code>/<code>compatTags</code> split was on the right track — we extend it to a three-field model (<code>displayClass</code> + <code>modPool</code> + <code>compatTags</code>) because wiki <code>CompatibilityTags</code> are capabilities (PROJECTILE/AOE), not slot/role names, and so they don't replace the pool routing. See the mod-compat mockup.</li>
+  <li><strong>Hosting our own image CDN.</strong> DE's <code>content.warframe.com/PublicExport/</code> already serves icons via <code>ExportManifest.json</code>'s <code>textureLocation</code>. Use it.</li>
+  <li><strong>Drop tables / acquisition.</strong> Out of scope for now. Wiki has <code>Module:DropTables/data</code> — accessible later via the same Lua-fetch pipeline if/when we want acquisition info in the planner.</li>
+  <li><strong>i18n.</strong> Locked English-only. Wiki Lua modules are English-only anyway; multi-locale would require a different data strategy. Deferred.</li>
+  <li><strong>Modular weapon composer (Zaws / Kitguns / Amps).</strong> Both DE and wiki ship the parts; neither ships per-build entries. Whether the planner exposes parts-as-components (let users assemble a Zaw from prism + scaffold + brace) or surfaces curated common combos is a UX call, not a data-pipeline call. Deferred to a separate spec.</li>
+</ul>
+
+<h2>The TL;DR</h2>
+<div class="callout good">
+  <p><strong>DE PublicExport (game numbers, levelStats, icons) + wiki Lua modules (Class, CompatibilityTags, Polarities, ExilusPolarity, Family, Slot, Traits) + small <code>data/curated/*.yaml</code> overrides — all three checked into <code>data/raw/</code> and <code>data/curated/</code> as a repo-local mirror.</strong> Three reads, one merge, our schema, our repo, our pins. Build never touches the network; git diff is the wiki changelog; rollback is <code>git revert</code>. Drop <code>@wfcd/items</code> entirely. ~460+ LOC deleted (beast claws confirmed wiki-covered). The Bubonico bug becomes structurally impossible because we read wiki <code>Class</code> directly, not WFCD's broken wiki-merge derivation.</p>
+</div>
+
+<hr />
+<p class="small">v3 generated 2026-05-27 after empirically fetching <code>content.warframe.com/PublicExport/index_en.txt.lzma</code> + 3 blobs, <code>wiki.warframe.com</code> raw Lua for <code>Module:Weapons/data/primary</code>, <code>Special:Version</code> (74 extensions, no Cargo, Bucket present-but-unpopulated), and the MediaWiki API for Bucket probes. v2 was based on educated guesses about field shapes; this version cites observed reality.</p>
+
+</body>
+</html>

@@ -1,0 +1,702 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="dark" />
+<title>Arsenyx · Data pipeline rewrite — implementation plan</title>
+<style>
+  :root {
+    --bg: #0e141b;
+    --panel: #151c25;
+    --panel-2: #1b2330;
+    --border: #25303f;
+    --text: #e6edf3;
+    --muted: #8a96a8;
+    --accent: #6ea8fe;
+    --good: #4ade80;
+    --warn: #fbbf24;
+    --bad: #f87171;
+    --code-bg: #0a0f15;
+    --code-text: #d1d9e0;
+    --k: #79c0ff;
+    --s: #a5d6ff;
+    --n: #f2cc60;
+    --kw: #ff7b72;
+    --c: #768390;
+    --b: #d2a8ff;
+  }
+  * { box-sizing: border-box; -webkit-text-size-adjust: 100%; }
+  html, body { background: var(--bg); color: var(--text); }
+  body {
+    margin: 0;
+    font: 17px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+    padding: 0 0 80px;
+  }
+  main {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 16px 16px 0;
+  }
+  header.top {
+    padding: 20px 16px 12px;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 24px;
+    line-height: 1.25;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  h2 {
+    font-size: 20px;
+    line-height: 1.25;
+    margin: 36px 0 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    letter-spacing: -0.01em;
+    scroll-margin-top: 64px;
+  }
+  h2:first-of-type { border-top: none; padding-top: 0; }
+  h3 {
+    font-size: 17px;
+    margin: 24px 0 8px;
+    color: var(--accent);
+  }
+  p { margin: 8px 0 12px; }
+  .sub { color: var(--muted); font-size: 14px; margin-top: 2px; }
+  .lede {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin: 12px 0 20px;
+    font-size: 15px;
+  }
+  nav.toc {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: rgba(14, 20, 27, 0.92);
+    backdrop-filter: saturate(140%) blur(8px);
+    -webkit-backdrop-filter: saturate(140%) blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 16px;
+    margin: 0 -16px 20px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+  nav.toc a {
+    display: inline-block;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    padding: 6px 10px;
+    margin-right: 4px;
+    border-radius: 6px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+  }
+  nav.toc a:active { background: var(--accent); color: var(--bg); }
+  ul, ol { padding-left: 22px; margin: 8px 0 14px; }
+  li { margin: 4px 0; }
+  code {
+    background: var(--code-bg);
+    color: var(--code-text);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.88em;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 10px 0 16px;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  pre .k { color: var(--k); }
+  pre .s { color: var(--s); }
+  pre .n { color: var(--n); }
+  pre .kw { color: var(--kw); }
+  pre .c { color: var(--c); font-style: italic; }
+  pre .b { color: var(--b); }
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 10px -16px 16px;
+    padding: 0 16px;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 14px;
+    min-width: 540px;
+  }
+  th, td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+  tr:last-child td { border-bottom: none; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin: 12px 0;
+  }
+  .card h3 { margin-top: 0; }
+  .pill {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    margin-right: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+  }
+  .pill.good { color: var(--good); border-color: rgba(74,222,128,0.35); }
+  .pill.warn { color: var(--warn); border-color: rgba(251,191,36,0.35); }
+  .pill.bad  { color: var(--bad);  border-color: rgba(248,113,113,0.35); }
+  .pill.accent { color: var(--accent); border-color: rgba(110,168,254,0.35); }
+  .flow {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.55;
+    white-space: pre;
+    color: var(--code-text);
+  }
+  .phase-num {
+    display: inline-block;
+    min-width: 28px;
+    text-align: center;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 2px 6px;
+    font-size: 12px;
+    color: var(--accent);
+    font-family: ui-monospace, monospace;
+    margin-right: 6px;
+  }
+  details {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0;
+    margin: 8px 0;
+    overflow: hidden;
+  }
+  details > summary {
+    cursor: pointer;
+    padding: 12px 14px;
+    list-style: none;
+    font-weight: 600;
+    color: var(--text);
+  }
+  details > summary::-webkit-details-marker { display: none; }
+  details > summary::before {
+    content: "▸ ";
+    color: var(--muted);
+    display: inline-block;
+    transition: transform 0.15s;
+    margin-right: 4px;
+  }
+  details[open] > summary::before { content: "▾ "; }
+  details > *:not(summary) { padding: 0 14px; }
+  details > *:not(summary):last-child { padding-bottom: 12px; }
+  details > pre { margin: 0 14px 12px; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+  .footer-note {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 24px;
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+  }
+  @media (min-width: 760px) {
+    body { font-size: 16px; }
+    h1 { font-size: 28px; }
+    h2 { font-size: 22px; }
+    pre { font-size: 13.5px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1>Data pipeline rewrite — implementation plan</h1>
+  <div class="sub">Branch: <code>data-pipeline-rewrite-plan</code> (this doc). Implementation: <code>data-pipeline-rewrite</code> (cut in Phase 1).</div>
+</header>
+
+<main>
+
+<nav class="toc">
+  <a href="#tldr">TL;DR</a>
+  <a href="#flow">Data flow</a>
+  <a href="#layout">Layout</a>
+  <a href="#model">3-field model</a>
+  <a href="#phases">Phases</a>
+  <a href="#code">Key code</a>
+  <a href="#mockups">Mockups</a>
+  <a href="#risks">Risks</a>
+  <a href="#accept">Done-when</a>
+  <a href="#notes">Notes</a>
+</nav>
+
+<div class="lede">
+  Drop <code>@wfcd/items</code>. Mirror DE PublicExport + wiki Lua into the repo as checked-in files. Build <code>items-index.json</code> ourselves. Bubonico-typed-as-Rifle bug becomes structurally impossible. <strong>~460+ LOC deleted, one npm dep gone.</strong>
+</div>
+
+<h2 id="tldr">TL;DR</h2>
+<ol>
+  <li>Mirror raw data into <code>data/raw/de/</code> (16 JSON) + <code>data/raw/wiki/</code> (15 Lua) — checked into git.</li>
+  <li>Build script reads from disk, parses Lua with <code>luaparse</code>, merges with curated YAML, emits the same <code>items-index.json</code> shape we have today.</li>
+  <li>Three new fields on weapons: <code>displayClass</code> (wiki <code>Class</code>), <code>modPool</code> (= <code>displayClass</code> + small override map), <code>compatTags</code> (wiki <code>CompatibilityTags</code>).</li>
+  <li>Mod-compat predicate collapses from ~80 LOC of guessing to two structural checks.</li>
+  <li>Build never hits the network. <strong>The mirror IS the pin.</strong> Git diff is the wiki changelog.</li>
+</ol>
+
+<p>Background: <a href="data-architecture.html" style="color: var(--accent)">data-architecture.html</a> — read that first if anything below is ambiguous.</p>
+
+<h2 id="flow">Data flow</h2>
+<div class="flow">content.warframe.com           wiki.warframe.com
+  PublicExport (LZMA)            ?action=raw (Lua)
+        │                                │
+        ▼                                ▼
+  scripts/sync-de.ts            scripts/sync-wiki.ts
+   (LZMA decode,                 (raw fetch, no parse,
+    sanitize NUL bytes)           attribution preserved)
+        │                                │
+        └────────────┬───────────────────┘
+                     ▼
+        data/raw/de/*.json   +   data/raw/wiki/*.lua
+                ── checked into git ──
+                              │
+                              ▼
+                scripts/build-items-index.ts
+                  ├── readDe()        JSON.parse from disk
+                  ├── readWiki()      luaparse from disk
+                  ├── readCurated()   YAML from disk
+                  └── merge() ──▶ apps/web/public/data/
+                                    items-index.json
+                                    mods-all.json
+                                    items/*.json</div>
+
+<p><strong>Key invariant:</strong> the build never hits the network. The two <code>sync-*.ts</code> scripts are the only network-touching code, run by hand or by the bump bot, never by the app build.</p>
+
+<h2 id="layout">Repo layout (new files)</h2>
+<pre><code>data/
+  raw/
+    de/            <span class="c"># 16 LZMA-decoded JSON blobs (checked in)</span>
+    wiki/          <span class="c"># 15 raw .lua files (checked in)</span>
+    ATTRIBUTION.md <span class="c"># CC-BY-SA notice for wiki content</span>
+  curated/
+    mod-pools.yaml       <span class="c"># weapon name → modPool overrides</span>
+    wiki-aliases.yaml    <span class="c"># DE name → wiki key when they diverge</span>
+    wiki-stubs.yaml      <span class="c"># DE-has-it, wiki-hasn't-yet escape hatch</span>
+    plexus.yaml          <span class="c"># synthetic Plexus weapon</span>
+    atmospheric-archgun.yaml
+  PINS.json      <span class="c"># DE index hash + wiki module revids</span>
+
+scripts/
+  sync-de.ts            <span class="c"># fetch network → data/raw/de/</span>
+  sync-wiki.ts          <span class="c"># fetch network → data/raw/wiki/</span>
+  build-items-index.ts  <span class="c"># REWRITTEN: reads from disk only</span>
+  bump-data.ts          <span class="c"># entry: sync + build + diff</span>
+  build/
+    read-de.ts          <span class="c"># disk → typed shapes</span>
+    read-wiki.ts        <span class="c"># luaparse + extract return table</span>
+    read-curated.ts     <span class="c"># YAML loader</span>
+    merge-weapons.ts    <span class="c"># 3-field merge, fail-loud asserts</span>
+    merge-mods.ts</code></pre>
+
+<h2 id="model">The three-field model (load-bearing)</h2>
+
+<div class="table-scroll">
+<table>
+  <thead><tr><th>Field</th><th>Source</th><th>Bubonico</th></tr></thead>
+  <tbody>
+    <tr><td><code>displayClass</code></td><td>wiki <code>Class</code></td><td><code>"Arm-Cannon"</code></td></tr>
+    <tr><td><code>modPool</code></td><td>default = <code>displayClass</code>; override via <code>curated/mod-pools.yaml</code></td><td><code>"Shotgun"</code></td></tr>
+    <tr><td><code>compatTags</code></td><td>wiki <code>CompatibilityTags</code></td><td><code>["PROJECTILE","AOE","BATTERY"]</code></td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>Bubonico displays as Arm-Cannon, pulls from the Shotgun mod pool, refined by capability tags. <strong>None collapses into another.</strong> Shedu shares the same <code>displayClass</code> but is rifle-pool — proves the override map is needed.</p>
+
+<p>Override map expected size: <strong>under 20 entries</strong> (Arm-Cannon family + a handful of other display/pool divergences).</p>
+
+<h2 id="phases">Phases</h2>
+
+<div class="table-scroll">
+<table>
+  <thead><tr><th>#</th><th>Phase</th><th>Lands</th></tr></thead>
+  <tbody>
+    <tr><td>0</td><td>Decisions</td><td>This doc on <code>main</code>. Branch <code>data-pipeline-rewrite</code> created. Seed <code>mod-pools.yaml</code> with known Arm-Cannon overrides.</td></tr>
+    <tr><td>1</td><td>DE mirror + decode</td><td><code>scripts/sync-de.ts</code>, <code>data/raw/de/*.json</code> committed, <code>data/PINS.json</code>.</td></tr>
+    <tr><td>2</td><td>Wiki mirror + Lua parse</td><td><code>scripts/sync-wiki.ts</code>, <code>data/raw/wiki/*.lua</code> committed, <code>ATTRIBUTION.md</code>, <code>readWiki()</code> glue.</td></tr>
+    <tr><td>3a</td><td>Harness baseline</td><td>Snapshot of today's <code>items-index.json</code>. Diff harness against itself → empty. Lands before merge.</td></tr>
+    <tr><td>4</td><td>Merge + emit</td><td>New <code>build-items-index.ts</code>. Three-field model. <code>KNOWN_*</code> fail-loud asserts.</td></tr>
+    <tr><td>3b</td><td>Comparison diff</td><td>Per-item + per-mod-set diff old vs new. Runs on every bump PR.</td></tr>
+    <tr><td>5</td><td><code>type</code> → <code>displayClass</code></td><td>Consumer migration: ~7 web files. Codec keeps <code>type</code> as legacy alias for one release.</td></tr>
+    <tr><td>6</td><td>Mod-routing refactor</td><td>Collapse <code>mods.ts</code> inner predicate. Update tests.</td></tr>
+    <tr><td>7</td><td>CI workflow</td><td>Replace <code>bun update @wfcd/items</code> trigger with <code>bump-data.ts</code>.</td></tr>
+    <tr><td>8</td><td>Drop <code>@wfcd/items</code></td><td>Remove from <code>package.json</code>. Audit comment-only references.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p><strong>Parallelism:</strong> phases 1 and 2 can run in parallel. 3a must land before 4. 3b runs after 4. 5/6/7/8 are sequential after 4.</p>
+
+<h2 id="code">Key code</h2>
+
+<details open>
+<summary>Phase 1 · <code>scripts/sync-de.ts</code></summary>
+<pre><code><span class="kw">import</span> { decode <span class="kw">as</span> lzmaDecode } <span class="kw">from</span> <span class="s">"lzma"</span>;
+<span class="kw">import</span> { writeFileSync } <span class="kw">from</span> <span class="s">"node:fs"</span>;
+<span class="kw">import</span> { createHash } <span class="kw">from</span> <span class="s">"node:crypto"</span>;
+
+<span class="kw">const</span> INDEX_URL = <span class="s">"https://content.warframe.com/PublicExport/index_en.txt.lzma"</span>;
+<span class="kw">const</span> BLOB_URL = (h: <span class="b">string</span>) =&gt;
+  <span class="s">`https://content.warframe.com/PublicExport/Lzma/${h}`</span>;
+
+<span class="kw">const</span> indexBytes = <span class="kw">new</span> <span class="b">Uint8Array</span>(<span class="kw">await</span> (<span class="kw">await</span> fetch(INDEX_URL)).arrayBuffer());
+<span class="kw">const</span> indexText  = <span class="kw">new</span> <span class="b">TextDecoder</span>().decode(lzmaDecode(indexBytes));
+<span class="c">// "ExportWeapons_en.json!00_aBcD...\nExportUpgrades_en.json!00_..."</span>
+
+<span class="kw">const</span> entries = indexText.trim().split(<span class="s">"\n"</span>).map(line =&gt; {
+  <span class="kw">const</span> [name, hash] = line.split(<span class="s">"!"</span>);
+  <span class="kw">return</span> { name, hash };
+});
+
+<span class="kw">for</span> (<span class="kw">const</span> { name, hash } <span class="kw">of</span> entries) {
+  <span class="kw">const</span> compressed = <span class="kw">new</span> <span class="b">Uint8Array</span>(<span class="kw">await</span> (<span class="kw">await</span> fetch(BLOB_URL(hash))).arrayBuffer());
+  <span class="kw">const</span> raw   = <span class="kw">new</span> <span class="b">TextDecoder</span>().decode(lzmaDecode(compressed));
+  <span class="kw">const</span> clean = raw.replace(<span class="s">/\x00/g</span>, <span class="s">""</span>);   <span class="c">// sanitize NUL bytes</span>
+  <span class="kw">const</span> parsed = <span class="b">JSON</span>.parse(clean);            <span class="c">// validate</span>
+  writeFileSync(<span class="s">`data/raw/de/${name}`</span>, <span class="b">JSON</span>.stringify(parsed, <span class="kw">null</span>, 2));
+}
+
+writeFileSync(<span class="s">"data/PINS.json"</span>, <span class="b">JSON</span>.stringify({
+  deIndexHash: createHash(<span class="s">"sha256"</span>).update(indexText).digest(<span class="s">"hex"</span>),
+  fetchedAt:   <span class="kw">new</span> <span class="b">Date</span>().toISOString(),
+  entries,
+}, <span class="kw">null</span>, 2));</code></pre>
+</details>
+
+<details>
+<summary>Phase 2 · <code>scripts/sync-wiki.ts</code></summary>
+<pre><code><span class="kw">const</span> MODULES = [
+  <span class="s">"Weapons/data/primary"</span>, <span class="s">"Weapons/data/secondary"</span>, <span class="s">"Weapons/data/melee"</span>,
+  <span class="s">"Weapons/data/archwing"</span>, <span class="s">"Weapons/data/companion"</span>, <span class="s">"Weapons/data/railjack"</span>,
+  <span class="s">"Weapons/data/modular"</span>,  <span class="s">"Weapons/data/misc"</span>,
+  <span class="s">"Warframes/data"</span>, <span class="s">"Companions/data"</span>, <span class="s">"Arcane/data"</span>, <span class="s">"Mods/data"</span>,
+  <span class="s">"Stances/data"</span>,   <span class="s">"Focus/data"</span>,      <span class="s">"Avionics/data"</span>,
+];
+
+<span class="kw">for</span> (<span class="kw">const</span> m <span class="kw">of</span> MODULES) {
+  <span class="kw">const</span> url = <span class="s">`https://wiki.warframe.com/index.php?title=Module:${m}&amp;action=raw`</span>;
+  <span class="kw">const</span> body = <span class="kw">await</span> (<span class="kw">await</span> fetch(url)).text();
+  <span class="kw">const</span> header = <span class="s">`-- Source: ${url}\n-- Mirror license: CC-BY-SA 4.0\n\n`</span>;
+  <span class="kw">const</span> fname = m.replace(<span class="s">/\//g</span>, <span class="s">"_"</span>) + <span class="s">".lua"</span>;
+  writeFileSync(<span class="s">`data/raw/wiki/${fname}`</span>, header + body);
+}</code></pre>
+</details>
+
+<details>
+<summary>Phase 2 · <code>scripts/build/read-wiki.ts</code> (luaparse glue)</summary>
+<pre><code><span class="kw">import</span> { parse <span class="kw">as</span> luaparse } <span class="kw">from</span> <span class="s">"luaparse"</span>;
+<span class="kw">import</span> { readFileSync } <span class="kw">from</span> <span class="s">"node:fs"</span>;
+
+<span class="kw">export function</span> <span class="b">readWikiModule</span>(path: <span class="b">string</span>): <span class="b">Record</span>&lt;<span class="b">string</span>, <span class="b">unknown</span>&gt; {
+  <span class="kw">const</span> src = readFileSync(path, <span class="s">"utf-8"</span>);
+  <span class="kw">const</span> ast = luaparse(src, { comments: <span class="kw">false</span> });
+  <span class="kw">const</span> ret = ast.body.find((n: <span class="b">any</span>) =&gt; n.type === <span class="s">"ReturnStatement"</span>);
+  <span class="kw">if</span> (!ret) <span class="kw">throw new</span> <span class="b">Error</span>(<span class="s">`No return in ${path}`</span>);
+  <span class="kw">return</span> luaTableToJs(ret.arguments[0]);
+}
+
+<span class="kw">function</span> <span class="b">luaTableToJs</span>(node: <span class="b">any</span>): <span class="b">any</span> {
+  <span class="kw">if</span> (node.type === <span class="s">"TableConstructorExpression"</span>) {
+    <span class="kw">const</span> isArray = node.fields.every((f: <span class="b">any</span>) =&gt; f.type === <span class="s">"TableValue"</span>);
+    <span class="kw">if</span> (isArray) <span class="kw">return</span> node.fields.map((f: <span class="b">any</span>) =&gt; luaTableToJs(f.value));
+    <span class="kw">const</span> obj: <span class="b">Record</span>&lt;<span class="b">string</span>, <span class="b">any</span>&gt; = {};
+    <span class="kw">for</span> (<span class="kw">const</span> f <span class="kw">of</span> node.fields) {
+      <span class="kw">const</span> key = f.type === <span class="s">"TableKey"</span>
+        ? luaTableToJs(f.key)         <span class="c">// ["Coda Bubonico"] = {...}</span>
+        : f.key.name;                  <span class="c">// Hek = {...}</span>
+      obj[key] = luaTableToJs(f.value);
+    }
+    <span class="kw">return</span> obj;
+  }
+  <span class="kw">if</span> (node.type === <span class="s">"StringLiteral"</span>)  <span class="kw">return</span> node.value;
+  <span class="kw">if</span> (node.type === <span class="s">"NumericLiteral"</span>) <span class="kw">return</span> node.value;
+  <span class="kw">if</span> (node.type === <span class="s">"BooleanLiteral"</span>) <span class="kw">return</span> node.value;
+  <span class="kw">if</span> (node.type === <span class="s">"NilLiteral"</span>)     <span class="kw">return</span> <span class="kw">null</span>;
+  <span class="kw">if</span> (node.type === <span class="s">"UnaryExpression"</span> &amp;&amp; node.operator === <span class="s">"-"</span>)
+    <span class="kw">return</span> -luaTableToJs(node.argument);
+  <span class="kw">throw new</span> <span class="b">Error</span>(<span class="s">`Unhandled Lua node: ${node.type}`</span>);
+}</code></pre>
+</details>
+
+<details>
+<summary>Phase 4 · <code>scripts/build-items-index.ts</code> entrypoint</summary>
+<pre><code><span class="c">// ~150 LOC total (was ~490)</span>
+<span class="kw">import</span> { readDe }     <span class="kw">from</span> <span class="s">"./build/read-de"</span>;
+<span class="kw">import</span> { readWiki }   <span class="kw">from</span> <span class="s">"./build/read-wiki"</span>;
+<span class="kw">import</span> { readCurated } <span class="kw">from</span> <span class="s">"./build/read-curated"</span>;
+<span class="kw">import</span> { mergeWeapons } <span class="kw">from</span> <span class="s">"./build/merge-weapons"</span>;
+<span class="kw">import</span> { mergeMods }    <span class="kw">from</span> <span class="s">"./build/merge-mods"</span>;
+
+<span class="kw">const</span> de    = readDe();        <span class="c">// { weapons, upgrades, sentinels, arcanes, manifest, ... }</span>
+<span class="kw">const</span> wiki  = readWiki();      <span class="c">// { weapons, mods, companions, warframes, arcanes, ... }</span>
+<span class="kw">const</span> ours  = readCurated();   <span class="c">// { modPools, wikiAliases, wikiStubs, plexus, ... }</span>
+
+<span class="kw">const</span> items = mergeWeapons(de, wiki, ours);
+<span class="kw">const</span> mods  = mergeMods(de.upgrades, wiki.mods, ours);
+
+writeItemsIndex(items);
+writeModsAll(mods);
+writePerItemDetails(items);</code></pre>
+</details>
+
+<details>
+<summary>Phase 4 · <code>build/merge-weapons.ts</code> (the fail-loud core)</summary>
+<pre><code><span class="kw">const</span> KNOWN_PRODUCT_CATEGORIES = <span class="kw">new</span> <span class="b">Set</span>([
+  <span class="s">"Pistols"</span>, <span class="s">"Melee"</span>, <span class="s">"LongGuns"</span>, <span class="s">"SpecialItems"</span>,
+  <span class="s">"SentinelWeapons"</span>, <span class="s">"SpaceGuns"</span>, <span class="s">"SpaceMelee"</span>, <span class="s">"OperatorAmps"</span>,
+]);
+
+<span class="kw">const</span> KNOWN_MOD_POOLS = <span class="kw">new</span> <span class="b">Set</span>([
+  <span class="s">"Pistol"</span>, <span class="s">"Rifle"</span>, <span class="s">"Shotgun"</span>, <span class="s">"Melee"</span>, <span class="s">"Sniper"</span>, <span class="s">"Bow"</span>,
+  <span class="s">"Arch-Gun"</span>, <span class="s">"Arch-Melee"</span>, <span class="s">"Parazon"</span>, <span class="s">"Necramech"</span>,
+  <span class="s">"Plexus"</span>, <span class="s">"Tome"</span>, <span class="s">"Robotic"</span>, <span class="s">"Sentinel"</span>, <span class="s">"Amp"</span>, <span class="c">/* ... */</span>
+]);
+
+<span class="kw">const</span> KNOWN_WIKI_CLASSES = <span class="kw">new</span> <span class="b">Set</span>([<span class="c">/* enumerated in Phase 0 from raw .lua */</span>]);
+
+<span class="kw">function</span> <span class="b">mergeWeapon</span>(deWeapon, wikiWeapon, ours) {
+  <span class="kw">if</span> (!KNOWN_PRODUCT_CATEGORIES.has(deWeapon.productCategory))
+    <span class="kw">throw new</span> <span class="b">Error</span>(<span class="s">`Unknown productCategory: ${deWeapon.productCategory} on ${deWeapon.name}`</span>);
+  <span class="kw">if</span> (wikiWeapon &amp;&amp; !KNOWN_WIKI_CLASSES.has(wikiWeapon.Class))
+    <span class="kw">throw new</span> <span class="b">Error</span>(<span class="s">`Unknown wiki Class: ${wikiWeapon.Class} on ${deWeapon.name}`</span>);
+
+  <span class="kw">const</span> displayClass = wikiWeapon?.Class
+    ?? ours.stubs[deWeapon.uniqueName]?.displayClass;
+  <span class="kw">const</span> modPool = ours.modPools[deWeapon.name] ?? displayClass;
+  <span class="kw">if</span> (!KNOWN_MOD_POOLS.has(modPool))
+    <span class="kw">throw new</span> <span class="b">Error</span>(<span class="s">`Unknown modPool: ${modPool} (from ${deWeapon.name}). Add override.`</span>);
+
+  <span class="kw">return</span> {
+    uniqueName: deWeapon.uniqueName,
+    name:       deWeapon.name,
+    displayClass,
+    modPool,
+    compatTags:     wikiWeapon?.CompatibilityTags ?? [],
+    polarities:     wikiWeapon?.Polarities ?? [],
+    exilusPolarity: wikiWeapon?.ExilusPolarity ?? <span class="kw">null</span>,
+    family:         wikiWeapon?.Family ?? <span class="kw">null</span>,
+    slot:           wikiWeapon?.Slot ?? <span class="kw">null</span>,
+    traits:         wikiWeapon?.Traits ?? [],
+    masteryReq:     deWeapon.masteryReq,
+    damagePerShot:  deWeapon.damagePerShot,   <span class="c">// DE wins for raw numbers</span>
+    fireRate:       deWeapon.fireRate,
+    magazineSize:   deWeapon.magazineSize,
+    <span class="c">// ... rest of DE stats</span>
+  };
+}</code></pre>
+</details>
+
+<details>
+<summary>Phase 6 · <code>packages/shared/src/warframe/mods.ts</code></summary>
+<pre><code><span class="c">// BEFORE: isPrimaryMod / isPistolMod / isMeleeCompat / modMatchesCompat (~80 LOC)</span>
+
+<span class="c">// AFTER:</span>
+<span class="kw">function</span> <span class="b">weaponAcceptsMod</span>(weapon, mod): <span class="b">boolean</span> {
+  <span class="c">// compatName is normalized to canonical case at build time, not here</span>
+  <span class="kw">if</span> (weapon.modPool !== mod.compatName) <span class="kw">return</span> <span class="kw">false</span>;
+
+  <span class="kw">if</span> (mod.requiredTags?.some(t =&gt; !weapon.compatTags.includes(t))) <span class="kw">return</span> <span class="kw">false</span>;
+  <span class="kw">if</span> (mod.forbiddenTags?.some(t =&gt; weapon.compatTags.includes(t)))  <span class="kw">return</span> <span class="kw">false</span>;
+
+  <span class="kw">return</span> <span class="kw">true</span>;
+}
+<span class="c">// Outer routing (necramech, plexus, railjack, stance-by-meleeClass) wraps this — unchanged.</span></code></pre>
+</details>
+
+<details>
+<summary>Phase 1+2 · <code>scripts/bump-data.ts</code> (CI + manual entry)</summary>
+<pre><code><span class="c">// Single entry point used by CI bot and by humans on `bun run data:bump`.</span>
+<span class="kw">await</span> sh(<span class="s">"bun scripts/sync-de.ts"</span>);
+<span class="kw">await</span> sh(<span class="s">"bun scripts/sync-wiki.ts"</span>);
+<span class="kw">await</span> sh(<span class="s">"bun scripts/build-items-index.ts"</span>);
+<span class="kw">await</span> sh(<span class="s">"bun scripts/diff-index.ts"</span>);   <span class="c">// Phase 3b: vs previous snapshot</span></code></pre>
+</details>
+
+<h2 id="mockups">Mockups</h2>
+
+<h3>data/PINS.json</h3>
+<pre><code>{
+  <span class="k">"deIndexHash"</span>: <span class="s">"f7e2c8a91b..."</span>,
+  <span class="k">"fetchedAt"</span>: <span class="s">"2026-05-27T14:33:01.000Z"</span>,
+  <span class="k">"entries"</span>: [
+    { <span class="k">"name"</span>: <span class="s">"ExportWeapons_en.json"</span>, <span class="k">"hash"</span>: <span class="s">"00_aBcDeF..."</span> },
+    { <span class="k">"name"</span>: <span class="s">"ExportUpgrades_en.json"</span>, <span class="k">"hash"</span>: <span class="s">"00_xYz123..."</span> }
+  ]
+}</code></pre>
+
+<h3>data/curated/mod-pools.yaml</h3>
+<pre><code><span class="c"># weapon name → mod pool (when displayClass alone is wrong)</span>
+<span class="c"># Default rule (in build): modPool = displayClass</span>
+
+Shedu: Rifle
+Bubonico: Shotgun
+<span class="s">"Coda Bubonico"</span>: Shotgun
+Sepulcrum: Pistol
+<span class="c"># … expected under 20 entries</span></code></pre>
+
+<h3>data/raw/wiki/ATTRIBUTION.md</h3>
+<pre><code># Wiki content attribution
+
+Files in this directory are mirrored from https://wiki.warframe.com
+via ?action=raw from the Module: namespace. Source URLs preserved at
+the top of each file as a Lua comment.
+
+Wiki content is licensed <span class="kw">CC-BY-SA 4.0</span>. This mirror redistributes
+it under the same license. Arsenyx's code remains under its own
+license; this attribution applies only to files in data/raw/wiki/.
+
+Source:  https://wiki.warframe.com
+License: https://creativecommons.org/licenses/by-sa/4.0/</code></pre>
+
+<h3>items-index.json — weapon entry (after)</h3>
+<pre><code>{
+  <span class="k">"uniqueName"</span>: <span class="s">"/Lotus/Weapons/Infested/InfestedLich/LongGuns/CodaBubonico/CodaBubonicoCannon"</span>,
+  <span class="k">"name"</span>: <span class="s">"Coda Bubonico"</span>,
+  <span class="k">"displayClass"</span>: <span class="s">"Arm-Cannon"</span>,
+  <span class="k">"modPool"</span>: <span class="s">"Shotgun"</span>,
+  <span class="k">"compatTags"</span>: [<span class="s">"PROJECTILE"</span>, <span class="s">"AOE"</span>, <span class="s">"BATTERY"</span>],
+  <span class="k">"polarities"</span>: [<span class="s">"Naramon"</span>, <span class="s">"Madurai"</span>, <span class="s">"Naramon"</span>],
+  <span class="k">"exilusPolarity"</span>: <span class="s">"Madurai"</span>,
+  <span class="k">"family"</span>: <span class="s">"Bubonico"</span>,
+  <span class="k">"slot"</span>: <span class="s">"Primary"</span>,
+  <span class="k">"traits"</span>: [<span class="s">"Infested"</span>],
+  <span class="k">"masteryReq"</span>: <span class="n">17</span>,
+  <span class="k">"fireRate"</span>: <span class="n">5.33</span>,
+  <span class="k">"magazineSize"</span>: <span class="n">36</span>
+}</code></pre>
+
+<h2 id="risks">Risks</h2>
+
+<div class="table-scroll">
+<table>
+  <thead><tr><th>Risk</th><th>Lik.</th><th>Impact</th><th>Mitigation</th></tr></thead>
+  <tbody>
+    <tr><td>Wiki name ≠ DE name</td><td><span class="pill warn">med</span></td><td>weapon-merge gap</td><td><code>curated/wiki-aliases.yaml</code>; harness reports unmatched DE entries</td></tr>
+    <tr><td>Wiki editor lag after game patch</td><td><span class="pill bad">high</span></td><td>new weapon has no <code>displayClass</code></td><td><code>curated/wiki-stubs.yaml</code> with <code>stubUntil</code> date; build warns, CI fails after expiry</td></tr>
+    <tr><td>Wiki Lua syntax <code>luaparse</code> can't handle</td><td><span class="pill good">low</span></td><td>build fails on that file</td><td>mirror isolates breakage to one file; last good snapshot keeps building</td></tr>
+    <tr><td>DE <code>productCategory</code> drift</td><td><span class="pill good">low</span></td><td>silent miscategorization</td><td><code>KNOWN_PRODUCT_CATEGORIES</code> assertion fails loud</td></tr>
+    <tr><td>Wiki adds new <code>Class</code> string</td><td><span class="pill warn">med</span></td><td>silent untyped weapon</td><td><code>KNOWN_WIKI_CLASSES</code> assertion fails loud</td></tr>
+    <tr><td>New <code>modPool</code> divergence we haven't seen</td><td><span class="pill warn">med</span></td><td>wrong mods available</td><td><code>KNOWN_MOD_POOLS</code> assertion; review <code>mod-pools.yaml</code> on every bump</td></tr>
+    <tr><td>LZMA <code>lzma</code> package breaks in Bun</td><td><span class="pill good">low</span></td><td><code>sync-de.ts</code> fails</td><td>pin version; alt is <code>lzma-purejs</code>; avoid binary <code>lzma-native</code></td></tr>
+    <tr><td>Wiki Bucket migration</td><td><span class="pill good">low</span></td><td>swap to JSON API</td><td><code>read-wiki.ts</code> is a pure "name → JS object" fn; one-file change</td></tr>
+    <tr><td>Bot PR conflicts on <code>data/raw/</code></td><td><span class="pill warn">med</span></td><td>merge friction</td><td>one PR per bump, never auto-merge; humans rebase</td></tr>
+    <tr><td>CC-BY-SA compliance gap</td><td><span class="pill good">low</span></td><td>upstream complaint</td><td><code>ATTRIBUTION.md</code> + source URL comments in each <code>.lua</code></td></tr>
+    <tr><td>Repo size growth (~17 MB raw + history)</td><td><span class="pill good">low</span></td><td>clone times</td><td>text compresses well; revisit if hits 100 MB</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="accept">Done-when (per phase)</h2>
+
+<div class="table-scroll">
+<table>
+  <thead><tr><th>#</th><th>Done when</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td><code>bun scripts/sync-de.ts</code> produces 16 valid JSON in <code>data/raw/de/</code>; <code>PINS.json</code> written; committed</td></tr>
+    <tr><td>2</td><td><code>bun scripts/sync-wiki.ts</code> produces 15 <code>.lua</code> in <code>data/raw/wiki/</code>; <code>ATTRIBUTION.md</code> present; <code>readWikiModule()</code> round-trips primary weapons</td></tr>
+    <tr><td>3a</td><td>Harness re-runs current <code>build-items-index.ts</code>, snapshots, diffs against itself → empty</td></tr>
+    <tr><td>4</td><td>New <code>build-items-index.ts</code> emits an <code>items-index.json</code> the existing web app loads without runtime errors; build fails loud on every unknown enum value</td></tr>
+    <tr><td>3b</td><td>Per-weapon diff old vs new shows only expected deltas (Bubonico class fix, Perigale Prime class fix, beast claws added); polarity spot-check passes on 30 weapons</td></tr>
+    <tr><td>5</td><td>All ~7 web files migrated <code>item.type</code> → <code>item.displayClass</code>; codec keeps <code>type</code> as alias; existing shared-build URLs still decode</td></tr>
+    <tr><td>6</td><td><code>mods.ts</code> predicate is the two-check function above; <code>tome-mods.test.ts</code>, <code>stance.test.ts</code>, <code>overframe-slots.test.ts</code> pass</td></tr>
+    <tr><td>7</td><td>CI workflow uses <code>bun scripts/bump-data.ts</code>; no <code>@wfcd/items</code> references in <code>.github/workflows/</code></td></tr>
+    <tr><td>8</td><td><code>@wfcd/items</code> not in <code>package.json</code>; <code>bun install</code> clean; <code>bun run typecheck</code> clean</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="notes">Notes for the implementer</h2>
+
+<div class="card">
+  <h3>Deleted</h3>
+  <ul>
+    <li><code>scripts/beast-claws.ts</code> (321 LOC) — wiki has them under <code>Module:Weapons/data/companion</code>, <code>Class = "Claws (Beast)"</code></li>
+    <li>All <code>patch*Variants*</code> functions in old <code>scripts/build-items-index.ts</code> (~60 LOC)</li>
+    <li>Inner mod-compat predicates in <code>packages/shared/src/warframe/mods.ts</code> (~80 LOC)</li>
+    <li><code>@wfcd/items</code> dependency (~20 MB)</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3>Rewritten in place</h3>
+  <ul>
+    <li><code>scripts/build-items-index.ts</code> (~490 LOC → ~150 LOC)</li>
+    <li><code>packages/shared/src/warframe/mods.ts</code> — outer routing kept, inner predicate collapsed</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3>Untouched</h3>
+  <ul>
+    <li>All UI components except <code>item.type</code> → <code>item.displayClass</code> rename (Phase 5)</li>
+    <li>API, Prisma schema, Better Auth, build/share URL codec (with the one legacy alias)</li>
+    <li>All tests except the three mod-routing ones</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3>Hard rules</h3>
+  <ul>
+    <li><strong>Use <code>uv run python</code></strong> for any one-off scripts. Plain <code>python</code>/<code>python3</code> is blocked.</li>
+    <li><strong>Don't add deps without asking</strong> — except <code>luaparse</code> and <code>lzma</code> (already approved by this plan).</li>
+    <li><strong><code>bun run typecheck</code> is the source of truth</strong> — <code>vite build</code> doesn't catch web/shared type errors.</li>
+    <li><strong><code>apps/web/public/data/items-index.json</code> is checked into the repo</strong> — regenerate with <code>bun scripts/build-items-index.ts</code> after any build-script change.</li>
+    <li><strong>Don't modify <code>apps/web/src/components/ui/</code></strong> — override via <code>className</code>.</li>
+    <li><strong>Wiki content is CC-BY-SA</strong> — leave <code>ATTRIBUTION.md</code> in place, preserve source-URL comments at the top of each <code>.lua</code>.</li>
+    <li><strong>If a wiki module's Lua shocks <code>luaparse</code></strong>: don't sed-patch the mirror. File a wiki ticket or add a curated override. The mirror IS the source of truth.</li>
+    <li><strong><code>KNOWN_*</code> assertion sets are load-bearing.</strong> Don't soften any of them to warnings. The whole point is fail-loud on drift.</li>
+    <li><strong>Don't assume Warframe game-mechanic facts from memory</strong> (CLAUDE.md rule). Verify against the wiki or data files before encoding.</li>
+  </ul>
+</div>
+
+<div class="footer-note">
+  Generated 2026-05-27 from <a href="data-architecture.html" style="color: var(--accent)">data-architecture.html</a>. Companion to <a href="docs/data-pipeline-rewrite-plan.md" style="color: var(--accent)">docs/data-pipeline-rewrite-plan.md</a> (markdown source). Open this file directly in a browser; no build step.
+</div>
+
+</main>
+</body>
+</html>

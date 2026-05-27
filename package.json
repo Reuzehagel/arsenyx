@@ -11,8 +11,11 @@
     "dev:api": "bun --filter=arsenyx-api run dev",
     "build:web": "bun --filter=arsenyx-web run build",
     "build:items": "bun run scripts/build-items-index.ts",
+    "data:sync": "bun run scripts/sync-de.ts && bun run scripts/sync-wiki.ts",
+    "data:bump": "bun run scripts/bump-data.ts",
     "update-data": "bun update @wfcd/items && bun run build:items",
-    "typecheck": "bun run --filter '*' typecheck",
+    "typecheck": "bun run --filter '*' typecheck && bun run typecheck:scripts",
+    "typecheck:scripts": "bunx tsc --noEmit -p scripts/tsconfig.json",
     "lint": "oxlint apps/web/src apps/api/src packages/shared/src",
     "lint:fix": "oxlint --fix apps/web/src apps/api/src packages/shared/src",
     "fmt": "oxfmt --write apps/web/src apps/api/src packages/shared/src '!**/generated/**' '!**/*.gen.ts' '!**/components/ui/**'",
@@ -24,7 +27,11 @@
     "nanoid": "^5.1.11"
   },
   "devDependencies": {
+    "@types/bun": "^1.3.14",
+    "@types/luaparse": "^0.2.12",
     "concurrently": "^9.2.1",
+    "luaparse": "^0.3.1",
+    "lzma": "^2.3.2",
     "oxfmt": "^0.41.0",
     "oxlint": "^1.62.0"
   }
