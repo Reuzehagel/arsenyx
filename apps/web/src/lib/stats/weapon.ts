@@ -414,30 +414,6 @@ function calcDamageBreakdown(
     baseDamageContribs,
   )
 
-  // Dedupe entries of the same type that survived combineElements (e.g.
-  // innate Cold + modded Cold with no other element to pair with). Done
-  // post-combination so the "innates pair last with leftovers" ordering
-  // still applies: modded Cold + Heat → Blast first, then any leftover
-  // innate Cold gets merged with other Cold entries here.
-  const dedupedByType = new Map<DamageType, DamageEntry>()
-  const deduped: DamageEntry[] = []
-  for (const entry of elemental) {
-    const existing = dedupedByType.get(entry.type)
-    if (existing) {
-      existing.value = round1(existing.value + entry.value)
-      existing.contributions.push(...entry.contributions)
-    } else {
-      const cloned: DamageEntry = {
-        ...entry,
-        contributions: [...entry.contributions],
-      }
-      dedupedByType.set(entry.type, cloned)
-      deduped.push(cloned)
-    }
-  }
-  elemental.length = 0
-  elemental.push(...deduped)
-
   // Combined-element stats from mods/rivens/arcanes (e.g. a Riven rolling
   // +Magnetic Damage). These don't combine further, so emit them directly.
   const combinedByType = new Map<
@@ -503,60 +479,162 @@ function combineElements(
   baseDamageContribs: StatContribution[],
 ): DamageEntry[] {
   if (elements.length === 0) return []
-  const result: DamageEntry[] = []
-  const remaining = [...elements]
 
-  while (remaining.length > 0) {
-    const first = remaining.shift()!
+  // Per wiki, mod-added elements combine pairwise in slot order. Innate
+  // elements are resolved AFTER mods: they either contribute to a combination
+  // already containing their type, or pair with a leftover uncombined mod
+  // element to form a secondary, or remain standalone if neither fits.
+  type Working = { entry: DamageEntry; sourceTypes: Set<DamageType> }
+  const result: Working[] = []
+  const moddedQueue = elements.filter((e) => !e.isInnate)
+  const innates = elements.filter((e) => e.isInnate)
+
+  while (moddedQueue.length > 0) {
+    const first = moddedQueue.shift()!
     let combined = false
-    for (let i = 0; i < remaining.length; i++) {
-      const second = remaining[i]
+    for (let i = 0; i < moddedQueue.length; i++) {
+      const second = moddedQueue[i]
       const combinedType =
         ELEMENTAL_COMBINATIONS[`${first.type}+${second.type}`]
       if (combinedType) {
-        const totalPct = first.value + second.value
-        const value = (totalModdedBase * totalPct) / 100
-        const contribs: StatContribution[] = [...baseDamageContribs]
-        for (const src of first.sources) {
-          contribs.push({
-            name: src.name,
-            amount: src.value,
-            operation: "percent_add",
-            group: DAMAGE_TYPE_LABELS[first.type],
-          })
-        }
-        for (const src of second.sources) {
-          contribs.push({
-            name: src.name,
-            amount: src.value,
-            operation: "percent_add",
-            group: DAMAGE_TYPE_LABELS[second.type],
-          })
-        }
         result.push({
-          type: combinedType,
-          value: round1(value),
-          base: 0,
-          contributions: contribs,
+          entry: makeCombinedEntry(
+            combinedType,
+            first,
+            second,
+            totalModdedBase,
+            baseDamageContribs,
+          ),
+          sourceTypes: new Set([first.type, second.type]),
         })
-        remaining.splice(i, 1)
+        moddedQueue.splice(i, 1)
         combined = true
         break
       }
     }
     if (!combined) {
-      result.push(
-        makeUncombinedEntry(
+      result.push({
+        entry: makeUncombinedEntry(
           first.type,
           first.sources,
           totalModdedBase,
           baseDamageContribs,
         ),
-      )
+        sourceTypes: new Set([first.type]),
+      })
     }
   }
 
-  return result
+  for (const innate of innates) {
+    // 1. Fold into any existing entry whose source elements already include
+    //    this type — covers both "contributes to established combination"
+    //    (e.g. innate Electricity into mod-made Magnetic) and "same-type
+    //    leftover" (innate Cold + lone modded Cold).
+    const sharing = result.find((r) => r.sourceTypes.has(innate.type))
+    if (sharing) {
+      const added = (totalModdedBase * innate.value) / 100
+      sharing.entry.value = round1(sharing.entry.value + added)
+      for (const src of innate.sources) {
+        sharing.entry.contributions.push({
+          name: src.name,
+          amount: src.value,
+          operation: "percent_add",
+          group: DAMAGE_TYPE_LABELS[innate.type],
+        })
+      }
+      continue
+    }
+
+    // 2. Pair with a leftover uncombined base-element entry to form a
+    //    secondary element (e.g. innate Cold + leftover modded Toxin → Viral).
+    const partnerIdx = result.findIndex(
+      (r) =>
+        r.sourceTypes.size === 1 &&
+        BASE_ELEMENTS.includes(r.entry.type) &&
+        ELEMENTAL_COMBINATIONS[`${innate.type}+${r.entry.type}`],
+    )
+    if (partnerIdx !== -1) {
+      const partner = result[partnerIdx]
+      const partnerType = partner.entry.type
+      const combinedType =
+        ELEMENTAL_COMBINATIONS[`${innate.type}+${partnerType}`]!
+      const added = (totalModdedBase * innate.value) / 100
+      const newContribs: StatContribution[] = [...partner.entry.contributions]
+      for (const src of innate.sources) {
+        newContribs.push({
+          name: src.name,
+          amount: src.value,
+          operation: "percent_add",
+          group: DAMAGE_TYPE_LABELS[innate.type],
+        })
+      }
+      result[partnerIdx] = {
+        entry: {
+          type: combinedType,
+          value: round1(partner.entry.value + added),
+          base: 0,
+          contributions: newContribs,
+        },
+        sourceTypes: new Set([partnerType, innate.type]),
+      }
+      continue
+    }
+
+    // 3. No fit — emit as standalone (innate Heat with no compatible mods).
+    result.push({
+      entry: makeUncombinedEntry(
+        innate.type,
+        innate.sources,
+        totalModdedBase,
+        baseDamageContribs,
+      ),
+      sourceTypes: new Set([innate.type]),
+    })
+  }
+
+  return result.map((r) => r.entry)
+}
+
+function makeCombinedEntry(
+  combinedType: DamageType,
+  first: {
+    type: DamageType
+    value: number
+    sources: { name: string; value: number }[]
+  },
+  second: {
+    type: DamageType
+    value: number
+    sources: { name: string; value: number }[]
+  },
+  totalModdedBase: number,
+  baseDamageContribs: StatContribution[],
+): DamageEntry {
+  const totalPct = first.value + second.value
+  const value = (totalModdedBase * totalPct) / 100
+  const contribs: StatContribution[] = [...baseDamageContribs]
+  for (const src of first.sources) {
+    contribs.push({
+      name: src.name,
+      amount: src.value,
+      operation: "percent_add",
+      group: DAMAGE_TYPE_LABELS[first.type],
+    })
+  }
+  for (const src of second.sources) {
+    contribs.push({
+      name: src.name,
+      amount: src.value,
+      operation: "percent_add",
+      group: DAMAGE_TYPE_LABELS[second.type],
+    })
+  }
+  return {
+    type: combinedType,
+    value: round1(value),
+    base: 0,
+    contributions: contribs,
+  }
 }
 
 function makeUncombinedEntry(
