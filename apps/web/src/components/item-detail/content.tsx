@@ -210,7 +210,7 @@ function statsFor(item: DetailItem, category: BrowseCategory): Stat[] {
         label: "Crit x",
         value:
           item.criticalMultiplier !== undefined
-            ? `${item.criticalMultiplier}x`
+            ? `${formatStat(item.criticalMultiplier)}x`
             : undefined,
       },
       { label: "Status", value: formatPct(item.procChance) },
@@ -218,7 +218,7 @@ function statsFor(item: DetailItem, category: BrowseCategory): Stat[] {
         label: "Fire Rate",
         value:
           item.fireRate !== undefined
-            ? formatStat(item.fireRate, 3)
+            ? formatStat(item.fireRate)
             : undefined,
       },
       { label: "Magazine", value: item.magazineSize },
