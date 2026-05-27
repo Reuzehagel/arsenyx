@@ -18,8 +18,7 @@ const CHANGELOG: ChangelogEntry[] = [
     changes: [
       {
         type: "feat",
-        description:
-          "Mod cards now show slot-type and set-crest badges.",
+        description: "Mod cards now show slot-type and set-crest badges.",
       },
       {
         type: "feat",
