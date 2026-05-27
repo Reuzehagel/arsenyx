@@ -1,6 +1,7 @@
 import { Link as RouterLink } from "@tanstack/react-router"
 import { ArrowRight } from "lucide-react"
 
+import { StatText } from "@/components/stat-text"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -68,7 +69,7 @@ export function ItemDetailContent({
               </div>
               {item.description && (
                 <p className="text-muted-foreground max-w-2xl text-base md:text-lg">
-                  {item.description}
+                  <StatText text={item.description} />
                 </p>
               )}
               {stats.length > 0 && (
@@ -98,7 +99,7 @@ export function ItemDetailContent({
                       <TooltipContent className="max-w-sm">
                         <div className="font-semibold">{a.name}</div>
                         <div className="text-muted-foreground mt-1">
-                          {a.description}
+                          <StatText text={a.description} />
                         </div>
                       </TooltipContent>
                     </Tooltip>
