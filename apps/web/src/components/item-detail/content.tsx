@@ -217,9 +217,7 @@ function statsFor(item: DetailItem, category: BrowseCategory): Stat[] {
       {
         label: "Fire Rate",
         value:
-          item.fireRate !== undefined
-            ? formatStat(item.fireRate)
-            : undefined,
+          item.fireRate !== undefined ? formatStat(item.fireRate) : undefined,
       },
       { label: "Magazine", value: item.magazineSize },
       {
