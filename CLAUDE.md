@@ -38,6 +38,7 @@ Game data is static, user data is dynamic. If something is read-heavy and rarely
 
 **Never**
 - Modify `apps/web/src/components/ui/` — override via `className` instead
+- Don't assume Warframe game-mechanic facts from memory. Mod compatibility, slot rules, ability behavior, drop sources, etc. drift between updates and the model's training data is unreliable here. Check [wiki.warframe.com](https://wiki.warframe.com) (via WebFetch) or the data files under `apps/web/public/data/` before encoding a rule into filters, validators, or hardcoded branches. If a fact can't be verified, say so instead of guessing.
 
 ## Progressive disclosure — load on demand
 
