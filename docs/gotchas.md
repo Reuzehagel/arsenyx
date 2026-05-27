@@ -27,3 +27,4 @@ Never modify existing files in `apps/web/src/components/ui/` — override via `c
 ## WFCD data quirks
 
 - Item fields vary types across items — e.g. `aura` is `string` on most warframes but `string[]` on Jade. Always handle both forms.
+- Set crest filenames under [apps/web/public/mod-set-icons/](../apps/web/public/mod-set-icons/) are WFCD `modSet` path segments — rerun [scripts/tint-set-crests.py](../scripts/tint-set-crests.py) when WFCD adds a new set or renames a codename. Aliases live in [apps/web/src/lib/mod-card-config.ts](../apps/web/src/lib/mod-card-config.ts) (`SET_CODE_ALIASES`).

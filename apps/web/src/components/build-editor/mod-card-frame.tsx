@@ -312,17 +312,18 @@ export function ModSlotBadge({
           aria-hidden
         >
           <img
+            // `key` forces a fresh DOM node when the URL changes. Without it
+            // React reuses the <img> across mod swaps, and a prior failed
+            // load's `display: none` could leak onto a freshly-cached, already-
+            // loaded src whose `onLoad` won't fire. With a per-URL key we don't
+            // need the load handler — only the error hide for unbundled sets.
+            key={setIconUrl}
             src={setIconUrl}
             alt=""
             width={setSize}
             height={setSize}
             className="h-full w-full object-contain"
             style={{ filter: "drop-shadow(0 0 3px rgba(0,0,0,0.95))" }}
-            onLoad={(e) => {
-              // Reset visibility in case a prior render's onError hid this
-              // same DOM node (React reuses the <img> across mod swaps).
-              ;(e.currentTarget as HTMLImageElement).style.display = ""
-            }}
             onError={(e) => {
               // Safety net for set codenames we haven't bundled yet.
               ;(e.currentTarget as HTMLImageElement).style.display = "none"
