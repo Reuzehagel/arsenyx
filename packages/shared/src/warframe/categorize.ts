@@ -100,8 +100,24 @@ export function buildIndex(allItems: BrowseableItem[]): BuiltIndex {
   for (const item of allItems) {
     for (const category of categorizeItem(item)) {
       const browseItem = toBrowseItem(item, category)
+      const key = `${category}|${browseItem.slug}`
+      const existing = slugLookup.get(key)
+      if (existing) {
+        // Same name + same category usually means WFCD shipped a non-player
+        // variant alongside the player weapon (e.g., the Doppelganger Grimoire
+        // boss-encounter weapon at /Lotus/Weapons/Tenno/Grimoire/TnDoppelgangerGrimoire).
+        // Prefer the entry with a `releaseDate` — DE attaches release dates to
+        // actually-released player items.
+        const existingRelease = (existing as { releaseDate?: string })
+          .releaseDate
+        const incomingRelease = (item as { releaseDate?: string }).releaseDate
+        if (existingRelease && !incomingRelease) continue
+        const arr = byCategory[category]
+        const idx = arr.findIndex((b) => b.slug === browseItem.slug)
+        if (idx >= 0) arr.splice(idx, 1)
+      }
       byCategory[category].push(browseItem)
-      slugLookup.set(`${category}|${browseItem.slug}`, item)
+      slugLookup.set(key, item)
     }
   }
 
