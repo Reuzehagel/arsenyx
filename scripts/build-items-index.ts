@@ -203,6 +203,7 @@ async function loadAllItems(): Promise<BrowseableItem[]> {
   }
   patchAtmosphericArchgunVariants(all)
   patchMissingAuras(all)
+  patchVariantWeaponTypes(all)
   // Beast claws (Adarza/Smeeta/Vasca/Kubrows/Vulpaphylas/Predasites) aren't
   // in DE's PublicExport, so we inject hardcoded entries. See beast-claws.ts.
   all.push(...BEAST_CLAWS)
@@ -226,6 +227,29 @@ function patchMissingAuras(items: BrowseableItem[]): void {
     if (item.aura) continue
     const aura = MISSING_AURAS[item.name]
     if (aura) item.aura = aura
+  }
+}
+
+// WFCD occasionally ships a Coda/Kuva/Tenet variant with a different `type`
+// from its base weapon (e.g., Coda Bubonico → "Rifle" while Bubonico is
+// "Shotgun"). The type drives mod-pool routing and the displayed weapon
+// class, so divergence shows up as wrong mods on the build page. Inherit the
+// base weapon's type whenever the variant's prefix matches.
+const VARIANT_PREFIXES = ["Coda ", "Kuva ", "Tenet "] as const
+
+function patchVariantWeaponTypes(items: BrowseableItem[]): void {
+  const typed = items as Array<BrowseableItem & { type?: string }>
+  const byName = new Map<string, BrowseableItem & { type?: string }>()
+  for (const item of typed) byName.set(item.name, item)
+
+  for (const item of typed) {
+    const prefix = VARIANT_PREFIXES.find((p) => item.name.startsWith(p))
+    if (!prefix) continue
+    const baseName = item.name.slice(prefix.length)
+    const base = byName.get(baseName)
+    if (!base?.type) continue
+    if (item.type === base.type) continue
+    item.type = base.type
   }
 }
 
