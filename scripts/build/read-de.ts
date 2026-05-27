@@ -108,20 +108,58 @@ export function readDeUpgrades(): DeUpgradesBlob {
 // Warframes / Sentinels / Resources / Misc — typed loosely.
 // ---------------------------------------------------------------------------
 
-export function readDeWarframes(): {
-  Suits?: Record<string, unknown>[]
-  SpaceSuits?: Record<string, unknown>[]
-  MechSuits?: Record<string, unknown>[]
-  ExportAbilities?: Record<string, unknown>[]
+export interface DeFrame {
+  uniqueName: string
+  /** DE name. Archwing frames carry a `"<ARCHWING> "` prefix that needs
+   *  stripping before matching against wiki keys. */
+  name: string
+  parentName?: string
+  description?: string
+  health: number
+  shield: number
+  armor: number
+  stamina?: number
+  power: number
+  masteryReq?: number
+  sprintSpeed?: number
+  passiveDescription?: string
+  exalted?: string[]
+  abilities?: Array<{
+    uniqueName: string
+    name: string
+    description: string
+    imageName?: string
+  }>
+  /** "Suits" | "SpaceSuits" | "MechSuits" — flat array in one blob. */
+  productCategory: string
+  codexSecret?: boolean
+  [key: string]: unknown
+}
+
+export function readDeFrames(): {
+  ExportWarframes: DeFrame[]
+  ExportAbilities: Record<string, unknown>[]
 } {
   return readFile("ExportWarframes_en.json")
 }
 
-export function readDeSentinels(): {
-  Sentinels?: Record<string, unknown>[]
-  SentinelWeapons?: Record<string, unknown>[]
-  KubrowPets?: Record<string, unknown>[]
-} {
+export interface DeSentinel {
+  uniqueName: string
+  name: string
+  description?: string
+  health?: number
+  shield?: number
+  armor?: number
+  power?: number
+  stamina?: number
+  masteryReq?: number
+  /** "Sentinels" | "KubrowPets" | "SpecialItems" */
+  productCategory: string
+  abilities?: unknown[]
+  [key: string]: unknown
+}
+
+export function readDeSentinels(): { ExportSentinels: DeSentinel[] } {
   return readFile("ExportSentinels_en.json")
 }
 
@@ -150,7 +188,7 @@ export function readDeArcanes(): {
 export interface DeAll {
   weapons: DeWeapon[]
   upgrades: DeUpgradesBlob
-  warframes: ReturnType<typeof readDeWarframes>
+  frames: ReturnType<typeof readDeFrames>
   sentinels: ReturnType<typeof readDeSentinels>
   manifest: DeManifestEntry[]
   arcanes: ReturnType<typeof readDeArcanes>
@@ -160,7 +198,7 @@ export function readDeAll(): DeAll {
   return {
     weapons: readDeWeapons(),
     upgrades: readDeUpgrades(),
-    warframes: readDeWarframes(),
+    frames: readDeFrames(),
     sentinels: readDeSentinels(),
     manifest: readDeManifest(),
     arcanes: readDeArcanes(),

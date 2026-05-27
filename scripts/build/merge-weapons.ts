@@ -149,6 +149,17 @@ function baseWeaponName(name: string): string | null {
   return null
 }
 
+/** DE prefixes some archwing weapons with `<ARCHWING> ` in their `name`
+ *  field. The wiki keys them without the prefix, so we strip it for both
+ *  wiki lookup and the canonical emitted name. */
+const ARCHWING_PREFIX = "<ARCHWING> "
+
+function cleanDeName(name: string): string {
+  return name.startsWith(ARCHWING_PREFIX)
+    ? name.slice(ARCHWING_PREFIX.length)
+    : name
+}
+
 export interface MergeWeaponOpts {
   curated: CuratedData
   /** Wiki record keyed by weapon name (after alias resolution). */
@@ -168,15 +179,18 @@ export function mergeWeapon(
     )
   }
 
-  const alias = opts.curated.wikiAliases[de.name]
+  // Strip the `<ARCHWING> ` prefix DE puts on archwing weapons so wiki
+  // lookup (which uses bare names) matches.
+  const cleanName = cleanDeName(de.name)
+  const alias = opts.curated.wikiAliases[cleanName]
   const wiki: WikiWeapon | undefined =
-    opts.wikiByName.get(alias ?? de.name) ??
+    opts.wikiByName.get(alias ?? cleanName) ??
     // Try base name (Coda Bubonico → Bubonico)
-    opts.wikiByName.get(baseWeaponName(de.name) ?? "")
+    opts.wikiByName.get(baseWeaponName(cleanName) ?? "")
   const stub = opts.curated.wikiStubs[de.uniqueName]
 
   if (!wiki && !stub) {
-    opts.unmatched.add(de.name)
+    opts.unmatched.add(cleanName)
   }
 
   const displayClass =
@@ -195,13 +209,13 @@ export function mergeWeapon(
   //   3. weapon's own name (for augment matching)
   //   4. base name if it's a Coda/Kuva/Tenet variant
   const baseList =
-    opts.curated.modPoolOverrides[de.name] ??
+    opts.curated.modPoolOverrides[cleanName] ??
     stub?.modPools ??
     (displayClass ? opts.curated.classPools[displayClass] : undefined) ??
     []
   const modPoolsSet = new Set<string>(baseList)
-  modPoolsSet.add(de.name)
-  const base = baseWeaponName(de.name)
+  modPoolsSet.add(cleanName)
+  const base = baseWeaponName(cleanName)
   if (base) modPoolsSet.add(base)
   const modPools = [...modPoolsSet]
 
@@ -223,7 +237,7 @@ export function mergeWeapon(
   const exilus = normalizePolarity(wiki?.ExilusPolarity ?? stub?.exilusPolarity)
   return {
     uniqueName: de.uniqueName,
-    name: de.name,
+    name: cleanName,
     displayClass,
     modPools,
     compatTags: (wiki?.CompatibilityTags as readonly string[] | undefined) ?? [],
@@ -246,6 +260,65 @@ export function mergeWeapon(
     multishot: de.multishot,
     trigger: de.trigger,
     maxLevelCap: de.maxLevelCap,
+  }
+}
+
+/**
+ * Build a MergedWeapon record from a wiki-only entry (no DE row exists).
+ * Beast claws are the canonical case — DE doesn't export them as weapons,
+ * but the wiki has them under Module:Weapons/data/companion with full
+ * damage tables.
+ */
+export function mergeWikiOnlyWeapon(
+  name: string,
+  wiki: WikiWeapon & { InternalName?: string },
+  curated: CuratedData,
+): MergedWeapon {
+  const displayClass = (wiki.Class as string | undefined) ?? null
+  if (displayClass && !(displayClass in curated.classPools)) {
+    throw new Error(
+      `Unknown wiki Class "${displayClass}" on wiki-only entry ${name}. ` +
+        `Add to data/curated/class-pools.ts.`,
+    )
+  }
+
+  const baseList =
+    curated.modPoolOverrides[name] ??
+    (displayClass ? curated.classPools[displayClass] : undefined) ??
+    []
+  for (const p of baseList) {
+    if (!KNOWN_MOD_POOLS.has(p)) {
+      throw new Error(
+        `Unknown modPool "${p}" routed from wiki-only ${name}. ` +
+          `Add to KNOWN_MOD_POOLS.`,
+      )
+    }
+  }
+  const modPoolsSet = new Set<string>(baseList)
+  modPoolsSet.add(name)
+  const modPools = [...modPoolsSet]
+
+  const polarities = (wiki.Polarities ?? [])
+    .map(normalizePolarity)
+    .filter((p): p is string => p !== null)
+  const exilus = normalizePolarity(wiki.ExilusPolarity)
+  return {
+    // Wiki InternalName is DE's uniqueName when present; otherwise synthesize
+    // one off the weapon's name.
+    uniqueName:
+      (wiki.InternalName as string | undefined) ??
+      `/Lotus/WikiOnly/${name.replace(/\s+/g, "")}`,
+    name,
+    displayClass,
+    modPools,
+    compatTags: (wiki.CompatibilityTags as readonly string[] | undefined) ?? [],
+    polarities,
+    exilusPolarity: exilus,
+    family: (wiki.Family as string | undefined) ?? null,
+    slot: (wiki.Slot as string | undefined) ?? null,
+    traits: (wiki.Traits as readonly string[] | undefined) ?? [],
+    masteryReq: (wiki.Mastery ?? 0) as number,
+    productCategory: "Wiki-Only",
   }
 }
 

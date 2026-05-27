@@ -56,27 +56,56 @@ function deepEqual(a: unknown, b: unknown): boolean {
   return false
 }
 
+/** Per-field counter for summary mode. */
+interface FieldDelta {
+  /** count of items where this field changed (any kind of change) */
+  changed: number
+  /** count where field exists in golden but not new (removed) */
+  removed: number
+  /** count where field exists in new but not golden (added) */
+  added: number
+  /** sample (old, new) value pair for the first divergence — for orientation */
+  sample?: { old: unknown; new: unknown; slug: string }
+}
+
 function diffItem(
   category: string,
   a: BrowseItem,
   b: BrowseItem,
+  summary: Map<string, Map<string, FieldDelta>>,
+  emitPerItem: boolean,
 ): string[] {
   const fields = new Set([...Object.keys(a), ...Object.keys(b)])
   const out: string[] = []
   for (const f of fields) {
     if (!deepEqual(a[f], b[f])) {
-      out.push(
-        `    ${category}/${a.slug}.${f}: ${JSON.stringify(a[f])} -> ${JSON.stringify(b[f])}`,
-      )
+      if (emitPerItem) {
+        out.push(
+          `    ${category}/${a.slug}.${f}: ${JSON.stringify(a[f])} -> ${JSON.stringify(b[f])}`,
+        )
+      }
+      // Aggregate for summary mode
+      if (!summary.has(category)) summary.set(category, new Map())
+      const cat = summary.get(category)!
+      if (!cat.has(f)) cat.set(f, { changed: 0, removed: 0, added: 0 })
+      const d = cat.get(f)!
+      d.changed++
+      if (f in a && !(f in b)) d.removed++
+      else if (!(f in a) && f in b) d.added++
+      if (!d.sample) d.sample = { old: a[f], new: b[f], slug: a.slug }
     }
   }
   return out
 }
 
-function compareIndex(goldenDir: string, newDir: string): number {
+function compareIndex(goldenDir: string, newDir: string, summaryMode: boolean): {
+  diffs: number
+  summary: Map<string, Map<string, FieldDelta>>
+} {
   const a = loadIndex(goldenDir)
   const b = loadIndex(newDir)
   const cats = new Set([...Object.keys(a), ...Object.keys(b)])
+  const summary = new Map<string, Map<string, FieldDelta>>()
 
   let differences = 0
   for (const cat of [...cats].sort()) {
@@ -95,7 +124,7 @@ function compareIndex(goldenDir: string, newDir: string): number {
       if (ia && !ib) onlyA.push(s)
       else if (!ia && ib) onlyB.push(s)
       else if (ia && ib) {
-        const itemDiffs = diffItem(cat, ia, ib)
+        const itemDiffs = diffItem(cat, ia, ib, summary, !summaryMode)
         if (itemDiffs.length > 0) {
           changed.push(s)
           differences += itemDiffs.length
@@ -115,7 +144,33 @@ function compareIndex(goldenDir: string, newDir: string): number {
       differences += onlyA.length + onlyB.length
     }
   }
-  return differences
+  return { diffs: differences, summary }
+}
+
+function printSummary(summary: Map<string, Map<string, FieldDelta>>): void {
+  console.log("\n=== Field-level deltas ===")
+  // Aggregate across categories first
+  const global = new Map<string, FieldDelta>()
+  for (const cat of summary.values()) {
+    for (const [field, d] of cat) {
+      const g = global.get(field) ?? { changed: 0, removed: 0, added: 0 }
+      g.changed += d.changed
+      g.removed += d.removed
+      g.added += d.added
+      if (!g.sample && d.sample) g.sample = d.sample
+      global.set(field, g)
+    }
+  }
+  const rows = [...global.entries()].sort((a, b) => b[1].changed - a[1].changed)
+  for (const [field, d] of rows) {
+    const sample = d.sample
+      ? ` (e.g. ${d.sample.slug}: ${JSON.stringify(d.sample.old)} -> ${JSON.stringify(d.sample.new)})`
+      : ""
+    let kind = ""
+    if (d.removed === d.changed) kind = " [field gone from new]"
+    else if (d.added === d.changed) kind = " [field new in v2]"
+    console.log(`  ${field.padEnd(14)} ${String(d.changed).padStart(4)} items${kind}${sample}`)
+  }
 }
 
 function compareDetail(goldenDir: string, newDir: string): number {
@@ -177,16 +232,22 @@ function compareDetail(goldenDir: string, newDir: string): number {
 }
 
 function main() {
-  const goldenDir = process.argv[2]
-  const newDir = process.argv[3]
+  const args = process.argv.slice(2)
+  const summaryMode = args.includes("--summary")
+  const positional = args.filter((a) => !a.startsWith("--"))
+  const goldenDir = positional[0]
+  const newDir = positional[1]
   if (!goldenDir || !newDir) {
-    console.error("Usage: bun run scripts/diff-index.ts <golden-dir> <new-dir>")
+    console.error("Usage: bun run scripts/diff-index.ts [--summary] <golden-dir> <new-dir>")
     process.exit(1)
   }
-  console.log(`Comparing ${goldenDir} vs ${newDir}`)
+  console.log(`Comparing ${goldenDir} vs ${newDir}${summaryMode ? " (summary)" : ""}`)
   console.log()
-  const indexDiffs = compareIndex(goldenDir, newDir)
-  const detailDiffs = compareDetail(goldenDir, newDir)
+  const { diffs: indexDiffs, summary } = compareIndex(goldenDir, newDir, summaryMode)
+  // Detail comparison is skipped in summary mode — per-item details are too
+  // verbose to summarize meaningfully without per-category schema knowledge.
+  const detailDiffs = summaryMode ? 0 : compareDetail(goldenDir, newDir)
+  if (summaryMode) printSummary(summary)
   const total = indexDiffs + detailDiffs
   console.log()
   if (total === 0) {
@@ -194,7 +255,7 @@ function main() {
     process.exit(0)
   }
   console.log(`${total} difference(s) total`)
-  process.exit(0)  // diff is informational, not an error
+  process.exit(0)
 }
 
 main()
