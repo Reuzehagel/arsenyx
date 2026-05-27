@@ -30,8 +30,10 @@ import {
   type BrowseCategory,
 } from "./build/categorize"
 import { buildImageLookup } from "./build/images"
+import { mergeArcanes, type MergedArcane } from "./build/merge-arcanes"
 import { mergeCompanions, type MergedCompanion } from "./build/merge-companions"
 import { mergeFrame, operatorsFromWiki, type MergedFrame } from "./build/merge-frames"
+import { deriveHelminthAbilities } from "./build/merge-helminth"
 import { mergeMods, type MergedMod } from "./build/merge-mods"
 import {
   mergeWeapon,
@@ -40,6 +42,7 @@ import {
   type MergedWeapon,
 } from "./build/merge-weapons"
 import {
+  readDeArcanes,
   readDeFrames,
   readDeManifest,
   readDeSentinels,
@@ -200,7 +203,10 @@ async function main() {
   stats.companions.wiki = mergedCompanions.length
   stats.companions.deOnly = unmatchedDeNames.length
 
-  // ---------- 5. Merge mods ----------
+  // Image lookup needs to be ready before arcane merge fills imageName.
+  const imageByUniqueName = buildImageLookup(deManifest)
+
+  // ---------- 5. Merge mods + arcanes ----------
   const { mods: mergedMods, counts: modCounts } = mergeMods(
     deUpgrades.ExportUpgrades ?? [],
     deUpgrades.ExportModSet ?? [],
@@ -208,8 +214,18 @@ async function main() {
   stats.mods.de = modCounts.total
   stats.mods.kept = modCounts.kept
 
+  const deArcanes = readDeArcanes()
+  const mergedArcanes = mergeArcanes(deArcanes.ExportRelicArcane ?? [])
+  // Image fill from manifest
+  const arcanesWithImages = mergedArcanes.map((a) => ({
+    ...a,
+    imageName: imageByUniqueName.get(a.uniqueName),
+  }))
+
   // ---------- 6. Image lookup ----------
-  const imageByUniqueName = buildImageLookup(deManifest)
+  // (defined before step 5 in the code flow so arcane merge can use it,
+  //  but conceptually a step-6 concern — kept here for readability)
+  void 0
 
   // ---------- 7. Build items-index.json ----------
   const byCategory: Partial<Record<BrowseCategory, BrowseItemV2[]>> = {}
@@ -306,6 +322,26 @@ async function main() {
     "utf8",
   )
   console.log(`  OK  mods-all.json (${mergedMods.length} mods)`)
+
+  await writeFile(
+    resolve(OUT_DIR, "arcanes-all.json"),
+    JSON.stringify(arcanesWithImages),
+    "utf8",
+  )
+  console.log(`  OK  arcanes-all.json (${arcanesWithImages.length} arcanes)`)
+
+  // Helminth abilities — derived from merged frames + DE's separate
+  // ExportAbilities array (which holds the Helminth-native ones).
+  const helminth = deriveHelminthAbilities(
+    mergedFrames,
+    deFramesBlob.ExportAbilities ?? [],
+  )
+  await writeFile(
+    resolve(OUT_DIR, "helminth-abilities.json"),
+    JSON.stringify(helminth),
+    "utf8",
+  )
+  console.log(`  OK  helminth-abilities.json (${helminth.length} abilities)`)
 
   // Per-item detail files — minimal pass-through for now. Phase 4b will
   // populate the rich damage/attacks shape; for now we emit the merged

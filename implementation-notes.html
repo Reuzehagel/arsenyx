@@ -119,15 +119,15 @@
   </div>
 
   <div class="lede">
-    <strong>Status: Phase 4 partial — weapons + mods merge cleanly.</strong>
+    <strong>Status: Phase 4 ~complete — full v2 build emits all expected
+    artifacts.</strong>
     <span class="pill good">phase 0-3a done</span>
-    <span class="pill warn">phase 4 partial (weapons + mods)</span>
-    Bubonico round-trips with the three-field model. The new structural
-    predicate <code>weapon.modPools.includes(mod.compatName)</code>
-    correctly hands Lanka 90 mods (Rifle + Sniper), Pyrana Prime 186 mods
-    (Pistol + Shotgun), Orthos Prime 108 mods (Melee + Polearms) — the
-    multi-pool cases the old code guessed at. Warframes/companions/arcanes
-    + items-index emit step still TODO.
+    <span class="pill good">phase 4 functional (parallel v2 path)</span>
+    The new pipeline produces <code>apps/web/public/data/v2/</code> with
+    items-index.json (1054 items across 10 categories), 1041 per-item
+    detail files, mods-all.json (1355 mods), arcanes-all.json (168 arcanes),
+    helminth-abilities.json (76 abilities), and meta.json. Lives in parallel
+    to the existing build until Phase 5 migrates consumers.
   </div>
 
   <h2>Phase status</h2>
@@ -157,8 +157,8 @@
       </tr>
       <tr>
         <td>4</td><td>Merge + emit</td>
-        <td><span class="progress">partial</span></td>
-        <td>Weapon + mod merges work (<code>build-weapons-v2.ts</code> + <code>build-mods-v2.ts</code> → <code>data/golden-v2/</code>); warframe/companion/arcane merges + items-index emit still TODO</td>
+        <td><span class="check">done (v2 parallel)</span></td>
+        <td>All six emit artifacts produced under <code>apps/web/public/data/v2/</code>. Old <code>build-items-index.ts</code> still runs; cutover is Phase 5.</td>
       </tr>
       <tr><td>3b</td><td>Comparison diff (old vs new)</td><td><span class="todo">pending</span></td><td>Blocked on full Phase 4</td></tr>
       <tr><td>5</td><td><code>type</code>→<code>displayClass</code> migration</td><td><span class="todo">pending</span></td><td>Blocked on Phase 4</td></tr>
@@ -464,47 +464,61 @@
     </table>
   </div>
 
-  <h2>Where this leaves us — what's left in Phase 4</h2>
+  <h2>v2 build output (current state)</h2>
 
   <div class="card">
-    <h3>The remaining Phase 4 work</h3>
+    <h3>What <code>bun run scripts/build-items-index-v2.ts</code> produces</h3>
+    <pre><code>apps/web/public/data/v2/
+  items-index.json           230 KB — BrowseItem[] per category
+  items/&lt;category&gt;/&lt;slug&gt;.json   1041 files, 0.69 MB total — per-item detail
+  mods-all.json              1355 normalized mods
+  arcanes-all.json           168 arcanes (Offensive/Defensive/Utility/...)
+  helminth-abilities.json    76 abilities (13 Helminth + 63 subsumables)
+  meta.json                  generated timestamp + counts
+  _report.json               build diagnostics (unmatched names, etc.)</code></pre>
     <p>
-      The current <code>build-items-index.ts</code> emits seven files:
-      <code>items-index.json</code>, <code>items/&lt;category&gt;/&lt;slug&gt;.json</code>,
-      <code>mods-all.json</code>, <code>arcanes-all.json</code>,
-      <code>helminth-abilities.json</code>,
-      <code>incarnon-evolutions.json</code>, <code>meta.json</code>. Phase
-      4 needs to replace all of that. Done so far: the weapon-merge half
-      (<code>merge-weapons.ts</code>). Still TODO:
+      <strong>Item count comparison vs golden:</strong>
     </p>
-    <ol>
-      <li><code>merge-warframes.ts</code> — DE Suits/SpaceSuits/MechSuits
-      + wiki Warframes/data subtables (Warframes, Archwings, Necramechs,
-      Operators). Pulls polarities + aura polarity from the wiki since DE
-      doesn't ship them.</li>
-      <li><code>merge-companions.ts</code> — DE Sentinels/KubrowPets +
-      wiki Companions/data (the authoritative source given DE undercounts).</li>
-      <li><code>merge-mods.ts</code> — DE ExportUpgrades (1595 records) +
-      wiki Mods/data (~933 KB). DE wins for stats; wiki for set augments
-      and Tennokai indicator. <strong>Normalize <code>compatName</code> at
-      build time</strong> (trim, canonical case) so the runtime predicate
-      doesn't need to.</li>
-      <li><code>merge-arcanes.ts</code> — DE ExportRelicArcane (mis-named
-      blob carrying all Arcane/Exodia/Theorem/Magus/Virtuos/Pax) + wiki
-      Arcane/data.</li>
-      <li>Helminth abilities — derive from merged warframes by looking up
-      each frame's subsumable ability. Same logic as the current build's
-      <code>buildHelminthAbilities()</code>; pure data shuffling.</li>
-      <li>Incarnon evolutions — re-import unchanged from
-      <code>shared/warframe/incarnon-evolutions.ts</code> (a checked-in TS
-      table, not affected by the rewrite).</li>
-      <li>The categorize step in <code>shared/warframe/categorize.ts</code>
-      currently routes by <code>item.category</code> + <code>item.type</code>
-      strings. Phase 5 work but worth checking now: the new merged shape
-      replaces <code>category</code>/<code>type</code> with
-      <code>productCategory</code>/<code>displayClass</code>, so categorize
-      needs an adapter or rewrite.</li>
-    </ol>
+    <table>
+      <thead><tr><th>Category</th><th>Old</th><th>v2</th><th>Delta</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td>warframes</td><td>115</td><td>115</td><td>—</td><td>✓</td></tr>
+        <tr><td>necramechs</td><td>2</td><td>2</td><td>—</td><td>✓</td></tr>
+        <tr><td>primary</td><td>193</td><td>203</td><td>+10</td><td>kitgun primary variants surfaced</td></tr>
+        <tr><td>secondary</td><td>146</td><td>161</td><td>+15</td><td>exalted secondaries (Balefire, Dex Pixia, Regulators) + kitgun variants</td></tr>
+        <tr><td>melee</td><td>232</td><td>266</td><td>+34</td><td>exalted melees + variants (Diwata, Exalted Blade, etc.)</td></tr>
+        <tr><td>archwing</td><td>33</td><td>57</td><td>+24</td><td>full archwing coverage from wiki</td></tr>
+        <tr><td>companion-weapons</td><td>36</td><td>41</td><td>+5</td><td>beast claws via wiki (Adarza/Chesa/Helminth Charger/...)</td></tr>
+        <tr><td>exalted-weapons</td><td>36</td><td>41</td><td>+5</td><td>Garuda Talons fix via cross-reference</td></tr>
+        <tr><td>companions</td><td>65</td><td>41</td><td>−24</td><td><strong>old over-listed modular Hound parts</strong> (Adlet Core, etc.) as companions; wiki correctly excludes them</td></tr>
+        <tr><td>railjack</td><td>1</td><td>127</td><td>+126</td><td><strong>railjack turret weapons now surfaced</strong> (Apoc/Cryophon/Photor mk-I/II/III, etc.)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Remaining Phase 4 gaps</h3>
+    <ul>
+      <li><strong><code>releaseDate</code> and <code>vaulted</code></strong> are missing
+      on ~800 / ~180 items respectively. DE doesn't ship these; the wiki
+      Lua only carries an "Introduced" update number, not a date.
+      Workable next step: a checked-in TS table snapshotted from the
+      golden file (one-time copy) plus wiki page-scraping for future
+      bumps.</li>
+      <li><strong>Rich per-item <code>damage</code>/<code>attacks</code> object</strong> on weapon
+      detail files isn't computed yet. The merged DE record has the raw
+      <code>damagePerShot[20]</code> array (DT_* enum) and per-attack
+      data, but the existing pipeline does a fan-out into named damage
+      types (impact/puncture/slash/...). Need to port the DT_* → named
+      mapping.</li>
+      <li><strong>Incarnon evolutions</strong> — the existing TS table at
+      <code>shared/warframe/incarnon-evolutions.ts</code> should re-export
+      unchanged. Just need to wire it into the emit step.</li>
+      <li><strong>147 weapons</strong> remain "unmatched" (no wiki record).
+      Spot-checking shows most are legitimate non-weapons (Antigen /
+      Mutagen breed items, kitgun parts, etc.) but some real curables
+      remain — see <code>_report.json</code>.</li>
+    </ul>
   </div>
 
   <h2>Resolved questions (you steered)</h2>

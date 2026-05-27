@@ -124,9 +124,11 @@ export interface DeFrame {
   sprintSpeed?: number
   passiveDescription?: string
   exalted?: string[]
+  /** DE uses `abilityUniqueName` / `abilityName` field names here; we
+   *  rename to the more conventional `uniqueName`/`name` in merge-frames. */
   abilities?: Array<{
-    uniqueName: string
-    name: string
+    abilityUniqueName: string
+    abilityName: string
     description: string
     imageName?: string
   }>
@@ -136,9 +138,16 @@ export interface DeFrame {
   [key: string]: unknown
 }
 
+export interface DeHelminthAbility {
+  abilityUniqueName: string
+  abilityName: string
+  description: string
+  imageName?: string
+}
+
 export function readDeFrames(): {
   ExportWarframes: DeFrame[]
-  ExportAbilities: Record<string, unknown>[]
+  ExportAbilities: DeHelminthAbility[]
 } {
   return readFile("ExportWarframes_en.json")
 }
@@ -173,11 +182,10 @@ export function readDeManifest(): DeManifestEntry[] {
   return raw.Manifest ?? []
 }
 
-export function readDeArcanes(): {
-  ExportArcanes?: Record<string, unknown>[]
-} {
+export function readDeArcanes(): { ExportRelicArcane: DeUpgrade[] } {
   // Arcanes ship in ExportRelicArcane_en.json under the misleading filename
-  // (see data-architecture.html for why).
+  // — the array carries both void relics and arcanes. Filter by uniqueName
+  // path prefix (/CosmeticEnhancers/) in merge-arcanes.ts.
   return readFile("ExportRelicArcane_en.json")
 }
 

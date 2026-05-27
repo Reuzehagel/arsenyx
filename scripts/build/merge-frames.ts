@@ -149,7 +149,14 @@ export function mergeFrame(
     masteryReq: de.masteryReq ?? 0,
     passiveDescription: de.passiveDescription,
     exalted: de.exalted ?? [],
-    abilities: de.abilities ?? [],
+    // DE uses abilityUniqueName/abilityName; rename to match the existing
+    // BrowseableItem Ability shape the UI consumes.
+    abilities: (de.abilities ?? []).map((a) => ({
+      uniqueName: a.abilityUniqueName,
+      name: a.abilityName,
+      description: a.description,
+      imageName: a.imageName,
+    })),
     polarities,
     auraPolarity: normalizePolarity(wiki?.AuraPolarity),
     exilusPolarity: normalizePolarity(wiki?.ExilusPolarity),
