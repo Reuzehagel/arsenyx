@@ -277,8 +277,9 @@ export function ModSlotBadge({
   // variant: the frame top is the same physical size in both, and scaling
   // the badge on hover would make it jump, which reads as broken.
   const slotSize = 20
-  // setSize:slotSize ≈ 3.4:1 matches the in-game ornament:glyph ratio.
-  const setSize = 68
+  // setSize:slotSize ≈ 4.2:1 — slightly larger than the in-game ornament:glyph
+  // ratio (3.4:1) for a more prominent crest read at card sizes.
+  const setSize = 84
 
   return (
     <>
@@ -308,7 +309,7 @@ export function ModSlotBadge({
       {setIconUrl && (
         <div
           className="pointer-events-none absolute left-1/2 z-30 -translate-x-1/2"
-          style={{ top: -26, width: setSize, height: setSize }}
+          style={{ top: -32, width: setSize, height: setSize }}
           aria-hidden
         >
           <img
