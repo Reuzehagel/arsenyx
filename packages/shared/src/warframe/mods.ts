@@ -108,9 +108,11 @@ function isPrimaryMod(compatName: string, modType: string, subtype: string) {
 }
 
 function isPistolMod(compatName: string, modType: string) {
-  // Tome mods (Grimoire-only) carry `type: "Secondary Mod"` so they'd otherwise
-  // leak into every secondary's pool — exclude them here; Grimoire has its own
-  // branch in getModsForItem.
+  // Tome mods (Grimoire/Noctua) carry `type: "Secondary Mod"` so they'd
+  // otherwise leak into every secondary's pool. The pistol/throwing and
+  // exalted-weapon branches in getModsForItem already short-circuit on
+  // `compatName === "tome"` before reaching here, so this guard is
+  // defense-in-depth — keep it so isPistolMod stays correct in isolation.
   if (compatName === "tome") return false
   return (
     compatName === "pistol" ||
