@@ -96,6 +96,9 @@ export interface MergedWeapon {
   polarities: readonly string[]
   /** Exilus polarity, or null if none. */
   exilusPolarity: string | null
+  /** Stance slot polarity for melees (and some exalted melees). Null when the
+   *  weapon has no stance slot (arch-melee, zaw strikes, non-melee). */
+  stancePolarity: string | null
   /** Variant family (e.g. "Bubonico" for Coda Bubonico). */
   family: string | null
   /** Wiki Slot value: "Primary" / "Secondary" / "Melee" / "Archwing" / etc. */
@@ -134,10 +137,12 @@ interface WikiWeapon {
   Family?: string
   Polarities?: readonly unknown[]
   ExilusPolarity?: string
+  StancePolarity?: string
   CompatibilityTags?: readonly unknown[]
   Traits?: readonly unknown[]
   Mastery?: number
   Attacks?: readonly Record<string, unknown>[]
+  Image?: string
 }
 
 function normalizePolarity(p: unknown): string | null {
@@ -248,6 +253,7 @@ export function mergeWeapon(
     .map(normalizePolarity)
     .filter((p): p is string => p !== null)
   const exilus = normalizePolarity(wiki?.ExilusPolarity ?? stub?.exilusPolarity)
+  const stance = normalizePolarity(wiki?.StancePolarity)
 
   // Damage shape: wiki Attacks is the rich source. Fall back to DE
   // damagePerShot[20] when the wiki has no attacks (railjack, modular).
@@ -263,6 +269,7 @@ export function mergeWeapon(
     compatTags: (wiki?.CompatibilityTags as readonly string[] | undefined) ?? [],
     polarities,
     exilusPolarity: exilus,
+    stancePolarity: stance,
     family: (wiki?.Family as string | undefined) ?? stub?.family ?? null,
     slot: (wiki?.Slot as string | undefined) ?? null,
     traits: (wiki?.Traits as readonly string[] | undefined) ?? [],
@@ -343,6 +350,7 @@ export function mergeWikiOnlyWeapon(
     .map(normalizePolarity)
     .filter((p): p is string => p !== null)
   const exilus = normalizePolarity(wiki.ExilusPolarity)
+  const stance = normalizePolarity(wiki.StancePolarity)
   const dmg = buildDamageBlock(wiki.Attacks)
   return {
     // Wiki InternalName is DE's uniqueName when present; otherwise synthesize
@@ -356,6 +364,7 @@ export function mergeWikiOnlyWeapon(
     compatTags: (wiki.CompatibilityTags as readonly string[] | undefined) ?? [],
     polarities,
     exilusPolarity: exilus,
+    stancePolarity: stance,
     family: (wiki.Family as string | undefined) ?? null,
     slot: (wiki.Slot as string | undefined) ?? null,
     traits: (wiki.Traits as readonly string[] | undefined) ?? [],

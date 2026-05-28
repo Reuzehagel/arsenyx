@@ -89,7 +89,9 @@ export interface DeUpgrade {
   compatName?: string
   type?: string
   levelStats?: Array<{ stats: string[] }>
-  description?: string
+  // DE ships description as string[] (one entry per paragraph). The merger
+  // joins it into a single string.
+  description?: string | string[]
   [key: string]: unknown
 }
 

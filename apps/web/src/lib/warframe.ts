@@ -7,20 +7,35 @@
 import type { BrowseCategory } from "@arsenyx/shared/warframe/types"
 export type { BrowseCategory } from "@arsenyx/shared/warframe/types"
 
-const WFCD_CDN_BASE = "https://cdn.warframestat.us/img"
-
 const PLACEHOLDER_URL =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128' viewBox='0 0 128 128'%3E%3Crect fill='%23374151' width='128' height='128' rx='8'/%3E%3Ctext x='64' y='72' text-anchor='middle' fill='%236b7280' font-family='system-ui' font-size='48' font-weight='bold'%3E%3F%3C/text%3E%3C/svg%3E"
 
+/** Hosts the build pipeline is allowed to emit absolute URLs against.
+ *  Production catalog points at `img.arsenyx.com` (our R2 bucket, see
+ *  `scripts/sync-images.ts`). The two upstream hosts are also accepted
+ *  so a dev workflow that ran `build:items` without `sync:images` still
+ *  renders correctly. Anything else falls through to the placeholder,
+ *  so an attacker-controlled value can't reach `<img src>`. */
+const TRUSTED_IMAGE_PREFIXES = [
+  "https://img.arsenyx.com/",
+  "https://content.warframe.com/PublicExport/",
+  "https://wiki.warframe.com/images/",
+  // Zaw component thumbnails resolve via the wiki's FilePath redirect
+  // (see `getZawComponentImage` in @arsenyx/shared/warframe/zaw-data).
+  // The redirect target is `wiki.warframe.com/images/...`, so the final
+  // image is on the same host already allowlisted above — this entry
+  // covers the redirect's source URL.
+  "https://wiki.warframe.com/w/Special:FilePath/",
+] as const
+
 export function getImageUrl(imageName?: string): string {
   if (!imageName) return PLACEHOLDER_URL
-  // Locally-hosted icons (e.g. our hardcoded beast-claws icon) live under
-  // `/img/`. Anything else is treated as a WFCD CDN filename — including
-  // attacker-controlled inputs like `//evil.com/x` or `/api/anything`,
-  // which would otherwise short-circuit to a third-party / same-origin
-  // request when rendered into an <img src>.
+  // Locally-hosted icons live under `/img/`.
   if (imageName.startsWith("/img/")) return imageName
-  return `${WFCD_CDN_BASE}/${imageName}`
+  for (const prefix of TRUSTED_IMAGE_PREFIXES) {
+    if (imageName.startsWith(prefix)) return imageName
+  }
+  return PLACEHOLDER_URL
 }
 
 export function getItemUrl(category: string, slug: string): string {

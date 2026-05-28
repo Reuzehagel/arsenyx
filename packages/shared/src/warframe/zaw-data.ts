@@ -339,12 +339,20 @@ export function getZawLink(name: string): ZawLink | undefined {
   return linkMap.get(name)
 }
 
+/** Wiki resolves bare filenames via the `Special:FilePath/<name>` redirect.
+ *  Unlike the rate-limited bulk-fetch case (see scripts/sync-images.ts),
+ *  zaw thumbnails are loaded a handful at a time from the component picker
+ *  — well below any per-IP threshold. We pin the URL here so the value
+ *  flows through `getImageUrl`'s trusted-prefix allowlist. */
+const WIKI_FILE_PATH_BASE = "https://wiki.warframe.com/w/Special:FilePath/"
+
 export function getZawComponentImage(name: string): string | undefined {
-  return (
+  const file =
     strikeMap.get(name)?.imageName ??
     gripMap.get(name)?.imageName ??
     linkMap.get(name)?.imageName
-  )
+  if (!file) return undefined
+  return `${WIKI_FILE_PATH_BASE}${file}`
 }
 
 export function getZawWeaponType(

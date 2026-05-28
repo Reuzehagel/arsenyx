@@ -18,6 +18,15 @@
 
 import type { DeUpgrade } from "./read-de"
 
+/** DE ships `description` as `string[]` on mods; arcanes ride the same
+ *  Upgrade type so the field is unioned to `string | string[]`. */
+function normalizeDescription(
+  d: string | string[] | undefined,
+): string | undefined {
+  if (d === undefined) return undefined
+  return Array.isArray(d) ? d.join("\n") : d
+}
+
 export interface MergedArcane {
   uniqueName: string
   name: string
@@ -59,7 +68,7 @@ export function mergeArcanes(rawAll: DeUpgrade[]): MergedArcane[] {
     out.push({
       uniqueName: a.uniqueName,
       name: a.name,
-      description: a.description,
+      description: normalizeDescription(a.description),
       type,
       rarity,
       imageName: undefined, // resolved from ExportManifest at emit time

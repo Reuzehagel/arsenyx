@@ -256,11 +256,23 @@ export function getModsForItem(
   mods: Mod[],
 ): Mod[] {
   const meleeClass = item.meleeClass?.toLowerCase()
+  const itemUniqueName = item.uniqueName
 
   // Modern path: structural routing via modPools.
   if (item.modPools && item.modPools.length > 0) {
     const poolSet = new Set(item.modPools)
     return mods.filter((mod) => {
+      // OpenWF augment gate: `compatItems` is a build-time-resolved
+      // closed list of item uniqueNames this mod fits (expanded from
+      // OpenWF's raw `compat` field — see build-items-index.ts). When
+      // present, the mod is locked to those exact items. This is the
+      // authoritative source — no string/name matching, no wiki-Class
+      // inference, no curated overrides.
+      if (mod.compatItems) {
+        if (!itemUniqueName || !mod.compatItems.includes(itemUniqueName))
+          return false
+      }
+
       const compatName = mod.compatName ?? ""
       if (!poolSet.has(compatName)) return false
       // Stance mods are class-specific. The item's modPools already
@@ -288,6 +300,11 @@ export function getModsForItem(
   const itemName = item.name
   const isTome = isTomeWeapon(itemName)
   return mods.filter((m) => {
+    // Same augment gate as the modern path — see comment above.
+    if (m.compatItems) {
+      if (!itemUniqueName || !m.compatItems.includes(itemUniqueName))
+        return false
+    }
     if ((m.compatName?.toLowerCase() ?? "") === "tome") return isTome
     return compats.some((c) => modMatchesCompat(m, c))
   })

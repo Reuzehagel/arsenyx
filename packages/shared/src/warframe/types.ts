@@ -232,6 +232,21 @@ export interface Mod {
   baseDrain: number
   fusionLimit: number
   compatName?: string // e.g., "Warframe", "Rifle", "Shotgun", "Pistol", "Melee"
+  /** Augment routing: closed list of catalog item `uniqueName` values
+   *  this mod fits. Set by `build-items-index.ts` from OpenWF's `compat`
+   *  field after expanding BaseSuit anchors to their family of frames
+   *  (Excalibur / ExcaliburPrime / ExcaliburUmbra share one entry).
+   *  Absent on non-augment mods — runtime treats missing as "no
+   *  restriction". See `getModsForItem`. */
+  compatItems?: string[]
+  /** OpenWF structural compatibility tags (e.g. `"WHIPS_STANCE"`).
+   *  Currently informational — `getModsForItem` doesn't gate on these
+   *  because `modPools` already covers the same territory. */
+  compatibilityTags?: string[]
+  /** OpenWF structural incompatibility tags. Reserved for future use
+   *  when an otherwise-matching mod needs to be excluded on a specific
+   *  item. */
+  incompatibilityTags?: string[]
   type: string // e.g., "Warframe Mod", "Primary Mod", "Secondary Mod", "Melee Mod"
   tradable: boolean
   isAugment?: boolean

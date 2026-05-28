@@ -38,12 +38,19 @@ import {
   categorizeWeapon,
   type BrowseCategory,
 } from "./build/categorize"
-import { buildImageLookup } from "./build/images"
+import {
+  buildDeImageLookup,
+  iterWikiImageEntries,
+  readWikiImageCache,
+  resolveWikiImageUrls,
+  writeWikiImageCache,
+} from "./build/images"
 import { mergeArcanes, type MergedArcane } from "./build/merge-arcanes"
 import { mergeCompanions, type MergedCompanion } from "./build/merge-companions"
 import { mergeFrame, operatorsFromWiki, type MergedFrame } from "./build/merge-frames"
 import { deriveHelminthAbilities } from "./build/merge-helminth"
 import { mergeMods, type MergedMod } from "./build/merge-mods"
+import { readPePlusUpgrades } from "./build/read-pe-plus"
 import {
   mergeWeapon,
   mergeWikiOnlyWeapon,
@@ -66,6 +73,7 @@ const REPO_ROOT = resolve(import.meta.dirname, "..")
 const WIKI_DIR = resolve(REPO_ROOT, "data/raw/wiki")
 const OUT_DIR = resolve(REPO_ROOT, "apps/web/public/data")
 const DETAIL_DIR = resolve(OUT_DIR, "items")
+const WIKI_IMAGE_CACHE = resolve(REPO_ROOT, "data/curated/wiki-image-urls.json")
 
 interface BrowseItemV2 {
   uniqueName: string
@@ -223,20 +231,83 @@ async function main() {
   stats.companions.wiki = mergedCompanions.length
   stats.companions.deOnly = unmatchedDeNames.length
 
-  // Image lookup needs to be ready before arcane merge fills imageName.
-  const imageByUniqueName = buildImageLookup(deManifest)
+  // ---------- Image lookup ----------
+  // Primary source: DE PublicExport CDN (content.warframe.com), via the
+  // textureLocation field on each ExportManifest entry. Covers everything
+  // DE ships (~99% of items, including mods + arcanes).
+  const deImageUrls = buildDeImageLookup(deManifest)
+
+  // Fallback source: wiki MediaWiki API, for the small set of items DE
+  // doesn't manifest but the wiki documents with an `Image` field (beast
+  // claws, railjack ordnance, modular pieces, a handful of mods). We
+  // build a `uniqueName → wiki Image filename` map by walking the wiki
+  // module data we already loaded, then resolve any uncached filenames
+  // to direct `wiki.warframe.com/images/<…>?<ver>` URLs via the
+  // MediaWiki API (50 titles per batch) and persist to disk so
+  // subsequent builds are offline.
+  const wikiImageFileByUniqueName = new Map<string, string>()
+  const allWikiModules: unknown[] = [
+    wikiFramesBlob,
+    wikiCompanionsBlob,
+    ...[...wikiWeaponsByName.values()],
+  ]
+  // Also walk the Mods + Arcane modules for InternalName → Image pairs.
+  for (const f of ["Mods_data.lua", "Arcane_data.lua"]) {
+    allWikiModules.push(readWikiModule(resolve(WIKI_DIR, f)))
+  }
+  for (const mod of allWikiModules) {
+    for (const { internalName, image } of iterWikiImageEntries(mod)) {
+      // First write wins; conflicts are wiki-side data issues. Skip
+      // any uniqueName DE already covers — DE CDN is faster + more stable.
+      if (deImageUrls.has(internalName)) continue
+      if (!wikiImageFileByUniqueName.has(internalName)) {
+        wikiImageFileByUniqueName.set(internalName, image)
+      }
+    }
+  }
+
+  const wikiCache = readWikiImageCache(WIKI_IMAGE_CACHE)
+  const neededFilenames = new Set<string>()
+  for (const fn of wikiImageFileByUniqueName.values()) {
+    if (!wikiCache.urls[fn]) neededFilenames.add(fn)
+  }
+  if (neededFilenames.size > 0) {
+    console.log(`Resolving ${neededFilenames.size} wiki image URLs via MediaWiki API...`)
+    const resolved = await resolveWikiImageUrls(neededFilenames)
+    for (const [fn, url] of resolved) wikiCache.urls[fn] = url
+    writeWikiImageCache(WIKI_IMAGE_CACHE, wikiCache)
+    console.log(`  OK  resolved ${resolved.size} / ${neededFilenames.size}`)
+  }
+
+  /** Final lookup: DE URL if present, else wiki URL via cache. */
+  const imageByUniqueName = new Map<string, string>()
+  for (const [un, url] of deImageUrls) imageByUniqueName.set(un, url)
+  for (const [un, fn] of wikiImageFileByUniqueName) {
+    const url = wikiCache.urls[fn]
+    if (url) imageByUniqueName.set(un, url)
+  }
 
   // ---------- 5. Merge mods + arcanes ----------
-  const { mods: mergedMods, counts: modCounts } = mergeMods(
+  // OpenWF's `warframe-public-export-plus` provides extra routing fields
+  // (`compat`, `compatibilityTags`, `incompatibilityTags`) extracted from
+  // the game client. We use `compat` to lock augments to their specific
+  // weapon — strictly more reliable than the wiki-Class-based modPools
+  // inference, which periodically drifted.
+  const pePlusUpgrades = readPePlusUpgrades()
+  const { mods: rawMergedMods, counts: modCounts } = mergeMods(
     deUpgrades.ExportUpgrades ?? [],
     deUpgrades.ExportModSet ?? [],
+    pePlusUpgrades,
   )
+  let mergedMods = rawMergedMods.map((m) => ({
+    ...m,
+    imageName: imageByUniqueName.get(m.uniqueName),
+  }))
   stats.mods.de = modCounts.total
   stats.mods.kept = modCounts.kept
 
   const deArcanes = readDeArcanes()
   const mergedArcanes = mergeArcanes(deArcanes.ExportRelicArcane ?? [])
-  // Image fill from manifest
   const arcanesWithImages = mergedArcanes.map((a) => ({
     ...a,
     imageName: imageByUniqueName.get(a.uniqueName),
@@ -343,6 +414,82 @@ async function main() {
     stats.perCategory[cat] = arr?.length ?? 0
   }
 
+  // ---------- 7b. Expand mod `compat` to per-item lists ----------
+  // OpenWF's `compat` is one of three things:
+  //
+  //   1. A specific item uniqueName (e.g. weapon augments) — direct match.
+  //   2. A frame "BaseSuit" anchor like `/Lotus/Powersuits/Excalibur/
+  //      ExcaliburBaseSuit`. DE's `parentName` chain doesn't fully resolve
+  //      (intermediate suits like `DarkExcalibur` aren't first-class
+  //      records), so we use a path-prefix heuristic: BaseSuit compat
+  //      expands to every catalog frame in the same `/Lotus/Powersuits/
+  //      <Family>/` directory. This covers Excalibur ↔ ExcaliburPrime ↔
+  //      ExcaliburUmbra without depending on DE shipping the full chain.
+  //   3. A generic class anchor (e.g. `.../PlayerMeleeWeapon`) — strip,
+  //      `modPools` already covers the equivalent routing.
+  //
+  // Output field is `compatItems: string[]` — a closed list of item
+  // uniqueNames the augment fits. Runtime check collapses to a single
+  // `includes(item.uniqueName)`.
+  const knownItemUniqueNames = new Set<string>()
+  /** Track each item's category so BaseSuit expansion can stay within
+   *  warframes (Excalibur's directory also contains the Exalted Blade
+   *  exalted weapon — without a category gate the path-prefix heuristic
+   *  would pull the exalted weapon in as a "frame variant"). */
+  const categoryByUniqueName = new Map<string, string>()
+  for (const [cat, arr] of Object.entries(byCategory)) {
+    if (!arr) continue
+    for (const item of arr) {
+      knownItemUniqueNames.add(item.uniqueName)
+      categoryByUniqueName.set(item.uniqueName, cat)
+    }
+  }
+
+  function expandCompat(compat: string): string[] {
+    if (knownItemUniqueNames.has(compat)) return [compat]
+    // BaseSuit → all warframes in the same family directory. The path
+    // prefix alone over-matches (exalted weapons share the directory),
+    // so we also require the item's category to be `warframes`.
+    if (compat.includes("BaseSuit")) {
+      const dir = compat.slice(0, compat.lastIndexOf("/") + 1)
+      const out: string[] = []
+      for (const un of knownItemUniqueNames) {
+        if (un.startsWith(dir) && categoryByUniqueName.get(un) === "warframes") {
+          out.push(un)
+        }
+      }
+      return out
+    }
+    if (compat.includes("BaseMechSuit")) {
+      const dir = compat.slice(0, compat.lastIndexOf("/") + 1)
+      const out: string[] = []
+      for (const un of knownItemUniqueNames) {
+        if (un.startsWith(dir) && categoryByUniqueName.get(un) === "necramechs") {
+          out.push(un)
+        }
+      }
+      return out
+    }
+    return []
+  }
+
+  let augmentCount = 0
+  let strippedCount = 0
+  mergedMods = mergedMods.map((m) => {
+    if (!m.compat) return m
+    const expanded = expandCompat(m.compat)
+    const { compat: _drop, ...rest } = m
+    if (expanded.length > 0) {
+      augmentCount++
+      return { ...rest, compatItems: expanded }
+    }
+    strippedCount++
+    return rest
+  })
+  console.log(
+    `\n  compat: ${augmentCount} augment-style (kept), ${strippedCount} unresolved (stripped)`,
+  )
+
   // ---------- 8. Write outputs ----------
   await rm(OUT_DIR, { recursive: true, force: true })
   await mkdir(OUT_DIR, { recursive: true })
@@ -366,11 +513,17 @@ async function main() {
   console.log(`  OK  arcanes-all.json (${arcanesWithImages.length} arcanes)`)
 
   // Helminth abilities — derived from merged frames + DE's separate
-  // ExportAbilities array (which holds the Helminth-native ones).
-  const helminth = deriveHelminthAbilities(
+  // ExportAbilities array (which holds the Helminth-native ones). DE
+  // doesn't populate `imageName` inline, so fill it from the central
+  // image lookup keyed on each ability's uniqueName.
+  const helminthRaw = deriveHelminthAbilities(
     mergedFrames,
     deFramesBlob.ExportAbilities ?? [],
   )
+  const helminth = helminthRaw.map((a) => ({
+    ...a,
+    imageName: imageByUniqueName.get(a.uniqueName) ?? a.imageName,
+  }))
   await writeFile(
     resolve(OUT_DIR, "helminth-abilities.json"),
     JSON.stringify(helminth),
@@ -419,6 +572,13 @@ async function main() {
     await writeDetail(cat, slugify(f.name), {
       ...f,
       imageName: imageByUniqueName.get(f.uniqueName),
+      // Ability icons live in the DE manifest under the ability's own
+      // uniqueName (e.g. `.../SlashDashNewAbility` → `Power04.png`); DE
+      // doesn't populate `a.imageName` on the warframe record itself.
+      abilities: f.abilities.map((a) => ({
+        ...a,
+        imageName: imageByUniqueName.get(a.uniqueName) ?? a.imageName,
+      })),
       displayClass: frameDisplayClass(f),
     })
   }

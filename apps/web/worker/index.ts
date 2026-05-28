@@ -153,14 +153,15 @@ function collapseWs(s: string): string {
 
 function imageUrl(imageName: string | null): string | null {
   if (!imageName) return null
-  // If a future data refresh ever stores an absolute URL, honour it. Otherwise
-  // treat the value as a bare filename and join it under cdn.warframestat.us
-  // — leading slashes are stripped because URL() would otherwise resolve them
-  // against the host root and drop the `/img/` base path.
+  // Newer catalog data ships absolute `https://img.arsenyx.com/...` URLs
+  // (see scripts/sync-images.ts). Pass those through unchanged. Legacy
+  // saved builds may still carry a bare filename — fall back to our own
+  // CDN root so the OG card resolves to something hosted by us instead
+  // of the WFCD CDN we no longer use.
   if (/^https?:\/\//i.test(imageName)) return imageName
   const clean = imageName.replace(/^\/+/, "")
   try {
-    return new URL(clean, "https://cdn.warframestat.us/img/").toString()
+    return new URL(clean, "https://img.arsenyx.com/").toString()
   } catch {
     return null
   }

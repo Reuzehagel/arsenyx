@@ -207,22 +207,30 @@ function statsFor(item: DetailItem, category: BrowseCategory): Stat[] {
   }
   if (WEAPON_CATEGORIES.has(category)) {
     const rows: Stat[] = [
-      { label: "Damage", value: item.totalDamage },
+      // formatStat trims trailing zeros and clamps to 2dp by default —
+      // raw stats from DE carry float garbage like `2.4000001` that we
+      // don't want to show in the header. The catalog still ships the
+      // precise value; this only affects rendering.
+      {
+        label: "Damage",
+        value:
+          item.totalDamage !== undefined
+            ? formatStat(item.totalDamage)
+            : undefined,
+      },
       { label: "Crit %", value: formatPct(item.criticalChance) },
       {
         label: "Crit x",
         value:
           item.criticalMultiplier !== undefined
-            ? `${item.criticalMultiplier}x`
+            ? `${formatStat(item.criticalMultiplier)}x`
             : undefined,
       },
       { label: "Status", value: formatPct(item.procChance) },
       {
         label: "Fire Rate",
         value:
-          item.fireRate !== undefined
-            ? formatStat(item.fireRate, 3)
-            : undefined,
+          item.fireRate !== undefined ? formatStat(item.fireRate) : undefined,
       },
       { label: "Magazine", value: item.magazineSize },
       {
@@ -233,7 +241,11 @@ function statsFor(item: DetailItem, category: BrowseCategory): Stat[] {
             : undefined,
       },
     ]
-    if (category === "melee") rows.push({ label: "Range", value: item.range })
+    if (category === "melee")
+      rows.push({
+        label: "Range",
+        value: item.range !== undefined ? formatStat(item.range) : undefined,
+      })
     return rows
   }
   return []

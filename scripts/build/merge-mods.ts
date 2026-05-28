@@ -29,6 +29,7 @@
  */
 
 import type { DeUpgrade } from "./read-de"
+import type { PePlusUpgradeFields } from "./read-pe-plus"
 
 /** DE's `AP_*` polarity → canonical lowercase name used by the UI. */
 const DE_POLARITY_MAP: Record<string, string> = {
@@ -96,6 +97,25 @@ export interface MergedMod {
   levelStats?: Array<{ stats: string[] }>
   modSet?: string
   modSetStats?: string[]
+  /** Wiki Image filename, filled by build-items-index from the central
+   *  wiki-image lookup. Bare filename; consumer resolves via wiki. */
+  imageName?: string
+  /** OpenWF `compat` — either a specific item `uniqueName` (augments)
+   *  or a generic class-anchor path (e.g. `.../PlayerMeleeWeapon`) for
+   *  non-augment mods. `build-items-index.ts` transforms this into
+   *  `compatItems` (a closed list of catalog item uniqueNames) and
+   *  drops this raw field before write. Not present on the emitted
+   *  mods-all.json — only here in the build-time merged shape. */
+  compat?: string
+  /** Resolved augment target: catalog item uniqueNames this mod fits.
+   *  Set by `build-items-index.ts`; absent on non-augment mods.
+   *  Runtime check: `compatItems.includes(item.uniqueName)`. */
+  compatItems?: string[]
+  /** OpenWF structural compatibility tags (e.g. `["WHIPS_STANCE"]`). */
+  compatibilityTags?: string[]
+  /** OpenWF structural incompatibility tags. Used to forbid otherwise-
+   *  matching mods on specific items. */
+  incompatibilityTags?: string[]
 }
 
 interface FilterCounts {
@@ -107,6 +127,15 @@ interface FilterCounts {
   nemesis: number
   noNameOrCompat: number
   hardcoded: number
+}
+
+/** DE ships `description` as `string[]` (one entry per paragraph). The
+ *  frontend expects a single string; join with newlines. */
+function normalizeDescription(
+  d: string | string[] | undefined,
+): string | undefined {
+  if (d === undefined) return undefined
+  return Array.isArray(d) ? d.join("\n") : d
 }
 
 /**
@@ -127,7 +156,7 @@ function shouldKeep(mod: DeUpgrade, counts: FilterCounts): boolean {
     counts.noNameOrCompat++
     return false
   }
-  if (mod.description?.includes("Conclave")) {
+  if (normalizeDescription(mod.description)?.includes("Conclave")) {
     counts.conclave++
     return false
   }
@@ -180,6 +209,10 @@ export interface MergeModsResult {
 export function mergeMods(
   rawUpgrades: DeUpgrade[],
   rawModSets: DeUpgrade[] = [],
+  /** Optional OpenWF augmentation map keyed by mod `uniqueName`. When
+   *  supplied, each merged mod gets `compat` / `compatibilityTags` /
+   *  `incompatibilityTags` from this lookup. */
+  pePlus: Map<string, PePlusUpgradeFields> = new Map(),
 ): MergeModsResult {
   // Build the mod-set index first so we can attach set stats per mod.
   const setStats = new Map<string, string[]>()
@@ -267,10 +300,12 @@ export function mergeMods(
     const modSetRef = (raw as { modSet?: string }).modSet
     const modSetStats = modSetRef ? setStats.get(modSetRef) : undefined
 
+    const plus = pePlus.get(raw.uniqueName)
+
     mods.push({
       uniqueName: raw.uniqueName,
       name: raw.name,
-      description: raw.description,
+      description: normalizeDescription(raw.description),
       polarity,
       rarity,
       baseDrain: raw.baseDrain ?? 0,
@@ -283,6 +318,9 @@ export function mergeMods(
       levelStats: raw.levelStats,
       modSet: modSetRef,
       modSetStats,
+      compat: plus?.compat,
+      compatibilityTags: plus?.compatibilityTags,
+      incompatibilityTags: plus?.incompatibilityTags,
     })
   }
 
