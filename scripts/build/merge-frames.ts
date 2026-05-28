@@ -44,8 +44,9 @@ export interface MergedFrame {
   }>
   /** Lowercase polarity names from wiki Polarities (8 slots). */
   polarities: readonly string[]
-  /** Aura slot polarity (warframes + archwing + necramech only). */
-  auraPolarity: string | null
+  /** Aura slot polarity (warframes + archwing + necramech only). Array
+   *  when the frame has more than one aura slot (e.g. Jade has two). */
+  auraPolarity: string | string[] | null
   /** Exilus polarity (warframes only, when set in-game). */
   exilusPolarity: string | null
   /** True when this frame has a Prime variant (derived from name). */
@@ -55,7 +56,8 @@ export interface MergedFrame {
 interface WikiFrame {
   Name?: string
   Polarities?: readonly unknown[]
-  AuraPolarity?: string
+  /** Single string for most frames; array for multi-aura frames like Jade. */
+  AuraPolarity?: string | readonly unknown[]
   ExilusPolarity?: string
   /** Subsumable ability on warframes — useful for Helminth derivation. */
   Subsumed?: string
@@ -81,6 +83,19 @@ function normalizePolarity(p: unknown): string | null {
   if (typeof p !== "string" || p.length === 0) return null
   const lower = p.toLowerCase()
   return POLARITY_SET.has(lower) ? lower : lower
+}
+
+/** Wiki AuraPolarity is a string for single-aura frames and an array for
+ *  multi-aura frames (Jade: `{ "Aura", "Vazarin" }`). Return one of:
+ *  string (single slot), string[] (multi-slot), or null (no aura slot). */
+function normalizeAuraPolarity(p: unknown): string | string[] | null {
+  if (Array.isArray(p)) {
+    const arr = p
+      .map(normalizePolarity)
+      .filter((x): x is string => x !== null)
+    return arr.length === 0 ? null : arr
+  }
+  return normalizePolarity(p)
 }
 
 function categoryOf(productCategory: string): FrameCategory {
@@ -190,7 +205,7 @@ export function mergeFrame(
       imageName: a.imageName,
     })),
     polarities,
-    auraPolarity: normalizePolarity(wiki?.AuraPolarity),
+    auraPolarity: normalizeAuraPolarity(wiki?.AuraPolarity),
     exilusPolarity: normalizePolarity(wiki?.ExilusPolarity),
     isPrime: cleanName.includes(" Prime"),
   }
@@ -215,7 +230,7 @@ export function operatorsFromWiki(wiki: FrameWikiTable): MergedFrame[] {
       polarities: (op.Polarities ?? [])
         .map(normalizePolarity)
         .filter((p): p is string => p !== null),
-      auraPolarity: normalizePolarity(op.AuraPolarity),
+      auraPolarity: normalizeAuraPolarity(op.AuraPolarity),
       exilusPolarity: null,
       isPrime: false,
       modPools: modPoolsForFrame(name, "operators"),

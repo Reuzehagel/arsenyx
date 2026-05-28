@@ -253,6 +253,10 @@ export interface Mod {
   isPrime?: boolean
   isExilus?: boolean
   isUtility?: boolean // Also indicates exilus-compatible mods in WFCD data
+  /** True for PvP-only mods (description mentions Conclave). The mod-picker
+   *  filters these by default — see the Game Mode toggle in
+   *  `mod-search-grid.tsx`. */
+  isConclave?: boolean
   levelStats?: Array<{ stats: string[] }>
   modSet?: string
   modSetStats?: string[]

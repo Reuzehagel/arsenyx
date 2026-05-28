@@ -102,7 +102,7 @@ export function WarframeStatsPanel({ stats }: { stats: WarframeStats }) {
 }
 
 export function WeaponStatsPanel({ stats }: { stats: WeaponStats }) {
-  const { attackModes, multishot, grandTotalDamage } = stats
+  const { attackModes, multishot } = stats
   const showMultiple = attackModes.length > 1
   const primary = attackModes[0]
 
@@ -162,18 +162,6 @@ export function WeaponStatsPanel({ stats }: { stats: WeaponStats }) {
           showHeader={showMultiple}
         />
       ))}
-
-      {showMultiple && (
-        <>
-          <Separator />
-          <StatLine
-            label="Total"
-            value={grandTotalDamage}
-            digits={1}
-            emphasis
-          />
-        </>
-      )}
     </div>
   )
 }
@@ -198,15 +186,26 @@ function AttackModeBlock({
 
   return (
     <div className="flex flex-col gap-1.5">
-      {showHeader && (
+      {showHeader ? (
         <>
           <Separator />
-          <div className="text-muted-foreground mt-1 text-[10px] font-semibold tracking-wide uppercase">
-            {mode.name}
+          <div className="mt-1 flex items-baseline justify-between gap-2">
+            <span className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
+              {mode.name}
+            </span>
+            <span className="text-foreground font-semibold tabular-nums">
+              {formatStat(scaledTotal.modified, 1)}
+            </span>
           </div>
         </>
+      ) : (
+        <StatLine
+          label="Total Damage"
+          value={scaledTotal}
+          digits={1}
+          emphasis
+        />
       )}
-      <StatLine label="Total Damage" value={scaledTotal} digits={1} emphasis />
 
       {physical.length > 0 && (
         <>

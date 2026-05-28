@@ -128,6 +128,13 @@ export interface MergedWeapon {
   /** Normal Attack damage dict (lowercased element keys, nonzero only).
    *  Mirrors first-attack values for legacy stats-panel rendering. */
   damage?: Record<string, number>
+  /** Atmospheric-deployment damage variant for arch-guns (deployed on the
+   *  ground via Archgun Deployer). Populated only when the wiki ships a
+   *  separate `Foo (Atmosphere)` entry for the weapon. The editor toggles
+   *  the stats panel between space and atmospheric using these fields. */
+  atmosphericAttacks?: AttackOut[]
+  atmosphericDamage?: Record<string, number>
+  atmosphericTotalDamage?: number
 }
 
 interface WikiWeapon {
@@ -261,6 +268,13 @@ export function mergeWeapon(
   const fallbackDamage =
     !dmg.damage && de.damagePerShot ? damageFromDePerShot(de.damagePerShot) : undefined
 
+  // Arch-guns deployed atmospherically have a separate wiki entry
+  // (`Foo (Atmosphere)`) with different damage tables. Fold those into
+  // atmospheric* fields on the base weapon so the browse list stays
+  // consolidated; the editor toggles between presentations.
+  const atmosWiki = opts.wikiByName.get(`${cleanName} (Atmosphere)`)
+  const atmosDmg = atmosWiki?.Attacks ? buildDamageBlock(atmosWiki.Attacks) : null
+
   return {
     uniqueName: de.uniqueName,
     name: cleanName,
@@ -289,6 +303,9 @@ export function mergeWeapon(
     maxLevelCap: de.maxLevelCap,
     attacks: dmg.attacks,
     damage: dmg.damage ?? fallbackDamage,
+    atmosphericAttacks: atmosDmg?.attacks,
+    atmosphericDamage: atmosDmg?.damage,
+    atmosphericTotalDamage: atmosDmg?.totalDamage,
   }
 }
 

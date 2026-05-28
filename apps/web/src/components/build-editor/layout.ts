@@ -147,13 +147,13 @@ export function hasStanceSlot(
 }
 
 /**
- * Number of Aura slots for an item. Warframes derive from `item.aura` —
- * an array means multiple aura slots (Jade: 2). Companions and other
- * categories have none.
+ * Number of Aura slots for an item. Warframes derive from
+ * `item.auraPolarity` — an array means multiple aura slots (Jade: 2).
+ * Companions and other categories have none.
  */
 export function getAuraSlotCount(
   category: BrowseCategory,
-  item: Pick<DetailItem, "aura">,
+  item: Pick<DetailItem, "auraPolarity">,
 ): number {
   // Plexus has an Aura slot in the Integrated section — accepts any Plexus
   // mod and inverts drain to a capacity bonus. The Plexus-mod placement
@@ -161,8 +161,8 @@ export function getAuraSlotCount(
   // capacity math reuses `auraBonusForMod` without changes.
   if (category === "railjack") return 1
   if (category !== "warframes") return 0
-  if (Array.isArray(item.aura)) return item.aura.length
-  return item.aura ? 1 : 0
+  if (Array.isArray(item.auraPolarity)) return item.auraPolarity.length
+  return item.auraPolarity ? 1 : 0
 }
 
 // =============================================================================

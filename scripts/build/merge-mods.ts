@@ -90,10 +90,13 @@ export interface MergedMod {
   isAugment: boolean
   /** True for Primed/Umbral mods. */
   isPrime: boolean
-  /** Exilus-eligible. DE doesn't ship a flag; derived from polarity + slot
-   *  heuristics in the legacy code. Stubbed to false here — Phase 4b will
-   *  reconcile with wiki Mods/data which carries this explicitly. */
+  /** Exilus-eligible. DE doesn't ship a flag; sourced from wiki
+   *  `Mods_data.IsExilus`, keyed by `uniqueName` (= wiki InternalName). */
   isExilus: boolean
+  /** PvP-only mod. Detected from the description ("… in Conclave").
+   *  The web mod picker filters these out by default — see the Game
+   *  Mode toggle in `mod-search-grid.tsx`. */
+  isConclave: boolean
   levelStats?: Array<{ stats: string[] }>
   modSet?: string
   modSetStats?: string[]
@@ -142,8 +145,19 @@ function normalizeDescription(
  * Drop entries the planner doesn't surface. Mirrors `normalizeMods()` in
  * shared/warframe/mods.ts but works directly against DE data.
  */
-function shouldKeep(mod: DeUpgrade, counts: FilterCounts): boolean {
+function shouldKeep(
+  mod: DeUpgrade,
+  counts: FilterCounts,
+  wikiIgnore: Set<string>,
+  wikiKnownNames: Set<string>,
+): boolean {
   counts.total++
+  // Wiki maintainers flagged this as unreleased / non-functional
+  // (e.g. "Primed Streamline"). Honor it before anything else.
+  if (mod.uniqueName && wikiIgnore.has(mod.uniqueName)) {
+    counts.hardcoded++
+    return false
+  }
   if (!mod.name) {
     counts.noNameOrCompat++
     return false
@@ -156,9 +170,14 @@ function shouldKeep(mod: DeUpgrade, counts: FilterCounts): boolean {
     counts.noNameOrCompat++
     return false
   }
+  // Conclave (PvP) mods are kept and tagged with `isConclave` at emission
+  // time (sourced from the wiki's `Conclave = true` flag — see
+  // build-items-index.ts). The Game Mode toggle in the picker hides them
+  // by default. We still count description-based hits for the build-time
+  // diagnostic, but the count is informational only; emission decides PvP
+  // membership.
   if (normalizeDescription(mod.description)?.includes("Conclave")) {
     counts.conclave++
-    return false
   }
   // Plexus "Unfused Artifact" entries are pre-fusion placeholders with no
   // stats; they're not buildable in-game.
@@ -177,6 +196,16 @@ function shouldKeep(mod: DeUpgrade, counts: FilterCounts): boolean {
   }
   if (uniqueName.endsWith("Expert") && !mod.name.includes("Primed")) {
     counts.beginner++
+    return false
+  }
+  // DE leaks unreleased Primed Expert mods (Primed Fast Deflection,
+  // Primed Streamline, Primed Charged Chamber, Primed Blunderbuss, …).
+  // Released ones (Primed Continuity, Primed Reach, Primed Fury, …) all
+  // have a wiki entry with a matching Name field. The wiki is the
+  // authoritative game-content index, so anything Expert-suffixed that
+  // isn't named in the wiki is unreleased — drop it.
+  if (uniqueName.endsWith("Expert") && !wikiKnownNames.has(mod.name)) {
+    counts.hardcoded++
     return false
   }
   if (uniqueName.includes("/Nemesis/")) {
@@ -213,6 +242,28 @@ export function mergeMods(
    *  supplied, each merged mod gets `compat` / `compatibilityTags` /
    *  `incompatibilityTags` from this lookup. */
   pePlus: Map<string, PePlusUpgradeFields> = new Map(),
+  /** Wiki-sourced `IsExilus` flag keyed by mod `uniqueName`. Mods missing
+   *  from this map default to `false`. */
+  wikiExilus: Map<string, boolean> = new Map(),
+  /** DE `ExportAvionics` — railjack Plexus mods. Ship empty `compatName`
+   *  and empty `type` in DE, so we tag them with `type: "Plexus Mod"`
+   *  here to match the runtime predicate in
+   *  packages/shared/src/warframe/mods.ts (`isPlexusMod`). */
+  rawAvionics: DeUpgrade[] = [],
+  /** Wiki mods flagged `_IgnoreEntry = true` (keyed by InternalName). */
+  wikiIgnore: Set<string> = new Set(),
+  /** All wiki mod display Names. Gates the Primed-Expert allowance against
+   *  DE's stream of unreleased Primed mods (Primed Fast Deflection,
+   *  Primed Charged Chamber, Primed Blunderbuss, Primed Streamline have
+   *  no wiki entry → dropped; Primed Continuity / Reach / Fury / Steady
+   *  Hands / Redirection do → kept). Keyed by Name rather than
+   *  InternalName because the wiki inconsistently includes the `/Expert/`
+   *  infix in InternalName. */
+  wikiKnownNames: Set<string> = new Set(),
+  /** Wiki mods with `Conclave = true` (keyed by InternalName). The
+   *  canonical PvP marker — the description "in Conclave" substring only
+   *  catches ~14% of Conclave mods. */
+  wikiConclave: Set<string> = new Set(),
 ): MergeModsResult {
   // Build the mod-set index first so we can attach set stats per mod.
   const setStats = new Map<string, string[]>()
@@ -238,7 +289,7 @@ export function mergeMods(
 
   const mods: MergedMod[] = []
   for (const raw of rawUpgrades) {
-    if (!shouldKeep(raw, counts)) continue
+    if (!shouldKeep(raw, counts, wikiIgnore, wikiKnownNames)) continue
 
     const polarityRaw = raw.polarity ?? ""
     const polarity = DE_POLARITY_MAP[polarityRaw] ?? null
@@ -314,7 +365,8 @@ export function mergeMods(
       type,
       isAugment,
       isPrime,
-      isExilus: false,
+      isExilus: wikiExilus.get(raw.uniqueName) ?? false,
+      isConclave: wikiConclave.has(raw.uniqueName),
       levelStats: raw.levelStats,
       modSet: modSetRef,
       modSetStats,
@@ -322,6 +374,61 @@ export function mergeMods(
       compatibilityTags: plus?.compatibilityTags,
       incompatibilityTags: plus?.incompatibilityTags,
     })
+  }
+
+  // Avionics (Railjack Plexus mods). DE ships them with empty `type` and
+  // empty `compatName`, so the regular `shouldKeep` / type-validation paths
+  // above would drop them. Process separately and tag with the canonical
+  // "Plexus Mod" type the runtime expects.
+  for (const raw of rawAvionics) {
+    if (!raw.name || !raw.uniqueName) continue
+    // Drop the pre-fusion "Unfused Artifact" placeholders. DE ships one
+    // per `/Railjack/<section>/Base*` shell; the real avionics live under
+    // `Lavan*` / `Vidar* `/ `Zekti*` house variants and have proper names.
+    if (raw.name === "Unfused Artifact") continue
+    const polarityRaw = raw.polarity ?? ""
+    const polarity = DE_POLARITY_MAP[polarityRaw] ?? null
+    if (!polarity) {
+      throw new Error(
+        `Unknown DE polarity "${polarityRaw}" on avionic ${raw.name}. ` +
+          `Add to DE_POLARITY_MAP in merge-mods.ts.`,
+      )
+    }
+    const rarityRaw = raw.rarity ?? ""
+    const rarity = DE_RARITY_MAP[rarityRaw]
+    if (!rarity) {
+      throw new Error(
+        `Unknown DE rarity "${rarityRaw}" on avionic ${raw.name}. ` +
+          `Add to DE_RARITY_MAP.`,
+      )
+    }
+    const plus = pePlus.get(raw.uniqueName)
+    mods.push({
+      uniqueName: raw.uniqueName,
+      name: raw.name,
+      description: normalizeDescription(raw.description),
+      polarity,
+      rarity,
+      baseDrain: raw.baseDrain ?? 0,
+      fusionLimit: raw.fusionLimit ?? 0,
+      // The Plexus item's `modPools` is `["Plexus"]` (see
+      // data/curated/plexus.ts), and `getModsForItem` filters by
+      // `mod.compatName ∈ modPools`. Tag avionics so the structural
+      // router lets them through; sub-slot routing (Battle/Tactical/
+      // Integrated) still happens via uniqueName path and `type`.
+      compatName: "Plexus",
+      type: "Plexus Mod",
+      isAugment: false,
+      isPrime: false,
+      isExilus: false,
+      isConclave: false,
+      levelStats: raw.levelStats,
+      compat: plus?.compat,
+      compatibilityTags: plus?.compatibilityTags,
+      incompatibilityTags: plus?.incompatibilityTags,
+    })
+    counts.total++
+    counts.kept++
   }
 
   return { mods, setStats, counts }

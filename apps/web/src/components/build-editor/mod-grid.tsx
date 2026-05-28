@@ -18,24 +18,24 @@ import type { BuildSlotsState, SlotId } from "./use-build-slots"
 
 const CANONICAL_SET = new Set<Polarity>(CANONICAL_POLARITIES)
 
-export function toPolarity(v: string | undefined): Polarity | undefined {
+export function toPolarity(v: string | null | undefined): Polarity | undefined {
   if (!v) return undefined
   return CANONICAL_SET.has(v as Polarity) ? (v as Polarity) : undefined
 }
 
 /**
- * Per-slot innate polarities for an item's aura slots. `item.aura` may be a
- * single polarity string (most frames) or an array (Jade: 2 slots). Length
- * always matches `count` so callers can zip by index.
+ * Per-slot innate polarities for an item's aura slots. `item.auraPolarity`
+ * may be a single polarity string (most frames) or an array (Jade: 2 slots).
+ * Length always matches `count` so callers can zip by index.
  */
 export function getAuraPolarities(
-  item: Pick<DetailItem, "aura">,
+  item: Pick<DetailItem, "auraPolarity">,
   count: number,
 ): (Polarity | undefined)[] {
-  const raws = Array.isArray(item.aura)
-    ? item.aura
-    : item.aura
-      ? [item.aura]
+  const raws = Array.isArray(item.auraPolarity)
+    ? item.auraPolarity
+    : item.auraPolarity
+      ? [item.auraPolarity]
       : []
   return Array.from({ length: count }, (_, i) => toPolarity(raws[i]))
 }

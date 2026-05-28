@@ -41,6 +41,7 @@ import {
 import {
   buildDeImageLookup,
   iterWikiImageEntries,
+  iterWikiRecords,
   readWikiImageCache,
   resolveWikiImageUrls,
   writeWikiImageCache,
@@ -171,11 +172,17 @@ async function main() {
   const skippedModular: string[] = []
   const mergedWeapons: MergedWeapon[] = []
   const seenWikiNames = new Set<string>()
+  // DE's ExportWeapons occasionally ships the same uniqueName multiple
+  // times (Mausolon has 3 identical entries; a few other arch-guns have 2).
+  // Dedupe on first-seen so we don't emit duplicates downstream.
+  const seenWeaponUniqueNames = new Set<string>()
   for (const de of deWeapons) {
     if (de.slot === undefined) {
       skippedModular.push(de.name)
       continue
     }
+    if (seenWeaponUniqueNames.has(de.uniqueName)) continue
+    seenWeaponUniqueNames.add(de.uniqueName)
     const merged = mergeWeapon(de, {
       curated,
       wikiByName: wikiWeaponsByName,
@@ -198,6 +205,10 @@ async function main() {
     // with no Slot, sub-pages without Class, etc.).
     const w = wiki as { Class?: string; Slot?: string }
     if (!w.Class || !w.Slot) continue
+    // Arch-gun atmospheric variants (Slot "Archgun (Atmosphere)") are
+    // folded into the base weapon's atmospheric* fields by `mergeWeapon`.
+    // Skip emitting them as standalone browse items.
+    if (w.Slot === "Archgun (Atmosphere)") continue
     mergedWeapons.push(mergeWikiOnlyWeapon(name, wiki, curated))
     wikiOnlyEmitted++
   }
@@ -252,9 +263,9 @@ async function main() {
     ...[...wikiWeaponsByName.values()],
   ]
   // Also walk the Mods + Arcane modules for InternalName → Image pairs.
-  for (const f of ["Mods_data.lua", "Arcane_data.lua"]) {
-    allWikiModules.push(readWikiModule(resolve(WIKI_DIR, f)))
-  }
+  const wikiModsBlob = readWikiModule(resolve(WIKI_DIR, "Mods_data.lua"))
+  const wikiArcanesBlob = readWikiModule(resolve(WIKI_DIR, "Arcane_data.lua"))
+  allWikiModules.push(wikiModsBlob, wikiArcanesBlob)
   for (const mod of allWikiModules) {
     for (const { internalName, image } of iterWikiImageEntries(mod)) {
       // First write wins; conflicts are wiki-side data issues. Skip
@@ -266,9 +277,24 @@ async function main() {
     }
   }
 
+  // Arcanes are a special case: DE's manifest gives us the small
+  // "Projection" symbol-only PNG, but the wiki ships the full art (symbol
+  // composited onto the metal arcane frame) that players actually recognize
+  // in-game. Build a wiki-only lookup keyed by arcane uniqueName so we can
+  // override the DE URL for arcanes specifically.
+  const arcaneWikiImageFile = new Map<string, string>()
+  for (const { internalName, image } of iterWikiImageEntries(wikiArcanesBlob)) {
+    arcaneWikiImageFile.set(internalName, image)
+  }
+
   const wikiCache = readWikiImageCache(WIKI_IMAGE_CACHE)
   const neededFilenames = new Set<string>()
   for (const fn of wikiImageFileByUniqueName.values()) {
+    if (!wikiCache.urls[fn]) neededFilenames.add(fn)
+  }
+  // Arcane wiki images override DE projections; resolve those too even when
+  // DE already covers them.
+  for (const fn of arcaneWikiImageFile.values()) {
     if (!wikiCache.urls[fn]) neededFilenames.add(fn)
   }
   if (neededFilenames.size > 0) {
@@ -294,10 +320,40 @@ async function main() {
   // weapon — strictly more reliable than the wiki-Class-based modPools
   // inference, which periodically drifted.
   const pePlusUpgrades = readPePlusUpgrades()
+  const wikiExilus = new Map<string, boolean>()
+  // Wiki convention: `_IgnoreEntry = true` flags records the wiki maintainers
+  // consider unreleased / non-functional (e.g. "Primed Streamline" — exists
+  // in DE ExportUpgrades but isn't a real in-game mod). We honor it.
+  const wikiIgnoreMods = new Set<string>()
+  // Names of every wiki-registered mod. Used by merge-mods to gate the
+  // Primed-Expert allowance against DE's stream of unreleased Primed mods.
+  const wikiKnownModNames = new Set<string>()
+  // Wiki PvP flag — `Conclave = true` is the canonical Conclave marker
+  // (155 mods). The description "in Conclave" substring covers only ~14%
+  // of them, so we route via this instead.
+  const wikiConclaveMods = new Set<string>()
+  for (const { internalName, record } of iterWikiRecords(wikiModsBlob)) {
+    const name = record["Name"]
+    if (typeof name === "string") wikiKnownModNames.add(name)
+    if (typeof record["IsExilus"] === "boolean") {
+      wikiExilus.set(internalName, record["IsExilus"])
+    }
+    if (record["_IgnoreEntry"] === true) {
+      wikiIgnoreMods.add(internalName)
+    }
+    if (record["Conclave"] === true) {
+      wikiConclaveMods.add(internalName)
+    }
+  }
   const { mods: rawMergedMods, counts: modCounts } = mergeMods(
     deUpgrades.ExportUpgrades ?? [],
     deUpgrades.ExportModSet ?? [],
     pePlusUpgrades,
+    wikiExilus,
+    deUpgrades.ExportAvionics ?? [],
+    wikiIgnoreMods,
+    wikiKnownModNames,
+    wikiConclaveMods,
   )
   let mergedMods = rawMergedMods.map((m) => ({
     ...m,
@@ -307,11 +363,29 @@ async function main() {
   stats.mods.kept = modCounts.kept
 
   const deArcanes = readDeArcanes()
-  const mergedArcanes = mergeArcanes(deArcanes.ExportRelicArcane ?? [])
-  const arcanesWithImages = mergedArcanes.map((a) => ({
-    ...a,
-    imageName: imageByUniqueName.get(a.uniqueName),
-  }))
+  const allMergedArcanes = mergeArcanes(deArcanes.ExportRelicArcane ?? [])
+  // DE ships per-ability-slot copies of some arcanes (Arcane Steadfast has
+  // 5 records — one per ability + on-cast) and a handful of cut entries
+  // (e.g. "Arcane Liquid") that aren't in-game. The wiki Arcane_data is the
+  // canonical in-game list; intersect against it to drop both.
+  const wikiArcaneNames = new Set<string>()
+  for (const { internalName } of iterWikiImageEntries(wikiArcanesBlob)) {
+    wikiArcaneNames.add(internalName)
+  }
+  const mergedArcanes = allMergedArcanes.filter((a) =>
+    wikiArcaneNames.has(a.uniqueName),
+  )
+  const arcanesWithImages = mergedArcanes.map((a) => {
+    // Prefer the wiki full-art frame over DE's symbol-only Projection
+    // (see arcaneWikiImageFile above). Fall back to the generic lookup
+    // for the handful of arcanes the wiki doesn't list.
+    const wikiFn = arcaneWikiImageFile.get(a.uniqueName)
+    const wikiUrl = wikiFn ? wikiCache.urls[wikiFn] : undefined
+    return {
+      ...a,
+      imageName: wikiUrl ?? imageByUniqueName.get(a.uniqueName),
+    }
+  })
 
   // ---------- 6. Image lookup ----------
   // (defined before step 5 in the code flow so arcane merge can use it,
@@ -398,7 +472,9 @@ async function main() {
     push(cat, browseItem)
   }
 
-  // Synthetic Plexus
+  // Synthetic Plexus — the only browseable Railjack item. Turrets,
+  // ordnance, and reactors stay in the catalog but are sidebar pickers
+  // inside the Plexus editor (see scripts/build/categorize.ts).
   push("railjack", {
     uniqueName: curated.plexusBrowse.uniqueName,
     name: curated.plexusBrowse.name,

@@ -183,6 +183,7 @@ export function EditorHeader({
           <Button
             variant="outline"
             size="sm"
+            nativeButton={false}
             render={
               buildSlug ? (
                 <RouterLink to="/builds/$slug" params={{ slug: buildSlug }} />

@@ -85,12 +85,13 @@ export interface ItemAbility {
 
 export interface DetailItem extends BrowseItem {
   description?: string
-  // slot polarities (from WFCD): `aura` is warframe-only, `polarities` lists
-  // innate polarities on normal slots in slot order, `exilusPolarity` is the
-  // innate polarity on the exilus slot (weapons + warframes).
-  aura?: string | string[]
+  // slot polarities. `auraPolarity` is warframe-only (array on multi-aura
+  // frames like Jade), `polarities` lists innate polarities on normal slots
+  // in slot order, `exilusPolarity` is the innate polarity on the exilus
+  // slot (weapons + warframes).
+  auraPolarity?: string | string[] | null
   polarities?: string[]
-  exilusPolarity?: string
+  exilusPolarity?: string | null
   stancePolarity?: string
   meleeClass?: string
   // warframe
@@ -143,6 +144,9 @@ export const CATEGORIES: { id: BrowseCategory; label: string }[] = [
   { id: "archwing", label: "Archwing" },
   { id: "necramechs", label: "Necramechs" },
   { id: "exalted-weapons", label: "Exalted" },
+  // Railjack tab only surfaces the Plexus (the mod-equip entry point).
+  // Turrets, ordnance, and reactors are sidebar pickers inside the Plexus
+  // editor — they live in the catalog but are not browseable items.
   { id: "railjack", label: "Railjack" },
 ]
 

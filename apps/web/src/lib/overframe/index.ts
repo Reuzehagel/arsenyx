@@ -120,7 +120,7 @@ function innatePolarityFor(
 ): Polarity | undefined {
   if (slotId.startsWith("aura-")) {
     const idx = Number(slotId.slice("aura-".length))
-    const a = detail.aura
+    const a = detail.auraPolarity
     if (!a) return undefined
     return (Array.isArray(a) ? a[idx] : idx === 0 ? a : undefined) as
       | Polarity

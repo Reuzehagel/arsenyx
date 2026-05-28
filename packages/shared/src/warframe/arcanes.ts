@@ -1,12 +1,14 @@
 /**
- * Arcane compatibility helpers. Pure functions — caller supplies the raw WFCD
- * arcanes array. The build script filters the "clean" list once; the web app
- * further filters by browse category at runtime.
+ * Arcane compatibility helpers. Pure functions — caller supplies the
+ * arcanes array emitted by `scripts/build/merge-arcanes.ts`, which sets
+ * `type` from the DE sub-path: one of `Defensive | Offensive | Utility |
+ * Zariman | Amp | Operator`. Those effect-style buckets don't map to
+ * equip slots, so slot eligibility is derived from arcane names below.
  */
 
 import type { Arcane, BrowseCategory } from "./types"
 
-/** Strip beta/excluded/empty entries from the raw WFCD arcane dump. */
+/** Strip beta/excluded/empty entries from the raw arcane dump. */
 export function normalizeArcanes(rawArcanes: Arcane[]): Arcane[] {
   return rawArcanes.filter((arcane) => {
     if (!arcane.name) return false
@@ -25,24 +27,36 @@ export type ArcaneSlotType =
   | "melee"
   | "weapon"
 
-// "Zaw Arcane" covers Exodia arcanes (Zaw-only in-game, surfaced for any
-// melee here to match the rest of the permissive pool).
+// Name tokens — DE's sub-path buckets (Utility/Defensive/Offensive/Zariman)
+// mix frame and weapon arcanes together, so we route by name. "Zaw" tokens
+// surface Exodia (Zaw-only in-game) on every melee, matching the
+// permissive pool we've always shown.
 const PRIMARY_TOKENS = ["primary", "residua", "fractal"] as const
 const SECONDARY_TOKENS = ["secondary", "pax"] as const
-const MELEE_TOKENS = ["melee", "zaw"] as const
+const MELEE_TOKENS = ["melee", "zaw", "exodia"] as const
+const WEAPON_TOKENS = [
+  ...PRIMARY_TOKENS,
+  ...SECONDARY_TOKENS,
+  ...MELEE_TOKENS,
+] as const
 
-const SLOT_TOKENS: Record<ArcaneSlotType, readonly string[]> = {
-  warframe: [], // exact-match below
-  operator: ["magus", "operator"],
-  primary: PRIMARY_TOKENS,
-  secondary: SECONDARY_TOKENS,
-  melee: MELEE_TOKENS,
-  weapon: [...PRIMARY_TOKENS, ...SECONDARY_TOKENS, ...MELEE_TOKENS],
+function nameMatches(arcane: Arcane, tokens: readonly string[]): boolean {
+  const n = arcane.name.toLowerCase()
+  return tokens.some((t) => n.includes(t))
 }
 
-/** Exodia / Zaw-only arcane (WFCD type "Zaw Arcane"). */
+/** Exodia / Zaw-only arcane — detected by name (the type bucket no longer
+ *  distinguishes these from other melee arcanes). */
 export function isZawArcane(arcane: Arcane): boolean {
-  return (arcane.type?.toLowerCase() ?? "").includes("zaw")
+  const n = arcane.name.toLowerCase()
+  return n.includes("exodia") || n.includes("zaw")
+}
+
+/** Operator/Amp arcane — sits in a different equip section from the
+ *  weapon/frame arcanes and should never appear in those pickers. */
+function isOperatorOrAmpArcane(arcane: Arcane): boolean {
+  const t = arcane.type ?? ""
+  return t === "Operator" || t === "Amp"
 }
 
 export function getArcanesForSlot(
@@ -50,11 +64,22 @@ export function getArcanesForSlot(
   slotType: ArcaneSlotType,
 ): Arcane[] {
   return arcanes.filter((arcane) => {
-    const type = arcane.type?.toLowerCase() ?? ""
-    if (slotType === "warframe") {
-      return type === "arcane" || type === "warframe arcane"
+    if (slotType === "operator") return isOperatorOrAmpArcane(arcane)
+    if (isOperatorOrAmpArcane(arcane)) return false
+    switch (slotType) {
+      case "warframe":
+        // Anything that isn't a weapon-token arcane (Pax, Primary, Residua,
+        // Exodia, …) is a frame arcane.
+        return !nameMatches(arcane, WEAPON_TOKENS)
+      case "primary":
+        return nameMatches(arcane, PRIMARY_TOKENS)
+      case "secondary":
+        return nameMatches(arcane, SECONDARY_TOKENS)
+      case "melee":
+        return nameMatches(arcane, MELEE_TOKENS)
+      case "weapon":
+        return nameMatches(arcane, WEAPON_TOKENS)
     }
-    return SLOT_TOKENS[slotType].some((t) => type.includes(t))
   })
 }
 

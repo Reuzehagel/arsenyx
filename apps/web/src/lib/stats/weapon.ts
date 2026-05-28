@@ -116,50 +116,7 @@ export function calculateWeaponStats(input: WeaponCalcInput): WeaponStats {
     }
   }
 
-  const grandTotalDamage = calcGrandTotal(attackModes, multishot, stats)
-
-  return { attackModes, multishot, grandTotalDamage }
-}
-
-function calcGrandTotal(
-  modes: AttackModeStats[],
-  multishot: StatValue,
-  stats: SourcedStat[],
-): StatValue {
-  const baseSum = modes.reduce((s, m) => s + m.totalDamage.base, 0)
-  const modifiedSum = modes.reduce(
-    (s, m) => s + m.totalDamage.modified * multishot.modified,
-    0,
-  )
-
-  // Merge per-mode contributions (deduped by group+name+op) then append
-  // multishot mods so the user can see every mod that fed the grand total.
-  const seen = new Set<string>()
-  const contributions: StatContribution[] = []
-  for (const mode of modes) {
-    for (const c of mode.totalDamage.contributions) {
-      const key = `${c.group ?? ""}|${c.name}|${c.operation}`
-      if (seen.has(key)) continue
-      seen.add(key)
-      contributions.push(c)
-    }
-  }
-  for (const s of stats) {
-    if (s.type === "multishot" && s.operation === "percent_add") {
-      contributions.push({
-        name: s.sourceName,
-        amount: s.value,
-        operation: "percent_add",
-        group: "Multishot",
-      })
-    }
-  }
-
-  return {
-    base: round(baseSum, 1),
-    modified: round(modifiedSum, 1),
-    contributions,
-  }
+  return { attackModes, multishot }
 }
 
 interface AttackSource {

@@ -101,10 +101,14 @@ export function categorizeWeapon(
     case "Hound": // Hound weapons
       out.push("companion-weapons")
       break
-    // Railjack
+    // Railjack — turrets, ordnance, and reactors live in the catalog under
+    // their own browse category in principle, but the Railjack browse tab
+    // is intentionally hidden for now (see CATEGORIES in
+    // apps/web/src/lib/warframe.ts). Skip emission so they don't show up in
+    // browse results; the editor's railjack handling stays dormant until we
+    // resurface them.
     case "Railjack Turret":
     case "Railjack Ordnance":
-      out.push("railjack")
       break
     // Necramech exalted (Ironbride) — surfaces as a melee with exalted tag
     case "Nech-Melee":

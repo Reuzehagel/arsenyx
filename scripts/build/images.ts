@@ -150,3 +150,22 @@ export function* iterWikiImageEntries(
   }
 }
 
+/**
+ * Walk a wiki module blob and yield every record that has an InternalName.
+ * The whole record is yielded so callers can pluck arbitrary fields
+ * (IsExilus, Polarity, etc.) without re-walking. */
+export function* iterWikiRecords(
+  obj: unknown,
+): Generator<{ internalName: string; record: Record<string, unknown> }> {
+  if (!obj || typeof obj !== "object") return
+  const rec = obj as Record<string, unknown>
+  const internalName = rec["InternalName"]
+  if (typeof internalName === "string" && internalName.length > 0) {
+    yield { internalName, record: rec }
+    return
+  }
+  for (const v of Object.values(rec)) {
+    if (v && typeof v === "object") yield* iterWikiRecords(v)
+  }
+}
+

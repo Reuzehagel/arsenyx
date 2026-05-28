@@ -109,6 +109,7 @@ export function ItemDetailContent({
               <div className="flex flex-wrap items-center gap-4 pt-2">
                 <Button
                   size="lg"
+                  nativeButton={false}
                   render={
                     <RouterLink
                       to="/create"

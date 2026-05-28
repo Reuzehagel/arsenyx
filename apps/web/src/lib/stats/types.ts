@@ -129,7 +129,6 @@ export interface AttackModeStats {
 export interface WeaponStats {
   attackModes: AttackModeStats[]
   multishot: StatValue
-  grandTotalDamage: StatValue
 }
 
 export interface WarframeStats {

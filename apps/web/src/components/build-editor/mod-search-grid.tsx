@@ -61,10 +61,15 @@ const POLARITY_OPTIONS = [
   "penjaga",
   "umbra",
 ] as const satisfies readonly ("All" | Polarity)[]
+// PvE is the default — Conclave (PvP) mods are flagged with `isConclave`
+// at build time (see scripts/build/merge-mods.ts) and hidden unless the
+// user explicitly opts into the Conclave view.
+const GAME_MODE_OPTIONS = ["PvE", "Conclave"] as const
 
 type SortOption = (typeof SORT_OPTIONS)[number]
 type RarityFilter = (typeof RARITY_OPTIONS)[number]
 type PolarityFilter = (typeof POLARITY_OPTIONS)[number]
+type GameModeFilter = (typeof GAME_MODE_OPTIONS)[number]
 
 const RARITY_ORDER: Record<Exclude<RarityFilter, "All">, number> = {
   Common: 0,
@@ -196,6 +201,7 @@ export function ModSearchGrid({
   const [sort, setSort] = useState<SortOption>("Drain")
   const [rarity, setRarity] = useState<RarityFilter>("All")
   const [polarity, setPolarity] = useState<PolarityFilter>("All")
+  const [gameMode, setGameMode] = useState<GameModeFilter>("PvE")
   const searchRef = useRef<HTMLInputElement>(null)
   const cardRefs = useRef<Map<string, HTMLDivElement | null>>(new Map())
 
@@ -244,24 +250,35 @@ export function ModSearchGrid({
     return map
   }, [mods])
 
-  // One pass: partition `ordered` into matches vs non-matches, and track the
-  // match set. When searching, matches float to the front so they're visible
-  // without scrolling; otherwise `displayed` === `ordered`.
+  // Two-tier model:
+  //   1. Hard filters remove mods from the grid entirely. Game mode (PvE
+  //      hides Conclave / Conclave shows only Conclave), rarity, and
+  //      polarity all narrow the visible set — picking "Madurai" should
+  //      not leave the user staring at a wall of dimmed Vazarin tiles.
+  //   2. Soft filters (search query, slot-kind target) keep all tiles
+  //      visible but float matches to the front and dim non-matches, so
+  //      typing a partial query doesn't strand the user mid-grid if they
+  //      mistype.
+  const hardFiltered = useMemo(() => {
+    const wantConclave = gameMode === "Conclave"
+    return ordered.filter((m) => {
+      if (wantConclave ? !m.isConclave : m.isConclave) return false
+      if (rarity !== "All" && m.rarity !== rarity) return false
+      if (polarity !== "All" && m.polarity !== polarity) return false
+      return true
+    })
+  }, [ordered, gameMode, rarity, polarity])
+
   const { displayed, matches } = useMemo(() => {
     const q = deferredQuery.trim().toLowerCase()
     const hasQuery = q.length > 0
-    const hasRarity = rarity !== "All"
-    const hasPolarity = polarity !== "All"
-
     const kindPred = slotKindPredicate(selectedSlotKind)
 
     const set = new Set<string>()
     const hits: Mod[] = []
     const rest: Mod[] = []
-    for (const m of ordered) {
+    for (const m of hardFiltered) {
       const matchesFilters =
-        (!hasRarity || m.rarity === rarity) &&
-        (!hasPolarity || m.polarity === polarity) &&
         (!hasQuery || (searchIndex.get(m.uniqueName) ?? "").includes(q)) &&
         (!kindPred || kindPred(m))
       if (matchesFilters) {
@@ -271,15 +288,12 @@ export function ModSearchGrid({
         rest.push(m)
       }
     }
-    // Float matches to the front whenever a narrowing filter is active
-    // (search query or a slot-kind target). Rarity/polarity filters just dim
-    // in place — they're coarser and reshuffling would be disorienting.
     const shouldFloat = hasQuery || !!kindPred
     return {
       matches: set,
-      displayed: shouldFloat ? [...hits, ...rest] : ordered,
+      displayed: shouldFloat ? [...hits, ...rest] : hardFiltered,
     }
-  }, [ordered, deferredQuery, rarity, polarity, searchIndex, selectedSlotKind])
+  }, [hardFiltered, deferredQuery, searchIndex, selectedSlotKind])
 
   // Ordered list of uniqueNames the user can Tab/arrow into. Mirrors
   // `displayed` but skips dimmed (non-match) and used mods — those aren't
@@ -439,7 +453,7 @@ export function ModSearchGrid({
           {query.length > 0 ? (
             <InputGroupAddon align="inline-end">
               <span className="text-muted-foreground text-xs tabular-nums">
-                {matches.size} / {mods.length}
+                {matches.size} / {hardFiltered.length}
               </span>
               <InputGroupButton
                 size="icon-xs"
@@ -452,7 +466,7 @@ export function ModSearchGrid({
           ) : (
             <InputGroupAddon align="inline-end">
               <span className="text-muted-foreground text-xs tabular-nums">
-                {matches.size} / {mods.length}
+                {matches.size} / {hardFiltered.length}
               </span>
               <Kbd>/</Kbd>
             </InputGroupAddon>
@@ -475,6 +489,11 @@ export function ModSearchGrid({
             onChange={setPolarity}
             options={POLARITY_OPTIONS}
             labelFor={(v) => (v === "All" ? "All" : cap(v))}
+          />
+          <FilterSelect
+            value={gameMode}
+            onChange={setGameMode}
+            options={GAME_MODE_OPTIONS}
           />
         </div>
       </div>
