@@ -53,9 +53,10 @@ stop:
 setup:
     bun run scripts/setup.ts
 
-# Update game data (WFCD items + browse index).
+# Refresh game data: mirror DE PublicExport + wiki Lua, then rebuild
+# the static catalog. Same steps the weekly CI cron runs.
 update-data:
-    bun run update-data
+    bun run data:bump
 
 # Ensure apps/web/src/routeTree.gen.ts exists. Vite's router-plugin
 # generates it during build, but `bun run typecheck` (and editors) need
