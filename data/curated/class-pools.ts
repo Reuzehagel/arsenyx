@@ -84,7 +84,11 @@ export const CLASS_DEFAULT_POOLS: Record<string, readonly string[]> = {
   // generic "Melee". Most pull from the same pools as their player-weapon
   // analogues (a Sweeper takes shotgun mods, a Deth Machine Rifle takes
   // rifle mods); Deconstructor (a thrown glaive) takes Melee + Thrown Melee.
-  "Claws (Beast)": ["Claws", "BEAST"],
+  // Beast claws (Sahasa Claws, Adarza Claws, …) use a separate mod pool
+  // from player Claws weapons. The pool name "BeastClaws" is synthesized
+  // in merge-mods.ts (DE ships beast mods with compatName "Claws", which
+  // would otherwise leak them onto Venka/Garuda Talons/etc.).
+  "Claws (Beast)": ["BeastClaws", "BEAST"],
   Melee: ["Melee"], // companion weapon variant
 
   // ──────── Modular Zaw classes ────────

@@ -73,7 +73,7 @@ export const KNOWN_MOD_POOLS = new Set<string>([
   // Companion / archwing / railjack
   "Archgun", "Archmelee", "Archwing",
   "Sentinel", "BEAST", "COMPANION", "ROBOTIC", "Hound", "Moa", "Kavat", "Kubrow",
-  "Kavat Claws", "Kubrow Claws", "Helminth Claws",
+  "Kavat Claws", "Kubrow Claws", "Helminth Claws", "BeastClaws",
   // Operator / modular / synthetic
   "Necramech", "Parazon", "Plexus", "Amp", "K-Drive",
   // Frame umbrella (matched by warframe items, not weapons — kept here so a

@@ -335,7 +335,21 @@ export function mergeMods(
 
     // Trim compatName — DE has " Itzal" (leading space), trailing whitespace
     // can leak in, etc. Preserve case so it matches weapon.modPools entries.
-    const compatName = (raw.compatName ?? "").trim()
+    let compatName = (raw.compatName ?? "").trim()
+    // Beast-claw mods (Maul, Bite, Frost Jaw, Sepsis Claws, …) ship with
+    // compatName "Claws" — the same string player melee Claws mods use —
+    // so without disambiguation they leak onto weapon Claws (Venka,
+    // Ripkas, Garuda Talons). DE buckets all beast-shared mods under
+    // /Sentinel/Kubrow/ regardless of pet family; remap to a distinct
+    // pool name so player Claws and beast claws stop colliding. Paired
+    // with "BeastClaws" in class-pools.ts ("Claws (Beast)" companion
+    // weapons) and KNOWN_MOD_POOLS in merge-weapons.ts.
+    if (
+      compatName === "Claws" &&
+      raw.uniqueName?.includes("/Sentinel/Kubrow/")
+    ) {
+      compatName = "BeastClaws"
+    }
 
     const isPrime =
       raw.name.includes("Primed ") || raw.name.includes("Umbral ")
