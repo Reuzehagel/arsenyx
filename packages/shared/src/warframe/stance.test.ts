@@ -92,6 +92,13 @@ describe("build-codec stance slot round-trip", () => {
   })
 })
 
+// Stance filtering through the modern (modPools) router. Tests pass the
+// shapes the build pipeline emits — verified against the per-item JSON in
+// apps/web/public/data/items/. Stance compat lives in `modPools` directly
+// ("Polearms" is added to Orthos's pool, "Swords" to Exalted Blade's), so
+// pool membership alone gates the mod. `meleeClass` is only consulted as
+// an extra narrowing step when a wider pool overlaps multiple stance
+// classes (rare under the modern emitter).
 describe("getModsForItem stance filtering", () => {
   const polearmStance = modFixture({
     uniqueName: "/Lotus/Mods/Stances/BleedingWillow",
@@ -113,16 +120,26 @@ describe("getModsForItem stance filtering", () => {
   })
   const mods = [polearmStance, heavyBladeStance, meleeMod]
 
-  it("returns every stance when meleeClass is missing (fail-open)", () => {
-    const result = getModsForItem({ type: "Melee", name: "Orthos" }, mods)
+  it("admits stances whose compatName is in the item's modPools", () => {
+    // Orthos: modPools=["Melee","Polearms","Orthos"]. The polearm stance
+    // matches "Polearms"; the heavy blade stance has no overlap.
+    const result = getModsForItem(
+      { name: "Orthos", modPools: ["Melee", "Polearms", "Orthos"] },
+      mods,
+    )
     expect(result).toContain(polearmStance)
-    expect(result).toContain(heavyBladeStance)
+    expect(result).not.toContain(heavyBladeStance)
     expect(result).toContain(meleeMod)
   })
 
-  it("filters stances to the weapon's meleeClass", () => {
+  it("narrows further by meleeClass when supplied", () => {
+    // Synthetic item with two stance pools — meleeClass forces the
+    // polearm-only pick. Real items don't ship this shape today, but the
+    // refinement is the documented contract for future multi-stance pools
+    // (e.g. a wide curated override).
+    const widePool = ["Melee", "Polearms", "Heavy Blade"]
     const result = getModsForItem(
-      { type: "Melee", name: "Orthos", meleeClass: "Polearms" },
+      { name: "Synthetic", modPools: widePool, meleeClass: "Polearms" },
       mods,
     )
     expect(result).toContain(polearmStance)
@@ -131,21 +148,25 @@ describe("getModsForItem stance filtering", () => {
   })
 
   it("matches meleeClass case-insensitively", () => {
+    const widePool = ["Melee", "Polearms", "Heavy Blade"]
     const result = getModsForItem(
-      { type: "Melee", name: "Orthos", meleeClass: "polearms" },
+      { name: "Synthetic", modPools: widePool, meleeClass: "polearms" },
       mods,
     )
     expect(result).toContain(polearmStance)
     expect(result).not.toContain(heavyBladeStance)
   })
 
-  it("excludes stance mods from an exalted melee weapon's pool", () => {
-    // Exalted melees (Exalted Blade etc.) have no swappable stance slot.
+  it("admits sword stances on Exalted Blade (Swords is in its pool)", () => {
+    // Exalted Blade: modPools=["Melee","Swords","Exalted Blade"]. Polearm
+    // and Heavy Blade stances aren't in pool → filtered. A sword stance
+    // would pass — that's the picker's job to decide whether the slot is
+    // even editable (exalted melees have no stance slot in-game).
     const result = getModsForItem(
       {
-        type: "Exalted Weapon",
         name: "Exalted Blade",
         uniqueName: "/Lotus/Powersuits/Excalibur/ExaltedBlade",
+        modPools: ["Melee", "Swords", "Exalted Blade"],
       },
       mods,
     )
@@ -161,11 +182,14 @@ describe("getModsForItem stance filtering", () => {
       type: "Arch-Melee Mod",
       compatName: "ArchMelee",
     })
+    // Ironbride: modPools=["ArchMelee","Ironbride"] — no "Melee" pool, so
+    // both regular melee mods and any (Polearm/Heavy Blade) stances are
+    // shut out structurally.
     const result = getModsForItem(
       {
-        type: "Exalted Weapon",
         name: "Ironbride",
         uniqueName: "/Lotus/Powersuits/EntratiMech/Bonewidow/Ironbride",
+        modPools: ["ArchMelee", "Ironbride"],
       },
       [...mods, archMeleeMod],
     )
