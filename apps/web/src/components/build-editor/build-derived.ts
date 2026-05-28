@@ -7,6 +7,7 @@ import {
   calculateCapacity,
   calculateFormaCount,
   calculateTotalEndoCost,
+  type CapacityInput,
 } from "./calculations"
 import {
   type ArcaneSlotConfig,
@@ -69,6 +70,10 @@ export interface BuildDerived {
   totalEndoCost: number
   formaCount: number
   capacity: { used: number; max: number; base: number; auraBonus: number }
+  /** Shared (non-`placed`, non-`formaPolarities`) capacity inputs, exposed
+   * so multi-variant auto-forma planners can reuse the same memoized values
+   * — `placed` swaps per variant in that scenario. */
+  capacitySharedInputs: Omit<CapacityInput, "placed" | "formaPolarities">
 }
 
 export function useBuildDerived(input: {
@@ -131,22 +136,19 @@ export function useBuildDerived(input: {
     })
   }, [category, normalSlotCount])
 
-  const capacity = useMemo(
-    () =>
-      calculateCapacity({
-        placed: slots.placed,
-        formaPolarities: slots.formaPolarities,
-        auraInnates,
-        exilusInnate,
-        stanceInnate,
-        normalInnates,
-        hasReactor,
-        maxLevelCap: getMaxLevelCap(category, item),
-        normalSlotConsumesDrain,
-      }),
+  const capacitySharedInputs = useMemo<
+    Omit<CapacityInput, "placed" | "formaPolarities">
+  >(
+    () => ({
+      auraInnates,
+      exilusInnate,
+      stanceInnate,
+      normalInnates,
+      hasReactor,
+      maxLevelCap: getMaxLevelCap(category, item),
+      normalSlotConsumesDrain,
+    }),
     [
-      slots.placed,
-      slots.formaPolarities,
       auraInnates,
       exilusInnate,
       stanceInnate,
@@ -157,11 +159,21 @@ export function useBuildDerived(input: {
       normalSlotConsumesDrain,
     ],
   )
+  const capacity = useMemo(
+    () =>
+      calculateCapacity({
+        ...capacitySharedInputs,
+        placed: slots.placed,
+        formaPolarities: slots.formaPolarities,
+      }),
+    [capacitySharedInputs, slots.placed, slots.formaPolarities],
+  )
 
   return {
     arcaneConfig,
     totalEndoCost,
     formaCount,
     capacity,
+    capacitySharedInputs,
   }
 }

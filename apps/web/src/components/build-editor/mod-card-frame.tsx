@@ -4,9 +4,11 @@ import {
   type CardVariant,
   DISPLAY_SIZE,
   type ModRarity,
+  type SlotBadgeKind,
   getModAssetUrl,
   getPolarityIconUrl,
   getRarityColor,
+  getSlotBadgeUrl,
 } from "@/lib/mod-card-config"
 import { cn } from "@/lib/util/utils"
 
@@ -248,6 +250,89 @@ export function DrainBadge({
         />
       </div>
     </div>
+  )
+}
+
+/**
+ * Top-center badges marking a mod's slot type (Aura/Exilus/Stance) and/or
+ * set membership. Both stack when both apply — the slot glyph sits inside
+ * the frame top while the set crest overlaps it above — mirroring the
+ * in-game / Overframe convention (see issue #112).
+ *
+ * Slot icons use `mask-image` so the source PNG color is discarded — we
+ * tint to the mod's rarity color. Set crest PNGs are pre-tinted offline
+ * by `scripts/tint-set-crests.py`, so they render as a plain `<img>`.
+ */
+export function ModSlotBadge({
+  slotKind,
+  setIconUrl,
+  rarity,
+}: {
+  slotKind: SlotBadgeKind | null
+  setIconUrl: string | null
+  rarity: ModRarity
+}) {
+  if (!slotKind && !setIconUrl) return null
+  // Sizes intentionally don't depend on the parent card's compact/expanded
+  // variant: the frame top is the same physical size in both, and scaling
+  // the badge on hover would make it jump, which reads as broken.
+  const slotSize = 20
+  // setSize:slotSize ≈ 4.2:1 — slightly larger than the in-game ornament:glyph
+  // ratio (3.4:1) for a more prominent crest read at card sizes.
+  const setSize = 84
+
+  return (
+    <>
+      {slotKind && (
+        <div
+          className="pointer-events-none absolute left-1/2 z-30 -translate-x-1/2"
+          style={{ top: 7, width: slotSize, height: slotSize }}
+          aria-hidden
+        >
+          <div
+            className="h-full w-full"
+            style={{
+              backgroundColor: getRarityColor(rarity),
+              maskImage: `url(${getSlotBadgeUrl(slotKind)})`,
+              maskSize: "contain",
+              maskRepeat: "no-repeat",
+              maskPosition: "center",
+              WebkitMaskImage: `url(${getSlotBadgeUrl(slotKind)})`,
+              WebkitMaskSize: "contain",
+              WebkitMaskRepeat: "no-repeat",
+              WebkitMaskPosition: "center",
+              filter: "drop-shadow(0 0 2px rgba(0,0,0,0.9))",
+            }}
+          />
+        </div>
+      )}
+      {setIconUrl && (
+        <div
+          className="pointer-events-none absolute left-1/2 z-30 -translate-x-1/2"
+          style={{ top: -32, width: setSize, height: setSize }}
+          aria-hidden
+        >
+          <img
+            // `key` forces a fresh DOM node when the URL changes. Without it
+            // React reuses the <img> across mod swaps, and a prior failed
+            // load's `display: none` could leak onto a freshly-cached, already-
+            // loaded src whose `onLoad` won't fire. With a per-URL key we don't
+            // need the load handler — only the error hide for unbundled sets.
+            key={setIconUrl}
+            src={setIconUrl}
+            alt=""
+            width={setSize}
+            height={setSize}
+            className="h-full w-full object-contain"
+            style={{ filter: "drop-shadow(0 0 3px rgba(0,0,0,0.95))" }}
+            onError={(e) => {
+              // Safety net for set codenames we haven't bundled yet.
+              ;(e.currentTarget as HTMLImageElement).style.display = "none"
+            }}
+          />
+        </div>
+      )}
+    </>
   )
 }
 

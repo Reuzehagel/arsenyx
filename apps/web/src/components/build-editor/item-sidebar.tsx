@@ -77,6 +77,12 @@ export interface ItemSidebarProps {
   category: BrowseCategory
   capacityUsed: number
   capacityMax: number
+  autoFormaCount?: number
+  /** Transient flag set after a click that couldn't produce a plan. The
+   * button flips to a "No fix found" label briefly so the click isn't
+   * silently swallowed. */
+  autoFormaNoFix?: boolean
+  onAutoForma?: () => void
   hasReactor: boolean
   onToggleReactor: () => void
   shards: (PlacedShard | null)[]
@@ -114,6 +120,9 @@ export function ItemSidebar({
   category,
   capacityUsed,
   capacityMax,
+  autoFormaCount,
+  autoFormaNoFix,
+  onAutoForma,
   hasReactor,
   onToggleReactor,
   shards,
@@ -383,7 +392,13 @@ export function ItemSidebar({
             />
           </div>
 
-          <CapacityBar used={capacityUsed} max={capacityMax} />
+          <CapacityBar
+            used={capacityUsed}
+            max={capacityMax}
+            autoFormaCount={autoFormaCount}
+            autoFormaNoFix={autoFormaNoFix}
+            onAutoForma={onAutoForma}
+          />
         </div>
 
         {/* `sm:flex` is unconditional so desktop visibility never depends on

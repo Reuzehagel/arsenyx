@@ -1,3 +1,4 @@
+import { getModSetCode, isStanceMod } from "@arsenyx/shared/warframe/mods"
 import type { Mod } from "@arsenyx/shared/warframe/types"
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
@@ -5,8 +6,10 @@ import { createPortal } from "react-dom"
 import {
   DISPLAY_SIZE,
   type ModRarity,
+  type SlotBadgeKind,
   getModAssetUrl,
   getRarityColor,
+  getSetIconUrl,
   normalizeRarity,
 } from "@/lib/mod-card-config"
 import { cn } from "@/lib/util/utils"
@@ -18,9 +21,47 @@ import {
   type DrainMatchState,
   LowerTab,
   ModCardFrame,
+  ModSlotBadge,
   RankCompleteLine,
   RankDots,
 } from "./mod-card-frame"
+import {
+  isAuraMod,
+  isExilusCompatible,
+  isPlexusAuraMod,
+} from "./use-build-slots"
+
+/** Resolve which top-center badges to show on a mod card. Slot kind and
+ * set crest are independent — a number of set mods are also exilus-
+ * compatible (Aero Periphery, Vigilante Pursuit, the Archon Anguish set,
+ * etc.), and in-game both indicators appear together. The slot glyph sits
+ * inside the frame top (top: 7) and the set crest overlaps the frame top
+ * (top: -26), so they stack without visually colliding.
+ *
+ * Aura mods are also exilus-compatible per the WFCD `isUtility` flag, so
+ * the aura check must come first within the slot resolution. */
+function resolveSlotKind(mod: Mod): SlotBadgeKind | null {
+  if (isStanceMod(mod)) return "stance"
+  // Plexus aura mods occupy the railjack aura slot — they don't carry
+  // `compatName === "AURA"` (that's only on classic warframe auras), so
+  // they need the explicit plexus check or they'd render bare.
+  if (isAuraMod(mod) || isPlexusAuraMod(mod)) return "aura"
+  if (isExilusCompatible(mod)) return "exilus"
+  return null
+}
+
+function resolveBadge(
+  mod: Mod,
+  rarity: ModRarity,
+): {
+  slotKind: SlotBadgeKind | null
+  setIconUrl: string | null
+} {
+  return {
+    slotKind: resolveSlotKind(mod),
+    setIconUrl: getSetIconUrl(getModSetCode(mod), rarity),
+  }
+}
 
 const NUMBER_PATTERN = /(\d+(\.\d+)?)/g
 
@@ -174,6 +215,8 @@ function CompactModCard({
     preloadAllRarityFrames()
   }, [])
 
+  const badge = resolveBadge(mod, rarity)
+
   return (
     <ModCardFrame rarity={rarity} variant="compact" vtPrefix={vtPrefix}>
       {!hideDrain && (
@@ -185,6 +228,11 @@ function CompactModCard({
           vtPrefix={vtPrefix}
         />
       )}
+      <ModSlotBadge
+        slotKind={badge.slotKind}
+        setIconUrl={badge.setIconUrl}
+        rarity={rarity}
+      />
 
       <div
         className="pointer-events-none absolute top-[4px] right-[3px] -bottom-4 left-[3px] z-10 overflow-hidden rounded-b-[5px]"
@@ -265,6 +313,8 @@ function ExpandedModCard({
 
   const hasStats = stats.length > 0
 
+  const badge = resolveBadge(mod, rarity)
+
   return (
     <ModCardFrame rarity={rarity} variant="expanded" vtPrefix={vtPrefix}>
       {!hideDrain && (
@@ -276,6 +326,11 @@ function ExpandedModCard({
           vtPrefix={vtPrefix}
         />
       )}
+      <ModSlotBadge
+        slotKind={badge.slotKind}
+        setIconUrl={badge.setIconUrl}
+        rarity={rarity}
+      />
 
       <div
         className="absolute top-[4px] right-[3px] bottom-[4px] left-[3px] z-10 overflow-hidden"

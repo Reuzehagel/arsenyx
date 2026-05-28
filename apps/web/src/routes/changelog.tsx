@@ -14,12 +14,91 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-05-27",
+    changes: [
+      {
+        type: "feat",
+        description: "Mod cards now show slot-type and set-crest badges.",
+      },
+      {
+        type: "feat",
+        description:
+          "Auto-forma button now applies across every variant in a build.",
+      },
+      {
+        type: "fix",
+        description:
+          "Tome mods are restricted to the Grimoire and Noctua instead of showing up for every secondary.",
+      },
+    ],
+  },
+  {
+    date: "2026-05-26",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Arcane tooltips show element icons inline. Rarity badge removed.",
+      },
+      {
+        type: "feat",
+        description:
+          "Mod search matches on target weapon/frame name and type, so you can search by what a mod fits.",
+      },
+      {
+        type: "refactor",
+        description:
+          "Docs split into a Concepts guide and an API reference, with rewritten privacy and terms pages and a published LICENSE.",
+      },
+    ],
+  },
+  {
+    date: "2026-05-24",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Beast claws (Kavat and Kubrow) are now buildable, with innate element ordering fixed across companion weapons.",
+      },
+      {
+        type: "feat",
+        description:
+          "Build links unfurl on Discord, Slack, and Twitter with the item, author, and org.",
+      },
+      {
+        type: "feat",
+        description:
+          "Build headers show the author alongside the org, with a publish-time opt-out for authors who'd rather stay hidden.",
+      },
+      {
+        type: "feat",
+        description:
+          "Mod pool now reflects the forma count you've actually spent.",
+      },
+    ],
+  },
+  {
     date: "2026-05-23",
     changes: [
+      {
+        type: "feat",
+        description:
+          "Build variants — pack up to 4 loadouts into a single build for steel-path / starchart / eidolon splits.",
+      },
+      {
+        type: "fix",
+        description:
+          "Companion weapon mod pools fixed, and the variant guide editor is clearer about which loadout you're editing.",
+      },
       {
         type: "fix",
         description:
           "Rank hotkeys now work while the mod picker is open instead of getting swallowed.",
+      },
+      {
+        type: "refactor",
+        description:
+          "Security hardening pass: auth, image proxy, rate limits, and privileged user fields all locked down.",
       },
       {
         type: "refactor",

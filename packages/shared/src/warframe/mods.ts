@@ -91,6 +91,19 @@ export function isStanceMod(mod: Pick<Mod, "type">): boolean {
   return mod.type?.toLowerCase() === "stance mod"
 }
 
+/** Pulls the set codename out of a mod's `modSet` path (e.g.
+ * `/Lotus/Upgrades/Mods/Sets/Augur/AugurSetMod` → `"Augur"`).
+ * Returns null when the mod isn't part of a set. The codename is the
+ * internal segment from the WFCD path, not the in-game set name — e.g.
+ * "Boneblade" backs the Jugulus set, "Sacrifice" backs Sacrificial.
+ * Callers that need the display/icon name should map through
+ * `SET_CODE_TO_ICON_NAME` (apps/web). */
+export function getModSetCode(mod: Pick<Mod, "modSet">): string | null {
+  if (!mod.modSet) return null
+  const seg = mod.modSet.split("/Sets/")[1]?.split("/")[0]
+  return seg ?? null
+}
+
 function isMeleeCompat(compatName: string, modType: string) {
   // Arch-Melee shares the substring "melee" but uses its own mod pool.
   if (compatName === "archmelee" || modType.includes("arch-melee")) return false
