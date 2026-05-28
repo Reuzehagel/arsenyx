@@ -37,6 +37,12 @@ export function CommandPalette({
   const navigate = useNavigate()
   const [query, setQuery] = useState("")
   const [debouncedQuery, setDebouncedQuery] = useState("")
+  // cmdk's auto-selection sticks to the last-highlighted value, so when
+  // results change underneath (debounce fires, list shrinks, etc.) the
+  // selection can land on an item that's no longer rendered. Controlling
+  // `value` here lets us re-pin selection to the first item whenever the
+  // visible set changes.
+  const [selected, setSelected] = useState("")
   const { data: session } = authClient.useSession()
 
   useEffect(() => {
@@ -58,9 +64,21 @@ export function CommandPalette({
 
   const allItems = useMemo<ItemEntry[]>(() => {
     if (!items) return []
-    return CATEGORIES.flatMap(({ id, label }) =>
-      (items[id] ?? []).map((it) => ({ ...it, categoryLabel: label })),
-    )
+    // Exalted weapons are intentionally dual-categorized in the catalog
+    // (e.g. Garuda Prime Talons appears in both "melee" and
+    // "exalted-weapons" so they surface in the Melee browse tab too).
+    // For the palette, collapse to one row per uniqueName and prefer the
+    // "Exalted" label — it's the more specific signal for the user.
+    const byKey = new Map<string, ItemEntry>()
+    for (const { id, label } of CATEGORIES) {
+      for (const it of items[id] ?? []) {
+        const existing = byKey.get(it.uniqueName)
+        if (!existing || id === "exalted-weapons") {
+          byKey.set(it.uniqueName, { ...it, categoryLabel: label })
+        }
+      }
+    }
+    return [...byKey.values()]
   }, [items])
 
   const filteredItems = useMemo<ItemEntry[]>(() => {
@@ -74,6 +92,10 @@ export function CommandPalette({
       )
       .slice(0, 10)
   }, [allItems, debouncedQuery])
+
+  useEffect(() => {
+    setSelected(filteredItems[0] ? `item:${filteredItems[0].uniqueName}` : "")
+  }, [filteredItems])
 
   const go = (fn: () => void) => {
     onOpenChange(false)
@@ -90,7 +112,11 @@ export function CommandPalette({
         <DialogDescription className="sr-only">
           Jump to items or pages.
         </DialogDescription>
-        <Command shouldFilter={false}>
+        <Command
+          shouldFilter={false}
+          value={selected}
+          onValueChange={setSelected}
+        >
           <CommandInput
             placeholder="Search items or pages…"
             value={query}
