@@ -2,8 +2,8 @@
   "stats": {
     "weapons": {
       "de": 831,
-      "merged": 873,
-      "emitted": 841,
+      "merged": 851,
+      "emitted": 693,
       "unmatched": 0
     },
     "frames": {
@@ -17,20 +17,20 @@
       "deOnly": 0
     },
     "mods": {
-      "de": 1595,
-      "kept": 1334
+      "de": 1644,
+      "kept": 1398
     },
     "perCategory": {
-      "archwing": 57,
+      "archwing": 35,
       "warframes": 115,
       "necramechs": 2,
       "secondary": 161,
       "melee": 258,
       "primary": 203,
-      "exalted-weapons": 41,
+      "exalted-weapons": 38,
       "companion-weapons": 41,
-      "railjack": 127,
-      "companions": 41
+      "companions": 41,
+      "railjack": 1
     }
   },
   "weaponsUnmatched": [],
@@ -218,5 +218,25 @@
     "Zipneedle",
     "Zubb Bracket"
   ],
-  "releaseHistoryUnmatched": []
+  "releaseHistoryUnmatched": [
+    "Arbucep (Atmosphere)",
+    "Cortege (Atmosphere)",
+    "Corvas (Atmosphere)",
+    "Corvas Prime (Atmosphere)",
+    "Cyngas (Atmosphere)",
+    "Dual Decurion (Atmosphere)",
+    "Fluctus (Atmosphere)",
+    "Grattler (Atmosphere)",
+    "Imperator (Atmosphere)",
+    "Imperator Vandal (Atmosphere)",
+    "Kuva Ayanga (Atmosphere)",
+    "Kuva Grattler (Atmosphere)",
+    "Larkspur (Atmosphere)",
+    "Larkspur Prime (Atmosphere)",
+    "Mausolon (Atmosphere)",
+    "Morgha (Atmosphere)",
+    "Phaedra (Atmosphere)",
+    "Prisma Dual Decurions (Atmosphere)",
+    "Velocitus (Atmosphere)"
+  ]
 }
