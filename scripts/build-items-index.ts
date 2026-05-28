@@ -1,484 +1,486 @@
 /**
- * Precompute static browse data.
+ * Build the static catalog under `apps/web/public/data/` by merging
+ * DE PublicExport + wiki Lua + curated overrides.
  *
- *  1. `items-index.json` — every browseable item as a card payload.
- *  2. `items/<category>/<slug>.json` — one file per item, full WFCD object,
- *     consumed by the detail page.
+ * Outputs:
+ *   items-index.json            — flat per-category browse listing
+ *   items/<cat>/<slug>.json     — per-item detail (weapons + frames +
+ *                                 companions)
+ *   mods-all.json               — all mods, post-normalization
+ *   arcanes-all.json            — arcanes with image fill
+ *   helminth-abilities.json     — Helminth subsume picker list
+ *   incarnon-evolutions.json    — evolution trees (curated passthrough)
+ *   meta.json + _report.json    — build metadata + diagnostics
  *
- * Reads raw WFCD JSON directly from the `@wfcd/items` package.
+ * Schema notes (vs the pre-rewrite `@wfcd/items`-backed pipeline):
+ *   - BrowseItem.type → BrowseItem.displayClass (wiki Class label).
+ *   - Per-item weapon detail gains `modPools`, `compatTags`, `polarities`,
+ *     `family`, `traits` from the wiki merge.
+ *   - Polarities everywhere are lowercase full names ("naramon", not "V").
+ *   - All items (weapons + frames + companions) carry `modPools` — the
+ *     structural mod-routing field consumed by `getModsForItem`.
  *
- * Run: `bun run build:items`
+ * Stable fields: uniqueName, name, slug, category, imageName, masteryReq,
+ * isPrime, vaulted, releaseDate.
  */
 
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
-import { createRequire } from "node:module"
-import { dirname, resolve } from "node:path"
+import { mkdir, rm, writeFile } from "node:fs/promises"
+import { readdirSync } from "node:fs"
+import { resolve } from "node:path"
 
-import { normalizeArcanes } from "@arsenyx/shared/warframe/arcanes"
-import { BROWSE_CATEGORIES } from "@arsenyx/shared/warframe/categories"
-import { buildIndex } from "@arsenyx/shared/warframe/categorize"
-import {
-  INCARNON_GENESIS_IMAGES,
-  INCARNON_NAMES,
-} from "@arsenyx/shared/warframe/incarnon-data"
+import { slugify } from "@arsenyx/shared/warframe/slugs"
 import { INCARNON_EVOLUTIONS } from "@arsenyx/shared/warframe/incarnon-evolutions"
-import { normalizeMods } from "@arsenyx/shared/warframe/mods"
+
 import {
-  slimArcanesForClient,
-  slimItemForClient,
-  slimModsForClient,
-} from "@arsenyx/shared/warframe/slim"
-import type {
-  Arcane,
-  BrowseableItem,
-  BrowseCategory,
-  BrowseItem,
-  Mod,
-} from "@arsenyx/shared/warframe/types"
+  buildExaltedSet,
+  categorizeCompanion,
+  categorizeFrame,
+  categorizeWeapon,
+  type BrowseCategory,
+} from "./build/categorize"
+import { buildImageLookup } from "./build/images"
+import { mergeArcanes, type MergedArcane } from "./build/merge-arcanes"
+import { mergeCompanions, type MergedCompanion } from "./build/merge-companions"
+import { mergeFrame, operatorsFromWiki, type MergedFrame } from "./build/merge-frames"
+import { deriveHelminthAbilities } from "./build/merge-helminth"
+import { mergeMods, type MergedMod } from "./build/merge-mods"
+import {
+  mergeWeapon,
+  mergeWikiOnlyWeapon,
+  validateCuratedAgainstKnown,
+  type MergedWeapon,
+} from "./build/merge-weapons"
+import {
+  readDeArcanes,
+  readDeFrames,
+  readDeManifest,
+  readDeSentinels,
+  readDeUpgrades,
+  readDeWeapons,
+  type DeSentinel,
+} from "./build/read-de"
+import { readCurated } from "./build/read-curated"
+import { readWikiModule } from "./build/read-wiki"
 
-import { BEAST_CLAWS } from "./beast-claws"
+const REPO_ROOT = resolve(import.meta.dirname, "..")
+const WIKI_DIR = resolve(REPO_ROOT, "data/raw/wiki")
+const OUT_DIR = resolve(REPO_ROOT, "apps/web/public/data")
+const DETAIL_DIR = resolve(OUT_DIR, "items")
 
-const require = createRequire(import.meta.url)
-const WFCD_PKG = dirname(require.resolve("@wfcd/items/package.json"))
-const WFCD_JSON = resolve(WFCD_PKG, "data/json")
-
-// WFCD files that contribute browseable items.
-const DATA_FILES = [
-  "Warframes.json",
-  "Primary.json",
-  "Secondary.json",
-  "Melee.json",
-  "Sentinels.json",
-  "Pets.json",
-  "SentinelWeapons.json",
-  "Misc.json",
-  "Archwing.json",
-  "Arch-Gun.json",
-  "Arch-Melee.json",
-] as const
-
-const REPO = resolve(import.meta.dirname, "..")
-const PUBLIC_DATA = resolve(REPO, "apps/web/public/data")
-const INDEX_OUT = resolve(PUBLIC_DATA, "items-index.json")
-const DETAIL_DIR = resolve(PUBLIC_DATA, "items")
-const MODS_OUT = resolve(PUBLIC_DATA, "mods-all.json")
-const ARCANES_OUT = resolve(PUBLIC_DATA, "arcanes-all.json")
-const HELMINTH_OUT = resolve(PUBLIC_DATA, "helminth-abilities.json")
-const INCARNON_OUT = resolve(PUBLIC_DATA, "incarnon-evolutions.json")
-const META_OUT = resolve(PUBLIC_DATA, "meta.json")
-
-async function readWfcdMeta(): Promise<{
-  packageVersion: string
-  gameUpdate: string | null
-}> {
-  const pkg = JSON.parse(
-    await readFile(resolve(WFCD_PKG, "package.json"), "utf8"),
-  ) as { version: string }
-  let gameUpdate: string | null = null
-  try {
-    const readme = await readFile(resolve(WFCD_PKG, "README.md"), "utf8")
-    // Badge format: warframe_update-<version>-<color>.svg
-    const match = readme.match(/warframe_update-([\d.]+)-[a-z]+\.svg/i)
-    if (match) gameUpdate = match[1] ?? null
-  } catch {
-    // README missing — just skip
-  }
-  return { packageVersion: pkg.version, gameUpdate }
-}
-
-// Warframe → subsumed ability name. Mirrors legacy/src/lib/warframe/helminth.ts.
-const SUBSUMABLE_ABILITIES: Record<string, string> = {
-  Ash: "Shuriken",
-  Atlas: "Petrify",
-  Banshee: "Silence",
-  Baruuk: "Lull",
-  Caliban: "Sentient Wrath",
-  Citrine: "Fractured Blast",
-  Chroma: "Elemental Ward",
-  "Cyte-09": "Evade",
-  Dagath: "Wyrd Scythes",
-  Dante: "Dark Verse",
-  Ember: "Fire Blast",
-  Equinox: "Rest & Rage",
-  Excalibur: "Radial Blind",
-  Frost: "Ice Wave",
-  Gara: "Spectrorage",
-  Garuda: "Blood Altar",
-  Gauss: "Thermal Sunder",
-  Grendel: "Nourish",
-  Gyre: "Coil Horizon",
-  Harrow: "Condemn",
-  Hildryn: "Pillage",
-  Hydroid: "Tempest Barrage",
-  Inaros: "Desiccation",
-  Ivara: "Quiver",
-  Jade: "Ophanim Eyes",
-  Khora: "Ensnare",
-  Koumei: "Omamori",
-  Kullervo: "Wrathful Advance",
-  Lavos: "Vial Rush",
-  Limbo: "Banish",
-  Loki: "Decoy",
-  Mag: "Pull",
-  Mesa: "Shooting Gallery",
-  Mirage: "Eclipse",
-  Nekros: "Terrify",
-  Nezha: "Fire Walker",
-  Nidus: "Larva",
-  Nokko: "Brightbonnet",
-  Nova: "Null Star",
-  Nyx: "Mind Control",
-  Oberon: "Smite",
-  Octavia: "Resonator",
-  Oraxia: "Webbed Embrace",
-  Protea: "Dispensary",
-  Qorvex: "Chyrinka Pillar",
-  Revenant: "Reave",
-  Rhino: "Roar",
-  Saryn: "Molt",
-  Sevagoth: "Gloom",
-  Styanax: "Tharros Strike",
-  Temple: "Pyrotechnics",
-  Titania: "Spellbind",
-  Trinity: "Well of Life",
-  Uriel: "Remedium",
-  Valkyr: "Warcry",
-  Vauban: "Tesla Nervos",
-  Volt: "Shock",
-  Voruna: "Lycath's Hunt",
-  Wisp: "Breach Surge",
-  Wukong: "Defy",
-  Xaku: "Xata's Whisper",
-  Yareli: "Aquablades",
-  Zephyr: "Airburst",
-}
-
-interface HelminthAbility {
+interface BrowseItemV2 {
   uniqueName: string
   name: string
+  slug: string
+  category: BrowseCategory
   imageName?: string
-  description: string
-  source: string
+  masteryReq?: number
+  isPrime?: boolean
+  vaulted?: boolean
+  /** Wiki Class for weapons; "Warframe"/"Necramech"/"Archwing"/"Operator"
+   *  for frames; companion subtype label for pets. Replaces legacy `type`. */
+  displayClass?: string
+  releaseDate?: string
 }
 
-type MaybeWarframe = {
-  name: string
-  abilities?: Array<{
-    uniqueName: string
-    name: string
-    imageName?: string
-    description: string
-  }>
+interface BuildStats {
+  weapons: { de: number; merged: number; emitted: number; unmatched: number }
+  frames: { de: number; merged: number; emitted: number; operators: number }
+  companions: { wiki: number; deOnly: number }
+  mods: { de: number; kept: number }
+  perCategory: Record<string, number>
 }
 
-function buildHelminthAbilities(allItems: BrowseableItem[]): HelminthAbility[] {
-  const byName = new Map<string, MaybeWarframe>()
-  for (const item of allItems as unknown as MaybeWarframe[]) {
-    if (item.name && item.abilities) byName.set(item.name, item)
+const stats: BuildStats = {
+  weapons: { de: 0, merged: 0, emitted: 0, unmatched: 0 },
+  frames: { de: 0, merged: 0, emitted: 0, operators: 0 },
+  companions: { wiki: 0, deOnly: 0 },
+  mods: { de: 0, kept: 0 },
+  perCategory: {},
+}
+
+function frameDisplayClass(f: MergedFrame): string {
+  switch (f.category) {
+    case "warframes":
+      return "Warframe"
+    case "necramechs":
+      return "Necramech"
+    case "archwing":
+      return "Archwing"
+    case "operators":
+      return "Operator"
   }
-  const out: HelminthAbility[] = []
-
-  const helminth = byName.get("Helminth")
-  if (helminth?.abilities) {
-    for (const a of helminth.abilities) {
-      out.push({ ...a, source: "Helminth" })
-    }
-  }
-
-  for (const [frame, abilityName] of Object.entries(SUBSUMABLE_ABILITIES)) {
-    const a = byName.get(frame)?.abilities?.find((x) => x.name === abilityName)
-    if (a) out.push({ ...a, source: frame })
-  }
-
-  out.sort((a, b) => a.name.localeCompare(b.name))
-  return out
-}
-
-async function loadAllItems(): Promise<BrowseableItem[]> {
-  const all: BrowseableItem[] = []
-  for (const file of DATA_FILES) {
-    const body = await readFile(resolve(WFCD_JSON, file), "utf8")
-    const items = JSON.parse(body) as BrowseableItem[]
-    all.push(...items)
-  }
-  patchAtmosphericArchgunVariants(all)
-  patchMissingAuras(all)
-  patchVariantWeaponTypes(all)
-  // Beast claws (Adarza/Smeeta/Vasca/Kubrows/Vulpaphylas/Predasites) aren't
-  // in DE's PublicExport, so we inject hardcoded entries. See beast-claws.ts.
-  all.push(...BEAST_CLAWS)
-  return all
-}
-
-// WFCD omits the `aura` field entirely for a handful of warframes, which
-// hides the aura slot in the editor. The value `"aura"` represents the
-// universal/no-innate-polarity slot (matches Protea/Dante); specific
-// polarities are filled in for frames whose innate aura polarity is known.
-const MISSING_AURAS: Record<string, string> = {
-  Excalibur: "naramon",
-  Nekros: "aura",
-  "Nekros Prime": "aura",
-  Sevagoth: "aura",
-  "Sevagoth Prime": "aura",
-}
-
-function patchMissingAuras(items: BrowseableItem[]): void {
-  for (const item of items as Array<BrowseableItem & { aura?: string }>) {
-    if (item.aura) continue
-    const aura = MISSING_AURAS[item.name]
-    if (aura) item.aura = aura
-  }
-}
-
-// WFCD occasionally ships a Coda/Kuva/Tenet variant with a different `type`
-// from its base weapon (e.g., Coda Bubonico → "Rifle" while Bubonico is
-// "Shotgun"). The type drives mod-pool routing and the displayed weapon
-// class, so divergence shows up as wrong mods on the build page. Inherit the
-// base weapon's type whenever the variant's prefix matches.
-const VARIANT_PREFIXES = ["Coda ", "Kuva ", "Tenet "] as const
-
-function patchVariantWeaponTypes(items: BrowseableItem[]): void {
-  const typed = items as Array<BrowseableItem & { type?: string }>
-  const byName = new Map<string, BrowseableItem & { type?: string }>()
-  for (const item of typed) byName.set(item.name, item)
-
-  for (const item of typed) {
-    const prefix = VARIANT_PREFIXES.find((p) => item.name.startsWith(p))
-    if (!prefix) continue
-    const baseName = item.name.slice(prefix.length)
-    const base = byName.get(baseName)
-    if (!base?.type) continue
-    if (item.type === base.type) continue
-    item.type = base.type
-  }
-}
-
-// Atmospheric Archguns (deployed on the ground via Archgun Deployer) lose
-// their innate elemental damage. WFCD only models the Archwing-mission
-// profile, so we curate divergent variants here.
-const ATMOSPHERIC_OVERRIDES: Record<string, { strip: ReadonlyArray<string> }> =
-  {
-    Corvas: { strip: ["heat"] },
-    "Corvas Prime": { strip: ["heat"] },
-  }
-
-type WeaponLike = {
-  name: string
-  damage?: Record<string, number | undefined>
-  totalDamage?: number
-  attacks?: Array<{ damage?: Record<string, number | undefined> | string }>
-  atmosphericDamage?: Record<string, number | undefined>
-  atmosphericTotalDamage?: number
-  atmosphericAttacks?: Array<{
-    damage?: Record<string, number | undefined> | string
-  }>
-}
-
-function patchAtmosphericArchgunVariants(items: BrowseableItem[]): void {
-  for (const item of items as WeaponLike[]) {
-    const override = ATMOSPHERIC_OVERRIDES[item.name]
-    if (!override) continue
-    if (!item.damage) continue
-
-    const damage = { ...item.damage }
-    let removed = 0
-    for (const key of override.strip) {
-      removed += damage[key] ?? 0
-      damage[key] = 0
-    }
-    // `damage.total` is a precomputed sum, not a damage type — keep it
-    // consistent with the per-type fields we just zeroed.
-    if (typeof damage.total === "number") {
-      damage.total = damage.total - removed
-    }
-    item.atmosphericDamage = damage
-    item.atmosphericTotalDamage =
-      item.totalDamage !== undefined
-        ? item.totalDamage - removed
-        : Object.values(damage).reduce<number>(
-            (s, v) => s + (typeof v === "number" ? v : 0),
-            0,
-          )
-
-    if (Array.isArray(item.attacks)) {
-      item.atmosphericAttacks = item.attacks.map((attack) => {
-        if (typeof attack.damage !== "object" || !attack.damage) return attack
-        const next = { ...attack.damage }
-        for (const key of override.strip) next[key] = 0
-        return { ...attack, damage: next }
-      })
-    }
-  }
-}
-
-async function loadAllMods(): Promise<Mod[]> {
-  const body = await readFile(resolve(WFCD_JSON, "Mods.json"), "utf8")
-  return JSON.parse(body) as Mod[]
-}
-
-async function loadAllArcanes(): Promise<Arcane[]> {
-  const body = await readFile(resolve(WFCD_JSON, "Arcanes.json"), "utf8")
-  return JSON.parse(body) as Arcane[]
-}
-
-// Synthetic Plexus item — DE doesn't export it as a standalone entry, so we
-// inject one. The detail file is written in `main` alongside the per-item
-// detail files. Keep the BrowseItem and BrowseableItem shapes in sync.
-const PLEXUS_UNIQUE_NAME = "/Lotus/Railjacks/Plexus"
-const PLEXUS_SLUG = "plexus"
-const PLEXUS_BROWSE_ITEM: BrowseItem = {
-  uniqueName: PLEXUS_UNIQUE_NAME,
-  name: "Plexus",
-  slug: PLEXUS_SLUG,
-  category: "railjack",
-  // Reuse the Caballero Railjack Skin asset (Skins.json) — closest available
-  // ship-themed image on the warframestat CDN for the Plexus entry.
-  imageName: "RailjackWrasseSkin.png",
-  isPrime: false,
-  type: "Plexus",
-}
-const PLEXUS_DETAIL = {
-  uniqueName: PLEXUS_UNIQUE_NAME,
-  name: "Plexus",
-  slug: PLEXUS_SLUG,
-  category: "railjack",
-  type: "Plexus",
-  imageName: "RailjackWrasseSkin.png",
-  description:
-    "Personal modular Railjack loadout. Houses Battle, Tactical, and Integrated mods that travel with you between ships.",
-  tradable: false,
-  // 1 Aura + 14 normal slots (3 Battle, 3 Tactical, 8 Integrated) are
-  // resolved by the build editor's layout helpers, not stored here.
 }
 
 async function main() {
-  const [allItems, rawMods, rawArcanes, wfcd] = await Promise.all([
-    loadAllItems(),
-    loadAllMods(),
-    loadAllArcanes(),
-    readWfcdMeta(),
-  ])
-  const mods = normalizeMods(rawMods)
-  const arcanes = normalizeArcanes(rawArcanes)
-  const { byCategory, slugLookup } = buildIndex(allItems)
-  byCategory.railjack = [PLEXUS_BROWSE_ITEM, ...(byCategory.railjack ?? [])]
+  console.log(`Output dir: ${OUT_DIR}\n`)
 
-  await mkdir(dirname(INDEX_OUT), { recursive: true })
+  // ---------- 1. Read everything from disk ----------
+  const curated = readCurated()
+  validateCuratedAgainstKnown(curated)
 
-  const indexPayload: Partial<Record<BrowseCategory, BrowseItem[]>> = {}
-  for (const cat of BROWSE_CATEGORIES) {
-    indexPayload[cat.id] = byCategory[cat.id] ?? []
+  const deWeapons = readDeWeapons()
+  const deFramesBlob = readDeFrames()
+  const deSentinelsBlob = readDeSentinels()
+  const deManifest = readDeManifest()
+  const deUpgrades = readDeUpgrades()
+  console.log(`DE: ${deWeapons.length} weapons, ${deFramesBlob.ExportWarframes.length} frames, ${deSentinelsBlob.ExportSentinels.length} sentinel-blob rows, ${deUpgrades.ExportUpgrades?.length ?? 0} upgrades`)
+
+  // Wiki weapon subpages — flat name → entry map.
+  const wikiWeaponsByName = new Map<string, Record<string, unknown>>()
+  for (const f of readdirSync(WIKI_DIR).filter(
+    (n) => n.startsWith("Weapons_data_") && n.endsWith(".lua"),
+  )) {
+    const m = readWikiModule(resolve(WIKI_DIR, f))
+    for (const [n, e] of Object.entries(m)) {
+      if (e && typeof e === "object") {
+        wikiWeaponsByName.set(n, e as Record<string, unknown>)
+      }
+    }
   }
-  const indexJson = JSON.stringify(indexPayload)
-  await writeFile(INDEX_OUT, indexJson, "utf8")
+  console.log(`Wiki weapons (across subpages): ${wikiWeaponsByName.size} unique names`)
 
-  const totalItems = Object.values(indexPayload).reduce(
-    (sum, arr) => sum + (arr?.length ?? 0),
-    0,
+  const wikiFramesBlob = readWikiModule(resolve(WIKI_DIR, "Warframes_data.lua")) as {
+    Warframes?: Record<string, Record<string, unknown>>
+    Archwings?: Record<string, Record<string, unknown>>
+    Necramechs?: Record<string, Record<string, unknown>>
+    Operators?: Record<string, Record<string, unknown>>
+  }
+
+  const wikiCompanionsBlob = readWikiModule(
+    resolve(WIKI_DIR, "Companions_data.lua"),
+  ) as { Companions?: Record<string, Record<string, unknown>> }
+  const wikiCompanions = wikiCompanionsBlob.Companions ?? {}
+  console.log(`Wiki: ${Object.keys(wikiFramesBlob.Warframes ?? {}).length} warframes, ${Object.keys(wikiCompanions).length} companions`)
+
+  // ---------- 2. Merge weapons ----------
+  // DE rows with `slot === undefined` are modular component parts (Kitgun
+  // chambers/grips/loaders, Zaw strikes, MOA/Hound subparts, Amp parts,
+  // Vulpaphyla/Predasite antigens, K-Drive parts). They share the
+  // `productCategory: "Pistols"` bucket with real secondaries, but the wiki
+  // doesn't index them as weapons — so skip them silently rather than dumping
+  // 180 false positives into the unmatched report.
+  const weaponUnmatched = new Set<string>()
+  const skippedModular: string[] = []
+  const mergedWeapons: MergedWeapon[] = []
+  const seenWikiNames = new Set<string>()
+  for (const de of deWeapons) {
+    if (de.slot === undefined) {
+      skippedModular.push(de.name)
+      continue
+    }
+    const merged = mergeWeapon(de, {
+      curated,
+      wikiByName: wikiWeaponsByName,
+      unmatched: weaponUnmatched,
+    })
+    mergedWeapons.push(merged)
+    // Track which wiki names we paired with a DE row (the merge step
+    // strips `<ARCHWING> ` prefixes, so `merged.name` is the wiki key).
+    seenWikiNames.add(merged.name)
+    // Aliases also count as matched.
+    const alias = curated.wikiAliases[merged.name]
+    if (alias) seenWikiNames.add(alias)
+  }
+  // Wiki-only entries: things like beast claws (Adarza Claws, Chesa
+  // Claws, ...) that DE doesn't export but the wiki documents fully.
+  let wikiOnlyEmitted = 0
+  for (const [name, wiki] of wikiWeaponsByName) {
+    if (seenWikiNames.has(name)) continue
+    // Skip wiki entries we don't want as standalone items (modular parts
+    // with no Slot, sub-pages without Class, etc.).
+    const w = wiki as { Class?: string; Slot?: string }
+    if (!w.Class || !w.Slot) continue
+    mergedWeapons.push(mergeWikiOnlyWeapon(name, wiki, curated))
+    wikiOnlyEmitted++
+  }
+  console.log(`Wiki-only weapons emitted: ${wikiOnlyEmitted}`)
+  stats.weapons.de = deWeapons.length
+  stats.weapons.merged = mergedWeapons.length
+  stats.weapons.unmatched = weaponUnmatched.size
+
+  // ---------- 3. Merge frames ----------
+  const frameUnmatched = new Set<string>()
+  const mergedFrames: MergedFrame[] = []
+  for (const de of deFramesBlob.ExportWarframes) {
+    mergedFrames.push(mergeFrame(de, { wiki: wikiFramesBlob, unmatched: frameUnmatched }))
+  }
+  const operators = operatorsFromWiki(wikiFramesBlob)
+  stats.frames.de = deFramesBlob.ExportWarframes.length
+  stats.frames.merged = mergedFrames.length
+  stats.frames.operators = operators.length
+
+  // ---------- 4. Merge companions ----------
+  const deCompanionByName = new Map<string, DeSentinel>()
+  for (const ent of deSentinelsBlob.ExportSentinels) {
+    if (ent.productCategory === "Sentinels" || ent.productCategory === "KubrowPets") {
+      deCompanionByName.set(ent.name, ent)
+    }
+  }
+  const { companions: mergedCompanions, unmatchedDeNames } = mergeCompanions({
+    wikiCompanions,
+    deByName: deCompanionByName,
+  })
+  stats.companions.wiki = mergedCompanions.length
+  stats.companions.deOnly = unmatchedDeNames.length
+
+  // Image lookup needs to be ready before arcane merge fills imageName.
+  const imageByUniqueName = buildImageLookup(deManifest)
+
+  // ---------- 5. Merge mods + arcanes ----------
+  const { mods: mergedMods, counts: modCounts } = mergeMods(
+    deUpgrades.ExportUpgrades ?? [],
+    deUpgrades.ExportModSet ?? [],
   )
-  const indexKb = (Buffer.byteLength(indexJson, "utf8") / 1024).toFixed(1)
+  stats.mods.de = modCounts.total
+  stats.mods.kept = modCounts.kept
+
+  const deArcanes = readDeArcanes()
+  const mergedArcanes = mergeArcanes(deArcanes.ExportRelicArcane ?? [])
+  // Image fill from manifest
+  const arcanesWithImages = mergedArcanes.map((a) => ({
+    ...a,
+    imageName: imageByUniqueName.get(a.uniqueName),
+  }))
+
+  // ---------- 6. Image lookup ----------
+  // (defined before step 5 in the code flow so arcane merge can use it,
+  //  but conceptually a step-6 concern — kept here for readability)
+  void 0
+
+  // ---------- 7. Build items-index.json ----------
+  const byCategory: Partial<Record<BrowseCategory, BrowseItemV2[]>> = {}
+  function push(cat: BrowseCategory, item: BrowseItemV2): void {
+    if (!byCategory[cat]) byCategory[cat] = []
+    byCategory[cat]!.push(item)
+  }
+
+  // Release-history enrichment is keyed by display name. Track resolved
+  // names so we can warn about dead curated entries.
+  const releaseHistoryResolved = new Set<string>()
+  function applyReleaseHistory(name: string, item: BrowseItemV2): void {
+    const rec = curated.releaseHistory[name]
+    if (!rec) return
+    releaseHistoryResolved.add(name)
+    if (rec.releaseDate) item.releaseDate = rec.releaseDate
+    if (rec.vaulted) item.vaulted = true
+  }
+
+  // Frames
+  for (const f of [...mergedFrames, ...operators]) {
+    const cat = categorizeFrame(f)
+    if (!cat) continue
+    const browseItem: BrowseItemV2 = {
+      uniqueName: f.uniqueName,
+      name: f.name,
+      slug: slugify(f.name),
+      category: cat,
+      imageName: imageByUniqueName.get(f.uniqueName),
+      masteryReq: f.masteryReq,
+      isPrime: f.isPrime,
+      displayClass: frameDisplayClass(f),
+    }
+    applyReleaseHistory(f.name, browseItem)
+    push(cat, browseItem)
+    stats.frames.emitted++
+  }
+
+  // Weapons — pre-compute the exalted set from frames' exalted[] arrays
+  // so categorize picks up exalteds the wiki doesn't tag (Garuda Talons).
+  const exaltedSet = buildExaltedSet(mergedFrames)
+  const weaponDetailByCatAndSlug = new Map<string, MergedWeapon>()
+  for (const w of mergedWeapons) {
+    const cats = categorizeWeapon(w, exaltedSet)
+    if (cats.length === 0) continue
+    const slug = slugify(w.name)
+    const browseItem: BrowseItemV2 = {
+      uniqueName: w.uniqueName,
+      name: w.name,
+      slug,
+      category: cats[0]!,
+      imageName: imageByUniqueName.get(w.uniqueName),
+      masteryReq: w.masteryReq,
+      isPrime: w.name.includes(" Prime"),
+      displayClass: w.displayClass ?? undefined,
+    }
+    applyReleaseHistory(w.name, browseItem)
+    for (const c of cats) {
+      push(c, { ...browseItem, category: c })
+      weaponDetailByCatAndSlug.set(`${c}|${slug}`, w)
+    }
+    stats.weapons.emitted++
+  }
+
+  // Companions
+  for (const c of mergedCompanions) {
+    const cat = categorizeCompanion(c)
+    const browseItem: BrowseItemV2 = {
+      uniqueName: c.uniqueName,
+      name: c.name,
+      slug: slugify(c.name),
+      category: cat,
+      imageName: imageByUniqueName.get(c.uniqueName),
+      masteryReq: c.masteryReq,
+      isPrime: c.isPrime,
+      displayClass: c.subType === "sentinel" ? "Sentinel" : "Beast Companion",
+    }
+    applyReleaseHistory(c.name, browseItem)
+    push(cat, browseItem)
+  }
+
+  // Synthetic Plexus
+  push("railjack", {
+    uniqueName: curated.plexusBrowse.uniqueName,
+    name: curated.plexusBrowse.name,
+    slug: curated.plexusBrowse.slug,
+    category: "railjack",
+    imageName: curated.plexusBrowse.imageName,
+    isPrime: false,
+    displayClass: "Plexus",
+  })
+
+  // Per-category counts
+  for (const [cat, arr] of Object.entries(byCategory)) {
+    stats.perCategory[cat] = arr?.length ?? 0
+  }
+
+  // ---------- 8. Write outputs ----------
+  await rm(OUT_DIR, { recursive: true, force: true })
+  await mkdir(OUT_DIR, { recursive: true })
+
+  const indexJson = JSON.stringify(byCategory)
+  await writeFile(resolve(OUT_DIR, "items-index.json"), indexJson, "utf8")
+  console.log(`\n  OK  items-index.json (${(indexJson.length / 1024).toFixed(1)} KB)`)
+
+  await writeFile(
+    resolve(OUT_DIR, "mods-all.json"),
+    JSON.stringify(mergedMods),
+    "utf8",
+  )
+  console.log(`  OK  mods-all.json (${mergedMods.length} mods)`)
+
+  await writeFile(
+    resolve(OUT_DIR, "arcanes-all.json"),
+    JSON.stringify(arcanesWithImages),
+    "utf8",
+  )
+  console.log(`  OK  arcanes-all.json (${arcanesWithImages.length} arcanes)`)
+
+  // Helminth abilities — derived from merged frames + DE's separate
+  // ExportAbilities array (which holds the Helminth-native ones).
+  const helminth = deriveHelminthAbilities(
+    mergedFrames,
+    deFramesBlob.ExportAbilities ?? [],
+  )
+  await writeFile(
+    resolve(OUT_DIR, "helminth-abilities.json"),
+    JSON.stringify(helminth),
+    "utf8",
+  )
+  console.log(`  OK  helminth-abilities.json (${helminth.length} abilities)`)
+
+  // Incarnon evolution trees — verbatim passthrough from the curated
+  // shared module (lazy-fetched by the editor sidebar).
+  const incarnonBody = JSON.stringify(INCARNON_EVOLUTIONS)
+  await writeFile(
+    resolve(OUT_DIR, "incarnon-evolutions.json"),
+    incarnonBody,
+    "utf8",
+  )
   console.log(
-    `✓ wrote ${totalItems} items across ${BROWSE_CATEGORIES.length} categories → items-index.json (${indexKb} KB)`,
+    `  OK  incarnon-evolutions.json (${Object.keys(INCARNON_EVOLUTIONS).length} weapons, ${(incarnonBody.length / 1024).toFixed(1)} KB)`,
   )
 
-  await rm(DETAIL_DIR, { recursive: true, force: true })
+  // Per-item detail files — minimal pass-through for now. Phase 4b will
+  // populate the rich damage/attacks shape; for now we emit the merged
+  // weapon record verbatim so the schema is discoverable.
   await mkdir(DETAIL_DIR, { recursive: true })
-
   let detailCount = 0
   let detailBytes = 0
-  for (const cat of BROWSE_CATEGORIES) {
-    const catDir = resolve(DETAIL_DIR, cat.id)
-    await mkdir(catDir, { recursive: true })
-    for (const slim of byCategory[cat.id] ?? []) {
-      const full = slugLookup.get(`${cat.id}|${slim.slug}`)
-      if (!full) continue
-      const body = JSON.stringify(slimItemForClient(full))
-      await writeFile(resolve(catDir, `${slim.slug}.json`), body, "utf8")
+  function writeDetail(cat: string, slug: string, payload: unknown): Promise<void> {
+    return mkdir(resolve(DETAIL_DIR, cat), { recursive: true }).then(async () => {
+      const body = JSON.stringify(payload)
+      await writeFile(resolve(DETAIL_DIR, cat, `${slug}.json`), body, "utf8")
       detailCount++
       detailBytes += Buffer.byteLength(body, "utf8")
-    }
+    })
   }
-  // Synthetic Plexus detail file. Bypasses slimItemForClient because the
-  // entry isn't a WFCD BrowseableItem — its shape is hand-curated above.
-  {
-    const body = JSON.stringify(PLEXUS_DETAIL)
-    await writeFile(
-      resolve(DETAIL_DIR, "railjack", `${PLEXUS_SLUG}.json`),
-      body,
-      "utf8",
-    )
-    detailCount++
-    detailBytes += Buffer.byteLength(body, "utf8")
+
+  for (const [catSlug, w] of weaponDetailByCatAndSlug) {
+    const [cat, slug] = catSlug.split("|")
+    if (!cat || !slug) continue
+    await writeDetail(cat, slug, {
+      ...w,
+      imageName: imageByUniqueName.get(w.uniqueName),
+    })
   }
-  const detailMb = (detailBytes / 1024 / 1024).toFixed(2)
+  for (const f of [...mergedFrames, ...operators]) {
+    const cat = categorizeFrame(f)
+    if (!cat) continue
+    await writeDetail(cat, slugify(f.name), {
+      ...f,
+      imageName: imageByUniqueName.get(f.uniqueName),
+      displayClass: frameDisplayClass(f),
+    })
+  }
+  for (const c of mergedCompanions) {
+    await writeDetail("companions", slugify(c.name), {
+      ...c,
+      imageName: imageByUniqueName.get(c.uniqueName),
+    })
+  }
+  // Plexus
+  await writeDetail("railjack", curated.plexusDetail.slug, curated.plexusDetail)
   console.log(
-    `✓ wrote ${detailCount} per-item detail files → items/ (${detailMb} MB total)`,
+    `  OK  ${detailCount} per-item details (${(detailBytes / 1024 / 1024).toFixed(2)} MB total)`,
   )
 
-  // All normalized mods in one file. Client filters per-item via
-  // @arsenyx/shared's getModsForItem so we don't duplicate mod objects.
-  const modsBody = JSON.stringify(slimModsForClient(mods))
-  await writeFile(MODS_OUT, modsBody, "utf8")
-  const modsMb = (Buffer.byteLength(modsBody, "utf8") / 1024 / 1024).toFixed(2)
-  console.log(
-    `✓ wrote ${mods.length} normalized mods → mods-all.json (${modsMb} MB)`,
+  // Meta
+  await writeFile(
+    resolve(OUT_DIR, "meta.json"),
+    JSON.stringify(
+      {
+        generatedAt: new Date().toISOString(),
+        source: "DE PublicExport + wiki Lua (v2 pipeline)",
+        pipelineVersion: 2,
+        itemCount: Object.values(stats.perCategory).reduce((a, b) => a + b, 0),
+        modCount: mergedMods.length,
+        unmatchedWeapons: stats.weapons.unmatched,
+        unmatchedFrames: frameUnmatched.size,
+      },
+      null,
+      2,
+    ),
+    "utf8",
   )
 
-  const arcanesBody = JSON.stringify(slimArcanesForClient(arcanes))
-  await writeFile(ARCANES_OUT, arcanesBody, "utf8")
-  const arcanesKb = (Buffer.byteLength(arcanesBody, "utf8") / 1024).toFixed(1)
-  console.log(
-    `✓ wrote ${arcanes.length} normalized arcanes → arcanes-all.json (${arcanesKb} KB)`,
+  // Report
+  await writeFile(
+    resolve(OUT_DIR, "_report.json"),
+    JSON.stringify(
+      {
+        stats,
+        weaponsUnmatched: [...weaponUnmatched].sort(),
+        framesUnmatched: [...frameUnmatched].sort(),
+        companionsUnmatched: unmatchedDeNames.sort(),
+        skippedModularComponents: skippedModular.sort(),
+        releaseHistoryUnmatched: Object.keys(curated.releaseHistory)
+          .filter((n) => !releaseHistoryResolved.has(n))
+          .sort(),
+      },
+      null,
+      2,
+    ),
+    "utf8",
   )
 
-  const helminth = buildHelminthAbilities(allItems)
-  const helminthBody = JSON.stringify(helminth)
-  await writeFile(HELMINTH_OUT, helminthBody, "utf8")
-  const helminthKb = (Buffer.byteLength(helminthBody, "utf8") / 1024).toFixed(1)
-  console.log(
-    `✓ wrote ${helminth.length} helminth abilities → helminth-abilities.json (${helminthKb} KB)`,
-  )
-
-  // Cross-check: the small lookup module must enumerate every weapon present
-  // in the full evolution data, otherwise the auto-toggle and image swap will
-  // silently miss weapons. Fail loud at build time.
-  const evolutionKeys = Object.keys(INCARNON_EVOLUTIONS)
-  for (const key of evolutionKeys) {
-    if (!INCARNON_NAMES.has(key)) {
-      throw new Error(`INCARNON_NAMES missing entry: "${key}"`)
-    }
-    const expectedImage = INCARNON_EVOLUTIONS[key]?.genesisImage
-    if (expectedImage && INCARNON_GENESIS_IMAGES[key] !== expectedImage) {
-      throw new Error(
-        `INCARNON_GENESIS_IMAGES[${key}] mismatch: ` +
-          `expected ${expectedImage}, got ${INCARNON_GENESIS_IMAGES[key]}`,
-      )
-    }
+  console.log("\nBy category:")
+  for (const [cat, n] of Object.entries(stats.perCategory).sort((a, b) => b[1] - a[1])) {
+    console.log(`  ${cat.padEnd(20)} ${n}`)
   }
-  for (const key of INCARNON_NAMES) {
-    if (!evolutionKeys.includes(key)) {
-      throw new Error(`INCARNON_NAMES has stale entry: "${key}"`)
-    }
-  }
-  const incarnonBody = JSON.stringify(INCARNON_EVOLUTIONS)
-  await writeFile(INCARNON_OUT, incarnonBody, "utf8")
-  const incarnonKb = (Buffer.byteLength(incarnonBody, "utf8") / 1024).toFixed(1)
-  console.log(
-    `✓ wrote ${evolutionKeys.length} incarnon evolutions → incarnon-evolutions.json (${incarnonKb} KB)`,
-  )
-
-  const meta = {
-    generatedAt: new Date().toISOString(),
-    wfcdPackageVersion: wfcd.packageVersion,
-    gameUpdate: wfcd.gameUpdate,
-    itemCount: totalItems,
-    modCount: mods.length,
-    arcaneCount: arcanes.length,
-  }
-  await writeFile(META_OUT, JSON.stringify(meta, null, 2), "utf8")
-  console.log(
-    `✓ wrote meta.json (game update ${wfcd.gameUpdate ?? "unknown"}, wfcd ${wfcd.packageVersion})`,
-  )
+  console.log()
+  console.log(`Weapons unmatched (no wiki record): ${stats.weapons.unmatched}`)
+  console.log(`Frames unmatched (no wiki record):  ${frameUnmatched.size}`)
+  console.log(`DE companions only (no wiki match): ${stats.companions.deOnly}`)
 }
 
 main().catch((err) => {

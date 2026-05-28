@@ -11,6 +11,10 @@ import { ATMOSPHERIC_OVERRIDES } from "../../data/curated/atmospheric-archgun"
 import { CLASS_DEFAULT_POOLS, ALL_MENTIONED_POOLS } from "../../data/curated/class-pools"
 import { MOD_POOL_OVERRIDES } from "../../data/curated/mod-pools"
 import { PLEXUS_BROWSE_ITEM, PLEXUS_DETAIL } from "../../data/curated/plexus"
+import {
+  RELEASE_HISTORY,
+  type ReleaseHistoryEntry,
+} from "../../data/curated/release-history"
 import { WIKI_ALIASES } from "../../data/curated/wiki-aliases"
 import { WIKI_STUBS } from "../../data/curated/wiki-stubs"
 
@@ -24,6 +28,8 @@ export interface CuratedData {
   plexusBrowse: typeof PLEXUS_BROWSE_ITEM
   plexusDetail: typeof PLEXUS_DETAIL
   atmospheric: typeof ATMOSPHERIC_OVERRIDES
+  /** Name → { releaseDate?, vaulted? } from curated snapshot. */
+  releaseHistory: Record<string, ReleaseHistoryEntry>
 }
 
 export function readCurated(): CuratedData {
@@ -36,5 +42,6 @@ export function readCurated(): CuratedData {
     plexusBrowse: PLEXUS_BROWSE_ITEM,
     plexusDetail: PLEXUS_DETAIL,
     atmospheric: ATMOSPHERIC_OVERRIDES,
+    releaseHistory: RELEASE_HISTORY,
   }
 }

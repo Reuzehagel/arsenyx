@@ -5,6 +5,11 @@ on:
     - cron: "0 2 * * 0" # Sunday 02:00 UTC
   workflow_dispatch: {} # Manual trigger
 
+# Phase 7 rewrite: previously this ran `bun update @wfcd/items && bun run
+# build:items`. The new pipeline pulls directly from DE PublicExport and
+# the wiki Lua modules — no npm dep to bump. Diff covers `data/raw/de/`,
+# `data/raw/wiki/`, and `apps/web/public/data/`.
+
 jobs:
   update-data:
     runs-on: ubuntu-latest
@@ -21,14 +26,16 @@ jobs:
 
       - run: bun install
 
-      - run: bun update @wfcd/items
+      - name: Sync upstream + rebuild items
+        run: bun run data:bump
 
-      - run: bun run build:items
+      - name: Typecheck
+        run: bun run typecheck
 
       - name: Check for changes
         id: diff
         run: |
-          if git diff --quiet apps/web/public/data/ package.json bun.lock; then
+          if git diff --quiet data/raw/ apps/web/public/data/; then
             echo "changed=false" >> $GITHUB_OUTPUT
           else
             echo "changed=true" >> $GITHUB_OUTPUT
@@ -39,9 +46,15 @@ jobs:
         uses: peter-evans/create-pull-request@v8
         with:
           branch: auto/update-warframe-data
-          title: "chore: update @wfcd/items game data"
+          title: "chore: refresh Warframe game data"
           body: |
-            Automated weekly update of Warframe game data from `@wfcd/items`.
+            Automated weekly refresh:
 
-            Review the JSON diffs in `apps/web/public/data/` before merging.
-          commit-message: "chore: update @wfcd/items game data"
+            - DE PublicExport mirror (`data/raw/de/`)
+            - Wiki Lua modules (`data/raw/wiki/`)
+            - Rebuilt catalog (`apps/web/public/data/`)
+
+            Review the JSON diffs and the wiki mirror diff before merging.
+            Any new wiki Class strings or DE compatNames not yet curated
+            will fail the build — fix `data/curated/` if so.
+          commit-message: "chore: refresh Warframe game data"

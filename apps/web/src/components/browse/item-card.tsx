@@ -44,8 +44,8 @@ export function ItemCard({ item, index }: ItemCardProps) {
             {item.name}
           </h3>
           <div className="text-muted-foreground flex items-center justify-between text-xs">
-            {item.type && (
-              <span className="max-w-[60%] truncate">{item.type}</span>
+            {item.displayClass && (
+              <span className="max-w-[60%] truncate">{item.displayClass}</span>
             )}
             {item.masteryReq !== undefined && item.masteryReq > 0 && (
               <span className="shrink-0">MR {item.masteryReq}</span>

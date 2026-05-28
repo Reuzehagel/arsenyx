@@ -13,7 +13,6 @@
     "build:items": "bun run scripts/build-items-index.ts",
     "data:sync": "bun run scripts/sync-de.ts && bun run scripts/sync-wiki.ts",
     "data:bump": "bun run scripts/bump-data.ts",
-    "update-data": "bun update @wfcd/items && bun run build:items",
     "typecheck": "bun run --filter '*' typecheck && bun run typecheck:scripts",
     "typecheck:scripts": "bunx tsc --noEmit -p scripts/tsconfig.json",
     "lint": "oxlint apps/web/src apps/api/src packages/shared/src",
@@ -23,7 +22,6 @@
   },
   "dependencies": {
     "@arsenyx/shared": "workspace:*",
-    "@wfcd/items": "^1.1274.29",
     "nanoid": "^5.1.11"
   },
   "devDependencies": {

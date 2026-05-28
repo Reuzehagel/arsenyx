@@ -26,4 +26,39 @@ export const MOD_POOL_OVERRIDES: Record<string, readonly string[]> = {
   "Coda Bubonico": ["Shotgun"],
   Sepulcrum: ["Pistol"],
   // Cyte-09's Arm-Cannon (Aerolyst) — TBD, leave to default for now.
+
+  // Exalted weapons — wiki Class is "Exalted Weapon" with no per-frame
+  // routing data, so we override with the actual mod pools each draws
+  // from. The build adds the weapon's own name on top for augment hooks.
+  Noctua: ["Pistol", "Tome"],
+  Grimoire: ["Pistol", "Tome"],
+  "Exalted Blade": ["Melee", "Swords"],
+  "Exalted Umbra Blade": ["Melee", "Swords"],
+  "Exalted Prime Blade": ["Melee", "Swords"],
+  "Garuda Talons": ["Melee", "Claws"],
+  "Garuda Prime Talons": ["Melee", "Claws"],
+  "Iron Staff": ["Melee", "Staves"],
+  "Iron Staff Prime": ["Melee", "Staves"],
+  Diwata: ["Melee", "Swords"],
+  "Diwata Prime": ["Melee", "Swords"],
+  "Desert Wind": ["Melee", "Sparring"],
+  "Desert Wind Prime": ["Melee", "Sparring"],
+  "Whipclaw": ["Melee"],
+  // Hildryn / Protea / Mesa exalted ranged are pistols by routing:
+  "Balefire Charger": ["Pistol"],
+  "Balefire Charger Prime": ["Pistol"],
+  "Dex Pixia": ["Pistol"],
+  "Dex Pixia Prime": ["Pistol"],
+  Regulators: ["Pistol"],
+  "Regulators Prime": ["Pistol"],
+  // Ivara's exalted bow is Primary/Bow:
+  "Artemis Bow": ["Rifle", "Bow"],
+  "Artemis Bow Prime": ["Rifle", "Bow"],
+  // Necramech exalteds — Arquebex (Archgun) / Ironbride (Archmelee).
+  Arquebex: ["Archgun"],
+  Ironbride: ["Archmelee"],
+  // Lavos's Cedo replacement isn't exalted; skip. Lavos's Mausolon is
+  // an archgun (Voidrig/Bonewidow share):
+  Mausolon: ["Archgun"],
+  "Mausolon (Atmosphere)": ["Archgun"],
 }

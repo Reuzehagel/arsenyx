@@ -18,8 +18,12 @@ export {
   hasExilusSlot,
 } from "@arsenyx/shared/warframe/slot-layout"
 
-function isZawComponent(itemType: DetailItem["type"]): boolean {
-  return itemType === "Zaw Component"
+/** Zaw strikes are emitted as individual items with a wiki Class like
+ *  "Zaw Dagger / Staff", "Zaw Polearm / Hammer", etc. The "Zaw " prefix is
+ *  the stable marker — we treat the whole family as Zaw components for
+ *  layout purposes (extra Exodia arcane slot, single-slot stance pool). */
+function isZawComponent(displayClass: DetailItem["displayClass"]): boolean {
+  return displayClass?.startsWith("Zaw ") ?? false
 }
 
 /** Resolve which arcane pool an exalted weapon draws from. Mirrors the
@@ -40,7 +44,7 @@ function getExaltedArcaneSlot(
  * have none. */
 export function getArcaneSlotCount(
   category: BrowseCategory,
-  itemType: DetailItem["type"],
+  displayClass: DetailItem["displayClass"],
 ): number {
   switch (category) {
     case "warframes":
@@ -48,13 +52,14 @@ export function getArcaneSlotCount(
     case "melee":
       // Zaws have a dedicated Exodia slot in addition to the regular Melee
       // Arcane slot — both can be active simultaneously in-game.
-      return isZawComponent(itemType) ? 2 : 1
+      return isZawComponent(displayClass) ? 2 : 1
     case "primary":
     case "secondary":
     case "exalted-weapons":
       return 1
     case "archwing":
-      return itemType === "Arch-Gun" ? 2 : 0
+      // Wiki Class is "Archgun" (no hyphen) for arch-gun primaries.
+      return displayClass === "Archgun" ? 2 : 0
     default:
       return 0
   }
@@ -72,7 +77,7 @@ export function getArcaneSlotConfig(
   allArcanes: Arcane[],
   category: BrowseCategory,
   count: number,
-  item?: Pick<DetailItem, "name" | "trigger" | "type">,
+  item?: Pick<DetailItem, "name" | "trigger" | "displayClass">,
 ): ArcaneSlotConfig {
   if (count === 0) return { options: [] }
   if (category === "archwing") {
@@ -88,7 +93,7 @@ export function getArcaneSlotConfig(
     const slot = getExaltedArcaneSlot(item)
     return { options: [getArcanesForSlot(allArcanes, slot)] }
   }
-  if (category === "melee" && item && isZawComponent(item.type)) {
+  if (category === "melee" && item && isZawComponent(item.displayClass)) {
     const regular: Arcane[] = []
     const exodia: Arcane[] = []
     for (const a of getArcanesForSlot(allArcanes, "melee")) {
@@ -107,10 +112,10 @@ export function getArcaneSlotConfig(
  * longer authoritative.
  */
 export function resolveInitialArcanes(
-  item: Pick<DetailItem, "type">,
+  item: Pick<DetailItem, "displayClass">,
   arcanes: (PlacedArcane | null)[] | undefined,
 ): (PlacedArcane | null)[] | undefined {
-  if (!isZawComponent(item.type) || !arcanes) return arcanes
+  if (!isZawComponent(item.displayClass) || !arcanes) return arcanes
   const out: (PlacedArcane | null)[] = [null, null]
   for (const a of arcanes) {
     if (!a) continue
@@ -132,12 +137,12 @@ export function resolveInitialArcanes(
  * surface the slot (innate polarity unknown; user can forma).
  */
 export function hasStanceSlot(
-  item: Pick<DetailItem, "stancePolarity" | "type">,
+  item: Pick<DetailItem, "stancePolarity" | "displayClass">,
   category: BrowseCategory,
 ): boolean {
   if (category === "exalted-weapons") return false
   if (category === "railjack") return false
-  if (isZawComponent(item.type)) return true
+  if (isZawComponent(item.displayClass)) return true
   return Boolean(item.stancePolarity)
 }
 

@@ -87,40 +87,6 @@ export function normalizeMods(rawMods: Mod[]): Mod[] {
 
 // --- compatibility matchers ---
 
-function isPrimaryMod(compatName: string, modType: string, subtype: string) {
-  if (compatName === subtype) return true
-  if (modType.includes(subtype)) return true
-  if (subtype !== "shotgun" && compatName === "rifle") return true
-  if (subtype !== "shotgun" && compatName === "rifle (no aoe)") return true
-  if (subtype !== "shotgun" && compatName === "assault rifle") return true
-  if (compatName === "primary") return true
-  if (
-    modType.includes("primary") &&
-    !compatName &&
-    !modType.includes("rifle") &&
-    !modType.includes("shotgun") &&
-    !modType.includes("sniper") &&
-    !modType.includes("launcher") &&
-    !modType.includes("bow")
-  )
-    return true
-  return false
-}
-
-function isPistolMod(compatName: string, modType: string) {
-  // Tome mods (Grimoire/Noctua) carry `type: "Secondary Mod"` so they'd
-  // otherwise leak into every secondary's pool. The pistol/throwing and
-  // exalted-weapon branches in getModsForItem already short-circuit on
-  // `compatName === "tome"` before reaching here, so this guard is
-  // defense-in-depth — keep it so isPistolMod stays correct in isolation.
-  if (compatName === "tome") return false
-  return (
-    compatName === "pistol" ||
-    modType.includes("secondary") ||
-    modType.includes("pistol")
-  )
-}
-
 export function isStanceMod(mod: Pick<Mod, "type">): boolean {
   return mod.type?.toLowerCase() === "stance mod"
 }
@@ -134,8 +100,6 @@ function isMeleeCompat(compatName: string, modType: string) {
     modType === "stance mod"
   )
 }
-
-const PRIMARY_SUBTYPES = ["rifle", "shotgun", "sniper", "launcher", "bow"]
 
 function modMatchesCompat(mod: Mod, compatibility: ModCompatibility): boolean {
   const compatName = mod.compatName?.toLowerCase() ?? ""
@@ -238,28 +202,6 @@ const CATEGORY_TO_COMPAT: Record<string, ModCompatibility[]> = {
   railjack: ["Plexus"],
 }
 
-/**
- * Return the mods compatible with the given item. `mods` must already be
- * normalized via `normalizeMods`.
- */
-// Necramechs are categorized as `Warframes` in WFCD data — detect them by
-// name so we can route them to the necramech mod pool instead of the
-// warframe one. Mirrors `isNecramech` in categorize.ts.
-function isNecramechItem(name?: string): boolean {
-  if (!name) return false
-  return (
-    name.includes("Necramech") || name === "Bonewidow" || name === "Voidrig"
-  )
-}
-
-// Necramech exalted weapons (Arquebex, Ironbride) share `type: "Exalted
-// Weapon"` with warframe exalteds. Their uniqueName lives under the Entrati
-// NechroTech / EntratiMech paths, which is how we tell them apart.
-function isNecramechExalted(uniqueName?: string): boolean {
-  if (!uniqueName) return false
-  return uniqueName.includes("NechroTech") || uniqueName.includes("EntratiMech")
-}
-
 // Tome weapons (Grimoire, Noctua) accept Tome mods — `compatName: "Tome"`,
 // `type: "Secondary Mod"` — in addition to the standard secondary pool. Tome
 // mods are exclusive to these two weapons, so every other secondary must
@@ -270,184 +212,83 @@ function isTomeWeapon(name?: string): boolean {
   return lower.startsWith("grimoire") || lower.startsWith("noctua")
 }
 
+/**
+ * Return the mods compatible with the given item.
+ *
+ * Modern path (Phase 6 collapse): the item carries `modPools` — the list
+ * of mod `compatName` values it accepts, computed once at build time
+ * from wiki Class + curated overrides. Filtering is a single set
+ * membership check (`modPools.includes(mod.compatName)`), plus a
+ * narrow filter for stance mods (class-specific) and exilus utility.
+ *
+ * Legacy path: when `modPools` is absent (synthetic items, builds
+ * imported from before the cutover) we fall back to the category-only
+ * routing via `CATEGORY_TO_COMPAT`. Type-based name-pattern routing
+ * (`Bubonico is a Rifle → Shotgun` etc.) is gone — that class of bug
+ * is what motivated the rewrite.
+ *
+ * `mods` must already be normalized via `normalizeMods`.
+ */
 export function getModsForItem(
   item: {
+    /** DEPRECATED — kept in signature for back-compat with older call
+     *  sites. The structural router ignores this entirely; pass
+     *  `modPools` instead. Removed in a follow-up sweep. */
     type?: string
     category?: string
     name?: string
     trigger?: string
+    /** Lowercase stance compatibility (e.g. "polearms", "swords"). When
+     *  set, stance mods are filtered to that class only; when absent,
+     *  all stance mods that match the broader modPools pass. */
     meleeClass?: string
     uniqueName?: string
-    /** Lowercased compatNames a Beast Weapon accepts. Synthesized at
-     * build time in scripts/beast-claws.ts. */
+    /** DEPRECATED — Beast claws routing used to require a curated
+     *  compatGroups list. The new pipeline encodes those compatNames
+     *  directly into `modPools`. Kept for legacy callers. */
     compatGroups?: string[]
+    /** Phase 6 routing field: the DE `compatName` values this item
+     *  accepts. Includes generic pools ("Rifle", "WARFRAME"), refinement
+     *  pools ("Sniper", "Polearms"), the item's own name (for augments),
+     *  and family/base names where applicable. */
+    modPools?: readonly string[]
   },
   mods: Mod[],
 ): Mod[] {
-  const itemType = item.type
-  const itemName = item.name
   const meleeClass = item.meleeClass?.toLowerCase()
 
-  // Railjack (Plexus) short-circuits ahead of the per-type pipeline because
-  // its synthetic item has no `type` matching any weapon/warframe branch.
-  if (item.category?.toLowerCase() === "railjack") {
-    return mods.filter((m) => modMatchesCompat(m, "Plexus"))
-  }
-
-  // Necramechs carry `type: "Warframe"` in WFCD data; intercept before the
-  // warframe branch so they get necramech mods, not warframe mods.
-  if (isNecramechItem(itemName)) {
-    return mods.filter((m) =>
-      (m.type?.toLowerCase() ?? "").includes("necramech"),
-    )
-  }
-
-  if (!itemType) {
-    const category = item.category?.toLowerCase()
-    const compats = category ? CATEGORY_TO_COMPAT[category] : undefined
-    if (!compats) return []
-    const isTome = isTomeWeapon(itemName)
-    return mods.filter((m) => {
-      if ((m.compatName?.toLowerCase() ?? "") === "tome") return isTome
-      return compats.some((c) => modMatchesCompat(m, c))
+  // Modern path: structural routing via modPools.
+  if (item.modPools && item.modPools.length > 0) {
+    const poolSet = new Set(item.modPools)
+    return mods.filter((mod) => {
+      const compatName = mod.compatName ?? ""
+      if (!poolSet.has(compatName)) return false
+      // Stance mods are class-specific. The item's modPools already
+      // includes the stance-compat name (e.g. "Polearms") — but a
+      // melee weapon's pool also includes the generic "Melee" pool,
+      // and a stance mod with `compatName: "Polearms"` would only fire
+      // for polearms. So pool membership is necessary AND sufficient;
+      // the meleeClass refinement is only useful when modPools is
+      // missing the stance-compat (very old items / synthesized).
+      if (isStanceMod(mod) && meleeClass && compatName) {
+        return compatName.toLowerCase() === meleeClass
+      }
+      return true
     })
   }
 
-  const itemTypeLower = itemType.toLowerCase()
-  const itemNameLower = itemName?.toLowerCase() ?? ""
-
-  if (itemTypeLower === "zaw component") {
-    return mods.filter((m) => modMatchesCompat(m, "Melee"))
+  // Legacy fallback: category-driven routing for items whose pipeline
+  // hasn't been migrated to emit modPools.
+  const category = item.category?.toLowerCase()
+  if (category === "railjack") {
+    return mods.filter((m) => modMatchesCompat(m, "Plexus"))
   }
-
-  return mods.filter((mod) => {
-    const compatName = mod.compatName?.toLowerCase() ?? ""
-    const modType = mod.type?.toLowerCase() ?? ""
-
-    if (PRIMARY_SUBTYPES.includes(itemTypeLower)) {
-      if (
-        modType.includes("primary") &&
-        compatName &&
-        itemNameLower.includes(compatName)
-      )
-        return true
-      return isPrimaryMod(compatName, modType, itemTypeLower)
-    }
-
-    if (itemTypeLower === "pistol" || itemTypeLower === "throwing") {
-      // Grimoire accepts Tome mods in addition to the standard secondary pool.
-      if (compatName === "tome") return isTomeWeapon(itemName)
-      if (
-        modType.includes("secondary") &&
-        compatName &&
-        itemNameLower.includes(compatName)
-      )
-        return true
-      return isPistolMod(compatName, modType)
-    }
-
-    if (itemTypeLower === "melee") {
-      // Stance mods are class-specific (Polearms, Glaives, ...). When we know
-      // the weapon's class, only offer stances matching it; fail open if not.
-      if (modType === "stance mod") {
-        if (!meleeClass) return true
-        return compatName === meleeClass
-      }
-      if (
-        modType.includes("melee") &&
-        compatName &&
-        itemNameLower.includes(compatName)
-      )
-        return true
-      return isMeleeCompat(compatName, modType)
-    }
-
-    if (itemTypeLower === "arch-gun")
-      return compatName === "archgun" || modType.includes("arch-gun")
-    if (itemTypeLower === "arch-melee")
-      return compatName === "archmelee" || modType.includes("arch-melee")
-    if (itemTypeLower === "archwing")
-      return compatName === "archwing" || modType.includes("archwing")
-
-    if (itemTypeLower === "beast weapon") {
-      // Beast claws accept several compat groups: the generic "Claws"
-      // (Bite/Maul/stances/postures), per-pet finisher mods (Ferocity →
-      // "Sahasa Kubrow"), per-class mods (Swipe → "Kavat Claws"), per-family
-      // mods (Volatile Parasite → "Predasite"), and the lone Helminth Charger
-      // mod (Strain Fever → "Helminth Claws"). The weapon item carries a
-      // pre-resolved `compatGroups` list so this matcher is data-driven.
-      return Boolean(
-        item.compatGroups &&
-        compatName &&
-        item.compatGroups.includes(compatName),
-      )
-    }
-
-    if (itemTypeLower === "companion weapon") {
-      // Sentinel weapons share mod pools with their primary-weapon analogues.
-      // Deconstructor(/Prime) is a thrown glaive → melee mods, but it has no
-      // stance slot in-game so exclude stance mods to keep the picker clean.
-      // Sweeper(/Prime) is a shotgun → shotgun mods. Everything else
-      // (Verglas, Vulklok, Deth Machine Rifle, Burst Laser, etc.) → rifle.
-      // Match on name prefix rather than uniqueName — Deconstructor and
-      // Deconstructor Prime live under different uniqueName paths
-      // (.../SentGlaiveWeapon vs .../DeconstructorPrime/PrimeHeliosGlaiveWeapon).
-      if (itemNameLower.startsWith("deconstructor")) {
-        if (modType === "stance mod") return false
-        return isMeleeCompat(compatName, modType)
-      }
-      if (itemNameLower.startsWith("sweeper"))
-        return compatName === "shotgun" || modType.includes("shotgun")
-      return isPrimaryMod(compatName, modType, "rifle")
-    }
-
-    if (itemTypeLower === "exalted weapon") {
-      // Necramech exalteds use Archgun/Archmelee mods (Arquebex → Archgun,
-      // Ironbride → Archmelee), routed by whether the weapon has a trigger.
-      if (isNecramechExalted(item.uniqueName)) {
-        if (item.trigger)
-          return compatName === "archgun" || modType.includes("arch-gun")
-        return compatName === "archmelee" || modType.includes("arch-melee")
-      }
-      // Noctua (Dante's exalted) is a Tome weapon, so it takes Tome mods on top
-      // of the standard secondary pool — same as the Grimoire. It has a trigger
-      // and would otherwise fall to isPistolMod, which excludes Tome mods.
-      if (compatName === "tome") return isTomeWeapon(itemName)
-      if (itemNameLower.includes("bow"))
-        return isPrimaryMod(compatName, modType, "bow")
-      if (item.trigger) return isPistolMod(compatName, modType)
-      // Exalted melees have a stance pre-applied in-game that the player can't
-      // swap, so they get no stance slot — exclude stance mods from the pool
-      // (otherwise `isMeleeCompat` lets them through). Mirrors the Deconstructor
-      // exclusion above.
-      if (modType === "stance mod") return false
-      return isMeleeCompat(compatName, modType)
-    }
-
-    if (itemTypeLower === "warframe") {
-      if (
-        modType.includes("warframe") &&
-        (compatName === "warframe" || compatName === "aura")
-      )
-        return true
-      if (itemName && mod.isAugment && modType.includes("warframe")) {
-        const baseItemName = itemNameLower.replace(" prime", "")
-        if (compatName === itemNameLower || compatName === baseItemName)
-          return true
-      }
-      return false
-    }
-
-    if (itemTypeLower === "necramech") return modType.includes("necramech")
-
-    if (["companion", "sentinel", "beast", "pets"].includes(itemTypeLower)) {
-      return (
-        modType.includes("companion") ||
-        modType.includes("sentinel") ||
-        modType.includes("beast")
-      )
-    }
-
-    return false
+  const compats = category ? CATEGORY_TO_COMPAT[category] : undefined
+  if (!compats) return []
+  const itemName = item.name
+  const isTome = isTomeWeapon(itemName)
+  return mods.filter((m) => {
+    if ((m.compatName?.toLowerCase() ?? "") === "tome") return isTome
+    return compats.some((c) => modMatchesCompat(m, c))
   })
 }

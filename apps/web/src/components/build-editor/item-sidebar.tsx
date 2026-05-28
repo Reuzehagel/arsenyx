@@ -168,7 +168,7 @@ export function ItemSidebar({
   const hasAtmosphericVariant =
     isWeapon &&
     category === "archwing" &&
-    item.type === "Arch-Gun" &&
+    item.displayClass === "Archgun" &&
     item.atmosphericDamage !== undefined
   const effectiveDeploymentContext: DeploymentContext = hasAtmosphericVariant
     ? (deploymentContext ?? DEFAULT_DEPLOYMENT_CONTEXT)

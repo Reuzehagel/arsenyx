@@ -31,6 +31,10 @@ export interface MergedFrame {
   masteryReq: number
   passiveDescription?: string
   exalted: readonly string[]
+  /** DE compatNames a mod can carry to be installable on this frame.
+   *  Mirrors `MergedWeapon.modPools` so consumers can use the same
+   *  `modPools.includes(mod.compatName)` predicate uniformly. */
+  modPools: readonly string[]
   /** Each frame's four standard abilities, plus the passive on warframes. */
   abilities: ReadonlyArray<{
     uniqueName: string
@@ -123,6 +127,32 @@ export interface MergeFramesOpts {
   unmatched: Set<string>
 }
 
+/** Build the mod-pool list for a frame.
+ *
+ *  Warframes accept three classes of mods:
+ *    - "WARFRAME" mods (the general pool)
+ *    - "AURA" mods (the dedicated aura slot)
+ *    - per-frame augment mods, keyed by the frame's name. Primes accept
+ *      the base name's augments too (`isPrime` strips " Prime" suffix).
+ *
+ *  Necramechs / Archwings each have their own pool, plus per-name
+ *  augments. Operators take no mods (they use Focus, not mods). */
+function modPoolsForFrame(name: string, category: FrameCategory): readonly string[] {
+  switch (category) {
+    case "warframes": {
+      const pools = new Set<string>(["WARFRAME", "AURA", name])
+      if (name.endsWith(" Prime")) pools.add(name.slice(0, -" Prime".length))
+      return [...pools]
+    }
+    case "necramechs":
+      return ["Necramech", name]
+    case "archwing":
+      return ["Archwing", name]
+    case "operators":
+      return []
+  }
+}
+
 export function mergeFrame(
   de: DeFrame,
   opts: MergeFramesOpts,
@@ -134,11 +164,12 @@ export function mergeFrame(
   const polarities = (wiki?.Polarities ?? [])
     .map(normalizePolarity)
     .filter((p): p is string => p !== null)
+  const category = categoryOf(de.productCategory)
 
   return {
     uniqueName: de.uniqueName,
     name: cleanName,
-    category: categoryOf(de.productCategory),
+    category,
     description: de.description ?? "",
     health: de.health,
     shield: de.shield,
@@ -149,6 +180,7 @@ export function mergeFrame(
     masteryReq: de.masteryReq ?? 0,
     passiveDescription: de.passiveDescription,
     exalted: de.exalted ?? [],
+    modPools: modPoolsForFrame(cleanName, category),
     // DE uses abilityUniqueName/abilityName; rename to match the existing
     // BrowseableItem Ability shape the UI consumes.
     abilities: (de.abilities ?? []).map((a) => ({
@@ -186,6 +218,7 @@ export function operatorsFromWiki(wiki: FrameWikiTable): MergedFrame[] {
       auraPolarity: normalizePolarity(op.AuraPolarity),
       exilusPolarity: null,
       isPrime: false,
+      modPools: modPoolsForFrame(name, "operators"),
     })
   }
   return out

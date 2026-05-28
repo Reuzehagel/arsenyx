@@ -29,6 +29,11 @@
 
 import { KNOWN_PRODUCT_CATEGORIES, type DeWeapon } from "./read-de"
 import type { CuratedData } from "./read-curated"
+import {
+  buildDamageBlock,
+  damageFromDePerShot,
+  type AttackOut,
+} from "./merge-damage"
 
 /** Polarity values we recognize from wiki Lua. Lowercased for storage.
  *  The UI's existing codec already abbreviates these (see mods.ts), so we
@@ -68,6 +73,7 @@ export const KNOWN_MOD_POOLS = new Set<string>([
   // Companion / archwing / railjack
   "Archgun", "Archmelee", "Archwing",
   "Sentinel", "BEAST", "COMPANION", "ROBOTIC", "Hound", "Moa", "Kavat", "Kubrow",
+  "Kavat Claws", "Kubrow Claws", "Helminth Claws",
   // Operator / modular / synthetic
   "Necramech", "Parazon", "Plexus", "Amp", "K-Drive",
   // Frame umbrella (matched by warframe items, not weapons — kept here so a
@@ -113,6 +119,12 @@ export interface MergedWeapon {
   multishot?: number
   trigger?: string
   maxLevelCap?: number
+  /** Per-attack-mode breakdown sourced from wiki Attacks. Empty when
+   *  wiki has no attack data (rare — railjack turrets, modular Plexus). */
+  attacks?: AttackOut[]
+  /** Normal Attack damage dict (lowercased element keys, nonzero only).
+   *  Mirrors first-attack values for legacy stats-panel rendering. */
+  damage?: Record<string, number>
 }
 
 interface WikiWeapon {
@@ -125,6 +137,7 @@ interface WikiWeapon {
   CompatibilityTags?: readonly unknown[]
   Traits?: readonly unknown[]
   Mastery?: number
+  Attacks?: readonly Record<string, unknown>[]
 }
 
 function normalizePolarity(p: unknown): string | null {
@@ -235,6 +248,13 @@ export function mergeWeapon(
     .map(normalizePolarity)
     .filter((p): p is string => p !== null)
   const exilus = normalizePolarity(wiki?.ExilusPolarity ?? stub?.exilusPolarity)
+
+  // Damage shape: wiki Attacks is the rich source. Fall back to DE
+  // damagePerShot[20] when the wiki has no attacks (railjack, modular).
+  const dmg = buildDamageBlock(wiki?.Attacks)
+  const fallbackDamage =
+    !dmg.damage && de.damagePerShot ? damageFromDePerShot(de.damagePerShot) : undefined
+
   return {
     uniqueName: de.uniqueName,
     name: cleanName,
@@ -251,7 +271,7 @@ export function mergeWeapon(
     fireRate: de.fireRate,
     magazineSize: de.magazineSize,
     reloadTime: de.reloadTime,
-    totalDamage: de.totalDamage,
+    totalDamage: dmg.totalDamage ?? de.totalDamage,
     damagePerShot: de.damagePerShot,
     criticalChance: de.criticalChance,
     criticalMultiplier: de.criticalMultiplier,
@@ -260,6 +280,8 @@ export function mergeWeapon(
     multishot: de.multishot,
     trigger: de.trigger,
     maxLevelCap: de.maxLevelCap,
+    attacks: dmg.attacks,
+    damage: dmg.damage ?? fallbackDamage,
   }
 }
 
@@ -271,7 +293,10 @@ export function mergeWeapon(
  */
 export function mergeWikiOnlyWeapon(
   name: string,
-  wiki: WikiWeapon & { InternalName?: string },
+  wiki: WikiWeapon & {
+    InternalName?: string
+    Users?: readonly string[]
+  },
   curated: CuratedData,
 ): MergedWeapon {
   const displayClass = (wiki.Class as string | undefined) ?? null
@@ -296,12 +321,29 @@ export function mergeWikiOnlyWeapon(
   }
   const modPoolsSet = new Set<string>(baseList)
   modPoolsSet.add(name)
+  // Beast claws: derive Kavat/Kubrow pools from the wiki Users[0] field
+  // (e.g. "Adarza Kavat", "Sahasa Kubrow"). Routes Swipe-style class-
+  // specific claws mods (compat "Kavat Claws" / "Kubrow Claws") and
+  // per-pet mods (compat "Adarza Kavat") to the right weapons.
+  if (displayClass === "Claws (Beast)" && wiki.Users && wiki.Users.length > 0) {
+    const user = wiki.Users[0]!
+    if (user.endsWith(" Kavat")) modPoolsSet.add("Kavat Claws")
+    if (user.endsWith(" Kubrow")) modPoolsSet.add("Kubrow Claws")
+    if (user === "Helminth Charger") {
+      modPoolsSet.add("Helminth Claws")
+      modPoolsSet.add("Kubrow Claws")
+    }
+    // The pet name itself (Sahasa Kubrow etc.) is what per-pet mods
+    // target — but those mods are pet-side, not claws-side. We don't
+    // add them here; companion modPools handle that.
+  }
   const modPools = [...modPoolsSet]
 
   const polarities = (wiki.Polarities ?? [])
     .map(normalizePolarity)
     .filter((p): p is string => p !== null)
   const exilus = normalizePolarity(wiki.ExilusPolarity)
+  const dmg = buildDamageBlock(wiki.Attacks)
   return {
     // Wiki InternalName is DE's uniqueName when present; otherwise synthesize
     // one off the weapon's name.
@@ -319,6 +361,9 @@ export function mergeWikiOnlyWeapon(
     traits: (wiki.Traits as readonly string[] | undefined) ?? [],
     masteryReq: (wiki.Mastery ?? 0) as number,
     productCategory: "Wiki-Only",
+    attacks: dmg.attacks,
+    damage: dmg.damage,
+    totalDamage: dmg.totalDamage,
   }
 }
 

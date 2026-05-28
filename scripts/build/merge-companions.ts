@@ -30,6 +30,43 @@ export interface MergedCompanion {
    *  given mod targets this companion class. */
   compatTags: readonly string[]
   isPrime: boolean
+  /** DE compatNames a mod can carry to be installable on this companion.
+   *  Same shape as MergedWeapon.modPools / MergedFrame.modPools so the
+   *  consumer-side mod predicate is uniform across all item types. */
+  modPools: readonly string[]
+}
+
+/** Build the mod-pool list for a companion. Mirrors the routing baked
+ *  into the legacy `getModsForItem` predicate, but reshaped as data:
+ *
+ *  - All companions: "COMPANION" (generic pool), own name (augments).
+ *  - Sentinels: + "Sentinel".
+ *  - Beasts (Kubrow/Kavat/Vulpaphyla/Predasite/Helminth): + "BEAST".
+ *  - MOAs: + "Moa", + "ROBOTIC".
+ *  - Hounds: + "Hound", + "ROBOTIC". */
+function modPoolsForCompanion(
+  name: string,
+  subType: CompanionCategory,
+): readonly string[] {
+  const pools = new Set<string>(["COMPANION", name])
+  if (name.endsWith(" Prime")) pools.add(name.slice(0, -" Prime".length))
+  switch (subType) {
+    case "sentinel":
+      pools.add("Sentinel")
+      break
+    case "beast":
+      pools.add("BEAST")
+      break
+    case "moa":
+      pools.add("Moa")
+      pools.add("ROBOTIC")
+      break
+    case "hound":
+      pools.add("Hound")
+      pools.add("ROBOTIC")
+      break
+  }
+  return [...pools]
 }
 
 interface WikiCompanion {
@@ -98,13 +135,14 @@ export function mergeCompanions(
     const de = opts.deByName.get(name)
     if (de) seenInternalNames.add(de.name)
 
+    const subType = subTypeOf(wiki.Category)
     companions.push({
       // Prefer DE's uniqueName (it's the canonical game ID and what the
       // game's RPC layer uses). The wiki InternalName for some Primes
       // points at the base entry, which would conflate Wyrm + Wyrm Prime.
       uniqueName: de?.uniqueName || internal || `/Lotus/Companions/${name.replace(/\s+/g, "")}`,
       name,
-      subType: subTypeOf(wiki.Category),
+      subType,
       description: (wiki.Description as string | undefined) ?? de?.description ?? "",
       health: (wiki.Health as number | undefined) ?? de?.health ?? 0,
       shield: (wiki.Shield as number | undefined) ?? de?.shield ?? 0,
@@ -116,6 +154,7 @@ export function mergeCompanions(
         .filter((p): p is string => p !== null),
       compatTags: (wiki.CompatibilityTags as readonly string[] | undefined) ?? [],
       isPrime: name.includes(" Prime"),
+      modPools: modPoolsForCompanion(name, subType),
     })
   }
 

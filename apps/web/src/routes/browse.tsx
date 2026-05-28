@@ -272,7 +272,7 @@ function filterAndSort(
   const filtered = items.filter((item) => {
     if (term) {
       const nameMatch = item.name.toLowerCase().includes(term)
-      const typeMatch = item.type?.toLowerCase().includes(term)
+      const typeMatch = item.displayClass?.toLowerCase().includes(term)
       if (!nameMatch && !typeMatch) return false
     }
     if (item.masteryReq !== undefined && item.masteryReq > masteryMax)

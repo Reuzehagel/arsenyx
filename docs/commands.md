@@ -37,9 +37,14 @@ bun --cwd apps/api run db:generate # regenerate Prisma client
 
 ## Data pipeline
 
+Sources (no npm dep): DE PublicExport JSON blobs (`data/raw/de/`) +
+wiki Lua modules (`data/raw/wiki/`). The build merges them with the
+curated overrides under `data/curated/`.
+
 ```bash
-just build-items-index             # regenerate apps/web/public/data/ (items-index.json + per-item JSON)
-just update-data                   # bump @wfcd/items, then rebuild
+bun run data:sync                  # mirror DE PublicExport + wiki Lua into data/raw/
+bun run build:items                # regenerate apps/web/public/data/ from raw + curated
+bun run data:bump                  # sync + rebuild (full refresh, used by the weekly CI cron)
 ```
 
 ## Shadcn (apps/web)

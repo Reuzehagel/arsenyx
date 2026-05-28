@@ -70,7 +70,7 @@ export function CommandPalette({
       .filter(
         (it) =>
           it.name.toLowerCase().includes(q) ||
-          it.type?.toLowerCase().includes(q),
+          it.displayClass?.toLowerCase().includes(q),
       )
       .slice(0, 10)
   }, [allItems, debouncedQuery])
@@ -222,7 +222,7 @@ function ItemRow({
   return (
     <CommandItem
       value={`item:${item.uniqueName}`}
-      keywords={[item.name, item.type ?? "", item.categoryLabel]}
+      keywords={[item.name, item.displayClass ?? "", item.categoryLabel]}
       onSelect={onSelect}
     >
       <img

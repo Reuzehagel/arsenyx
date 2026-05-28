@@ -52,7 +52,10 @@ export interface BrowseItem {
   masteryReq?: number
   isPrime?: boolean
   vaulted?: boolean
-  type?: string
+  /** Wiki Class label ("Sniper Rifle", "Polearm", "Warframe") — replaces
+   *  the legacy WFCD `type` field. Renamed for clarity: this is what
+   *  appears as the class label in the UI, not a category enum. */
+  displayClass?: string
   releaseDate?: string
 }
 
@@ -108,6 +111,11 @@ export interface DetailItem extends BrowseItem {
   // Beast claws (hardcoded synthetic entries): lowercased compatNames the
   // weapon accepts. Used by getModsForItem to pick claws/family/pet mods.
   compatGroups?: string[]
+  /** Phase 6 structural mod routing: DE `compatName` values this item
+   *  accepts. Emitted by the v2 pipeline on every weapon/frame/companion.
+   *  When present, replaces the legacy type-based routing in
+   *  `getModsForItem`. */
+  modPools?: readonly string[]
 }
 
 export const CATEGORIES: { id: BrowseCategory; label: string }[] = [

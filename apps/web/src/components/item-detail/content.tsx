@@ -171,9 +171,12 @@ function ItemMeta({ item }: { item: DetailItem }) {
           </span>
         </span>
       )}
-      {item.type && (
+      {item.displayClass && (
         <span>
-          Type <span className="text-foreground font-medium">{item.type}</span>
+          Type{" "}
+          <span className="text-foreground font-medium">
+            {item.displayClass}
+          </span>
         </span>
       )}
     </div>

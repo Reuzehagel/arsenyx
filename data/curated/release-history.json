@@ -1,0 +1,2544 @@
+{
+  "AX-52": {
+    "releaseDate": "2024-07-20"
+  },
+  "Acceltra": {
+    "releaseDate": "2019-08-29"
+  },
+  "Acceltra Prime": {
+    "releaseDate": "2024-01-17",
+    "vaulted": true
+  },
+  "Ack & Brunt": {
+    "releaseDate": "2015-07-31"
+  },
+  "Acrid": {
+    "releaseDate": "2013-05-23"
+  },
+  "Adarza Kavat": {
+    "releaseDate": "2016-07-08"
+  },
+  "Aegrit": {
+    "releaseDate": "2022-09-07"
+  },
+  "Aeolak": {
+    "releaseDate": "2022-04-27"
+  },
+  "Afentis": {
+    "releaseDate": "2022-09-07"
+  },
+  "Afuris": {
+    "releaseDate": "2013-01-10"
+  },
+  "Afuris Prime": {
+    "releaseDate": "2022-12-14",
+    "vaulted": true
+  },
+  "Agkuza": {
+    "releaseDate": "2016-07-08"
+  },
+  "Akarius": {
+    "releaseDate": "2019-08-29"
+  },
+  "Akarius Prime": {
+    "releaseDate": "2024-01-17",
+    "vaulted": true
+  },
+  "Akbolto": {
+    "releaseDate": "2013-01-29"
+  },
+  "Akbolto Prime": {
+    "releaseDate": "2017-12-12",
+    "vaulted": true
+  },
+  "Akbronco": {
+    "releaseDate": "2013-05-23"
+  },
+  "Akbronco Prime": {
+    "releaseDate": "2014-03-05"
+  },
+  "Akjagara": {
+    "releaseDate": "2015-02-05"
+  },
+  "Akjagara Prime": {
+    "releaseDate": "2018-12-18",
+    "vaulted": true
+  },
+  "Aklato": {
+    "releaseDate": "2012-10-25"
+  },
+  "Aklex": {
+    "releaseDate": "2013-11-27"
+  },
+  "Aklex Prime": {
+    "releaseDate": "2017-01-27",
+    "vaulted": true
+  },
+  "Akmagnus": {
+    "releaseDate": "2014-01-29"
+  },
+  "Akmagnus Prime": {
+    "releaseDate": "2024-07-22",
+    "vaulted": true
+  },
+  "Aksomati": {
+    "releaseDate": "2015-04-09"
+  },
+  "Aksomati Prime": {
+    "releaseDate": "2019-12-17",
+    "vaulted": true
+  },
+  "Akstiletto": {
+    "releaseDate": "2014-02-05"
+  },
+  "Akstiletto Prime": {
+    "releaseDate": "2016-05-17",
+    "vaulted": true
+  },
+  "Akvasto": {
+    "releaseDate": "2013-08-30"
+  },
+  "Akvasto Prime": {
+    "releaseDate": "2018-11-13",
+    "vaulted": true
+  },
+  "Akzani": {
+    "releaseDate": "2014-07-18"
+  },
+  "Alternox": {
+    "releaseDate": "2022-04-27"
+  },
+  "Alternox Prime": {
+    "releaseDate": "2025-12-10"
+  },
+  "Amanata": {
+    "releaseDate": "2024-10-02"
+  },
+  "Ambassador": {
+    "releaseDate": "2021-07-06"
+  },
+  "Amesha": {
+    "releaseDate": "2016-07-08"
+  },
+  "Amphis": {
+    "releaseDate": "2013-02-22"
+  },
+  "Amprex": {
+    "releaseDate": "2014-04-23"
+  },
+  "Angstrum": {
+    "releaseDate": "2014-05-14"
+  },
+  "Anku": {
+    "releaseDate": "2015-06-04"
+  },
+  "Ankyros": {
+    "releaseDate": "2013-04-19"
+  },
+  "Ankyros Prime": {
+    "releaseDate": "2014-03-05",
+    "vaulted": true
+  },
+  "Arbucep (Atmosphere)": {
+    "releaseDate": "2025-10-15"
+  },
+  "Arca Plasmor": {
+    "releaseDate": "2017-09-09"
+  },
+  "Arca Scisco": {
+    "releaseDate": "2017-09-09"
+  },
+  "Arca Titron": {
+    "releaseDate": "2017-09-09"
+  },
+  "Argo & Vel": {
+    "releaseDate": "2023-07-27"
+  },
+  "Argonak": {
+    "releaseDate": "2017-10-12"
+  },
+  "Arquebex": {
+    "releaseDate": "2020-08-25"
+  },
+  "Artax": {
+    "releaseDate": "2017-02-09"
+  },
+  "Artemis Bow": {
+    "releaseDate": "2018-06-15"
+  },
+  "Artemis Bow Prime": {
+    "releaseDate": "2019-12-17"
+  },
+  "Arum Spinosa": {
+    "releaseDate": "2020-11-19"
+  },
+  "Ash": {
+    "releaseDate": "2012-10-25"
+  },
+  "Ash Prime": {
+    "releaseDate": "2015-07-07",
+    "vaulted": true
+  },
+  "Astilla": {
+    "releaseDate": "2017-10-12"
+  },
+  "Astilla Prime": {
+    "releaseDate": "2021-05-25",
+    "vaulted": true
+  },
+  "Athodai": {
+    "releaseDate": "2020-08-01"
+  },
+  "Atlas": {
+    "releaseDate": "2015-10-01"
+  },
+  "Atlas Prime": {
+    "releaseDate": "2019-10-01",
+    "vaulted": true
+  },
+  "Atomos": {
+    "releaseDate": "2015-05-12"
+  },
+  "Atterax": {
+    "releaseDate": "2014-09-17"
+  },
+  "Attica": {
+    "releaseDate": "2014-04-09"
+  },
+  "Azima": {
+    "releaseDate": "2016-03-04"
+  },
+  "Azothane": {
+    "releaseDate": "2023-04-26"
+  },
+  "Balefire Charger": {
+    "releaseDate": "2019-03-08"
+  },
+  "Balefire Charger Prime": {
+    "releaseDate": "2023-03-15"
+  },
+  "Balla": {
+    "releaseDate": "2017-10-12"
+  },
+  "Ballistica": {
+    "releaseDate": "2013-10-16"
+  },
+  "Ballistica Prime": {
+    "releaseDate": "2017-08-29",
+    "vaulted": true
+  },
+  "Banshee": {
+    "releaseDate": "2013-03-18"
+  },
+  "Banshee Prime": {
+    "releaseDate": "2017-02-28",
+    "vaulted": true
+  },
+  "Baruuk": {
+    "releaseDate": "2018-12-18"
+  },
+  "Baruuk Prime": {
+    "releaseDate": "2022-12-14",
+    "vaulted": true
+  },
+  "Basmu": {
+    "releaseDate": "2020-03-24"
+  },
+  "Battacor": {
+    "releaseDate": "2018-11-08"
+  },
+  "Baza": {
+    "releaseDate": "2017-11-23"
+  },
+  "Baza Prime": {
+    "releaseDate": "2019-12-17",
+    "vaulted": true
+  },
+  "Bo": {
+    "releaseDate": "2012-10-25"
+  },
+  "Bo Prime": {
+    "releaseDate": "2014-06-11",
+    "vaulted": true
+  },
+  "Boar": {
+    "releaseDate": "2012-10-25"
+  },
+  "Boar Prime": {
+    "releaseDate": "2013-09-13",
+    "vaulted": true
+  },
+  "Boltace": {
+    "releaseDate": "2015-05-12"
+  },
+  "Bolto": {
+    "releaseDate": "2012-10-25"
+  },
+  "Boltor": {
+    "releaseDate": "2013-01-29"
+  },
+  "Boltor Prime": {
+    "releaseDate": "2014-03-05",
+    "vaulted": true
+  },
+  "Brakk": {
+    "releaseDate": "2013-10-30"
+  },
+  "Braton": {
+    "releaseDate": "2012-10-25"
+  },
+  "Braton Prime": {
+    "releaseDate": "2013-07-13"
+  },
+  "Braton Vandal": {
+    "releaseDate": "2013-02-15"
+  },
+  "Broken Scepter": {
+    "releaseDate": "2016-11-11"
+  },
+  "Broken War": {
+    "releaseDate": "2015-12-03"
+  },
+  "Bronco": {
+    "releaseDate": "2012-10-25"
+  },
+  "Bronco Prime": {
+    "releaseDate": "2013-07-13"
+  },
+  "Bubonico": {
+    "releaseDate": "2020-11-19"
+  },
+  "Burst Laser": {
+    "releaseDate": "2013-03-18"
+  },
+  "Burst Laser Prime": {
+    "releaseDate": "2023-03-15"
+  },
+  "Burston": {
+    "releaseDate": "2012-10-25"
+  },
+  "Burston Prime": {
+    "releaseDate": "2013-12-19"
+  },
+  "Buzlok": {
+    "releaseDate": "2014-09-17"
+  },
+  "Cadus": {
+    "releaseDate": "2021-07-06"
+  },
+  "Caliban": {
+    "releaseDate": "2021-12-15"
+  },
+  "Caliban Prime": {
+    "releaseDate": "2025-08-26"
+  },
+  "Cantare": {
+    "releaseDate": "2024-06-18"
+  },
+  "Carmine Penta": {
+    "releaseDate": "2021-03-19"
+  },
+  "Carrier": {
+    "releaseDate": "2013-09-13"
+  },
+  "Carrier Prime": {
+    "releaseDate": "2015-07-07",
+    "vaulted": true
+  },
+  "Cassowar": {
+    "releaseDate": "2017-11-23"
+  },
+  "Castanas": {
+    "releaseDate": "2014-02-19"
+  },
+  "Catabolyst": {
+    "releaseDate": "2020-11-19"
+  },
+  "Caustacyst": {
+    "releaseDate": "2016-10-20"
+  },
+  "Cedo": {
+    "releaseDate": "2020-12-18"
+  },
+  "Cedo Prime": {
+    "releaseDate": "2025-02-12"
+  },
+  "Centaur": {
+    "releaseDate": "2014-12-19"
+  },
+  "Ceramic Dagger": {
+    "releaseDate": "2012-12-18"
+  },
+  "Cerata": {
+    "releaseDate": "2015-10-28"
+  },
+  "Cernos": {
+    "releaseDate": "2013-11-27"
+  },
+  "Cernos Prime": {
+    "releaseDate": "2016-11-22",
+    "vaulted": true
+  },
+  "Cestra": {
+    "releaseDate": "2013-11-20"
+  },
+  "Ceti Lacera": {
+    "releaseDate": "2020-03-24"
+  },
+  "Chesa Kubrow": {
+    "releaseDate": "2015-07-31"
+  },
+  "Chroma": {
+    "releaseDate": "2015-03-19"
+  },
+  "Chroma Prime": {
+    "releaseDate": "2018-09-25",
+    "vaulted": true
+  },
+  "Cinta": {
+    "releaseDate": "2023-04-26"
+  },
+  "Citrine": {
+    "releaseDate": "2023-02-15"
+  },
+  "Cobra & Crane": {
+    "releaseDate": "2018-12-18"
+  },
+  "Cobra & Crane Prime": {
+    "releaseDate": "2022-12-14",
+    "vaulted": true
+  },
+  "Coda Bassocyst": {
+    "releaseDate": "2025-03-19"
+  },
+  "Coda Bubonico": {
+    "releaseDate": "2026-03-25"
+  },
+  "Coda Catabolyst": {
+    "releaseDate": "2025-03-19"
+  },
+  "Coda Caustacyst": {
+    "releaseDate": "2025-03-19"
+  },
+  "Coda Hema": {
+    "releaseDate": "2025-03-19"
+  },
+  "Coda Hirudo": {
+    "releaseDate": "2025-03-19"
+  },
+  "Coda Mire": {
+    "releaseDate": "2025-03-19"
+  },
+  "Coda Motovore": {
+    "releaseDate": "2025-03-19"
+  },
+  "Coda Pathocyst": {
+    "releaseDate": "2025-03-19"
+  },
+  "Coda Pox": {
+    "releaseDate": "2025-03-19"
+  },
+  "Coda Sporothrix": {
+    "releaseDate": "2025-03-19"
+  },
+  "Coda Synapse": {
+    "releaseDate": "2025-03-19"
+  },
+  "Coda Tysis": {
+    "releaseDate": "2025-03-19"
+  },
+  "Convectrix": {
+    "releaseDate": "2015-10-01"
+  },
+  "Corinth": {
+    "releaseDate": "2017-12-21"
+  },
+  "Corinth Prime": {
+    "releaseDate": "2020-03-31",
+    "vaulted": true
+  },
+  "Cortege (Atmosphere)": {
+    "releaseDate": "2020-08-25"
+  },
+  "Corufell": {
+    "releaseDate": "2023-02-15"
+  },
+  "Corvas (Atmosphere)": {
+    "releaseDate": "2014-10-24"
+  },
+  "Corvas Prime": {
+    "vaulted": true
+  },
+  "Corvas Prime (Atmosphere)": {
+    "releaseDate": "2022-03-28"
+  },
+  "Crescent Vulpaphyla": {
+    "releaseDate": "2020-08-25"
+  },
+  "Cronus": {
+    "releaseDate": "2012-10-25"
+  },
+  "Cryotra": {
+    "releaseDate": "2018-11-08"
+  },
+  "Cyanex": {
+    "releaseDate": "2019-05-22"
+  },
+  "Cyath": {
+    "releaseDate": "2017-10-12"
+  },
+  "Cycron": {
+    "releaseDate": "2017-04-26"
+  },
+  "Cyngas (Atmosphere)": {
+    "releaseDate": "2016-07-08"
+  },
+  "Cyte-09": {
+    "releaseDate": "2024-12-13"
+  },
+  "Dagath": {
+    "releaseDate": "2023-10-18"
+  },
+  "Daikyu": {
+    "releaseDate": "2015-05-12"
+  },
+  "Daikyu Prime": {
+    "releaseDate": "2025-05-21"
+  },
+  "Dakra Prime": {
+    "releaseDate": "2013-09-13",
+    "vaulted": true
+  },
+  "Dante": {
+    "releaseDate": "2024-03-27"
+  },
+  "Dark Dagger": {
+    "releaseDate": "2012-12-18"
+  },
+  "Dark Sword": {
+    "releaseDate": "2012-12-18"
+  },
+  "Deconstructor": {
+    "releaseDate": "2014-03-19"
+  },
+  "Deconstructor Prime": {
+    "releaseDate": "2017-02-28",
+    "vaulted": true
+  },
+  "Dehtat": {
+    "releaseDate": "2017-10-12"
+  },
+  "Dera": {
+    "releaseDate": "2013-05-23"
+  },
+  "Dera Vandal": {
+    "releaseDate": "2015-05-12"
+  },
+  "Desert Wind": {
+    "releaseDate": "2018-12-18"
+  },
+  "Desert Wind Prime": {
+    "releaseDate": "2022-12-14"
+  },
+  "Despair": {
+    "releaseDate": "2013-05-23"
+  },
+  "Destreza": {
+    "releaseDate": "2016-01-13"
+  },
+  "Destreza Prime": {
+    "releaseDate": "2018-06-19",
+    "vaulted": true
+  },
+  "Deth Machine Rifle": {
+    "releaseDate": "2013-05-23"
+  },
+  "Deth Machine Rifle Prime": {
+    "releaseDate": "2019-10-01"
+  },
+  "Dethcube": {
+    "releaseDate": "2013-05-23"
+  },
+  "Dethcube Prime": {
+    "releaseDate": "2019-10-01",
+    "vaulted": true
+  },
+  "Detron": {
+    "releaseDate": "2013-12-31"
+  },
+  "Dex Dakra": {
+    "releaseDate": "2015-03-25"
+  },
+  "Dex Furis": {
+    "releaseDate": "2014-03-26"
+  },
+  "Dex Nikana": {
+    "releaseDate": "2024-03-27"
+  },
+  "Dex Pixia": {
+    "releaseDate": "2018-06-15"
+  },
+  "Dex Pixia Prime": {
+    "releaseDate": "2018-06-15"
+  },
+  "Dex Sybaris": {
+    "releaseDate": "2016-03-22"
+  },
+  "Diriga": {
+    "releaseDate": "2015-09-02"
+  },
+  "Diwata": {
+    "releaseDate": "2018-06-15"
+  },
+  "Diwata Prime": {
+    "releaseDate": "2020-03-31"
+  },
+  "Djinn": {
+    "releaseDate": "2013-09-13"
+  },
+  "Dokrahm": {
+    "releaseDate": "2018-04-20"
+  },
+  "Dorrclave": {
+    "releaseDate": "2023-10-18"
+  },
+  "Dragon Nikana": {
+    "releaseDate": "2014-04-09"
+  },
+  "Drakgoon": {
+    "releaseDate": "2014-01-08"
+  },
+  "Dread": {
+    "releaseDate": "2013-05-23"
+  },
+  "Dual Cestra": {
+    "releaseDate": "2014-02-05"
+  },
+  "Dual Cleavers": {
+    "releaseDate": "2013-05-23"
+  },
+  "Dual Coda Torxica": {
+    "releaseDate": "2025-03-19"
+  },
+  "Dual Decurion (Atmosphere)": {
+    "releaseDate": "2014-11-27"
+  },
+  "Dual Ether": {
+    "releaseDate": "2013-04-12"
+  },
+  "Dual Heat Swords": {
+    "releaseDate": "2013-02-08"
+  },
+  "Dual Ichor": {
+    "releaseDate": "2013-09-13"
+  },
+  "Dual Kamas": {
+    "releaseDate": "2013-11-27"
+  },
+  "Dual Kamas Prime": {
+    "releaseDate": "2015-10-06",
+    "vaulted": true
+  },
+  "Dual Keres": {
+    "releaseDate": "2018-04-20"
+  },
+  "Dual Keres Prime": {
+    "releaseDate": "2022-07-16",
+    "vaulted": true
+  },
+  "Dual Raza": {
+    "releaseDate": "2015-04-09"
+  },
+  "Dual Skana": {
+    "releaseDate": "2012-10-25"
+  },
+  "Dual Toxocyst": {
+    "releaseDate": "2016-03-04"
+  },
+  "Dual Viciss": {
+    "releaseDate": "2025-03-19"
+  },
+  "Dual Zoren": {
+    "releaseDate": "2013-01-29"
+  },
+  "Dual Zoren Prime": {
+    "releaseDate": "2025-02-12"
+  },
+  "EFV-5 Jupiter": {
+    "releaseDate": "2025-03-19"
+  },
+  "EFV-8 Mars": {
+    "releaseDate": "2025-03-19"
+  },
+  "Edun": {
+    "releaseDate": "2023-04-26"
+  },
+  "Ekhein": {
+    "releaseDate": "2023-12-13"
+  },
+  "Elytron": {
+    "releaseDate": "2014-10-24"
+  },
+  "Ember": {
+    "releaseDate": "2012-10-25"
+  },
+  "Ember Prime": {
+    "releaseDate": "2013-11-20",
+    "vaulted": true
+  },
+  "Embolist": {
+    "releaseDate": "2013-09-13"
+  },
+  "Endura": {
+    "releaseDate": "2017-05-24"
+  },
+  "Epitaph": {
+    "releaseDate": "2021-04-13"
+  },
+  "Epitaph Prime": {
+    "releaseDate": "2024-08-21"
+  },
+  "Equinox": {
+    "releaseDate": "2015-07-31"
+  },
+  "Equinox Prime": {
+    "releaseDate": "2019-04-02",
+    "vaulted": true
+  },
+  "Ether Daggers": {
+    "releaseDate": "2013-04-12"
+  },
+  "Ether Reaper": {
+    "releaseDate": "2013-09-13"
+  },
+  "Ether Sword": {
+    "releaseDate": "2013-05-23"
+  },
+  "Euphona Prime": {
+    "releaseDate": "2017-02-28",
+    "vaulted": true
+  },
+  "Evensong": {
+    "releaseDate": "2024-06-18"
+  },
+  "Exalted Blade": {
+    "releaseDate": "2018-06-15"
+  },
+  "Exalted Prime Blade": {
+    "releaseDate": "2018-06-15"
+  },
+  "Exalted Umbra Blade": {
+    "releaseDate": "2018-06-15"
+  },
+  "Excalibur": {
+    "releaseDate": "2012-10-25"
+  },
+  "Excalibur Prime": {
+    "releaseDate": "2012-12-18",
+    "vaulted": true
+  },
+  "Excalibur Umbra": {
+    "releaseDate": "2018-06-15"
+  },
+  "Exergis": {
+    "releaseDate": "2018-12-18"
+  },
+  "Falcor": {
+    "releaseDate": "2018-10-12"
+  },
+  "Fang": {
+    "releaseDate": "2013-03-18"
+  },
+  "Fang Prime": {
+    "releaseDate": "2013-07-13"
+  },
+  "Felarx": {
+    "releaseDate": "2022-06-09"
+  },
+  "Ferrox": {
+    "releaseDate": "2017-03-09"
+  },
+  "Fluctus (Atmosphere)": {
+    "releaseDate": "2014-12-19"
+  },
+  "Flux Rifle": {
+    "releaseDate": "2013-05-23"
+  },
+  "Follie": {
+    "releaseDate": "2026-03-25"
+  },
+  "Fragor": {
+    "releaseDate": "2013-01-14"
+  },
+  "Fragor Prime": {
+    "releaseDate": "2016-05-17",
+    "vaulted": true
+  },
+  "Frost": {
+    "releaseDate": "2013-01-29"
+  },
+  "Frost Prime": {
+    "releaseDate": "2013-05-03",
+    "vaulted": true
+  },
+  "Fulmin": {
+    "releaseDate": "2019-05-22"
+  },
+  "Fulmin Prime": {
+    "releaseDate": "2023-07-27",
+    "vaulted": true
+  },
+  "Furax": {
+    "releaseDate": "2012-10-25"
+  },
+  "Furax Wraith": {
+    "releaseDate": "2016-04-29"
+  },
+  "Furis": {
+    "releaseDate": "2012-10-25"
+  },
+  "Fusilai": {
+    "releaseDate": "2017-10-12"
+  },
+  "Galariak Prime": {
+    "releaseDate": "2025-12-10"
+  },
+  "Galatine": {
+    "releaseDate": "2013-09-27"
+  },
+  "Galatine Prime": {
+    "releaseDate": "2016-08-23",
+    "vaulted": true
+  },
+  "Galvacord": {
+    "releaseDate": "2018-12-18"
+  },
+  "Gammacor": {
+    "releaseDate": "2014-11-27"
+  },
+  "Gara": {
+    "releaseDate": "2017-10-12"
+  },
+  "Gara Prime": {
+    "releaseDate": "2021-05-25",
+    "vaulted": true
+  },
+  "Garuda": {
+    "releaseDate": "2018-11-08"
+  },
+  "Garuda Prime": {
+    "releaseDate": "2022-03-28",
+    "vaulted": true
+  },
+  "Garuda Prime Talons": {
+    "releaseDate": "2022-03-28"
+  },
+  "Garuda Talons": {
+    "releaseDate": "2018-11-08"
+  },
+  "Gauss": {
+    "releaseDate": "2019-08-29"
+  },
+  "Gauss Prime": {
+    "releaseDate": "2024-01-17",
+    "vaulted": true
+  },
+  "Gazal Machete": {
+    "releaseDate": "2016-10-05"
+  },
+  "Ghoulsaw": {
+    "releaseDate": "2021-09-08"
+  },
+  "Glaive": {
+    "releaseDate": "2013-04-26"
+  },
+  "Glaive Prime": {
+    "releaseDate": "2013-11-20",
+    "vaulted": true
+  },
+  "Glaxion": {
+    "releaseDate": "2014-08-28"
+  },
+  "Glaxion Vandal": {
+    "releaseDate": "2019-05-22"
+  },
+  "Glory": {
+    "releaseDate": "2024-06-18"
+  },
+  "Gorgon": {
+    "releaseDate": "2012-10-25"
+  },
+  "Gorgon Wraith": {
+    "releaseDate": "2014-03-05"
+  },
+  "Gotva Prime": {
+    "releaseDate": "2023-08-25",
+    "vaulted": true
+  },
+  "Grakata": {
+    "releaseDate": "2013-04-19"
+  },
+  "Gram": {
+    "releaseDate": "2013-02-08"
+  },
+  "Gram Prime": {
+    "releaseDate": "2018-09-25",
+    "vaulted": true
+  },
+  "Grattler (Atmosphere)": {
+    "releaseDate": "2015-07-31"
+  },
+  "Grendel": {
+    "releaseDate": "2019-10-31"
+  },
+  "Grendel Prime": {
+    "releaseDate": "2023-10-18",
+    "vaulted": true
+  },
+  "Grimoire": {
+    "releaseDate": "2023-12-13"
+  },
+  "Grinlok": {
+    "releaseDate": "2014-02-13"
+  },
+  "Guandao": {
+    "releaseDate": "2017-07-19"
+  },
+  "Guandao Prime": {
+    "releaseDate": "2020-10-27",
+    "vaulted": true
+  },
+  "Gunsen": {
+    "releaseDate": "2017-10-12"
+  },
+  "Gunsen Prime": {
+    "releaseDate": "2023-07-27",
+    "vaulted": true
+  },
+  "Gyre": {
+    "releaseDate": "2022-04-27"
+  },
+  "Gyre Prime": {
+    "releaseDate": "2025-12-10"
+  },
+  "Halikar": {
+    "releaseDate": "2014-10-24"
+  },
+  "Halikar Wraith": {
+    "releaseDate": "2021-04-05"
+  },
+  "Harmony": {
+    "releaseDate": "2024-06-18"
+  },
+  "Harpak": {
+    "releaseDate": "2015-07-31"
+  },
+  "Harrow": {
+    "releaseDate": "2017-06-29"
+  },
+  "Harrow Prime": {
+    "releaseDate": "2021-12-15",
+    "vaulted": true
+  },
+  "Hate": {
+    "releaseDate": "2013-05-23"
+  },
+  "Heat Dagger": {
+    "releaseDate": "2012-12-18"
+  },
+  "Heat Sword": {
+    "releaseDate": "2012-12-18"
+  },
+  "Hek": {
+    "releaseDate": "2013-01-04"
+  },
+  "Heliocor": {
+    "releaseDate": "2016-07-28"
+  },
+  "Helios": {
+    "releaseDate": "2014-03-19"
+  },
+  "Helios Prime": {
+    "releaseDate": "2017-02-28",
+    "vaulted": true
+  },
+  "Helminth Charger": {
+    "releaseDate": "2016-12-22"
+  },
+  "Helstrum": {
+    "releaseDate": "2020-06-11"
+  },
+  "Hema": {
+    "releaseDate": "2016-12-22"
+  },
+  "Hespar": {
+    "releaseDate": "2022-04-27"
+  },
+  "Higasa": {
+    "releaseDate": "2024-10-02"
+  },
+  "Hikou": {
+    "releaseDate": "2013-07-13"
+  },
+  "Hikou Prime": {
+    "releaseDate": "2014-09-24",
+    "vaulted": true
+  },
+  "Hildryn": {
+    "releaseDate": "2019-03-08"
+  },
+  "Hildryn Prime": {
+    "releaseDate": "2023-03-15",
+    "vaulted": true
+  },
+  "Hind": {
+    "releaseDate": "2013-08-16"
+  },
+  "Hirudo": {
+    "releaseDate": "2016-12-22"
+  },
+  "Huras Kubrow": {
+    "releaseDate": "2014-07-18"
+  },
+  "Hydroid": {
+    "releaseDate": "2014-04-09"
+  },
+  "Hydroid Prime": {
+    "releaseDate": "2017-08-29",
+    "vaulted": true
+  },
+  "Hystrix": {
+    "releaseDate": "2018-04-20"
+  },
+  "Hystrix Prime": {
+    "releaseDate": "2022-07-16",
+    "vaulted": true
+  },
+  "Ignis": {
+    "releaseDate": "2013-05-23"
+  },
+  "Ignis Wraith": {
+    "releaseDate": "2017-03-02"
+  },
+  "Imperator (Atmosphere)": {
+    "releaseDate": "2014-10-24"
+  },
+  "Imperator Vandal (Atmosphere)": {
+    "releaseDate": "2014-12-19"
+  },
+  "Inaros": {
+    "releaseDate": "2016-03-04"
+  },
+  "Inaros Prime": {
+    "releaseDate": "2020-07-14",
+    "vaulted": true
+  },
+  "Innodem": {
+    "releaseDate": "2022-06-09"
+  },
+  "Iron Staff": {
+    "releaseDate": "2018-06-15"
+  },
+  "Iron Staff Prime": {
+    "releaseDate": "2019-07-06"
+  },
+  "Ironbride": {
+    "releaseDate": "2020-11-19"
+  },
+  "Itzal": {
+    "releaseDate": "2014-12-19"
+  },
+  "Ivara": {
+    "releaseDate": "2015-12-03"
+  },
+  "Ivara Prime": {
+    "releaseDate": "2019-12-17",
+    "vaulted": true
+  },
+  "Jade": {
+    "releaseDate": "2024-06-18"
+  },
+  "Jat Kittag": {
+    "releaseDate": "2014-02-05"
+  },
+  "Jat Kusar": {
+    "releaseDate": "2017-07-26"
+  },
+  "Javlok": {
+    "releaseDate": "2016-12-16"
+  },
+  "Jaw Sword": {
+    "releaseDate": "2012-12-18"
+  },
+  "Kama": {
+    "releaseDate": "2013-09-13"
+  },
+  "Karak": {
+    "releaseDate": "2013-12-19"
+  },
+  "Karak Wraith": {
+    "releaseDate": "2015-05-12"
+  },
+  "Karyst": {
+    "releaseDate": "2014-08-13"
+  },
+  "Karyst Prime": {
+    "releaseDate": "2020-07-14",
+    "vaulted": true
+  },
+  "Kaszas": {
+    "releaseDate": "2015-10-01"
+  },
+  "Keratinos": {
+    "releaseDate": "2020-08-25"
+  },
+  "Kesheg": {
+    "releaseDate": "2016-11-11"
+  },
+  "Kestrel": {
+    "releaseDate": "2013-06-07"
+  },
+  "Kestrel Prime": {
+    "releaseDate": "2025-12-10"
+  },
+  "Khora": {
+    "releaseDate": "2018-04-20"
+  },
+  "Khora Prime": {
+    "releaseDate": "2022-07-16",
+    "vaulted": true
+  },
+  "Knell": {
+    "releaseDate": "2017-06-29"
+  },
+  "Knell Prime": {
+    "releaseDate": "2021-12-15",
+    "vaulted": true
+  },
+  "Knux": {
+    "releaseDate": "2015-08-19"
+  },
+  "Kogake": {
+    "releaseDate": "2013-06-28"
+  },
+  "Kogake Prime": {
+    "releaseDate": "2017-12-12",
+    "vaulted": true
+  },
+  "Kohm": {
+    "releaseDate": "2014-12-11"
+  },
+  "Kohmak": {
+    "releaseDate": "2015-03-19"
+  },
+  "Komorex": {
+    "releaseDate": "2019-05-22"
+  },
+  "Kompressa": {
+    "releaseDate": "2021-07-06"
+  },
+  "Kompressa Prime": {
+    "releaseDate": "2025-05-21"
+  },
+  "Korrudo": {
+    "releaseDate": "2019-04-04"
+  },
+  "Korumm": {
+    "releaseDate": "2021-12-15"
+  },
+  "Koumei": {
+    "releaseDate": "2024-10-02"
+  },
+  "Kraken": {
+    "releaseDate": "2013-02-14"
+  },
+  "Kreska": {
+    "releaseDate": "2018-11-08"
+  },
+  "Krohkur": {
+    "releaseDate": "2017-10-12"
+  },
+  "Kronen": {
+    "releaseDate": "2014-08-28"
+  },
+  "Kronen Prime": {
+    "releaseDate": "2018-03-20",
+    "vaulted": true
+  },
+  "Kronsh": {
+    "releaseDate": "2017-10-12"
+  },
+  "Kullervo": {
+    "releaseDate": "2023-06-21"
+  },
+  "Kulstar": {
+    "releaseDate": "2015-07-31"
+  },
+  "Kunai": {
+    "releaseDate": "2013-05-23"
+  },
+  "Kuva Ayanga (Atmosphere)": {
+    "releaseDate": "2019-10-31"
+  },
+  "Kuva Brakk": {
+    "releaseDate": "2019-10-31"
+  },
+  "Kuva Bramma": {
+    "releaseDate": "2020-02-04"
+  },
+  "Kuva Chakkhurr": {
+    "releaseDate": "2019-10-31"
+  },
+  "Kuva Drakgoon": {
+    "releaseDate": "2019-10-31"
+  },
+  "Kuva Grattler (Atmosphere)": {
+    "releaseDate": "2021-07-06"
+  },
+  "Kuva Hek": {
+    "releaseDate": "2021-07-06"
+  },
+  "Kuva Hind": {
+    "releaseDate": "2020-02-04"
+  },
+  "Kuva Karak": {
+    "releaseDate": "2019-10-31"
+  },
+  "Kuva Kohm": {
+    "releaseDate": "2019-10-31"
+  },
+  "Kuva Kraken": {
+    "releaseDate": "2019-10-31"
+  },
+  "Kuva Nukor": {
+    "releaseDate": "2020-02-04"
+  },
+  "Kuva Ogris": {
+    "releaseDate": "2019-10-31"
+  },
+  "Kuva Quartakk": {
+    "releaseDate": "2019-10-31"
+  },
+  "Kuva Seer": {
+    "releaseDate": "2019-10-31"
+  },
+  "Kuva Shildeg": {
+    "releaseDate": "2019-10-31"
+  },
+  "Kuva Sobek": {
+    "releaseDate": "2024-05-15"
+  },
+  "Kuva Tonkor": {
+    "releaseDate": "2019-10-31"
+  },
+  "Kuva Twin Stubbas": {
+    "releaseDate": "2019-10-31"
+  },
+  "Kuva Zarr": {
+    "releaseDate": "2021-07-06"
+  },
+  "Lacera": {
+    "releaseDate": "2015-12-03"
+  },
+  "Laetum": {
+    "releaseDate": "2022-04-27"
+  },
+  "Landslide Fists": {
+    "releaseDate": "2025-03-19"
+  },
+  "Landslide Fists Prime": {
+    "releaseDate": "2025-03-19"
+  },
+  "Lanka": {
+    "releaseDate": "2013-05-23"
+  },
+  "Larkspur (Atmosphere)": {
+    "releaseDate": "2019-03-08"
+  },
+  "Larkspur Prime": {
+    "vaulted": true
+  },
+  "Larkspur Prime (Atmosphere)": {
+    "releaseDate": "2023-03-15"
+  },
+  "Laser Rifle": {
+    "releaseDate": "2013-03-18"
+  },
+  "Lato": {
+    "releaseDate": "2012-10-25"
+  },
+  "Lato Prime": {
+    "releaseDate": "2012-12-18",
+    "vaulted": true
+  },
+  "Lato Vandal": {
+    "releaseDate": "2013-03-18"
+  },
+  "Latron": {
+    "releaseDate": "2012-10-25"
+  },
+  "Latron Prime": {
+    "releaseDate": "2013-05-23",
+    "vaulted": true
+  },
+  "Latron Wraith": {
+    "releaseDate": "2014-08-28"
+  },
+  "Lavos": {
+    "releaseDate": "2020-12-18"
+  },
+  "Lavos Prime": {
+    "releaseDate": "2025-02-12"
+  },
+  "Lecta": {
+    "releaseDate": "2013-11-20"
+  },
+  "Lenz": {
+    "releaseDate": "2017-08-02"
+  },
+  "Lesion": {
+    "releaseDate": "2016-03-04"
+  },
+  "Lex": {
+    "releaseDate": "2012-10-25"
+  },
+  "Lex Prime": {
+    "releaseDate": "2014-04-09"
+  },
+  "Limbo": {
+    "releaseDate": "2014-10-24"
+  },
+  "Limbo Prime": {
+    "releaseDate": "2018-06-19",
+    "vaulted": true
+  },
+  "Loki": {
+    "releaseDate": "2012-10-25"
+  },
+  "Loki Prime": {
+    "releaseDate": "2014-06-11",
+    "vaulted": true
+  },
+  "MK1-Bo": {
+    "releaseDate": "2014-07-18"
+  },
+  "MK1-Braton": {
+    "releaseDate": "2012-10-25"
+  },
+  "MK1-Furax": {
+    "releaseDate": "2014-07-18"
+  },
+  "MK1-Furis": {
+    "releaseDate": "2014-07-18"
+  },
+  "MK1-Kunai": {
+    "releaseDate": "2014-07-18"
+  },
+  "MK1-Paris": {
+    "releaseDate": "2014-07-18"
+  },
+  "MK1-Strun": {
+    "releaseDate": "2014-07-18"
+  },
+  "Machete": {
+    "releaseDate": "2013-05-23"
+  },
+  "Machete Wraith": {
+    "releaseDate": "2013-10-23"
+  },
+  "Mag": {
+    "releaseDate": "2012-10-25"
+  },
+  "Mag Prime": {
+    "releaseDate": "2013-09-13",
+    "vaulted": true
+  },
+  "Magistar": {
+    "releaseDate": "2013-12-19"
+  },
+  "Magnus": {
+    "releaseDate": "2013-12-04"
+  },
+  "Magnus Prime": {
+    "releaseDate": "2021-09-08",
+    "vaulted": true
+  },
+  "Mara Detron": {
+    "releaseDate": "2014-12-12"
+  },
+  "Marelok": {
+    "releaseDate": "2014-02-27"
+  },
+  "Masseter": {
+    "releaseDate": "2019-10-31"
+  },
+  "Masseter Prime": {
+    "releaseDate": "2023-10-18",
+    "vaulted": true
+  },
+  "Mausolon (Atmosphere)": {
+    "releaseDate": "2020-08-25"
+  },
+  "Medjay Predasite": {
+    "releaseDate": "2020-08-25"
+  },
+  "Mesa": {
+    "releaseDate": "2014-11-27"
+  },
+  "Mesa Prime": {
+    "releaseDate": "2018-12-18",
+    "vaulted": true
+  },
+  "Mewan": {
+    "releaseDate": "2017-10-12"
+  },
+  "Mios": {
+    "releaseDate": "2015-11-12"
+  },
+  "Mirage": {
+    "releaseDate": "2014-07-18"
+  },
+  "Mirage Prime": {
+    "releaseDate": "2017-12-12",
+    "vaulted": true
+  },
+  "Mire": {
+    "releaseDate": "2013-04-05"
+  },
+  "Miter": {
+    "releaseDate": "2013-08-09"
+  },
+  "Morgha (Atmosphere)": {
+    "releaseDate": "2020-11-19"
+  },
+  "Multron": {
+    "releaseDate": "2018-11-08"
+  },
+  "Mutalist Cernos": {
+    "releaseDate": "2016-03-04"
+  },
+  "Mutalist Quanta": {
+    "releaseDate": "2014-06-19"
+  },
+  "Nagantaka": {
+    "releaseDate": "2018-11-08"
+  },
+  "Nagantaka Prime": {
+    "releaseDate": "2022-03-28",
+    "vaulted": true
+  },
+  "Nami Skyla": {
+    "releaseDate": "2014-04-09"
+  },
+  "Nami Skyla Prime": {
+    "releaseDate": "2017-08-29",
+    "vaulted": true
+  },
+  "Nami Solo": {
+    "releaseDate": "2014-05-28"
+  },
+  "Nataruk": {
+    "releaseDate": "2021-12-15"
+  },
+  "Nautilus": {
+    "releaseDate": "2021-03-19"
+  },
+  "Nautilus Prime": {
+    "releaseDate": "2024-08-21"
+  },
+  "Nekros": {
+    "releaseDate": "2013-09-13"
+  },
+  "Nekros Prime": {
+    "releaseDate": "2016-08-23",
+    "vaulted": true
+  },
+  "Nepheri": {
+    "releaseDate": "2021-12-15"
+  },
+  "Neutralizer": {
+    "releaseDate": "2024-12-13"
+  },
+  "Nezha": {
+    "releaseDate": "2015-12-16"
+  },
+  "Nezha Prime": {
+    "releaseDate": "2020-10-27",
+    "vaulted": true
+  },
+  "Nidus": {
+    "releaseDate": "2016-12-22"
+  },
+  "Nidus Prime": {
+    "releaseDate": "2021-09-08",
+    "vaulted": true
+  },
+  "Nikana": {
+    "releaseDate": "2014-04-09"
+  },
+  "Nikana Prime": {
+    "releaseDate": "2016-02-16",
+    "vaulted": true
+  },
+  "Ninkondi": {
+    "releaseDate": "2015-09-09"
+  },
+  "Ninkondi Prime": {
+    "releaseDate": "2019-07-06",
+    "vaulted": true
+  },
+  "Noctua": {
+    "releaseDate": "2024-03-27"
+  },
+  "Nokko": {
+    "releaseDate": "2025-10-15"
+  },
+  "Nova": {
+    "releaseDate": "2013-07-13"
+  },
+  "Nova Prime": {
+    "releaseDate": "2014-12-17",
+    "vaulted": true
+  },
+  "Nukor": {
+    "releaseDate": "2014-08-28"
+  },
+  "Nyx": {
+    "releaseDate": "2013-01-29"
+  },
+  "Nyx Prime": {
+    "releaseDate": "2014-09-24",
+    "vaulted": true
+  },
+  "Oberon": {
+    "releaseDate": "2013-12-19"
+  },
+  "Oberon Prime": {
+    "releaseDate": "2017-05-30",
+    "vaulted": true
+  },
+  "Obex": {
+    "releaseDate": "2013-11-06"
+  },
+  "Octavia": {
+    "releaseDate": "2017-03-24"
+  },
+  "Octavia Prime": {
+    "releaseDate": "2021-02-23",
+    "vaulted": true
+  },
+  "Ocucor": {
+    "releaseDate": "2018-11-08"
+  },
+  "Odonata": {
+    "releaseDate": "2014-10-24"
+  },
+  "Odonata Prime": {
+    "releaseDate": "2015-03-25",
+    "vaulted": true
+  },
+  "Ogris": {
+    "releaseDate": "2013-05-23"
+  },
+  "Ohma": {
+    "releaseDate": "2017-01-18"
+  },
+  "Okina": {
+    "releaseDate": "2016-07-08"
+  },
+  "Okina Prime": {
+    "releaseDate": "2024-05-01",
+    "vaulted": true
+  },
+  "Onorix": {
+    "releaseDate": "2014-10-24"
+  },
+  "Onos": {
+    "releaseDate": "2024-03-27"
+  },
+  "Ooltha": {
+    "releaseDate": "2017-10-12"
+  },
+  "Opticor": {
+    "releaseDate": "2014-10-24"
+  },
+  "Opticor Vandal": {
+    "releaseDate": "2019-03-08"
+  },
+  "Oraxia": {
+    "releaseDate": "2025-06-25"
+  },
+  "Orthos": {
+    "releaseDate": "2013-06-07"
+  },
+  "Orthos Prime": {
+    "releaseDate": "2013-07-13"
+  },
+  "Orvius": {
+    "releaseDate": "2016-11-11"
+  },
+  "Oxylus": {
+    "releaseDate": "2018-11-08"
+  },
+  "Pandero": {
+    "releaseDate": "2017-03-24"
+  },
+  "Pandero Prime": {
+    "releaseDate": "2021-02-23",
+    "vaulted": true
+  },
+  "Pangolin Prime": {
+    "releaseDate": "2020-03-31",
+    "vaulted": true
+  },
+  "Pangolin Sword": {
+    "releaseDate": "2012-12-18"
+  },
+  "Panthera": {
+    "releaseDate": "2015-01-15"
+  },
+  "Panthera Prime": {
+    "releaseDate": "2020-07-14",
+    "vaulted": true
+  },
+  "Panzer Vulpaphyla": {
+    "releaseDate": "2020-08-25"
+  },
+  "Paracesis": {
+    "releaseDate": "2018-10-12"
+  },
+  "Paracyst": {
+    "releaseDate": "2014-11-27"
+  },
+  "Paris": {
+    "releaseDate": "2013-03-18"
+  },
+  "Paris Prime": {
+    "releaseDate": "2013-07-13"
+  },
+  "Pathocyst": {
+    "releaseDate": "2019-09-26"
+  },
+  "Pennant": {
+    "releaseDate": "2019-12-13"
+  },
+  "Penta": {
+    "releaseDate": "2013-12-12"
+  },
+  "Perigale": {
+    "releaseDate": "2022-11-30"
+  },
+  "Perigale Prime": {
+    "releaseDate": "2026-04-08"
+  },
+  "Phaedra (Atmosphere)": {
+    "releaseDate": "2015-10-01"
+  },
+  "Phage": {
+    "releaseDate": "2014-02-05"
+  },
+  "Phantasma": {
+    "releaseDate": "2018-08-24"
+  },
+  "Phantasma Prime": {
+    "releaseDate": "2022-10-05",
+    "vaulted": true
+  },
+  "Pharaoh Predasite": {
+    "releaseDate": "2020-08-25"
+  },
+  "Phenmor": {
+    "releaseDate": "2022-04-27"
+  },
+  "Plague Keewar": {
+    "releaseDate": "2017-11-15"
+  },
+  "Plague Kripath": {
+    "releaseDate": "2017-11-15"
+  },
+  "Plasma Sword": {
+    "releaseDate": "2012-12-18"
+  },
+  "Plinx": {
+    "releaseDate": "2018-12-18"
+  },
+  "Pox": {
+    "releaseDate": "2016-08-19"
+  },
+  "Praedos": {
+    "releaseDate": "2022-04-27"
+  },
+  "Prime Laser Rifle": {
+    "releaseDate": "2014-06-11"
+  },
+  "Prisma Angstrum": {
+    "releaseDate": "2017-09-09"
+  },
+  "Prisma Burst Laser": {
+    "releaseDate": "2015-08-21"
+  },
+  "Prisma Dual Cleavers": {
+    "releaseDate": "2015-07-10"
+  },
+  "Prisma Dual Decurions (Atmosphere)": {
+    "releaseDate": "2020-12-11"
+  },
+  "Prisma Gorgon": {
+    "releaseDate": "2015-01-22"
+  },
+  "Prisma Grakata": {
+    "releaseDate": "2015-06-12"
+  },
+  "Prisma Grinlok": {
+    "releaseDate": "2019-03-08"
+  },
+  "Prisma Lenz": {
+    "releaseDate": "2023-05-12"
+  },
+  "Prisma Machete": {
+    "releaseDate": "2021-06-10"
+  },
+  "Prisma Obex": {
+    "releaseDate": "2017-05-05"
+  },
+  "Prisma Ohma": {
+    "releaseDate": "2023-08-03"
+  },
+  "Prisma Shade": {
+    "releaseDate": "2015-08-21"
+  },
+  "Prisma Skana": {
+    "releaseDate": "2015-05-28"
+  },
+  "Prisma Tetra": {
+    "releaseDate": "2015-08-07"
+  },
+  "Prisma Twin Gremlins": {
+    "releaseDate": "2018-08-17"
+  },
+  "Prisma Veritux": {
+    "releaseDate": "2015-02-06"
+  },
+  "Proboscis Cernos": {
+    "releaseDate": "2020-11-19"
+  },
+  "Protea": {
+    "releaseDate": "2020-06-11"
+  },
+  "Protea Prime": {
+    "releaseDate": "2024-05-01",
+    "vaulted": true
+  },
+  "Prova": {
+    "releaseDate": "2013-05-23"
+  },
+  "Prova Vandal": {
+    "releaseDate": "2013-10-23"
+  },
+  "Pulmonars": {
+    "releaseDate": "2020-11-19"
+  },
+  "Pupacyst": {
+    "releaseDate": "2018-10-12"
+  },
+  "Purgator 1": {
+    "releaseDate": "2025-03-19"
+  },
+  "Pyrana": {
+    "releaseDate": "2014-06-04"
+  },
+  "Pyrana Prime": {
+    "releaseDate": "2018-06-19",
+    "vaulted": true
+  },
+  "Qorvex": {
+    "releaseDate": "2023-12-13"
+  },
+  "Quanta": {
+    "releaseDate": "2014-07-30"
+  },
+  "Quanta Vandal": {
+    "releaseDate": "2015-04-23"
+  },
+  "Quartakk": {
+    "releaseDate": "2017-10-12"
+  },
+  "Quassus": {
+    "releaseDate": "2020-08-25"
+  },
+  "Quatz": {
+    "releaseDate": "2019-07-18"
+  },
+  "Quellor": {
+    "releaseDate": "2019-12-13"
+  },
+  "Rabvee": {
+    "releaseDate": "2018-04-20"
+  },
+  "Raksa Kubrow": {
+    "releaseDate": "2014-07-18"
+  },
+  "Rakta Ballistica": {
+    "releaseDate": "2014-11-27"
+  },
+  "Rakta Cernos": {
+    "releaseDate": "2015-09-02"
+  },
+  "Rakta Dark Dagger": {
+    "releaseDate": "2016-09-15"
+  },
+  "Rathbone": {
+    "releaseDate": "2014-11-13"
+  },
+  "Rauta": {
+    "releaseDate": "2023-06-21"
+  },
+  "Reaper Prime": {
+    "releaseDate": "2013-05-23",
+    "vaulted": true
+  },
+  "Reconifex": {
+    "releaseDate": "2024-12-13"
+  },
+  "Redeemer": {
+    "releaseDate": "2014-11-27"
+  },
+  "Redeemer Prime": {
+    "releaseDate": "2018-12-18",
+    "vaulted": true
+  },
+  "Regulators": {
+    "releaseDate": "2018-06-15"
+  },
+  "Regulators Prime": {
+    "releaseDate": "2018-12-18"
+  },
+  "Revenant": {
+    "releaseDate": "2018-08-24"
+  },
+  "Revenant Prime": {
+    "releaseDate": "2022-10-05",
+    "vaulted": true
+  },
+  "Rhino": {
+    "releaseDate": "2012-10-25"
+  },
+  "Rhino Prime": {
+    "releaseDate": "2014-03-05",
+    "vaulted": true
+  },
+  "Riot-848": {
+    "releaseDate": "2025-03-19"
+  },
+  "Ripkas": {
+    "releaseDate": "2015-03-19"
+  },
+  "Rubico": {
+    "releaseDate": "2015-12-03"
+  },
+  "Rubico Prime": {
+    "releaseDate": "2018-09-25",
+    "vaulted": true
+  },
+  "Rumblejack": {
+    "releaseDate": "2021-12-15"
+  },
+  "Ruvox": {
+    "releaseDate": "2024-03-27"
+  },
+  "Sagek Prime": {
+    "releaseDate": "2025-12-10"
+  },
+  "Sahasa Kubrow": {
+    "releaseDate": "2014-07-18"
+  },
+  "Sampotes": {
+    "releaseDate": "2023-04-26"
+  },
+  "Sancti Castanas": {
+    "releaseDate": "2014-11-27"
+  },
+  "Sancti Magistar": {
+    "releaseDate": "2016-09-15"
+  },
+  "Sancti Tigris": {
+    "releaseDate": "2015-09-02"
+  },
+  "Sarofang": {
+    "releaseDate": "2022-11-30"
+  },
+  "Sarofang Prime": {
+    "releaseDate": "2026-04-08"
+  },
+  "Sarpa": {
+    "releaseDate": "2016-08-19"
+  },
+  "Saryn": {
+    "releaseDate": "2013-03-18"
+  },
+  "Saryn Prime": {
+    "releaseDate": "2016-02-16",
+    "vaulted": true
+  },
+  "Scindo": {
+    "releaseDate": "2013-01-14"
+  },
+  "Scindo Prime": {
+    "releaseDate": "2014-09-24",
+    "vaulted": true
+  },
+  "Scoliac": {
+    "releaseDate": "2013-12-19"
+  },
+  "Scourge": {
+    "releaseDate": "2017-06-29"
+  },
+  "Scourge Prime": {
+    "releaseDate": "2021-12-15",
+    "vaulted": true
+  },
+  "Scyotid": {
+    "releaseDate": "2025-06-25"
+  },
+  "Secura Dual Cestra": {
+    "releaseDate": "2014-11-27"
+  },
+  "Secura Lecta": {
+    "releaseDate": "2016-09-15"
+  },
+  "Secura Penta": {
+    "releaseDate": "2015-09-02"
+  },
+  "Seer": {
+    "releaseDate": "2013-07-13"
+  },
+  "Sepfahn": {
+    "releaseDate": "2018-04-20"
+  },
+  "Sepulcrum": {
+    "releaseDate": "2020-08-25"
+  },
+  "Serro": {
+    "releaseDate": "2014-05-21"
+  },
+  "Sevagoth": {
+    "releaseDate": "2021-04-13"
+  },
+  "Sevagoth Prime": {
+    "releaseDate": "2024-08-21"
+  },
+  "Shade": {
+    "releaseDate": "2013-03-18"
+  },
+  "Shade Prime": {
+    "releaseDate": "2023-03-15",
+    "vaulted": true
+  },
+  "Shadow Claws": {
+    "releaseDate": "2021-04-13"
+  },
+  "Shadow Claws Prime": {
+    "releaseDate": "2021-04-13"
+  },
+  "Shadow Clones": {
+    "releaseDate": "2025-03-19"
+  },
+  "Shadow Clones Prime": {
+    "releaseDate": "2025-03-19"
+  },
+  "Shaku": {
+    "releaseDate": "2015-12-16"
+  },
+  "Shattered Lash": {
+    "releaseDate": "2025-03-19"
+  },
+  "Shattered Lash Prime": {
+    "releaseDate": "2025-03-19"
+  },
+  "Shedu": {
+    "releaseDate": "2019-12-13"
+  },
+  "Sheev": {
+    "releaseDate": "2014-09-17"
+  },
+  "Sibear": {
+    "releaseDate": "2016-04-06"
+  },
+  "Sicarus": {
+    "releaseDate": "2012-10-25"
+  },
+  "Sicarus Prime": {
+    "releaseDate": "2013-11-20",
+    "vaulted": true
+  },
+  "Sigma & Octantis": {
+    "releaseDate": "2017-10-30"
+  },
+  "Silva & Aegis": {
+    "releaseDate": "2014-07-18"
+  },
+  "Silva & Aegis Prime": {
+    "releaseDate": "2017-05-30",
+    "vaulted": true
+  },
+  "Simulor": {
+    "releaseDate": "2015-06-25"
+  },
+  "Skana": {
+    "releaseDate": "2012-10-25"
+  },
+  "Skana Prime": {
+    "releaseDate": "2012-12-18",
+    "vaulted": true
+  },
+  "Skiajati": {
+    "releaseDate": "2018-06-15"
+  },
+  "Slaytra": {
+    "releaseDate": "2022-09-07"
+  },
+  "Sly Vulpaphyla": {
+    "releaseDate": "2020-08-25"
+  },
+  "Smeeta Kavat": {
+    "releaseDate": "2016-07-08"
+  },
+  "Snipetron": {
+    "releaseDate": "2012-10-25"
+  },
+  "Snipetron Vandal": {
+    "releaseDate": "2013-07-08"
+  },
+  "Sobek": {
+    "releaseDate": "2013-07-13"
+  },
+  "Soma": {
+    "releaseDate": "2013-09-13"
+  },
+  "Soma Prime": {
+    "releaseDate": "2014-12-17",
+    "vaulted": true
+  },
+  "Sonicor": {
+    "releaseDate": "2015-10-01"
+  },
+  "Spectra": {
+    "releaseDate": "2013-07-13"
+  },
+  "Spectra Vandal": {
+    "releaseDate": "2019-05-22"
+  },
+  "Spinnerex": {
+    "releaseDate": "2025-06-25"
+  },
+  "Spira": {
+    "releaseDate": "2015-09-23"
+  },
+  "Spira Prime": {
+    "releaseDate": "2016-02-16",
+    "vaulted": true
+  },
+  "Sporothrix": {
+    "releaseDate": "2020-11-19"
+  },
+  "Stahlta": {
+    "releaseDate": "2020-06-11"
+  },
+  "Staticor": {
+    "releaseDate": "2016-02-04"
+  },
+  "Steflos": {
+    "releaseDate": "2023-02-15"
+  },
+  "Stinger": {
+    "releaseDate": "2013-09-13"
+  },
+  "Stradavar": {
+    "releaseDate": "2016-05-11"
+  },
+  "Stradavar Prime": {
+    "releaseDate": "2019-04-02",
+    "vaulted": true
+  },
+  "Stropha": {
+    "releaseDate": "2020-06-11"
+  },
+  "Strun": {
+    "releaseDate": "2012-10-25"
+  },
+  "Strun Prime": {
+    "releaseDate": "2021-09-08",
+    "vaulted": true
+  },
+  "Strun Wraith": {
+    "releaseDate": "2013-09-03"
+  },
+  "Stubba": {
+    "releaseDate": "2017-10-12"
+  },
+  "Stug": {
+    "releaseDate": "2013-12-19"
+  },
+  "Styanax": {
+    "releaseDate": "2022-09-07"
+  },
+  "Sun & Moon": {
+    "releaseDate": "2023-04-26"
+  },
+  "Sunika Kubrow": {
+    "releaseDate": "2014-07-18"
+  },
+  "Supra": {
+    "releaseDate": "2013-05-23"
+  },
+  "Supra Vandal": {
+    "releaseDate": "2017-05-04"
+  },
+  "Sweeper": {
+    "releaseDate": "2013-09-13"
+  },
+  "Sweeper Prime": {
+    "releaseDate": "2015-07-07",
+    "vaulted": true
+  },
+  "Syam": {
+    "releaseDate": "2023-04-26"
+  },
+  "Sybaris": {
+    "releaseDate": "2014-05-14"
+  },
+  "Sybaris Prime": {
+    "releaseDate": "2017-05-30",
+    "vaulted": true
+  },
+  "Sydon": {
+    "releaseDate": "2016-01-05"
+  },
+  "Synapse": {
+    "releaseDate": "2013-09-13"
+  },
+  "Synoid Gammacor": {
+    "releaseDate": "2014-11-27"
+  },
+  "Synoid Heliocor": {
+    "releaseDate": "2016-09-15"
+  },
+  "Synoid Simulor": {
+    "releaseDate": "2015-09-02"
+  },
+  "Tak & Lug": {
+    "releaseDate": "2025-04-17"
+  },
+  "Talons": {
+    "releaseDate": "2015-12-03"
+  },
+  "Tatsu": {
+    "releaseDate": "2019-03-08"
+  },
+  "Tatsu Prime": {
+    "releaseDate": "2022-10-05",
+    "vaulted": true
+  },
+  "Taxon": {
+    "releaseDate": "2017-02-09"
+  },
+  "Tazicor": {
+    "releaseDate": "2018-11-08"
+  },
+  "Tekko": {
+    "releaseDate": "2015-10-01"
+  },
+  "Tekko Prime": {
+    "releaseDate": "2019-10-01",
+    "vaulted": true
+  },
+  "Telos Akbolto": {
+    "releaseDate": "2014-11-27"
+  },
+  "Telos Boltace": {
+    "releaseDate": "2016-09-15"
+  },
+  "Telos Boltor": {
+    "releaseDate": "2015-09-02"
+  },
+  "Temple": {
+    "releaseDate": "2025-03-19"
+  },
+  "Tenet Agendus": {
+    "releaseDate": "2021-07-06"
+  },
+  "Tenet Arca Plasmor": {
+    "releaseDate": "2021-07-06"
+  },
+  "Tenet Cycron": {
+    "releaseDate": "2021-07-06"
+  },
+  "Tenet Detron": {
+    "releaseDate": "2021-07-06"
+  },
+  "Tenet Diplos": {
+    "releaseDate": "2021-07-06"
+  },
+  "Tenet Envoy": {
+    "releaseDate": "2021-07-06"
+  },
+  "Tenet Exec": {
+    "releaseDate": "2021-07-06"
+  },
+  "Tenet Ferrox": {
+    "releaseDate": "2022-11-30"
+  },
+  "Tenet Flux Rifle": {
+    "releaseDate": "2021-07-06"
+  },
+  "Tenet Glaxion": {
+    "releaseDate": "2024-05-15"
+  },
+  "Tenet Grigori": {
+    "releaseDate": "2021-07-06"
+  },
+  "Tenet Livia": {
+    "releaseDate": "2021-07-06"
+  },
+  "Tenet Plinx": {
+    "releaseDate": "2022-11-30"
+  },
+  "Tenet Quanta": {
+    "releaseDate": "2026-03-25"
+  },
+  "Tenet Spirex": {
+    "releaseDate": "2021-07-06"
+  },
+  "Tenet Tetra": {
+    "releaseDate": "2021-07-06"
+  },
+  "Tenora": {
+    "releaseDate": "2017-03-24"
+  },
+  "Tenora Prime": {
+    "releaseDate": "2021-02-23",
+    "vaulted": true
+  },
+  "Tetra": {
+    "releaseDate": "2014-01-22"
+  },
+  "Thalys": {
+    "releaseDate": "2025-06-25"
+  },
+  "Thornbak": {
+    "releaseDate": "2025-10-15"
+  },
+  "Tiberon": {
+    "releaseDate": "2014-10-01"
+  },
+  "Tiberon Prime": {
+    "releaseDate": "2018-03-20",
+    "vaulted": true
+  },
+  "Tigris": {
+    "releaseDate": "2013-11-20"
+  },
+  "Tigris Prime": {
+    "releaseDate": "2016-08-23",
+    "vaulted": true
+  },
+  "Tipedo": {
+    "releaseDate": "2015-01-08"
+  },
+  "Tipedo Prime": {
+    "releaseDate": "2019-04-02",
+    "vaulted": true
+  },
+  "Titania": {
+    "releaseDate": "2016-08-19"
+  },
+  "Titania Prime": {
+    "releaseDate": "2020-03-31",
+    "vaulted": true
+  },
+  "Tonbo": {
+    "releaseDate": "2015-02-18"
+  },
+  "Tonkkatt": {
+    "releaseDate": "2025-04-17"
+  },
+  "Tonkor": {
+    "releaseDate": "2015-04-23"
+  },
+  "Torid": {
+    "releaseDate": "2013-05-23"
+  },
+  "Trinity": {
+    "releaseDate": "2012-10-25"
+  },
+  "Trinity Prime": {
+    "releaseDate": "2015-10-06",
+    "vaulted": true
+  },
+  "Trumna": {
+    "releaseDate": "2020-08-25"
+  },
+  "Trumna Prime": {
+    "releaseDate": "2024-11-13"
+  },
+  "Twin Basolk": {
+    "releaseDate": "2015-10-21"
+  },
+  "Twin Grakatas": {
+    "releaseDate": "2015-07-31"
+  },
+  "Twin Gremlins": {
+    "releaseDate": "2013-08-09"
+  },
+  "Twin Kohmak": {
+    "releaseDate": "2015-03-19"
+  },
+  "Twin Krohkur": {
+    "releaseDate": "2017-10-12"
+  },
+  "Twin Rogga": {
+    "releaseDate": "2016-11-11"
+  },
+  "Twin Vipers": {
+    "releaseDate": "2013-04-12"
+  },
+  "Twin Vipers Wraith": {
+    "releaseDate": "2013-12-19"
+  },
+  "Tysis": {
+    "releaseDate": "2014-01-15"
+  },
+  "Uriel": {
+    "releaseDate": "2025-12-10"
+  },
+  "Vadarya Prime": {
+    "releaseDate": "2025-08-26"
+  },
+  "Valkyr": {
+    "releaseDate": "2013-11-20"
+  },
+  "Valkyr Prime": {
+    "releaseDate": "2016-11-22",
+    "vaulted": true
+  },
+  "Valkyr Prime Talons": {
+    "releaseDate": "2018-06-15"
+  },
+  "Valkyr Talons": {
+    "releaseDate": "2018-06-15"
+  },
+  "Vasca Kavat": {
+    "releaseDate": "2019-10-31"
+  },
+  "Vastilok": {
+    "releaseDate": "2021-07-17"
+  },
+  "Vasto": {
+    "releaseDate": "2013-07-26"
+  },
+  "Vasto Prime": {
+    "releaseDate": "2014-12-17",
+    "vaulted": true
+  },
+  "Vauban": {
+    "releaseDate": "2013-05-17"
+  },
+  "Vauban Prime": {
+    "releaseDate": "2016-05-17",
+    "vaulted": true
+  },
+  "Vaykor Hek": {
+    "releaseDate": "2015-09-02"
+  },
+  "Vaykor Marelok": {
+    "releaseDate": "2014-11-27"
+  },
+  "Vaykor Sydon": {
+    "releaseDate": "2016-09-15"
+  },
+  "Vectis": {
+    "releaseDate": "2013-10-30"
+  },
+  "Vectis Prime": {
+    "releaseDate": "2015-07-07",
+    "vaulted": true
+  },
+  "Veldt": {
+    "releaseDate": "2018-04-20"
+  },
+  "Velocitus (Atmosphere)": {
+    "releaseDate": "2014-11-13"
+  },
+  "Velox": {
+    "releaseDate": "2020-06-11"
+  },
+  "Velox Prime": {
+    "releaseDate": "2024-05-01",
+    "vaulted": true
+  },
+  "Venato": {
+    "releaseDate": "2021-12-15"
+  },
+  "Venato Prime": {
+    "releaseDate": "2025-08-26"
+  },
+  "Venka": {
+    "releaseDate": "2014-06-25"
+  },
+  "Venka Prime": {
+    "releaseDate": "2016-11-22",
+    "vaulted": true
+  },
+  "Verdilac": {
+    "releaseDate": "2021-12-15"
+  },
+  "Verglas": {
+    "releaseDate": "2021-03-19"
+  },
+  "Verglas Prime": {
+    "releaseDate": "2024-08-21"
+  },
+  "Vericres": {
+    "releaseDate": "2022-07-14"
+  },
+  "Veritux": {
+    "releaseDate": "2014-10-24"
+  },
+  "Vesper 77": {
+    "releaseDate": "2024-12-13"
+  },
+  "Vinquibus": {
+    "releaseDate": "2025-12-10"
+  },
+  "Viper": {
+    "releaseDate": "2013-03-18"
+  },
+  "Viper Wraith": {
+    "releaseDate": "2018-01-11"
+  },
+  "Vitrica": {
+    "releaseDate": "2020-10-27"
+  },
+  "Vizier Predasite": {
+    "releaseDate": "2020-08-25"
+  },
+  "Volnus": {
+    "releaseDate": "2017-10-12"
+  },
+  "Volnus Prime": {
+    "releaseDate": "2021-05-25",
+    "vaulted": true
+  },
+  "Volt": {
+    "releaseDate": "2012-10-25"
+  },
+  "Volt Prime": {
+    "releaseDate": "2015-03-25",
+    "vaulted": true
+  },
+  "Voruna": {
+    "releaseDate": "2022-11-30"
+  },
+  "Voruna Prime": {
+    "releaseDate": "2026-04-08"
+  },
+  "Vulcax": {
+    "releaseDate": "2018-11-08"
+  },
+  "Vulkar": {
+    "releaseDate": "2013-05-23"
+  },
+  "Vulkar Wraith": {
+    "releaseDate": "2016-01-25"
+  },
+  "Vulklok": {
+    "releaseDate": "2015-09-02"
+  },
+  "War": {
+    "releaseDate": "2015-12-03"
+  },
+  "Whipclaw": {
+    "releaseDate": "2025-03-19"
+  },
+  "Whipclaw Prime": {
+    "releaseDate": "2025-03-19"
+  },
+  "Wisp": {
+    "releaseDate": "2019-05-22"
+  },
+  "Wisp Prime": {
+    "releaseDate": "2023-07-27",
+    "vaulted": true
+  },
+  "Wolf Sledge": {
+    "releaseDate": "2019-02-27"
+  },
+  "Wukong": {
+    "releaseDate": "2015-11-25"
+  },
+  "Wukong Prime": {
+    "releaseDate": "2019-07-06",
+    "vaulted": true
+  },
+  "Wyrm": {
+    "releaseDate": "2013-03-18"
+  },
+  "Wyrm Prime": {
+    "vaulted": true
+  },
+  "Xaku": {
+    "releaseDate": "2020-08-25"
+  },
+  "Xaku Prime": {
+    "releaseDate": "2024-11-13"
+  },
+  "Xoris": {
+    "releaseDate": "2020-06-11"
+  },
+  "Yareli": {
+    "releaseDate": "2021-07-06"
+  },
+  "Yareli Prime": {
+    "releaseDate": "2025-05-21"
+  },
+  "Zakti": {
+    "releaseDate": "2017-07-19"
+  },
+  "Zakti Prime": {
+    "releaseDate": "2020-10-27",
+    "vaulted": true
+  },
+  "Zarr": {
+    "releaseDate": "2016-11-11"
+  },
+  "Zenistar": {
+    "releaseDate": "2016-07-28"
+  },
+  "Zenith": {
+    "releaseDate": "2017-04-12"
+  },
+  "Zephyr": {
+    "releaseDate": "2014-02-05"
+  },
+  "Zephyr Prime": {
+    "releaseDate": "2018-03-20",
+    "vaulted": true
+  },
+  "Zhuge": {
+    "releaseDate": "2016-03-16"
+  },
+  "Zhuge Prime": {
+    "releaseDate": "2019-07-06",
+    "vaulted": true
+  },
+  "Zylok": {
+    "releaseDate": "2018-08-30"
+  },
+  "Zylok Prime": {
+    "releaseDate": "2023-10-18",
+    "vaulted": true
+  },
+  "Zymos": {
+    "releaseDate": "2020-08-25"
+  }
+}
