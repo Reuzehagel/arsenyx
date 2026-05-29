@@ -24,7 +24,7 @@ Local secrets live in a **single file: `apps/api/.env`** (gitignored — copy fr
 
 - `wrangler dev` (the local API server, `bun run dev`) — Wrangler 4.x loads `.env` into the Worker's `env` bindings automatically (boot log: "Using secrets defined in .env"). **Do not add a `.dev.vars` file**: if present it *overrides and suppresses* `.env` entirely, reintroducing the drift this setup avoids. (`CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false` disables `.env` loading.)
 - Prisma (`db:push` / `db:studio` / `db:generate`) via [prisma.config.ts](prisma.config.ts) (dotenv).
-- The `bun run` scripts (`seed-admin`, `backfill-image-names`) via `dotenv` / bun's auto-load.
+- The `bun run` scripts (e.g. `seed-admin`) via `dotenv` / bun's auto-load.
 
 Keys: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`, `NODE_ENV`, `WEB_ORIGIN`.
 

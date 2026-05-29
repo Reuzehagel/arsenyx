@@ -319,6 +319,68 @@ export function refreshImagesFromMap(
   }
 }
 
+/**
+ * Drop the denormalized `imageName` from every placed mod/arcane/helminth
+ * before a build is persisted. Images are re-resolved at render time by stable
+ * `uniqueName` — the viewer via `image-map.json` (refreshImagesFromMap), the
+ * editor via the full catalog (normalizeBuildData) — so the stored copy is dead
+ * weight that also rots whenever the image-naming/hosting scheme changes.
+ * `name` and stats stay for snapshot fidelity (vaulted entities still render).
+ *
+ * Rivens are the one exception: they carry a stub `uniqueName` that isn't in the
+ * catalog/map, so there's nothing to re-resolve from — but their image is the
+ * stable `RIVEN_IMAGE_NAME` constant that never rots, so we keep it as-is.
+ */
+export function stripPersistedImages(data: SavedBuildData): SavedBuildData {
+  const stripMod = (placed: PlacedMod): PlacedMod => {
+    if (placed.mod.rivenStats) return placed
+    const { imageName: _drop, ...mod } = placed.mod
+    return { ...placed, mod }
+  }
+  const stripSlots = (
+    slots: Partial<Record<SlotId, PlacedMod>> | undefined,
+  ): Partial<Record<SlotId, PlacedMod>> | undefined => {
+    if (!slots) return slots
+    const next: Partial<Record<SlotId, PlacedMod>> = {}
+    for (const [id, placed] of Object.entries(slots)) {
+      if (placed) next[id as SlotId] = stripMod(placed)
+    }
+    return next
+  }
+  const stripArcanes = (
+    arcanes: (PlacedArcane | null)[] | undefined,
+  ): (PlacedArcane | null)[] | undefined =>
+    arcanes?.map((a) => {
+      if (!a) return a
+      const { imageName: _drop, ...arcane } = a.arcane
+      return { ...a, arcane }
+    })
+  const stripHelminth = (
+    helminth: Record<number, HelminthAbility> | undefined,
+  ): Record<number, HelminthAbility> | undefined => {
+    if (!helminth) return helminth
+    const next: Record<number, HelminthAbility> = {}
+    for (const [slot, ability] of Object.entries(helminth)) {
+      const { imageName: _drop, ...rest } = ability
+      next[Number(slot)] = rest
+    }
+    return next
+  }
+
+  return {
+    ...data,
+    slots: stripSlots(data.slots),
+    arcanes: stripArcanes(data.arcanes),
+    helminth: stripHelminth(data.helminth),
+    variants: data.variants?.map((v) => ({
+      ...v,
+      slots: stripSlots(v.slots) ?? v.slots,
+      arcanes: stripArcanes(v.arcanes) ?? v.arcanes,
+      helminth: stripHelminth(v.helminth),
+    })),
+  }
+}
+
 // Pre-rewrite builds were persisted in BuildState shape (auraSlots/normalSlots/
 // exilusSlot/...). The editor reads SavedBuildData. Detect and convert.
 type LegacyOrSaved = Partial<BuildState> &
@@ -341,7 +403,21 @@ export function normalizeBuildData(
   const base = isLegacyBuildData(r)
     ? buildStateToSavedData(r, mods, arcanes).data
     : migrateLegacyAuraKey(r as SavedBuildData)
-  return refreshHelminthImage(base, helminthAbilities)
+  const withHelminth = refreshHelminthImage(base, helminthAbilities)
+
+  // Builds no longer persist mod/arcane `imageName` (see stripPersistedImages),
+  // so re-resolve it by `uniqueName`. When a catalog is supplied — the editor
+  // loads the full mods/arcanes — derive a map from it and patch. The viewer
+  // passes empty catalogs to skip the ~1.2 MB download and instead calls
+  // refreshImagesFromMap with the compact image-map.json after this. Legacy
+  // builds already carry fresh images from buildStateToSavedData; this is an
+  // idempotent confirmation for them.
+  if (mods.length === 0 && arcanes.length === 0) return withHelminth
+  const catalogMap: Record<string, string> = {}
+  for (const m of mods) if (m.imageName) catalogMap[m.uniqueName] = m.imageName
+  for (const a of arcanes)
+    if (a.imageName) catalogMap[a.uniqueName] = a.imageName
+  return refreshImagesFromMap(withHelminth, catalogMap)
 }
 
 // Synthetic single-variant identity used when a legacy / single-loadout build

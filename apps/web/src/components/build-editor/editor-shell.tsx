@@ -44,6 +44,7 @@ import {
   normalizeBuildData,
   savedDataToBuildState,
   selectVariant,
+  stripPersistedImages,
   SYNTHETIC_VARIANT_ID,
   SYNTHETIC_VARIANT_LABEL,
 } from "@/lib/codec/build-codec-adapter"
@@ -746,7 +747,11 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
         visibility: nextVisibility,
         organizationId: nextOrganizationId,
         hideAuthor: nextHideAuthor,
-        buildData: {
+        // Strip denormalized mod/arcane/helminth imageName before persisting —
+        // images are re-resolved by uniqueName at render time (viewer via
+        // image-map.json, editor via the catalog), so storing them just bloats
+        // the row and rots across image-scheme changes.
+        buildData: stripPersistedImages({
           version: 1,
           slots: slots.placed,
           formaPolarities: slots.formaPolarities,
@@ -767,7 +772,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
             !isSyntheticVariant(nextVariants[0])) && {
             variants: nextVariants,
           }),
-        },
+        }),
         guide: {
           summary: guideSummary.trim() || null,
           description: guideDescription.trim() || null,

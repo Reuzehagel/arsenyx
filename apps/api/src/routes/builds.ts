@@ -777,6 +777,7 @@ builds.get("/:slug", async (c) => {
         viewCount: true,
         itemName: true,
         itemCategory: true,
+        itemUniqueName: true,
         itemImageName: true,
         user: { select: { name: true, username: true, displayUsername: true } },
         organization: { select: { name: true } },
@@ -798,6 +799,7 @@ builds.get("/:slug", async (c) => {
       item: {
         name: slim.itemName,
         category: slim.itemCategory,
+        uniqueName: slim.itemUniqueName,
         imageName: slim.itemImageName,
       },
       user: slim.user,
