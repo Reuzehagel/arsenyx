@@ -38,6 +38,10 @@ export type BuildListItem = {
   createdAt: string
   updatedAt: string
   item: {
+    /** Stable DE identifier — used to resolve the CURRENT catalog image at
+     *  render time, since the stored `imageName` rots across image-scheme
+     *  changes (see useItemImage). */
+    uniqueName: string
     name: string
     imageName: string | null
     category: string

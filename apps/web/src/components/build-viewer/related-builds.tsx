@@ -5,6 +5,7 @@ import {
   partnerBuildsQuery,
   type PartnerBuild,
 } from "@/lib/queries/partner-builds-query"
+import { useItemImage } from "@/lib/use-item-image"
 import { getImageUrl } from "@/lib/warframe"
 
 /**
@@ -32,6 +33,7 @@ export function RelatedBuildsStrip({ slug }: { slug: string }) {
 }
 
 function RelatedBuildChip({ build }: { build: PartnerBuild }) {
+  const itemImage = useItemImage()
   return (
     <RouterLink
       to="/builds/$slug"
@@ -41,7 +43,9 @@ function RelatedBuildChip({ build }: { build: PartnerBuild }) {
     >
       <span className="bg-muted/40 flex size-12 shrink-0 items-center justify-center overflow-hidden rounded">
         <img
-          src={getImageUrl(build.item.imageName ?? undefined)}
+          src={getImageUrl(
+            itemImage(build.item.uniqueName, build.item.imageName),
+          )}
           alt=""
           className="size-full object-contain"
         />

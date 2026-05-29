@@ -26,6 +26,7 @@ export const LIST_SELECT = {
   hideAuthor: true,
   createdAt: true,
   updatedAt: true,
+  itemUniqueName: true,
   itemName: true,
   itemImageName: true,
   itemCategory: true,
@@ -127,6 +128,7 @@ export function serializeListRow(b: ListRow) {
     createdAt: b.createdAt.toISOString(),
     updatedAt: b.updatedAt.toISOString(),
     item: {
+      uniqueName: b.itemUniqueName,
       name: b.itemName,
       imageName: b.itemImageName,
       category: b.itemCategory,

@@ -8,6 +8,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import type { BuildListItem } from "@/lib/queries/builds-list-query"
+import { useItemImage } from "@/lib/use-item-image"
 import { formatAbsoluteTime, relativeTime } from "@/lib/util/relative-time"
 import { authorName } from "@/lib/util/user-display"
 import { getImageUrl } from "@/lib/warframe"
@@ -15,6 +16,7 @@ import { getImageUrl } from "@/lib/warframe"
 export function BuildCard({ build }: { build: BuildListItem }) {
   const author = authorName(build.user)
   const timeAgo = relativeTime(build.updatedAt)
+  const itemImage = useItemImage()
 
   return (
     <Link
@@ -24,7 +26,9 @@ export function BuildCard({ build }: { build: BuildListItem }) {
     >
       <div className="bg-muted/20 relative aspect-video">
         <img
-          src={getImageUrl(build.item.imageName ?? undefined)}
+          src={getImageUrl(
+            itemImage(build.item.uniqueName, build.item.imageName),
+          )}
           alt={build.item.name}
           className="absolute inset-0 h-full w-full object-contain p-2"
         />
@@ -79,6 +83,7 @@ export function BuildCard({ build }: { build: BuildListItem }) {
 export function BuildRow({ build }: { build: BuildListItem }) {
   const author = authorName(build.user)
   const timeAgo = relativeTime(build.updatedAt)
+  const itemImage = useItemImage()
 
   return (
     <Link
@@ -88,7 +93,9 @@ export function BuildRow({ build }: { build: BuildListItem }) {
     >
       <div className="bg-muted/20 relative size-14 shrink-0 overflow-hidden rounded-md sm:size-16">
         <img
-          src={getImageUrl(build.item.imageName ?? undefined)}
+          src={getImageUrl(
+            itemImage(build.item.uniqueName, build.item.imageName),
+          )}
           alt={build.item.name}
           className="absolute inset-0 h-full w-full object-contain p-1"
         />

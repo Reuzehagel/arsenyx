@@ -19,6 +19,7 @@ import {
   getVariants,
   isLegacyBuildData,
   normalizeBuildData,
+  refreshImagesFromMap,
   selectVariant,
 } from "@/lib/codec/build-codec-adapter"
 import { arcanesQuery } from "@/lib/queries/arcanes-query"
@@ -27,6 +28,7 @@ import {
   helminthQuery,
   type HelminthAbility,
 } from "@/lib/queries/helminth-query"
+import { imageMapQuery } from "@/lib/queries/image-map-query"
 import { itemQuery } from "@/lib/queries/item-query"
 import { modsQuery } from "@/lib/queries/mods-query"
 import { padShards } from "@/lib/shards"
@@ -51,15 +53,16 @@ interface BuildViewerBodyProps {
 
 /**
  * Read-only viewer body for `/builds/$slug`. Branches on legacy-vs-new
- * buildData shape so legacy builds (which inline only uniqueNames) can
- * fetch the mod/arcane/helminth catalogs while new builds skip the
- * ~1.35MB download.
+ * buildData shape so legacy builds can fetch the full mod/arcane/helminth
+ * catalogs (to rebuild their mods) while new builds skip the ~1.35MB
+ * download. Both paths re-resolve images via the compact image-map.json
+ * (see refreshImagesFromMap), so a build never shows a stale/404 icon.
  */
 export function BuildViewerBody(props: BuildViewerBodyProps) {
-  // Only legacy BuildState-shape builds need the catalogs for uniqueName
-  // lookup and image refresh (older wfcd hashed-slug filenames now 404
-  // on the CDN). New-format builds carry full mod/arcane objects inline
-  // in buildData.
+  // Only legacy BuildState-shape builds need the full catalogs to rebuild
+  // mods from uniqueNames. New-format builds carry full mod/arcane objects
+  // inline; their stale inline imageNames are refreshed from image-map.json
+  // in BuildViewerBodyInner.
   if (isLegacyBuildData(props.build.buildData)) {
     return <BuildViewerBodyWithCatalog {...props} />
   }
@@ -102,17 +105,24 @@ function BuildViewerBodyInner({
   helminthAbilities: HelminthAbility[]
 }) {
   const { data: item } = useSuspenseQuery(itemQuery(category, itemSlug))
+  const { data: imageMap } = useSuspenseQuery(imageMapQuery)
   const navigate = useNavigate()
 
+  // Re-resolve mod/arcane/helminth images by uniqueName. New-format builds
+  // carry stale inline imageNames (frozen at save time); legacy builds are
+  // already fresh via the catalog rebuild, so this just confirms them.
   const savedAll = useMemo(
     () =>
-      normalizeBuildData(
-        build.buildData,
-        allMods,
-        allArcanes,
-        helminthAbilities,
+      refreshImagesFromMap(
+        normalizeBuildData(
+          build.buildData,
+          allMods,
+          allArcanes,
+          helminthAbilities,
+        ),
+        imageMap,
       ),
-    [build.buildData, allMods, allArcanes, helminthAbilities],
+    [build.buildData, allMods, allArcanes, helminthAbilities, imageMap],
   )
 
   const variants = useMemo(() => getVariants(savedAll), [savedAll])
@@ -198,6 +208,7 @@ function BuildViewerBodyInner({
           formaCount={formaCount}
           category={category}
           itemSlug={itemSlug}
+          itemImageName={item.imageName ?? undefined}
         />
       )}
 

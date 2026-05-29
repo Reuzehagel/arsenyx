@@ -254,6 +254,71 @@ export function buildStateToSavedData(
   }
 }
 
+/**
+ * Re-resolve every placed mod/arcane/helminth `imageName` from the current
+ * catalog by its stable `uniqueName`. New-format builds carry full mod objects
+ * inline (so the viewer skips the ~1.2 MB mod catalog), but those inline
+ * `imageName`s were frozen at save time and rot across image-scheme changes.
+ * Patching against the compact `image-map.json` self-heals them without the
+ * full catalog. Legacy builds already get fresh images via `toEditorPlacedMod`,
+ * so this is a no-op for them. Falls back to the stored value on a map miss.
+ */
+export function refreshImagesFromMap(
+  data: SavedBuildData,
+  imageMap: Record<string, string> | undefined,
+): SavedBuildData {
+  if (!imageMap || Object.keys(imageMap).length === 0) return data
+  const url = (uniqueName?: string): string | undefined =>
+    uniqueName ? imageMap[uniqueName] : undefined
+
+  const fixSlots = (
+    slots: Partial<Record<SlotId, PlacedMod>> | undefined,
+  ): Partial<Record<SlotId, PlacedMod>> | undefined => {
+    if (!slots) return slots
+    const next: Partial<Record<SlotId, PlacedMod>> = {}
+    for (const [id, placed] of Object.entries(slots)) {
+      if (!placed) continue
+      const fresh = url(placed.mod.uniqueName)
+      next[id as SlotId] = fresh
+        ? { ...placed, mod: { ...placed.mod, imageName: fresh } }
+        : placed
+    }
+    return next
+  }
+  const fixArcanes = (
+    arcanes: (PlacedArcane | null)[] | undefined,
+  ): (PlacedArcane | null)[] | undefined =>
+    arcanes?.map((a) => {
+      if (!a) return a
+      const fresh = url(a.arcane.uniqueName)
+      return fresh ? { ...a, arcane: { ...a.arcane, imageName: fresh } } : a
+    })
+  const fixHelminth = (
+    helminth: Record<number, HelminthAbility> | undefined,
+  ): Record<number, HelminthAbility> | undefined => {
+    if (!helminth) return helminth
+    const next: Record<number, HelminthAbility> = {}
+    for (const [slot, ability] of Object.entries(helminth)) {
+      const fresh = url(ability.uniqueName)
+      next[Number(slot)] = fresh ? { ...ability, imageName: fresh } : ability
+    }
+    return next
+  }
+
+  return {
+    ...data,
+    slots: fixSlots(data.slots),
+    arcanes: fixArcanes(data.arcanes),
+    helminth: fixHelminth(data.helminth),
+    variants: data.variants?.map((v) => ({
+      ...v,
+      slots: fixSlots(v.slots) ?? v.slots,
+      arcanes: fixArcanes(v.arcanes) ?? v.arcanes,
+      helminth: fixHelminth(v.helminth),
+    })),
+  }
+}
+
 // Pre-rewrite builds were persisted in BuildState shape (auraSlots/normalSlots/
 // exilusSlot/...). The editor reads SavedBuildData. Detect and convert.
 type LegacyOrSaved = Partial<BuildState> &

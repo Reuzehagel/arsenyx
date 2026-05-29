@@ -9,6 +9,8 @@
  *   mods-all.json               — all mods, post-normalization
  *   arcanes-all.json            — arcanes with image fill
  *   helminth-abilities.json     — Helminth subsume picker list
+ *   image-map.json              — uniqueName → imageName for items/mods/
+ *                                 arcanes/helminth (build image re-resolution)
  *   incarnon-evolutions.json    — evolution trees (curated passthrough)
  *   meta.json + _report.json    — build metadata + diagnostics
  *
@@ -625,6 +627,31 @@ async function main() {
     "utf8",
   )
   console.log(`  OK  helminth-abilities.json (${helminth.length} abilities)`)
+
+  // Image map: uniqueName → current imageName for every entity a saved build
+  // can reference (items, mods, arcanes, helminth abilities). Builds persist a
+  // denormalized imageName at save time which rots whenever the image-naming/
+  // hosting scheme changes; the viewer + build lists re-resolve against this
+  // map by the stable uniqueName. Kept separate from the full catalogs so a
+  // build page can refresh every image without downloading mods-all.json
+  // (~1.2 MB). sync:images rewrites these URLs to our CDN like any other file.
+  const imageMap: Record<string, string> = {}
+  const addImage = (uniqueName?: string, imageName?: string) => {
+    if (uniqueName && imageName && !(uniqueName in imageMap)) {
+      imageMap[uniqueName] = imageName
+    }
+  }
+  for (const list of Object.values(byCategory)) {
+    for (const it of list) addImage(it.uniqueName, it.imageName)
+  }
+  for (const m of mergedMods) addImage(m.uniqueName, m.imageName)
+  for (const a of arcanesWithImages) addImage(a.uniqueName, a.imageName)
+  for (const h of helminth) addImage(h.uniqueName, h.imageName)
+  const imageMapBody = JSON.stringify(imageMap)
+  await writeFile(resolve(OUT_DIR, "image-map.json"), imageMapBody, "utf8")
+  console.log(
+    `  OK  image-map.json (${Object.keys(imageMap).length} entries, ${(imageMapBody.length / 1024).toFixed(1)} KB)`,
+  )
 
   // Incarnon evolution trees — verbatim passthrough from the curated
   // shared module (lazy-fetched by the editor sidebar).

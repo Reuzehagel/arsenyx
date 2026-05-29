@@ -30,6 +30,7 @@ export function ViewerHeader({
   formaCount,
   category,
   itemSlug,
+  itemImageName,
 }: {
   build: BuildDetail
   categoryLabel: string
@@ -38,15 +39,20 @@ export function ViewerHeader({
   formaCount: number
   category: BrowseCategory
   itemSlug: string
+  /** Fresh image from the live catalog (resolved by uniqueName upstream).
+   *  Preferred over the build's stored `item.imageName`, which rots across
+   *  image-scheme changes. */
+  itemImageName?: string
 }) {
+  const headerImage = itemImageName ?? build.item.imageName ?? undefined
   return (
     <div className="bg-card mb-4 rounded-lg border p-4">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex min-w-0 flex-1 items-center gap-4">
           <div className="bg-muted/10 relative flex size-[clamp(4rem,8vw,6rem)] shrink-0 items-center justify-center overflow-hidden rounded-md">
-            {build.item.imageName ? (
+            {headerImage ? (
               <img
-                src={getImageUrl(build.item.imageName)}
+                src={getImageUrl(headerImage)}
                 alt={build.item.name}
                 className="h-full w-full object-cover"
               />
