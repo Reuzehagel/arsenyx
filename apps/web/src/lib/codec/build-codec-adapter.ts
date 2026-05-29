@@ -278,6 +278,16 @@ export function refreshImagesFromMap(
     const next: Partial<Record<SlotId, PlacedMod>> = {}
     for (const [id, placed] of Object.entries(slots)) {
       if (!placed) continue
+      // Rivens have a stub uniqueName that isn't in the catalog/map, so pin
+      // them to the current RIVEN_IMAGE_NAME — this heals older builds that
+      // stored a now-dead riven image (e.g. the bare "OmegaMod.png").
+      if (placed.mod.rivenStats) {
+        next[id as SlotId] = {
+          ...placed,
+          mod: { ...placed.mod, imageName: RIVEN_IMAGE_NAME },
+        }
+        continue
+      }
       const fresh = url(placed.mod.uniqueName)
       next[id as SlotId] = fresh
         ? { ...placed, mod: { ...placed.mod, imageName: fresh } }

@@ -1,3 +1,4 @@
+import { RIVEN_IMAGE_NAME } from "@arsenyx/shared/warframe/rivens"
 import type { Arcane, Mod } from "@arsenyx/shared/warframe/types"
 import { describe, expect, it } from "vitest"
 
@@ -162,5 +163,17 @@ describe("strip → re-resolve round trip", () => {
     const normalized = normalizeBuildData(stripped, [], [])
     // Viewer resolves separately via refreshImagesFromMap + image-map.json.
     expect(normalized.slots?.["normal-0"]?.mod.imageName).toBeUndefined()
+  })
+
+  it("pins rivens to RIVEN_IMAGE_NAME, healing a stale/dead stored image", () => {
+    // Rivens have a stub uniqueName that's never in the map, and old builds
+    // stored a now-dead image (the bare "OmegaMod.png"). Render must override
+    // it with the current constant rather than fall back to the dead value.
+    const resolved = refreshImagesFromMap(
+      { version: 1, slots: { "normal-0": rivenPlaced("OmegaMod.png") } },
+      // Non-empty map (riven absent) so the early no-op return doesn't apply.
+      { "/Mods/Serration": "https://img.arsenyx.com/Serration-abc.png" },
+    )
+    expect(resolved.slots?.["normal-0"]?.mod.imageName).toBe(RIVEN_IMAGE_NAME)
   })
 })

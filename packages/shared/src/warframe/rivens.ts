@@ -1,7 +1,11 @@
 import type { BrowseCategory, Mod, Polarity } from "./types"
 
 export const RIVEN_UNIQUE_NAME = "/riven"
-export const RIVEN_IMAGE_NAME = "OmegaMod.png"
+// Rivens are excluded from the catalog (no per-mod image in the pipeline), so
+// this is a bundled local icon under apps/web/public/ — DE's generic riven card
+// art (`OmegaMod.png`). A local `/img/` path is what `getImageUrl` trusts; the
+// old bare `"OmegaMod.png"` resolved to nothing and rendered the `?` placeholder.
+export const RIVEN_IMAGE_NAME = "/img/items/riven-mod.png"
 
 /** Polarities a riven mod can be rolled with. */
 export const RIVEN_POLARITIES: readonly Polarity[] = [
