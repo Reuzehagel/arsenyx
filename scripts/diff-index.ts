@@ -1,15 +1,13 @@
 /**
  * Compare two `items-index.json` snapshots (and per-item detail dirs)
- * record-by-record.
+ * record-by-record. Snapshot a known-good build to `data/golden/`, then diff
+ * a new build's `apps/web/public/data/` against it: an empty diff means no
+ * regressions, and any reported delta is either an intended change or a
+ * regression to investigate.
  *
- * Phase 3a: snapshot the current pipeline output to `data/golden/`, then run
- * this against `apps/web/public/data/` to verify self-equality. Empty diff
- * means the harness is wired correctly and Phase 4 has a known-good baseline
- * to diff against.
- *
- * Phase 3b: after Phase 4 lands the new build, this script reports only the
- * expected deltas (Bubonico class fix, Perigale Prime class fix, beast claws
- * added, …). Anything else is a regression.
+ * `data/golden/` is a LOCAL scratch dir (gitignored) — it's a copy of a
+ * generated build, so never commit it. Re-snapshot before a diff session:
+ *   rm -rf data/golden && cp -r apps/web/public/data data/golden
  *
  * Usage:
  *   bun run scripts/diff-index.ts <golden-dir> <new-dir>
@@ -255,7 +253,7 @@ function main() {
     process.exit(0)
   }
   console.log(`${total} difference(s) total`)
-  process.exit(0)
+  process.exit(1)
 }
 
 main()

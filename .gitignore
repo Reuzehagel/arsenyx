@@ -37,6 +37,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 
+# diff-index regression snapshots — a local scratch copy of a known-good
+# apps/web/public/data/ build, never committed (it's a duplicate of generated
+# output). See scripts/diff-index.ts.
+/data/golden/
+
 # wrangler
 .wrangler/
 .dev.vars
