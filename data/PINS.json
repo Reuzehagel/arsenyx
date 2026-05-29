@@ -1,7 +1,7 @@
 {
   "de": {
     "indexHash": "421d863308c4ecf2c197a9a223b3bd402d1d08e8713e570bfb00d7d29aa129bc",
-    "fetchedAt": "2026-05-27T12:38:38.317Z",
+    "fetchedAt": "2026-05-29T15:07:40.088Z",
     "entries": [
       {
         "name": "ExportCustoms_en.json",
@@ -102,112 +102,112 @@
     ]
   },
   "wiki": {
-    "fetchedAt": "2026-05-27T12:39:30.477Z",
+    "fetchedAt": "2026-05-29T15:07:40.987Z",
     "modules": [
       {
         "module": "Weapons/data/primary",
         "file": "Weapons_data_primary.lua",
-        "sha256": "1ad86d7d757246ac27ec4db3b0dd6e1d00e6f54e697ef35c787ce5da5dcb20c1",
+        "sha256": "465e71062761916b53ad9e3f3cd48ecb5ce073159a0bcd5a47ca567bd1bc81b5",
         "bytes": 311399,
-        "fetchedAt": "2026-05-27T12:39:28.544Z"
+        "fetchedAt": "2026-05-29T15:07:40.356Z"
       },
       {
         "module": "Weapons/data/secondary",
         "file": "Weapons_data_secondary.lua",
         "sha256": "c90cf5c37be9346f9814435b9eb8faceff977176c03b855891287293615006d3",
         "bytes": 212375,
-        "fetchedAt": "2026-05-27T12:39:28.652Z"
+        "fetchedAt": "2026-05-29T15:07:40.402Z"
       },
       {
         "module": "Weapons/data/melee",
         "file": "Weapons_data_melee.lua",
         "sha256": "9e862defb168d2557febdde7ea3c7ddf207811d5d288b3beab71dc120fcdd2f5",
         "bytes": 429773,
-        "fetchedAt": "2026-05-27T12:39:28.776Z"
+        "fetchedAt": "2026-05-29T15:07:40.447Z"
       },
       {
         "module": "Weapons/data/archwing",
         "file": "Weapons_data_archwing.lua",
-        "sha256": "664ff77e9653099be7662af67fdb24712822b42207cd8f3283a42f4437840c22",
-        "bytes": 74722,
-        "fetchedAt": "2026-05-27T12:39:28.841Z"
+        "sha256": "01305bf63bbe643571ba3e46c3252c0ac5416e5be919257a022558bf07f8bcc3",
+        "bytes": 74723,
+        "fetchedAt": "2026-05-29T15:07:40.496Z"
       },
       {
         "module": "Weapons/data/companion",
         "file": "Weapons_data_companion.lua",
         "sha256": "126793cbe933f5cb411bf321a08a05cdeb91ce24b7dd3aa0f037cb8a116e200b",
         "bytes": 39141,
-        "fetchedAt": "2026-05-27T12:39:28.909Z"
+        "fetchedAt": "2026-05-29T15:07:40.535Z"
       },
       {
         "module": "Weapons/data/railjack",
         "file": "Weapons_data_railjack.lua",
         "sha256": "62a9ea36738e0b53c4c614ce8f5a453888480730833ea1ca5d5397d1545dfece",
         "bytes": 128708,
-        "fetchedAt": "2026-05-27T12:39:28.985Z"
+        "fetchedAt": "2026-05-29T15:07:40.575Z"
       },
       {
         "module": "Weapons/data/modular",
         "file": "Weapons_data_modular.lua",
         "sha256": "caf55c77cad88627c5a03f146876731a00ef749747a84e25624b8dd0eb4e7c85",
         "bytes": 40424,
-        "fetchedAt": "2026-05-27T12:39:29.049Z"
+        "fetchedAt": "2026-05-29T15:07:40.614Z"
       },
       {
         "module": "Weapons/data/misc",
         "file": "Weapons_data_misc.lua",
         "sha256": "3ab807af07b4b5c80532b1400399ac6dbf6b7352bba9c9447f6115d5b2f34194",
         "bytes": 13432,
-        "fetchedAt": "2026-05-27T12:39:29.108Z"
+        "fetchedAt": "2026-05-29T15:07:40.654Z"
       },
       {
         "module": "Warframes/data",
         "file": "Warframes_data.lua",
         "sha256": "4e10c3a7f0d8feeaef94552da695901725fc39b445f3573d2300f72819d2bc48",
         "bytes": 152504,
-        "fetchedAt": "2026-05-27T12:39:29.203Z"
+        "fetchedAt": "2026-05-29T15:07:40.702Z"
       },
       {
         "module": "Companions/data",
         "file": "Companions_data.lua",
         "sha256": "a071dd78100536a7eaa63d8ccae4460bdf34729f30b2005f8671167576da2e90",
         "bytes": 71567,
-        "fetchedAt": "2026-05-27T12:39:29.354Z"
+        "fetchedAt": "2026-05-29T15:07:40.749Z"
       },
       {
         "module": "Arcane/data",
         "file": "Arcane_data.lua",
         "sha256": "5eb1f09f6397775b3ea254a0df64ec4218eb9239203720e97522ff1fcf686656",
         "bytes": 94025,
-        "fetchedAt": "2026-05-27T12:39:29.419Z"
+        "fetchedAt": "2026-05-29T15:07:40.795Z"
       },
       {
         "module": "Mods/data",
         "file": "Mods_data.lua",
         "sha256": "10a7f93c07fb66ae7ad9dafb454c4b4d0241e0a2b67ed2487142132e4c4451cd",
         "bytes": 933225,
-        "fetchedAt": "2026-05-27T12:39:29.855Z"
+        "fetchedAt": "2026-05-29T15:07:40.856Z"
       },
       {
         "module": "Stances/data",
         "file": "Stances_data.lua",
         "sha256": "81a45083edb678ab71a015b18f2df4c33048395e4329f70769a01925ddc6215e",
         "bytes": 222615,
-        "fetchedAt": "2026-05-27T12:39:30.088Z"
+        "fetchedAt": "2026-05-29T15:07:40.903Z"
       },
       {
         "module": "Focus/data",
         "file": "Focus_data.lua",
         "sha256": "66ad581d552df63838117cf2f002b37e211ba337e19168df657a2f206d806e5d",
         "bytes": 108934,
-        "fetchedAt": "2026-05-27T12:39:30.224Z"
+        "fetchedAt": "2026-05-29T15:07:40.944Z"
       },
       {
         "module": "Avionics/data",
         "file": "Avionics_data.lua",
         "sha256": "f5c792ba771b05d74bf9d7c2d3160d8b12ad64892bdbbe6d529d7f52e72ec3ef",
         "bytes": 13931,
-        "fetchedAt": "2026-05-27T12:39:30.474Z"
+        "fetchedAt": "2026-05-29T15:07:40.983Z"
       }
     ]
   }
