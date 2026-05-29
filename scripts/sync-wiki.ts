@@ -19,6 +19,8 @@ import { createHash } from "node:crypto"
 import { mkdir, writeFile } from "node:fs/promises"
 import { resolve } from "node:path"
 
+import { fetchRetry } from "./build/http"
+
 /** Modules we mirror. `Module:Weapons/data/{primary,secondary,...}` are the
  *  eight subpages declared by the router; the other seven are independent
  *  top-level Module pages. All are pure data per the upstream contract. */
@@ -45,10 +47,7 @@ const OUT_DIR = resolve(REPO_ROOT, "data/raw/wiki")
 const PINS_PATH = resolve(REPO_ROOT, "data/PINS.json")
 
 async function fetchText(url: string): Promise<string> {
-  const res = await fetch(url)
-  if (!res.ok) {
-    throw new Error(`Fetch ${url} → HTTP ${res.status} ${res.statusText}`)
-  }
+  const res = await fetchRetry(url)
   return await res.text()
 }
 

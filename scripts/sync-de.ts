@@ -22,6 +22,7 @@ import { createHash } from "node:crypto"
 import { mkdir, writeFile } from "node:fs/promises"
 import { resolve } from "node:path"
 
+import { fetchRetry } from "./build/http"
 import { lzmaDecompressText } from "./build/lzma"
 
 const INDEX_URL = "https://content.warframe.com/PublicExport/index_en.txt.lzma"
@@ -43,18 +44,12 @@ interface PinEntry {
 }
 
 async function fetchBytes(url: string): Promise<Uint8Array> {
-  const res = await fetch(url)
-  if (!res.ok) {
-    throw new Error(`Fetch ${url} -> HTTP ${res.status} ${res.statusText}`)
-  }
+  const res = await fetchRetry(url)
   return new Uint8Array(await res.arrayBuffer())
 }
 
 async function fetchText(url: string): Promise<string> {
-  const res = await fetch(url)
-  if (!res.ok) {
-    throw new Error(`Fetch ${url} -> HTTP ${res.status} ${res.statusText}`)
-  }
+  const res = await fetchRetry(url)
   return await res.text()
 }
 
@@ -70,7 +65,11 @@ async function main() {
     .map((line) => {
       const idx = line.indexOf("!")
       if (idx < 0) throw new Error(`Malformed index line: ${line}`)
-      return { entry: line, name: line.slice(0, idx), hash: line.slice(idx + 1) }
+      return {
+        entry: line,
+        name: line.slice(0, idx),
+        hash: line.slice(idx + 1),
+      }
     })
 
   console.log(`Index has ${entries.length} entries. Mirroring to ${OUT_DIR}...`)
@@ -117,10 +116,20 @@ async function main() {
   }
   await writeFile(PINS_PATH, JSON.stringify(merged, null, 2) + "\n", "utf8")
   console.log(`\n  OK  ${entries.length} files -> data/raw/de/`)
-  console.log(`  OK  data/PINS.json (de.indexHash=${merged.de.indexHash.slice(0, 12)}...)`)
+  console.log(
+    `  OK  data/PINS.json (de.indexHash=${merged.de.indexHash.slice(0, 12)}...)`,
+  )
 }
 
-main().catch((err) => {
-  console.error(err)
-  process.exit(1)
-})
+// Force exit on success. The `lzma` package (used to decode the PublicExport
+// index) leaves a dangling worker/timer handle that keeps the event loop alive
+// indefinitely, so the process never exits on its own once main() resolves —
+// which hangs `data:sync` (`&&` never advances) and `bump-data` (spawnSync
+// never returns) right after the DE step. All disk writes are awaited inside
+// main(), so exiting here is safe.
+main()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error(err)
+    process.exit(1)
+  })
