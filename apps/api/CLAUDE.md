@@ -20,7 +20,14 @@ Hono on Cloudflare Workers (Bun-compatible for local dev). Better Auth + Prisma 
 
 ## Env
 
-`.env` is the only source locally; prod injects secrets via `wrangler secret put` (see [wrangler.toml](wrangler.toml) for the list). Plaintext vars (`WEB_ORIGIN`, `BETTER_AUTH_URL`, `NODE_ENV`) live in `wrangler.toml`'s `[vars]` block. **Don't branch on `NODE_ENV`** to pick credentials; do use it for cookie `SameSite`/`Secure` gates.
+Local secrets live in **two files that must be kept in sync** — an unavoidable split because two toolchains read different filenames:
+
+- `.dev.vars` — read natively by `wrangler dev` (the local API server, `bun run dev`). Wrangler cannot read `.env`.
+- `.env` — read by Prisma (`db:push` / `db:studio` / `db:generate`, via [prisma.config.ts](prisma.config.ts)) and by the `bun run` scripts (`seed-admin`, `backfill-image-names`) via `dotenv`. These cannot read `.dev.vars`.
+
+Both hold the same keys (`DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`, `NODE_ENV`, `WEB_ORIGIN`). Edit both, or copy one onto the other after a change — they drift silently otherwise. Don't delete either: each is load-bearing for a different tool.
+
+Prod injects secrets via `wrangler secret put` (see [wrangler.toml](wrangler.toml) for the list). Plaintext vars (`WEB_ORIGIN`, `BETTER_AUTH_URL`, `NODE_ENV`) live in `wrangler.toml`'s `[vars]` block. **Don't branch on `NODE_ENV`** to pick credentials; do use it for cookie `SameSite`/`Secure` gates.
 
 ## Boundaries
 

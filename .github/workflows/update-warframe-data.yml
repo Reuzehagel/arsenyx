@@ -57,4 +57,10 @@ jobs:
             Review the JSON diffs and the wiki mirror diff before merging.
             Any new wiki Class strings or DE compatNames not yet curated
             will fail the build — fix `data/curated/` if so.
+
+            ⚠ This catalog still points at the upstream CDNs — the cron has
+            no R2 creds, so `sync:images` was skipped and CI's `check:images`
+            guard will fail. Before merging, check out this branch locally and
+            run `bun run sync:images` (mirrors new images into R2 + rewrites
+            the catalog to img.arsenyx.com), then push.
           commit-message: "chore: refresh Warframe game data"

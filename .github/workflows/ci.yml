@@ -22,6 +22,11 @@ jobs:
       - run: bun install --frozen-lockfile
         # Triggers apps/api's `postinstall: prisma generate` — no separate step needed.
 
+      - name: Check catalog images (no upstream hotlinks)
+        # Fails if apps/web/public/data still points at content/wiki.warframe.com
+        # — i.e. a catalog was committed without running `bun run sync:images`.
+        run: bun run check:images
+
       - name: Lint
         run: bun run lint
 
@@ -43,3 +48,8 @@ jobs:
         # script doesn't break CI. Keep in sync with the `test` recipe in
         # `justfile` when adding a workspace.
         run: bun --filter=arsenyx-web --filter=arsenyx-api --filter=@arsenyx/shared run test
+
+      - name: Test (build pipeline)
+        # Pure-function unit tests for scripts/build/* (run via bun's test
+        # runner, not vitest). Keep in sync with the `test` recipe in justfile.
+        run: bun test scripts/build/

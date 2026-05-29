@@ -12,6 +12,7 @@
     "build:web": "bun --filter=arsenyx-web run build",
     "build:items": "bun run scripts/build-items-index.ts",
     "sync:images": "bun run scripts/sync-images.ts",
+    "check:images": "bun run scripts/check-image-hosts.ts",
     "data:sync": "bun run scripts/sync-de.ts && bun run scripts/sync-wiki.ts",
     "data:bump": "bun run scripts/bump-data.ts",
     "typecheck": "bun run --filter '*' typecheck && bun run typecheck:scripts",

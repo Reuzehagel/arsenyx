@@ -43,8 +43,24 @@ curated overrides under `data/curated/`.
 
 ```bash
 bun run data:sync                  # mirror DE PublicExport + wiki Lua into data/raw/
-bun run build:items                # regenerate apps/web/public/data/ from raw + curated
-bun run data:bump                  # sync + rebuild (full refresh, used by the weekly CI cron)
+bun run build:items                # regenerate apps/web/public/data/ (emits UPSTREAM image URLs)
+bun run sync:images                # mirror emitted images into R2, rewrite catalog → img.arsenyx.com
+bun run check:images               # guard (CI): fail if catalog still hotlinks content/wiki.warframe.com
+just build-items-index             # build:items + sync:images — the everyday "rebuild" pair
+bun run data:bump                  # data:sync + build:items + sync:images (full refresh; weekly CI cron)
+```
+
+`build:items` alone leaves upstream CDN URLs in the catalog; `sync:images`
+mirrors the bytes into R2 and rewrites them to `img.arsenyx.com`. Always pair
+them (use `just build-items-index`) — `check:images` blocks a hotlinked
+catalog from merging. `sync:images` needs R2 creds in the root `.env` (see
+`.env.example`); run via the build chain it self-skips when they're absent.
+
+Occasional dev tools (run by path, not aliased):
+
+```bash
+bun run scripts/diff-index.ts <golden-dir> <new-dir>    # regression-diff two catalog snapshots
+uv run --with pillow python scripts/tint-set-crests.py  # regenerate bronze/gold mod-set crests
 ```
 
 ## Shadcn (apps/web)

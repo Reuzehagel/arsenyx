@@ -43,6 +43,31 @@ function envOrThrow(name: string): string {
   return v
 }
 
+/** Build chains (`data:bump`, the justfile rebuild target) pass
+ *  `--skip-if-no-creds` so a contributor without R2 access — or the weekly
+ *  data-refresh cron, which carries no R2 secrets — can still rebuild the
+ *  catalog. In that case the catalog is left pointing at the upstream CDNs;
+ *  CI's hotlink guard (`bun run check:images`) then blocks that from merging,
+ *  so a human runs `sync:images` locally before the data PR lands. A direct
+ *  `bun run sync:images` (no flag) still hard-errors via `envOrThrow`. */
+const R2_ENV_KEYS = [
+  "R2_ACCOUNT_ID",
+  "R2_ACCESS_KEY_ID",
+  "R2_SECRET_ACCESS_KEY",
+  "R2_BUCKET",
+  "R2_PUBLIC_URL",
+] as const
+const missingCreds = R2_ENV_KEYS.filter((k) => !process.env[k])
+if (missingCreds.length > 0 && process.argv.includes("--skip-if-no-creds")) {
+  console.warn(
+    `⚠ sync:images skipped — missing R2 creds (${missingCreds.join(", ")}). ` +
+      `Catalog still points at the upstream CDNs. Add them to the root .env ` +
+      `and run \`bun run sync:images\` before deploying — CI's hotlink guard ` +
+      `flags it otherwise.`,
+  )
+  process.exit(0)
+}
+
 const PUBLIC_URL = envOrThrow("R2_PUBLIC_URL").replace(/\/+$/, "")
 const BUCKET = envOrThrow("R2_BUCKET")
 const ACCOUNT_ID = envOrThrow("R2_ACCOUNT_ID")
@@ -116,7 +141,7 @@ function keyForUrl(url: string): string {
 interface UploadResult {
   url: string
   key: string
-  status: "uploaded" | "skipped" | "missing" | "metadata-fixed"
+  status: "uploaded" | "skipped" | "missing"
 }
 
 /** Pass `--refresh-metadata` to re-apply Content-Type / Content-Disposition
@@ -175,10 +200,6 @@ async function refreshMetadata(key: string): Promise<void> {
 
 async function ensureUploaded(url: string, key: string): Promise<UploadResult> {
   if (await existsInBucket(key)) {
-    if (REFRESH_METADATA) {
-      await refreshMetadata(key)
-      return { url, key, status: "metadata-fixed" }
-    }
     return { url, key, status: "skipped" }
   }
   const res = await fetch(url, {
@@ -235,11 +256,55 @@ async function pMap<T, R>(
 // Main.
 // ---------------------------------------------------------------------------
 
+/** Escape a string for safe interpolation into a `RegExp`. */
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+/** `--refresh-metadata` only: re-apply Content-Type / Content-Disposition on
+ *  every object the catalog already references, derived from the keys in the
+ *  current JSON — whether they still point upstream (pre-sync) or at our CDN
+ *  (post-sync). Keying off the live catalog (not the upstream URL set, which
+ *  is empty once a sync has rewritten everything) is what makes this runnable
+ *  at any time. Uses S3 CopyObject — no bytes are re-downloaded. */
+async function refreshAllMetadata(files: readonly string[]): Promise<void> {
+  const ourUrlRe = new RegExp(`${escapeRegex(PUBLIC_URL)}/([^"\\\\]+)`, "g")
+  const keys = new Set<string>()
+  for (const f of files) {
+    const text = readFileSync(f, "utf8")
+    for (const u of extractSourceUrls(text)) keys.add(keyForUrl(u))
+    for (const m of text.matchAll(ourUrlRe)) keys.add(decodeURIComponent(m[1]!))
+  }
+  console.log(`\n--refresh-metadata: re-applying Content-Type / Content-Disposition on ${keys.size} objects`)
+
+  let fixed = 0
+  let absent = 0
+  const list = [...keys]
+  await pMap(list, 16, async (key, i) => {
+    if (await existsInBucket(key)) {
+      await refreshMetadata(key)
+      fixed++
+    } else {
+      absent++
+    }
+    if ((i + 1) % 200 === 0 || i === list.length - 1) {
+      console.log(`  ${i + 1}/${list.length}  (${fixed} refreshed, ${absent} not in bucket)`)
+    }
+  })
+  console.log(`\nMetadata refresh complete: ${fixed} refreshed, ${absent} not in bucket`)
+}
+
 async function main(): Promise<void> {
   console.log(`Bucket: ${BUCKET}`)
   console.log(`Public: ${PUBLIC_URL}`)
 
   const files = findJsonFiles(DATA_DIR)
+
+  if (REFRESH_METADATA) {
+    await refreshAllMetadata(files)
+    return
+  }
+
   const sources = new Set<string>()
   for (const f of files) {
     for (const u of extractSourceUrls(readFileSync(f, "utf8"))) sources.add(u)
@@ -260,36 +325,35 @@ async function main(): Promise<void> {
     remap.set(src, `${PUBLIC_URL}/${keyForUrl(src)}`)
   }
 
-  if (REFRESH_METADATA) {
-    console.log(`\n--refresh-metadata: re-applying Content-Type / Content-Disposition on existing objects`)
-  }
-
   // Upload pass.
   const list = [...sources]
   let uploaded = 0
   let skipped = 0
-  let missing = 0
-  let metadataFixed = 0
+  const missingUrls: string[] = []
   await pMap(list, 16, async (src, i) => {
     const key = keyForUrl(src)
     const result = await ensureUploaded(src, key)
     if (result.status === "uploaded") uploaded++
     else if (result.status === "skipped") skipped++
-    else if (result.status === "metadata-fixed") metadataFixed++
-    else missing++
+    else missingUrls.push(src)
     if ((i + 1) % 100 === 0 || i === list.length - 1) {
-      const parts = [`${uploaded} uploaded`, `${skipped} already in R2`]
-      if (metadataFixed > 0) parts.push(`${metadataFixed} metadata-fixed`)
-      parts.push(`${missing} upstream-missing`)
-      console.log(`  ${i + 1}/${list.length}  (${parts.join(", ")})`)
+      console.log(
+        `  ${i + 1}/${list.length}  (${uploaded} uploaded, ${skipped} already in R2, ${missingUrls.length} upstream-missing)`,
+      )
     }
   })
 
   console.log(`\nUpload pass complete:`)
   console.log(`  ${uploaded} uploaded`)
   console.log(`  ${skipped} already in R2`)
-  if (metadataFixed > 0) console.log(`  ${metadataFixed} metadata refreshed`)
-  console.log(`  ${missing} upstream missing (will 404 from our CDN too)`)
+  console.log(`  ${missingUrls.length} upstream missing (will 404 from our CDN too)`)
+  if (missingUrls.length > 0) {
+    // Surface the gaps explicitly — these are the only catalog images that
+    // won't resolve from our CDN, because upstream itself 404s. Fix the
+    // source (curated data / build) rather than the bucket.
+    console.log(`\n  Upstream-missing URLs:`)
+    for (const u of missingUrls.sort()) console.log(`    ${u}`)
+  }
 
   // Rewrite pass — single regex replace per file using the remap.
   let rewrittenFiles = 0
