@@ -25,7 +25,8 @@ export const MOD_POOL_OVERRIDES: Record<string, readonly string[]> = {
   Bubonico: ["Shotgun"],
   "Coda Bubonico": ["Shotgun"],
   Sepulcrum: ["Pistol"],
-  // Cyte-09's Arm-Cannon (Aerolyst) — TBD, leave to default for now.
+  // Cyte-09's exalted weapon is the Neutralizer (an exalted sniper rifle),
+  // not an arm-cannon — leave to default for now.
 
   // Exalted weapons — wiki Class is "Exalted Weapon" with no per-frame
   // routing data, so we override with the actual mod pools each draws
@@ -37,6 +38,10 @@ export const MOD_POOL_OVERRIDES: Record<string, readonly string[]> = {
   "Exalted Prime Blade": ["Melee", "Swords"],
   "Garuda Talons": ["Melee", "Claws"],
   "Garuda Prime Talons": ["Melee", "Claws"],
+  "Valkyr Talons": ["Melee", "Claws"],
+  "Valkyr Prime Talons": ["Melee", "Claws"],
+  "Shadow Claws": ["Melee", "Claws"],
+  "Shadow Claws Prime": ["Melee", "Claws"],
   "Iron Staff": ["Melee", "Staves"],
   "Iron Staff Prime": ["Melee", "Staves"],
   Diwata: ["Melee", "Swords"],
@@ -44,7 +49,20 @@ export const MOD_POOL_OVERRIDES: Record<string, readonly string[]> = {
   "Desert Wind": ["Melee", "Sparring"],
   "Desert Wind Prime": ["Melee", "Sparring"],
   "Whipclaw": ["Melee"],
-  // Hildryn / Protea / Mesa exalted ranged are pistols by routing:
+  "Whipclaw Prime": ["Melee"],
+  // Pseudo-exalted abilities — independently moddable with melee mods, but
+  // can't slot a stance, so no stance sub-pool. (Verified against the wiki.)
+  "Landslide Fists": ["Melee"],
+  "Landslide Fists Prime": ["Melee"],
+  "Shattered Lash": ["Melee"],
+  "Shattered Lash Prime": ["Melee"],
+  "Shadow Clones": ["Melee"],
+  "Shadow Clones Prime": ["Melee"],
+  // Glory (Jade) uses Pistol mods; Lizzie (Temple) uses Rifle mods.
+  Glory: ["Pistol"],
+  Lizzie: ["Rifle"],
+  // Exalted ranged weapons that route to the Pistol pool: Balefire
+  // (Hildryn), Dex Pixia (Titania), Regulators (Mesa).
   "Balefire Charger": ["Pistol"],
   "Balefire Charger Prime": ["Pistol"],
   "Dex Pixia": ["Pistol"],
@@ -54,11 +72,14 @@ export const MOD_POOL_OVERRIDES: Record<string, readonly string[]> = {
   // Ivara's exalted bow is Primary/Bow:
   "Artemis Bow": ["Rifle", "Bow"],
   "Artemis Bow Prime": ["Rifle", "Bow"],
+  // Cyte-09's exalted sniper rifle:
+  Neutralizer: ["Rifle", "Sniper"],
   // Necramech exalteds — Arquebex (Archgun) / Ironbride (Archmelee).
   Arquebex: ["Archgun"],
   Ironbride: ["Archmelee"],
-  // Lavos's Cedo replacement isn't exalted; skip. Lavos's Mausolon is
-  // an archgun (Voidrig/Bonewidow share):
+  // Mausolon is the standard Necramech archgun (Voidrig/Bonewidow share
+  // it) — not exalted, but its wiki Class still needs routing to the
+  // Archgun pool. The Atmosphere variant is the ground-deploy form.
   Mausolon: ["Archgun"],
   "Mausolon (Atmosphere)": ["Archgun"],
 }

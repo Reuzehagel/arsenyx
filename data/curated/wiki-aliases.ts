@@ -29,7 +29,7 @@ export const WIKI_ALIASES: Record<string, string> = {
   // Heavy Blade modes). Map to the Dual Swords variant — that's the
   // default in-game mode and has stance compatibility we care about.
   "Dark Split-Sword": "Dark Split-Sword (Dual Swords)",
-  // Vinquibus / Perigale split into primary + melee modes on the wiki.
-  // DE only has one entry; map to the primary mode (the rifle form).
+  // Vinquibus splits into primary + melee modes on the wiki. DE only has
+  // one entry; map to the primary mode (the rifle form).
   Vinquibus: "Vinquibus (Primary)",
 }

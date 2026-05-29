@@ -85,9 +85,9 @@ describe("Tome mod gating (modPools)", () => {
   })
 })
 
-// Legacy fallback (no `modPools`) — kept alive for builds/items imported
-// from before the Phase 6 cutover. Routes by `category` only, with a
-// name-based override for Tome weapons.
+// Fallback (no `modPools`) — for builds/items imported before the field
+// existed. Routes by `category` only, with a name-based override for Tome
+// weapons.
 describe("Tome mod gating (legacy category fallback)", () => {
   it("excludes Tome mods from the typeless category fallback for non-Tome items", () => {
     const result = getModsForItem(

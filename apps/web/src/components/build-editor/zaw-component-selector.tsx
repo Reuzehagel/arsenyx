@@ -1,8 +1,5 @@
-import {
-  ZAW_GRIPS,
-  ZAW_LINKS,
-  getZawComponentImage,
-} from "@arsenyx/shared/warframe/zaw-data"
+import { ZAW_GRIPS, ZAW_LINKS } from "@arsenyx/shared/warframe/zaw-data"
+import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 
 import {
@@ -10,6 +7,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { zawImagesQuery } from "@/lib/queries/zaw-images-query"
 import { cn } from "@/lib/util/utils"
 import { getImageUrl } from "@/lib/warframe"
 
@@ -71,7 +69,8 @@ function ZawPartCard({
   readOnly,
 }: ZawPartCardProps) {
   const [open, setOpen] = useState(false)
-  const imageName = getZawComponentImage(value)
+  const { data: zawImages } = useQuery(zawImagesQuery)
+  const imageName = zawImages?.[value]
 
   const card = (
     <div
@@ -113,7 +112,7 @@ function ZawPartCard({
       <PopoverContent className="w-[260px] p-2" align="center">
         <div className="grid max-h-[320px] grid-cols-3 gap-1.5 overflow-y-auto p-0.5">
           {options.map((opt) => {
-            const optImage = getZawComponentImage(opt.name)
+            const optImage = zawImages?.[opt.name]
             const isSelected = opt.name === value
             return (
               <button

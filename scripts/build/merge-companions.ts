@@ -10,6 +10,7 @@
  */
 
 import type { DeSentinel } from "./read-de"
+import { normalizePolarity } from "./polarity"
 
 export type CompanionCategory = "sentinel" | "beast" | "moa" | "hound"
 
@@ -72,6 +73,10 @@ function modPoolsForCompanion(
 interface WikiCompanion {
   Name?: string
   Category?: string
+  /** Companion kind: "Sentinel" | "MOA" | "Hound" | "Kavat" | "Kubrow" |
+   *  "Vulpaphyla" | "Predasite". This — not `Category` — is the subtype
+   *  discriminator. */
+  Type?: string
   Health?: number
   Shield?: number
   Armor?: number
@@ -83,33 +88,19 @@ interface WikiCompanion {
   InternalName?: string
 }
 
-const POLARITY_SET = new Set<string>([
-  "madurai", "vazarin", "naramon", "zenurik", "unairu", "penjaga",
-  "umbra", "aura", "exilus", "universal", "any",
-])
-
-function normalizePolarity(p: unknown): string | null {
-  if (typeof p !== "string" || p.length === 0) return null
-  const lower = p.toLowerCase()
-  return POLARITY_SET.has(lower) ? lower : lower
-}
-
-/** Map wiki Category string to our subType enum. */
-function subTypeOf(wikiCategory: string | undefined): CompanionCategory {
-  switch ((wikiCategory ?? "").toLowerCase()) {
-    case "sentinels":
+/** Map the wiki `Type` string to our subType enum. */
+export function subTypeOf(wikiType: string | undefined): CompanionCategory {
+  switch ((wikiType ?? "").toLowerCase()) {
+    case "sentinel":
       return "sentinel"
-    case "moas":
+    case "moa":
       return "moa"
-    case "hounds":
+    case "hound":
       return "hound"
-    case "beasts":
-    case "kubrows":
-    case "kavats":
-    case "vulpaphylas":
-    case "predasites":
-    case "kubrow":
     case "kavat":
+    case "kubrow":
+    case "vulpaphyla":
+    case "predasite":
       return "beast"
     default:
       // Fallback: assume beast (most undocumented entries are beast breeds).
@@ -135,7 +126,7 @@ export function mergeCompanions(
     const de = opts.deByName.get(name)
     if (de) seenInternalNames.add(de.name)
 
-    const subType = subTypeOf(wiki.Category)
+    const subType = subTypeOf(wiki.Type)
     companions.push({
       // Prefer DE's uniqueName (it's the canonical game ID and what the
       // game's RPC layer uses). The wiki InternalName for some Primes

@@ -2,12 +2,9 @@
  * Merge DE PublicExport + wiki Lua + curated overrides into our internal
  * weapon shape.
  *
- * The merge implements the three-field model from
- * data-architecture.html, with one deviation that fell out of inspecting
- * the actual DE compatName vocabulary: **modPool is a LIST, not a single
- * string** (see implementation-notes.html for the why — a sniper rifle
+ * Note that **modPool is a LIST, not a single string**: a sniper rifle
  * accepts both "Rifle" mods and "Sniper" mods, an Excalibur accepts both
- * "WARFRAME" mods and "Excalibur" augments, etc.).
+ * "WARFRAME" mods and "Excalibur" augments, etc.
  *
  * Inputs:
  *   DE weapon record (uniqueName + name + productCategory + raw stats)
@@ -34,23 +31,8 @@ import {
   damageFromDePerShot,
   type AttackOut,
 } from "./merge-damage"
-
-/** Polarity values we recognize from wiki Lua. Lowercased for storage.
- *  The UI's existing codec already abbreviates these (see mods.ts), so we
- *  keep the long-form here and let consumers map. */
-const KNOWN_POLARITIES = new Set<string>([
-  "madurai",
-  "vazarin",
-  "naramon",
-  "zenurik",
-  "unairu",
-  "penjaga",
-  "umbra",
-  "aura",
-  "universal",
-  "exilus",
-  "any",
-])
+import { normalizePolarity } from "./polarity"
+import { cleanDeName } from "./names"
 
 /** Closed set of mod pools the build will route to. Asserted on; extend
  *  here when you also extend `CLASS_DEFAULT_POOLS` or `mod-pools.ts`. */
@@ -152,17 +134,6 @@ interface WikiWeapon {
   Image?: string
 }
 
-function normalizePolarity(p: unknown): string | null {
-  if (typeof p !== "string" || p.length === 0) return null
-  const lower = p.toLowerCase()
-  if (!KNOWN_POLARITIES.has(lower)) {
-    // Wiki sometimes uses fancy capitalization or trailing space — log so
-    // we can audit, but pass through verbatim to keep merge non-throwing.
-    return lower
-  }
-  return lower
-}
-
 /** Strip the Coda / Kuva / Tenet prefix from a variant name to recover the
  *  base weapon name (for augment-mod matching). */
 const VARIANT_PREFIXES = ["Coda ", "Kuva ", "Tenet "] as const
@@ -172,17 +143,6 @@ function baseWeaponName(name: string): string | null {
     if (name.startsWith(p)) return name.slice(p.length)
   }
   return null
-}
-
-/** DE prefixes some archwing weapons with `<ARCHWING> ` in their `name`
- *  field. The wiki keys them without the prefix, so we strip it for both
- *  wiki lookup and the canonical emitted name. */
-const ARCHWING_PREFIX = "<ARCHWING> "
-
-function cleanDeName(name: string): string {
-  return name.startsWith(ARCHWING_PREFIX)
-    ? name.slice(ARCHWING_PREFIX.length)
-    : name
 }
 
 export interface MergeWeaponOpts {
@@ -220,6 +180,7 @@ export function mergeWeapon(
 
   const displayClass =
     (wiki?.Class as string | undefined) ?? stub?.displayClass ?? null
+  const slot = (wiki?.Slot as string | undefined) ?? null
 
   if (displayClass && !(displayClass in opts.curated.classPools)) {
     throw new Error(
@@ -228,14 +189,31 @@ export function mergeWeapon(
     )
   }
 
+  // Archwing weapons whose wiki Class is a *ground*-weapon class — e.g.
+  // Arbucep, an Arch-gun the wiki labels "Launcher" — would otherwise
+  // inherit the ground pool ("Rifle") and show primary mods. The slot is
+  // authoritative: route every arch-gun to the Archgun pool and every
+  // arch-melee to Archmelee, regardless of the class label. (For a normal
+  // arch-gun, Class="Archgun" already resolves to ["Archgun"], so this is a
+  // no-op there.)
+  const archPool =
+    slot === "Archgun" || slot === "Archgun (Atmosphere)"
+      ? "Archgun"
+      : slot === "Archmelee"
+        ? "Archmelee"
+        : null
+
   // Compute modPools:
-  //   1. class default (from class-pools.ts)
-  //   2. per-name override (mod-pools.ts) — REPLACES class default
-  //   3. weapon's own name (for augment matching)
-  //   4. base name if it's a Coda/Kuva/Tenet variant
+  //   1. per-name override (mod-pools.ts) — REPLACES class default
+  //   2. curated wiki stub pools
+  //   3. archwing slot pool (overrides a misleading ground class label)
+  //   4. class default (from class-pools.ts)
+  //   5. weapon's own name (for augment matching)
+  //   6. base name if it's a Coda/Kuva/Tenet variant
   const baseList =
     opts.curated.modPoolOverrides[cleanName] ??
     stub?.modPools ??
+    (archPool ? [archPool] : undefined) ??
     (displayClass ? opts.curated.classPools[displayClass] : undefined) ??
     []
   const modPoolsSet = new Set<string>(baseList)
@@ -285,7 +263,7 @@ export function mergeWeapon(
     exilusPolarity: exilus,
     stancePolarity: stance,
     family: (wiki?.Family as string | undefined) ?? stub?.family ?? null,
-    slot: (wiki?.Slot as string | undefined) ?? null,
+    slot,
     traits: (wiki?.Traits as readonly string[] | undefined) ?? [],
     masteryReq: (wiki?.Mastery ?? de.masteryReq ?? 0) as number,
     productCategory: de.productCategory,
@@ -393,8 +371,8 @@ export function mergeWikiOnlyWeapon(
   }
 }
 
-/** Concentric checks of the curated data shape. Run once at build start so
- *  config errors fail fast rather than mid-loop. */
+/** Validate the curated data shape. Run once at build start so config
+ *  errors fail fast rather than mid-loop. */
 export function validateCuratedAgainstKnown(curated: CuratedData): void {
   for (const pool of curated.allMentionedPools) {
     if (!KNOWN_MOD_POOLS.has(pool)) {

@@ -190,27 +190,3 @@ export function readDeArcanes(): { ExportRelicArcane: DeUpgrade[] } {
   // path prefix (/CosmeticEnhancers/) in merge-arcanes.ts.
   return readFile("ExportRelicArcane_en.json")
 }
-
-// ---------------------------------------------------------------------------
-// Bundle the lot for ergonomic single-load.
-// ---------------------------------------------------------------------------
-
-export interface DeAll {
-  weapons: DeWeapon[]
-  upgrades: DeUpgradesBlob
-  frames: ReturnType<typeof readDeFrames>
-  sentinels: ReturnType<typeof readDeSentinels>
-  manifest: DeManifestEntry[]
-  arcanes: ReturnType<typeof readDeArcanes>
-}
-
-export function readDeAll(): DeAll {
-  return {
-    weapons: readDeWeapons(),
-    upgrades: readDeUpgrades(),
-    frames: readDeFrames(),
-    sentinels: readDeSentinels(),
-    manifest: readDeManifest(),
-    arcanes: readDeArcanes(),
-  }
-}

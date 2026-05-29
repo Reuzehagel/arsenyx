@@ -12,9 +12,9 @@
  *   incarnon-evolutions.json    — evolution trees (curated passthrough)
  *   meta.json + _report.json    — build metadata + diagnostics
  *
- * Schema notes (vs the pre-rewrite `@wfcd/items`-backed pipeline):
- *   - BrowseItem.type → BrowseItem.displayClass (wiki Class label).
- *   - Per-item weapon detail gains `modPools`, `compatTags`, `polarities`,
+ * Schema notes:
+ *   - BrowseItem carries `displayClass` (the wiki Class label).
+ *   - Per-item weapon detail carries `modPools`, `compatTags`, `polarities`,
  *     `family`, `traits` from the wiki merge.
  *   - Polarities everywhere are lowercase full names ("naramon", not "V").
  *   - All items (weapons + frames + companions) carry `modPools` — the
@@ -30,12 +30,18 @@ import { resolve } from "node:path"
 
 import { slugify } from "@arsenyx/shared/warframe/slugs"
 import { INCARNON_EVOLUTIONS } from "@arsenyx/shared/warframe/incarnon-evolutions"
+import {
+  ZAW_GRIPS,
+  ZAW_LINKS,
+  ZAW_STRIKES,
+} from "@arsenyx/shared/warframe/zaw-data"
 
 import {
   buildExaltedSet,
   categorizeCompanion,
   categorizeFrame,
   categorizeWeapon,
+  isExaltedWeapon,
   type BrowseCategory,
 } from "./build/categorize"
 import {
@@ -86,7 +92,7 @@ interface BrowseItemV2 {
   isPrime?: boolean
   vaulted?: boolean
   /** Wiki Class for weapons; "Warframe"/"Necramech"/"Archwing"/"Operator"
-   *  for frames; companion subtype label for pets. Replaces legacy `type`. */
+   *  for frames; companion subtype label for pets. */
   displayClass?: string
   releaseDate?: string
 }
@@ -372,6 +378,16 @@ async function main() {
   for (const { internalName } of iterWikiImageEntries(wikiArcanesBlob)) {
     wikiArcaneNames.add(internalName)
   }
+  // The wiki `Type` field is the authoritative equip slot (Warframe, Primary,
+  // Secondary, Melee, Kitgun, Zaw, …). DE only ships an effect bucket, so we
+  // carry the wiki slot through for runtime arcane-slot routing.
+  const arcaneSlotByUniqueName = new Map<string, string>()
+  for (const { internalName, record } of iterWikiRecords(wikiArcanesBlob)) {
+    const t = record["Type"]
+    if (typeof t === "string" && t.length > 0) {
+      arcaneSlotByUniqueName.set(internalName, t)
+    }
+  }
   const mergedArcanes = allMergedArcanes.filter((a) =>
     wikiArcaneNames.has(a.uniqueName),
   )
@@ -384,15 +400,11 @@ async function main() {
     return {
       ...a,
       imageName: wikiUrl ?? imageByUniqueName.get(a.uniqueName),
+      slotType: arcaneSlotByUniqueName.get(a.uniqueName),
     }
   })
 
-  // ---------- 6. Image lookup ----------
-  // (defined before step 5 in the code flow so arcane merge can use it,
-  //  but conceptually a step-6 concern — kept here for readability)
-  void 0
-
-  // ---------- 7. Build items-index.json ----------
+  // ---------- Build items-index.json ----------
   const byCategory: Partial<Record<BrowseCategory, BrowseItemV2[]>> = {}
   function push(cat: BrowseCategory, item: BrowseItemV2): void {
     if (!byCategory[cat]) byCategory[cat] = []
@@ -448,9 +460,16 @@ async function main() {
       displayClass: w.displayClass ?? undefined,
     }
     applyReleaseHistory(w.name, browseItem)
+    const exalted = isExaltedWeapon(w, exaltedSet)
     for (const c of cats) {
-      push(c, { ...browseItem, category: c })
+      // Emit the detail file for every category so links resolve regardless
+      // of which path reaches the weapon.
       weaponDetailByCatAndSlug.set(`${c}|${slug}`, w)
+      // Exalted weapons have their own "Exalted Weapons" tab; don't also list
+      // them in the generic weapon tabs (melee/primary/secondary) where they
+      // cluttered the list and double-rendered in the All view.
+      if (exalted && c !== "exalted-weapons") continue
+      push(c, { ...browseItem, category: c })
     }
     stats.weapons.emitted++
   }
@@ -619,9 +638,37 @@ async function main() {
     `  OK  incarnon-evolutions.json (${Object.keys(INCARNON_EVOLUTIONS).length} weapons, ${(incarnonBody.length / 1024).toFixed(1)} KB)`,
   )
 
-  // Per-item detail files — minimal pass-through for now. Phase 4b will
-  // populate the rich damage/attacks shape; for now we emit the merged
-  // weapon record verbatim so the schema is discoverable.
+  // Zaw component picker thumbnails. Grips/links/strikes aren't catalog items,
+  // so resolve their DE CDN URLs (with version hash) from the manifest by
+  // matching each component's texture filename, keyed by component name for
+  // the web picker. Their old wiki `Special:FilePath` URLs 404 on the current
+  // wiki; these flow through sync:images → R2 like every other catalog image.
+  const zawByFile = new Map<string, string>()
+  for (const url of imageByUniqueName.values()) {
+    if (!url.includes("/Zaws/")) continue
+    const file = url.split("/").pop()?.split("!")[0]
+    if (file && !zawByFile.has(file)) zawByFile.set(file, url)
+  }
+  const zawImages: Record<string, string> = {}
+  for (const c of [...ZAW_STRIKES, ...ZAW_GRIPS, ...ZAW_LINKS]) {
+    const url = zawByFile.get(c.imageName)
+    if (url) zawImages[c.name] = url
+  }
+  const zawTotal = ZAW_STRIKES.length + ZAW_GRIPS.length + ZAW_LINKS.length
+  await writeFile(
+    resolve(OUT_DIR, "zaw-images.json"),
+    JSON.stringify(zawImages),
+    "utf8",
+  )
+  if (Object.keys(zawImages).length < zawTotal) {
+    console.warn(
+      `  WARN zaw-images.json resolved ${Object.keys(zawImages).length}/${zawTotal} — some component textures missing from the manifest`,
+    )
+  } else {
+    console.log(`  OK  zaw-images.json (${zawTotal} components)`)
+  }
+
+  // Per-item detail files: emit the merged weapon record verbatim.
   await mkdir(DETAIL_DIR, { recursive: true })
   let detailCount = 0
   let detailBytes = 0

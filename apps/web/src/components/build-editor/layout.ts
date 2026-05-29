@@ -1,6 +1,7 @@
 import {
   getArcanesForCategory,
   getArcanesForSlot,
+  getArcanesForWeapon,
   isZawArcane,
   type ArcaneSlotType,
 } from "@arsenyx/shared/warframe/arcanes"
@@ -77,7 +78,7 @@ export function getArcaneSlotConfig(
   allArcanes: Arcane[],
   category: BrowseCategory,
   count: number,
-  item?: Pick<DetailItem, "name" | "trigger" | "displayClass">,
+  item?: Pick<DetailItem, "name" | "trigger" | "displayClass" | "uniqueName">,
 ): ArcaneSlotConfig {
   if (count === 0) return { options: [] }
   if (category === "archwing") {
@@ -100,6 +101,16 @@ export function getArcaneSlotConfig(
       ;(isZawArcane(a) ? exodia : regular).push(a)
     }
     return { options: [regular, exodia], labels: ["Melee Arcane", "Exodia"] }
+  }
+  // Primary/secondary: gate the weapon-type sub-pools (Shotgun/Bow/Kitgun
+  // arcanes) by this weapon's own class so e.g. a rifle doesn't see shotgun
+  // or kitgun arcanes. Falls back to the broad per-category pool when we have
+  // no item to inspect.
+  if (category === "primary" || category === "secondary") {
+    const shared = item
+      ? getArcanesForWeapon(allArcanes, category, item)
+      : getArcanesForCategory(allArcanes, category)
+    return { options: Array.from({ length: count }, () => shared) }
   }
   const shared = getArcanesForCategory(allArcanes, category)
   return { options: Array.from({ length: count }, () => shared) }

@@ -15,7 +15,7 @@ function stanceMod(polarity: Mod["polarity"]): Mod {
     rarity: "Uncommon",
     baseDrain: -2,
     fusionLimit: 3,
-    type: "Stance Mod",
+    type: "Stance",
     compatName: "Polearms",
     tradable: true,
   }

@@ -50,6 +50,16 @@ export function categorizeCompanion(_c: MergedCompanion): BrowseCategory {
   return "companions"
 }
 
+/** A weapon is exalted if the wiki tags it "Exalted Weapon" OR a warframe/
+ *  necramech lists it in its `exalted` array (the wiki sometimes labels them
+ *  by melee Class instead, e.g. Garuda's Talons = "Claws"). */
+export function isExaltedWeapon(
+  w: MergedWeapon,
+  exaltedSet: Set<string>,
+): boolean {
+  return w.displayClass === "Exalted Weapon" || exaltedSet.has(w.uniqueName)
+}
+
 /** Route a merged weapon to its BrowseCategory.
  *  Returns multiple categories when the item belongs to several (e.g. an
  *  Exalted Weapon is also a primary/secondary/melee for mod-pool purposes).
@@ -67,12 +77,7 @@ export function categorizeWeapon(
   if (w.productCategory === "OperatorAmps") return []
 
   const out: BrowseCategory[] = []
-  // Wiki Class is "Exalted Weapon" for most exalteds, but for a few
-  // (Garuda's Talons, Iron Staff variants) the wiki uses the melee Class
-  // and the exalted-ness is only structural — reachable via the wielding
-  // warframe's `exalted` array.
-  const isExalted =
-    w.displayClass === "Exalted Weapon" || exaltedSet.has(w.uniqueName)
+  const isExalted = isExaltedWeapon(w, exaltedSet)
 
   // Slot from wiki is the authoritative routing signal — present on every
   // playable weapon. Items without a wiki Slot (or with a Slot we don't
@@ -110,7 +115,8 @@ export function categorizeWeapon(
     case "Railjack Turret":
     case "Railjack Ordnance":
       break
-    // Necramech exalted (Ironbride) — surfaces as a melee with exalted tag
+    // Necramech exalted melee (e.g. Voidrig's Pugil) — surfaces as a melee
+    // with exalted tag
     case "Nech-Melee":
       out.push("melee")
       break

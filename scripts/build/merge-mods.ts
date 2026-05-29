@@ -1,22 +1,21 @@
 /**
  * Merge DE ExportUpgrades into our normalized Mod shape.
  *
- * Inputs:
- *   DE ExportUpgrades (1595 records, including mods, mod sets, avionics,
- *                      focus upgrades — split into sub-tables)
- *   DE ExportModSet (19 set-bonus records — looked up by uniqueName)
+ * Inputs (sibling arrays in ExportUpgrades_en.json):
+ *   ExportUpgrades  (1595 mod records)
+ *   ExportModSet    (19 set-bonus records — looked up by uniqueName)
+ *   ExportAvionics  (82 Railjack/Plexus avionics)
+ *   ExportFocusUpgrades (105 focus upgrades)
  *
  * Outputs:
  *   MergedMod[] — what mods-all.json emits.
  *
- * The legacy `normalizeMods()` in shared/warframe/mods.ts handled most of
- * this on WFCD-shaped data. This module reproduces its filter/normalize
- * behavior against DE data directly, with two refinements:
+ * Filters and normalizes DE upgrade records into the Mod shape, with two
+ * points worth calling out:
  *
  *   1. **compatName is normalized at build time** (canonical trim, kept in
- *      its source case to match the weapon's modPools list). This is the
- *      "normalize at build, not at runtime" piece from the plan — the
- *      runtime predicate becomes a plain array membership check.
+ *      its source case to match the weapon's modPools list), so the runtime
+ *      predicate is a plain array membership check.
  *
  *   2. **polarity moves from DE's AP_* enum to our lowercase scheme** at
  *      build time (matches what shared/warframe/types.ts expects). No
@@ -52,6 +51,11 @@ const DE_RARITY_MAP: Record<string, string> = {
   RARE: "Rare",
   LEGENDARY: "Legendary",
 }
+
+/** DE path fragments that mark a compatName="Claws" mod as beast/companion
+ *  (not a player melee Claws mod). Player claw stances live under
+ *  /MeleeTrees/ and /PvPMods/ and must NOT match. */
+const BEAST_CLAW_PATHS = ["/Sentinel/Kubrow/", "/BeastWeapons/", "/Sets/Hunter/"] as const
 
 /** Closed set of DE mod types — assert on drift. */
 const KNOWN_MOD_TYPES = new Set<string>([
@@ -179,8 +183,8 @@ function shouldKeep(
   if (normalizeDescription(mod.description)?.includes("Conclave")) {
     counts.conclave++
   }
-  // Plexus "Unfused Artifact" entries are pre-fusion placeholders with no
-  // stats; they're not buildable in-game.
+  // "Unfused Artifact" entries (Railjack crew-ship innate-damage
+  // placeholders) have no stats and aren't buildable in-game.
   if (mod.name === "Unfused Artifact") {
     counts.hardcoded++
     return false
@@ -336,31 +340,24 @@ export function mergeMods(
     // Trim compatName — DE has " Itzal" (leading space), trailing whitespace
     // can leak in, etc. Preserve case so it matches weapon.modPools entries.
     let compatName = (raw.compatName ?? "").trim()
-    // Beast-claw mods (Maul, Bite, Frost Jaw, Sepsis Claws, …) ship with
-    // compatName "Claws" — the same string player melee Claws mods use —
-    // so without disambiguation they leak onto weapon Claws (Venka,
-    // Ripkas, Garuda Talons). DE buckets all beast-shared mods under
-    // /Sentinel/Kubrow/ regardless of pet family; remap to a distinct
-    // pool name so player Claws and beast claws stop colliding. Paired
-    // with "BeastClaws" in class-pools.ts ("Claws (Beast)" companion
-    // weapons) and KNOWN_MOD_POOLS in merge-weapons.ts.
-    if (
-      compatName === "Claws" &&
-      raw.uniqueName?.includes("/Sentinel/Kubrow/")
-    ) {
+    // Beast-claw mods (Maul, Bite, Frost Jaw, Sepsis Claws, Beast Postures,
+    // Hunter Synergy, …) ship with compatName "Claws" — the same string
+    // player melee Claws mods use — so without disambiguation they leak
+    // onto weapon Claws (Venka, Ripkas, Garuda Talons). They live under
+    // several DE paths (/Sentinel/Kubrow/, /BeastWeapons/, the Hunter set);
+    // remap any "Claws" mod under those to a distinct pool name so player
+    // Claws and beast claws stop colliding. Player claw stances live under
+    // /MeleeTrees/ and /PvPMods/ and are left untouched. Paired with
+    // "BeastClaws" in class-pools.ts and KNOWN_MOD_POOLS in merge-weapons.ts.
+    if (compatName === "Claws" && BEAST_CLAW_PATHS.some((p) => raw.uniqueName?.includes(p))) {
       compatName = "BeastClaws"
     }
 
     const isPrime =
       raw.name.includes("Primed ") || raw.name.includes("Umbral ")
-    const isAugment =
-      // Augments key off the frame's name as compatName. Simple heuristic:
-      // any mod whose compatName is a single frame name (i.e., not a coarse
-      // pool like "Rifle"/"Melee"). The merge-warframes step will provide
-      // an authoritative frame-name set so we can promote this from
-      // heuristic to lookup; for now, leave false and let downstream code
-      // detect augments structurally (looks at uniqueName /Augment/).
-      raw.uniqueName?.includes("/Augment/") ?? false
+    // Augments are detected by DE's name suffix: frame-ability augments end
+    // in "AugmentCard"/"AugmentTwoCard", weapon augments in "AugmentMod".
+    const isAugment = /Augment\w*$/.test(raw.uniqueName ?? "")
 
     const modSetRef = (raw as { modSet?: string }).modSet
     const modSetStats = modSetRef ? setStats.get(modSetRef) : undefined
@@ -448,18 +445,3 @@ export function mergeMods(
   return { mods, setStats, counts }
 }
 
-/**
- * The collapsed runtime predicate (Phase 6 lands this as the body of
- * `weaponAcceptsMod` in shared/warframe/mods.ts). Kept here as the spec —
- * once Phase 6 ships, this function moves and this file no longer exports
- * it.
- */
-export function weaponAcceptsMod(
-  weapon: { modPools: readonly string[] },
-  mod: { compatName: string },
-): boolean {
-  // Build-normalized compatName matches weapon.modPools entries verbatim
-  // (case-sensitive, trimmed). The old runtime guessing collapses to one
-  // structural membership check.
-  return weapon.modPools.includes(mod.compatName)
-}

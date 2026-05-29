@@ -27,7 +27,7 @@ function placedModFixture(overrides: Partial<PlacedMod>): PlacedMod {
     fusionLimit: 4,
     rank: 4,
     rarity: "Uncommon",
-    type: "Stance Mod",
+    type: "Stance",
     compatName: "Polearms",
     ...overrides,
   }
@@ -103,13 +103,13 @@ describe("getModsForItem stance filtering", () => {
   const polearmStance = modFixture({
     uniqueName: "/Lotus/Mods/Stances/BleedingWillow",
     name: "Bleeding Willow",
-    type: "Stance Mod",
+    type: "Stance",
     compatName: "Polearms",
   })
   const heavyBladeStance = modFixture({
     uniqueName: "/Lotus/Mods/Stances/CleavingWhirlwind",
     name: "Cleaving Whirlwind",
-    type: "Stance Mod",
+    type: "Stance",
     compatName: "Heavy Blade",
   })
   const meleeMod = modFixture({

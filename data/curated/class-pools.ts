@@ -1,11 +1,11 @@
 /**
  * Per-wiki-Class default modPool routing.
  *
- * The plan claims `modPool = displayClass` is the default — empirically that
- * only holds for gun-class weapons where the wiki Class name happens to be
- * the same as DE's compatName (Rifle, Shotgun, Pistol, …). For everything
- * else — especially melees, which have 30+ wiki Class values that all
- * collapse to the single "Melee" mod pool — we need an explicit table.
+ * `modPool = displayClass` only holds for gun-class weapons where the wiki
+ * Class name happens to be the same as DE's compatName (Rifle, Shotgun,
+ * Pistol, …). For everything else — especially melees, which have 30+ wiki
+ * Class values that all collapse to the single "Melee" mod pool — we need
+ * an explicit table.
  *
  * This is the **class default**. Per-weapon overrides live in
  * `mod-pools.ts`. The merge step also appends the weapon's own name (and

@@ -7,8 +7,9 @@
  * provenance and CC-BY-SA attribution travels with the data.
  *
  * The router module `Module:Weapons/data` itself uses Scribunto's
- * `mw.loadData` + metatables and is NOT pure data — we deliberately mirror
- * only its eight subpages, which are pure table literals safe to luaparse.
+ * `mw.loadData` + metatables and is NOT pure data — we mirror its eight
+ * subpages instead, which are pure table literals safe to luaparse (see the
+ * MODULES list below for the full set).
  *
  * Network-only. The build never calls this; `read-wiki.ts` parses from disk.
  * Run via `bun run scripts/sync-wiki.ts` or as part of `bun run data:sync`.

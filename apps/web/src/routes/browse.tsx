@@ -145,13 +145,21 @@ function BrowseContent() {
     searchRef.current?.select()
   })
 
-  const items = useMemo(
-    () =>
-      category === "all"
-        ? CATEGORIES.flatMap((c) => data[c.id] ?? [])
-        : (data[category] ?? []),
-    [data, category],
-  )
+  const items = useMemo(() => {
+    if (category !== "all") return data[category] ?? []
+    // A few items are listed under more than one category (e.g. atmospheric
+    // arch-gun variants). Dedup the "All" view by the same uniqueName|slug key
+    // the cards use, so nothing double-renders. Atmosphere variants share a
+    // uniqueName but differ by slug, so both legitimately survive.
+    const byKey = new Map<string, BrowseItem>()
+    for (const c of CATEGORIES) {
+      for (const it of data[c.id] ?? []) {
+        const key = `${it.uniqueName}|${it.slug}`
+        if (!byKey.has(key)) byKey.set(key, it)
+      }
+    }
+    return [...byKey.values()]
+  }, [data, category])
 
   const visible = useMemo(
     () =>

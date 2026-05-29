@@ -281,7 +281,13 @@ export interface Arcane {
   name: string
   description?: string
   imageName?: string
+  /** Effect bucket from DE's sub-path: "Offensive" | "Defensive" | "Utility"
+   *  | "Zariman" | "Amp" | "Operator". NOT an equip slot. */
   type: string
+  /** Equip slot from the wiki's `Type` field: "Warframe" | "Primary" |
+   *  "Secondary" | "Melee" | "Bow" | "Shotgun" | "Kitgun" | "Zaw" | "Amp" |
+   *  "Operator" | "Tektolyst Artifacts". Drives slot eligibility. */
+  slotType?: string
   tradable: boolean
   levelStats?: Array<{ stats: string[] }>
   drops?: Array<{

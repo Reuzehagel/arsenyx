@@ -511,37 +511,3 @@ function buildStateToBuildDoc(state: Partial<BuildState>): BuildDoc {
     ],
   }
 }
-
-// =============================================================================
-// URL helpers
-// =============================================================================
-
-export function generateBuildUrl(state: BuildState, baseUrl?: string): string {
-  const encoded = encodeBuild(state)
-  const base =
-    baseUrl || (typeof window !== "undefined" ? window.location.origin : "")
-  return `${base}/create?build=${encodeURIComponent(encoded)}`
-}
-
-export function extractBuildFromUrl(url: string): Partial<BuildState> | null {
-  try {
-    const urlObj = new URL(url)
-    const buildParam = urlObj.searchParams.get("build")
-    if (!buildParam) return null
-    return decodeBuild(decodeURIComponent(buildParam))
-  } catch {
-    return null
-  }
-}
-
-export async function copyBuildToClipboard(
-  state: BuildState,
-): Promise<boolean> {
-  try {
-    const url = generateBuildUrl(state)
-    await navigator.clipboard.writeText(url)
-    return true
-  } catch {
-    return false
-  }
-}

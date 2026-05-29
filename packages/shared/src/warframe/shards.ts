@@ -132,10 +132,3 @@ export function getStatIndex(color: ShardColor, statName: string): number {
   const index = stats.findIndex((s) => s.name === statName)
   return index >= 0 ? index : 0
 }
-
-export function getStatByIndex(color: ShardColor, index: number): string {
-  const stats = SHARD_STATS[color]
-  if (!stats || index < 0 || index >= stats.length)
-    return stats?.[0]?.name ?? ""
-  return stats[index].name
-}

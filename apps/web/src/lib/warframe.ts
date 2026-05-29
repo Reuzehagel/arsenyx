@@ -1,6 +1,6 @@
 /**
  * Minimal client-side warframe helpers. The heavy data loading lives at
- * build time in legacy/scripts/build-items-index.ts — the frontend only
+ * build time in scripts/build-items-index.ts — the frontend only
  * needs enough to render cards and link to detail pages.
  */
 
@@ -20,12 +20,6 @@ const TRUSTED_IMAGE_PREFIXES = [
   "https://img.arsenyx.com/",
   "https://content.warframe.com/PublicExport/",
   "https://wiki.warframe.com/images/",
-  // Zaw component thumbnails resolve via the wiki's FilePath redirect
-  // (see `getZawComponentImage` in @arsenyx/shared/warframe/zaw-data).
-  // The redirect target is `wiki.warframe.com/images/...`, so the final
-  // image is on the same host already allowlisted above — this entry
-  // covers the redirect's source URL.
-  "https://wiki.warframe.com/w/Special:FilePath/",
 ] as const
 
 export function getImageUrl(imageName?: string): string {
@@ -67,8 +61,7 @@ export interface BrowseItem {
   masteryReq?: number
   isPrime?: boolean
   vaulted?: boolean
-  /** Wiki Class label ("Sniper Rifle", "Polearm", "Warframe") — replaces
-   *  the legacy WFCD `type` field. Renamed for clarity: this is what
+  /** Wiki Class label ("Sniper Rifle", "Polearm", "Warframe"). This is what
    *  appears as the class label in the UI, not a category enum. */
   displayClass?: string
   releaseDate?: string
@@ -127,9 +120,8 @@ export interface DetailItem extends BrowseItem {
   // Beast claws (hardcoded synthetic entries): lowercased compatNames the
   // weapon accepts. Used by getModsForItem to pick claws/family/pet mods.
   compatGroups?: string[]
-  /** Phase 6 structural mod routing: DE `compatName` values this item
-   *  accepts. Emitted by the v2 pipeline on every weapon/frame/companion.
-   *  When present, replaces the legacy type-based routing in
+  /** Structural mod routing: DE `compatName` values this item accepts.
+   *  Emitted by the build on every weapon/frame/companion and consumed by
    *  `getModsForItem`. */
   modPools?: readonly string[]
 }

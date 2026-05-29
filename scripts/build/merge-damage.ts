@@ -151,10 +151,6 @@ export function buildDamageBlock(
  * DE's `damagePerShot` is a 20-element array indexed by an internal
  * DT_* damage type enum. This table maps each index to the lowercase
  * element name the UI expects.
- *
- * Order verified against DE source (DT_INDEX in
- * `https://github.com/WFCD/warframe-items` build pipeline) and the
- * legacy items-index emission for known weapons.
  */
 const DT_INDEX: readonly string[] = [
   "impact", // 0
@@ -176,7 +172,7 @@ const DT_INDEX: readonly string[] = [
   "shielddrain", // 16
   "healthdrain", // 17
   "energydrain", // 18
-  "true", // 19
+  "finisher", // 19
 ]
 
 /** Convert DE damagePerShot[20] → lowercase damage dict (nonzero only). */

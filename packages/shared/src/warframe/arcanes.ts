@@ -1,23 +1,13 @@
 /**
  * Arcane compatibility helpers. Pure functions — caller supplies the
- * arcanes array emitted by `scripts/build/merge-arcanes.ts`, which sets
- * `type` from the DE sub-path: one of `Defensive | Offensive | Utility |
- * Zariman | Amp | Operator`. Those effect-style buckets don't map to
- * equip slots, so slot eligibility is derived from arcane names below.
+ * arcanes array emitted by `scripts/build/merge-arcanes.ts`. Slot eligibility
+ * routes on each arcane's wiki `slotType` (the authoritative equip slot:
+ * Warframe / Primary / Secondary / Melee / Kitgun / Zaw / Operator / …). DE's
+ * `type` is an effect bucket (Offensive/Utility/…), not a slot; the name-token
+ * heuristic below is only a fallback for arcanes missing a `slotType`.
  */
 
 import type { Arcane, BrowseCategory } from "./types"
-
-/** Strip beta/excluded/empty entries from the raw arcane dump. */
-export function normalizeArcanes(rawArcanes: Arcane[]): Arcane[] {
-  return rawArcanes.filter((arcane) => {
-    if (!arcane.name) return false
-    if (arcane.name === "Arcane") return false
-    if ((arcane as { excludeFromCodex?: boolean }).excludeFromCodex)
-      return false
-    return true
-  })
-}
 
 export type ArcaneSlotType =
   | "warframe"
@@ -27,10 +17,9 @@ export type ArcaneSlotType =
   | "melee"
   | "weapon"
 
-// Name tokens — DE's sub-path buckets (Utility/Defensive/Offensive/Zariman)
-// mix frame and weapon arcanes together, so we route by name. "Zaw" tokens
-// surface Exodia (Zaw-only in-game) on every melee, matching the
-// permissive pool we've always shown.
+// Fallback name tokens — used only for the rare arcane that lacks a wiki
+// `slotType`. DE's sub-path bucket (Utility/Defensive/…) is an effect type,
+// not an equip slot, so these approximate the slot from the name.
 const PRIMARY_TOKENS = ["primary", "residua", "fractal"] as const
 const SECONDARY_TOKENS = ["secondary", "pax"] as const
 const MELEE_TOKENS = ["melee", "zaw", "exodia"] as const
@@ -45,18 +34,95 @@ function nameMatches(arcane: Arcane, tokens: readonly string[]): boolean {
   return tokens.some((t) => n.includes(t))
 }
 
-/** Exodia / Zaw-only arcane — detected by name (the type bucket no longer
- *  distinguishes these from other melee arcanes). */
+/** Exodia / Zaw-only arcane — detected by name so callers can split the
+ *  melee pool into Exodia (Zaw) vs ordinary melee arcanes. */
 export function isZawArcane(arcane: Arcane): boolean {
   const n = arcane.name.toLowerCase()
   return n.includes("exodia") || n.includes("zaw")
 }
 
-/** Operator/Amp arcane — sits in a different equip section from the
- *  weapon/frame arcanes and should never appear in those pickers. */
+/** Operator-side arcane (Operator / Amp / Tektolyst) — never on a
+ *  weapon/frame slot. */
 function isOperatorOrAmpArcane(arcane: Arcane): boolean {
-  const t = arcane.type ?? ""
-  return t === "Operator" || t === "Amp"
+  const slot = arcane.slotType
+  if (slot) {
+    return (
+      slot === "Operator" || slot === "Amp" || slot === "Tektolyst Artifacts"
+    )
+  }
+  return arcane.type === "Operator" || arcane.type === "Amp"
+}
+
+/** Map the wiki `slotType` to one of our equip-slot buckets. Kitgun arcanes
+ *  go on both primary and secondary (a kitgun can be built either way); Zaw
+ *  arcanes ride the melee slot; Bow/Shotgun are primary sub-types. */
+function slotTypeMatches(slot: string, target: ArcaneSlotType): boolean {
+  switch (target) {
+    case "warframe":
+      return slot === "Warframe"
+    case "operator":
+      return (
+        slot === "Operator" || slot === "Amp" || slot === "Tektolyst Artifacts"
+      )
+    case "primary":
+      return (
+        slot === "Primary" ||
+        slot === "Bow" ||
+        slot === "Shotgun" ||
+        slot === "Kitgun"
+      )
+    case "secondary":
+      return slot === "Secondary" || slot === "Kitgun"
+    case "melee":
+      return slot === "Melee" || slot === "Zaw"
+    case "weapon":
+      return slot !== "Warframe" && !isOperatorSlot(slot)
+  }
+}
+
+function isOperatorSlot(slot: string): boolean {
+  return slot === "Operator" || slot === "Amp" || slot === "Tektolyst Artifacts"
+}
+
+/** Kitgun weapons (Catchmoon / Gaze / Rattleguts / Tombfinger / Vermisplicer
+ *  / Sporelacer, built as primary OR secondary) — identified by their modular
+ *  barrel `uniqueName` path. Primary kitguns report a normal weapon
+ *  `displayClass` ("Shotgun"/"Rifle"/"Launcher") but aren't real shotguns/
+ *  rifles, so they must be detected structurally, not by class. Kitguns are
+ *  the only weapons that accept Kitgun arcanes (Pax / Residual). */
+export function isKitgunWeapon(weapon: { uniqueName?: string }): boolean {
+  const u = weapon.uniqueName ?? ""
+  return u.includes("SUModular") || u.includes("InfKitGun")
+}
+
+/** Arcanes equippable on a SPECIFIC primary/secondary weapon. Unlike
+ *  `getArcanesForSlot` (the broad per-slot pool used by browse/archwing), this
+ *  gates the weapon-type sub-pools by the weapon's own class: a rifle sees
+ *  only generic Primary arcanes; a shotgun adds Shotgun arcanes; a bow adds
+ *  Bow arcanes; only kitguns see Kitgun (Pax/Residual) arcanes. Wiki-verified:
+ *  Shotgun Vendetta is shotgun-only, Longbow Sharpshot bow-only, Pax/Residual
+ *  kitgun-only. */
+export function getArcanesForWeapon(
+  arcanes: Arcane[],
+  category: "primary" | "secondary",
+  weapon: { displayClass?: string; uniqueName?: string },
+): Arcane[] {
+  const kitgun = isKitgunWeapon(weapon)
+  const dc = weapon.displayClass
+  return getArcanesForSlot(arcanes, category).filter((a) => {
+    switch (a.slotType) {
+      case "Kitgun":
+        return kitgun
+      case "Shotgun":
+        return !kitgun && dc === "Shotgun"
+      case "Bow":
+        return !kitgun && dc === "Bow"
+      default:
+        // Generic Primary/Secondary arcanes, or fallback-routed arcanes with
+        // no wiki slotType, fit any weapon in their base slot.
+        return true
+    }
+  })
 }
 
 export function getArcanesForSlot(
@@ -64,12 +130,13 @@ export function getArcanesForSlot(
   slotType: ArcaneSlotType,
 ): Arcane[] {
   return arcanes.filter((arcane) => {
+    // Authoritative: route on the wiki equip slot.
+    if (arcane.slotType) return slotTypeMatches(arcane.slotType, slotType)
+    // Fallback (no wiki slotType): legacy name-token routing.
     if (slotType === "operator") return isOperatorOrAmpArcane(arcane)
     if (isOperatorOrAmpArcane(arcane)) return false
     switch (slotType) {
       case "warframe":
-        // Anything that isn't a weapon-token arcane (Pax, Primary, Residua,
-        // Exodia, …) is a frame arcane.
         return !nameMatches(arcane, WEAPON_TOKENS)
       case "primary":
         return nameMatches(arcane, PRIMARY_TOKENS)

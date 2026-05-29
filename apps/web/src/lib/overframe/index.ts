@@ -126,7 +126,9 @@ function innatePolarityFor(
       | Polarity
       | undefined
   }
-  if (slotId === "exilus") return undefined // not stored in items index
+  if (slotId === "exilus") {
+    return (detail.exilusPolarity ?? undefined) as Polarity | undefined
+  }
   if (slotId.startsWith("normal-")) {
     const idx = Number(slotId.slice("normal-".length))
     return (detail.polarities?.[idx] ?? undefined) as Polarity | undefined

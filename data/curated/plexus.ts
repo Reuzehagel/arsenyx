@@ -1,6 +1,6 @@
 /**
  * Synthetic Plexus weapon. DE doesn't export it as a standalone entry, so
- * we curate one here. Moved from scripts/build-items-index.ts in Phase 4.
+ * we curate one here.
  */
 
 import type { BrowseItem } from "@arsenyx/shared/warframe/types"

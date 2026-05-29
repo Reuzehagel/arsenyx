@@ -319,14 +319,6 @@ export function isZawStrike(name: string): boolean {
   return strikeMap.has(name)
 }
 
-export function isZawGrip(name: string): boolean {
-  return gripMap.has(name)
-}
-
-export function isZawLink(name: string): boolean {
-  return linkMap.has(name)
-}
-
 export function getZawStrike(name: string): ZawStrike | undefined {
   return strikeMap.get(name)
 }
@@ -339,31 +331,11 @@ export function getZawLink(name: string): ZawLink | undefined {
   return linkMap.get(name)
 }
 
-/** Wiki resolves bare filenames via the `Special:FilePath/<name>` redirect.
- *  Unlike the rate-limited bulk-fetch case (see scripts/sync-images.ts),
- *  zaw thumbnails are loaded a handful at a time from the component picker
- *  — well below any per-IP threshold. We pin the URL here so the value
- *  flows through `getImageUrl`'s trusted-prefix allowlist. */
-const WIKI_FILE_PATH_BASE = "https://wiki.warframe.com/w/Special:FilePath/"
-
-export function getZawComponentImage(name: string): string | undefined {
-  const file =
-    strikeMap.get(name)?.imageName ??
-    gripMap.get(name)?.imageName ??
-    linkMap.get(name)?.imageName
-  if (!file) return undefined
-  return `${WIKI_FILE_PATH_BASE}${file}`
-}
-
-export function getZawWeaponType(
-  strikeName: string,
-  gripName: string,
-): string | null {
-  const strike = strikeMap.get(strikeName)
-  const grip = gripMap.get(gripName)
-  if (!strike || !grip) return null
-  return grip.oneHanded ? strike.oneHanded : strike.twoHanded
-}
+// Component thumbnail URLs are resolved at build time from the DE manifest
+// (keyed by the `imageName` filenames above) and emitted to
+// `apps/web/public/data/zaw-images.json`; the web picker loads that map via
+// `zawImagesQuery`. The old `Special:FilePath` wiki redirect 404s on the
+// current wiki, so runtime URL construction was removed.
 
 export const ZAW_DEFAULT_GRIP = "Jayap"
 export const ZAW_DEFAULT_LINK = "Jai"

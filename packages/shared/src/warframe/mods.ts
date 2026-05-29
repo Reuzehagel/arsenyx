@@ -28,67 +28,10 @@ export function normalizePolarity(polarity?: string): Polarity {
   return map[lower] ?? "universal"
 }
 
-/** Strip variants/tutorial/nemesis duplicates and normalize polarity + special rarities. */
-export function normalizeMods(rawMods: Mod[]): Mod[] {
-  const modSetIndex = new Map<string, Mod>()
-  for (const mod of rawMods) {
-    if (mod.uniqueName && mod.stats) {
-      modSetIndex.set(mod.uniqueName, mod)
-    }
-  }
-
-  return rawMods
-    .filter((mod) => {
-      if (!mod.name) return false
-      if (mod.name.includes("Riven Mod")) return false
-      if (!mod.compatName && !mod.type) return false
-      if (mod.description?.includes("Conclave")) return false
-      // Plexus "Unfused Artifact" entries are pre-fusion placeholders with
-      // no stats; they're not buildable in-game.
-      if (mod.name === "Unfused Artifact") return false
-
-      const uniqueName = mod.uniqueName ?? ""
-      if (uniqueName.includes("/Beginner/")) return false
-      if (uniqueName.endsWith("Intermediate")) return false
-      if (uniqueName.endsWith("Expert") && !mod.name.includes("Primed"))
-        return false
-      if (uniqueName.includes("/Nemesis/")) return false
-      if (uniqueName.endsWith("SubMod")) return false
-      // Unused upstream entry that ships as a second "Pressure Point" with
-      // +200% Melee Damage + +120% combo count chance. Not a real in-game
-      // mod; @wfcd/items keeps it for parity with the game files.
-      if (
-        uniqueName ===
-        "/Lotus/Upgrades/Mods/Melee/WeaponMeleeDamageOnHeavyKillMod"
-      )
-        return false
-
-      return true
-    })
-    .map((mod) => {
-      let modSetStats: string[] | undefined
-      if (mod.modSet) {
-        const setMod = modSetIndex.get(mod.modSet)
-        if (setMod?.stats) modSetStats = setMod.stats
-      }
-
-      let rarity = mod.rarity
-      if (mod.name.startsWith("Amalgam ")) rarity = "Amalgam"
-      else if (mod.name.startsWith("Galvanized ")) rarity = "Galvanized"
-
-      return {
-        ...mod,
-        polarity: normalizePolarity(mod.polarity as unknown as string),
-        modSetStats,
-        rarity,
-      }
-    })
-}
-
 // --- compatibility matchers ---
 
 export function isStanceMod(mod: Pick<Mod, "type">): boolean {
-  return mod.type?.toLowerCase() === "stance mod"
+  return mod.type?.toLowerCase() === "stance"
 }
 
 /** Pulls the set codename out of a mod's `modSet` path (e.g.
@@ -108,9 +51,7 @@ function isMeleeCompat(compatName: string, modType: string) {
   // Arch-Melee shares the substring "melee" but uses its own mod pool.
   if (compatName === "archmelee" || modType.includes("arch-melee")) return false
   return (
-    compatName === "melee" ||
-    modType.includes("melee") ||
-    modType === "stance mod"
+    compatName === "melee" || modType.includes("melee") || modType === "stance"
   )
 }
 
@@ -228,25 +169,22 @@ function isTomeWeapon(name?: string): boolean {
 /**
  * Return the mods compatible with the given item.
  *
- * Modern path (Phase 6 collapse): the item carries `modPools` — the list
- * of mod `compatName` values it accepts, computed once at build time
- * from wiki Class + curated overrides. Filtering is a single set
- * membership check (`modPools.includes(mod.compatName)`), plus a
- * narrow filter for stance mods (class-specific) and exilus utility.
+ * When the item carries `modPools` — the list of mod `compatName` values
+ * it accepts, computed at build time from wiki Class + curated overrides —
+ * filtering is a single set membership check
+ * (`modPools.includes(mod.compatName)`), plus a narrow filter for stance
+ * mods (class-specific) and exilus utility.
  *
- * Legacy path: when `modPools` is absent (synthetic items, builds
- * imported from before the cutover) we fall back to the category-only
- * routing via `CATEGORY_TO_COMPAT`. Type-based name-pattern routing
- * (`Bubonico is a Rifle → Shotgun` etc.) is gone — that class of bug
- * is what motivated the rewrite.
+ * When `modPools` is absent (synthetic items, builds imported before the
+ * field existed) we fall back to category-only routing via
+ * `CATEGORY_TO_COMPAT`.
  *
  * `mods` must already be normalized via `normalizeMods`.
  */
 export function getModsForItem(
   item: {
-    /** DEPRECATED — kept in signature for back-compat with older call
-     *  sites. The structural router ignores this entirely; pass
-     *  `modPools` instead. Removed in a follow-up sweep. */
+    /** Unused by the router; pass `modPools` instead. Kept in the signature
+     *  for back-compat with older call sites. */
     type?: string
     category?: string
     name?: string
@@ -256,11 +194,10 @@ export function getModsForItem(
      *  all stance mods that match the broader modPools pass. */
     meleeClass?: string
     uniqueName?: string
-    /** DEPRECATED — Beast claws routing used to require a curated
-     *  compatGroups list. The new pipeline encodes those compatNames
-     *  directly into `modPools`. Kept for legacy callers. */
+    /** Unused by the router — beast-claw compatNames are now encoded
+     *  directly into `modPools`. Kept for back-compat with older callers. */
     compatGroups?: string[]
-    /** Phase 6 routing field: the DE `compatName` values this item
+    /** The DE `compatName` values this item
      *  accepts. Includes generic pools ("Rifle", "WARFRAME"), refinement
      *  pools ("Sniper", "Polearms"), the item's own name (for augments),
      *  and family/base names where applicable. */

@@ -3,13 +3,12 @@
  * blob, sub-path `/Lotus/Upgrades/CosmeticEnhancers/`) into our normalized
  * shape.
  *
- * The plan flagged DE's choice: `ExportRelicArcane_en.json` carries both
- * Void Relics (~3000 entries) and Arcanes (~168 entries) in a flat
- * ExportRelicArcane array. We filter by the `/CosmeticEnhancers/` path
- * prefix to extract just the arcanes.
+ * `ExportRelicArcane_en.json` carries both Void Relics (~3000 entries) and
+ * Arcanes (~168 entries) in a flat ExportRelicArcane array. We filter by the
+ * `/CosmeticEnhancers/` path prefix to extract just the arcanes.
  *
- * `levelStats` is already pre-computed by DE (5 or 6 ranks worth of stat
- * strings per arcane) — no math here, just pass-through.
+ * `levelStats` is already pre-computed by DE (typically 4 or 6 ranks worth
+ * of stat strings per arcane) — no math here, just pass-through.
  *
  * Arcane "type" is derived from the sub-path (Offensive, Defensive,
  * Utility, OperatorAmps, OperatorArmour, Zariman). We map these to
@@ -33,6 +32,9 @@ export interface MergedArcane {
   description?: string
   /** "Offensive" | "Defensive" | "Utility" | "Zariman" | "Amp" | "Operator" */
   type: string
+  /** Equip slot from the wiki `Type` field, filled in at emit time (the DE
+   *  blob doesn't carry it). Drives slot routing in shared/warframe/arcanes. */
+  slotType?: string
   rarity: string
   imageName?: string
   levelStats?: Array<{ stats: string[] }>

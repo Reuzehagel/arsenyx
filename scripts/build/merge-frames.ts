@@ -14,6 +14,8 @@
  */
 
 import type { DeFrame } from "./read-de"
+import { normalizePolarity } from "./polarity"
+import { cleanDeName } from "./names"
 
 type FrameCategory = "warframes" | "archwing" | "necramechs" | "operators"
 
@@ -65,26 +67,6 @@ interface WikiFrame {
   Progenitor?: string
 }
 
-const POLARITY_SET = new Set<string>([
-  "madurai",
-  "vazarin",
-  "naramon",
-  "zenurik",
-  "unairu",
-  "penjaga",
-  "umbra",
-  "aura",
-  "exilus",
-  "universal",
-  "any",
-])
-
-function normalizePolarity(p: unknown): string | null {
-  if (typeof p !== "string" || p.length === 0) return null
-  const lower = p.toLowerCase()
-  return POLARITY_SET.has(lower) ? lower : lower
-}
-
 /** Wiki AuraPolarity is a string for single-aura frames and an array for
  *  multi-aura frames (Jade: `{ "Aura", "Vazarin" }`). Return one of:
  *  string (single slot), string[] (multi-slot), or null (no aura slot). */
@@ -109,15 +91,6 @@ function categoryOf(productCategory: string): FrameCategory {
     default:
       throw new Error(`Unknown frame productCategory "${productCategory}"`)
   }
-}
-
-const ARCHWING_PREFIX = "<ARCHWING> "
-
-/** Strip the `<ARCHWING> ` prefix DE puts on archwing frame names. */
-function cleanDeName(name: string): string {
-  return name.startsWith(ARCHWING_PREFIX)
-    ? name.slice(ARCHWING_PREFIX.length)
-    : name
 }
 
 interface FrameWikiTable {

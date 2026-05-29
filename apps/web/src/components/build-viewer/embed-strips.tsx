@@ -1,10 +1,7 @@
 import { getIncarnonBaseName } from "@arsenyx/shared/warframe/incarnon-data"
 import type { LichBonusElement } from "@arsenyx/shared/warframe/types"
-import {
-  getZawComponentImage,
-  isZawStrike,
-} from "@arsenyx/shared/warframe/zaw-data"
-import { useSuspenseQuery } from "@tanstack/react-query"
+import { isZawStrike } from "@arsenyx/shared/warframe/zaw-data"
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
 import { ExternalLink, Zap } from "lucide-react"
 import { Suspense, useState } from "react"
 
@@ -21,6 +18,7 @@ import {
 } from "@/components/ui/tooltip"
 import type { HelminthAbility } from "@/lib/queries/helminth-query"
 import { incarnonEvolutionsQuery } from "@/lib/queries/incarnon-query"
+import { zawImagesQuery } from "@/lib/queries/zaw-images-query"
 import type { PlacedShard } from "@/lib/shards"
 import { cn } from "@/lib/util/utils"
 import { getImageUrl } from "@/lib/warframe"
@@ -281,7 +279,8 @@ function EmbedZawStrip({
 
 function EmbedZawPart({ name, type }: { name: string; type: "Grip" | "Link" }) {
   const [open, setOpen] = useState(false)
-  const imageName = getZawComponentImage(name)
+  const { data: zawImages } = useQuery(zawImagesQuery)
+  const imageName = zawImages?.[name]
   const triggerEl = (
     <button
       type="button"
