@@ -16,7 +16,6 @@ import { resolve } from "node:path"
 const REPO = resolve(import.meta.dirname, "..")
 const API_DIR = resolve(REPO, "apps/api")
 const API_ENV = resolve(API_DIR, ".env")
-const API_DEV_VARS = resolve(API_DIR, ".dev.vars")
 const API_ENV_EXAMPLE = resolve(API_DIR, ".env.example")
 const NODE_MODULES = resolve(REPO, "node_modules")
 
@@ -150,19 +149,18 @@ DATABASE_URL
     "✓ GITHUB_CLIENT_ID / SECRET left as-is (email+password dev login will work)",
   )
 
-  // Prisma CLI reads .env; wrangler dev reads .dev.vars only. Same content,
-  // two files. NODE_ENV=development enables the dev-only email+password
+  // Single file: apps/api/.env. Wrangler 4.x auto-loads it into the Worker's
+  // env bindings, and Prisma / the bun scripts read it too. Do NOT also write
+  // a .dev.vars — wrangler treats its presence as an override that suppresses
+  // .env entirely. NODE_ENV=development enables the dev-only email+password
   // sign-in path; wrangler.toml's [vars] overrides it to "production" on deploy.
   const nextValues = new Map(existing)
   nextValues.set("NODE_ENV", "development")
   nextValues.set("DATABASE_URL", dbUrl!)
   nextValues.set("BETTER_AUTH_SECRET", secret)
   const rendered = renderEnv(template, nextValues)
-  await Promise.all([
-    writeFile(API_ENV, rendered, "utf8"),
-    writeFile(API_DEV_VARS, rendered, "utf8"),
-  ])
-  console.log("✓ apps/api/.env + apps/api/.dev.vars written")
+  await writeFile(API_ENV, rendered, "utf8")
+  console.log("✓ apps/api/.env written")
 
   console.log("\n› prisma db push\n")
   await run(["bun", "run", "db:push"], API_DIR, { DATABASE_URL: dbUrl! })

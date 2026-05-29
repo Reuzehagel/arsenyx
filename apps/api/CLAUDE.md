@@ -20,12 +20,13 @@ Hono on Cloudflare Workers (Bun-compatible for local dev). Better Auth + Prisma 
 
 ## Env
 
-Local secrets live in **two files that must be kept in sync** — an unavoidable split because two toolchains read different filenames:
+Local secrets live in a **single file: `apps/api/.env`** (gitignored — copy from [.env.example](.env.example)). Three toolchains read it:
 
-- `.dev.vars` — read natively by `wrangler dev` (the local API server, `bun run dev`). Wrangler cannot read `.env`.
-- `.env` — read by Prisma (`db:push` / `db:studio` / `db:generate`, via [prisma.config.ts](prisma.config.ts)) and by the `bun run` scripts (`seed-admin`, `backfill-image-names`) via `dotenv`. These cannot read `.dev.vars`.
+- `wrangler dev` (the local API server, `bun run dev`) — Wrangler 4.x loads `.env` into the Worker's `env` bindings automatically (boot log: "Using secrets defined in .env"). **Do not add a `.dev.vars` file**: if present it *overrides and suppresses* `.env` entirely, reintroducing the drift this setup avoids. (`CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false` disables `.env` loading.)
+- Prisma (`db:push` / `db:studio` / `db:generate`) via [prisma.config.ts](prisma.config.ts) (dotenv).
+- The `bun run` scripts (`seed-admin`, `backfill-image-names`) via `dotenv` / bun's auto-load.
 
-Both hold the same keys (`DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`, `NODE_ENV`, `WEB_ORIGIN`). Edit both, or copy one onto the other after a change — they drift silently otherwise. Don't delete either: each is load-bearing for a different tool.
+Keys: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`, `NODE_ENV`, `WEB_ORIGIN`.
 
 Prod injects secrets via `wrangler secret put` (see [wrangler.toml](wrangler.toml) for the list). Plaintext vars (`WEB_ORIGIN`, `BETTER_AUTH_URL`, `NODE_ENV`) live in `wrangler.toml`'s `[vars]` block. **Don't branch on `NODE_ENV`** to pick credentials; do use it for cookie `SameSite`/`Secure` gates.
 
