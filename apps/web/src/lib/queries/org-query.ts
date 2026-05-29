@@ -4,6 +4,7 @@ import { notFound } from "@tanstack/react-router"
 import {
   type BuildListParams,
   type BuildListResponse,
+  buildQueryString,
 } from "@/lib/queries/builds-list-query"
 import { apiFetch, ApiError } from "@/lib/util/api-client"
 
@@ -99,14 +100,7 @@ export const orgBuildsQuery = (slug: string, params: BuildListParams) =>
   queryOptions({
     queryKey: ["builds", "org", slug.toLowerCase(), params],
     queryFn: async (): Promise<BuildListResponse> => {
-      const q = new URLSearchParams()
-      if (params.page > 1) q.set("page", String(params.page))
-      if (params.sort !== "newest") q.set("sort", params.sort)
-      if (params.q) q.set("q", params.q)
-      if (params.category) q.set("category", params.category)
-      if (params.hasGuide) q.set("hasGuide", "1")
-      if (params.hasShards) q.set("hasShards", "1")
-      const qs = q.toString() ? `?${q.toString()}` : ""
+      const qs = buildQueryString(params, "newest", ["item", "limit"])
       try {
         return await apiFetch<BuildListResponse>(
           `/orgs/${encodeURIComponent(slug)}/builds${qs}`,

@@ -27,7 +27,7 @@
  *   - Unknown type enum value
  */
 
-import type { DeUpgrade } from "./read-de"
+import { type DeUpgrade, mapRarity, normalizeDescription } from "./read-de"
 import type { PePlusUpgradeFields } from "./read-pe-plus"
 
 /** DE's `AP_*` polarity → canonical lowercase name used by the UI. */
@@ -41,15 +41,6 @@ const DE_POLARITY_MAP: Record<string, string> = {
   AP_UMBRA: "umbra",
   AP_ANY: "any",
   AP_UNIVERSAL: "universal",
-}
-
-/** DE rarity (UPPERCASE) → capitalized canonical. Plus the two
- *  name-derived variants (Amalgam, Galvanized) added during normalize. */
-const DE_RARITY_MAP: Record<string, string> = {
-  COMMON: "Common",
-  UNCOMMON: "Uncommon",
-  RARE: "Rare",
-  LEGENDARY: "Legendary",
 }
 
 /** DE path fragments that mark a compatName="Claws" mod as beast/companion
@@ -134,15 +125,6 @@ interface FilterCounts {
   nemesis: number
   noNameOrCompat: number
   hardcoded: number
-}
-
-/** DE ships `description` as `string[]` (one entry per paragraph). The
- *  frontend expects a single string; join with newlines. */
-function normalizeDescription(
-  d: string | string[] | undefined,
-): string | undefined {
-  if (d === undefined) return undefined
-  return Array.isArray(d) ? d.join("\n") : d
 }
 
 /**
@@ -230,6 +212,57 @@ function shouldKeep(
   }
   counts.kept++
   return true
+}
+
+/** Per-mod fields the two emit loops compute differently: the main loop
+ *  derives them from the DE record, the avionics loop hardcodes the Plexus
+ *  overrides. Everything else (uniqueName, name, description, polarity,
+ *  drain, levelStats, OpenWF compat fields) is read straight off `raw` and
+ *  `plus`, so it lives in `toMergedMod`. */
+interface MergedModParts {
+  polarity: string
+  rarity: string
+  compatName: string
+  type: string
+  isAugment: boolean
+  isPrime: boolean
+  isExilus: boolean
+  isConclave: boolean
+  /** Set-bonus reference + stats. Avionics carry neither, so both default
+   *  to absent. */
+  modSet?: string
+  modSetStats?: string[]
+}
+
+/** Assemble a `MergedMod` from a DE record, its OpenWF augmentation fields,
+ *  and the per-caller `parts`. Shared by the main upgrade loop and the
+ *  avionics loop so the emitted field set can't drift between them. */
+function toMergedMod(
+  raw: DeUpgrade,
+  plus: PePlusUpgradeFields | undefined,
+  parts: MergedModParts,
+): MergedMod {
+  return {
+    uniqueName: raw.uniqueName,
+    name: raw.name,
+    description: normalizeDescription(raw.description),
+    polarity: parts.polarity,
+    rarity: parts.rarity,
+    baseDrain: raw.baseDrain ?? 0,
+    fusionLimit: raw.fusionLimit ?? 0,
+    compatName: parts.compatName,
+    type: parts.type,
+    isAugment: parts.isAugment,
+    isPrime: parts.isPrime,
+    isExilus: parts.isExilus,
+    isConclave: parts.isConclave,
+    levelStats: raw.levelStats,
+    modSet: parts.modSet,
+    modSetStats: parts.modSetStats,
+    compat: plus?.compat,
+    compatibilityTags: plus?.compatibilityTags,
+    incompatibilityTags: plus?.incompatibilityTags,
+  }
 }
 
 export interface MergeModsResult {
@@ -325,17 +358,7 @@ export function mergeMods(
     let rarity: string
     if (raw.name.startsWith("Amalgam ")) rarity = "Amalgam"
     else if (raw.name.startsWith("Galvanized ")) rarity = "Galvanized"
-    else {
-      const rarityRaw = raw.rarity ?? ""
-      const mapped = DE_RARITY_MAP[rarityRaw]
-      if (!mapped) {
-        throw new Error(
-          `Unknown DE rarity "${rarityRaw}" on mod ${raw.name}. ` +
-            `Add to DE_RARITY_MAP.`,
-        )
-      }
-      rarity = mapped
-    }
+    else rarity = mapRarity(raw.rarity, { context: `mod ${raw.name}` })
 
     // Trim compatName — DE has " Itzal" (leading space), trailing whitespace
     // can leak in, etc. Preserve case so it matches weapon.modPools entries.
@@ -355,8 +378,10 @@ export function mergeMods(
 
     const isPrime =
       raw.name.includes("Primed ") || raw.name.includes("Umbral ")
-    // Augments are detected by DE's name suffix: frame-ability augments end
-    // in "AugmentCard"/"AugmentTwoCard", weapon augments in "AugmentMod".
+    // Augments are detected by an "Augment"-rooted suffix on the DE
+    // `uniqueName` path (e.g. .../FooAugmentCard, .../BarAugmentMod): the
+    // regex matches "Augment" followed by zero or more word chars at end of
+    // string, so any Augment* variant qualifies.
     const isAugment = /Augment\w*$/.test(raw.uniqueName ?? "")
 
     const modSetRef = (raw as { modSet?: string }).modSet
@@ -364,27 +389,20 @@ export function mergeMods(
 
     const plus = pePlus.get(raw.uniqueName)
 
-    mods.push({
-      uniqueName: raw.uniqueName,
-      name: raw.name,
-      description: normalizeDescription(raw.description),
-      polarity,
-      rarity,
-      baseDrain: raw.baseDrain ?? 0,
-      fusionLimit: raw.fusionLimit ?? 0,
-      compatName,
-      type,
-      isAugment,
-      isPrime,
-      isExilus: wikiExilus.get(raw.uniqueName) ?? false,
-      isConclave: wikiConclave.has(raw.uniqueName),
-      levelStats: raw.levelStats,
-      modSet: modSetRef,
-      modSetStats,
-      compat: plus?.compat,
-      compatibilityTags: plus?.compatibilityTags,
-      incompatibilityTags: plus?.incompatibilityTags,
-    })
+    mods.push(
+      toMergedMod(raw, plus, {
+        polarity,
+        rarity,
+        compatName,
+        type,
+        isAugment,
+        isPrime,
+        isExilus: wikiExilus.get(raw.uniqueName) ?? false,
+        isConclave: wikiConclave.has(raw.uniqueName),
+        modSet: modSetRef,
+        modSetStats,
+      }),
+    )
   }
 
   // Avionics (Railjack Plexus mods). DE ships them with empty `type` and
@@ -405,39 +423,25 @@ export function mergeMods(
           `Add to DE_POLARITY_MAP in merge-mods.ts.`,
       )
     }
-    const rarityRaw = raw.rarity ?? ""
-    const rarity = DE_RARITY_MAP[rarityRaw]
-    if (!rarity) {
-      throw new Error(
-        `Unknown DE rarity "${rarityRaw}" on avionic ${raw.name}. ` +
-          `Add to DE_RARITY_MAP.`,
-      )
-    }
+    const rarity = mapRarity(raw.rarity, { context: `avionic ${raw.name}` })
     const plus = pePlus.get(raw.uniqueName)
-    mods.push({
-      uniqueName: raw.uniqueName,
-      name: raw.name,
-      description: normalizeDescription(raw.description),
-      polarity,
-      rarity,
-      baseDrain: raw.baseDrain ?? 0,
-      fusionLimit: raw.fusionLimit ?? 0,
-      // The Plexus item's `modPools` is `["Plexus"]` (see
-      // data/curated/plexus.ts), and `getModsForItem` filters by
-      // `mod.compatName ∈ modPools`. Tag avionics so the structural
-      // router lets them through; sub-slot routing (Battle/Tactical/
-      // Integrated) still happens via uniqueName path and `type`.
-      compatName: "Plexus",
-      type: "Plexus Mod",
-      isAugment: false,
-      isPrime: false,
-      isExilus: false,
-      isConclave: false,
-      levelStats: raw.levelStats,
-      compat: plus?.compat,
-      compatibilityTags: plus?.compatibilityTags,
-      incompatibilityTags: plus?.incompatibilityTags,
-    })
+    mods.push(
+      toMergedMod(raw, plus, {
+        polarity,
+        rarity,
+        // The Plexus item's `modPools` is `["Plexus"]` (see
+        // data/curated/plexus.ts), and `getModsForItem` filters by
+        // `mod.compatName ∈ modPools`. Tag avionics so the structural
+        // router lets them through; sub-slot routing (Battle/Tactical/
+        // Integrated) still happens via uniqueName path and `type`.
+        compatName: "Plexus",
+        type: "Plexus Mod",
+        isAugment: false,
+        isPrime: false,
+        isExilus: false,
+        isConclave: false,
+      }),
+    )
     counts.total++
     counts.kept++
   }

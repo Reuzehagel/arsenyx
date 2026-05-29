@@ -106,6 +106,49 @@ export function readDeUpgrades(): DeUpgradesBlob {
   return readFile<DeUpgradesBlob>("ExportUpgrades_en.json")
 }
 
+/** DE ships `description` as `string[]` (one entry per paragraph); arcanes
+ *  ride the same Upgrade type so the field is unioned to `string | string[]`.
+ *  The frontend expects a single string — join with newlines. */
+export function normalizeDescription(
+  d: string | string[] | undefined,
+): string | undefined {
+  if (d === undefined) return undefined
+  return Array.isArray(d) ? d.join("\n") : d
+}
+
+/** DE rarity (UPPERCASE) → capitalized canonical. Shared by mods and
+ *  arcanes. (Mods additionally derive the name-based Amalgam/Galvanized
+ *  variants before consulting this table — see merge-mods.ts.) */
+export const DE_RARITY_MAP: Record<string, string> = {
+  COMMON: "Common",
+  UNCOMMON: "Uncommon",
+  RARE: "Rare",
+  LEGENDARY: "Legendary",
+}
+
+/** Map a DE rarity enum to its canonical capitalized form. Callers differ
+ *  on unknown values: mods fail loud (`onUnknown: "throw"`, the default) so
+ *  a new DE tier surfaces at build time; arcanes pass the raw value through
+ *  (`onUnknown: "passthrough"`) to stay tolerant of the looser arcane blob. */
+export function mapRarity(
+  raw: string | undefined,
+  opts: {
+    onUnknown?: "throw" | "passthrough"
+    /** Used only in the thrown error message. */
+    context?: string
+  } = {},
+): string {
+  const { onUnknown = "throw", context } = opts
+  const rarityRaw = raw ?? ""
+  const mapped = DE_RARITY_MAP[rarityRaw]
+  if (mapped) return mapped
+  if (onUnknown === "passthrough") return rarityRaw
+  throw new Error(
+    `Unknown DE rarity "${rarityRaw}"${context ? ` on ${context}` : ""}. ` +
+      `Add to DE_RARITY_MAP in read-de.ts.`,
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Warframes / Sentinels / Resources / Misc — typed loosely.
 // ---------------------------------------------------------------------------

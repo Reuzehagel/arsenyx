@@ -11,29 +11,19 @@ import {
 import { DelayedSuspense } from "@/components/delayed-fallback"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
+import { Stat } from "@/components/profile-stat"
 import { RouteNotFound } from "@/components/route-not-found"
 import { Badge } from "@/components/ui/badge"
 import { UserAvatar } from "@/components/user-avatar"
-import { type BuildListSort } from "@/lib/queries/builds-list-query"
 import {
   profileBuildsQuery,
   profileQuery,
   type Profile,
 } from "@/lib/queries/profile-query"
 import { authorName } from "@/lib/util/user-display"
-import { type BrowseCategory } from "@/lib/warframe"
-
-type ProfileSearch = {
-  page?: number
-  sort?: BuildListSort
-  q?: string
-  category?: BrowseCategory
-  hasGuide?: boolean
-  hasShards?: boolean
-}
 
 export const Route = createFileRoute("/profile/$username")({
-  validateSearch: (search): ProfileSearch => parseBuildsListSearch(search),
+  validateSearch: (search): BuildsListSearch => parseBuildsListSearch(search),
   loaderDeps: ({ search }) => buildsListLoaderDeps(search, "newest"),
   loader: async ({ context, params, deps }) => {
     await Promise.all([
@@ -83,12 +73,7 @@ function ProfileContent() {
         title="Public builds"
         description={`Builds shared by ${profile.displayUsername ?? profile.username ?? "this user"}.`}
         query={profileBuildsQuery(username, params)}
-        page={params.page}
-        sort={params.sort}
-        q={params.q}
-        category={params.category}
-        hasGuide={params.hasGuide}
-        hasShards={params.hasShards}
+        params={params}
         onUpdateSearch={onUpdateSearch}
         showFilters
         emptyState={
@@ -130,17 +115,6 @@ function ProfileHeader({ profile }: { profile: Profile }) {
         </div>
       </div>
     </div>
-  )
-}
-
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <span>
-      <span className="text-foreground font-semibold tabular-nums">
-        {value.toLocaleString()}
-      </span>{" "}
-      {label}
-    </span>
   )
 }
 

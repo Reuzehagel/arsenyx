@@ -985,6 +985,9 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
             category={category}
             isCompanion={isCompanion}
             normalSlotCount={normalSlotCount}
+            auraSlotCount={auraSlotCount}
+            showExilus={showExilus}
+            showStance={showStance}
             arcaneCount={arcaneCount}
             slots={slots}
             arcanes={arcanes}

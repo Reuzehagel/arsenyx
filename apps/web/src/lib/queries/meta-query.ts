@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query"
+import { staticDataQuery } from "./static-data-query"
 
 export interface DataMeta {
   generatedAt: string
@@ -9,13 +9,8 @@ export interface DataMeta {
   arcaneCount: number
 }
 
-export const metaQuery = queryOptions({
-  queryKey: ["data-meta"],
-  queryFn: async (): Promise<DataMeta> => {
-    const r = await fetch("/data/meta.json")
-    if (!r.ok) throw new Error("failed to load data meta")
-    return r.json()
-  },
-  staleTime: Infinity,
-  gcTime: Infinity,
-})
+export const metaQuery = staticDataQuery<DataMeta>(
+  ["data-meta"],
+  "/data/meta.json",
+  "failed to load data meta",
+)

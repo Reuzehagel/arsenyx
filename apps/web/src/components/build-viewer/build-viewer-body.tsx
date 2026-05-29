@@ -235,6 +235,9 @@ function BuildViewerBodyInner({
           category={category}
           isCompanion={isCompanion}
           normalSlotCount={normalSlotCount}
+          auraSlotCount={auraSlotCount}
+          showExilus={layout.showExilus}
+          showStance={layout.showStance}
           arcaneCount={arcaneCount}
           slots={slots}
           arcanes={arcanes}

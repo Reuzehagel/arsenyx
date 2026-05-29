@@ -1,3 +1,4 @@
+import { clamp } from "@arsenyx/shared"
 import { slugify } from "@arsenyx/shared/warframe/slugs"
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
@@ -36,8 +37,7 @@ export const Route = createFileRoute("/builds/$slug")({
       return typeof n === "number" && Number.isFinite(n) ? n : undefined
     }
     const rawScale = num(s.scale)
-    const scale =
-      rawScale !== undefined ? Math.min(2, Math.max(0.1, rawScale)) : undefined
+    const scale = rawScale !== undefined ? clamp(rawScale, 0.1, 2) : undefined
     const bg = typeof s.bg === "string" && s.bg.length > 0 ? s.bg : undefined
     const rawV = num(s.v)
     // 0-indexed; default (undefined) means "first variant". Clamped to a

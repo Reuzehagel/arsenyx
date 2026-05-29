@@ -9,23 +9,10 @@ import {
 } from "@/components/builds/builds-list-view"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
-import {
-  publicBuildsQuery,
-  type BuildListSort,
-} from "@/lib/queries/builds-list-query"
-import { type BrowseCategory } from "@/lib/warframe"
-
-type BuildsSearch = {
-  page?: number
-  sort?: BuildListSort
-  q?: string
-  category?: BrowseCategory
-  hasGuide?: boolean
-  hasShards?: boolean
-}
+import { publicBuildsQuery } from "@/lib/queries/builds-list-query"
 
 export const Route = createFileRoute("/builds/")({
-  validateSearch: (search): BuildsSearch => parseBuildsListSearch(search),
+  validateSearch: (search): BuildsListSearch => parseBuildsListSearch(search),
   loaderDeps: ({ search }) => buildsListLoaderDeps(search, "newest"),
   loader: ({ context, deps }) =>
     context.queryClient.ensureQueryData(publicBuildsQuery(deps)),
@@ -49,12 +36,7 @@ function BuildsIndexPage() {
             title="Community Builds"
             description="Discover builds created by the community."
             query={publicBuildsQuery(params)}
-            page={params.page}
-            sort={params.sort}
-            q={params.q}
-            category={params.category}
-            hasGuide={params.hasGuide}
-            hasShards={params.hasShards}
+            params={params}
             onUpdateSearch={onUpdateSearch}
             showFilters
             emptyState={

@@ -26,6 +26,24 @@ export function apiErrorMessage(err: unknown, fallback: string): string {
   return err.body?.message ?? err.body?.error ?? err.body?.details ?? fallback
 }
 
+/** Maps an `ApiError` to a stable code string via per-status overrides,
+ *  falling back to `codes.default`. Non-`ApiError` values are returned as-is
+ *  so unexpected throws (network errors, etc.) propagate unchanged. The
+ *  returned `Error` keeps the original as its `cause`. Used by mutation hooks
+ *  that translate HTTP statuses into UI-facing error codes. */
+export function remapApiError(
+  err: unknown,
+  codes: { default: string; 401?: string; 403?: string; 404?: string },
+): unknown {
+  if (!(err instanceof ApiError)) return err
+  const code =
+    (err.status === 401 && codes[401]) ||
+    (err.status === 403 && codes[403]) ||
+    (err.status === 404 && codes[404]) ||
+    codes.default
+  return new Error(code, { cause: err })
+}
+
 export interface ApiFetchInit extends Omit<RequestInit, "body"> {
   /** JSON-stringified into the request body with the right content-type. */
   json?: unknown

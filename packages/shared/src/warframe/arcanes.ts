@@ -45,11 +45,7 @@ export function isZawArcane(arcane: Arcane): boolean {
  *  weapon/frame slot. */
 function isOperatorOrAmpArcane(arcane: Arcane): boolean {
   const slot = arcane.slotType
-  if (slot) {
-    return (
-      slot === "Operator" || slot === "Amp" || slot === "Tektolyst Artifacts"
-    )
-  }
+  if (slot) return isOperatorSlot(slot)
   return arcane.type === "Operator" || arcane.type === "Amp"
 }
 
@@ -61,9 +57,7 @@ function slotTypeMatches(slot: string, target: ArcaneSlotType): boolean {
     case "warframe":
       return slot === "Warframe"
     case "operator":
-      return (
-        slot === "Operator" || slot === "Amp" || slot === "Tektolyst Artifacts"
-      )
+      return isOperatorSlot(slot)
     case "primary":
       return (
         slot === "Primary" ||

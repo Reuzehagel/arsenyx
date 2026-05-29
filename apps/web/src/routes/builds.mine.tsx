@@ -1,9 +1,4 @@
-import {
-  createFileRoute,
-  Link,
-  redirect,
-  useNavigate,
-} from "@tanstack/react-router"
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 
 import {
   BuildsListView,
@@ -14,30 +9,12 @@ import {
 } from "@/components/builds/builds-list-view"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
-import { authClient } from "@/lib/auth-client"
-import {
-  myBuildsQuery,
-  type BuildListSort,
-} from "@/lib/queries/builds-list-query"
-import { type BrowseCategory } from "@/lib/warframe"
-
-type MineSearch = {
-  page?: number
-  sort?: BuildListSort
-  q?: string
-  category?: BrowseCategory
-  hasGuide?: boolean
-  hasShards?: boolean
-}
+import { requireUser } from "@/lib/auth-guards"
+import { myBuildsQuery } from "@/lib/queries/builds-list-query"
 
 export const Route = createFileRoute("/builds/mine")({
-  validateSearch: (search): MineSearch => parseBuildsListSearch(search),
-  beforeLoad: async () => {
-    const session = await authClient.getSession()
-    if (!session.data?.user) {
-      throw redirect({ to: "/auth/signin" })
-    }
-  },
+  validateSearch: (search): BuildsListSearch => parseBuildsListSearch(search),
+  beforeLoad: () => requireUser(),
   loaderDeps: ({ search }) => buildsListLoaderDeps(search, "updated"),
   loader: ({ context, deps }) =>
     context.queryClient.ensureQueryData(myBuildsQuery(deps)),
@@ -61,12 +38,7 @@ function MineBuildsPage() {
             title="My Builds"
             description="Builds you've authored."
             query={myBuildsQuery(params)}
-            page={params.page}
-            sort={params.sort}
-            q={params.q}
-            category={params.category}
-            hasGuide={params.hasGuide}
-            hasShards={params.hasShards}
+            params={params}
             onUpdateSearch={onUpdateSearch}
             showFilters
             emptyState={

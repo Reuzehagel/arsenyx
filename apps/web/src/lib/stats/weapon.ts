@@ -8,7 +8,7 @@ import type {
   Weapon,
 } from "@arsenyx/shared/warframe/types"
 
-import { round } from "./helpers"
+import { accumulate, round } from "./helpers"
 import {
   collectSourcedStats,
   type PlacedArcaneInput,
@@ -178,27 +178,7 @@ function calcStat(
   stats: SourcedStat[],
   digits = 2,
 ): StatValue {
-  const contributions: StatContribution[] = []
-  let percent = 0
-  let flat = 0
-  for (const s of stats) {
-    if (s.type !== statType) continue
-    if (s.operation === "percent_add") {
-      percent += s.value
-      contributions.push({
-        name: s.sourceName,
-        amount: s.value,
-        operation: "percent_add",
-      })
-    } else if (s.operation === "flat_add") {
-      flat += s.value
-      contributions.push({
-        name: s.sourceName,
-        amount: s.value,
-        operation: "flat_add",
-      })
-    }
-  }
+  const { percent, flat, contributions } = accumulate(statType, stats)
   const modified = base * (1 + percent / 100) + flat
   return {
     base: round(base, digits),

@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query"
+import { staticDataQuery } from "./static-data-query"
 
 export interface HelminthAbility {
   uniqueName: string
@@ -8,13 +8,8 @@ export interface HelminthAbility {
   source: string
 }
 
-export const helminthQuery = queryOptions({
-  queryKey: ["helminth-abilities"],
-  queryFn: async (): Promise<HelminthAbility[]> => {
-    const r = await fetch("/data/helminth-abilities.json")
-    if (!r.ok) throw new Error("failed to load helminth abilities")
-    return r.json()
-  },
-  staleTime: Infinity,
-  gcTime: Infinity,
-})
+export const helminthQuery = staticDataQuery<HelminthAbility[]>(
+  ["helminth-abilities"],
+  "/data/helminth-abilities.json",
+  "failed to load helminth abilities",
+)

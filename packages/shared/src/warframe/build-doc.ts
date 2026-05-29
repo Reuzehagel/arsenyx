@@ -37,8 +37,10 @@ export interface BuildVariant {
 
 /**
  * Top-level build document. Holds shared metadata + 1..MAX_VARIANTS
- * variants. Legacy single-loadout builds are wrapped as a one-entry
- * variants array via `normalizeToBuildDoc` (web adapter).
+ * variants. Legacy single-loadout (v1) builds are wrapped as a one-entry
+ * variants array by `decodeBuildDoc` (build-codec.ts); the web adapter
+ * `savedDataToBuildState` (apps/web/src/lib/codec/build-codec-adapter.ts)
+ * bridges saved DB builds into a `BuildState`.
  */
 export interface BuildDoc {
   itemUniqueName: string

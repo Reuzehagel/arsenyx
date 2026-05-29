@@ -7,16 +7,13 @@ import {
   ApiKeyLimitExceededError,
   createApiKey,
   listApiKeysForUser,
-  PRIVILEGED_API_KEY_SCOPES,
   revokeApiKey,
 } from "../lib/api-keys"
 import { getSession } from "../lib/session"
 import { parseJsonBody } from "../lib/validate"
 import { rateLimitUser } from "../middleware/rate-limit"
-import { getUserRoles } from "./_admin"
 
 const KNOWN_SCOPES = new Set<string>(ALL_API_KEY_SCOPES)
-const PRIVILEGED_SCOPES = new Set<string>(PRIVILEGED_API_KEY_SCOPES)
 
 export const me = new Hono()
 
@@ -135,11 +132,6 @@ me.post("/api-keys", rateLimitUser("mutate"), async (c) => {
     }
     if (requested.some((s) => !KNOWN_SCOPES.has(s))) {
       return c.json({ error: "unknown_scope" }, 400)
-    }
-    const roles = getUserRoles(user as { id: string } & Record<string, unknown>)
-    const canUsePrivileged = roles.isAdmin || roles.isModerator
-    if (!canUsePrivileged && requested.some((s) => PRIVILEGED_SCOPES.has(s))) {
-      return c.json({ error: "forbidden_scope" }, 403)
     }
     scopes = requested
   }

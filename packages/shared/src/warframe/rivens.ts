@@ -14,7 +14,7 @@ export const RIVEN_POLARITIES: readonly Polarity[] = [
   "vazarin",
 ] as const
 
-/** Riven polarity drain reduction caps at 9 (default max cost). */
+/** Maximum base drain a riven mod can have (un-installed cost). */
 export const RIVEN_MAX_DRAIN = 18
 export const RIVEN_MIN_DRAIN = 0
 

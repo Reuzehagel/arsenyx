@@ -1,3 +1,4 @@
+import { clamp } from "../util/math"
 import type { BuildDoc, BuildVariant } from "./build-doc"
 import { projectVariant } from "./build-doc"
 import { normalizePolarity } from "./mods"
@@ -184,7 +185,7 @@ function decodeSlot(
       // non-rivens at decode time (we don't have the mod's data here), so it
       // can't gate the rank — a crafted link must not be able to inject an
       // arbitrary rank into capacity / endo math downstream.
-      rank: Math.max(0, Math.min(10, Math.floor(encoded.m.r ?? 0))),
+      rank: clamp(Math.floor(encoded.m.r ?? 0), 0, 10),
       rarity: isRiven ? "Riven" : "",
     }
     if (encoded.m.rv) {

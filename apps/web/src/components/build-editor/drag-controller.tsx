@@ -1,11 +1,7 @@
 import type { Mod } from "@arsenyx/shared/warframe/types"
 import {
   createContext,
-  useCallback,
   useContext,
-  useEffect,
-  useRef,
-  useState,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
   type RefObject,
@@ -18,6 +14,7 @@ import {
   type BuildSlotsState,
   type SlotId,
 } from "./use-build-slots"
+import { useDragGesture } from "./use-drag-gesture"
 
 // Custom drag layer for the build editor. Replaces @dnd-kit because that
 // library's `useDraggable` subscribes every draggable to a single React
@@ -26,20 +23,19 @@ import {
 // memo), so we own the pointer plumbing ourselves.
 //
 // Design:
-// - One window-scoped pointer listener set, installed once.
 // - Source elements register only an `onPointerDown` handler; they never
 //   subscribe to drag state, so they don't re-render mid-drag.
 // - Slots subscribe to two narrow contexts (`isOver`, `isSource`) — at
 //   most ~10 consumers, recommit on slot-boundary crossings is cheap.
-// - The floating ghost element moves via direct DOM `transform` mutation
-//   in the pointermove handler, so React doesn't re-render on every tick.
 // - Drop target is the slot under the cursor (`elementFromPoint`), which
 //   fixes the off-by-one selection from dnd-kit's rect-intersection
 //   strategy.
+//
+// The reusable pointer mechanics (4px activation, rAF ghost, click-swallow,
+// pointer capture, Escape) live in `use-drag-gesture.ts`.
 
 const SLOT_DATA_ATTR = "data-drop-slot-id"
 const SOURCE_CLASS = "is-drag-source"
-const ACTIVATION_DISTANCE = 4
 
 type Source =
   | { kind: "pool"; mod: Mod }
@@ -52,19 +48,6 @@ const TargetContext = createContext<SlotId | null>(null)
 const SourceSlotContext = createContext<SlotId | null>(null)
 const DraggingContext = createContext<boolean>(false)
 
-interface PendingDrag {
-  source: Source
-  sourceEl: HTMLElement
-  startX: number
-  startY: number
-  pointerId: number
-}
-
-interface PointerCapture {
-  el: HTMLElement
-  pointerId: number
-}
-
 export function DragController({
   slots,
   children,
@@ -72,169 +55,21 @@ export function DragController({
   slots: BuildSlotsState
   children: ReactNode
 }) {
-  // Latest-slots ref so the drop handler doesn't re-bind window listeners
-  // every render.
-  const slotsRef = useRef(slots)
-
-  const [activeSource, setActiveSource] = useState<Source | null>(null)
-  const [target, setTarget] = useState<SlotId | null>(null)
-
-  const activeRef = useRef<Source | null>(null)
-  const targetRef = useRef<SlotId | null>(null)
-
-  // Sync refs after every render. The refs feed pointer-event listeners
-  // attached on drag activation; those listeners always fire after this
-  // effect has committed, so they see fresh values without re-binding.
-  useEffect(() => {
-    slotsRef.current = slots
-    activeRef.current = activeSource
-    targetRef.current = target
-  })
-
-  const pendingRef = useRef<PendingDrag | null>(null)
-  const sourceElRef = useRef<HTMLElement | null>(null)
-  const ghostRef = useRef<HTMLDivElement | null>(null)
-  const captureRef = useRef<PointerCapture | null>(null)
-  // Click-swallow listener armed at drag activation so the trailing
-  // `click` from the same pointer sequence doesn't fire the source's
-  // onClick (which would otherwise also place / open the picker).
-  const clickSwallowRef = useRef<((e: MouseEvent) => void) | null>(null)
-
-  const armClickSwallow = useCallback(() => {
-    if (clickSwallowRef.current) return
-    const fn = (e: MouseEvent) => {
-      e.stopPropagation()
-      e.preventDefault()
-      document.removeEventListener("click", fn, true)
-      clickSwallowRef.current = null
-    }
-    clickSwallowRef.current = fn
-    document.addEventListener("click", fn, true)
-  }, [])
-
-  const disarmClickSwallow = useCallback(() => {
-    if (!clickSwallowRef.current) return
-    document.removeEventListener("click", clickSwallowRef.current, true)
-    clickSwallowRef.current = null
-  }, [])
-
-  const cleanup = useCallback(() => {
-    pendingRef.current = null
-    // Disarm any still-armed click-swallow after the trailing click has
-    // had a chance to fire. Without this the listener leaks if no click
-    // follows pointerup (e.g., release over a pointer-events:none element).
-    if (clickSwallowRef.current) {
-      const fn = clickSwallowRef.current
-      setTimeout(() => {
-        if (clickSwallowRef.current === fn) {
-          document.removeEventListener("click", fn, true)
-          clickSwallowRef.current = null
-        }
-      }, 0)
-    }
-    if (sourceElRef.current) {
-      sourceElRef.current.classList.remove(SOURCE_CLASS)
-      sourceElRef.current = null
-    }
-    if (captureRef.current) {
-      const { el, pointerId } = captureRef.current
-      try {
-        if (el.hasPointerCapture(pointerId)) {
-          el.releasePointerCapture(pointerId)
-        }
-      } catch {
-        // No-op: capture may have been released by the browser already.
-      }
-      captureRef.current = null
-    }
-    activeRef.current = null
-    targetRef.current = null
-    setActiveSource(null)
-    setTarget(null)
-  }, [])
-
-  useEffect(() => {
-    let rafId = 0
-    let lastX = 0
-    let lastY = 0
-    let pendingMove = false
-
-    const findSlotAt = (x: number, y: number): SlotId | null => {
+  const { startDrag, activeSource, target, ghostRef } = useDragGesture<
+    Source,
+    SlotId
+  >({
+    sourceClass: SOURCE_CLASS,
+    findTargetAt: (x, y) => {
       const el = document.elementFromPoint(x, y)
       if (!el) return null
       const slot = (el as Element).closest(`[${SLOT_DATA_ATTR}]`)
       return slot
         ? ((slot.getAttribute(SLOT_DATA_ATTR) ?? null) as SlotId | null)
         : null
-    }
-
-    const positionGhost = (x: number, y: number) => {
-      const g = ghostRef.current
-      if (!g) return
-      // translate3d hints to the compositor; rotate adds the "lifted"
-      // tilt so the ghost reads distinctly from anything underneath.
-      g.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%) rotate(-2deg)`
-    }
-
-    const flushMove = () => {
-      rafId = 0
-      pendingMove = false
-      if (!activeRef.current) return
-      positionGhost(lastX, lastY)
-      const next = findSlotAt(lastX, lastY)
-      if (next !== targetRef.current) {
-        targetRef.current = next
-        setTarget(next)
-      }
-    }
-
-    const onPointerMove = (e: PointerEvent) => {
-      const pending = pendingRef.current
-      if (pending && !activeRef.current) {
-        if (pending.pointerId !== e.pointerId) return
-        const dx = e.clientX - pending.startX
-        const dy = e.clientY - pending.startY
-        if (dx * dx + dy * dy < ACTIVATION_DISTANCE * ACTIVATION_DISTANCE) {
-          return
-        }
-        sourceElRef.current = pending.sourceEl
-        pending.sourceEl.classList.add(SOURCE_CLASS)
-        activeRef.current = pending.source
-        const t = findSlotAt(e.clientX, e.clientY)
-        targetRef.current = t
-        lastX = e.clientX
-        lastY = e.clientY
-        // Take pointer capture only once the drag actually activates.
-        // Capturing on pointerdown redirects the synthesized click to the
-        // wrapper element, bypassing the inner ModCard's onClick — which
-        // is exactly what broke click-to-place after the drag PR landed.
-        try {
-          pending.sourceEl.setPointerCapture(pending.pointerId)
-          captureRef.current = {
-            el: pending.sourceEl,
-            pointerId: pending.pointerId,
-          }
-        } catch {
-          // Capture is best-effort; window listeners still receive events.
-        }
-        setActiveSource(pending.source)
-        setTarget(t)
-        armClickSwallow()
-        requestAnimationFrame(() => positionGhost(lastX, lastY))
-        return
-      }
-      if (!activeRef.current) return
-      // rAF-coalesce: pointermove can fire 500+/sec on high-Hz devices, but
-      // we only need to update ghost position and target slot once per frame.
-      lastX = e.clientX
-      lastY = e.clientY
-      if (pendingMove) return
-      pendingMove = true
-      rafId = requestAnimationFrame(flushMove)
-    }
-
-    const commitDrop = (source: Source, targetSlot: SlotId) => {
-      const s = slotsRef.current
+    },
+    onCommit: (source, targetSlot) => {
+      const s = slots
       if (source.kind === "pool") {
         if (!canPlaceIn(source.mod, targetSlot)) return
         const existing = s.placed[targetSlot]
@@ -245,64 +80,8 @@ export function DragController({
       }
       if (source.slotId === targetSlot) return
       s.swap(source.slotId, targetSlot)
-    }
-
-    const onPointerUp = () => {
-      const a = activeRef.current
-      if (a) {
-        const t = targetRef.current
-        if (t) commitDrop(a, t)
-      }
-      cleanup()
-    }
-
-    const onPointerCancel = () => {
-      disarmClickSwallow()
-      cleanup()
-    }
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && activeRef.current) {
-        disarmClickSwallow()
-        cleanup()
-      }
-    }
-
-    window.addEventListener("pointermove", onPointerMove, { passive: true })
-    window.addEventListener("pointerup", onPointerUp)
-    window.addEventListener("pointercancel", onPointerCancel)
-    window.addEventListener("keydown", onKeyDown)
-    return () => {
-      window.removeEventListener("pointermove", onPointerMove)
-      window.removeEventListener("pointerup", onPointerUp)
-      window.removeEventListener("pointercancel", onPointerCancel)
-      window.removeEventListener("keydown", onKeyDown)
-      if (rafId) cancelAnimationFrame(rafId)
-    }
-  }, [cleanup, armClickSwallow, disarmClickSwallow])
-
-  const startDrag: StartFn = useCallback((source, e) => {
-    if (e.button !== 0) return
-    // Defer touch — touch-scroll inside the pool grid needs the gesture
-    // for itself. Click-to-place / arrow-key nav still cover touch users.
-    if (e.pointerType === "touch") return
-    // Don't preventDefault here — doing so on pointerdown suppresses the
-    // synthesized click event (per the Pointer Events spec), which breaks
-    // click-to-place when the gesture stays under the activation distance.
-    // Native image-drag is suppressed via `onDragStart` on the source
-    // wrappers; text selection is held off by `select-none` on the editor.
-    const el = e.currentTarget as HTMLElement
-    pendingRef.current = {
-      source,
-      sourceEl: el,
-      startX: e.clientX,
-      startY: e.clientY,
-      pointerId: e.pointerId,
-    }
-    // Pointer capture is deferred to drag activation (see onPointerMove).
-    // Window-level pointermove/pointerup listeners cover the pre-activation
-    // window without redirecting the click target.
-  }, [])
+    },
+  })
 
   const activeSourceSlot =
     activeSource?.kind === "slot" ? activeSource.slotId : null

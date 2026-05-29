@@ -19,7 +19,7 @@ export const PLEXUS_BROWSE_ITEM: BrowseItem = {
   imageName:
     "https://content.warframe.com/PublicExport/Lotus/Interface/Icons/StoreIcons/PlayerShip/Ships/RailjackWrasseSkin.png!00_avatybGG8ADR-dgGnKJNkw",
   isPrime: false,
-  type: "Plexus",
+  displayClass: "Plexus",
 }
 
 export const PLEXUS_DETAIL = {

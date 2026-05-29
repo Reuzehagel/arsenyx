@@ -1,6 +1,7 @@
 import { Link as RouterLink } from "@tanstack/react-router"
 import { Pencil } from "lucide-react"
 
+import { EndoFormaBadges } from "@/components/endo-forma-badges"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -108,32 +109,10 @@ export function ViewerHeader({
                 ))}
             </span>
             <div className="flex flex-wrap items-center gap-2">
-              <Badge
-                variant="secondary"
-                className="bg-muted/50 hover:bg-muted gap-1.5 px-2 py-0.5 text-xs font-semibold"
-              >
-                <img
-                  src="/icons/currency/Endo.png"
-                  alt=""
-                  aria-hidden
-                  className="size-4"
-                />
-                {totalEndoCost.toLocaleString("en-US")}
-              </Badge>
-              {formaCount > 0 && (
-                <Badge
-                  variant="secondary"
-                  className="bg-muted/50 hover:bg-muted gap-1.5 px-2 py-0.5 text-xs font-semibold"
-                >
-                  <img
-                    src="/icons/currency/Forma.png"
-                    alt=""
-                    aria-hidden
-                    className="size-[18px] object-contain"
-                  />
-                  {formaCount}
-                </Badge>
-              )}
+              <EndoFormaBadges
+                totalEndoCost={totalEndoCost}
+                formaCount={formaCount}
+              />
               <Badge variant="outline" className="text-xs">
                 {build.likeCount} likes · {build.viewCount} views
               </Badge>

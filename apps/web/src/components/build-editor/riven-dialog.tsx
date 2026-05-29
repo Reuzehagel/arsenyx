@@ -1,3 +1,4 @@
+import { clamp } from "@arsenyx/shared"
 import {
   RIVEN_MAX_DRAIN,
   RIVEN_MIN_DRAIN,
@@ -68,7 +69,7 @@ function emptyNegative(init?: RivenStats): StatRowState {
 function clampDrain(raw: string): number {
   const n = parseInt(raw, 10)
   if (Number.isNaN(n)) return RIVEN_MIN_DRAIN
-  return Math.max(RIVEN_MIN_DRAIN, Math.min(RIVEN_MAX_DRAIN, n))
+  return clamp(n, RIVEN_MIN_DRAIN, RIVEN_MAX_DRAIN)
 }
 
 export function RivenDialog({

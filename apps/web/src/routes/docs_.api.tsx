@@ -134,6 +134,23 @@ const PUBLIC_ENDPOINTS: Endpoint[] = [
   },
 ]
 
+function EndpointCard({ ep }: { ep: Endpoint }) {
+  return (
+    <li className="border-border bg-card flex flex-col gap-2 rounded-lg border p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="bg-muted rounded px-2 py-0.5 font-mono text-xs font-semibold">
+          {ep.method}
+        </span>
+        <code className="text-sm font-medium">{ep.path}</code>
+      </div>
+      <p className="text-muted-foreground text-sm">{ep.summary}</p>
+      <pre className="bg-muted/50 overflow-x-auto rounded p-3 text-xs leading-relaxed">
+        <code>{ep.example}</code>
+      </pre>
+    </li>
+  )
+}
+
 function DocsApiPage() {
   return (
     <div className="relative flex min-h-screen flex-col">
@@ -166,21 +183,7 @@ function DocsApiPage() {
           </p>
           <ul className="not-prose flex list-none flex-col gap-4 pl-0">
             {PUBLIC_ENDPOINTS.map((ep) => (
-              <li
-                key={`${ep.method} ${ep.path}`}
-                className="border-border bg-card flex flex-col gap-2 rounded-lg border p-4"
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="bg-muted rounded px-2 py-0.5 font-mono text-xs font-semibold">
-                    {ep.method}
-                  </span>
-                  <code className="text-sm font-medium">{ep.path}</code>
-                </div>
-                <p className="text-muted-foreground text-sm">{ep.summary}</p>
-                <pre className="bg-muted/50 overflow-x-auto rounded p-3 text-xs leading-relaxed">
-                  <code>{ep.example}</code>
-                </pre>
-              </li>
+              <EndpointCard key={`${ep.method} ${ep.path}`} ep={ep} />
             ))}
           </ul>
           <p className="text-sm opacity-75">
@@ -199,21 +202,7 @@ function DocsApiPage() {
           </p>
           <ul className="not-prose flex list-none flex-col gap-4 pl-0">
             {WRITE_ENDPOINTS.map((ep) => (
-              <li
-                key={`${ep.method} ${ep.path}`}
-                className="border-border bg-card flex flex-col gap-2 rounded-lg border p-4"
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="bg-muted rounded px-2 py-0.5 font-mono text-xs font-semibold">
-                    {ep.method}
-                  </span>
-                  <code className="text-sm font-medium">{ep.path}</code>
-                </div>
-                <p className="text-muted-foreground text-sm">{ep.summary}</p>
-                <pre className="bg-muted/50 overflow-x-auto rounded p-3 text-xs leading-relaxed">
-                  <code>{ep.example}</code>
-                </pre>
-              </li>
+              <EndpointCard key={`${ep.method} ${ep.path}`} ep={ep} />
             ))}
           </ul>
           <p className="text-sm opacity-75">

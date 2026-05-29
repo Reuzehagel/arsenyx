@@ -20,13 +20,7 @@ import { cn } from "@/lib/util/utils"
 import { formatStat } from "@/lib/warframe"
 
 import { useAbilityStatReorder } from "./ability-stat-reorder"
-import {
-  ContribRow,
-  formatContribAmount,
-  formatSum,
-  groupContributions,
-  StatLine,
-} from "./stat-display"
+import { GroupedContribs, StatLine } from "./stat-display"
 import {
   useAbilityStatOrder,
   type AbilityStatKey,
@@ -293,7 +287,6 @@ function DamageFormula({
   entry: DamageEntry
   multishot: number
 }) {
-  const grouped = groupContributions(entry.contributions)
   const scaled = entry.value * multishot
   return (
     <div className="flex flex-col gap-1.5">
@@ -315,23 +308,7 @@ function DamageFormula({
           {formatStat(scaled, 1)}
         </span>
       </div>
-      {grouped.map((g, i) => (
-        <div key={i} className="flex flex-col gap-0.5">
-          <Separator />
-          <div className="text-muted-foreground text-[10px] tracking-wide uppercase">
-            {g.label}{" "}
-            <span className="tabular-nums">({formatSum(g.contribs)})</span>
-          </div>
-          {g.contribs.map((c, j) => (
-            <ContribRow
-              key={j}
-              name={c.name}
-              amount={formatContribAmount(c)}
-              positive={c.amount > 0}
-            />
-          ))}
-        </div>
-      ))}
+      <GroupedContribs contribs={entry.contributions} />
       {multishot > 1.001 && (
         <>
           <Separator />

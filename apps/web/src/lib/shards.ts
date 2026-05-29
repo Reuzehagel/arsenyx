@@ -7,6 +7,8 @@ import {
   type PlacedShard,
 } from "@arsenyx/shared/warframe"
 
+import { formatStat } from "./warframe"
+
 export { SHARD_COLORS, SHARD_STATS, getStatIndex }
 export type { ShardColor, ShardStat, PlacedShard }
 
@@ -87,10 +89,7 @@ export function findShardStat(
 
 export function formatStatValue(stat: ShardStat, tauforged: boolean): string {
   const v = tauforged ? stat.tauforgedValue : stat.baseValue
-  const f = Number.isInteger(v)
-    ? v.toString()
-    : v.toFixed(1).replace(/\.0$/, "")
-  return `+${f}${stat.unit}`
+  return `+${formatStat(v, 1)}${stat.unit}`
 }
 
 /** Stat-name → warframe base-stat key, for flat bonuses (unit === ""). */

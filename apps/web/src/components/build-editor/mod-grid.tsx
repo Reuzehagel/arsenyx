@@ -5,12 +5,7 @@ import { cn } from "@/lib/util/utils"
 import type { BrowseCategory, DetailItem } from "@/lib/warframe"
 
 import { ArcaneSlot } from "./arcane"
-import {
-  getAuraSlotCount,
-  hasExilusSlot,
-  hasStanceSlot,
-  PLEXUS_GROUPS,
-} from "./layout"
+import { PLEXUS_GROUPS } from "./layout"
 import { ModSlot } from "./mod-slot"
 import { CANONICAL_POLARITIES } from "./polarity"
 import type { ArcaneSlotsState } from "./use-arcane-slots"
@@ -98,6 +93,9 @@ export function ModGrid({
   category,
   isCompanion,
   normalSlotCount,
+  auraSlotCount,
+  showExilus,
+  showStance,
   slots,
   onEditRiven,
   arcaneRow,
@@ -107,15 +105,16 @@ export function ModGrid({
   category: BrowseCategory
   isCompanion: boolean
   normalSlotCount: number
+  auraSlotCount: number
+  showExilus: boolean
+  showStance: boolean
   slots: BuildSlotsState
   onEditRiven?: (id: SlotId) => void
   arcaneRow?: React.ReactNode
   readOnly?: boolean
 }) {
-  const auraSlotCount = getAuraSlotCount(category, item)
-  const showExilus = hasExilusSlot(category)
-  const showStance = hasStanceSlot(item, category)
-
+  // auraPolarities stays derived here — it's not surfaced through the shared
+  // BuildLayout, so there's nothing to thread it down from.
   const auraPolarities = getAuraPolarities(item, auraSlotCount)
   const polarities = item.polarities ?? []
 

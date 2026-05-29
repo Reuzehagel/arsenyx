@@ -1,5 +1,7 @@
 import type { BuildDetail } from "@/lib/queries/build-query"
 
+import { titleCaseWord } from "./utils"
+
 type UserLike = {
   name?: string | null
   username?: string | null
@@ -11,5 +13,5 @@ export function authorName(user: UserLike, fallback = "Anonymous"): string {
 }
 
 export function formatVisibility(v: BuildDetail["visibility"]): string {
-  return v.charAt(0) + v.slice(1).toLowerCase()
+  return titleCaseWord(v)
 }

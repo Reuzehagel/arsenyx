@@ -1,4 +1,4 @@
-import type { MiddlewareHandler } from "hono"
+import type { Context, MiddlewareHandler } from "hono"
 
 import type { Bindings } from "../bindings"
 import { prisma, registerBackgroundWork } from "../db"
@@ -89,6 +89,33 @@ export function rateLimitUser(
   }
 }
 
+// Shared edge rate-limit policy for the Workers Rate Limiting API bindings
+// (ANON_SEARCH_LIMITER / ANON_READ_LIMITER). Returns a 429 `Response` when the
+// key is throttled, or `null` to let the caller proceed.
+//
+// Fail-open if the binding is missing outside production (local `wrangler dev`
+// usually has it, but a stripped wrangler.toml shouldn't break dev/tests).
+// Fail-loudly in production via a server log (`missingMessage`). `keyFn` is
+// only invoked when the binding is present, so callers can defer work (e.g. a
+// session lookup) that's pointless when the limiter is absent.
+export async function enforceAnonEdgeLimit(
+  c: Context,
+  bindingName: "ANON_SEARCH_LIMITER" | "ANON_READ_LIMITER",
+  missingMessage: string,
+  keyFn: () => string | Promise<string>,
+): Promise<Response | null> {
+  const limiter = (c.env as Bindings | undefined)?.[bindingName]
+  if (!limiter) {
+    if (process.env.NODE_ENV === "production") {
+      console.error(missingMessage)
+    }
+    return null
+  }
+  const { success } = await limiter.limit({ key: await keyFn() })
+  if (!success) return c.json({ error: "rate_limited" }, 429)
+  return null
+}
+
 // Edge-side read limiter for public GET endpoints. Throttles unauthenticated
 // browsing/scraping; authenticated traffic is keyed by user.id instead, so
 // shared NAT / household IPs don't collide on the same bucket.
@@ -98,36 +125,28 @@ export function rateLimitUser(
 // Crucially, a forged `better-auth.session_token` cookie won't decode, so
 // it falls through to the IP-keyed branch — closing the spoof bypass that an
 // unvalidated cookie-presence check would leave open.
-//
-// Fail-open if the binding is missing outside production (local `wrangler dev`
-// usually has it, but a stripped wrangler.toml shouldn't break dev/tests).
-// Fail-loudly in production via a server log.
 export function rateLimitAnonRead(): MiddlewareHandler {
   return async (c, next) => {
     if (!SAFE_METHODS.has(c.req.method)) return next()
 
-    const limiter = (c.env as Bindings | undefined)?.ANON_READ_LIMITER
-    if (!limiter) {
-      if (process.env.NODE_ENV === "production") {
-        console.error(
-          "rate-limit: ANON_READ_LIMITER binding missing in production",
-        )
-      }
-      return next()
-    }
-
-    // Authenticated → key by user id so household/office NATs don't collide.
-    // Anon (including forged cookies, which fail to decode) → key by IP.
-    const session = await getSession(c)
-    const key = session?.user
-      ? `u:${session.user.id}`
-      : `ip:${c.req.header("cf-connecting-ip") ?? "unknown"}`
-    if (!session?.user && !c.req.header("cf-connecting-ip")) {
-      console.warn("rate-limit: missing cf-connecting-ip header")
-    }
-
-    const { success } = await limiter.limit({ key })
-    if (!success) return c.json({ error: "rate_limited" }, 429)
+    const blocked = await enforceAnonEdgeLimit(
+      c,
+      "ANON_READ_LIMITER",
+      "rate-limit: ANON_READ_LIMITER binding missing in production",
+      async () => {
+        // Authenticated → key by user id so household/office NATs don't
+        // collide. Anon (including forged cookies, which fail to decode) →
+        // key by IP.
+        const session = await getSession(c)
+        if (!session?.user && !c.req.header("cf-connecting-ip")) {
+          console.warn("rate-limit: missing cf-connecting-ip header")
+        }
+        return session?.user
+          ? `u:${session.user.id}`
+          : `ip:${c.req.header("cf-connecting-ip") ?? "unknown"}`
+      },
+    )
+    if (blocked) return blocked
 
     await next()
   }

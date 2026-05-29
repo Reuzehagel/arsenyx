@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { Filter } from "lucide-react"
-import { useEffect, useState, type ReactNode } from "react"
+import { useCallback, useEffect, useState, type ReactNode } from "react"
 
 import {
   BuildCard,
@@ -14,19 +13,15 @@ import {
   BuildsLayoutToggle,
   buildLayoutClass,
 } from "@/components/builds/layout-toggle"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { FilterPopoverTrigger } from "@/components/filter-popover-trigger"
+import { Pagination } from "@/components/pagination"
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group"
 import { Kbd } from "@/components/ui/kbd"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
+import { Popover, PopoverContent } from "@/components/ui/popover"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import { useBuildLayout } from "@/lib/hooks/use-build-layout"
@@ -86,12 +81,23 @@ export function parseBuildsListSearch(search: Record<string, unknown>): {
   return { page, sort, q, category, hasGuide, hasShards }
 }
 
+/** Fully-resolved list params: every field defaulted, ready for the query and
+ *  the list view. */
+export type BuildsListParams = {
+  page: number
+  sort: BuildListSort
+  q: string
+  category: BrowseCategory | undefined
+  hasGuide: boolean
+  hasShards: boolean
+}
+
 /** Materialize the loader deps every builds-list route needs, filling in the
  *  defaults the list component will use anyway. */
 export function buildsListLoaderDeps(
   search: BuildsListSearch,
   defaultSort: BuildListSort,
-) {
+): BuildsListParams {
   return {
     page: search.page ?? 1,
     sort: search.sort ?? defaultSort,
@@ -125,12 +131,7 @@ export function BuildsListView({
   title,
   description,
   query,
-  page,
-  sort,
-  q,
-  category,
-  hasGuide,
-  hasShards,
+  params,
   onUpdateSearch,
   emptyState,
   showFilters,
@@ -138,33 +139,49 @@ export function BuildsListView({
   title?: string
   description?: string
   query: BuildsQuery
-  page: number
-  sort: BuildListSort
-  q: string
-  category: BrowseCategory | undefined
-  hasGuide: boolean
-  hasShards: boolean
+  params: BuildsListParams
   onUpdateSearch: (next: BuildsListSearch) => void
   emptyState: ReactNode
   showFilters: boolean
 }) {
+  const { page, sort, q, category, hasGuide, hasShards } = params
+
   const [qLocal, setQLocal] = useState(q)
   useEffect(() => setQLocal(q), [q])
+
+  // Merge `next` over current search state, then normalize the optional fields
+  // the URL wants stripped: q/hasGuide/hasShards collapse falsy → undefined and
+  // page resets unless explicitly carried over.
+  const patch = useCallback(
+    (next: Partial<BuildsListSearch>) => {
+      const merged = {
+        sort,
+        q,
+        category,
+        hasGuide,
+        hasShards,
+        page: undefined as number | undefined,
+        ...next,
+      }
+      onUpdateSearch({
+        sort: merged.sort,
+        q: merged.q || undefined,
+        category: merged.category,
+        hasGuide: merged.hasGuide || undefined,
+        hasShards: merged.hasShards || undefined,
+        page: merged.page,
+      })
+    },
+    [sort, q, category, hasGuide, hasShards, onUpdateSearch],
+  )
 
   useEffect(() => {
     if (qLocal === q) return
     const t = setTimeout(() => {
-      onUpdateSearch({
-        sort,
-        category,
-        q: qLocal || undefined,
-        page: undefined,
-        hasGuide: hasGuide || undefined,
-        hasShards: hasShards || undefined,
-      })
+      patch({ q: qLocal })
     }, SEARCH_DEBOUNCE_MS)
     return () => clearTimeout(t)
-  }, [qLocal, q, sort, category, hasGuide, hasShards, onUpdateSearch])
+  }, [qLocal, q, patch])
 
   const activeFilterCount = (hasGuide ? 1 : 0) + (hasShards ? 1 : 0)
 
@@ -202,58 +219,21 @@ export function BuildsListView({
           <BuildsLayoutToggle />
           <BuildsSortDropdown
             value={sort}
-            onChange={(value) =>
-              onUpdateSearch({
-                sort: value,
-                q,
-                category,
-                hasGuide: hasGuide || undefined,
-                hasShards: hasShards || undefined,
-                page: undefined,
-              })
-            }
+            onChange={(value) => patch({ sort: value })}
           />
           {showFilters ? (
             <Popover>
-              <PopoverTrigger
-                render={<Button variant="outline" className="shrink-0 gap-2" />}
-              >
-                <Filter data-icon="inline-start" />
-                Filters
-                {activeFilterCount > 0 && (
-                  <Badge variant="secondary" className="ml-1 text-xs">
-                    {activeFilterCount}
-                  </Badge>
-                )}
-              </PopoverTrigger>
+              <FilterPopoverTrigger count={activeFilterCount} />
               <PopoverContent align="end" className="w-56 gap-3">
                 <FilterToggle
                   label="Has guide"
                   checked={hasGuide}
-                  onChange={(v) =>
-                    onUpdateSearch({
-                      sort,
-                      q,
-                      category,
-                      hasGuide: v || undefined,
-                      hasShards: hasShards || undefined,
-                      page: undefined,
-                    })
-                  }
+                  onChange={(v) => patch({ hasGuide: v })}
                 />
                 <FilterToggle
                   label="Has archon shards"
                   checked={hasShards}
-                  onChange={(v) =>
-                    onUpdateSearch({
-                      sort,
-                      q,
-                      category,
-                      hasGuide: hasGuide || undefined,
-                      hasShards: v || undefined,
-                      page: undefined,
-                    })
-                  }
+                  onChange={(v) => patch({ hasShards: v })}
                 />
               </PopoverContent>
             </Popover>
@@ -264,16 +244,7 @@ export function BuildsListView({
       {showFilters ? (
         <BuildsCategoryTabs
           value={category}
-          onChange={(next) =>
-            onUpdateSearch({
-              sort,
-              q,
-              category: next,
-              hasGuide: hasGuide || undefined,
-              hasShards: hasShards || undefined,
-              page: undefined,
-            })
-          }
+          onChange={(next) => patch({ category: next })}
         />
       ) : null}
 
@@ -281,11 +252,7 @@ export function BuildsListView({
         query={query}
         page={page}
         q={q}
-        sort={sort}
-        category={category}
-        hasGuide={hasGuide}
-        hasShards={hasShards}
-        onUpdateSearch={onUpdateSearch}
+        onPage={(p) => patch({ page: p > 1 ? p : undefined })}
         emptyState={emptyState}
       />
     </div>
@@ -296,21 +263,13 @@ function Results({
   query,
   page,
   q,
-  sort,
-  category,
-  hasGuide,
-  hasShards,
-  onUpdateSearch,
+  onPage,
   emptyState,
 }: {
   query: BuildsQuery
   page: number
   q: string
-  sort: BuildListSort
-  category: BrowseCategory | undefined
-  hasGuide: boolean
-  hasShards: boolean
-  onUpdateSearch: (next: BuildsListSearch) => void
+  onPage: (p: number) => void
   emptyState: ReactNode
 }) {
   const { data, isPending, isFetching } = useQuery(query)
@@ -349,46 +308,13 @@ function Results({
       )}
 
       {totalPages > 1 ? (
-        <div className="flex items-center justify-center gap-3 pt-2">
-          {page > 1 ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                onUpdateSearch({
-                  sort,
-                  q,
-                  category,
-                  hasGuide: hasGuide || undefined,
-                  hasShards: hasShards || undefined,
-                  page: page - 1 === 1 ? undefined : page - 1,
-                })
-              }
-            >
-              Previous
-            </Button>
-          ) : null}
-          <span className="text-muted-foreground text-sm">
-            Page {page} of {totalPages}
-          </span>
-          {page < totalPages ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                onUpdateSearch({
-                  sort,
-                  q,
-                  category,
-                  hasGuide: hasGuide || undefined,
-                  hasShards: hasShards || undefined,
-                  page: page + 1,
-                })
-              }
-            >
-              Next
-            </Button>
-          ) : null}
+        <div className="flex justify-center pt-2">
+          <Pagination
+            page={page}
+            total={data.total}
+            limit={data.limit}
+            onPage={onPage}
+          />
         </div>
       ) : null}
     </>

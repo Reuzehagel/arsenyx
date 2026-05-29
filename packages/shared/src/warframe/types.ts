@@ -178,7 +178,9 @@ export interface BrowseItem {
   masteryReq?: number
   isPrime?: boolean
   vaulted?: boolean
-  type?: string
+  /** Wiki Class label ("Sniper Rifle", "Polearm", "Warframe"). This is what
+   *  appears as the class label in the UI, not a category enum. */
+  displayClass?: string
   releaseDate?: string // Format: "YYYY-MM-DD"
 }
 

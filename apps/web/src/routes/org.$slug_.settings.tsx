@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { UserAvatar } from "@/components/user-avatar"
-import { authClient } from "@/lib/auth-client"
+import { requireUser } from "@/lib/auth-guards"
 import {
   useAddOrgMember,
   useDeleteOrg,
@@ -50,10 +50,7 @@ import { authorName } from "@/lib/util/user-display"
 
 export const Route = createFileRoute("/org/$slug_/settings")({
   beforeLoad: async ({ context, params }) => {
-    const session = await authClient.getSession()
-    if (!session.data?.user) {
-      throw redirect({ to: "/auth/signin" })
-    }
+    await requireUser()
     const org = await context.queryClient.ensureQueryData(orgQuery(params.slug))
     if (!org.viewer.isAdmin) {
       throw redirect({ to: "/org/$slug", params: { slug: params.slug } })

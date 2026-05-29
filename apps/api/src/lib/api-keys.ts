@@ -11,15 +11,13 @@ export const SCOPE_BUILD_READ = "build:read"
 export const SCOPE_BUILD_WRITE = "build:write"
 export type ApiKeyScope = typeof SCOPE_BUILD_READ | typeof SCOPE_BUILD_WRITE
 
-export const DEFAULT_API_KEY_SCOPES: readonly ApiKeyScope[] = [
-  SCOPE_BUILD_READ,
-  SCOPE_BUILD_WRITE,
-]
 export const ALL_API_KEY_SCOPES: readonly ApiKeyScope[] = [
   SCOPE_BUILD_READ,
   SCOPE_BUILD_WRITE,
 ]
-export const PRIVILEGED_API_KEY_SCOPES: readonly ApiKeyScope[] = []
+// New keys default to the full scope set; kept as a separate name so a
+// narrower default can be carved out later without touching `ALL_*`.
+export const DEFAULT_API_KEY_SCOPES: readonly ApiKeyScope[] = ALL_API_KEY_SCOPES
 export const DEFAULT_API_KEY_RATE_LIMIT = 60
 export const MAX_ACTIVE_API_KEYS_PER_USER = 10
 

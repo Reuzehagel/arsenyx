@@ -203,7 +203,11 @@ function StatFormula({
   )
 }
 
-function GroupedContribs({ contribs }: { contribs: StatContribution[] }) {
+export function GroupedContribs({
+  contribs,
+}: {
+  contribs: StatContribution[]
+}) {
   const groups = groupContributions(contribs)
   return (
     <>

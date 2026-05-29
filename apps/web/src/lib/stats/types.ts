@@ -33,7 +33,6 @@ export type StatType =
   | "viral"
   | "corrosive"
   | "tau_resistance"
-  | "melee_damage"
   | "status_duration"
   | "damage_vs_grineer"
   | "damage_vs_corpus"
@@ -65,7 +64,7 @@ export type DamageType =
   | "void"
   | "tau"
 
-export type StatOperation = "flat_add" | "percent_add" | "percent_mult"
+export type StatOperation = "flat_add" | "percent_add"
 
 export interface ParsedStat {
   type: StatType

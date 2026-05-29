@@ -5,3 +5,4 @@ export type {
   BrowseableItem,
   WfcdCategory,
 } from "./warframe/types"
+export { clamp } from "./util/math"

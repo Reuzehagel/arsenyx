@@ -1,11 +1,4 @@
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { SortSelect } from "@/components/sort-select"
 
 const SORT_ITEMS = [
   { value: "name-asc", label: "Name A-Z" },
@@ -25,25 +18,11 @@ interface SortDropdownProps {
 
 export function SortDropdown({ value, onChange }: SortDropdownProps) {
   return (
-    <Select
+    <SortSelect
       items={SORT_ITEMS}
       value={value}
-      onValueChange={(v) => {
-        if (v) onChange(v as SortOption)
-      }}
-    >
-      <SelectTrigger className="w-36">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent align="end">
-        <SelectGroup>
-          {SORT_ITEMS.map((item) => (
-            <SelectItem key={item.value} value={item.value}>
-              {item.label}
-            </SelectItem>
-          ))}
-        </SelectGroup>
-      </SelectContent>
-    </Select>
+      onChange={onChange}
+      triggerWidth="w-36"
+    />
   )
 }

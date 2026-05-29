@@ -1,3 +1,4 @@
+import { clamp } from "@arsenyx/shared"
 import type { Arcane, Mod, RivenStats } from "@arsenyx/shared/warframe/types"
 
 import type { ConditionLabel, ParsedStat, StatType } from "./types"
@@ -12,8 +13,6 @@ const PERCENT_PATTERN =
   /([+-]?\d+(?:\.\d+)?)\s*%\s+([A-Za-z][A-Za-z\s]*?)(?:\.|$|\n|,|<)/g
 const FLAT_PATTERN =
   /([+-]\d+(?:\.\d+)?)\s+(?!%|s\b|m\b|x\b)([A-Za-z][A-Za-z\s]*?)(?:\.|$|\n|,)/g
-const MULT_PATTERN =
-  /(\d+(?:\.\d+)?)\s*x\s+([A-Za-z][A-Za-z\s]*?)(?:\.|$|\n|,)/g
 
 const STAT_NAME_MAP: Record<string, StatType> = {
   health: "health",
@@ -164,7 +163,7 @@ export function parseModStats(input: PlacedModInput): ParsedStat[] {
   const results: ParsedStat[] = []
   const levels = mod.levelStats
   if (levels && levels.length > 0) {
-    const rankIndex = Math.min(Math.max(rank, 0), levels.length - 1)
+    const rankIndex = clamp(rank, 0, levels.length - 1)
     const levelData = levels[rankIndex]
     if (levelData?.stats) {
       for (const s of levelData.stats) {
@@ -193,7 +192,7 @@ export function parseArcaneStats(input: PlacedArcaneInput): ParsedStat[] {
   const out: ParsedStat[] = []
   const levels = arcane.levelStats
   if (levels && levels.length > 0) {
-    const rankIndex = Math.min(Math.max(rank, 0), levels.length - 1)
+    const rankIndex = clamp(rank, 0, levels.length - 1)
     const levelData = levels[rankIndex]
     if (levelData?.stats) {
       for (const s of levelData.stats) {
@@ -274,20 +273,6 @@ export function parseStatString(statString: string): ParsedStat[] {
       if (!results.find((r) => r.type === statType)) {
         results.push({ type: statType, value, operation: "flat_add", ...cond })
       }
-    }
-  }
-
-  for (match of statString.matchAll(MULT_PATTERN)) {
-    const value = parseFloat(match[1])
-    const statName = match[2].trim().toLowerCase()
-    const statType = STAT_NAME_MAP[statName]
-    if (statType) {
-      results.push({
-        type: statType,
-        value,
-        operation: "percent_mult",
-        ...cond,
-      })
     }
   }
 

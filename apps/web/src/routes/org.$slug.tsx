@@ -13,30 +13,20 @@ import { DelayedSuspense } from "@/components/delayed-fallback"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { Link } from "@/components/link"
+import { Stat } from "@/components/profile-stat"
 import { RouteNotFound } from "@/components/route-not-found"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { UserAvatar } from "@/components/user-avatar"
-import { type BuildListSort } from "@/lib/queries/builds-list-query"
 import {
   orgBuildsQuery,
   orgQuery,
   type OrgProfile,
 } from "@/lib/queries/org-query"
 import { authorName } from "@/lib/util/user-display"
-import { type BrowseCategory } from "@/lib/warframe"
-
-type OrgSearch = {
-  page?: number
-  sort?: BuildListSort
-  q?: string
-  category?: BrowseCategory
-  hasGuide?: boolean
-  hasShards?: boolean
-}
 
 export const Route = createFileRoute("/org/$slug")({
-  validateSearch: (search): OrgSearch => parseBuildsListSearch(search),
+  validateSearch: (search): BuildsListSearch => parseBuildsListSearch(search),
   loaderDeps: ({ search }) => buildsListLoaderDeps(search, "newest"),
   loader: async ({ context, params, deps }) => {
     await Promise.all([
@@ -87,12 +77,7 @@ function OrgContent() {
         <h2 className="text-lg font-semibold">Builds</h2>
         <BuildsListView
           query={orgBuildsQuery(slug, params)}
-          page={params.page}
-          sort={params.sort}
-          q={params.q}
-          category={params.category}
-          hasGuide={params.hasGuide}
-          hasShards={params.hasShards}
+          params={params}
           onUpdateSearch={onUpdateSearch}
           showFilters
           emptyState={
@@ -192,17 +177,6 @@ function OrgMembers({ org }: { org: OrgProfile }) {
         })}
       </ul>
     </section>
-  )
-}
-
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <span>
-      <span className="text-foreground font-semibold tabular-nums">
-        {value.toLocaleString()}
-      </span>{" "}
-      {label}
-    </span>
   )
 }
 

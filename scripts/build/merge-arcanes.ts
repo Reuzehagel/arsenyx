@@ -15,16 +15,7 @@
  * user-facing categories the existing UI uses.
  */
 
-import type { DeUpgrade } from "./read-de"
-
-/** DE ships `description` as `string[]` on mods; arcanes ride the same
- *  Upgrade type so the field is unioned to `string | string[]`. */
-function normalizeDescription(
-  d: string | string[] | undefined,
-): string | undefined {
-  if (d === undefined) return undefined
-  return Array.isArray(d) ? d.join("\n") : d
-}
+import { type DeUpgrade, mapRarity, normalizeDescription } from "./read-de"
 
 export interface MergedArcane {
   uniqueName: string
@@ -39,13 +30,6 @@ export interface MergedArcane {
   imageName?: string
   levelStats?: Array<{ stats: string[] }>
   tradable: boolean
-}
-
-const RARITY_MAP: Record<string, string> = {
-  COMMON: "Common",
-  UNCOMMON: "Uncommon",
-  RARE: "Rare",
-  LEGENDARY: "Legendary",
 }
 
 const SUBPATH_TO_TYPE: Record<string, string> = {
@@ -66,7 +50,11 @@ export function mergeArcanes(rawAll: DeUpgrade[]): MergedArcane[] {
     if (!a.name) continue
     const subpath = a.uniqueName.split("/CosmeticEnhancers/")[1]?.split("/")[0]
     const type = SUBPATH_TO_TYPE[subpath ?? ""] ?? "Other"
-    const rarity = a.rarity ? (RARITY_MAP[a.rarity] ?? a.rarity) : "Common"
+    // Arcanes are tolerant of unknown tiers (pass the raw value through);
+    // a missing rarity defaults to "Common".
+    const rarity = a.rarity
+      ? mapRarity(a.rarity, { onUnknown: "passthrough" })
+      : "Common"
     out.push({
       uniqueName: a.uniqueName,
       name: a.name,

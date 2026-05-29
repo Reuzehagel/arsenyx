@@ -4,7 +4,7 @@ import { findShardStat, type PlacedShard } from "@/lib/shards"
 
 import { EXCLUDED_WARFRAME_AURAS } from "./aura-ignore"
 import { applyStatCap } from "./caps"
-import { round } from "./helpers"
+import { accumulate, round } from "./helpers"
 import {
   collectSourcedStats,
   type PlacedArcaneInput,
@@ -156,6 +156,9 @@ export function calculateWarframeStats(
   }
 }
 
+const shardLabel = (color: string): string =>
+  `${color[0].toUpperCase()}${color.slice(1)} Shard`
+
 const SHARD_FLAT_MAP: Record<string, StatType> = {
   Health: "health",
   "Shield Capacity": "shield",
@@ -176,34 +179,19 @@ function calcSingle(
   shards: (PlacedShard | null)[],
   digits: number,
 ): StatValue {
-  const contributions: StatContribution[] = []
-  let percent = 0
-  let flat = 0
-
-  for (const s of stats) {
-    if (s.type !== statType) continue
-    if (s.operation === "flat_add") {
-      flat += s.value
-      contributions.push({
-        name: s.sourceName,
-        amount: s.value,
-        operation: "flat_add",
-      })
-    } else if (s.operation === "percent_add") {
-      percent += s.value
-      contributions.push({
-        name: s.sourceName,
-        amount: s.value,
-        operation: "percent_add",
-      })
-    }
-  }
+  const {
+    percent: basePercent,
+    flat: baseFlat,
+    contributions,
+  } = accumulate(statType, stats)
+  let percent = basePercent
+  let flat = baseFlat
 
   for (const shard of shards) {
     if (!shard) continue
     const stat = findShardStat(shard.color, shard.stat)
     if (!stat) continue
-    const name = `${shard.color[0].toUpperCase()}${shard.color.slice(1)} Shard`
+    const name = shardLabel(shard.color)
     const value = shard.tauforged ? stat.tauforgedValue : stat.baseValue
     if (stat.unit === "" && SHARD_FLAT_MAP[shard.stat] === statType) {
       flat += value
@@ -247,7 +235,7 @@ function calcAbility(
     const value = shard.tauforged ? stat.tauforgedValue : stat.baseValue
     percent += value
     contributions.push({
-      name: `${shard.color[0].toUpperCase()}${shard.color.slice(1)} Shard`,
+      name: shardLabel(shard.color),
       amount: value,
       operation: "percent_add",
     })

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
-import { apiFetch, ApiError } from "@/lib/util/api-client"
+import { apiFetch, ApiError, remapApiError } from "@/lib/util/api-client"
 
 type ForkResponse = { id: string; slug: string }
 
@@ -13,13 +13,11 @@ export function useDeleteBuild(slug: string) {
           method: "DELETE",
         })
       } catch (err) {
-        if (err instanceof ApiError) {
-          if (err.status === 401)
-            throw new Error("unauthorized", { cause: err })
-          if (err.status === 403) throw new Error("forbidden", { cause: err })
-          throw new Error("failed_delete", { cause: err })
-        }
-        throw err
+        throw remapApiError(err, {
+          401: "unauthorized",
+          403: "forbidden",
+          default: "failed_delete",
+        })
       }
     },
     onSuccess: () => {

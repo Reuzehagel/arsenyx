@@ -1,11 +1,4 @@
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { SortSelect } from "@/components/sort-select"
 import type { BuildListSort } from "@/lib/queries/builds-list-query"
 
 const SORT_ITEMS = [
@@ -26,25 +19,11 @@ export function BuildsSortDropdown({
   onChange: (value: BuildListSort) => void
 }) {
   return (
-    <Select
+    <SortSelect
       items={SORT_ITEMS}
       value={value}
-      onValueChange={(v) => {
-        if (v) onChange(v as BuildListSort)
-      }}
-    >
-      <SelectTrigger className="w-44">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent align="end">
-        <SelectGroup>
-          {SORT_ITEMS.map((item) => (
-            <SelectItem key={item.value} value={item.value}>
-              {item.label}
-            </SelectItem>
-          ))}
-        </SelectGroup>
-      </SelectContent>
-    </Select>
+      onChange={onChange}
+      triggerWidth="w-44"
+    />
   )
 }

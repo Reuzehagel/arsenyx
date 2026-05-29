@@ -1,13 +1,12 @@
+import { clamp } from "@arsenyx/shared"
 import type { Arcane } from "@arsenyx/shared/warframe/types"
 import { useCallback, useMemo, useState } from "react"
+
+import { arcaneMaxRank } from "./slot-ranks"
 
 export interface PlacedArcane {
   arcane: Arcane
   rank: number
-}
-
-function maxRank(arcane: Arcane): number {
-  return arcane.levelStats ? arcane.levelStats.length - 1 : 5
 }
 
 export interface ArcaneSlotsState {
@@ -43,7 +42,7 @@ export function useArcaneSlots(
     setPlaced((prev) => {
       if (prev.some((p) => p?.arcane.name === arcane.name)) return prev
       const next = [...prev]
-      next[index] = { arcane, rank: maxRank(arcane) }
+      next[index] = { arcane, rank: arcaneMaxRank(arcane) }
       return next
     })
   }, [])
@@ -59,7 +58,7 @@ export function useArcaneSlots(
             : prev.findIndex((p) => !p)
         if (targetIdx < 0) return prev
         const next = [...prev]
-        next[targetIdx] = { arcane, rank: maxRank(arcane) }
+        next[targetIdx] = { arcane, rank: arcaneMaxRank(arcane) }
         if (selected !== null && targetIdx === selected) placedInSelected = true
         return next
       })
@@ -85,7 +84,7 @@ export function useArcaneSlots(
     setPlaced((prev) => {
       const cur = prev[index]
       if (!cur) return prev
-      const clamped = Math.max(0, Math.min(maxRank(cur.arcane), rank))
+      const clamped = clamp(rank, 0, arcaneMaxRank(cur.arcane))
       if (clamped === cur.rank) return prev
       const next = [...prev]
       next[index] = { ...cur, rank: clamped }

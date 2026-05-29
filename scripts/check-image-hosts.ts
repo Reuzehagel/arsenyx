@@ -11,22 +11,14 @@
  * reach production. Run `bun run sync:images` to fix.
  */
 
-import { readdirSync, readFileSync, statSync } from "node:fs"
+import { readFileSync } from "node:fs"
 import { relative, resolve } from "node:path"
+
+import { findJsonFiles, sourceUrlRe } from "./build/image-hosts"
 
 const REPO_ROOT = resolve(import.meta.dirname, "..")
 const DATA_DIR = resolve(REPO_ROOT, "apps/web/public/data")
-const UPSTREAM_RE = /https:\/\/(?:content|wiki)\.warframe\.com\/[^"\\]+/g
-
-function findJsonFiles(dir: string): string[] {
-  const out: string[] = []
-  for (const name of readdirSync(dir)) {
-    const path = resolve(dir, name)
-    if (statSync(path).isDirectory()) out.push(...findJsonFiles(path))
-    else if (name.endsWith(".json")) out.push(path)
-  }
-  return out
-}
+const UPSTREAM_RE = sourceUrlRe()
 
 let offenders = 0
 let totalUrls = 0

@@ -22,12 +22,6 @@ export function useRecentItems(limit = 16): RecentItem[] {
   return all.slice(0, limit)
 }
 
-export function formatDate(iso?: string): string {
-  if (!iso) return "—"
-  const [y, m, d] = iso.split("-")
-  return `${y}.${m}.${d}`
-}
-
 function assertNever(x: never): never {
   throw new Error(`unhandled BrowseCategory: ${String(x)}`)
 }

@@ -5,7 +5,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query"
 
-import { apiFetch, ApiError } from "@/lib/util/api-client"
+import { apiFetch, remapApiError } from "@/lib/util/api-client"
 
 import type { BuildListItem } from "./builds-list-query"
 
@@ -56,13 +56,11 @@ export function useLinkPartner(ownerSlug: string) {
           { method: "PUT" },
         )
       } catch (err) {
-        if (err instanceof ApiError) {
-          if (err.status === 401)
-            throw new Error("unauthorized", { cause: err })
-          if (err.status === 403) throw new Error("forbidden", { cause: err })
-          throw new Error("failed_link", { cause: err })
-        }
-        throw err
+        throw remapApiError(err, {
+          401: "unauthorized",
+          403: "forbidden",
+          default: "failed_link",
+        })
       }
     },
     onMutate: async (partner) => {

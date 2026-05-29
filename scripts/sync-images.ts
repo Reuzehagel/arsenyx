@@ -18,19 +18,20 @@
  */
 
 import { createHash } from "node:crypto"
-import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs"
+import { readFileSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
 
 import { AwsClient } from "aws4fetch"
 
+import { findJsonFiles, sourceUrlRe } from "./build/image-hosts"
+
 const REPO_ROOT = resolve(import.meta.dirname, "..")
 const DATA_DIR = resolve(REPO_ROOT, "apps/web/public/data")
 
-/** Sources we'll mirror. URLs from anywhere else are left untouched in the
- *  catalog (so manually-curated local `/img/...` paths still work). */
-const SOURCE_HOSTS = ["content.warframe.com", "wiki.warframe.com"] as const
-const SOURCE_URL_RE =
-  /https:\/\/(?:content\.warframe\.com|wiki\.warframe\.com)\/[^"\\]+/g
+/** Upstream URLs we mirror (see `SOURCE_HOSTS` in build/image-hosts.ts).
+ *  URLs on any other host are left untouched in the catalog (so manually-
+ *  curated local `/img/...` paths still work). */
+const SOURCE_URL_RE = sourceUrlRe()
 
 function envOrThrow(name: string): string {
   const v = process.env[name]
@@ -90,17 +91,6 @@ function objectUrl(key: string): string {
 // ---------------------------------------------------------------------------
 // Walk catalog JSONs, collect every source URL we need to mirror.
 // ---------------------------------------------------------------------------
-
-function findJsonFiles(dir: string): string[] {
-  const out: string[] = []
-  for (const name of readdirSync(dir)) {
-    const path = resolve(dir, name)
-    const stat = statSync(path)
-    if (stat.isDirectory()) out.push(...findJsonFiles(path))
-    else if (name.endsWith(".json")) out.push(path)
-  }
-  return out
-}
 
 function extractSourceUrls(text: string): Set<string> {
   const out = new Set<string>()

@@ -32,6 +32,9 @@ export interface BuildSurfaceProps {
   category: BrowseCategory
   isCompanion: boolean
   normalSlotCount: number
+  auraSlotCount: number
+  showExilus: boolean
+  showStance: boolean
   arcaneCount: number
   slots: BuildSlotsState
   arcanes: ArcaneSlotsState
@@ -61,6 +64,9 @@ export function BuildSurface({
   category,
   isCompanion,
   normalSlotCount,
+  auraSlotCount,
+  showExilus,
+  showStance,
   arcaneCount,
   slots,
   arcanes,
@@ -134,6 +140,9 @@ export function BuildSurface({
           category={category}
           isCompanion={isCompanion}
           normalSlotCount={normalSlotCount}
+          auraSlotCount={auraSlotCount}
+          showExilus={showExilus}
+          showStance={showStance}
           slots={slots}
           {...(readOnly ? { readOnly: true } : { onEditRiven })}
           arcaneRow={

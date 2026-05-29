@@ -32,6 +32,7 @@ import { resolve } from "node:path"
 
 import { slugify } from "@arsenyx/shared/warframe/slugs"
 import { INCARNON_EVOLUTIONS } from "@arsenyx/shared/warframe/incarnon-evolutions"
+import type { BrowseItem } from "@arsenyx/shared/warframe/types"
 import {
   ZAW_GRIPS,
   ZAW_LINKS,
@@ -83,21 +84,6 @@ const WIKI_DIR = resolve(REPO_ROOT, "data/raw/wiki")
 const OUT_DIR = resolve(REPO_ROOT, "apps/web/public/data")
 const DETAIL_DIR = resolve(OUT_DIR, "items")
 const WIKI_IMAGE_CACHE = resolve(REPO_ROOT, "data/curated/wiki-image-urls.json")
-
-interface BrowseItemV2 {
-  uniqueName: string
-  name: string
-  slug: string
-  category: BrowseCategory
-  imageName?: string
-  masteryReq?: number
-  isPrime?: boolean
-  vaulted?: boolean
-  /** Wiki Class for weapons; "Warframe"/"Necramech"/"Archwing"/"Operator"
-   *  for frames; companion subtype label for pets. */
-  displayClass?: string
-  releaseDate?: string
-}
 
 interface BuildStats {
   weapons: { de: number; merged: number; emitted: number; unmatched: number }
@@ -250,7 +236,7 @@ async function main() {
   stats.companions.wiki = mergedCompanions.length
   stats.companions.deOnly = unmatchedDeNames.length
 
-  // ---------- Image lookup ----------
+  // ---------- 5. Image lookup ----------
   // Primary source: DE PublicExport CDN (content.warframe.com), via the
   // textureLocation field on each ExportManifest entry. Covers everything
   // DE ships (~99% of items, including mods + arcanes).
@@ -285,14 +271,27 @@ async function main() {
     }
   }
 
-  // Arcanes are a special case: DE's manifest gives us the small
-  // "Projection" symbol-only PNG, but the wiki ships the full art (symbol
-  // composited onto the metal arcane frame) that players actually recognize
-  // in-game. Build a wiki-only lookup keyed by arcane uniqueName so we can
-  // override the DE URL for arcanes specifically.
+  // Walk the wiki Arcane module once, building everything keyed off arcane
+  // records together:
+  //   - arcaneWikiImageFile: full-art frame filename (DE only ships the small
+  //     "Projection" symbol-only PNG; the wiki ships the art players know).
+  //   - wikiArcaneNames: the canonical in-game arcane set (records carrying an
+  //     Image), used to drop DE's per-ability-slot dupes and cut entries.
+  //   - arcaneSlotByUniqueName: the wiki `Type` field — the authoritative
+  //     equip slot (Warframe, Primary, …); DE only ships an effect bucket.
   const arcaneWikiImageFile = new Map<string, string>()
-  for (const { internalName, image } of iterWikiImageEntries(wikiArcanesBlob)) {
-    arcaneWikiImageFile.set(internalName, image)
+  const wikiArcaneNames = new Set<string>()
+  const arcaneSlotByUniqueName = new Map<string, string>()
+  for (const { internalName, record } of iterWikiRecords(wikiArcanesBlob)) {
+    const image = record["Image"]
+    if (typeof image === "string" && image.length > 0) {
+      arcaneWikiImageFile.set(internalName, image)
+      wikiArcaneNames.add(internalName)
+    }
+    const t = record["Type"]
+    if (typeof t === "string" && t.length > 0) {
+      arcaneSlotByUniqueName.set(internalName, t)
+    }
   }
 
   const wikiCache = readWikiImageCache(WIKI_IMAGE_CACHE)
@@ -321,7 +320,7 @@ async function main() {
     if (url) imageByUniqueName.set(un, url)
   }
 
-  // ---------- 5. Merge mods + arcanes ----------
+  // ---------- 6. Merge mods + arcanes ----------
   // OpenWF's `warframe-public-export-plus` provides extra routing fields
   // (`compat`, `compatibilityTags`, `incompatibilityTags`) extracted from
   // the game client. We use `compat` to lock augments to their specific
@@ -374,22 +373,9 @@ async function main() {
   const allMergedArcanes = mergeArcanes(deArcanes.ExportRelicArcane ?? [])
   // DE ships per-ability-slot copies of some arcanes (Arcane Steadfast has
   // 5 records — one per ability + on-cast) and a handful of cut entries
-  // (e.g. "Arcane Liquid") that aren't in-game. The wiki Arcane_data is the
-  // canonical in-game list; intersect against it to drop both.
-  const wikiArcaneNames = new Set<string>()
-  for (const { internalName } of iterWikiImageEntries(wikiArcanesBlob)) {
-    wikiArcaneNames.add(internalName)
-  }
-  // The wiki `Type` field is the authoritative equip slot (Warframe, Primary,
-  // Secondary, Melee, Kitgun, Zaw, …). DE only ships an effect bucket, so we
-  // carry the wiki slot through for runtime arcane-slot routing.
-  const arcaneSlotByUniqueName = new Map<string, string>()
-  for (const { internalName, record } of iterWikiRecords(wikiArcanesBlob)) {
-    const t = record["Type"]
-    if (typeof t === "string" && t.length > 0) {
-      arcaneSlotByUniqueName.set(internalName, t)
-    }
-  }
+  // (e.g. "Arcane Liquid") that aren't in-game. `wikiArcaneNames` (built in
+  // the single arcane-module walk above) is the canonical in-game list;
+  // intersect against it to drop both.
   const mergedArcanes = allMergedArcanes.filter((a) =>
     wikiArcaneNames.has(a.uniqueName),
   )
@@ -406,9 +392,9 @@ async function main() {
     }
   })
 
-  // ---------- Build items-index.json ----------
-  const byCategory: Partial<Record<BrowseCategory, BrowseItemV2[]>> = {}
-  function push(cat: BrowseCategory, item: BrowseItemV2): void {
+  // ---------- 7. Build items-index.json ----------
+  const byCategory: Partial<Record<BrowseCategory, BrowseItem[]>> = {}
+  function push(cat: BrowseCategory, item: BrowseItem): void {
     if (!byCategory[cat]) byCategory[cat] = []
     byCategory[cat]!.push(item)
   }
@@ -416,7 +402,7 @@ async function main() {
   // Release-history enrichment is keyed by display name. Track resolved
   // names so we can warn about dead curated entries.
   const releaseHistoryResolved = new Set<string>()
-  function applyReleaseHistory(name: string, item: BrowseItemV2): void {
+  function applyReleaseHistory(name: string, item: BrowseItem): void {
     const rec = curated.releaseHistory[name]
     if (!rec) return
     releaseHistoryResolved.add(name)
@@ -428,7 +414,7 @@ async function main() {
   for (const f of [...mergedFrames, ...operators]) {
     const cat = categorizeFrame(f)
     if (!cat) continue
-    const browseItem: BrowseItemV2 = {
+    const browseItem: BrowseItem = {
       uniqueName: f.uniqueName,
       name: f.name,
       slug: slugify(f.name),
@@ -451,7 +437,7 @@ async function main() {
     const cats = categorizeWeapon(w, exaltedSet)
     if (cats.length === 0) continue
     const slug = slugify(w.name)
-    const browseItem: BrowseItemV2 = {
+    const browseItem: BrowseItem = {
       uniqueName: w.uniqueName,
       name: w.name,
       slug,
@@ -479,7 +465,7 @@ async function main() {
   // Companions
   for (const c of mergedCompanions) {
     const cat = categorizeCompanion(c)
-    const browseItem: BrowseItemV2 = {
+    const browseItem: BrowseItem = {
       uniqueName: c.uniqueName,
       name: c.name,
       slug: slugify(c.name),
@@ -511,7 +497,7 @@ async function main() {
     stats.perCategory[cat] = arr?.length ?? 0
   }
 
-  // ---------- 7b. Expand mod `compat` to per-item lists ----------
+  // ---------- 8. Expand mod `compat` to per-item lists ----------
   // OpenWF's `compat` is one of three things:
   //
   //   1. A specific item uniqueName (e.g. weapon augments) — direct match.
@@ -542,26 +528,22 @@ async function main() {
     }
   }
 
+  // BaseSuit/BaseMechSuit → all frames in the same family directory. The
+  // path prefix alone over-matches (exalted weapons share the directory),
+  // so each anchor also requires a matching item category.
+  const BASE_SUIT_ANCHORS = [
+    { token: "BaseSuit", cat: "warframes" },
+    { token: "BaseMechSuit", cat: "necramechs" },
+  ] as const
+
   function expandCompat(compat: string): string[] {
     if (knownItemUniqueNames.has(compat)) return [compat]
-    // BaseSuit → all warframes in the same family directory. The path
-    // prefix alone over-matches (exalted weapons share the directory),
-    // so we also require the item's category to be `warframes`.
-    if (compat.includes("BaseSuit")) {
+    for (const { token, cat } of BASE_SUIT_ANCHORS) {
+      if (!compat.includes(token)) continue
       const dir = compat.slice(0, compat.lastIndexOf("/") + 1)
       const out: string[] = []
       for (const un of knownItemUniqueNames) {
-        if (un.startsWith(dir) && categoryByUniqueName.get(un) === "warframes") {
-          out.push(un)
-        }
-      }
-      return out
-    }
-    if (compat.includes("BaseMechSuit")) {
-      const dir = compat.slice(0, compat.lastIndexOf("/") + 1)
-      const out: string[] = []
-      for (const un of knownItemUniqueNames) {
-        if (un.startsWith(dir) && categoryByUniqueName.get(un) === "necramechs") {
+        if (un.startsWith(dir) && categoryByUniqueName.get(un) === cat) {
           out.push(un)
         }
       }
@@ -587,7 +569,7 @@ async function main() {
     `\n  compat: ${augmentCount} augment-style (kept), ${strippedCount} unresolved (stripped)`,
   )
 
-  // ---------- 8. Write outputs ----------
+  // ---------- 9. Write outputs ----------
   await rm(OUT_DIR, { recursive: true, force: true })
   await mkdir(OUT_DIR, { recursive: true })
 

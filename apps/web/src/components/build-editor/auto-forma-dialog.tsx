@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { capitalize } from "@/lib/util/utils"
 
 import type { FullAutoFormaPlan } from "./multi-variant-auto-forma"
 import { PolarityIcon } from "./polarity"
@@ -31,7 +32,7 @@ function slotLabel(id: SlotId): string {
 function polarityLabel(p: Polarity): string {
   if (p === "any") return "Omni Forma"
   if (p === "universal") return "Universal (cleared)"
-  return p.charAt(0).toUpperCase() + p.slice(1)
+  return capitalize(p)
 }
 
 /** Diff one variant's `before` vs `after` placed maps into per-mod moves

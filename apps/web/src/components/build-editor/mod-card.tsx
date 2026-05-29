@@ -13,9 +13,10 @@ import {
   normalizeRarity,
 } from "@/lib/mod-card-config"
 import { cn } from "@/lib/util/utils"
-import { getImageUrl } from "@/lib/warframe"
+import { formatStat, getImageUrl } from "@/lib/warframe"
 
 import { StatText } from "../stat-text"
+import { baseDrainForMod } from "./calculations"
 import {
   DrainBadge,
   type DrainMatchState,
@@ -25,6 +26,7 @@ import {
   RankCompleteLine,
   RankDots,
 } from "./mod-card-frame"
+import { modMaxRank } from "./slot-ranks"
 import {
   isAuraMod,
   isExilusCompatible,
@@ -108,10 +110,8 @@ const INVERTED_RIVEN_STATS = new Set(["Zoom"])
 
 function formatRivenValue(stat: string, v: number): string {
   const display = INVERTED_RIVEN_STATS.has(stat) ? -v : v
-  const fixed = display.toFixed(1)
-  const stripped = fixed.endsWith(".0") ? fixed.slice(0, -2) : fixed
   const sign = display > 0 ? "+" : ""
-  return `${sign}${stripped}%`
+  return `${sign}${formatStat(display, 1)}%`
 }
 
 type StatLine =
@@ -206,10 +206,8 @@ function CompactModCard({
   hideDrain = false,
   vtPrefix,
 }: CompactProps) {
-  const maxRank = mod.fusionLimit ?? 0
-  const drain =
-    drainOverride ??
-    (mod.rivenStats ? (mod.baseDrain ?? 0) : (mod.baseDrain ?? 0) + rank)
+  const maxRank = modMaxRank(mod)
+  const drain = drainOverride ?? baseDrainForMod(mod, rank)
 
   useEffect(() => {
     preloadAllRarityFrames()
@@ -303,10 +301,8 @@ function ExpandedModCard({
   vtPrefix,
 }: ExpandedProps) {
   const stats = getModStats(mod, rank, setCount)
-  const maxRank = mod.fusionLimit ?? 0
-  const drain =
-    drainOverride ??
-    (mod.rivenStats ? (mod.baseDrain ?? 0) : (mod.baseDrain ?? 0) + rank)
+  const maxRank = modMaxRank(mod)
+  const drain = drainOverride ?? baseDrainForMod(mod, rank)
   const compatLabel =
     mod.compatName ||
     (mod.type ? mod.type.replace(" Mod", "").toUpperCase() : "")
@@ -444,7 +440,7 @@ export function ModCard({
   const hoverCenter = useRef<{ x: number; y: number } | null>(null)
   const compactRef = useRef<HTMLDivElement>(null)
   const rarity = normalizeRarity(mod.rarity)
-  const maxRank = mod.fusionLimit ?? 0
+  const maxRank = modMaxRank(mod)
   // Default to max rank so preview cards read the way equipped mods look
   // in-game. Callers that need a specific rank (placed slots) pass one.
   const effectiveRank = rank ?? maxRank

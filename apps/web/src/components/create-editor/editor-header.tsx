@@ -3,7 +3,7 @@ import { Check, Pencil, Settings2, Share2, UploadCloud, X } from "lucide-react"
 import { useRef, useState } from "react"
 
 import { type PublishVisibility } from "@/components/build-editor"
-import { Badge } from "@/components/ui/badge"
+import { EndoFormaBadges } from "@/components/endo-forma-badges"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { formatVisibility } from "@/lib/util/user-display"
@@ -110,32 +110,10 @@ export function EditorHeader({
               {item.name} · {categoryLabel}
             </span>
             <div className="flex items-center gap-3">
-              <Badge
-                variant="secondary"
-                className="bg-muted/50 hover:bg-muted gap-1.5 px-2 py-0.5 text-xs font-semibold"
-              >
-                <img
-                  src="/icons/currency/Endo.png"
-                  alt=""
-                  aria-hidden
-                  className="size-4"
-                />
-                {totalEndoCost.toLocaleString("en-US")}
-              </Badge>
-              {formaCount > 0 && (
-                <Badge
-                  variant="secondary"
-                  className="bg-muted/50 hover:bg-muted gap-1.5 px-2 py-0.5 text-xs font-semibold"
-                >
-                  <img
-                    src="/icons/currency/Forma.png"
-                    alt=""
-                    aria-hidden
-                    className="size-[18px] object-contain"
-                  />
-                  {formaCount}
-                </Badge>
-              )}
+              <EndoFormaBadges
+                totalEndoCost={totalEndoCost}
+                formaCount={formaCount}
+              />
             </div>
           </div>
         </div>

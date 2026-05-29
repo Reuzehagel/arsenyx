@@ -1,3 +1,4 @@
+import type { BuildDetailResponse } from "@arsenyx/shared/api/build-dto"
 import type {
   DeploymentContext,
   LichBonusElement,
@@ -56,49 +57,9 @@ export type SavedBuildData = {
   variants?: SavedVariant[]
 }
 
-export type BuildDetail = {
-  id: string
-  slug: string
-  name: string
-  description: string | null
-  visibility: "PUBLIC" | "PRIVATE" | "UNLISTED"
-  item: {
-    uniqueName: string
-    category: string
-    name: string
-    imageName: string | null
-  }
-  buildData: unknown
-  hasShards: boolean
-  hasGuide: boolean
-  hideAuthor: boolean
-  likeCount: number
-  bookmarkCount: number
-  viewCount: number
-  createdAt: string
-  updatedAt: string
-  user: {
-    id: string
-    name: string | null
-    username: string | null
-    displayUsername: string | null
-    image: string | null
-  }
-  organization: {
-    id: string
-    name: string
-    slug: string
-    image: string | null
-  } | null
-  guide: {
-    summary: string | null
-    description: string | null
-    updatedAt: string
-  } | null
-  isOwner: boolean
-  viewerHasLiked: boolean
-  viewerHasBookmarked: boolean
-}
+/** Canonical wire shape lives in `@arsenyx/shared/api/build-dto`; re-exported
+ *  under the historical name so existing consumers keep importing it here. */
+export type BuildDetail = BuildDetailResponse
 
 export const buildQuery = (slug: string) =>
   queryOptions({

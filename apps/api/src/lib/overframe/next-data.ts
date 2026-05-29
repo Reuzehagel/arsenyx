@@ -34,77 +34,62 @@ function extractNextDataJson(html: string): unknown | null {
   }
 }
 
-function findFirstString(
+/**
+ * Depth-first walk over a parsed JSON tree. For every object entry, `visit`
+ * gets `(key, value, keyPath)` and may return a non-null match to stop the
+ * walk; otherwise recursion descends into the value. Arrays are recursed
+ * element-by-element (with `[i]` appended to the path) but their indices are
+ * not themselves visited. A `seen` set guards against cycles. Returns the
+ * first match `visit` produces, or null.
+ */
+function findFirst<T>(
   obj: unknown,
-  predicate: (key: string, value: string) => boolean,
-): { keyPath: string; value: string } | null {
+  visit: (key: string, value: unknown, keyPath: string) => T | null,
+): T | null {
   const seen = new Set<unknown>()
 
-  function walk(
-    value: unknown,
-    path: string,
-  ): { keyPath: string; value: string } | null {
-    if (value && typeof value === "object") {
-      if (seen.has(value)) return null
-      seen.add(value)
+  function walk(value: unknown, path: string): T | null {
+    if (!value || typeof value !== "object") return null
+    if (seen.has(value)) return null
+    seen.add(value)
 
-      if (Array.isArray(value)) {
-        for (let i = 0; i < value.length; i++) {
-          const res = walk(value[i], `${path}[${i}]`)
-          if (res) return res
-        }
-        return null
-      }
-
-      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-        if (typeof v === "string" && predicate(k, v)) {
-          return { keyPath: path ? `${path}.${k}` : k, value: v }
-        }
-        const res = walk(v, path ? `${path}.${k}` : k)
+    if (Array.isArray(value)) {
+      for (let i = 0; i < value.length; i++) {
+        const res = walk(value[i], `${path}[${i}]`)
         if (res) return res
       }
+      return null
     }
 
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      const keyPath = path ? `${path}.${k}` : k
+      const hit = visit(k, v, keyPath)
+      if (hit) return hit
+      const res = walk(v, keyPath)
+      if (res) return res
+    }
     return null
   }
 
   return walk(obj, "")
 }
 
+function findFirstString(
+  obj: unknown,
+  predicate: (key: string, value: string) => boolean,
+): { keyPath: string; value: string } | null {
+  return findFirst(obj, (k, v, keyPath) =>
+    typeof v === "string" && predicate(k, v) ? { keyPath, value: v } : null,
+  )
+}
+
 function findFirstArray(
   obj: unknown,
   keyName: string,
 ): { keyPath: string; value: unknown[] } | null {
-  const seen = new Set<unknown>()
-
-  function walk(
-    value: unknown,
-    path: string,
-  ): { keyPath: string; value: unknown[] } | null {
-    if (value && typeof value === "object") {
-      if (seen.has(value)) return null
-      seen.add(value)
-
-      if (Array.isArray(value)) {
-        for (let i = 0; i < value.length; i++) {
-          const res = walk(value[i], `${path}[${i}]`)
-          if (res) return res
-        }
-        return null
-      }
-
-      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-        if (k === keyName && Array.isArray(v)) {
-          return { keyPath: path ? `${path}.${k}` : k, value: v }
-        }
-        const res = walk(v, path ? `${path}.${k}` : k)
-        if (res) return res
-      }
-    }
-    return null
-  }
-
-  return walk(obj, "")
+  return findFirst(obj, (k, v, keyPath) =>
+    k === keyName && Array.isArray(v) ? { keyPath, value: v } : null,
+  )
 }
 
 function readNumberAtPath(obj: unknown, path: string[]): number | undefined {
@@ -170,50 +155,12 @@ function findFirstHelminthAbility(obj: unknown): {
   keyPath: string
   value: { slotIndex: number; uniqueName: string }
 } | null {
-  const seen = new Set<unknown>()
-
-  function walk(
-    value: unknown,
-    path: string,
-  ): {
-    keyPath: string
-    value: { slotIndex: number; uniqueName: string }
-  } | null {
-    if (!value || typeof value !== "object") {
-      return null
-    }
-
-    if (seen.has(value)) return null
-    seen.add(value)
-
-    if (Array.isArray(value)) {
-      for (let i = 0; i < value.length; i++) {
-        const res = walk(value[i], `${path}[${i}]`)
-        if (res) return res
-      }
-      return null
-    }
-
-    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-      const lower = k.toLowerCase()
-      if (lower === "helminthability" || lower === "helminth_ability") {
-        const parsed = parseHelminthAbility(v)
-        if (parsed) {
-          return {
-            keyPath: path ? `${path}.${k}` : k,
-            value: parsed,
-          }
-        }
-      }
-
-      const res = walk(v, path ? `${path}.${k}` : k)
-      if (res) return res
-    }
-
-    return null
-  }
-
-  return walk(obj, "")
+  return findFirst(obj, (k, v, keyPath) => {
+    const lower = k.toLowerCase()
+    if (lower !== "helminthability" && lower !== "helminth_ability") return null
+    const parsed = parseHelminthAbility(v)
+    return parsed ? { keyPath, value: parsed } : null
+  })
 }
 
 export function extractOverframeDataFromHtml(
@@ -282,12 +229,17 @@ export function extractOverframeDataFromHtml(
   ])
   if (pageDescription) extractedKeys.push("props.pageProps.pageDescription")
 
+  const guideMarkdown = readStringAtPath(nextData, [
+    "props",
+    "pageProps",
+    "guideMarkdown",
+  ])
   const guideDescription =
-    readStringAtPath(nextData, ["props", "pageProps", "guideMarkdown"]) ??
+    guideMarkdown ??
     readStringAtPath(nextData, ["props", "pageProps", "data", "description"])
   if (guideDescription) {
     extractedKeys.push(
-      readStringAtPath(nextData, ["props", "pageProps", "guideMarkdown"])
+      guideMarkdown
         ? "props.pageProps.guideMarkdown"
         : "props.pageProps.data.description",
     )

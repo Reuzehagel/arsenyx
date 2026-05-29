@@ -103,14 +103,21 @@ export function getMatchState(
   return modPolarity === slotPolarity ? "match" : "mismatch"
 }
 
+/**
+ * Drain a mod contributes before any slot-polarity adjustment. Riven
+ * `baseDrain` is the user-configured drain at max rank (what the game
+ * displays); regular mods add 1 drain per rank on top of `baseDrain`.
+ */
+export function baseDrainForMod(mod: Mod, rank: number): number {
+  return isRivenMod(mod) ? mod.baseDrain : mod.baseDrain + rank
+}
+
 export function effectiveDrainForMod(
   mod: Mod,
   rank: number,
   slotPolarity: Polarity | undefined,
 ): number {
-  // Riven `baseDrain` is the user-configured drain at max rank (what the
-  // game displays). Regular mods add 1 drain per rank on top of `baseDrain`.
-  const base = isRivenMod(mod) ? mod.baseDrain : mod.baseDrain + rank
+  const base = baseDrainForMod(mod, rank)
   if (!slotPolarity || slotPolarity === "universal") return base
   if (slotPolarity === "any") {
     return mod.polarity === "umbra" ? base : Math.ceil(base / 2)

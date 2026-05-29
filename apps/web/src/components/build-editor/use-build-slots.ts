@@ -1,3 +1,4 @@
+import { clamp } from "@arsenyx/shared"
 import {
   getPlexusSlotKind,
   isPlexusAuraMod as sharedIsPlexusAuraMod,
@@ -9,6 +10,7 @@ import { useCallback, useMemo, useState } from "react"
 
 import { getPlexusGroupForIndex } from "./layout"
 import type { ModSlotKind } from "./mod-slot"
+import { modMaxRank } from "./slot-ranks"
 
 export type SlotId = `aura-${number}` | "exilus" | "stance" | `normal-${number}`
 
@@ -72,10 +74,6 @@ export function canPlaceIn(mod: Mod, id: SlotId): boolean {
     case "normal":
       return !isAuraMod(mod) && !isStanceMod(mod)
   }
-}
-
-function maxRank(mod: Mod): number {
-  return mod.fusionLimit ?? 0
 }
 
 function candidateSlots(
@@ -234,7 +232,7 @@ export function useBuildSlots(
 
         if (selected && canPlaceIn(mod, selected)) {
           setSelected(getNextEmptySlot(selected, layout, prev))
-          return { ...prev, [selected]: { mod, rank: maxRank(mod) } }
+          return { ...prev, [selected]: { mod, rank: modMaxRank(mod) } }
         }
 
         const auraIds = Array.from(
@@ -250,7 +248,7 @@ export function useBuildSlots(
         for (const id of tryIds) {
           if (!prev[id] && canPlaceIn(mod, id)) {
             setSelected(getNextEmptySlot(id, layout, prev))
-            return { ...prev, [id]: { mod, rank: maxRank(mod) } }
+            return { ...prev, [id]: { mod, rank: modMaxRank(mod) } }
           }
         }
         return prev
@@ -271,7 +269,7 @@ export function useBuildSlots(
   const placeAt = useCallback((id: SlotId, mod: Mod, rank?: number) => {
     setPlaced((prev) => ({
       ...prev,
-      [id]: { mod, rank: rank ?? maxRank(mod) },
+      [id]: { mod, rank: rank ?? modMaxRank(mod) },
     }))
   }, [])
 
@@ -324,7 +322,7 @@ export function useBuildSlots(
     setPlaced((prev) => {
       const cur = prev[id]
       if (!cur) return prev
-      const clamped = Math.max(0, Math.min(maxRank(cur.mod), rank))
+      const clamped = clamp(rank, 0, modMaxRank(cur.mod))
       if (clamped === cur.rank) return prev
       return { ...prev, [id]: { ...cur, rank: clamped } }
     })

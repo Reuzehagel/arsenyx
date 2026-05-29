@@ -1,17 +1,14 @@
+import type { BuildListItemResponse } from "@arsenyx/shared/api/build-dto"
+import {
+  LIST_LIMIT,
+  LIST_SORTS,
+  type ListSort,
+} from "@arsenyx/shared/warframe/build-list"
 import { isValidCategory } from "@arsenyx/shared/warframe/categories"
 
 import { prisma } from "../db"
 import { Prisma } from "../generated/prisma/client"
-
-export const LIST_LIMIT = 24
-export const LIST_SORTS = [
-  "newest",
-  "updated",
-  "top",
-  "bookmarked",
-  "viewed",
-] as const
-export type ListSort = (typeof LIST_SORTS)[number]
+import { parsePage, trimQ } from "./_query"
 
 export const LIST_SELECT = {
   id: true,
@@ -113,7 +110,7 @@ export function serializeBuildDetail(b: DetailRow, viewer: ViewerState | null) {
   }
 }
 
-export function serializeListRow(b: ListRow) {
+export function serializeListRow(b: ListRow): BuildListItemResponse {
   return {
     id: b.id,
     slug: b.slug,
@@ -152,20 +149,17 @@ export type ListFilters = {
 export function parseListQuery(c: {
   req: { query: (k: string) => string | undefined }
 }): ListFilters {
-  const pageRaw = parseInt(c.req.query("page") ?? "1", 10)
-  const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1
+  const page = parsePage(c.req.query("page"))
   const sortRaw = c.req.query("sort")
   const sort: ListSort | undefined = (LIST_SORTS as readonly string[]).includes(
     sortRaw ?? "",
   )
     ? (sortRaw as ListSort)
     : undefined
-  const qRaw = c.req.query("q")?.trim()
-  const q = qRaw && qRaw.length > 0 ? qRaw.slice(0, 200) : undefined
+  const q = trimQ(c.req.query("q"), 200)
   const catRaw = c.req.query("category")
   const category = catRaw && isValidCategory(catRaw) ? catRaw : undefined
-  const itemRaw = c.req.query("item")?.trim()
-  const item = itemRaw && itemRaw.length > 0 ? itemRaw.slice(0, 200) : undefined
+  const item = trimQ(c.req.query("item"), 200)
   const limitRaw = parseInt(c.req.query("limit") ?? "", 10)
   const limit =
     Number.isFinite(limitRaw) && limitRaw > 0

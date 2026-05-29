@@ -4,13 +4,13 @@ import { ArrowRight } from "lucide-react"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import {
-  formatDate,
   isPrimeRedundant,
   useRecentItems,
 } from "@/components/landing/use-recent-items"
 import { Link } from "@/components/link"
 import { Kbd } from "@/components/ui/kbd"
 import { itemsIndexQuery } from "@/lib/queries/items-index-query"
+import { formatDotDate } from "@/lib/util/relative-time"
 import { getImageUrl, getItemUrl } from "@/lib/warframe"
 
 export const Route = createFileRoute("/")({
@@ -51,7 +51,7 @@ function Home() {
                   />
                   <div className="text-muted-foreground mt-5 flex items-baseline justify-between gap-3 text-[11px] tracking-[0.22em] uppercase">
                     <span className="font-mono">
-                      {formatDate(hero.releaseDate)}
+                      {formatDotDate(hero.releaseDate)}
                     </span>
                     <span className="text-foreground">{hero.name}</span>
                   </div>
@@ -98,7 +98,7 @@ function Home() {
                       className="flex items-baseline gap-3 text-sm"
                     >
                       <span className="text-muted-foreground font-mono text-[11px] tabular-nums">
-                        {formatDate(it.releaseDate)}
+                        {formatDotDate(it.releaseDate)}
                       </span>
                       <Link
                         href={getItemUrl(it.category, it.slug)}

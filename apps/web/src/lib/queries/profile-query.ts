@@ -1,9 +1,10 @@
 import { queryOptions } from "@tanstack/react-query"
 import { notFound } from "@tanstack/react-router"
 
-import type {
-  BuildListParams,
-  BuildListResponse,
+import {
+  type BuildListParams,
+  type BuildListResponse,
+  buildQueryString,
 } from "@/lib/queries/builds-list-query"
 import { apiFetch, ApiError } from "@/lib/util/api-client"
 
@@ -50,12 +51,12 @@ export const profileBuildsQuery = (username: string, params: BuildListParams) =>
   queryOptions({
     queryKey: ["builds", "profile", username.toLowerCase(), params],
     queryFn: async (): Promise<BuildListResponse> => {
-      const q = new URLSearchParams()
-      if (params.page > 1) q.set("page", String(params.page))
-      if (params.sort !== "newest") q.set("sort", params.sort)
-      if (params.q) q.set("q", params.q)
-      if (params.category) q.set("category", params.category)
-      const qs = q.toString() ? `?${q.toString()}` : ""
+      const qs = buildQueryString(params, "newest", [
+        "item",
+        "limit",
+        "hasGuide",
+        "hasShards",
+      ])
       try {
         return await apiFetch<BuildListResponse>(
           `/users/${encodeURIComponent(username)}/builds${qs}`,

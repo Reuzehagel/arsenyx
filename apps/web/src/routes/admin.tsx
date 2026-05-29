@@ -1,5 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query"
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { Suspense, useState } from "react"
 
 import { Footer } from "@/components/footer"
@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { UserAvatar } from "@/components/user-avatar"
 import { authClient } from "@/lib/auth-client"
+import { requireAdmin } from "@/lib/auth-guards"
 import {
   adminBuildsQuery,
   adminOrgsQuery,
@@ -66,15 +67,21 @@ function parseSearch(search: Record<string, unknown>): AdminSearch {
 
 export const Route = createFileRoute("/admin")({
   validateSearch: (search): AdminSearch => parseSearch(search),
-  beforeLoad: async () => {
-    const session = await authClient.getSession()
-    const user = session.data?.user as { isAdmin?: boolean } | undefined
-    if (!user || user.isAdmin !== true) {
-      throw redirect({ to: "/" })
-    }
-  },
+  beforeLoad: () => requireAdmin(),
   component: AdminPage,
 })
+
+/** Merge a partial search patch into the current admin URL search, replacing
+ *  history. Shared by the per-tab search/pagination controls. */
+function useAdminSearchUpdate() {
+  const navigate = useNavigate({ from: Route.fullPath })
+  return (next: Partial<AdminSearch>) => {
+    void navigate({
+      search: (prev) => ({ ...prev, ...next }),
+      replace: true,
+    })
+  }
+}
 
 function AdminPage() {
   const search = Route.useSearch()
@@ -176,17 +183,10 @@ function SearchBar({
 // ---------------- Users
 
 function UsersTab({ page, q }: { page: number; q: string }) {
-  const navigate = useNavigate({ from: Route.fullPath })
   const { data } = useSuspenseQuery(adminUsersQuery({ page, q }))
   const { data: session } = authClient.useSession()
   const selfId = session?.user?.id ?? null
-
-  function updateSearch(next: Partial<AdminSearch>) {
-    void navigate({
-      search: (prev) => ({ ...prev, ...next }),
-      replace: true,
-    })
-  }
+  const updateSearch = useAdminSearchUpdate()
 
   return (
     <div className="flex flex-col gap-4 py-4">
@@ -272,9 +272,19 @@ function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
           disabled={isSelf && !user.isBanned}
           onClick={() => toggle("isBanned")}
         />
-        <DeleteUserDialog
-          user={user}
-          isSelf={isSelf}
+        <ConfirmDeleteDialog
+          title="Delete user"
+          description={
+            <>
+              Permanently delete{" "}
+              <span className="font-semibold">
+                {user.displayUsername ?? user.username ?? user.email}
+              </span>{" "}
+              and all of their builds, likes, bookmarks, and memberships. This
+              cannot be undone.
+            </>
+          }
+          triggerDisabled={isSelf}
           onConfirm={() => del.mutate(user.id)}
           pending={del.isPending}
         />
@@ -308,35 +318,32 @@ function FlagButton({
   )
 }
 
-function DeleteUserDialog({
-  user,
-  isSelf,
+function ConfirmDeleteDialog({
+  title,
+  description,
   onConfirm,
   pending,
+  triggerDisabled,
 }: {
-  user: AdminUser
-  isSelf: boolean
+  title: string
+  description: React.ReactNode
   onConfirm: () => void
   pending: boolean
+  triggerDisabled?: boolean
 }) {
-  const display = user.displayUsername ?? user.username ?? user.email
   return (
     <Dialog>
       <DialogTrigger
         render={
-          <Button size="sm" variant="destructive" disabled={isSelf}>
+          <Button size="sm" variant="destructive" disabled={triggerDisabled}>
             Delete
           </Button>
         }
       />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Delete user</DialogTitle>
-          <DialogDescription>
-            Permanently delete <span className="font-semibold">{display}</span>{" "}
-            and all of their builds, likes, bookmarks, and memberships. This
-            cannot be undone.
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <DialogClose render={<Button variant="secondary">Cancel</Button>} />
@@ -360,16 +367,9 @@ function DeleteUserDialog({
 // ---------------- Content (builds)
 
 function ContentTab({ page, q }: { page: number; q: string }) {
-  const navigate = useNavigate({ from: Route.fullPath })
   const { data } = useSuspenseQuery(adminBuildsQuery({ page, q }))
   const del = useAdminDeleteBuild()
-
-  function updateSearch(next: Partial<AdminSearch>) {
-    void navigate({
-      search: (prev) => ({ ...prev, ...next }),
-      replace: true,
-    })
-  }
+  const updateSearch = useAdminSearchUpdate()
 
   return (
     <div className="flex flex-col gap-4 py-4">
@@ -408,41 +408,18 @@ function ContentTab({ page, q }: { page: number; q: string }) {
                     {b.likeCount}♥ · {b.bookmarkCount}★
                   </span>
                 </div>
-                <Dialog>
-                  <DialogTrigger
-                    render={
-                      <Button size="sm" variant="destructive">
-                        Delete
-                      </Button>
-                    }
-                  />
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Delete build</DialogTitle>
-                      <DialogDescription>
-                        Permanently delete{" "}
-                        <span className="font-semibold">{b.name}</span>. This
-                        cannot be undone.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                      <DialogClose
-                        render={<Button variant="secondary">Cancel</Button>}
-                      />
-                      <DialogClose
-                        render={
-                          <Button
-                            variant="destructive"
-                            onClick={() => del.mutate(b.slug)}
-                            disabled={del.isPending}
-                          >
-                            {del.isPending ? "Deleting…" : "Delete"}
-                          </Button>
-                        }
-                      />
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                <ConfirmDeleteDialog
+                  title="Delete build"
+                  description={
+                    <>
+                      Permanently delete{" "}
+                      <span className="font-semibold">{b.name}</span>. This
+                      cannot be undone.
+                    </>
+                  }
+                  onConfirm={() => del.mutate(b.slug)}
+                  pending={del.isPending}
+                />
               </div>
             )
           })}
@@ -461,15 +438,8 @@ function ContentTab({ page, q }: { page: number; q: string }) {
 // ---------------- Orgs
 
 function OrgsTab({ page, q }: { page: number; q: string }) {
-  const navigate = useNavigate({ from: Route.fullPath })
   const { data } = useSuspenseQuery(adminOrgsQuery({ page, q }))
-
-  function updateSearch(next: Partial<AdminSearch>) {
-    void navigate({
-      search: (prev) => ({ ...prev, ...next }),
-      replace: true,
-    })
-  }
+  const updateSearch = useAdminSearchUpdate()
 
   return (
     <div className="flex flex-col gap-4 py-4">
@@ -518,40 +488,18 @@ function OrgRow({ org }: { org: AdminOrg }) {
           /{org.slug} · {org.memberCount} members · {org.buildCount} builds
         </span>
       </div>
-      <Dialog>
-        <DialogTrigger
-          render={
-            <Button size="sm" variant="destructive">
-              Delete
-            </Button>
-          }
-        />
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete organization</DialogTitle>
-            <DialogDescription>
-              Permanently delete{" "}
-              <span className="font-semibold">{org.name}</span>. Its{" "}
-              {org.buildCount} build(s) will be unlinked (not deleted). This
-              cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose render={<Button variant="secondary">Cancel</Button>} />
-            <DialogClose
-              render={
-                <Button
-                  variant="destructive"
-                  onClick={() => del.mutate(org.slug)}
-                  disabled={del.isPending}
-                >
-                  {del.isPending ? "Deleting…" : "Delete"}
-                </Button>
-              }
-            />
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDeleteDialog
+        title="Delete organization"
+        description={
+          <>
+            Permanently delete <span className="font-semibold">{org.name}</span>
+            . Its {org.buildCount} build(s) will be unlinked (not deleted). This
+            cannot be undone.
+          </>
+        }
+        onConfirm={() => del.mutate(org.slug)}
+        pending={del.isPending}
+      />
     </div>
   )
 }

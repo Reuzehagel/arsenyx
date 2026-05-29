@@ -5,7 +5,6 @@ import { Header } from "@/components/header"
 
 interface ChangelogEntry {
   date: string
-  version?: string
   changes: {
     type: "feat" | "fix" | "refactor" | "chore"
     description: string

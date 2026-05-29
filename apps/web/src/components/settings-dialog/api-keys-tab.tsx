@@ -27,6 +27,7 @@ import {
   myApiKeysQuery,
   revokeApiKey,
 } from "@/lib/queries/me-query"
+import { formatLocaleDate } from "@/lib/util/relative-time"
 
 import { SignedOutNotice } from "./shared"
 
@@ -52,11 +53,6 @@ function expiryToDate(v: ExpiryValue): string | null {
     case "1y":
       return new Date(now + 365 * day).toISOString()
   }
-}
-
-function formatDate(iso: string | null, fallback = "Never") {
-  if (!iso) return fallback
-  return new Date(iso).toLocaleDateString()
 }
 
 type ScopeOption = {
@@ -349,9 +345,9 @@ function ApiKeyRow({ apiKey }: { apiKey: ApiKeySummary }) {
           {apiKey.keyPrefix}…
         </code>
         <span className="text-muted-foreground text-xs">
-          Created {formatDate(apiKey.createdAt)} · Expires{" "}
-          {formatDate(apiKey.expiresAt)} · Last used{" "}
-          {formatDate(apiKey.lastUsedAt)} · {apiKey.rateLimit}/min
+          Created {formatLocaleDate(apiKey.createdAt)} · Expires{" "}
+          {formatLocaleDate(apiKey.expiresAt)} · Last used{" "}
+          {formatLocaleDate(apiKey.lastUsedAt)} · {apiKey.rateLimit}/min
         </span>
       </div>
       {apiKey.isActive ? (

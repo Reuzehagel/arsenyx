@@ -6,7 +6,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./warframe": "./src/warframe/index.ts",
-    "./warframe/*": "./src/warframe/*.ts"
+    "./warframe/*": "./src/warframe/*.ts",
+    "./util/*": "./src/util/*.ts",
+    "./api/*": "./src/api/*.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

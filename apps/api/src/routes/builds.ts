@@ -4,14 +4,13 @@ import { Hono, type Context } from "hono"
 import { getCookie, setCookie } from "hono/cookie"
 import { customAlphabet, nanoid } from "nanoid"
 
-import type { Bindings } from "../bindings"
 import { prisma, registerBackgroundWork } from "../db"
 import { Prisma } from "../generated/prisma/client"
 import { BuildVisibility } from "../generated/prisma/enums"
 import type { InputJsonValue } from "../generated/prisma/internal/prismaNamespace"
 import { getSession } from "../lib/session"
 import { hasPrismaCode, parseJsonBody, trimToMax } from "../lib/validate"
-import { rateLimitUser } from "../middleware/rate-limit"
+import { enforceAnonEdgeLimit, rateLimitUser } from "../middleware/rate-limit"
 import {
   DETAIL_INCLUDE,
   LIST_SELECT,
@@ -373,21 +372,21 @@ builds.get(
     // open-fail. Outside production we tolerate absence so dev/test don't
     // need the binding wired up.
     if (!viewerId) {
-      const limiter = (c.env as Bindings | undefined)?.ANON_SEARCH_LIMITER
-      if (limiter) {
-        // Without cf-connecting-ip every caller shares the literal key
-        // "unknown", which collapses the global anon population into one
-        // bucket. That's a fail-closed outcome (the bucket trips fast) so
-        // it's preferable to fail-open, but log once so it's diagnosable.
-        const ip = c.req.header("cf-connecting-ip")
-        if (!ip) console.warn("rate-limit: missing cf-connecting-ip header")
-        const { success } = await limiter.limit({ key: ip ?? "unknown" })
-        if (!success) return c.json({ error: "rate_limited" }, 429)
-      } else if (process.env.NODE_ENV === "production") {
-        console.error(
-          "rate-limit: ANON_SEARCH_LIMITER binding missing in production — anon /builds/search is unthrottled",
-        )
-      }
+      const blocked = await enforceAnonEdgeLimit(
+        c,
+        "ANON_SEARCH_LIMITER",
+        "rate-limit: ANON_SEARCH_LIMITER binding missing in production — anon /builds/search is unthrottled",
+        () => {
+          // Without cf-connecting-ip every caller shares the literal key
+          // "unknown", which collapses the global anon population into one
+          // bucket. That's a fail-closed outcome (the bucket trips fast) so
+          // it's preferable to fail-open, but log once so it's diagnosable.
+          const ip = c.req.header("cf-connecting-ip")
+          if (!ip) console.warn("rate-limit: missing cf-connecting-ip header")
+          return ip ?? "unknown"
+        },
+      )
+      if (blocked) return blocked
     }
 
     const limitRaw = parseInt(c.req.query("limit") ?? "", 10)
@@ -819,13 +818,17 @@ builds.get("/:slug", async (c) => {
   if (!build) return c.json({ error: "not_found" }, 404)
 
   const viewerId = session?.user.id
+  // Resolve org membership once — both the view check and the owner/mutate
+  // check below need the same (org, viewer) answer.
+  const viewerIsOrgMember =
+    viewerId != null && build.organizationId != null
+      ? await isOrgMember(build.organizationId, viewerId)
+      : false
   const canView =
     build.visibility === "PUBLIC" ||
     build.visibility === "UNLISTED" ||
     (viewerId != null && build.userId === viewerId) ||
-    (viewerId != null &&
-      build.organizationId != null &&
-      (await isOrgMember(build.organizationId, viewerId)))
+    viewerIsOrgMember
 
   if (!canView) return c.json({ error: "not_found" }, 404)
 
@@ -848,12 +851,9 @@ builds.get("/:slug", async (c) => {
     viewerHasBookmarked = bookmark != null
   }
 
+  // Mirrors `canMutateBuild` but reuses the membership resolved above.
   const isOwner =
-    viewerId != null &&
-    (await canMutateBuild(
-      { userId: build.userId, organizationId: build.organizationId },
-      viewerId,
-    ))
+    viewerId != null && (build.userId === viewerId || viewerIsOrgMember)
 
   return c.json(
     serializeBuildDetail(build, {

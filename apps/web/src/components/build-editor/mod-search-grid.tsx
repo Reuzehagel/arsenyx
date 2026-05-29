@@ -35,7 +35,7 @@ import {
   type DamageType,
   ELEMENTAL_COMBINATIONS,
 } from "@/lib/stats/types"
-import { cn } from "@/lib/util/utils"
+import { capitalize, cn } from "@/lib/util/utils"
 
 import { useStartDrag } from "./drag-controller"
 import { ModCard } from "./mod-card"
@@ -130,10 +130,6 @@ function getSearchable(mod: Mod): string {
   const combinedStr = combined.size > 0 ? ` ${[...combined].join(" ")}` : ""
   const aliasStr = aliases.size > 0 ? ` ${[...aliases].join(" ")}` : ""
   return `${name} ${desc} ${target} ${stats}${combinedStr}${aliasStr}`
-}
-
-function cap(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
 interface FilterSelectProps<T extends string> {
@@ -488,7 +484,7 @@ export function ModSearchGrid({
             value={polarity}
             onChange={setPolarity}
             options={POLARITY_OPTIONS}
-            labelFor={(v) => (v === "All" ? "All" : cap(v))}
+            labelFor={(v) => (v === "All" ? "All" : capitalize(v))}
           />
           <FilterSelect
             value={gameMode}

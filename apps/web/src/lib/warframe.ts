@@ -4,8 +4,8 @@
  * needs enough to render cards and link to detail pages.
  */
 
-import type { BrowseCategory } from "@arsenyx/shared/warframe/types"
-export type { BrowseCategory } from "@arsenyx/shared/warframe/types"
+import type { BrowseCategory, BrowseItem } from "@arsenyx/shared/warframe/types"
+export type { BrowseCategory, BrowseItem } from "@arsenyx/shared/warframe/types"
 
 const PLACEHOLDER_URL =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128' viewBox='0 0 128 128'%3E%3Crect fill='%23374151' width='128' height='128' rx='8'/%3E%3Ctext x='64' y='72' text-anchor='middle' fill='%236b7280' font-family='system-ui' font-size='48' font-weight='bold'%3E%3F%3C/text%3E%3C/svg%3E"
@@ -50,21 +50,6 @@ export function formatPct(
 ): string | undefined {
   if (v === undefined) return undefined
   return `${(v * 100).toFixed(digits)}%`
-}
-
-export interface BrowseItem {
-  uniqueName: string
-  name: string
-  slug: string
-  category: BrowseCategory
-  imageName?: string
-  masteryReq?: number
-  isPrime?: boolean
-  vaulted?: boolean
-  /** Wiki Class label ("Sniper Rifle", "Polearm", "Warframe"). This is what
-   *  appears as the class label in the UI, not a category enum. */
-  displayClass?: string
-  releaseDate?: string
 }
 
 export type ItemsIndex = Partial<Record<BrowseCategory, BrowseItem[]>>
