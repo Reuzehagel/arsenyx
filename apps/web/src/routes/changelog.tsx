@@ -13,6 +13,56 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-05-30",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Kitguns are now buildable, with a grip and loader component picker in the editor and viewer that mirrors the Zaw flow.",
+      },
+      {
+        type: "feat",
+        description:
+          "The mod picker gained a PvE / Conclave game-mode toggle and a working exilus filter, and the rarity, polarity, and game-mode filters now actually narrow the grid instead of just dimming.",
+      },
+      {
+        type: "feat",
+        description:
+          "Arch-guns now have a Space / Atmosphere toggle on item detail when both stat sets exist.",
+      },
+      {
+        type: "refactor",
+        description:
+          "Item, mod, and arcane images are now self-hosted and cached on the CDN, so they load faster and no longer break when upstream sources move.",
+      },
+      {
+        type: "refactor",
+        description:
+          "Saved builds now resolve their images from the live catalog at view time, so old builds self-heal instead of showing broken cards.",
+      },
+      {
+        type: "chore",
+        description:
+          "Game data is now sourced directly from the official Warframe export and the wiki, keeping items, mods, and arcanes more accurate and up to date.",
+      },
+      {
+        type: "fix",
+        description:
+          "Augment and modular arcane compatibility is now exact — augments only show on weapons and frames that can equip them, and Kitgun/Pax arcanes no longer appear on every primary and secondary.",
+      },
+      {
+        type: "fix",
+        description:
+          "Universal (any) polarity mods now grant their capacity bonus on every polarized slot, and trade-off auras like Power Donation report the correct stat changes.",
+      },
+      {
+        type: "fix",
+        description:
+          "The Plexus mod picker is populated again, Jade renders both of her aura slots, and the command palette no longer lists exalted weapons twice.",
+      },
+    ],
+  },
+  {
     date: "2026-05-27",
     changes: [
       {
@@ -28,6 +78,16 @@ const CHANGELOG: ChangelogEntry[] = [
         type: "fix",
         description:
           "Tome mods are restricted to the Grimoire and Noctua instead of showing up for every secondary.",
+      },
+      {
+        type: "fix",
+        description:
+          "Innate base elements now fold into the weapon's established element combinations instead of being counted separately.",
+      },
+      {
+        type: "fix",
+        description:
+          "Weapon stats on item detail pages are capped to two decimals instead of showing long fractions.",
       },
     ],
   },
