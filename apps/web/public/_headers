@@ -17,5 +17,8 @@
 /mod-set-icons/*
   Cache-Control: public, max-age=31536000, immutable
 
+# Static catalog. The app appends a build-time ?v=<data-version> to every
+# /data/ fetch (see src/lib/queries/static-data-query.ts), so a regenerated
+# catalog ships under a fresh URL — safe to cache immutably for a year.
 /data/*
-  Cache-Control: public, max-age=600, s-maxage=3600
+  Cache-Control: public, max-age=31536000, immutable

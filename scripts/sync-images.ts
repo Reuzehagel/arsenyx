@@ -134,11 +134,11 @@ interface UploadResult {
   status: "uploaded" | "skipped" | "missing"
 }
 
-/** Pass `--refresh-metadata` to re-apply Content-Type / Content-Disposition
- *  on every already-uploaded object (via S3 CopyObject — no re-download).
- *  Useful when an earlier run uploaded objects with `application/octet-stream`
- *  which made browsers offer a download on right-click → "open in new tab"
- *  instead of rendering inline. */
+/** Pass `--refresh-metadata` to re-apply Content-Type / Content-Disposition /
+ *  Cache-Control on every already-uploaded object (via S3 CopyObject — no
+ *  re-download). Useful when an earlier run uploaded objects with
+ *  `application/octet-stream` (which made browsers offer a download instead of
+ *  rendering inline) or with no Cache-Control (which left the edge BYPASSing). */
 const REFRESH_METADATA = process.argv.includes("--refresh-metadata")
 
 /** Map file extension → image MIME type. Trusting the upstream Content-Type
@@ -163,6 +163,14 @@ function contentTypeForKey(key: string): string {
   return MIME_BY_EXT[ext] ?? "application/octet-stream"
 }
 
+/** Catalog keys are content-hashed (`<stem>-<sha8>.<ext>`), so the bytes at a
+ *  given URL never change — safe to cache forever. Without an explicit header,
+ *  R2's custom domain serves these with no Cache-Control and Cloudflare's edge
+ *  returns `Cf-Cache-Status: BYPASS`, round-tripping every icon to the R2
+ *  origin. A zone-level Cache Rule on the public domain is still needed to flip
+ *  the edge to HIT for all types; this header makes browsers cache long too. */
+const CACHE_CONTROL = "public, max-age=31536000, immutable"
+
 async function existsInBucket(key: string): Promise<boolean> {
   const res = await aws.fetch(objectUrl(key), { method: "HEAD" })
   if (res.status === 200) return true
@@ -181,6 +189,7 @@ async function refreshMetadata(key: string): Promise<void> {
       "x-amz-metadata-directive": "REPLACE",
       "Content-Type": contentTypeForKey(key),
       "Content-Disposition": "inline",
+      "Cache-Control": CACHE_CONTROL,
     },
   })
   if (!res.ok) {
@@ -215,6 +224,7 @@ async function ensureUploaded(url: string, key: string): Promise<UploadResult> {
       // the save dialog when the user opens the image directly.
       "Content-Type": contentTypeForKey(key),
       "Content-Disposition": "inline",
+      "Cache-Control": CACHE_CONTROL,
     },
   })
   if (!put.ok) {
@@ -246,8 +256,8 @@ async function pMap<T, R>(
 // Main.
 // ---------------------------------------------------------------------------
 
-/** `--refresh-metadata` only: re-apply Content-Type / Content-Disposition on
- *  every object the catalog already references, derived from the keys in the
+/** `--refresh-metadata` only: re-apply Content-Type / Content-Disposition /
+ *  Cache-Control on every object the catalog already references, derived from the keys in the
  *  current JSON — whether they still point upstream (pre-sync) or at our CDN
  *  (post-sync). Keying off the live catalog (not the upstream URL set, which
  *  is empty once a sync has rewritten everything) is what makes this runnable
@@ -260,7 +270,7 @@ async function refreshAllMetadata(files: readonly string[]): Promise<void> {
     for (const u of extractSourceUrls(text)) keys.add(keyForUrl(u))
     for (const m of text.matchAll(ourUrlRe)) keys.add(decodeURIComponent(m[1]!))
   }
-  console.log(`\n--refresh-metadata: re-applying Content-Type / Content-Disposition on ${keys.size} objects`)
+  console.log(`\n--refresh-metadata: re-applying Content-Type / Content-Disposition / Cache-Control on ${keys.size} objects`)
 
   let fixed = 0
   let absent = 0

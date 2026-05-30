@@ -8,6 +8,11 @@ Non-obvious pitfalls. Add to this file when you hit one.
 - **PowerShell doesn't support `<` redirection** — wrap in `bash -c '...'` for Docker stdin (e.g. piping SQL into `psql`).
 - **cssstudio is OFF by default in dev.** Toggle via URL: append `?cssstudio=1` to enable, `?cssstudio=0` to disable. The flag persists in `localStorage.arsenyx.cssstudio` and the param strips itself after apply. See [apps/web/src/main.tsx](../apps/web/src/main.tsx).
 
+## R2 image hosting (img.arsenyx.com)
+
+- **R2 served via a Custom Domain does NOT edge-cache objects that lack a `Cache-Control` header** — Cloudflare returns `Cf-Cache-Status: BYPASS` and every request round-trips to the R2 origin. [scripts/sync-images.ts](../scripts/sync-images.ts) sets `Cache-Control: public, max-age=31536000, immutable` on upload (keys are content-hashed, so the bytes never change). If you change that header, re-apply it to existing objects with `bun run sync:images --refresh-metadata` (CopyObject, no re-download). Verify with `curl -sSI https://img.arsenyx.com/<key>` → expect `HIT` on the second hit.
+- Non-default-cacheable extensions (anything outside png/jpg/jpeg/gif/webp/svg/ico) still need a zone **Cache Rule** ("Cache Everything") to cache even with the header. We only serve default-cacheable image types today, so the header alone suffices.
+
 ## Shadcn in the monorepo
 
 The `shadcn` skill's bootstrap runs `shadcn info` from cwd and errors at the monorepo root (`error: monorepo_root`). Workarounds:
