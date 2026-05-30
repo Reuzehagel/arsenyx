@@ -64,17 +64,16 @@ export function CommandPalette({
 
   const allItems = useMemo<ItemEntry[]>(() => {
     if (!items) return []
-    // Exalted weapons are intentionally dual-categorized in the catalog
-    // (e.g. Garuda Prime Talons appears in both "melee" and
-    // "exalted-weapons" so they surface in the Melee browse tab too).
-    // For the palette, collapse to one row per uniqueName and prefer the
-    // "Exalted" label — it's the more specific signal for the user.
+    // Dedupe by slug, not uniqueName: modular kitgun barrels (Catchmoon,
+    // Sporelacer, Vermisplicer, …) share a single uniqueName across their
+    // Primary and Secondary forms, but those are distinct browsable items
+    // with distinct slugs. slug is unique per catalog entry, so this keeps
+    // every form as its own row while still collapsing true duplicates.
     const byKey = new Map<string, ItemEntry>()
     for (const { id, label } of CATEGORIES) {
       for (const it of items[id] ?? []) {
-        const existing = byKey.get(it.uniqueName)
-        if (!existing || id === "exalted-weapons") {
-          byKey.set(it.uniqueName, { ...it, categoryLabel: label })
+        if (!byKey.has(it.slug)) {
+          byKey.set(it.slug, { ...it, categoryLabel: label })
         }
       }
     }
@@ -94,7 +93,7 @@ export function CommandPalette({
   }, [allItems, debouncedQuery])
 
   useEffect(() => {
-    setSelected(filteredItems[0] ? `item:${filteredItems[0].uniqueName}` : "")
+    setSelected(filteredItems[0] ? `item:${filteredItems[0].slug}` : "")
   }, [filteredItems])
 
   const go = (fn: () => void) => {
@@ -171,7 +170,7 @@ export function CommandPalette({
                     <CommandGroup heading="Popular items">
                       {filteredItems.map((item) => (
                         <ItemRow
-                          key={item.uniqueName}
+                          key={item.slug}
                           item={item}
                           onSelect={() =>
                             go(() =>
@@ -196,7 +195,7 @@ export function CommandPalette({
               <CommandGroup heading="Items">
                 {filteredItems.map((item) => (
                   <ItemRow
-                    key={item.uniqueName}
+                    key={item.slug}
                     item={item}
                     onSelect={() =>
                       go(() =>
@@ -247,7 +246,7 @@ function ItemRow({
 }) {
   return (
     <CommandItem
-      value={`item:${item.uniqueName}`}
+      value={`item:${item.slug}`}
       keywords={[item.name, item.displayClass ?? "", item.categoryLabel]}
       onSelect={onSelect}
     >

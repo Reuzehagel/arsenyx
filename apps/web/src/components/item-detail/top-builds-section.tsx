@@ -8,7 +8,7 @@ import {
 } from "@/components/builds/build-card"
 import { useBuildLayout } from "@/lib/hooks/use-build-layout"
 import { publicBuildsQuery } from "@/lib/queries/builds-list-query"
-import type { DetailItem } from "@/lib/warframe"
+import type { BrowseCategory, DetailItem } from "@/lib/warframe"
 
 // Cards: flex-wrap with fixed-width tiles so a small number of builds (e.g. 2)
 // don't get stretched across the full row by `1fr` grid tracks. They align
@@ -18,12 +18,22 @@ const ROWS_CLASS = "flex flex-col gap-2"
 
 const TOP_BUILDS_LIMIT = 6
 
-export function TopBuildsSection({ item }: { item: DetailItem }) {
+export function TopBuildsSection({
+  item,
+  category,
+}: {
+  item: DetailItem
+  category: BrowseCategory
+}) {
   const { data, isLoading } = useQuery(
     publicBuildsQuery({
       page: 1,
       sort: "top",
       item: item.uniqueName,
+      // Modular kitgun barrels share one uniqueName across their Primary and
+      // Secondary forms, so itemUniqueName alone matches both. Pair it with the
+      // page's category so each form only shows its own builds.
+      category,
       limit: TOP_BUILDS_LIMIT,
     }),
   )

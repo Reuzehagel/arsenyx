@@ -137,7 +137,7 @@ export function ItemDetailContent({
               <ArrowRight className="size-3.5" />
             </RouterLink>
           </div>
-          <TopBuildsSection item={item} />
+          <TopBuildsSection item={item} category={category} />
         </section>
       </div>
     </TooltipProvider>
