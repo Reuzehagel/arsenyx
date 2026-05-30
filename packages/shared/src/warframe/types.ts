@@ -1,5 +1,4 @@
 // Warframe item types for browseable equipment
-// Based on @wfcd/items type definitions
 
 export type BrowseCategory =
   | "warframes"
@@ -118,7 +117,7 @@ export interface Melee extends Weapon {
   /**
    * Canonical stance compat-name for this melee (e.g. "Polearms"). Matches
    * stance mod `compatName` so the picker can filter stances per weapon.
-   * Currently absent from WFCD upstream — when populated, `getModsForItem`
+   * Currently absent from upstream data — when populated, `getModsForItem`
    * filters stance mods; while missing, the picker shows every stance mod.
    */
   meleeClass?: string
@@ -230,20 +229,12 @@ export interface Mod {
    *  Absent on non-augment mods — runtime treats missing as "no
    *  restriction". See `getModsForItem`. */
   compatItems?: string[]
-  /** OpenWF structural compatibility tags (e.g. `"WHIPS_STANCE"`).
-   *  Currently informational — `getModsForItem` doesn't gate on these
-   *  because `modPools` already covers the same territory. */
-  compatibilityTags?: string[]
-  /** OpenWF structural incompatibility tags. Reserved for future use
-   *  when an otherwise-matching mod needs to be excluded on a specific
-   *  item. */
-  incompatibilityTags?: string[]
   type: string // e.g., "Warframe Mod", "Primary Mod", "Secondary Mod", "Melee Mod"
   tradable: boolean
   isAugment?: boolean
   isPrime?: boolean
   isExilus?: boolean
-  isUtility?: boolean // Also indicates exilus-compatible mods in WFCD data
+  isUtility?: boolean // Also indicates exilus-compatible mods in the source data
   /** True for PvP-only mods (description mentions Conclave). The mod-picker
    *  filters these by default — see the Game Mode toggle in
    *  `mod-search-grid.tsx`. */
@@ -328,7 +319,7 @@ export interface PlacedMod {
   modSet?: string
   modSetStats?: string[]
   isExilus?: boolean
-  isUtility?: boolean // Also indicates exilus-compatible mods in WFCD data
+  isUtility?: boolean // Also indicates exilus-compatible mods in the source data
   rivenStats?: RivenStats
 }
 

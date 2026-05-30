@@ -34,7 +34,7 @@ export interface OverframeRawSlot {
 }
 
 /**
- * Raw scrape response. The client matches item/mods/arcanes against WFCD data
+ * Raw scrape response. The client matches item/mods/arcanes against our catalog data
  * and interprets the slot_id layout.
  */
 export interface OverframeScrapeResponse {

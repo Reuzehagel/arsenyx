@@ -24,7 +24,7 @@ Never modify existing files in `apps/web/src/components/ui/` — override via `c
 - `Select` — `onValueChange` receives `string | null`.
 - `Select` — for `SelectValue` to render a label for the current value, pass an `items={[{ value, label }]}` prop to `<Select>`. Without it, `SelectValue` falls back to showing the raw value string (so `value={null}` renders literally as `null`, `value="__none__"` renders as `__none__`). Use `value: null` for the "no selection" entry. Reference: [select-example.tsx](https://raw.githubusercontent.com/shadcn-ui/ui/refs/heads/main/apps/v4/registry/bases/base/examples/select-example.tsx).
 
-## WFCD data quirks
+## Item data quirks
 
 - Item fields vary types across items — e.g. `aura` is `string` on most warframes but `string[]` on Jade. Always handle both forms.
-- Set crest filenames under [apps/web/public/mod-set-icons/](../apps/web/public/mod-set-icons/) are WFCD `modSet` path segments — rerun [scripts/tint-set-crests.py](../scripts/tint-set-crests.py) when WFCD adds a new set or renames a codename. Aliases live in [apps/web/src/lib/mod-card-config.ts](../apps/web/src/lib/mod-card-config.ts) (`SET_CODE_ALIASES`).
+- Set crest filenames under [apps/web/public/mod-set-icons/](../apps/web/public/mod-set-icons/) are `modSet` path segments — rerun [scripts/tint-set-crests.py](../scripts/tint-set-crests.py) when a new set ships or a codename changes. Aliases live in [apps/web/src/lib/mod-card-config.ts](../apps/web/src/lib/mod-card-config.ts) (`SET_CODE_ALIASES`).

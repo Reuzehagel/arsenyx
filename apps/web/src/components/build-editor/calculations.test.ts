@@ -9,7 +9,7 @@ import {
 } from "./calculations"
 import type { PlacedMod, SlotId } from "./use-build-slots"
 
-// Standard stance mod shape from WFCD data: baseDrain -2, fusionLimit 3.
+// Standard stance mod shape from the mod data: baseDrain -2, fusionLimit 3.
 // At max rank: abs(-2) + 3 = 5, doubled on matching polarity (10),
 // scaled 0.75 on mismatch (round(5 * 0.75) = 4).
 function stanceMod(polarity: Mod["polarity"]): Mod {

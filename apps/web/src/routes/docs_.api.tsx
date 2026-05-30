@@ -276,15 +276,16 @@ function DocsApiPage() {
           <h2 id="game-data">Game data</h2>
           <p>
             Items, mods, and arcanes live as static JSON under{" "}
-            <code>apps/web/public/data/</code>. The index is generated from the{" "}
+            <code>apps/web/public/data/</code>. The index is built from Digital
+            Extremes&apos; PublicExport manifests and the{" "}
             <Link
-              href={EXTERNAL_LINKS.wfcd}
+              href={EXTERNAL_LINKS.wiki}
               target="_blank"
               rel="noopener noreferrer"
             >
-              Warframe Community Developers
-            </Link>{" "}
-            dataset and committed to the repo, so loading game data is a single
+              Warframe wiki
+            </Link>
+            , then committed to the repo, so loading game data is a single
             static fetch against the CDN — no API round-trip.
           </p>
 

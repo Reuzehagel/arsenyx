@@ -36,7 +36,7 @@ export function getAuraPolarities(
 }
 
 /**
- * Innate exilus polarity, sourced from WFCD's `exilusPolarity` field
+ * Innate exilus polarity, sourced from the `exilusPolarity` field
  * (extracted from the Warframe wiki's `Module:Weapons/data` /
  * `Module:Warframes/data` Lua tables).
  */

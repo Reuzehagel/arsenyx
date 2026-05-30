@@ -194,7 +194,7 @@ function imageUrl(imageName: string | null): string | null {
   // (see scripts/sync-images.ts). Pass those through unchanged. Legacy
   // saved builds may still carry a bare filename — fall back to our own
   // CDN root so the OG card resolves to something hosted by us instead
-  // of the WFCD CDN we no longer use.
+  // of the upstream CDN we no longer use.
   if (/^https?:\/\//i.test(imageName)) return imageName
   const clean = imageName.replace(/^\/+/, "")
   try {

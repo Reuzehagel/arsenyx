@@ -169,8 +169,8 @@ export function getSlotBadgeUrl(kind: SlotBadgeKind): string {
   return SLOT_BADGE_URL[kind]
 }
 
-/** Set crest URL — sourced from WFCD's `warframe-items/data/img/*Header.png`
- * and bundled locally under `public/mod-set-icons/`. We ship the silver
+/** Set crest URL — the in-game `*Header.png` set crests, bundled locally
+ * under `public/mod-set-icons/`. We ship the silver
  * source plus pre-tinted bronze and gold variants (generated offline by
  * `scripts/tint-set-crests.py`); a runtime `mask-image` tint would flatten
  * the source's grayscale shading into a single colour and look terrible.

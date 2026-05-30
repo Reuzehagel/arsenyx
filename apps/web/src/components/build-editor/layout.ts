@@ -138,7 +138,7 @@ export function resolveInitialArcanes(
 
 /**
  * Whether to render a Stance slot. Driven by the item carrying a
- * `stancePolarity` (set by WFCD on every melee and on some exalted melees).
+ * `stancePolarity` (present on every melee and on some exalted melees).
  * Arch-melee weapons do not carry stancePolarity and so get no slot.
  * Exalted melees have a stance pre-applied in-game and the player cannot
  * swap it, so we skip the slot entirely for the `exalted-weapons` category.
@@ -212,7 +212,7 @@ export function getPlexusGroupForIndex(
 }
 
 /**
- * Max rank for an item. Necramechs overlevel to 40 (not flagged in WFCD data).
+ * Max rank for an item. Necramechs overlevel to 40 (not flagged in the item data).
  * Kuva/Tenet/Coda weapons + Paracesis carry `maxLevelCap: 40` in their JSON.
  * Undefined for normal-rank items; `calculateCapacity` treats that as 30.
  */

@@ -5,9 +5,8 @@ on:
     - cron: "0 2 * * 0" # Sunday 02:00 UTC
   workflow_dispatch: {} # Manual trigger
 
-# Phase 7 rewrite: previously this ran `bun update @wfcd/items && bun run
-# build:items`. The new pipeline pulls directly from DE PublicExport and
-# the wiki Lua modules — no npm dep to bump. Diff covers `data/raw/de/`,
+# The pipeline pulls game data directly from DE PublicExport and the wiki
+# Lua modules — no npm dep to bump. Diff covers `data/raw/de/`,
 # `data/raw/wiki/`, and `apps/web/public/data/`.
 
 jobs:

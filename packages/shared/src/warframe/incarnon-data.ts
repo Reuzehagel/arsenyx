@@ -9,7 +9,7 @@ export type {
   IncarnonTier,
 } from "./incarnon-evolutions"
 
-/** Stable identifier for the incarnon-form alt-fire attack mode in WFCD data. */
+/** Stable identifier for the incarnon-form alt-fire attack mode in the item data. */
 export const INCARNON_FORM_ATTACK_NAME = "Incarnon Form"
 
 /** All 48 incarnon-eligible base weapon names (8 innate + 40 Steel Path). */
@@ -149,7 +149,7 @@ function stripVariant(name: string): string {
   return n
 }
 
-/** Resolves a WFCD weapon name (incl. variants) to its base incarnon key, or null. */
+/** Resolves a weapon name (incl. variants) to its base incarnon key, or null. */
 export function getIncarnonBaseName(weaponName: string): string | null {
   if (INCARNON_NAMES.has(weaponName)) return weaponName
   const stripped = stripVariant(weaponName)

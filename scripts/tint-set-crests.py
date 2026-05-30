@@ -1,6 +1,6 @@
 """Generate bronze/gold variants of mod set crests.
 
-The WFCD `*Header.png` set crests are silvery-grey silhouettes with full
+The `*Header.png` set crests are silvery-grey silhouettes with full
 internal shading (highlights, midtones, shadows). For Common (bronze) and
 Rare (gold) mods the silver tone clashes — but a runtime `mask-image`
 tint flattens the shading into a single flat colour and looks awful.
@@ -11,7 +11,7 @@ and `*Header-gold.png` by multiplying the RGB channels by the tint
 colour (alpha preserved). Uncommon / Legendary / etc. keep using the
 unmodified silvery source.
 
-Re-run only when WFCD ships new crests:
+Re-run only when new set crests ship:
     uv run --with pillow python scripts/tint-set-crests.py
 
 The per-pixel loop is interpreted Python — fine for the 18 small (128×64)

@@ -2,7 +2,6 @@ import { staticDataQuery } from "./static-data-query"
 
 export interface DataMeta {
   generatedAt: string
-  wfcdPackageVersion: string
   gameUpdate: string | null
   itemCount: number
   modCount: number

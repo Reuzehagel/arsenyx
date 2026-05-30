@@ -37,7 +37,7 @@ export const API_URL =
 // External links
 export const EXTERNAL_LINKS = {
   github: "https://github.com/Reuzehagel/arsenyx",
-  wfcd: "https://warframestat.us",
+  wiki: "https://wiki.warframe.com",
   apiBase: "https://api.arsenyx.com",
 } as const
 

@@ -81,9 +81,9 @@ function AboutPage() {
             <h2>Community Focused</h2>
             <p>
               From real-time stats updates to seamless sharing, every feature is
-              designed to help the Warframe community. Data is automatically
-              synced with Warframe Community Developers (WFCD) to ensure
-              accuracy.
+              designed to help the Warframe community. Data is sourced directly
+              from Digital Extremes&apos; public game data and the Warframe wiki
+              to ensure accuracy.
             </p>
           </article>
         </div>

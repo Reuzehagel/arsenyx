@@ -220,7 +220,7 @@ export function parseRivenStats(rivenStats: RivenStats): ParsedStat[] {
   return out
 }
 
-/** Parse a single stat string from WFCD data. */
+/** Parse a single stat string from the item data. */
 export function parseStatString(statString: string): ParsedStat[] {
   const results: ParsedStat[] = []
 

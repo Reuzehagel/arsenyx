@@ -6,8 +6,7 @@
  *   1. **DE PublicExport CDN** — `content.warframe.com/PublicExport/<path>`,
  *      where `<path>` is the `textureLocation` field on the matching
  *      `ExportManifest.json` entry. Covers ~99% of items DE ships
- *      (weapons, frames, companions, mods, arcanes). This is what
- *      WFCD's warframe-items repo downloads from before re-hosting.
+ *      (weapons, frames, companions, mods, arcanes).
  *
  *   2. **Wiki MediaWiki API** — `wiki.warframe.com/api.php?action=query
  *      &prop=imageinfo&iiprop=url&titles=File:...`. Used for the small

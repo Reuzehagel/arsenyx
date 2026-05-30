@@ -7,15 +7,15 @@ can't get from DE PublicExport or wiki Lua directly:
   update version), not a calendar date. Resolving update → date is
   wiki-only data scattered across per-update pages. We could scrape
   those, but the resulting map is small and changes monotonically —
-  easier to snapshot. Bootstrapped from the legacy `@wfcd/items`-backed
-  `items-index.json` at the branch base.
+  easier to snapshot. Bootstrapped from the legacy `items-index.json`
+  at the branch base.
 - **vaulted** — Prime gear rotates in/out of relic drop tables. DE's
   PublicExport doesn't expose vault state and the wiki Lua modules don't
   carry it either. Two sources contribute:
   - https://wiki.warframe.com/w/Prime_Vault#Vaulted_Items — the canonical
     current rotation (114 items as of last refresh).
   - 19 additional "permanently unavailable" Primes that the Vault page
-    omits but WFCD historically tracked: Founders-exclusives (Excalibur
+    omits but were historically tracked: Founders-exclusives (Excalibur
     Prime, Lato Prime, Skana Prime) and legacy deep-vault items (Nyx
     Prime, Valkyr Prime, Cernos Prime, …). These need manual review when
     DE unvaults them.

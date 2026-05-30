@@ -23,7 +23,7 @@ Live at **[www.arsenyx.com](https://www.arsenyx.com)**.
 | Web | Vite · React 19 · TanStack Router · Tailwind v4 · shadcn/ui → **Cloudflare Workers (Static Assets)** |
 | API | Hono · Prisma 7 · Better Auth on **Cloudflare Workers** → `api.arsenyx.com` |
 | Database | **Neon Postgres** (`eu-central-1`) |
-| Game data | [`@wfcd/items`](https://www.npmjs.com/package/@wfcd/items), precomputed to static JSON at build time |
+| Game data | DE PublicExport + Warframe wiki, precomputed to static JSON at build time |
 
 ## Contributing
 

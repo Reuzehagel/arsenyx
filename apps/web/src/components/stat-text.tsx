@@ -8,7 +8,7 @@ import {
 } from "@/lib/stats/types"
 import { cn } from "@/lib/util/utils"
 
-// WFCD stat strings embed inline tokens from the in-game UI:
+// In-game stat strings embed inline tokens from the UI:
 //   <DT_FIRE_COLOR>Heat …    — colors the element name + icon
 //   <LINE_SEPARATOR>         — explicit line break (alongside literal "\n")
 //   <ENERGY>, <DT_SLASH>, …  — other tags we don't render specially; stripped
@@ -47,7 +47,7 @@ function stripResidualTags(text: string): string {
 }
 
 /**
- * Parse a WFCD stat string into renderable segments. Handles `\\n` and
+ * Parse an in-game stat string into renderable segments. Handles `\\n` and
  * `<LINE_SEPARATOR>` as breaks, `<DT_*_COLOR>` as unclosed colored spans
  * (carrying until the next break or end-of-input), and strips other tags.
  */
@@ -96,7 +96,7 @@ interface StatTextProps {
 }
 
 /**
- * Render WFCD stat / description text with inline element icons and
+ * Render in-game stat / description text with inline element icons and
  * colored damage-type spans, matching the in-game tooltip styling.
  */
 export function StatText({ text, iconClassName }: StatTextProps) {

@@ -440,7 +440,7 @@ function arrangeNormalsGreedy(
   const out: Partial<Record<SlotId, PlacedMod>> = { ...pinned }
   // Mod indices grouped by polarity, kept as candidate lists for the
   // greedy passes. Skip "any"/"universal" — neither appears as a mod
-  // polarity in WFCD data but defend against it anyway.
+  // polarity in the mod data but defend against it anyway.
   const indicesByPol = new Map<Polarity, number[]>()
   for (let i = 0; i < mods.length; i++) {
     const p = mods[i].mod.polarity

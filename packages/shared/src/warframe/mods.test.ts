@@ -21,7 +21,7 @@ describe("isStanceMod", () => {
 })
 
 describe("getModSetCode", () => {
-  it("pulls the set segment out of a WFCD modSet path", () => {
+  it("pulls the set segment out of a modSet path", () => {
     expect(
       getModSetCode({
         modSet: "/Lotus/Upgrades/Mods/Sets/Augur/AugurSetMod",

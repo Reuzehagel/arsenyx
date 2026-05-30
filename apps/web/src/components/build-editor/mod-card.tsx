@@ -40,7 +40,7 @@ import {
  * inside the frame top (top: 7) and the set crest overlaps the frame top
  * (top: -26), so they stack without visually colliding.
  *
- * Aura mods are also exilus-compatible per the WFCD `isUtility` flag, so
+ * Aura mods are also exilus-compatible per the `isUtility` flag, so
  * the aura check must come first within the slot resolution. */
 function resolveSlotKind(mod: Mod): SlotBadgeKind | null {
   if (isStanceMod(mod)) return "stance"

@@ -1,9 +1,9 @@
 /**
- * Mod compatibility helpers. Pure functions — caller supplies the raw WFCD
+ * Mod compatibility helpers. Pure functions — caller supplies the raw
  * mods array. The build script normalizes once and filters per item.
  */
 
-import type { Mod, ModCompatibility, Polarity } from "./types"
+import type { Mod, Polarity } from "./types"
 
 export function normalizePolarity(polarity?: string): Polarity {
   if (!polarity || typeof polarity !== "string") return "universal"
@@ -37,7 +37,7 @@ export function isStanceMod(mod: Pick<Mod, "type">): boolean {
 /** Pulls the set codename out of a mod's `modSet` path (e.g.
  * `/Lotus/Upgrades/Mods/Sets/Augur/AugurSetMod` → `"Augur"`).
  * Returns null when the mod isn't part of a set. The codename is the
- * internal segment from the WFCD path, not the in-game set name — e.g.
+ * internal segment from the DE path, not the in-game set name — e.g.
  * "Boneblade" backs the Jugulus set, "Sacrifice" backs Sacrificial.
  * Callers that need the display/icon name should map through
  * `SET_CODE_TO_ICON_NAME` (apps/web). */
@@ -45,61 +45,6 @@ export function getModSetCode(mod: Pick<Mod, "modSet">): string | null {
   if (!mod.modSet) return null
   const seg = mod.modSet.split("/Sets/")[1]?.split("/")[0]
   return seg ?? null
-}
-
-function isMeleeCompat(compatName: string, modType: string) {
-  // Arch-Melee shares the substring "melee" but uses its own mod pool.
-  if (compatName === "archmelee" || modType.includes("arch-melee")) return false
-  return (
-    compatName === "melee" || modType.includes("melee") || modType === "stance"
-  )
-}
-
-function modMatchesCompat(mod: Mod, compatibility: ModCompatibility): boolean {
-  const compatName = mod.compatName?.toLowerCase() ?? ""
-  const modType = mod.type?.toLowerCase() ?? ""
-
-  switch (compatibility) {
-    case "Warframe":
-      return (
-        modType.includes("warframe") &&
-        (compatName === "warframe" || compatName === "aura")
-      )
-    case "Aura":
-      return modType.includes("aura") || compatName === "aura"
-    case "Exilus":
-      return mod.isExilus === true || mod.isUtility === true
-    case "Rifle":
-      return compatName === "rifle" || modType.includes("rifle")
-    case "Shotgun":
-      return compatName === "shotgun" || modType.includes("shotgun")
-    case "Pistol":
-      if (compatName === "tome") return false
-      return compatName === "pistol" || modType.includes("secondary")
-    case "Melee":
-      return isMeleeCompat(compatName, modType)
-    case "Companion":
-      return (
-        modType.includes("companion") ||
-        modType.includes("sentinel") ||
-        modType.includes("beast")
-      )
-    case "Necramech":
-      return modType.includes("necramech")
-    case "Archgun":
-      return compatName === "archgun" || modType.includes("arch-gun")
-    case "Archmelee":
-      return compatName === "archmelee" || modType.includes("arch-melee")
-    case "Archwing":
-      return compatName === "archwing" || modType.includes("archwing")
-    case "Plexus":
-      // Every Plexus mod is `type: "Plexus Mod"` in WFCD — no need to inspect
-      // compatName or uniqueName path. Sub-slot kind (Battle/Tactical/
-      // Integrated) is resolved separately by `getPlexusSlotKind`.
-      return modType === "plexus mod"
-    default:
-      return false
-  }
 }
 
 /** Sub-slot kind for a Plexus mod. Path segment after `/Railjack/` in the
@@ -131,72 +76,39 @@ export function getPlexusSlotKind(mod: Mod): PlexusSlotKind | null {
 
 /** True when the mod is a Plexus (Railjack) mod. Use this everywhere
  * instead of `mod.type === "Plexus Mod"` so the picker, placement gate,
- * and slot-kind helpers can't drift on a casing change in WFCD data. */
+ * and slot-kind helpers can't drift on a casing change in the mod data. */
 export function isPlexusMod(mod: Pick<Mod, "type">): boolean {
   return mod.type?.toLowerCase() === "plexus mod"
 }
 
 /** Identifies the "Aura"/Matrix mods that only fit the Plexus Aura slot.
- * WFCD distinguishes them by a negative `baseDrain` (they add capacity
+ * The data distinguishes them by a negative `baseDrain` (they add capacity
  * when equipped instead of consuming it). Matrix-named mods (Ironclad,
  * Indomitable, Orgone Tuning, Onslaught, Raider) carry baseDrain: -2. */
 export function isPlexusAuraMod(mod: Mod): boolean {
   return isPlexusMod(mod) && mod.baseDrain < 0
 }
 
-const CATEGORY_TO_COMPAT: Record<string, ModCompatibility[]> = {
-  warframes: ["Warframe"],
-  primary: ["Rifle", "Shotgun"],
-  secondary: ["Pistol"],
-  melee: ["Melee"],
-  "exalted-weapons": ["Rifle", "Pistol", "Melee"],
-  necramechs: ["Necramech"],
-  companions: ["Companion"],
-  archwing: ["Archwing", "Archgun", "Archmelee"],
-  railjack: ["Plexus"],
-}
-
-// Tome weapons (Grimoire, Noctua) accept Tome mods — `compatName: "Tome"`,
-// `type: "Secondary Mod"` — in addition to the standard secondary pool. Tome
-// mods are exclusive to these two weapons, so every other secondary must
-// exclude them (see isPistolMod / modMatchesCompat). Match on name prefix so a
-// future variant (e.g. a Grimoire Prime) is covered automatically.
-function isTomeWeapon(name?: string): boolean {
-  const lower = name?.toLowerCase() ?? ""
-  return lower.startsWith("grimoire") || lower.startsWith("noctua")
-}
-
 /**
  * Return the mods compatible with the given item.
  *
- * When the item carries `modPools` — the list of mod `compatName` values
- * it accepts, computed at build time from wiki Class + curated overrides —
- * filtering is a single set membership check
- * (`modPools.includes(mod.compatName)`), plus a narrow filter for stance
- * mods (class-specific) and exilus utility.
- *
- * When `modPools` is absent (synthetic items, builds imported before the
- * field existed) we fall back to category-only routing via
- * `CATEGORY_TO_COMPAT`.
+ * Routing is a single set-membership check against the item's `modPools` —
+ * the list of mod `compatName` values it accepts, computed at build time
+ * from wiki Class + curated overrides (`modPools.includes(mod.compatName)`)
+ * — plus a narrow refinement for class-specific stance mods and the
+ * augment gate. Every catalog item carries a non-empty `modPools` (the
+ * build seeds it with the item's own name at minimum), so an item without
+ * one matches nothing.
  *
  * `mods` must already be normalized via `normalizeMods`.
  */
 export function getModsForItem(
   item: {
-    /** Unused by the router; pass `modPools` instead. Kept in the signature
-     *  for back-compat with older call sites. */
-    type?: string
-    category?: string
-    name?: string
-    trigger?: string
     /** Lowercase stance compatibility (e.g. "polearms", "swords"). When
      *  set, stance mods are filtered to that class only; when absent,
      *  all stance mods that match the broader modPools pass. */
     meleeClass?: string
     uniqueName?: string
-    /** Unused by the router — beast-claw compatNames are now encoded
-     *  directly into `modPools`. Kept for back-compat with older callers. */
-    compatGroups?: string[]
     /** The DE `compatName` values this item
      *  accepts. Includes generic pools ("Rifle", "WARFRAME"), refinement
      *  pools ("Sniper", "Polearms"), the item's own name (for augments),
@@ -205,57 +117,36 @@ export function getModsForItem(
   },
   mods: Mod[],
 ): Mod[] {
+  if (!item.modPools || item.modPools.length === 0) return []
+
   const meleeClass = item.meleeClass?.toLowerCase()
   const itemUniqueName = item.uniqueName
+  const poolSet = new Set(item.modPools)
 
-  // Modern path: structural routing via modPools.
-  if (item.modPools && item.modPools.length > 0) {
-    const poolSet = new Set(item.modPools)
-    return mods.filter((mod) => {
-      // OpenWF augment gate: `compatItems` is a build-time-resolved
-      // closed list of item uniqueNames this mod fits (expanded from
-      // OpenWF's raw `compat` field — see build-items-index.ts). When
-      // present, the mod is locked to those exact items. This is the
-      // authoritative source — no string/name matching, no wiki-Class
-      // inference, no curated overrides.
-      if (mod.compatItems) {
-        if (!itemUniqueName || !mod.compatItems.includes(itemUniqueName))
-          return false
-      }
-
-      const compatName = mod.compatName ?? ""
-      if (!poolSet.has(compatName)) return false
-      // Stance mods are class-specific. The item's modPools already
-      // includes the stance-compat name (e.g. "Polearms") — but a
-      // melee weapon's pool also includes the generic "Melee" pool,
-      // and a stance mod with `compatName: "Polearms"` would only fire
-      // for polearms. So pool membership is necessary AND sufficient;
-      // the meleeClass refinement is only useful when modPools is
-      // missing the stance-compat (very old items / synthesized).
-      if (isStanceMod(mod) && meleeClass && compatName) {
-        return compatName.toLowerCase() === meleeClass
-      }
-      return true
-    })
-  }
-
-  // Legacy fallback: category-driven routing for items whose pipeline
-  // hasn't been migrated to emit modPools.
-  const category = item.category?.toLowerCase()
-  if (category === "railjack") {
-    return mods.filter((m) => modMatchesCompat(m, "Plexus"))
-  }
-  const compats = category ? CATEGORY_TO_COMPAT[category] : undefined
-  if (!compats) return []
-  const itemName = item.name
-  const isTome = isTomeWeapon(itemName)
-  return mods.filter((m) => {
-    // Same augment gate as the modern path — see comment above.
-    if (m.compatItems) {
-      if (!itemUniqueName || !m.compatItems.includes(itemUniqueName))
+  return mods.filter((mod) => {
+    // OpenWF augment gate: `compatItems` is a build-time-resolved
+    // closed list of item uniqueNames this mod fits (expanded from
+    // OpenWF's raw `compat` field — see build-items-index.ts). When
+    // present, the mod is locked to those exact items. This is the
+    // authoritative source — no string/name matching, no wiki-Class
+    // inference, no curated overrides.
+    if (mod.compatItems) {
+      if (!itemUniqueName || !mod.compatItems.includes(itemUniqueName))
         return false
     }
-    if ((m.compatName?.toLowerCase() ?? "") === "tome") return isTome
-    return compats.some((c) => modMatchesCompat(m, c))
+
+    const compatName = mod.compatName ?? ""
+    if (!poolSet.has(compatName)) return false
+    // Stance mods are class-specific. The item's modPools already
+    // includes the stance-compat name (e.g. "Polearms") — but a
+    // melee weapon's pool also includes the generic "Melee" pool,
+    // and a stance mod with `compatName: "Polearms"` would only fire
+    // for polearms. So pool membership is necessary AND sufficient;
+    // the meleeClass refinement is only useful when modPools is
+    // missing the stance-compat (very old items / synthesized).
+    if (isStanceMod(mod) && meleeClass && compatName) {
+      return compatName.toLowerCase() === meleeClass
+    }
+    return true
   })
 }

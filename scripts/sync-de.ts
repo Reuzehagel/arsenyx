@@ -10,7 +10,7 @@
  * 4. Write `data/PINS.json` with the index hash + per-entry pins (under
  *    `de.` key) — merges with any existing wiki section.
  *
- * URL pattern reference: WFCD/warframe-items build/scraper.ts uses
+ * URL pattern: DE serves each blob at
  * `https://content.warframe.com/PublicExport/Manifest/<entry>` where
  * `<entry>` is the full `name!hash` index line.
  *

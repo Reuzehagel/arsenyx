@@ -160,7 +160,7 @@ model Build {
   // solo (no-org) builds — the author is the only attribution there.
   hideAuthor Boolean @default(false)
 
-  // Denormalized WFCD item reference
+  // Denormalized item reference (DE uniqueName + category)
   itemUniqueName String
   itemCategory   String
   itemName       String

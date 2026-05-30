@@ -54,8 +54,8 @@ function TermsPage() {
               {SITE_CONFIG.name} is not affiliated with Digital Extremes Ltd.{" "}
               <i>Warframe</i> and everything in it — names, marks, art, game
               data — belongs to Digital Extremes or its licensors. Game data
-              comes from the Warframe Community Developers project and is used
-              consistent with the{" "}
+              comes from Digital Extremes&apos; public exports and the Warframe
+              community wiki, and is used consistent with the{" "}
               <Link
                 href="https://www.warframe.com/eula"
                 target="_blank"

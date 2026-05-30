@@ -69,7 +69,7 @@ function toEditorPlacedMod(
 ): PlacedMod | null {
   // Rivens come with a stub uniqueName and rivenStats attached; preserve as-is.
   // Older saved builds carry the legacy hashed riven imageName (e.g.
-  // rifle-riven-mod-e05c5519f1.png) that wfcd no longer hosts — pin to the
+  // rifle-riven-mod-e05c5519f1.png) that the upstream CDN no longer hosts — pin to the
   // current RIVEN_IMAGE_NAME so they self-heal on next render.
   if (shared.rivenStats) {
     const mod: Mod = {
@@ -500,8 +500,8 @@ export function selectVariant(
   }
 }
 
-// Older builds were saved when wfcd shipped content-hashed image filenames
-// (e.g. `roar-e206197372.png`); the newer `@wfcd/items` package uses canonical
+// Older builds were saved when the upstream CDN shipped content-hashed image
+// filenames (e.g. `roar-e206197372.png`); the newer naming uses canonical
 // names and the upstream CDN no longer maps the old hashed slugs. Mods and
 // arcanes are already re-resolved via `toEditorPlacedMod` upstream, but
 // `buildStateToSavedData` copies helminth fields verbatim — so refresh just
