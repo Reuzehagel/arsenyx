@@ -31,3 +31,11 @@ export function normalizePolarity(p: unknown): string | null {
   }
   return lower
 }
+
+/** Normalize a list of wiki polarity values, dropping `None`/empty/unknown
+ *  entries. The frame / weapon / companion mergers all share this shape. */
+export function normalizePolarities(list: readonly unknown[]): string[] {
+  return list
+    .map(normalizePolarity)
+    .filter((p): p is string => p !== null)
+}

@@ -15,17 +15,15 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms))
 }
 
+interface FetchRetryOpts {
+  timeoutMs?: number
+  retries?: number
+  headers?: Record<string, string>
+}
+
 export async function fetchRetry(
   url: string,
-  {
-    timeoutMs = 30_000,
-    retries = 3,
-    headers,
-  }: {
-    timeoutMs?: number
-    retries?: number
-    headers?: Record<string, string>
-  } = {},
+  { timeoutMs = 30_000, retries = 3, headers }: FetchRetryOpts = {},
 ): Promise<Response> {
   let lastErr: unknown
   for (let attempt = 1; attempt <= retries; attempt++) {
@@ -64,4 +62,20 @@ export async function fetchRetry(
     }
   }
   throw lastErr
+}
+
+/** `fetchRetry` then `.text()`. */
+export async function fetchText(
+  url: string,
+  opts?: FetchRetryOpts,
+): Promise<string> {
+  return (await fetchRetry(url, opts)).text()
+}
+
+/** `fetchRetry` then the body as raw bytes. */
+export async function fetchBytes(
+  url: string,
+  opts?: FetchRetryOpts,
+): Promise<Uint8Array> {
+  return new Uint8Array(await (await fetchRetry(url, opts)).arrayBuffer())
 }

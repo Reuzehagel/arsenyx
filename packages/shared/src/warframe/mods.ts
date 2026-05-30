@@ -132,8 +132,11 @@ export function getModsForItem(
     // authoritative source — no string/name matching, no wiki-Class
     // inference, no curated overrides.
     if (mod.compatItems) {
-      if (!itemUniqueName || !mod.compatItems.includes(itemUniqueName))
-        return false
+      // Authoritative and exhaustive: the mod fits exactly these items and
+      // nothing else. Skip the pool/name refinement below — it would wrongly
+      // drop e.g. an Excalibur augment on Excalibur Umbra, whose `modPools`
+      // carries "Excalibur Umbra" but not the augment's "Excalibur" compatName.
+      return Boolean(itemUniqueName && mod.compatItems.includes(itemUniqueName))
     }
 
     const compatName = mod.compatName ?? ""

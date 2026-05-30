@@ -56,6 +56,10 @@ const BATCH_SIZE = 50
 
 interface MediaWikiQueryResponse {
   query?: {
+    // MediaWiki canonicalizes titles (capitalizes the first letter, spaces →
+    // underscores) and reports the mapping here. We must map results back to
+    // the caller's original filename or normalized titles silently miss.
+    normalized?: Array<{ from?: string; to?: string }>
     pages?: Record<
       string,
       {
@@ -92,11 +96,22 @@ export async function resolveWikiImageUrls(
       )
     }
     const json = (await res.json()) as MediaWikiQueryResponse
+    // Map each canonical `File:<to>` title back to the bare filename(s) the
+    // caller asked for, so a non-canonical Image field still resolves.
+    const canonicalToRequested = new Map<string, string>()
+    for (const { from, to } of json.query?.normalized ?? []) {
+      if (from && to) {
+        canonicalToRequested.set(to.replace(/^File:/, ""), from.replace(/^File:/, ""))
+      }
+    }
     const pages = json.query?.pages ?? {}
     for (const page of Object.values(pages)) {
       const title = page.title?.replace(/^File:/, "")
       const u = page.imageinfo?.[0]?.url
-      if (title && u) out.set(title, u)
+      if (!title || !u) continue
+      out.set(title, u)
+      const requested = canonicalToRequested.get(title)
+      if (requested) out.set(requested, u)
     }
   }
   return out

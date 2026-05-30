@@ -44,11 +44,7 @@ export function readPePlusUpgrades(): Map<string, PePlusUpgradeFields> {
   for (const [uniqueName, entry] of Object.entries(
     ExportUpgrades as Record<string, IUpgrade>,
   )) {
-    const fields: PePlusUpgradeFields = {}
-    if (entry.compat) fields.compat = entry.compat
-    if (fields.compat) {
-      out.set(uniqueName, fields)
-    }
+    if (entry.compat) out.set(uniqueName, { compat: entry.compat })
   }
   return out
 }

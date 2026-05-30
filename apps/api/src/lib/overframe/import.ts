@@ -43,6 +43,8 @@ function safeFetchMessage(err: SafeFetchError): string {
       return "response too large"
     case "fetch_failed":
       return "request failed"
+    case "private_host":
+      return "host not allowed"
   }
 }
 
@@ -55,6 +57,7 @@ async function fetchOverframeHtml(url: string): Promise<string> {
       maxBytes: MAX_HTML_BYTES,
       timeoutMs: FETCH_TIMEOUT_MS,
       maxRedirects: MAX_REDIRECTS,
+      blockPrivateDns: true,
       headers: {
         "user-agent":
           "Mozilla/5.0 (compatible; ArsenyxBot/1.0; +https://arsenyx.com)",

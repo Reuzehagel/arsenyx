@@ -19,7 +19,7 @@ import { createHash } from "node:crypto"
 import { mkdir, writeFile } from "node:fs/promises"
 import { resolve } from "node:path"
 
-import { fetchRetry } from "./build/http"
+import { fetchText } from "./build/http"
 
 /** Modules we mirror. `Module:Weapons/data/{primary,secondary,...}` are the
  *  eight subpages declared by the router; the other seven are independent
@@ -45,11 +45,6 @@ const MODULES = [
 const REPO_ROOT = resolve(import.meta.dirname, "..")
 const OUT_DIR = resolve(REPO_ROOT, "data/raw/wiki")
 const PINS_PATH = resolve(REPO_ROOT, "data/PINS.json")
-
-async function fetchText(url: string): Promise<string> {
-  const res = await fetchRetry(url)
-  return await res.text()
-}
 
 function moduleToFilename(module: string): string {
   return module.replace(/\//g, "_") + ".lua"

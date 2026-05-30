@@ -18,7 +18,9 @@ import { validateExternalUrl } from "../lib/validate"
 // - Subrequest pinned to https + redirects manual so a clever 3xx chain can't
 //   reach a private host that the initial URL avoided.
 
-const MAX_BYTES = 5 * 1024 * 1024
+// 3 MB covers avatars and guide screenshots while limiting the proxy's value
+// as a bandwidth amplifier; anything larger is almost certainly abuse.
+const MAX_BYTES = 3 * 1024 * 1024
 const TIMEOUT_MS = 8000
 
 export const img = new Hono()
@@ -37,11 +39,13 @@ img.get("/", async (c) => {
       maxRedirects: 3,
       headers: { accept: "image/*" },
       cf: { cacheTtl: 86400, cacheEverything: true },
+      blockPrivateDns: true,
     })
   } catch (err) {
     if (err instanceof SafeFetchError) {
       if (err.code === "invalid_redirect")
         return c.json({ error: "bad_redirect" }, 502)
+      if (err.code === "private_host") return c.json({ error: "bad_host" }, 502)
       if (err.code === "too_large") return c.json({ error: "too_large" }, 413)
       if (err.code === "upstream_status")
         return c.json({ error: "upstream_status", status: err.status }, 502)

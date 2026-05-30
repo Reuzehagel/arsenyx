@@ -7,7 +7,6 @@
  * to know which file each curated table lives in.
  */
 
-import { ATMOSPHERIC_OVERRIDES } from "../../data/curated/atmospheric-archgun"
 import { CLASS_DEFAULT_POOLS, ALL_MENTIONED_POOLS } from "../../data/curated/class-pools"
 import { MOD_POOL_OVERRIDES } from "../../data/curated/mod-pools"
 import { PLEXUS_BROWSE_ITEM, PLEXUS_DETAIL } from "../../data/curated/plexus"
@@ -27,7 +26,6 @@ export interface CuratedData {
   wikiStubs: typeof WIKI_STUBS
   plexusBrowse: typeof PLEXUS_BROWSE_ITEM
   plexusDetail: typeof PLEXUS_DETAIL
-  atmospheric: typeof ATMOSPHERIC_OVERRIDES
   /** Name → { releaseDate?, vaulted? } from curated snapshot. */
   releaseHistory: Record<string, ReleaseHistoryEntry>
 }
@@ -41,7 +39,6 @@ export function readCurated(): CuratedData {
     wikiStubs: WIKI_STUBS,
     plexusBrowse: PLEXUS_BROWSE_ITEM,
     plexusDetail: PLEXUS_DETAIL,
-    atmospheric: ATMOSPHERIC_OVERRIDES,
     releaseHistory: RELEASE_HISTORY,
   }
 }

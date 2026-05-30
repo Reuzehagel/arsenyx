@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { SafeFetchError, safeFetch } from "./safe-fetch"
+import { isPrivateIp, SafeFetchError, safeFetch } from "./safe-fetch"
 
 const realFetch = globalThis.fetch
 
@@ -103,5 +103,44 @@ describe("safeFetch", () => {
         timeoutMs: 10,
       }),
     ).rejects.toMatchObject({ code: "fetch_failed" })
+  })
+})
+
+describe("isPrivateIp", () => {
+  it("returns true for private, loopback, link-local, CGNAT, and ULA addresses", () => {
+    const privateIps = [
+      "10.0.0.1",
+      "127.0.0.1",
+      "169.254.169.254",
+      "192.168.1.1",
+      "172.16.0.1",
+      "172.31.255.255",
+      "100.64.0.1",
+      "0.0.0.0",
+      "::1",
+      "fe80::1",
+      "fd00::1",
+      "fc00::1",
+      "::ffff:127.0.0.1",
+    ]
+    for (const ip of privateIps) {
+      expect(isPrivateIp(ip)).toBe(true)
+    }
+  })
+
+  it("returns false for public addresses", () => {
+    const publicIps = [
+      "8.8.8.8",
+      "1.1.1.1",
+      "140.82.121.4",
+      "172.15.0.1",
+      "172.32.0.1",
+      "100.63.0.1",
+      "100.128.0.1",
+      "2606:4700:4700::1111",
+    ]
+    for (const ip of publicIps) {
+      expect(isPrivateIp(ip)).toBe(false)
+    }
   })
 })

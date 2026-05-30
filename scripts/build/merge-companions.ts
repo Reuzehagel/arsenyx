@@ -10,7 +10,7 @@
  */
 
 import type { DeSentinel } from "./read-de"
-import { normalizePolarity } from "./polarity"
+import { normalizePolarities } from "./polarity"
 
 export type CompanionCategory = "sentinel" | "beast" | "moa" | "hound"
 
@@ -136,9 +136,7 @@ export function mergeCompanions(
       armor: (wiki.Armor as number | undefined) ?? de?.armor ?? 0,
       power: (wiki.Energy as number | undefined) ?? de?.power,
       masteryReq: (wiki.Mastery as number | undefined) ?? de?.masteryReq ?? 0,
-      polarities: (wiki.Polarities ?? [])
-        .map(normalizePolarity)
-        .filter((p): p is string => p !== null),
+      polarities: normalizePolarities(wiki.Polarities ?? []),
       isPrime: name.includes(" Prime"),
       modPools: modPoolsForCompanion(name, subType),
     })

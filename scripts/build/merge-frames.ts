@@ -14,7 +14,7 @@
  */
 
 import type { DeFrame } from "./read-de"
-import { normalizePolarity } from "./polarity"
+import { normalizePolarity, normalizePolarities } from "./polarity"
 import { cleanDeName } from "./names"
 
 type FrameCategory = "warframes" | "archwing" | "necramechs" | "operators"
@@ -63,8 +63,6 @@ interface WikiFrame {
   ExilusPolarity?: string
   /** Subsumable ability on warframes — useful for Helminth derivation. */
   Subsumed?: string
-  /** Progenitor element on Kuva/Tenet variants — not used here. */
-  Progenitor?: string
 }
 
 /** Wiki AuraPolarity is a string for single-aura frames and an array for
@@ -72,9 +70,7 @@ interface WikiFrame {
  *  string (single slot), string[] (multi-slot), or null (no aura slot). */
 function normalizeAuraPolarity(p: unknown): string | string[] | null {
   if (Array.isArray(p)) {
-    const arr = p
-      .map(normalizePolarity)
-      .filter((x): x is string => x !== null)
+    const arr = normalizePolarities(p)
     return arr.length === 0 ? null : arr
   }
   return normalizePolarity(p)
@@ -149,9 +145,7 @@ export function mergeFrame(
   const wiki = findWikiFrame(cleanName, opts.wiki)
   if (!wiki) opts.unmatched.add(cleanName)
 
-  const polarities = (wiki?.Polarities ?? [])
-    .map(normalizePolarity)
-    .filter((p): p is string => p !== null)
+  const polarities = normalizePolarities(wiki?.Polarities ?? [])
   const category = categoryOf(de.productCategory)
 
   return {
@@ -200,9 +194,7 @@ export function operatorsFromWiki(wiki: FrameWikiTable): MergedFrame[] {
       masteryReq: 0,
       exalted: [],
       abilities: [],
-      polarities: (op.Polarities ?? [])
-        .map(normalizePolarity)
-        .filter((p): p is string => p !== null),
+      polarities: normalizePolarities(op.Polarities ?? []),
       auraPolarity: normalizeAuraPolarity(op.AuraPolarity),
       exilusPolarity: null,
       isPrime: false,

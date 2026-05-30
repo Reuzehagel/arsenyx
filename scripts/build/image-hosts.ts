@@ -9,7 +9,7 @@
  * set and match pattern, so the single source of truth lives here.
  */
 
-import { readdirSync, statSync } from "node:fs"
+import { readdirSync } from "node:fs"
 import { resolve } from "node:path"
 
 /** Upstream image hosts we mirror. URLs on any other host are left untouched
@@ -38,10 +38,10 @@ export function sourceUrlRe(): RegExp {
 /** Recursively collect every `.json` file under `dir`. */
 export function findJsonFiles(dir: string): string[] {
   const out: string[] = []
-  for (const name of readdirSync(dir)) {
-    const path = resolve(dir, name)
-    if (statSync(path).isDirectory()) out.push(...findJsonFiles(path))
-    else if (name.endsWith(".json")) out.push(path)
+  for (const ent of readdirSync(dir, { withFileTypes: true })) {
+    const path = resolve(dir, ent.name)
+    if (ent.isDirectory()) out.push(...findJsonFiles(path))
+    else if (ent.name.endsWith(".json")) out.push(path)
   }
   return out
 }

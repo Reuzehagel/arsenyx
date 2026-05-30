@@ -22,7 +22,7 @@ import { createHash } from "node:crypto"
 import { mkdir, writeFile } from "node:fs/promises"
 import { basename, resolve } from "node:path"
 
-import { fetchRetry } from "./build/http"
+import { fetchBytes, fetchText } from "./build/http"
 import { lzmaDecompressText } from "./build/lzma"
 
 const INDEX_URL = "https://content.warframe.com/PublicExport/index_en.txt.lzma"
@@ -41,16 +41,6 @@ interface PinEntry {
    *  identical contents. */
   sha256: string
   bytes: number
-}
-
-async function fetchBytes(url: string): Promise<Uint8Array> {
-  const res = await fetchRetry(url)
-  return new Uint8Array(await res.arrayBuffer())
-}
-
-async function fetchText(url: string): Promise<string> {
-  const res = await fetchRetry(url)
-  return await res.text()
 }
 
 async function main() {

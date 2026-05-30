@@ -31,7 +31,7 @@ import {
   damageFromDePerShot,
   type AttackOut,
 } from "./merge-damage"
-import { normalizePolarity } from "./polarity"
+import { normalizePolarity, normalizePolarities } from "./polarity"
 import { cleanDeName } from "./names"
 
 /** Closed set of mod pools the build will route to. Asserted on; extend
@@ -231,9 +231,9 @@ export function mergeWeapon(
     }
   }
 
-  const polarities = (wiki?.Polarities ?? stub?.polarities ?? [])
-    .map(normalizePolarity)
-    .filter((p): p is string => p !== null)
+  const polarities = normalizePolarities(
+    wiki?.Polarities ?? stub?.polarities ?? [],
+  )
   const exilus = normalizePolarity(wiki?.ExilusPolarity ?? stub?.exilusPolarity)
   const stance = normalizePolarity(wiki?.StancePolarity)
 
@@ -337,9 +337,7 @@ export function mergeWikiOnlyWeapon(
   }
   const modPools = [...modPoolsSet]
 
-  const polarities = (wiki.Polarities ?? [])
-    .map(normalizePolarity)
-    .filter((p): p is string => p !== null)
+  const polarities = normalizePolarities(wiki.Polarities ?? [])
   const exilus = normalizePolarity(wiki.ExilusPolarity)
   const stance = normalizePolarity(wiki.StancePolarity)
   const dmg = buildDamageBlock(wiki.Attacks)
