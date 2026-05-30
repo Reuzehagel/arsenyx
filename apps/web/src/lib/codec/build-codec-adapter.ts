@@ -28,6 +28,7 @@ type EditorState = {
   shards: (PlacedShard | null)[]
   helminth: Record<number, HelminthAbility>
   zawComponents?: { grip: string; link: string }
+  kitgunComponents?: { grip: string; loader: string }
   lichBonusElement?: LichBonusElement
   incarnonEnabled?: boolean
   incarnonPerks?: (string | null)[]
@@ -181,6 +182,7 @@ export function savedDataToBuildState(state: EditorState): BuildState {
     buildName: state.buildName,
     helminthAbility,
     zawComponents: state.zawComponents,
+    kitgunComponents: state.kitgunComponents,
     lichBonusElement: state.lichBonusElement,
     incarnonEnabled: state.incarnonEnabled,
     incarnonPerks: state.incarnonPerks,
@@ -245,6 +247,7 @@ export function buildStateToSavedData(
       hasReactor: state.hasReactor ?? true,
       helminth,
       zawComponents: state.zawComponents,
+      kitgunComponents: state.kitgunComponents,
       lichBonusElement: state.lichBonusElement,
       incarnonEnabled: state.incarnonEnabled,
       incarnonPerks: state.incarnonPerks,
@@ -492,7 +495,7 @@ export function selectVariant(
     incarnonEnabled: v.incarnonEnabled,
     incarnonPerks: v.incarnonPerks,
     deploymentContext: v.deploymentContext,
-    // formaPolarities, shards, hasReactor, zaw, lich, buildName are
+    // formaPolarities, shards, hasReactor, zaw, kitgun, lich, buildName are
     // shared across variants and stay as-is.
   }
 }

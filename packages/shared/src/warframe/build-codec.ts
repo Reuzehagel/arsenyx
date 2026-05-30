@@ -103,6 +103,7 @@ interface EncodedSharedMeta {
   sh?: number[]
   h?: EncodedHelminth
   zc?: { g: string; l: string }
+  kc?: { g: string; l: string }
   lb?: string
   n?: string
 }
@@ -298,6 +299,7 @@ type SharedMetaSource = Pick<
   | "shardSlots"
   | "helminthAbility"
   | "zawComponents"
+  | "kitgunComponents"
   | "lichBonusElement"
   | "buildName"
 >
@@ -324,6 +326,8 @@ function encodeSharedMeta(
   }
   if (src.zawComponents)
     target.zc = { g: src.zawComponents.grip, l: src.zawComponents.link }
+  if (src.kitgunComponents)
+    target.kc = { g: src.kitgunComponents.grip, l: src.kitgunComponents.loader }
   if (src.lichBonusElement) target.lb = src.lichBonusElement
   if (src.buildName) target.n = src.buildName
 }
@@ -347,6 +351,9 @@ function decodeSharedMeta(encoded: EncodedSharedMeta): SharedMetaSource & {
       : undefined,
     zawComponents: encoded.zc
       ? { grip: encoded.zc.g, link: encoded.zc.l }
+      : undefined,
+    kitgunComponents: encoded.kc
+      ? { grip: encoded.kc.g, loader: encoded.kc.l }
       : undefined,
     lichBonusElement: parseLichBonusElement(encoded.lb),
     buildName: encoded.n,
@@ -494,6 +501,7 @@ function buildStateToBuildDoc(state: Partial<BuildState>): BuildDoc {
     shardSlots: state.shardSlots ?? [],
     helminthAbility: state.helminthAbility,
     zawComponents: state.zawComponents,
+    kitgunComponents: state.kitgunComponents,
     lichBonusElement: state.lichBonusElement,
     buildName: state.buildName,
     variants: [

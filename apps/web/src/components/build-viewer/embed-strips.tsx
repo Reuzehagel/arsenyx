@@ -18,15 +18,16 @@ import {
 } from "@/components/ui/tooltip"
 import type { HelminthAbility } from "@/lib/queries/helminth-query"
 import { incarnonEvolutionsQuery } from "@/lib/queries/incarnon-query"
+import { kitgunImagesQuery } from "@/lib/queries/kitgun-images-query"
 import { zawImagesQuery } from "@/lib/queries/zaw-images-query"
 import type { PlacedShard } from "@/lib/shards"
+import { DAMAGE_TYPE_ICON, type DamageType } from "@/lib/stats/types"
 import { cn } from "@/lib/util/utils"
 import { getImageUrl } from "@/lib/warframe"
 
 /**
- * Render-router for the per-category strips shown above the loadout in
- * `?embed=1` mode. Keeps the route file out of the conditional spaghetti
- * by accepting everything as plain props and short-circuiting internally.
+ * Picks which embed strip(s) to render above the loadout for the given
+ * category and build state in `?embed=1` mode.
  */
 export function EmbedStrips({
   category,
@@ -36,6 +37,7 @@ export function EmbedStrips({
   helminth,
   shards,
   zawComponents,
+  kitgunComponents,
   incarnonEnabled,
   incarnonPerks,
   lichBonusElement,
@@ -48,6 +50,7 @@ export function EmbedStrips({
   helminth: Record<number, HelminthAbility>
   shards: (PlacedShard | null)[]
   zawComponents: { grip: string; link: string } | undefined
+  kitgunComponents: { grip: string; loader: string } | undefined
   incarnonEnabled: boolean
   incarnonPerks: (string | null)[]
   lichBonusElement: LichBonusElement | null
@@ -74,6 +77,16 @@ export function EmbedStrips({
           slug={slug}
         />
       )}
+      {(category === "primary" || category === "secondary") &&
+        kitgunComponents && (
+          <EmbedKitgunStrip
+            itemName={itemName}
+            itemImageName={itemImageName}
+            grip={kitgunComponents.grip}
+            loader={kitgunComponents.loader}
+            slug={slug}
+          />
+        )}
       {incarnonEnabled && incarnonPerks.some(Boolean) && (
         <Suspense fallback={null}>
           <EmbedIncarnonStrip
@@ -341,6 +354,82 @@ function EmbedZawPart({ name, type }: { name: string; type: "Grip" | "Link" }) {
   )
 }
 
+// ─── Kitgun strip ───────────────────────────────────────────────────────────
+
+function EmbedKitgunStrip({
+  itemName,
+  itemImageName,
+  grip,
+  loader,
+  slug,
+}: {
+  itemName: string
+  itemImageName?: string
+  grip: string
+  loader: string
+  slug: string
+}) {
+  return (
+    <EmbedStripFrame
+      itemName={itemName}
+      itemImageName={itemImageName}
+      slug={slug}
+    >
+      <div className="flex items-center gap-1.5">
+        <EmbedKitgunPart name={grip} type="Grip" />
+        <EmbedKitgunPart name={loader} type="Loader" />
+      </div>
+    </EmbedStripFrame>
+  )
+}
+
+function EmbedKitgunPart({
+  name,
+  type,
+}: {
+  name: string
+  type: "Grip" | "Loader"
+}) {
+  const [open, setOpen] = useState(false)
+  const { data: kitgunImages } = useQuery(kitgunImagesQuery)
+  const imageName = kitgunImages?.[name]
+  const triggerEl = (
+    <button
+      type="button"
+      className="bg-muted relative flex size-10 items-center justify-center overflow-hidden rounded-sm border"
+    >
+      {imageName ? (
+        <img
+          src={getImageUrl(imageName)}
+          alt={name}
+          className="h-full w-full object-contain"
+        />
+      ) : (
+        <span className="text-muted-foreground px-0.5 text-center text-[9px] leading-tight font-medium">
+          {name}
+        </span>
+      )}
+    </button>
+  )
+  const content = (
+    <>
+      <p className="font-semibold">{name}</p>
+      <p className="text-muted-foreground mt-0.5 text-xs">{type}</p>
+    </>
+  )
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <Tooltip>
+        <TooltipTrigger render={<PopoverTrigger render={triggerEl} />} />
+        <TooltipContent side="bottom">{content}</TooltipContent>
+      </Tooltip>
+      <PopoverContent side="bottom" align="center" className="p-3">
+        {content}
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 // ─── Incarnon evo strip ─────────────────────────────────────────────────────
 
 function EmbedIncarnonStrip({
@@ -437,16 +526,6 @@ function EmbedIncarnonTier({
 
 // ─── Lich element strip ─────────────────────────────────────────────────────
 
-const LICH_ELEMENT_ICON: Record<string, string> = {
-  Heat: "/icons/damage/HeatSymbol.png",
-  Cold: "/icons/damage/ColdSymbol.png",
-  Electricity: "/icons/damage/ElectricitySymbol.png",
-  Toxin: "/icons/damage/ToxinSymbol.png",
-  Radiation: "/icons/damage/RadiationSymbol.png",
-  Magnetic: "/icons/damage/MagneticSymbol.png",
-  Impact: "/icons/damage/ImpactSymbol.png",
-}
-
 function EmbedLichStrip({
   element,
   itemName,
@@ -458,7 +537,7 @@ function EmbedLichStrip({
   itemImageName?: string
   slug: string
 }) {
-  const iconPath = LICH_ELEMENT_ICON[element]
+  const iconPath = DAMAGE_TYPE_ICON[element.toLowerCase() as DamageType]
   return (
     <EmbedStripFrame
       itemName={itemName}

@@ -46,6 +46,7 @@ export type SavedBuildData = {
   hasReactor?: boolean
   helminth?: Record<number, HelminthAbility>
   zawComponents?: { grip: string; link: string }
+  kitgunComponents?: { grip: string; loader: string }
   lichBonusElement?: LichBonusElement
   incarnonEnabled?: boolean
   incarnonPerks?: (string | null)[]

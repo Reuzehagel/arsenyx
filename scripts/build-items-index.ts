@@ -38,6 +38,10 @@ import {
   ZAW_LINKS,
   ZAW_STRIKES,
 } from "@arsenyx/shared/warframe/zaw-data"
+import {
+  KITGUN_GRIPS,
+  KITGUN_LOADERS,
+} from "@arsenyx/shared/warframe/kitgun-data"
 
 import {
   buildExaltedSet,
@@ -433,10 +437,23 @@ async function main() {
   // so categorize picks up exalteds the wiki doesn't tag (Garuda Talons).
   const exaltedSet = buildExaltedSet(mergedFrames)
   const weaponDetailByCatAndSlug = new Map<string, MergedWeapon>()
+  // DE ships internal clones that share a display name (and thus slug) with a
+  // real weapon but carry a distinct uniqueName, so the uniqueName dedup above
+  // doesn't catch them — e.g. `TnDoppelgangerGrimoire` collides with the real
+  // `TnGrimoire`. Without a guard the clone emits a duplicate browse card and
+  // overwrites the real weapon's `${cat}|${slug}` detail entry. Key the guard
+  // on `${category}|${slug}` (the same unit the detail map and browse cards
+  // use) so two genuinely distinct weapons that happen to slugify alike in
+  // *different* categories both survive. First-wins: the real weapon precedes
+  // its clone in DE's export, so keep the first.
+  const seenWeaponSlugs = new Set<string>()
   for (const w of mergedWeapons) {
     const cats = categorizeWeapon(w, exaltedSet)
     if (cats.length === 0) continue
     const slug = slugify(w.name)
+    const slugKey = `${cats[0]!}|${slug}`
+    if (seenWeaponSlugs.has(slugKey)) continue
+    seenWeaponSlugs.add(slugKey)
     const browseItem: BrowseItem = {
       uniqueName: w.uniqueName,
       name: w.name,
@@ -675,6 +692,29 @@ async function main() {
     )
   } else {
     console.log(`  OK  zaw-images.json (${zawTotal} components)`)
+  }
+
+  // Kitgun grip/loader picker thumbnails. Each part carries its DE
+  // uniqueName, so resolve the manifest CDN URL directly (no filename match
+  // needed), keyed by component name for the web picker. Flows through
+  // sync:images → R2 like every other catalog image.
+  const kitgunImages: Record<string, string> = {}
+  for (const c of [...KITGUN_GRIPS, ...KITGUN_LOADERS]) {
+    const url = imageByUniqueName.get(c.uniqueName)
+    if (url) kitgunImages[c.name] = url
+  }
+  const kitgunTotal = KITGUN_GRIPS.length + KITGUN_LOADERS.length
+  await writeFile(
+    resolve(OUT_DIR, "kitgun-images.json"),
+    JSON.stringify(kitgunImages),
+    "utf8",
+  )
+  if (Object.keys(kitgunImages).length < kitgunTotal) {
+    console.warn(
+      `  WARN kitgun-images.json resolved ${Object.keys(kitgunImages).length}/${kitgunTotal} — some component textures missing from the manifest`,
+    )
+  } else {
+    console.log(`  OK  kitgun-images.json (${kitgunTotal} components)`)
   }
 
   // Per-item detail files: emit the merged weapon record verbatim.

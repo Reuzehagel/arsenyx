@@ -13,17 +13,6 @@ export type BrowseCategory =
   | "archwing"
   | "railjack"
 
-export type WfcdCategory =
-  | "Warframes"
-  | "Primary"
-  | "Secondary"
-  | "Melee"
-  | "Sentinels"
-  | "Pets"
-  | "Archwing"
-  | "Arch-Gun"
-  | "Arch-Melee"
-
 // Base item interface with common fields
 export interface BaseItem {
   uniqueName: string
@@ -394,6 +383,13 @@ export interface BuildState {
   zawComponents?: {
     grip: string
     link: string
+  }
+
+  // Kitgun component selection (Kitgun primary/secondary only).
+  // Chamber is derived from the build's item — it's not stored here.
+  kitgunComponents?: {
+    grip: string
+    loader: string
   }
 
   // Bonus element on Kuva/Tenet/Coda weapons (maxLevelCap: 40).

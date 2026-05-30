@@ -3,6 +3,10 @@ import {
   INCARNON_FORM_ATTACK_NAME,
 } from "@arsenyx/shared/warframe/incarnon-data"
 import {
+  isKitgunChamber,
+  type KitgunComponents,
+} from "@arsenyx/shared/warframe/kitgun-data"
+import {
   DEFAULT_DEPLOYMENT_CONTEXT,
   type DeploymentContext,
   type Gun,
@@ -47,6 +51,7 @@ import { adjustStrikeForZaw } from "@/lib/zaw-stats"
 import { AbilityIcon } from "./ability-icon"
 import { CapacityBar } from "./capacity-bar"
 import { IncarnonTierGrid, IncarnonTierGridSkeleton } from "./incarnon-controls"
+import { KitgunComponentSelector } from "./kitgun-component-selector"
 import { isLichWeapon } from "./layout"
 import { LichBonusElementPicker } from "./lich-bonus-picker"
 import { ShardSlot } from "./shard-controls"
@@ -91,6 +96,8 @@ export interface ItemSidebarProps {
   onSetHelminth: (slotIndex: number, ability: HelminthAbility | null) => void
   zawComponents?: { grip: string; link: string }
   onSetZawComponents?: (components: { grip: string; link: string }) => void
+  kitgunComponents?: KitgunComponents
+  onSetKitgunComponents?: (components: KitgunComponents) => void
   lichBonusElement?: LichBonusElement | null
   onSetLichBonusElement?: (value: LichBonusElement | null) => void
   incarnonEnabled?: boolean
@@ -131,6 +138,8 @@ export function ItemSidebar({
   onSetHelminth,
   zawComponents,
   onSetZawComponents,
+  kitgunComponents,
+  onSetKitgunComponents,
   lichBonusElement,
   onSetLichBonusElement,
   incarnonEnabled = false,
@@ -145,6 +154,12 @@ export function ItemSidebar({
   bare = false,
 }: ItemSidebarProps) {
   const isZawItem = category === "melee" && isZawStrike(item.name)
+  // Kitgun chambers surface as primary/secondary browse items; the grip's
+  // class is fixed by which one the build is anchored to.
+  const isKitgunItem =
+    (category === "primary" || category === "secondary") &&
+    isKitgunChamber(item.uniqueName)
+  const kitgunClass = category === "primary" ? "primary" : "secondary"
   // Distinguish archwing *suits* (have health) from arch-guns / arch-melee
   // (have attack data). Both share the `archwing` browse category.
   const hasWeaponData = itemHasWeaponData(item)
@@ -329,6 +344,20 @@ export function ItemSidebar({
               <ZawComponentSelector
                 components={zawComponents}
                 onChange={onSetZawComponents}
+                readOnly={readOnly}
+              />
+            </div>
+            <Separator />
+          </>
+        )}
+
+        {isKitgunItem && kitgunComponents && (
+          <>
+            <div className="flex justify-center p-3">
+              <KitgunComponentSelector
+                components={kitgunComponents}
+                cls={kitgunClass}
+                onChange={onSetKitgunComponents}
                 readOnly={readOnly}
               />
             </div>

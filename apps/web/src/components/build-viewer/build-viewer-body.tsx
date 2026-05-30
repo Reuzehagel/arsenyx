@@ -166,6 +166,7 @@ function BuildViewerBodyInner({
   const helminth = saved.helminth ?? {}
   const hasReactor = saved.hasReactor ?? true
   const zawComponents = saved.zawComponents
+  const kitgunComponents = saved.kitgunComponents
   const lichBonusElement = saved.lichBonusElement ?? null
   const incarnonEnabled = saved.incarnonEnabled ?? false
   const incarnonPerks = saved.incarnonPerks ?? []
@@ -188,6 +189,7 @@ function BuildViewerBodyInner({
     helminth,
     onSetHelminth: () => {},
     zawComponents,
+    kitgunComponents,
     lichBonusElement,
     incarnonEnabled,
     incarnonPerks,
@@ -222,6 +224,7 @@ function BuildViewerBodyInner({
             helminth={helminth}
             shards={shards}
             zawComponents={zawComponents}
+            kitgunComponents={kitgunComponents}
             incarnonEnabled={incarnonEnabled}
             incarnonPerks={incarnonPerks}
             lichBonusElement={lichBonusElement}

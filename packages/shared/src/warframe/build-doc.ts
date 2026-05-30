@@ -51,6 +51,7 @@ export interface BuildDoc {
   shardSlots: (PlacedShard | null)[]
   helminthAbility?: BuildState["helminthAbility"]
   zawComponents?: BuildState["zawComponents"]
+  kitgunComponents?: BuildState["kitgunComponents"]
   lichBonusElement?: LichBonusElement
   buildName?: string
 
@@ -78,6 +79,7 @@ export function projectVariant(doc: BuildDoc, index: number): BuildState {
     shardSlots: doc.shardSlots,
     helminthAbility: doc.helminthAbility,
     zawComponents: doc.zawComponents,
+    kitgunComponents: doc.kitgunComponents,
     lichBonusElement: doc.lichBonusElement,
     buildName: doc.buildName,
     auraSlots: v.auraSlots,
@@ -93,6 +95,11 @@ export function projectVariant(doc: BuildDoc, index: number): BuildState {
     formaCount: 0,
   }
 }
+
+/** Generous upper bound applied when parsing a `?v=` index from the URL,
+ *  before the doc is loaded. The viewer/editor then clamps to the actual
+ *  variant count via `clampVariantIndex`. */
+export const MAX_VARIANT_PARSE_INDEX = 50
 
 export function clampVariantIndex(doc: BuildDoc, index: number): number {
   if (!Number.isFinite(index)) return 0

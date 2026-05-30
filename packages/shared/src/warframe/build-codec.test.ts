@@ -142,6 +142,31 @@ describe("encodeBuildDoc / decodeBuildDoc round-trip", () => {
     expect(v2.variants[0].incarnonEnabled).toBeUndefined()
   })
 
+  it("round-trips kitgunComponents on single- and multi-variant docs", () => {
+    const kitgunComponents = { grip: "Haymaker", loader: "Splat" }
+    // Single variant → v1 path (encodeBuild → shared meta `kc`).
+    const single = decodeBuildDoc(
+      encodeBuildDoc({ ...makeDoc([makeVariant()]), kitgunComponents }),
+    )!
+    expect(single.kitgunComponents).toEqual(kitgunComponents)
+    // Multi variant → v2 path (encodeSharedMeta `kc`).
+    const multi = decodeBuildDoc(
+      encodeBuildDoc({
+        ...makeDoc([
+          makeVariant({ id: "a", label: "A" }),
+          makeVariant({ id: "b", label: "B" }),
+        ]),
+        kitgunComponents,
+      }),
+    )!
+    expect(multi.kitgunComponents).toEqual(kitgunComponents)
+  })
+
+  it("omits kitgunComponents when absent", () => {
+    const decoded = decodeBuildDoc(encodeBuildDoc(makeDoc([makeVariant()])))!
+    expect(decoded.kitgunComponents).toBeUndefined()
+  })
+
   it("returns null for garbage input", () => {
     expect(decodeBuildDoc("not-base64-!@#")).toBeNull()
   })
