@@ -28,8 +28,11 @@ jobs:
       - name: Sync upstream + rebuild items
         run: bun run data:bump
 
-      - name: Typecheck
-        run: bun run typecheck
+      # No typecheck/lint/test here — this job only refreshes data and opens a
+      # PR. That PR triggers ci.yml, which runs the full gauntlet (web build →
+      # typecheck → tests → check:images) with the build-first ordering that
+      # generates apps/web/src/routeTree.gen.ts (gitignored). Running
+      # `bun run typecheck` here without that build step fails in apps/web.
 
       - name: Check for changes
         id: diff

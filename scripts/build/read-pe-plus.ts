@@ -5,11 +5,10 @@
  * client's internal data. The `warframe-public-export-plus` npm package
  * (github.com/calamity-inc/warframe-public-export-plus) extracts those raw
  * fields directly from the client and ships them as JSON. We pull only the
- * mod-routing fields we need — `compat` (the specific item or class-anchor
- * path a mod targets) and the `compatibilityTags` / `incompatibilityTags`
- * arrays. Stats, level scaling, polarity, etc. continue to come from DE's
- * raw `ExportUpgrades_en.json` so the source of truth for numbers stays
- * DE's public export.
+ * mod-routing field we need — `compat` (the specific item or class-anchor
+ * path a mod targets). Stats, level scaling, polarity, etc. continue to
+ * come from DE's raw `ExportUpgrades_en.json` so the source of truth for
+ * numbers stays DE's public export.
  *
  * Risk model: OpenWF *extracts* additional raw fields rather than *deriving*
  * them. The augment-routing bug class that motivated this dep ("mod shows
@@ -35,8 +34,6 @@ export interface PePlusUpgradeFields {
    *  step keeps both shapes; the filter pass in `build-items-index.ts`
    *  strips class anchors by intersecting against the live item set. */
   compat?: string
-  compatibilityTags?: string[]
-  incompatibilityTags?: string[]
 }
 
 /** Build a `uniqueName → fields` lookup. Top-level shape of the OpenWF
@@ -49,15 +46,7 @@ export function readPePlusUpgrades(): Map<string, PePlusUpgradeFields> {
   )) {
     const fields: PePlusUpgradeFields = {}
     if (entry.compat) fields.compat = entry.compat
-    if (entry.compatibilityTags?.length)
-      fields.compatibilityTags = entry.compatibilityTags
-    if (entry.incompatibilityTags?.length)
-      fields.incompatibilityTags = entry.incompatibilityTags
-    if (
-      fields.compat ||
-      fields.compatibilityTags ||
-      fields.incompatibilityTags
-    ) {
+    if (fields.compat) {
       out.set(uniqueName, fields)
     }
   }

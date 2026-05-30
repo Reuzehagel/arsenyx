@@ -124,7 +124,7 @@ describe("getModsForItem stance filtering", () => {
     // Orthos: modPools=["Melee","Polearms","Orthos"]. The polearm stance
     // matches "Polearms"; the heavy blade stance has no overlap.
     const result = getModsForItem(
-      { name: "Orthos", modPools: ["Melee", "Polearms", "Orthos"] },
+      { modPools: ["Melee", "Polearms", "Orthos"] },
       mods,
     )
     expect(result).toContain(polearmStance)
@@ -139,7 +139,7 @@ describe("getModsForItem stance filtering", () => {
     // (e.g. a wide curated override).
     const widePool = ["Melee", "Polearms", "Heavy Blade"]
     const result = getModsForItem(
-      { name: "Synthetic", modPools: widePool, meleeClass: "Polearms" },
+      { modPools: widePool, meleeClass: "Polearms" },
       mods,
     )
     expect(result).toContain(polearmStance)
@@ -150,7 +150,7 @@ describe("getModsForItem stance filtering", () => {
   it("matches meleeClass case-insensitively", () => {
     const widePool = ["Melee", "Polearms", "Heavy Blade"]
     const result = getModsForItem(
-      { name: "Synthetic", modPools: widePool, meleeClass: "polearms" },
+      { modPools: widePool, meleeClass: "polearms" },
       mods,
     )
     expect(result).toContain(polearmStance)
@@ -164,7 +164,6 @@ describe("getModsForItem stance filtering", () => {
     // even editable (exalted melees have no stance slot in-game).
     const result = getModsForItem(
       {
-        name: "Exalted Blade",
         uniqueName: "/Lotus/Powersuits/Excalibur/ExaltedBlade",
         modPools: ["Melee", "Swords", "Exalted Blade"],
       },
@@ -187,7 +186,6 @@ describe("getModsForItem stance filtering", () => {
     // shut out structurally.
     const result = getModsForItem(
       {
-        name: "Ironbride",
         uniqueName: "/Lotus/Powersuits/EntratiMech/Bonewidow/Ironbride",
         modPools: ["ArchMelee", "Ironbride"],
       },

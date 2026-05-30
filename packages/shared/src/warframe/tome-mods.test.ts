@@ -11,7 +11,9 @@ import type { Mod } from "./types"
 // items that accept tome mods (Grimoire, Grimoire variants, Noctua).
 // Every other secondary's pool stays at ["Pistol"], so the membership
 // check alone gates the mod. The fixtures below mirror the real shapes
-// emitted by build-items-index (verified against the per-item JSON in
+// emitted by build-items-index (Grimoire ships
+// `modPools: ["Pistol", "Tome", "Grimoire"]`, Noctua
+// `["Pistol", "Tome", "Noctua"]` — verified against the per-item JSON in
 // apps/web/public/data/items/).
 
 const tomeMod: Mod = {
@@ -40,16 +42,16 @@ const regularPistolMod: Mod = {
 
 describe("Tome mod gating (modPools)", () => {
   it("excludes Tome mods from a regular pistol", () => {
-    const result = getModsForItem(
-      { name: "Lex", modPools: ["Pistol", "Lex"] },
-      [tomeMod, regularPistolMod],
-    )
+    const result = getModsForItem({ modPools: ["Pistol", "Lex"] }, [
+      tomeMod,
+      regularPistolMod,
+    ])
     expect(result).toEqual([regularPistolMod])
   })
 
   it("includes Tome mods on Grimoire", () => {
     const result = getModsForItem(
-      { name: "Grimoire", modPools: ["Pistol", "Tome", "Grimoire"] },
+      { modPools: ["Pistol", "Tome", "Grimoire"] },
       [tomeMod, regularPistolMod],
     )
     expect(result).toContain(tomeMod)
@@ -59,7 +61,6 @@ describe("Tome mod gating (modPools)", () => {
   it("includes Tome mods on a future Grimoire Prime variant", () => {
     const result = getModsForItem(
       {
-        name: "Grimoire Prime",
         modPools: ["Pistol", "Tome", "Grimoire Prime", "Grimoire"],
       },
       [tomeMod],
@@ -68,39 +69,19 @@ describe("Tome mod gating (modPools)", () => {
   })
 
   it("includes Tome mods on Noctua (Dante's exalted)", () => {
-    const result = getModsForItem(
-      { name: "Noctua", modPools: ["Pistol", "Tome", "Noctua"] },
-      [tomeMod, regularPistolMod],
-    )
+    const result = getModsForItem({ modPools: ["Pistol", "Tome", "Noctua"] }, [
+      tomeMod,
+      regularPistolMod,
+    ])
     expect(result).toContain(tomeMod)
     expect(result).toContain(regularPistolMod)
   })
 
   it("excludes Tome mods from other exalted pistols (e.g. Regulators)", () => {
-    const result = getModsForItem(
-      { name: "Regulators", modPools: ["Pistol", "Regulators"] },
-      [tomeMod, regularPistolMod],
-    )
-    expect(result).toEqual([regularPistolMod])
-  })
-})
-
-// Fallback (no `modPools`) — for builds/items imported before the field
-// existed. Routes by `category` only, with a name-based override for Tome
-// weapons.
-describe("Tome mod gating (legacy category fallback)", () => {
-  it("excludes Tome mods from the typeless category fallback for non-Tome items", () => {
-    const result = getModsForItem(
-      { name: "Some Future Pistol", category: "secondary" },
-      [tomeMod, regularPistolMod],
-    )
-    expect(result).not.toContain(tomeMod)
-  })
-
-  it("includes Tome mods in the typeless fallback when the item is Grimoire", () => {
-    const result = getModsForItem({ name: "Grimoire", category: "secondary" }, [
+    const result = getModsForItem({ modPools: ["Pistol", "Regulators"] }, [
       tomeMod,
+      regularPistolMod,
     ])
-    expect(result).toContain(tomeMod)
+    expect(result).toEqual([regularPistolMod])
   })
 })

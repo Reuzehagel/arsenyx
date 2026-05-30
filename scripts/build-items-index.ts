@@ -16,7 +16,7 @@
  *
  * Schema notes:
  *   - BrowseItem carries `displayClass` (the wiki Class label).
- *   - Per-item weapon detail carries `modPools`, `compatTags`, `polarities`,
+ *   - Per-item weapon detail carries `modPools`, `polarities`,
  *     `family`, `traits` from the wiki merge.
  *   - Polarities everywhere are lowercase full names ("naramon", not "V").
  *   - All items (weapons + frames + companions) carry `modPools` — the
@@ -325,11 +325,10 @@ async function main() {
   }
 
   // ---------- 6. Merge mods + arcanes ----------
-  // OpenWF's `warframe-public-export-plus` provides extra routing fields
-  // (`compat`, `compatibilityTags`, `incompatibilityTags`) extracted from
-  // the game client. We use `compat` to lock augments to their specific
-  // weapon — strictly more reliable than the wiki-Class-based modPools
-  // inference, which periodically drifted.
+  // OpenWF's `warframe-public-export-plus` provides the `compat` routing
+  // field extracted from the game client. We use it to lock augments to
+  // their specific weapon — strictly more reliable than the wiki-Class-based
+  // modPools inference, which periodically drifted.
   const pePlusUpgrades = readPePlusUpgrades()
   const wikiExilus = new Map<string, boolean>()
   // Wiki convention: `_IgnoreEntry = true` flags records the wiki maintainers

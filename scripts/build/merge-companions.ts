@@ -27,9 +27,6 @@ export interface MergedCompanion {
   power?: number
   masteryReq: number
   polarities: readonly string[]
-  /** Wiki CompatibilityTags — used by the mod-pool routing to know if a
-   *  given mod targets this companion class. */
-  compatTags: readonly string[]
   isPrime: boolean
   /** DE compatNames a mod can carry to be installable on this companion.
    *  Same shape as MergedWeapon.modPools / MergedFrame.modPools so the
@@ -83,7 +80,6 @@ interface WikiCompanion {
   Energy?: number
   Mastery?: number
   Polarities?: readonly unknown[]
-  CompatibilityTags?: readonly unknown[]
   Description?: string
   InternalName?: string
 }
@@ -143,7 +139,6 @@ export function mergeCompanions(
       polarities: (wiki.Polarities ?? [])
         .map(normalizePolarity)
         .filter((p): p is string => p !== null),
-      compatTags: (wiki.CompatibilityTags as readonly string[] | undefined) ?? [],
       isPrime: name.includes(" Prime"),
       modPools: modPoolsForCompanion(name, subType),
     })

@@ -83,9 +83,6 @@ export function SearchPanel({
   const compatible = useMemo(() => {
     const base = getModsForItem(
       {
-        category: item.category,
-        name: item.name,
-        trigger: item.trigger,
         meleeClass: item.meleeClass,
         uniqueName: item.uniqueName,
         modPools: item.modPools,

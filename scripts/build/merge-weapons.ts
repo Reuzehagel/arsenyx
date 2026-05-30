@@ -9,7 +9,7 @@
  * Inputs:
  *   DE weapon record (uniqueName + name + productCategory + raw stats)
  *   Wiki record by name (Class, Slot, Family, Polarities, ExilusPolarity,
- *                        CompatibilityTags, Traits, Mastery)
+ *                        Traits, Mastery)
  *   Curated overrides (mod-pool routing, wiki stubs for new weapons)
  *
  * Outputs:
@@ -71,8 +71,6 @@ export interface MergedWeapon {
   /** DE compatNames this weapon's mod pool accepts. May include the weapon's
    *  own name to match weapon-specific augment mods. */
   modPools: readonly string[]
-  /** Capability refinement tags from wiki CompatibilityTags. */
-  compatTags: readonly string[]
   /** Polarity abbreviations for the eight upgrade slots, e.g. ["D","V","R"].
    *  Empty array means wiki doesn't have polarities for this weapon. */
   polarities: readonly string[]
@@ -127,7 +125,6 @@ interface WikiWeapon {
   Polarities?: readonly unknown[]
   ExilusPolarity?: string
   StancePolarity?: string
-  CompatibilityTags?: readonly unknown[]
   Traits?: readonly unknown[]
   Mastery?: number
   Attacks?: readonly Record<string, unknown>[]
@@ -258,7 +255,6 @@ export function mergeWeapon(
     name: cleanName,
     displayClass,
     modPools,
-    compatTags: (wiki?.CompatibilityTags as readonly string[] | undefined) ?? [],
     polarities,
     exilusPolarity: exilus,
     stancePolarity: stance,
@@ -356,7 +352,6 @@ export function mergeWikiOnlyWeapon(
     name,
     displayClass,
     modPools,
-    compatTags: (wiki.CompatibilityTags as readonly string[] | undefined) ?? [],
     polarities,
     exilusPolarity: exilus,
     stancePolarity: stance,

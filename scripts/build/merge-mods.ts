@@ -109,11 +109,6 @@ export interface MergedMod {
    *  Set by `build-items-index.ts`; absent on non-augment mods.
    *  Runtime check: `compatItems.includes(item.uniqueName)`. */
   compatItems?: string[]
-  /** OpenWF structural compatibility tags (e.g. `["WHIPS_STANCE"]`). */
-  compatibilityTags?: string[]
-  /** OpenWF structural incompatibility tags. Used to forbid otherwise-
-   *  matching mods on specific items. */
-  incompatibilityTags?: string[]
 }
 
 interface FilterCounts {
@@ -260,8 +255,6 @@ function toMergedMod(
     modSet: parts.modSet,
     modSetStats: parts.modSetStats,
     compat: plus?.compat,
-    compatibilityTags: plus?.compatibilityTags,
-    incompatibilityTags: plus?.incompatibilityTags,
   }
 }
 
@@ -276,8 +269,7 @@ export function mergeMods(
   rawUpgrades: DeUpgrade[],
   rawModSets: DeUpgrade[] = [],
   /** Optional OpenWF augmentation map keyed by mod `uniqueName`. When
-   *  supplied, each merged mod gets `compat` / `compatibilityTags` /
-   *  `incompatibilityTags` from this lookup. */
+   *  supplied, each merged mod gets `compat` from this lookup. */
   pePlus: Map<string, PePlusUpgradeFields> = new Map(),
   /** Wiki-sourced `IsExilus` flag keyed by mod `uniqueName`. Mods missing
    *  from this map default to `false`. */
