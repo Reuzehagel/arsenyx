@@ -123,8 +123,8 @@ interface FilterCounts {
 }
 
 /**
- * Drop entries the planner doesn't surface. Mirrors `normalizeMods()` in
- * shared/warframe/mods.ts but works directly against DE data.
+ * Drop entries the planner doesn't surface — the build-time gate that decides
+ * which DE upgrades enter the catalog at all (operates directly on DE data).
  */
 function shouldKeep(
   mod: DeUpgrade,

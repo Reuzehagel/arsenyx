@@ -24,6 +24,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs"
 import { dirname } from "node:path"
 
+import { fetchRetry } from "./http"
 import type { DeManifestEntry } from "./read-de"
 
 const DE_CDN_BASE = "https://content.warframe.com/PublicExport"
@@ -80,7 +81,11 @@ export async function resolveWikiImageUrls(
     const url =
       `${WIKI_API}?action=query&prop=imageinfo&iiprop=url&format=json` +
       `&titles=${encodeURIComponent(titles)}`
-    const res = await fetch(url)
+    // Through fetchRetry: this runs inside a watchdog'd data:bump step, so a
+    // half-open stall must retry/abort rather than hang until SIGKILL.
+    const res = await fetchRetry(url, {
+      headers: { "User-Agent": "arsenyx-image-sync (https://www.arsenyx.com)" },
+    })
     if (!res.ok) {
       throw new Error(
         `MediaWiki API HTTP ${res.status} on batch ${i / BATCH_SIZE + 1}: ${res.statusText}`,

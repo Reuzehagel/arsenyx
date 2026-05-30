@@ -20,13 +20,21 @@ export async function fetchRetry(
   {
     timeoutMs = 30_000,
     retries = 3,
-  }: { timeoutMs?: number; retries?: number } = {},
+    headers,
+  }: {
+    timeoutMs?: number
+    retries?: number
+    headers?: Record<string, string>
+  } = {},
 ): Promise<Response> {
   let lastErr: unknown
   for (let attempt = 1; attempt <= retries; attempt++) {
     let res: Response
     try {
-      res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) })
+      res = await fetch(url, {
+        signal: AbortSignal.timeout(timeoutMs),
+        headers,
+      })
     } catch (err) {
       // Timeout (AbortError) or network-level failure — transient, retry.
       lastErr = err

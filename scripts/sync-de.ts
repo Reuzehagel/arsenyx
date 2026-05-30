@@ -20,7 +20,7 @@
 
 import { createHash } from "node:crypto"
 import { mkdir, writeFile } from "node:fs/promises"
-import { resolve } from "node:path"
+import { basename, resolve } from "node:path"
 
 import { fetchRetry } from "./build/http"
 import { lzmaDecompressText } from "./build/lzma"
@@ -91,6 +91,11 @@ async function main() {
     //     diffs are line-by-line readable)
     const parsed = JSON.parse(clean)
     const pretty = JSON.stringify(parsed, null, 2) + "\n"
+    // The index name is trusted (DE-controlled), but make the trust boundary
+    // explicit: a `name` with path separators would escape OUT_DIR.
+    if (basename(name) !== name) {
+      throw new Error(`Unexpected path separator in index entry name: ${name}`)
+    }
     await writeFile(resolve(OUT_DIR, name), pretty, "utf8")
     const sha = createHash("sha256").update(pretty).digest("hex")
     pinEntries.push({ name, hash, sha256: sha, bytes: pretty.length })

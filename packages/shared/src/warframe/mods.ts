@@ -100,7 +100,8 @@ export function isPlexusAuraMod(mod: Mod): boolean {
  * build seeds it with the item's own name at minimum), so an item without
  * one matches nothing.
  *
- * `mods` must already be normalized via `normalizeMods`.
+ * `mods` must already be the filtered catalog set the build emits (see
+ * `shouldKeep` in scripts/build/merge-mods.ts) — this does no further filtering.
  */
 export function getModsForItem(
   item: {

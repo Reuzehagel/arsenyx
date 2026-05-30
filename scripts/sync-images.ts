@@ -14,6 +14,12 @@
  * upstream — a wiki re-upload changes the URL, which changes the key,
  * which triggers a fresh download.
  *
+ * Known debt: keys derive from the source URL. If upstream ever rotates a URL
+ * without changing the bytes, we upload a fresh copy and the old object orphans
+ * — there's no prune pass, so the bucket can grow slowly over many game
+ * updates. Storage-only (cheap) and not user-facing; add a sweep keyed on the
+ * live catalog if the bucket ever grows noticeably.
+ *
  * Requires .env at repo root with R2_* vars. See .env.example.
  */
 
@@ -23,6 +29,7 @@ import { resolve } from "node:path"
 
 import { AwsClient } from "aws4fetch"
 
+import { fetchRetry } from "./build/http"
 import { escapeRegex, findJsonFiles, sourceUrlRe } from "./build/image-hosts"
 
 const REPO_ROOT = resolve(import.meta.dirname, "..")
@@ -201,7 +208,7 @@ async function ensureUploaded(url: string, key: string): Promise<UploadResult> {
   if (await existsInBucket(key)) {
     return { url, key, status: "skipped" }
   }
-  const res = await fetch(url, {
+  const res = await fetchRetry(url, {
     headers: {
       // Identify ourselves so an upstream operator can trace abuse back
       // to us if anything goes wrong. (Wiki /images/ isn't rate-limited

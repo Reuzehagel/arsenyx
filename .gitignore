@@ -37,10 +37,19 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 
+# Upstream data mirror — DE PublicExport JSON + wiki Lua, re-fetched from the
+# network by `bun run data:sync` (scripts/sync-de.ts, sync-wiki.ts). Pure
+# pipeline input: neither CI nor the deploy reads it — only the weekly
+# `data:bump` job, which re-downloads it first. The built catalog under
+# apps/web/public/data/ IS committed and is what actually ships. Fresh clones
+# run `bun run data:sync` before rebuilding the catalog locally.
+/data/raw/
+
 # diff-index regression snapshots — a local scratch copy of a known-good
 # apps/web/public/data/ build, never committed (it's a duplicate of generated
-# output). See scripts/diff-index.ts.
+# output). See scripts/diff-index.ts. golden-v2 is the current snapshot dir.
 /data/golden/
+/data/golden-v2/
 
 # wrangler
 .wrangler/

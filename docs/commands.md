@@ -41,6 +41,12 @@ Sources (no npm dep): DE PublicExport JSON blobs (`data/raw/de/`) +
 wiki Lua modules (`data/raw/wiki/`). The build merges them with the
 curated overrides under `data/curated/`.
 
+`data/raw/` is **gitignored** — it's a network mirror, not source. The built
+catalog under `apps/web/public/data/` is what's committed and what ships, so a
+plain clone runs the app fine. You only need the raw mirror to *rebuild* the
+catalog: run `bun run data:sync` once on a fresh clone before `build:items`
+(or just run `data:bump`, which syncs first).
+
 ```bash
 bun run data:sync                  # mirror DE PublicExport + wiki Lua into data/raw/
 bun run build:items                # regenerate apps/web/public/data/ (emits UPSTREAM image URLs)

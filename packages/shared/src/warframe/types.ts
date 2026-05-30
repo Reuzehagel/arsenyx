@@ -421,22 +421,6 @@ export interface HelminthAbility {
   description?: string
 }
 
-// Mod compatibility categories for filtering
-export type ModCompatibility =
-  | "Warframe"
-  | "Aura"
-  | "Exilus"
-  | "Rifle"
-  | "Shotgun"
-  | "Pistol"
-  | "Melee"
-  | "Companion"
-  | "Archwing"
-  | "Archgun"
-  | "Archmelee"
-  | "Necramech"
-  | "Plexus"
-
 // =============================================================================
 // ARCHON SHARD TYPES
 // =============================================================================

@@ -33,7 +33,7 @@ Game data is static, user data is dynamic. If something is read-heavy and rarely
 - Use `uv run python` instead of `python`/`python3`
 
 **Ask first**
-- Adding new dependencies, dont skip over actually discuss with the user
+- Adding new dependencies — don't skip this; actually discuss it with the user first
 - Schema changes that drop/rename columns or add required fields
 
 **Never**
