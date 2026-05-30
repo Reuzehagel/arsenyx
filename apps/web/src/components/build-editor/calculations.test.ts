@@ -1,7 +1,12 @@
 import type { Mod } from "@arsenyx/shared/warframe/types"
 import { describe, expect, it } from "vitest"
 
-import { calculateCapacity, type CapacityInput } from "./calculations"
+import {
+  auraBonusForMod,
+  calculateCapacity,
+  type CapacityInput,
+  getMatchState,
+} from "./calculations"
 import type { PlacedMod, SlotId } from "./use-build-slots"
 
 // Standard stance mod shape from WFCD data: baseDrain -2, fusionLimit 3.
@@ -100,5 +105,49 @@ describe("calculateCapacity", () => {
 
   it("no stance placed → no bonus", () => {
     expect(calculateCapacity(emptyInput()).max).toBe(60)
+  })
+})
+
+// Regression: issue #168 — an "any" (Universal) polarity aura, e.g. Dreamer's
+// Bond (baseDrain -2 → +7 at max rank), must earn the doubled bonus on every
+// polarized slot, not only on an "any"-polarity slot.
+describe('"any"-polarity mods match every polarized slot', () => {
+  function placedAura(polarity: Mod["polarity"]): PlacedMod {
+    return {
+      mod: {
+        uniqueName: "/Aura/any",
+        name: "Dreamer's Bond",
+        polarity,
+        rarity: "Uncommon",
+        baseDrain: -2,
+        fusionLimit: 5,
+        type: "Aura",
+        compatName: "AURA",
+        tradable: true,
+      },
+      rank: 5,
+    }
+  }
+
+  it("getMatchState treats an any-polarity mod as matching any slot", () => {
+    expect(getMatchState("any", "madurai")).toBe("match")
+    expect(getMatchState("any", "any")).toBe("match")
+    expect(getMatchState("any", undefined)).toBe("neutral")
+  })
+
+  it("auraBonusForMod doubles an any-polarity aura on a specific slot", () => {
+    expect(auraBonusForMod(placedAura("any").mod, 5, "madurai")).toBe(14)
+    expect(auraBonusForMod(placedAura("any").mod, 5, "any")).toBe(14)
+    expect(auraBonusForMod(placedAura("any").mod, 5, undefined)).toBe(7)
+  })
+
+  it("an any-polarity aura grants +14 on a madurai aura slot", () => {
+    const result = calculateCapacity(
+      emptyInput({
+        placed: { "aura-0": placedAura("any") },
+        auraInnates: ["madurai"],
+      }),
+    )
+    expect(result.max).toBe(74) // 60 + 14
   })
 })

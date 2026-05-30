@@ -231,10 +231,32 @@ export function parseStatString(statString: string): ParsedStat[] {
 
   const cond = detectCondition(statString)
 
+  // Trade-off auras (Power Donation, Combat Discipline, Melee Guidance) pack
+  // two clauses on separate lines: a wearer penalty ("You lose X") and a
+  // squad buff ("Squadmates gain X"). Parse line-by-line so each clause is
+  // judged on its own: the squadmates buff doesn't touch the equipped frame,
+  // and the wearer's loss subtracts despite the number being written positive.
+  for (const clause of statString.split(/\r?\n/)) {
+    const clauseLower = clause.toLowerCase()
+    if (clauseLower.includes("squadmates")) continue
+    const sign = clauseLower.includes("you lose") ? -1 : 1
+    parseClauseInto(clause, sign, cond, results)
+  }
+
+  return results
+}
+
+/** Extract stats from one clause, applying `sign` (−1 negates "You lose X"). */
+function parseClauseInto(
+  clause: string,
+  sign: number,
+  cond: ConditionInfo,
+  results: ParsedStat[],
+): void {
   let match: RegExpMatchArray
 
-  for (match of statString.matchAll(COLOR_TAG_PATTERN)) {
-    const value = parseFloat(match[1])
+  for (match of clause.matchAll(COLOR_TAG_PATTERN)) {
+    const value = parseFloat(match[1]) * sign
     const colorTag = match[2]
     const damageType = DAMAGE_TYPE_COLORS[colorTag]
     if (damageType) {
@@ -248,8 +270,8 @@ export function parseStatString(statString: string): ParsedStat[] {
     }
   }
 
-  for (match of statString.matchAll(PERCENT_PATTERN)) {
-    const value = parseFloat(match[1])
+  for (match of clause.matchAll(PERCENT_PATTERN)) {
+    const value = parseFloat(match[1]) * sign
     const statName = match[2].trim().toLowerCase()
     if (DAMAGE_TYPE_COLORS[`DT_${statName.toUpperCase()}_COLOR`]) continue
     const statType = STAT_NAME_MAP[statName]
@@ -258,8 +280,8 @@ export function parseStatString(statString: string): ParsedStat[] {
     }
   }
 
-  for (match of statString.matchAll(FLAT_PATTERN)) {
-    const value = parseFloat(match[1])
+  for (match of clause.matchAll(FLAT_PATTERN)) {
+    const value = parseFloat(match[1]) * sign
     const statName = match[2].trim().toLowerCase()
     if (
       ["damage", "enemies", "seconds", "meters", "radius"].some((s) =>
@@ -275,8 +297,6 @@ export function parseStatString(statString: string): ParsedStat[] {
       }
     }
   }
-
-  return results
 }
 
 export interface SourcedStat extends ParsedStat {

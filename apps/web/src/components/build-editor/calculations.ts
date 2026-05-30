@@ -100,6 +100,9 @@ export function getMatchState(
   if (slotPolarity === "any") {
     return modPolarity === "umbra" ? "neutral" : "match"
   }
+  // An "any" (Universal) polarity mod fits every polarized slot, so it always
+  // earns the matching bonus — mirror of the "any"-polarity slot case above.
+  if (modPolarity === "any") return "match"
   return modPolarity === slotPolarity ? "match" : "mismatch"
 }
 
@@ -122,7 +125,10 @@ export function effectiveDrainForMod(
   if (slotPolarity === "any") {
     return mod.polarity === "umbra" ? base : Math.ceil(base / 2)
   }
-  if (mod.polarity === slotPolarity) return Math.ceil(base / 2)
+  // "any"-polarity mods match every polarized slot (see getMatchState).
+  if (mod.polarity === "any" || mod.polarity === slotPolarity) {
+    return Math.ceil(base / 2)
+  }
   return Math.round(base * 1.25)
 }
 
@@ -136,7 +142,8 @@ export function auraBonusForMod(
   if (slotPolarity === "any") {
     return mod.polarity === "umbra" ? base : base * 2
   }
-  if (mod.polarity === slotPolarity) return base * 2
+  // "any"-polarity mods match every polarized slot (see getMatchState).
+  if (mod.polarity === "any" || mod.polarity === slotPolarity) return base * 2
   return Math.round(base * 0.75)
 }
 
