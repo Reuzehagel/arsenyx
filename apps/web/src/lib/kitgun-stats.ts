@@ -36,6 +36,9 @@ export function adjustChamberForKitgun<T extends AnyWeapon>(
   if (!chamber) return weapon
   const grip = chamber.grips[gripName]
   if (!grip) return weapon
+  // A gilded kitgun always has a loader, so this should always resolve; if it
+  // somehow doesn't, the loader's additive terms fall to 0 and magazine/reload
+  // keep the chamber's shell values (guarded below) rather than throwing.
   const loader = modular.loaders[loaderName]
 
   const critChance = (chamber.critChance + (loader?.critChance ?? 0)) * 100

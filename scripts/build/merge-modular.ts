@@ -150,6 +150,15 @@ function buildChambers(
     const wikiName = `${family} ${CLASS_SUFFIX[cls]}`
     const wikiEntry = wikiWeaponsByName.get(wikiName)
     const wikiAttacks = (wikiEntry?.Attacks as Raw[] | undefined) ?? []
+    if (wikiAttacks.length === 0) {
+      // Without the catalog weapon's attack structure, allocateDamage emits a
+      // synthetic "Normal Attack" whose name won't match the catalog item's
+      // real attack modes — the web reconstructor then drops everything. Warn
+      // so a family/name drift between the two wiki tables surfaces at build.
+      console.warn(
+        `[merge-modular] no catalog weapon "${wikiName}" (or it has no Attacks) — ${family} (${cls}) damage can't map to real attack modes`,
+      )
+    }
     out[family] = buildChamber(raw, wikiAttacks, wikiName)
   }
   return out
