@@ -1,5 +1,8 @@
 import { decodeBuildDoc } from "@arsenyx/shared/warframe/build-codec"
-import { clampVariantIndex } from "@arsenyx/shared/warframe/build-doc"
+import {
+  clampVariantIndex,
+  MAX_VARIANT_PARSE_INDEX,
+} from "@arsenyx/shared/warframe/build-doc"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Suspense, useEffect } from "react"
 
@@ -48,7 +51,7 @@ export const Route = createFileRoute("/create")({
     // so a multi-variant build opens on the variant the sharer was viewing.
     const v =
       rawV !== undefined && Number.isFinite(rawV) && rawV >= 0
-        ? Math.min(50, Math.floor(rawV))
+        ? Math.min(MAX_VARIANT_PARSE_INDEX, Math.floor(rawV))
         : share
           ? activeVariantFromShare(share)
           : undefined

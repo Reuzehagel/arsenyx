@@ -28,6 +28,9 @@ export type BuildOrganizationSummary = {
 }
 
 export type BuildItemSummary = {
+  /** Stable DE identifier — used to resolve the CURRENT catalog image at
+   *  render time, since the stored `imageName` rots across image-scheme
+   *  changes (see useItemImage). */
   uniqueName: string
   category: string
   name: string
@@ -79,15 +82,7 @@ export type BuildListItemResponse = {
   hideAuthor: boolean
   createdAt: string
   updatedAt: string
-  item: {
-    /** Stable DE identifier — used to resolve the CURRENT catalog image at
-     *  render time, since the stored `imageName` rots across image-scheme
-     *  changes (see useItemImage). */
-    uniqueName: string
-    name: string
-    imageName: string | null
-    category: string
-  }
+  item: BuildItemSummary
   user: BuildUserSummary
   organization: BuildOrganizationSummary | null
 }

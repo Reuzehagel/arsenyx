@@ -13,12 +13,12 @@ import { formatAbsoluteTime, relativeTime } from "@/lib/util/relative-time"
 import { authorName } from "@/lib/util/user-display"
 import { getImageUrl } from "@/lib/warframe"
 
-/** Shared per-card derivation: display author, relative timestamp, and the
- *  current catalog image URL resolved from the build's item. */
+/** Shared per-card derivation: relative timestamp and the current catalog
+ *  image URL resolved from the build's item. (Author is derived in
+ *  BuildByline, the only place it's rendered.) */
 function useBuildCardData(build: BuildListItem) {
   const itemImage = useItemImage()
   return {
-    author: authorName(build.user),
     timeAgo: relativeTime(build.updatedAt),
     imageUrl: getImageUrl(
       itemImage(build.item.uniqueName, build.item.imageName),

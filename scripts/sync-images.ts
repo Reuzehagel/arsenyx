@@ -23,7 +23,7 @@ import { resolve } from "node:path"
 
 import { AwsClient } from "aws4fetch"
 
-import { findJsonFiles, sourceUrlRe } from "./build/image-hosts"
+import { escapeRegex, findJsonFiles, sourceUrlRe } from "./build/image-hosts"
 
 const REPO_ROOT = resolve(import.meta.dirname, "..")
 const DATA_DIR = resolve(REPO_ROOT, "apps/web/public/data")
@@ -245,11 +245,6 @@ async function pMap<T, R>(
 // ---------------------------------------------------------------------------
 // Main.
 // ---------------------------------------------------------------------------
-
-/** Escape a string for safe interpolation into a `RegExp`. */
-function escapeRegex(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-}
 
 /** `--refresh-metadata` only: re-apply Content-Type / Content-Disposition on
  *  every object the catalog already references, derived from the keys in the

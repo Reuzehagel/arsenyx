@@ -21,7 +21,7 @@ export const SOURCE_HOSTS = [
 
 /** Escape a literal string for embedding in a `RegExp` (here: the `.` in
  *  each host). */
-function escapeRegex(s: string): string {
+export function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
 

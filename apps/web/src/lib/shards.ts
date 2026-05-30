@@ -91,33 +91,3 @@ export function formatStatValue(stat: ShardStat, tauforged: boolean): string {
   const v = tauforged ? stat.tauforgedValue : stat.baseValue
   return `+${formatStat(v, 1)}${stat.unit}`
 }
-
-/** Stat-name → warframe base-stat key, for flat bonuses (unit === ""). */
-const AZURE_MAP: Record<string, "health" | "shield" | "armor" | "energy"> = {
-  Health: "health",
-  "Shield Capacity": "shield",
-  Armor: "armor",
-  "Energy Max": "energy",
-}
-
-export interface ShardStatBonuses {
-  health: number
-  shield: number
-  armor: number
-  energy: number
-}
-
-export function sumShardFlatBonuses(
-  shards: (PlacedShard | null)[],
-): ShardStatBonuses {
-  const out: ShardStatBonuses = { health: 0, shield: 0, armor: 0, energy: 0 }
-  for (const s of shards) {
-    if (!s) continue
-    const key = AZURE_MAP[s.stat]
-    if (!key) continue
-    const stat = findShardStat(s.color, s.stat)
-    if (!stat || stat.unit !== "") continue
-    out[key] += s.tauforged ? stat.tauforgedValue : stat.baseValue
-  }
-  return out
-}

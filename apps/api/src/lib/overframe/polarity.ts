@@ -22,20 +22,8 @@ const OVERFRAME_POLARITY_CODE_MAP: Record<number, Polarity | undefined> = {
   9: "zenurik",
 }
 
-export function mapOverframePolarityCode(code: number | null | undefined): {
-  code: number | null
-  polarity?: Polarity
-  isKnown: boolean
-} {
-  if (code === null || code === undefined || !Number.isFinite(code)) {
-    return { code: null, isKnown: false }
-  }
-
-  const polarity = OVERFRAME_POLARITY_CODE_MAP[code]
-  const isKnown = Object.prototype.hasOwnProperty.call(
-    OVERFRAME_POLARITY_CODE_MAP,
-    code,
-  )
-
-  return { code, polarity, isKnown }
+/** Map an Overframe polarity code to our `Polarity`, or `undefined` for the
+ *  "none" code (0) and any code not yet observed. */
+export function mapOverframePolarity(code: number): Polarity | undefined {
+  return OVERFRAME_POLARITY_CODE_MAP[code]
 }

@@ -34,23 +34,15 @@ users.get("/:username", async (c) => {
   })
   if (!user || user.isBanned) return c.json({ error: "not_found" }, 404)
 
-  const [buildCount, agg] = await Promise.all([
-    prisma.build.count({
-      where: {
-        userId: user.id,
-        visibility: BuildVisibility.PUBLIC,
-        organizationId: null,
-      },
-    }),
-    prisma.build.aggregate({
-      where: {
-        userId: user.id,
-        visibility: BuildVisibility.PUBLIC,
-        organizationId: null,
-      },
-      _sum: { likeCount: true, bookmarkCount: true, viewCount: true },
-    }),
-  ])
+  const agg = await prisma.build.aggregate({
+    where: {
+      userId: user.id,
+      visibility: BuildVisibility.PUBLIC,
+      organizationId: null,
+    },
+    _count: true,
+    _sum: { likeCount: true, bookmarkCount: true, viewCount: true },
+  })
 
   return c.json({
     id: user.id,
@@ -67,7 +59,7 @@ users.get("/:username", async (c) => {
       admin: user.isAdmin,
     },
     stats: {
-      buildCount,
+      buildCount: agg._count,
       totalLikes: agg._sum.likeCount ?? 0,
       totalBookmarks: agg._sum.bookmarkCount ?? 0,
       totalViews: agg._sum.viewCount ?? 0,

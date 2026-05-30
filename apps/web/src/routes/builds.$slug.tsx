@@ -1,4 +1,5 @@
 import { clamp } from "@arsenyx/shared"
+import { MAX_VARIANT_PARSE_INDEX } from "@arsenyx/shared/warframe/build-doc"
 import { slugify } from "@arsenyx/shared/warframe/slugs"
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
@@ -45,7 +46,7 @@ export const Route = createFileRoute("/builds/$slug")({
     // variant count.
     const v =
       rawV !== undefined && rawV >= 0
-        ? Math.min(50, Math.floor(rawV))
+        ? Math.min(MAX_VARIANT_PARSE_INDEX, Math.floor(rawV))
         : undefined
     return {
       ...(embed && { embed }),

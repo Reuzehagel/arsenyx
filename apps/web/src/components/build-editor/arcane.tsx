@@ -151,12 +151,9 @@ export function ArcaneSlot({
 }: ArcaneSlotProps) {
   const [open, setOpen] = useState(false)
 
-  const arcaneStats: string[] =
-    placed && placed.arcane.levelStats && placed.arcane.levelStats.length > 0
-      ? (placed.arcane.levelStats[
-          Math.min(placed.rank, placed.arcane.levelStats.length - 1)
-        ]?.stats ?? [])
-      : []
+  const arcaneStats: string[] = placed
+    ? statsAt(placed.arcane, placed.rank)
+    : []
 
   const handleContextMenu = (e: MouseEvent) => {
     if (readOnly) return
@@ -281,7 +278,7 @@ function ArcanePicker({
     if (!q) return sorted
     return sorted.filter((a) => {
       if (a.name.toLowerCase().includes(q)) return true
-      const last = a.levelStats?.[a.levelStats.length - 1]?.stats ?? []
+      const last = statsAt(a, (a.levelStats?.length ?? 0) - 1)
       return last.some((s) => s.toLowerCase().includes(q))
     })
   }, [sorted, deferred])

@@ -9,7 +9,7 @@ import { SafeFetchError, safeFetch } from "../safe-fetch"
 import { decodeOverframeBuildString } from "./decode"
 import { getOverframeItemsMap } from "./items-map"
 import { extractOverframeDataFromHtml } from "./next-data"
-import { mapOverframePolarityCode } from "./polarity"
+import { mapOverframePolarity } from "./polarity"
 
 export function isValidOverframeBuildUrl(value: string): boolean {
   try {
@@ -129,15 +129,13 @@ function parseRawSlots(slots: unknown): OverframeRawSlot[] {
       modIdNum !== 0
     const overframeId = hasMod ? String(modIdRaw) : null
     if (!Number.isFinite(slot_id) || !Number.isFinite(rank)) continue
-    const mapped = mapOverframePolarityCode(
-      Number.isFinite(polarityCode) ? polarityCode : 0,
-    )
+    const safePolarityCode = Number.isFinite(polarityCode) ? polarityCode : 0
     out.push({
       slot_id,
       overframeId,
       rank,
-      polarityCode: Number.isFinite(polarityCode) ? polarityCode : 0,
-      polarity: mapped.polarity,
+      polarityCode: safePolarityCode,
+      polarity: mapOverframePolarity(safePolarityCode),
     })
   }
   return out

@@ -90,9 +90,10 @@ async function fetchImageMap(
   base: URL,
 ): Promise<Record<string, string> | null> {
   try {
-    const req = new Request(new URL("/data/image-map.json", base).toString(), {
-      cf: { cacheTtl: 3600, cacheEverything: true },
-    } as RequestInit)
+    // The ASSETS binding is an in-isolate service binding; it never consults
+    // Cloudflare's edge cache, so `cf: { cacheTtl, ... }` would be silently
+    // ignored here (those directives only apply to global `fetch()`).
+    const req = new Request(new URL("/data/image-map.json", base).toString())
     const res = await env.ASSETS.fetch(req)
     if (!res.ok) return null
     return (await res.json()) as Record<string, string>

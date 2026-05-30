@@ -1,8 +1,8 @@
 /**
  * Read curated TS modules from `data/curated/`.
  *
- * These are checked-in TypeScript constants (not YAML; see
- * implementation-notes.html for why). The build script imports them
+ * These are checked-in TypeScript constants (not YAML — type-safe and
+ * reviewable in diffs). The build script imports them
  * directly. This module is the single entrypoint so consumers don't need
  * to know which file each curated table lives in.
  */

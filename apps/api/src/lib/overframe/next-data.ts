@@ -14,7 +14,6 @@ export interface ExtractedOverframeData {
     slotIndex: number
     uniqueName: string
   }
-  extractedKeys: string[]
 }
 
 function extractNextDataJson(html: string): unknown | null {
@@ -167,14 +166,11 @@ export function extractOverframeDataFromHtml(
   html: string,
   source: OverframeBuildSource,
 ): ExtractedOverframeData {
-  const extractedKeys: string[] = []
-
   const nextData = extractNextDataJson(html)
   if (!nextData) {
     return {
       source,
       nextData: undefined,
-      extractedKeys,
       buildString: undefined,
     }
   }
@@ -194,10 +190,8 @@ export function extractOverframeDataFromHtml(
       typeof v === "string" && v.length > 20 && /^[A-Za-z0-9_\-+/=]+$/.test(v)
     )
   })
-  if (buildStringRes) extractedKeys.push(buildStringRes.keyPath)
 
   const slotsRes = findFirstArray(nextData, "slots")
-  if (slotsRes) extractedKeys.push(slotsRes.keyPath)
 
   const itemNameRes = findFirstString(nextData, (k, v) => {
     const lower = k.toLowerCase()
@@ -206,13 +200,11 @@ export function extractOverframeDataFromHtml(
     // Avoid matching random unrelated names.
     return typeof v === "string" && v.length >= 3 && v.length <= 60
   })
-  if (itemNameRes) extractedKeys.push(itemNameRes.keyPath)
 
   // Pinned path — Overframe embeds many `formas` numbers in __NEXT_DATA__
   // (sibling builds, related builds), so a tree walk picks the wrong one.
   const formaPath = ["props", "pageProps", "data", "formas"]
   const formaCount = readNumberAtPath(nextData, formaPath)
-  if (formaCount !== undefined) extractedKeys.push(formaPath.join("."))
 
   const pageTitle = readStringAtPath(nextData, [
     "props",
@@ -220,14 +212,12 @@ export function extractOverframeDataFromHtml(
     "data",
     "title",
   ])
-  if (pageTitle) extractedKeys.push("props.pageProps.data.title")
 
   const pageDescription = readStringAtPath(nextData, [
     "props",
     "pageProps",
     "pageDescription",
   ])
-  if (pageDescription) extractedKeys.push("props.pageProps.pageDescription")
 
   const guideMarkdown = readStringAtPath(nextData, [
     "props",
@@ -237,16 +227,8 @@ export function extractOverframeDataFromHtml(
   const guideDescription =
     guideMarkdown ??
     readStringAtPath(nextData, ["props", "pageProps", "data", "description"])
-  if (guideDescription) {
-    extractedKeys.push(
-      guideMarkdown
-        ? "props.pageProps.guideMarkdown"
-        : "props.pageProps.data.description",
-    )
-  }
 
   const helminthAbilityRes = findFirstHelminthAbility(nextData)
-  if (helminthAbilityRes) extractedKeys.push(helminthAbilityRes.keyPath)
 
   return {
     source,
@@ -259,6 +241,5 @@ export function extractOverframeDataFromHtml(
     pageDescription,
     guideDescription,
     helminthAbility: helminthAbilityRes?.value,
-    extractedKeys,
   }
 }

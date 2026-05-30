@@ -1,15 +1,14 @@
 import type { Context } from "hono"
 
 import { getSession } from "../lib/session"
+import { hasPrismaCode } from "../lib/validate"
 
 export type AdminUser = { id: string; isAdmin: boolean }
 
+/** Prisma's "record not found" error (e.g. a delete/update whose `where`
+ *  matched nothing). Thin alias over the general code probe in validate.ts. */
 export function isPrismaNotFound(err: unknown): boolean {
-  return (
-    typeof err === "object" &&
-    err != null &&
-    (err as { code?: string }).code === "P2025"
-  )
+  return hasPrismaCode(err, "P2025")
 }
 
 export async function requireAdmin(c: Context): Promise<AdminUser | Response> {

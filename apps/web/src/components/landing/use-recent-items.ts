@@ -22,64 +22,6 @@ export function useRecentItems(limit = 16): RecentItem[] {
   return all.slice(0, limit)
 }
 
-function assertNever(x: never): never {
-  throw new Error(`unhandled BrowseCategory: ${String(x)}`)
-}
-
-export function shortCategory(c: BrowseCategory): string {
-  switch (c) {
-    case "warframes":
-      return "WF"
-    case "primary":
-      return "PRI"
-    case "secondary":
-      return "SEC"
-    case "melee":
-      return "MEL"
-    case "necramechs":
-      return "NEC"
-    case "companions":
-      return "COM"
-    case "companion-weapons":
-      return "C·W"
-    case "exalted-weapons":
-      return "EXA"
-    case "archwing":
-      return "ARW"
-    case "railjack":
-      return "RJ"
-    default:
-      return assertNever(c)
-  }
-}
-
-export function longCategory(c: BrowseCategory): string {
-  switch (c) {
-    case "warframes":
-      return "warframe"
-    case "primary":
-      return "primary"
-    case "secondary":
-      return "secondary"
-    case "melee":
-      return "melee"
-    case "necramechs":
-      return "necramech"
-    case "companions":
-      return "companion"
-    case "companion-weapons":
-      return "companion weapon"
-    case "exalted-weapons":
-      return "exalted weapon"
-    case "archwing":
-      return "archwing"
-    case "railjack":
-      return "railjack"
-    default:
-      return assertNever(c)
-  }
-}
-
 /** True when the item's name already contains "Prime", so we don't duplicate the tag. */
 export function isPrimeRedundant(name: string): boolean {
   return /\bprime\b/i.test(name)
