@@ -81,7 +81,7 @@ function toPct(v: number | undefined): number | undefined {
   return Math.round(v * 1000) / 10
 }
 
-function lowerDamageKeys(d: Record<string, unknown> | undefined): Record<string, number> | undefined {
+export function lowerDamageKeys(d: Record<string, unknown> | undefined): Record<string, number> | undefined {
   if (!d) return undefined
   const out: Record<string, number> = {}
   for (const [k, v] of Object.entries(d)) {

@@ -81,6 +81,9 @@ export interface DetailItem extends BrowseItem {
   abilities?: ItemAbility[]
   // weapon
   maxLevelCap?: number
+  /** Modular chamber/strike family ("Sporelacer", "Catchmoon") — used to key
+   *  into the kitgun stat tables in /data/modular.json. */
+  family?: string
   trigger?: string
   totalDamage?: number
   criticalChance?: number

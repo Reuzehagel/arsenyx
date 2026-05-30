@@ -63,6 +63,7 @@ import { mergeArcanes, type MergedArcane } from "./build/merge-arcanes"
 import { mergeCompanions, type MergedCompanion } from "./build/merge-companions"
 import { mergeFrame, operatorsFromWiki, type MergedFrame } from "./build/merge-frames"
 import { deriveHelminthAbilities } from "./build/merge-helminth"
+import { mergeModular } from "./build/merge-modular"
 import { mergeMods, type MergedMod } from "./build/merge-mods"
 import { readPePlusUpgrades } from "./build/read-pe-plus"
 import {
@@ -158,6 +159,14 @@ async function main() {
   ) as { Companions?: Record<string, Record<string, unknown>> }
   const wikiCompanions = wikiCompanionsBlob.Companions ?? {}
   console.log(`Wiki: ${Object.keys(wikiFramesBlob.Warframes ?? {}).length} warframes, ${Object.keys(wikiCompanions).length} companions`)
+
+  // Modular (Kitgun/Zaw) stat tables. Module:Modular/data is the only
+  // verifiable source for the per-combination stats DE zeroes out; pass the
+  // weapon entries so chamber damage can be allocated across attack modes.
+  const modularData = mergeModular(
+    readWikiModule(resolve(WIKI_DIR, "Modular_data.lua")),
+    wikiWeaponsByName,
+  )
 
   // ---------- 2. Merge weapons ----------
   // DE rows with `slot === undefined` are modular component parts (Kitgun
@@ -661,6 +670,17 @@ async function main() {
   )
   console.log(
     `  OK  incarnon-evolutions.json (${Object.keys(INCARNON_EVOLUTIONS).length} weapons, ${(incarnonBody.length / 1024).toFixed(1)} KB)`,
+  )
+
+  // Modular (Kitgun/Zaw) stat reconstruction tables — fetched by the build
+  // editor to recompute a chamber's stats from the selected grip + loader.
+  const modularBody = JSON.stringify(modularData)
+  await writeFile(resolve(OUT_DIR, "modular.json"), modularBody, "utf8")
+  const kitgunChambers =
+    Object.keys(modularData.kitgun.primary).length +
+    Object.keys(modularData.kitgun.secondary).length
+  console.log(
+    `  OK  modular.json (${kitgunChambers} kitgun chambers, ${Object.keys(modularData.kitgun.loaders).length} loaders, ${Object.keys(modularData.zaw.strikes).length} zaw strikes, ${(modularBody.length / 1024).toFixed(1)} KB)`,
   )
 
   // Zaw component picker thumbnails. Grips/links/strikes aren't catalog items,

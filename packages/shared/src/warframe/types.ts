@@ -153,6 +153,98 @@ export interface Companion extends BaseItem {
   type?: string
 }
 
+// ---------------------------------------------------------------------------
+// Modular weapon (Kitgun / Zaw) stat reconstruction data.
+//
+// DE ships modular component parts (kitgun chambers/grips/loaders, zaw
+// strikes/grips/links) as zero-stat shells, so the real per-combination stats
+// can't be read off the catalog. The wiki's `Module:Modular/data` is the only
+// verifiable source; the build parses it into the shape below and emits it as
+// `/data/modular.json` (see scripts/build/merge-modular.ts). The web stat
+// panel reconstructs a chamber's stats from the selected grip + loader.
+// ---------------------------------------------------------------------------
+
+/** One reconstructed attack mode for a chamber+grip (damage keys lowercased,
+ *  nonzero only). Keyed by `name` to the chamber's catalog attack modes. */
+export interface ModularKitgunAttack {
+  name: string
+  damage: DamageTypes
+}
+
+/** A chamber's per-grip results: fire rate is grip-determined; damage is the
+ *  flat per-grip total allocated across the chamber's attack modes. */
+export interface ModularKitgunGrip {
+  fireRate: number
+  attacks: ModularKitgunAttack[]
+}
+
+export interface ModularKitgunChamber {
+  /** Crit chance as a ratio (0.21 = 21%), before the loader's additive term. */
+  critChance: number
+  critMultiplier: number
+  /** Status chance as a ratio, before the loader's additive term. */
+  statusChance: number
+  /** Magazine tier label ("High", "Med", …) → resolved size for this chamber. */
+  magazine: Record<string, number>
+  grips: Record<string, ModularKitgunGrip>
+}
+
+export interface ModularKitgunLoader {
+  /** Additive crit-chance ratio applied on top of the chamber's base. */
+  critChance: number
+  critMultiplier: number
+  statusChance: number
+  reload: number
+  /** Magazine tier label keyed into the chamber's `magazine` table. */
+  magazine: string
+}
+
+export interface ModularKitguns {
+  /** Chamber family ("Sporelacer") → stats, split by the grip's weapon class. */
+  primary: Record<string, ModularKitgunChamber>
+  secondary: Record<string, ModularKitgunChamber>
+  /** Loaders are shared across both classes (identical modifiers). */
+  loaders: Record<string, ModularKitgunLoader>
+}
+
+/** Zaw modifier tables, staged from the same wiki module for a future
+ *  migration off the hand-maintained `zaw-data.ts` tables. Not yet consumed
+ *  by the stat panel — the field semantics (esp. the two-handed multiplier)
+ *  still need reconciling against the current zaw model before cutover. */
+export interface ModularZawStrike {
+  critChance: number
+  critMultiplier: number
+  statusChance: number
+  speed: number
+  damage: DamageTypes
+  oneHanded: string
+  twoHanded: string
+}
+
+export interface ModularZawGrip {
+  damage: number
+  speed: number
+  twoHanded: boolean
+}
+
+export interface ModularZawLink {
+  critChance: number
+  statusChance: number
+  damage: number
+  speed: number
+}
+
+export interface ModularZaws {
+  strikes: Record<string, ModularZawStrike>
+  grips: Record<string, ModularZawGrip>
+  links: Record<string, ModularZawLink>
+}
+
+export interface ModularData {
+  kitgun: ModularKitguns
+  zaw: ModularZaws
+}
+
 // Union type for all browseable items
 export type BrowseableItem = Warframe | Gun | Melee | Necramech | Companion
 

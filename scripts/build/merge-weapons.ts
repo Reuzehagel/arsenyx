@@ -129,6 +129,31 @@ interface WikiWeapon {
   Mastery?: number
   Attacks?: readonly Record<string, unknown>[]
   Image?: string
+  /** DE compatibility flags ("PROJECTILE", "AOE", "BEAM", …). The "AOE" tag is
+   *  the authoritative marker for whether a weapon counts as area-of-effect —
+   *  DE's export has no such field, so this is the only source. */
+  CompatibilityTags?: readonly unknown[]
+}
+
+/**
+ * Mods tagged "Rifle (No Aoe)" / "Pistol (No Aoe)" (e.g. Energizing Shot)
+ * equip on rifle/pistol-pool weapons that DE does NOT classify as AoE. A
+ * weapon accepts them unless its wiki `CompatibilityTags` include "AOE" — so
+ * weapons with only incidental self-explosions (Sporelacer, Catchmoon) and
+ * untagged weapons qualify, while true AoE launchers (Tombfinger, Kompressa)
+ * do not. Mutates the pool set in place. Only Rifle/Pistol have a No-Aoe mod
+ * pool; Shotgun does not.
+ */
+export function addNoAoePools(
+  pools: Set<string>,
+  compatTags: readonly unknown[] | undefined,
+): void {
+  const isAoE = (compatTags ?? []).some(
+    (t) => String(t).toUpperCase() === "AOE",
+  )
+  if (isAoE) return
+  if (pools.has("Rifle")) pools.add("Rifle (No Aoe)")
+  if (pools.has("Pistol")) pools.add("Pistol (No Aoe)")
 }
 
 /** Strip the Coda / Kuva / Tenet prefix from a variant name to recover the
@@ -217,6 +242,7 @@ export function mergeWeapon(
   modPoolsSet.add(cleanName)
   const base = baseWeaponName(cleanName)
   if (base) modPoolsSet.add(base)
+  addNoAoePools(modPoolsSet, wiki?.CompatibilityTags)
   const modPools = [...modPoolsSet]
 
   // Fail loud only on the "structural" pool buckets — weapon-name pool
@@ -335,6 +361,7 @@ export function mergeWikiOnlyWeapon(
     // target — but those mods are pet-side, not claws-side. We don't
     // add them here; companion modPools handle that.
   }
+  addNoAoePools(modPoolsSet, wiki.CompatibilityTags)
   const modPools = [...modPoolsSet]
 
   const polarities = normalizePolarities(wiki.Polarities ?? [])

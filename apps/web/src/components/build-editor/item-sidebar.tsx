@@ -15,6 +15,7 @@ import {
   type Warframe,
 } from "@arsenyx/shared/warframe/types"
 import { isZawStrike } from "@arsenyx/shared/warframe/zaw-data"
+import { useQuery } from "@tanstack/react-query"
 import { ChevronDown, SlidersHorizontal } from "lucide-react"
 import { Suspense, useMemo, useState } from "react"
 
@@ -33,7 +34,9 @@ import {
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
+import { adjustChamberForKitgun } from "@/lib/kitgun-stats"
 import { type HelminthAbility } from "@/lib/queries/helminth-query"
+import { modularQuery } from "@/lib/queries/modular-query"
 import { type PlacedShard } from "@/lib/shards"
 import {
   calculateCompanionStats,
@@ -208,6 +211,13 @@ export function ItemSidebar({
     [placedArcanes],
   )
 
+  // Kitgun chambers ship zero-stat; reconstruct from the selected grip+loader
+  // using the wiki-sourced modifier tables. Only fetched for kitgun items.
+  const { data: modular } = useQuery({
+    ...modularQuery,
+    enabled: isKitgunItem,
+  })
+
   const [showMaxStacks, setShowMaxStacks] = useState(false)
 
   // Stats panels fold on phones only. On sm+ (≥640px) the `sm:flex` rule
@@ -243,15 +253,24 @@ export function ItemSidebar({
   const weaponStats = useMemo<WeaponStats | null>(() => {
     if (!isWeapon) return null
     const baseWeapon = item as unknown as Gun | Melee
-    const weapon =
-      isZawItem && zawComponents
-        ? adjustStrikeForZaw(
-            baseWeapon,
-            item.name,
-            zawComponents.grip,
-            zawComponents.link,
-          )
-        : baseWeapon
+    let weapon: Gun | Melee = baseWeapon
+    if (isZawItem && zawComponents) {
+      weapon = adjustStrikeForZaw(
+        baseWeapon,
+        item.name,
+        zawComponents.grip,
+        zawComponents.link,
+      )
+    } else if (isKitgunItem && kitgunComponents) {
+      weapon = adjustChamberForKitgun(
+        baseWeapon as Gun,
+        item.family ?? "",
+        kitgunClass,
+        kitgunComponents.grip,
+        kitgunComponents.loader,
+        modular?.kitgun,
+      )
+    }
     const stats = calculateWeaponStats({
       weapon,
       mods: modList,
@@ -274,6 +293,10 @@ export function ItemSidebar({
     isWeapon,
     isZawItem,
     zawComponents,
+    isKitgunItem,
+    kitgunComponents,
+    kitgunClass,
+    modular,
     item,
     modList,
     arcaneList,

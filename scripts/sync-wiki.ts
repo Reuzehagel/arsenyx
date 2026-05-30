@@ -22,8 +22,13 @@ import { resolve } from "node:path"
 import { fetchText } from "./build/http"
 
 /** Modules we mirror. `Module:Weapons/data/{primary,secondary,...}` are the
- *  eight subpages declared by the router; the other seven are independent
- *  top-level Module pages. All are pure data per the upstream contract. */
+ *  eight subpages declared by the router; the other eight are independent
+ *  top-level Module pages. All are pure data per the upstream contract.
+ *
+ *  `Modular/data` carries the per-combination stat modifiers for Kitguns and
+ *  Zaws (chamber/grip/loader and strike/grip/link tables). DE ships modular
+ *  parts as zero-stat shells, so this module is the only verifiable source for
+ *  the reconstructed stats — see scripts/build/merge-modular.ts. */
 const MODULES = [
   "Weapons/data/primary",
   "Weapons/data/secondary",
@@ -40,6 +45,7 @@ const MODULES = [
   "Stances/data",
   "Focus/data",
   "Avionics/data",
+  "Modular/data",
 ] as const
 
 const REPO_ROOT = resolve(import.meta.dirname, "..")

@@ -2,6 +2,7 @@ import {
   getArcanesForCategory,
   getArcanesForSlot,
   getArcanesForWeapon,
+  isKitgunWeapon,
   isZawArcane,
   type ArcaneSlotType,
 } from "@arsenyx/shared/warframe/arcanes"
@@ -45,8 +46,9 @@ function getExaltedArcaneSlot(
  * have none. */
 export function getArcaneSlotCount(
   category: BrowseCategory,
-  displayClass: DetailItem["displayClass"],
+  item: Pick<DetailItem, "displayClass" | "uniqueName">,
 ): number {
+  const displayClass = item.displayClass
   switch (category) {
     case "warframes":
       return 2
@@ -56,6 +58,9 @@ export function getArcaneSlotCount(
       return isZawComponent(displayClass) ? 2 : 1
     case "primary":
     case "secondary":
+      // Gilded kitguns have a dedicated Pax/Residual arcane slot on top of the
+      // regular weapon-arcane slot — both active at once in-game.
+      return isKitgunWeapon(item) ? 2 : 1
     case "exalted-weapons":
       return 1
     case "archwing":
@@ -102,6 +107,24 @@ export function getArcaneSlotConfig(
     }
     return { options: [regular, exodia], labels: ["Melee Arcane", "Exodia"] }
   }
+  // Kitguns get two arcane slots: the regular weapon-arcane slot plus a
+  // dedicated Pax/Residual slot. Split the weapon-eligible pool so the
+  // Kitgun-only arcanes (slotType "Kitgun") live in the second slot and the
+  // ordinary Primary/Secondary arcanes in the first — matching the in-game
+  // arsenal (and preventing a Pax from filling the weapon-arcane slot).
+  if (
+    (category === "primary" || category === "secondary") &&
+    item &&
+    isKitgunWeapon(item)
+  ) {
+    const weapon: Arcane[] = []
+    const kitgun: Arcane[] = []
+    for (const a of getArcanesForWeapon(allArcanes, category, item)) {
+      ;(a.slotType === "Kitgun" ? kitgun : weapon).push(a)
+    }
+    const label = category === "primary" ? "Primary Arcane" : "Secondary Arcane"
+    return { options: [weapon, kitgun], labels: [label, "Pax / Residual"] }
+  }
   // Primary/secondary: gate the weapon-type sub-pools (Shotgun/Bow/Kitgun
   // arcanes) by this weapon's own class so e.g. a rifle doesn't see shotgun
   // or kitgun arcanes. Falls back to the broad per-category pool when we have
@@ -117,20 +140,29 @@ export function getArcaneSlotConfig(
 }
 
 /**
- * Initial arcane placement for the editor hook. For Zaws, routes a saved
- * Exodia to slot 1 and regular melee arcanes to slot 0 — older Zaw builds
- * were saved with a single melee arcane slot, so the saved index is no
- * longer authoritative.
+ * Initial arcane placement for the editor hook. Modular weapons split their
+ * arcane pool across two slots, but were historically saved (and are imported
+ * from Overframe) with a single slot, so the saved index isn't authoritative —
+ * re-bucket by arcane kind:
+ *   - Zaws: Exodia → slot 1, regular melee arcanes → slot 0.
+ *   - Kitguns: Pax/Residual (Kitgun slotType) → slot 1, weapon arcanes → slot 0.
+ * Non-modular items keep their saved order untouched.
  */
 export function resolveInitialArcanes(
-  item: Pick<DetailItem, "displayClass">,
+  item: Pick<DetailItem, "displayClass" | "uniqueName">,
   arcanes: (PlacedArcane | null)[] | undefined,
 ): (PlacedArcane | null)[] | undefined {
-  if (!isZawComponent(item.displayClass) || !arcanes) return arcanes
+  if (!arcanes) return arcanes
+  const isZaw = isZawComponent(item.displayClass)
+  const isKitgun = !isZaw && isKitgunWeapon(item)
+  if (!isZaw && !isKitgun) return arcanes
+  const toSecondSlot = isZaw
+    ? (a: PlacedArcane) => isZawArcane(a.arcane)
+    : (a: PlacedArcane) => a.arcane.slotType === "Kitgun"
   const out: (PlacedArcane | null)[] = [null, null]
   for (const a of arcanes) {
     if (!a) continue
-    const idx = isZawArcane(a.arcane) ? 1 : 0
+    const idx = toSecondSlot(a) ? 1 : 0
     if (!out[idx]) out[idx] = a
   }
   return out

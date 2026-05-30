@@ -1,15 +1,21 @@
-// Kitgun modular weapon data.
+// Kitgun modular weapon data — part *identity* (names, classes, uniqueNames,
+// chamber detection) for the selector UI.
 //
-// Unlike Zaws — where the strike item carries real base stats and the
-// grip/link apply documented additive modifiers (see zaw-data.ts /
-// zaw-stats.ts) — DE ships kitgun chamber/grip/loader parts as zero-stat
-// shells (`totalDamage: 0`, `criticalChance: 0`, ...) and the wiki's
-// Weapons_data_modular dump is geometry-only. The actual per-combination
-// stats are computed by the game engine from internal tables that aren't in
-// any source we can verify. So this module powers part *selection* only — the
-// stat panel is not recomputed from the chosen grip/loader. If a verifiable
-// numeric source ever appears, the modifier tables can be layered on top the
-// same way zaw-stats.ts does.
+// DE ships kitgun chamber/grip/loader parts as zero-stat shells
+// (`totalDamage: 0`, `criticalChance: 0`, ...), and the wiki's
+// Weapons_data_modular dump is geometry-only. The real per-combination stats
+// live in the wiki's `Module:Modular/data` (chamber base crit/status/multi,
+// per-grip damage + fire-rate tables, per-loader crit/status/reload/magazine
+// modifiers). The build mirrors and parses that module into `/data/modular.json`
+// (see scripts/build/merge-modular.ts), and the stat panel reconstructs a
+// chamber from the chosen grip + loader at runtime (apps/web/.../kitgun-stats.ts)
+// — the same shape zaws use. The numeric tables intentionally do NOT live here:
+// they're generated game data, kept out of hand-maintained source.
+//
+// The one stat not in any verifiable source is the magnitude of a kitgun's
+// *explosion* attack (e.g. Tombfinger): the game derives it from an internal
+// multiple absent from every wiki module, so it's left unreconstructed rather
+// than guessed.
 //
 // Everything below (part names, primary/secondary grip split) is sourced from
 // DE's ExportWeapons part paths, not from memory. Fortuna (Solaris United) and

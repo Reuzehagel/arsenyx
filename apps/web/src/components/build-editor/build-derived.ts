@@ -51,7 +51,7 @@ export function getBuildLayout(
     isCompanion: category === "companions",
     normalSlotCount: getNormalSlotCount(category),
     auraSlotCount: getAuraSlotCount(category, item),
-    arcaneCount: getArcaneSlotCount(category, item.displayClass),
+    arcaneCount: getArcaneSlotCount(category, item),
     showExilus: hasExilusSlot(category),
     showStance: hasStanceSlot(item, category),
   }
