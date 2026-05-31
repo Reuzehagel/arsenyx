@@ -131,6 +131,37 @@ export function resetEditorCache() {
   cachedVariants = null
 }
 
+// ─── Variant structural epoch ───────────────────────────────────────────────
+//
+// EditorShell is re-keyed on `${build}-${v}` (see create.tsx) so the
+// per-variant hooks re-initialize from the projected variant on a switch. But
+// `?v` is an *index*, and deleting a non-last active variant slides the next
+// variant into that same index — `?v` is unchanged, no remount fires, and the
+// slot/arcane hooks keep showing the deleted variant's data.
+//
+// This monotonic counter closes that gap: structural mutations (add / delete /
+// duplicate) bump it, CreatePage subscribes via useSyncExternalStore and folds
+// it into the key, so any structural change forces a clean remount regardless
+// of whether the index moved. A module-level store (not React state) because
+// the value has to be readable by CreatePage, which is a sibling above the
+// component that mutates it.
+let variantEpoch = 0
+const variantEpochListeners = new Set<() => void>()
+
+export function subscribeVariantEpoch(onChange: () => void): () => void {
+  variantEpochListeners.add(onChange)
+  return () => variantEpochListeners.delete(onChange)
+}
+
+export function getVariantEpoch(): number {
+  return variantEpoch
+}
+
+function bumpVariantEpoch() {
+  variantEpoch += 1
+  for (const listener of variantEpochListeners) listener()
+}
+
 export interface EditorShellSearch {
   item: string
   category: BrowseCategory
@@ -1078,6 +1109,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       search: (s) => ({ ...s, v: next.length - 1 }),
       replace: true,
     })
+    bumpVariantEpoch()
   }
 
   const duplicateActive = () => {
@@ -1099,6 +1131,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       search: (s) => ({ ...s, v: insertAt === 0 ? undefined : insertAt }),
       replace: true,
     })
+    bumpVariantEpoch()
   }
 
   const deleteActive = () => {
@@ -1115,6 +1148,10 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       }),
       replace: true,
     })
+    // Deleting a non-last active variant keeps `?v` unchanged (the next
+    // variant slides into this index), so the navigate alone won't remount.
+    // Bump the epoch to force the re-hydration regardless.
+    bumpVariantEpoch()
   }
 
   const renameActive = (label: string) => {

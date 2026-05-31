@@ -4,11 +4,13 @@ import {
   MAX_VARIANT_PARSE_INDEX,
 } from "@arsenyx/shared/warframe/build-doc"
 import { createFileRoute, redirect } from "@tanstack/react-router"
-import { Suspense, useEffect } from "react"
+import { Suspense, useEffect, useSyncExternalStore } from "react"
 
 import {
   EditorShell,
+  getVariantEpoch,
   resetEditorCache,
+  subscribeVariantEpoch,
   type EditorShellSearch,
 } from "@/components/build-editor"
 import { Footer } from "@/components/footer"
@@ -97,7 +99,16 @@ function CreatePage() {
   // variant's data. Cheaper than extracting + threading callbacks for
   // every per-variant setter through every subcomponent.
   const search = Route.useSearch()
-  const variantKey = `${search.build ?? "new"}-${search.v ?? 0}`
+  // `?v` is a variant *index*; deleting a non-last active variant leaves it
+  // unchanged while the variant at that index changes. The epoch advances on
+  // every structural variant mutation, so folding it into the key forces a
+  // remount + re-hydration even when the index doesn't move.
+  const variantEpoch = useSyncExternalStore(
+    subscribeVariantEpoch,
+    getVariantEpoch,
+    getVariantEpoch,
+  )
+  const variantKey = `${search.build ?? "new"}-${search.v ?? 0}-${variantEpoch}`
   // Drop the in-memory editor cache on every navigation away from
   // /create (Cancel, route change). Without this, an unsaved variant
   // added before Cancel would silently re-appear next time the user
