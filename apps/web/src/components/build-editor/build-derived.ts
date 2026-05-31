@@ -52,7 +52,7 @@ export function getBuildLayout(
     normalSlotCount: getNormalSlotCount(category),
     auraSlotCount: getAuraSlotCount(category, item),
     arcaneCount: getArcaneSlotCount(category, item),
-    showExilus: hasExilusSlot(category),
+    showExilus: hasExilusSlot(category, item),
     showStance: hasStanceSlot(item, category),
   }
 }

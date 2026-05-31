@@ -7,6 +7,7 @@ import {
   getArcaneSlotConfig,
   getArcaneSlotCount,
   getAuraSlotCount,
+  hasExilusSlot,
   resolveInitialArcanes,
 } from "./layout"
 import type { PlacedArcane } from "./use-arcane-slots"
@@ -36,6 +37,36 @@ const NORMAL_PISTOL: Pick<DetailItem, "displayClass" | "uniqueName"> = {
   uniqueName: "/Lotus/Weapons/Tenno/Pistol/Lex",
 }
 
+// Voidrig's Arquebex (arch-gun) and Bonewidow's Ironbride (arch-melee) are the
+// only exalted weapons that mod from the Archgun/Archmelee pools. Mausolon
+// shares the Archgun pool but is a regular arch-gun (displayClass "Archgun").
+const ARQUEBEX: Pick<DetailItem, "displayClass" | "uniqueName" | "modPools"> = {
+  displayClass: "Exalted Weapon",
+  uniqueName:
+    "/Lotus/Types/Enemies/Orokin/Entrati/EntratiTech/NechroTech/ExaltedArtilleryWeapon",
+  modPools: ["Archgun", "Arquebex"],
+}
+const IRONBRIDE: Pick<DetailItem, "displayClass" | "uniqueName" | "modPools"> = {
+  displayClass: "Exalted Weapon",
+  uniqueName:
+    "/Lotus/Types/Enemies/Orokin/Entrati/EntratiTech/NechroTech/AbilitySword/NechroTechSwordWeapon",
+  modPools: ["Archmelee", "Ironbride"],
+}
+const EXALTED_BLADE: Pick<
+  DetailItem,
+  "displayClass" | "uniqueName" | "modPools"
+> = {
+  displayClass: "Exalted Weapon",
+  uniqueName: "/Lotus/Powersuits/Excalibur/DoomSword",
+  modPools: ["Melee", "Swords", "Exalted Blade"],
+}
+const MAUSOLON: Pick<DetailItem, "displayClass" | "uniqueName" | "modPools"> = {
+  displayClass: "Archgun",
+  uniqueName:
+    "/Lotus/Weapons/Tenno/Archwing/Primary/ThanoTechArchLongGun/ThanoTechLongGun",
+  modPools: ["Archgun", "Mausolon"],
+}
+
 describe("getArcaneSlotCount", () => {
   it("gives kitguns two slots (weapon arcane + Pax/Residual)", () => {
     expect(getArcaneSlotCount("secondary", KITGUN_SECONDARY)).toBe(2)
@@ -44,6 +75,34 @@ describe("getArcaneSlotCount", () => {
 
   it("gives ordinary weapons one slot", () => {
     expect(getArcaneSlotCount("secondary", NORMAL_PISTOL)).toBe(1)
+  })
+
+  it("gives Necramech exalted weapons (Arquebex, Ironbride) no arcane slot", () => {
+    expect(getArcaneSlotCount("exalted-weapons", ARQUEBEX)).toBe(0)
+    expect(getArcaneSlotCount("exalted-weapons", IRONBRIDE)).toBe(0)
+  })
+
+  it("keeps the single arcane slot on frame exalted weapons", () => {
+    expect(getArcaneSlotCount("exalted-weapons", EXALTED_BLADE)).toBe(1)
+    // Mausolon shares the Archgun pool but isn't a Necramech exalted weapon.
+    expect(getArcaneSlotCount("exalted-weapons", MAUSOLON)).toBe(1)
+  })
+})
+
+describe("hasExilusSlot", () => {
+  it("denies an exilus slot to Necramech exalted weapons", () => {
+    expect(hasExilusSlot("exalted-weapons", ARQUEBEX)).toBe(false)
+    expect(hasExilusSlot("exalted-weapons", IRONBRIDE)).toBe(false)
+  })
+
+  it("keeps the exilus slot on other exalted weapons", () => {
+    expect(hasExilusSlot("exalted-weapons", EXALTED_BLADE)).toBe(true)
+    expect(hasExilusSlot("exalted-weapons", MAUSOLON)).toBe(true)
+  })
+
+  it("defers to the category for non-exalted items", () => {
+    expect(hasExilusSlot("primary", NORMAL_PISTOL)).toBe(true)
+    expect(hasExilusSlot("companions", NORMAL_PISTOL)).toBe(false)
   })
 })
 

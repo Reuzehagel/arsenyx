@@ -50,14 +50,20 @@ export function categorizeCompanion(_c: MergedCompanion): BrowseCategory {
   return "companions"
 }
 
-/** A weapon is exalted if the wiki tags it "Exalted Weapon" OR a warframe/
+/** A weapon is exalted if the wiki tags it "Exalted Weapon", OR a warframe/
  *  necramech lists it in its `exalted` array (the wiki sometimes labels them
- *  by melee Class instead, e.g. Garuda's Talons = "Claws"). */
+ *  by melee Class instead, e.g. Garuda's Talons = "Claws") AND it's a summoned
+ *  `SpecialItems` weapon rather than standalone gear. The productCategory check
+ *  is what keeps Mausolon out: Necramechs list their *standard* equipped
+ *  arch-gun (Mausolon, a normal `SpaceGuns` Archgun) in `exalted` alongside
+ *  their real exalted weapon, but it's independently built, not summoned. */
 export function isExaltedWeapon(
   w: MergedWeapon,
   exaltedSet: Set<string>,
 ): boolean {
-  return w.displayClass === "Exalted Weapon" || exaltedSet.has(w.uniqueName)
+  if (w.displayClass === "Exalted Weapon") return true
+  if (!exaltedSet.has(w.uniqueName)) return false
+  return w.productCategory === "SpecialItems"
 }
 
 /** Route a merged weapon to its BrowseCategory.

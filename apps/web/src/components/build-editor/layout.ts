@@ -13,12 +13,39 @@ import type { BrowseCategory, DetailItem } from "@/lib/warframe"
 import type { PlacedArcane } from "./use-arcane-slots"
 
 // Category-only slot facts live in shared (the api Overframe importer needs
-// them too). Re-exported here so editor call sites keep importing from the
-// build-editor barrel.
-export {
-  getNormalSlotCount,
-  hasExilusSlot,
-} from "@arsenyx/shared/warframe/slot-layout"
+// them too). `getNormalSlotCount` is re-exported as-is; `hasExilusSlot` gets
+// an item-aware wrapper below (Necramech exalted weapons are the exception),
+// so the shared version is imported under an alias for the wrapper to delegate
+// to.
+import { hasExilusSlot as categoryHasExilusSlot } from "@arsenyx/shared/warframe/slot-layout"
+
+export { getNormalSlotCount } from "@arsenyx/shared/warframe/slot-layout"
+
+/** Arquebex and Ironbride are the Necramechs' exalted weapons (Voidrig's
+ * arch-gun and Bonewidow's arch-melee). Unlike frame exalted weapons they
+ * follow standard Necramech-weapon rules — no Exilus slot and no Arcane slot —
+ * so the editor must not surface either. They're the only `exalted-weapons`
+ * entries that mod from the Archgun/Archmelee pools; Mausolon shares the
+ * Archgun pool but carries `displayClass: "Archgun"`, so the displayClass guard
+ * excludes it. (wiki.warframe.com/w/Arquebex, /w/Ironbride) */
+function isNecramechExalted(
+  item: Pick<DetailItem, "displayClass" | "modPools">,
+): boolean {
+  if (item.displayClass !== "Exalted Weapon") return false
+  const pools = item.modPools ?? []
+  return pools.includes("Archgun") || pools.includes("Archmelee")
+}
+
+/** Whether to render an Exilus slot. Category-level for every item except
+ * exalted weapons, where the two Necramech exalted weapons (Arquebex,
+ * Ironbride) lack one; all other exalted weapons keep the category default. */
+export function hasExilusSlot(
+  category: BrowseCategory,
+  item: Pick<DetailItem, "displayClass" | "modPools">,
+): boolean {
+  if (category === "exalted-weapons" && isNecramechExalted(item)) return false
+  return categoryHasExilusSlot(category)
+}
 
 /** Zaw strikes are emitted as individual items with a wiki Class like
  *  "Zaw Dagger / Staff", "Zaw Polearm / Hammer", etc. The "Zaw " prefix is
@@ -46,7 +73,7 @@ function getExaltedArcaneSlot(
  * have none. */
 export function getArcaneSlotCount(
   category: BrowseCategory,
-  item: Pick<DetailItem, "displayClass" | "uniqueName">,
+  item: Pick<DetailItem, "displayClass" | "uniqueName" | "modPools">,
 ): number {
   const displayClass = item.displayClass
   switch (category) {
@@ -62,7 +89,8 @@ export function getArcaneSlotCount(
       // regular weapon-arcane slot — both active at once in-game.
       return isKitgunWeapon(item) ? 2 : 1
     case "exalted-weapons":
-      return 1
+      // Arquebex / Ironbride (Necramech exalted) have no Arcane slot.
+      return isNecramechExalted(item) ? 0 : 1
     case "archwing":
       // Wiki Class is "Archgun" (no hyphen) for arch-gun primaries.
       return displayClass === "Archgun" ? 2 : 0
