@@ -38,6 +38,7 @@ import {
 } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import { useEffect, useMemo, useState } from "react"
+import { toast } from "sonner"
 
 import { EditorHeader } from "@/components/create-editor/editor-header"
 import { SearchPanel } from "@/components/create-editor/search-panel"
@@ -55,7 +56,6 @@ import {
   SYNTHETIC_VARIANT_LABEL,
 } from "@/lib/codec/build-codec-adapter"
 import { useHotkey } from "@/lib/hooks/hotkeys"
-import { useCopyToClipboard } from "@/lib/hooks/use-copy-to-clipboard"
 import { consumeDraft } from "@/lib/import-draft"
 import { arcanesQuery } from "@/lib/queries/arcanes-query"
 import {
@@ -72,6 +72,7 @@ import { modsQuery } from "@/lib/queries/mods-query"
 import { myOrgsQuery } from "@/lib/queries/org-query"
 import { padShards, type PlacedShard } from "@/lib/shards"
 import { apiErrorMessage, apiFetch } from "@/lib/util/api-client"
+import { copyToClipboard } from "@/lib/util/clipboard"
 import { getCategoryLabel, type BrowseCategory } from "@/lib/warframe"
 
 import { AutoFormaDialog } from "./auto-forma-dialog"
@@ -351,10 +352,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       draft?.buildName ??
       item.name,
   )
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "error">(
-    "idle",
-  )
-  const [saveError, setSaveError] = useState<string | null>(null)
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving">("idle")
 
   const [visibility, setVisibility] = useState<PublishVisibility>(
     () => existingBuild?.visibility ?? "PUBLIC",
@@ -648,7 +646,6 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
 
   const isUpdate = !!existingBuild && existingBuild.isOwner
 
-  const { copied: shareCopied, copy: copyShare } = useCopyToClipboard()
   const handleShare = () => {
     const state = savedDataToBuildState({
       item: {
@@ -747,7 +744,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       encoded = encodeBuild(state)
     }
     const url = `${window.location.origin}/create?item=${encodeURIComponent(slug)}&category=${encodeURIComponent(category)}&share=${encodeURIComponent(encoded)}`
-    void copyShare(url)
+    void copyToClipboard(url, "Build link copied")
   }
 
   const handleSaveClick = () => {
@@ -762,6 +759,11 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     void performSave(visibility, organizationId, hideAuthor)
   }
 
+  // Ctrl/Cmd+S saves from anywhere in the editor, including while a text
+  // field (name, guide) has focus — hence allowInEditable. preventDefault
+  // (the default) stops the browser's own Save dialog.
+  useHotkey("mod+s", handleSaveClick, { allowInEditable: true })
+
   const performSave = async (
     nextVisibility: PublishVisibility,
     nextOrganizationId: string | null,
@@ -773,7 +775,6 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     }
     setPublishDialogOpen(false)
     setSaveStatus("saving")
-    setSaveError(null)
     try {
       // Snapshot the active variant's current editor state, then merge
       // back into the full variants array. Single-variant builds emit
@@ -841,10 +842,24 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       // Drop the in-memory variants cache so a follow-up edit re-hydrates
       // from the persisted server state rather than stale local edits.
       cachedVariants = null
+      toast.success(isUpdate ? "Build saved" : "Build published")
       navigate({ to: "/builds/$slug", params: { slug } })
     } catch (err) {
-      setSaveStatus("error")
-      setSaveError(apiErrorMessage(err, "save_failed"))
+      // Re-enable the Save button and surface the failure as a toast with a
+      // Retry action. This is the only place a save can fail (API down), so
+      // there's no longer a need for the inline error text in the header.
+      setSaveStatus("idle")
+      toast.error(apiErrorMessage(err, "Couldn't save the build"), {
+        action: {
+          label: "Retry",
+          onClick: () =>
+            void performSave(
+              nextVisibility,
+              nextOrganizationId,
+              nextHideAuthor,
+            ),
+        },
+      })
     }
   }
 
@@ -1002,7 +1017,6 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
         onBuildNameChange={setBuildName}
         onSave={handleSaveClick}
         saveStatus={saveStatus}
-        saveError={saveError}
         isSignedIn={!!session?.user}
         settings={
           isUpdate
@@ -1010,7 +1024,6 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
             : undefined
         }
         onShare={handleShare}
-        shareCopied={shareCopied}
       />
 
       <DragController slots={slots}>

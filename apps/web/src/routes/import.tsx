@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { Check, Copy, UploadCloud } from "lucide-react"
+import { Copy, UploadCloud } from "lucide-react"
 import { useMemo, useState } from "react"
 
 import {
@@ -16,7 +16,6 @@ import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useCopyToClipboard } from "@/lib/hooks/use-copy-to-clipboard"
 import { saveDraft } from "@/lib/import-draft"
 import {
   applyOverframeScrape,
@@ -29,6 +28,7 @@ import { itemQuery } from "@/lib/queries/item-query"
 import { itemsIndexQuery } from "@/lib/queries/items-index-query"
 import { modsQuery } from "@/lib/queries/mods-query"
 import { apiErrorMessage, apiFetch, ApiError } from "@/lib/util/api-client"
+import { copyToClipboard } from "@/lib/util/clipboard"
 
 export const Route = createFileRoute("/import")({
   loader: async ({ context }) => {
@@ -334,22 +334,18 @@ function ImportPage() {
 }
 
 function CopyDebugButton({ payload }: { payload: unknown }) {
-  const { copied, copy } = useCopyToClipboard()
   return (
     <Button
       variant="outline"
       size="sm"
-      onClick={() => void copy(JSON.stringify(payload, null, 2))}
+      onClick={() =>
+        void copyToClipboard(
+          JSON.stringify(payload, null, 2),
+          "Debug JSON copied",
+        )
+      }
     >
-      {copied ? (
-        <>
-          <Check className="h-4 w-4" /> Copied
-        </>
-      ) : (
-        <>
-          <Copy className="h-4 w-4" /> Copy debug JSON
-        </>
-      )}
+      <Copy className="h-4 w-4" /> Copy debug JSON
     </Button>
   )
 }

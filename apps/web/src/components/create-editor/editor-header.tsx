@@ -1,17 +1,27 @@
 import { Link as RouterLink } from "@tanstack/react-router"
-import { Check, Pencil, Settings2, Share2, UploadCloud, X } from "lucide-react"
+import { Pencil, Settings2, Share2, UploadCloud, X } from "lucide-react"
 import { useRef, useState } from "react"
 
 import { type PublishVisibility } from "@/components/build-editor"
 import { EndoFormaBadges } from "@/components/endo-forma-badges"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Kbd } from "@/components/ui/kbd"
 import { formatVisibility } from "@/lib/util/user-display"
 import {
   getImageUrl,
   type BrowseCategory,
   type DetailItem,
 } from "@/lib/warframe"
+
+// Mac shows ⌘S; everything else shows Ctrl S. Computed once — the platform
+// doesn't change mid-session. The matching hotkey is registered in
+// editor-shell via useHotkey("mod+s").
+const SAVE_HINT =
+  typeof navigator !== "undefined" &&
+  /Mac|iPhone|iPad/.test(navigator.userAgent)
+    ? "⌘S"
+    : "Ctrl S"
 
 export function EditorHeader({
   item,
@@ -26,11 +36,9 @@ export function EditorHeader({
   onBuildNameChange,
   onSave,
   saveStatus,
-  saveError,
   isSignedIn,
   settings,
   onShare,
-  shareCopied,
 }: {
   item: DetailItem
   category: BrowseCategory
@@ -43,12 +51,10 @@ export function EditorHeader({
   displayImageName?: string
   onBuildNameChange: (name: string) => void
   onSave: () => void
-  saveStatus: "idle" | "saving" | "error"
-  saveError: string | null
+  saveStatus: "idle" | "saving"
   isSignedIn: boolean
   settings?: { visibility: PublishVisibility; onEdit: () => void }
   onShare: () => void
-  shareCopied: boolean
 }) {
   const [editing, setEditing] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -118,9 +124,6 @@ export function EditorHeader({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {saveStatus === "error" && saveError ? (
-            <span className="text-destructive text-xs">{saveError}</span>
-          ) : null}
           {settings && (
             <Button
               variant="outline"
@@ -138,17 +141,8 @@ export function EditorHeader({
             onClick={onShare}
             title="Copy shareable link"
           >
-            {shareCopied ? (
-              <>
-                <Check data-icon="inline-start" />
-                Copied
-              </>
-            ) : (
-              <>
-                <Share2 data-icon="inline-start" />
-                Share
-              </>
-            )}
+            <Share2 data-icon="inline-start" />
+            Share
           </Button>
           <Button size="sm" onClick={onSave} disabled={saveStatus === "saving"}>
             <UploadCloud data-icon="inline-start" />
@@ -157,6 +151,11 @@ export function EditorHeader({
               : isSignedIn
                 ? "Save"
                 : "Save (sign in)"}
+            {isSignedIn && saveStatus !== "saving" ? (
+              <Kbd className="bg-primary-foreground/15 text-primary-foreground">
+                {SAVE_HINT}
+              </Kbd>
+            ) : null}
           </Button>
           <Button
             variant="outline"

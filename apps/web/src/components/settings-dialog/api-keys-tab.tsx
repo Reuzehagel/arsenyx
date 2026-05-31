@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Check, Copy } from "lucide-react"
+import { Copy } from "lucide-react"
 import * as React from "react"
 
 import { Button } from "@/components/ui/button"
@@ -20,13 +20,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { authClient } from "@/lib/auth-client"
-import { useCopyToClipboard } from "@/lib/hooks/use-copy-to-clipboard"
 import {
   type ApiKeySummary,
   createApiKey,
   myApiKeysQuery,
   revokeApiKey,
 } from "@/lib/queries/me-query"
+import { copyToClipboard } from "@/lib/util/clipboard"
 import { formatLocaleDate } from "@/lib/util/relative-time"
 
 import { SignedOutNotice } from "./shared"
@@ -128,7 +128,6 @@ function CreateApiKeyForm({ disabled }: { disabled: boolean }) {
     token: string
     apiKey: ApiKeySummary
   } | null>(null)
-  const { copied, copy } = useCopyToClipboard()
 
   const toggleScope = (scope: string) => {
     setScopes((prev) => {
@@ -170,14 +169,12 @@ function CreateApiKeyForm({ disabled }: { disabled: boolean }) {
             type="button"
             size="sm"
             variant="outline"
-            onClick={() => void copy(justCreated.token)}
+            onClick={() =>
+              void copyToClipboard(justCreated.token, "API key copied")
+            }
           >
-            {copied ? (
-              <Check className="size-3.5" />
-            ) : (
-              <Copy className="size-3.5" />
-            )}
-            {copied ? "Copied" : "Copy"}
+            <Copy className="size-3.5" />
+            Copy
           </Button>
         </div>
         <div className="pt-1">
