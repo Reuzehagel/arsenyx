@@ -138,6 +138,7 @@ function IncarnonTierSlot({
                     setOpen(false)
                   }}
                   title="Clear selection"
+                  aria-label="Clear selection"
                 >
                   <X className="size-3" />
                 </Button>

@@ -73,7 +73,7 @@ export function BuildActionsMenu({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-40">
           <DropdownMenuItem onClick={onFork} disabled={fork.isPending}>
-            <GitFork className="size-4" />
+            <GitFork />
             {fork.isPending ? "Forking…" : "Fork"}
           </DropdownMenuItem>
           {isOwner ? (
@@ -83,7 +83,7 @@ export function BuildActionsMenu({
                 variant="destructive"
                 onClick={() => setConfirmOpen(true)}
               >
-                <Trash2 className="size-4" />
+                <Trash2 />
                 Delete
               </DropdownMenuItem>
             </>

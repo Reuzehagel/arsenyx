@@ -31,11 +31,11 @@ export function ShareMenu({ slug }: { slug: string }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-44">
         <DropdownMenuItem onClick={onCopyLink}>
-          <Link2 className="size-4" />
+          <Link2 />
           Copy link
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onCopyEmbed}>
-          <Code2 className="size-4" />
+          <Code2 />
           Copy embed code
         </DropdownMenuItem>
       </DropdownMenuContent>

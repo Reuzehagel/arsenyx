@@ -58,7 +58,7 @@ export function Header() {
                     render={<Link href={item.href} />}
                     nativeButton={false}
                     onClick={() => setMobileNavOpen(false)}
-                    className="justify-start"
+                    className="cursor-default justify-start"
                   >
                     {item.label}
                   </Button>
@@ -81,6 +81,7 @@ export function Header() {
                 size="sm"
                 render={<Link href={item.href} />}
                 nativeButton={false}
+                className="cursor-default"
               >
                 {item.label}
               </Button>

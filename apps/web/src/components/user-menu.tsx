@@ -32,8 +32,9 @@ export function UserMenu() {
         variant="ghost"
         render={<Link href={ROUTES.signIn} />}
         nativeButton={false}
+        className="cursor-default"
       >
-        <LogIn className="size-4" />
+        <LogIn data-icon="inline-start" />
         Sign in
       </Button>
     )

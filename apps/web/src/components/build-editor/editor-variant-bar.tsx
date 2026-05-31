@@ -139,6 +139,7 @@ function EditorVariantBarMulti({
                     <button
                       type="button"
                       title="Variant settings"
+                      aria-label="Variant settings"
                       className="border-primary bg-primary text-primary-foreground rounded-r-md border border-l-0 px-1.5 py-1 text-sm"
                     >
                       ⚙

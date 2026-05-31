@@ -173,7 +173,7 @@ function CreateApiKeyForm({ disabled }: { disabled: boolean }) {
               void copyToClipboard(justCreated.token, "API key copied")
             }
           >
-            <Copy className="size-3.5" />
+            <Copy data-icon="inline-start" />
             Copy
           </Button>
         </div>

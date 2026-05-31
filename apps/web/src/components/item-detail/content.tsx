@@ -110,6 +110,7 @@ export function ItemDetailContent({
                 <Button
                   size="lg"
                   nativeButton={false}
+                  className="cursor-default"
                   render={
                     <RouterLink
                       to="/create"

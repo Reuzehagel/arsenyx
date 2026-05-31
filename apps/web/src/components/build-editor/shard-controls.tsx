@@ -160,6 +160,7 @@ function ShardPicker({
               size="icon-sm"
               onClick={() => setColor(null)}
               title="Back"
+              aria-label="Back"
               className="-ml-1"
             >
               <ChevronLeft className="size-3.5" />
@@ -175,6 +176,7 @@ function ShardPicker({
             size="icon-sm"
             onClick={onClear}
             title="Remove shard"
+            aria-label="Remove shard"
           >
             <X className="size-3" />
           </Button>

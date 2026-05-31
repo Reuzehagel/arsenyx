@@ -128,8 +128,9 @@ function OrgHeader({ org }: { org: OrgProfile }) {
           size="sm"
           render={<Link href={`/org/${org.slug}/settings`} />}
           nativeButton={false}
+          className="cursor-default"
         >
-          <Settings className="size-4" />
+          <Settings data-icon="inline-start" />
           Settings
         </Button>
       ) : null}

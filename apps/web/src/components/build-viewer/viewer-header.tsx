@@ -143,6 +143,7 @@ export function ViewerHeader({
             <Button
               size="sm"
               nativeButton={false}
+              className="cursor-default"
               render={
                 <RouterLink
                   to="/create"
