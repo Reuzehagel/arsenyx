@@ -28,6 +28,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { useHotkey } from "@/lib/hooks/hotkeys"
 import {
   BASE_ELEMENTS,
@@ -184,6 +189,28 @@ function slotKindPredicate(kind: ModSlotKind | undefined) {
   if (kind === "aura") return (m: Mod) => isAuraMod(m)
   if (kind === "stance") return (m: Mod) => isStanceMod(m)
   return (m: Mod) => !isAuraMod(m) && !isStanceMod(m) && isExilusCompatible(m)
+}
+
+const SLOT_KIND_REASON: Record<"aura" | "stance" | "exilus", string> = {
+  aura: "Only aura mods fit the aura slot",
+  stance: "Only stance mods fit the stance slot",
+  exilus: "Only exilus mods fit the exilus slot",
+}
+
+// Why a card is dimmed, for the hover tooltip. Returns null for a normal match
+// and — deliberately — for a card dimmed only because it doesn't match the
+// search query: that's the user's own filter, so it needs no explanation.
+// "Already equipped" wins over the slot-kind reason; it's the more actionable
+// thing to tell someone hunting for a mod they can't find.
+function incompatibilityReason(
+  mod: Mod,
+  kind: ModSlotKind | undefined,
+  isUsed: boolean,
+): string | null {
+  if (isUsed) return "Already equipped in this build"
+  if (!kind || kind === "normal") return null
+  const pred = slotKindPredicate(kind)
+  return pred && !pred(mod) ? SLOT_KIND_REASON[kind] : null
 }
 
 export function ModSearchGrid({
@@ -517,6 +544,7 @@ export function ModSearchGrid({
               isMatch={isMatch}
               isUsed={isUsed}
               isFocusable={isFocusable}
+              reason={incompatibilityReason(mod, selectedSlotKind, isUsed)}
               draggable={!!onSelect}
               registerRef={registerCardRef}
               onSelect={cellOnSelect}
@@ -534,6 +562,8 @@ interface PoolCardCellProps {
   isMatch: boolean
   isUsed: boolean
   isFocusable: boolean
+  /** When set, the card is dimmed for this reason; surfaced via a tooltip. */
+  reason: string | null
   draggable: boolean
   registerRef: (uniqueName: string, el: HTMLDivElement | null) => void
   onSelect?: (mod: Mod) => void
@@ -545,6 +575,7 @@ const PoolCardCell = memo(function PoolCardCell({
   isMatch,
   isUsed,
   isFocusable,
+  reason,
   draggable,
   registerRef,
   onSelect,
@@ -571,7 +602,7 @@ const PoolCardCell = memo(function PoolCardCell({
     },
     [startDrag, draggable, isFocusable, mod],
   )
-  return (
+  const cell = (
     <div
       ref={setRef}
       tabIndex={-1}
@@ -601,5 +632,16 @@ const PoolCardCell = memo(function PoolCardCell({
         )}
       />
     </div>
+  )
+
+  // Only dimmed-for-a-reason cards carry a tooltip. Plain matches and
+  // search-only non-matches stay tooltip-free, so the common browsing case
+  // mounts zero tooltip roots.
+  if (!reason) return cell
+  return (
+    <Tooltip>
+      <TooltipTrigger render={cell} />
+      <TooltipContent>{reason}</TooltipContent>
+    </Tooltip>
   )
 })
