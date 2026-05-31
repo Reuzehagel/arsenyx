@@ -218,7 +218,16 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     if (draft) return draft.data
     // A restored draft overrides the saved build — that's the whole point.
     // The "Draft restored" toast + reset control keep it from being haunted.
-    if (localDraft) return localDraft.buildData
+    // Normalize like a saved build: the draft persisted with mod/arcane
+    // `imageName` stripped (see stripPersistedImages), so re-resolve images
+    // from the catalog — otherwise restored mods render with a blank "?" tile.
+    if (localDraft)
+      return normalizeBuildData(
+        localDraft.buildData,
+        allMods,
+        allArcanes,
+        helminthAbilities,
+      )
     if (existingBuild)
       return normalizeBuildData(
         existingBuild.buildData,
