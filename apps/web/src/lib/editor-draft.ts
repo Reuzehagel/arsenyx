@@ -72,27 +72,3 @@ export function clearEditorDraft(storeKey: string): void {
     /* ignore */
   }
 }
-
-/**
- * Stable JSON for equality checks: sorts object keys and drops `undefined`
- * so two payloads with the same content but different key order or absent-vs-
- * undefined fields compare equal. Used to tell whether the live editor state
- * has drifted from a known baseline (the saved build / a pristine new build).
- */
-export function serializeDraft(payload: EditorDraftPayload): string {
-  return JSON.stringify(canonicalize(payload))
-}
-
-function canonicalize(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonicalize)
-  if (value && typeof value === "object") {
-    const out: Record<string, unknown> = {}
-    for (const k of Object.keys(value as Record<string, unknown>).sort()) {
-      const v = (value as Record<string, unknown>)[k]
-      if (v === undefined) continue
-      out[k] = canonicalize(v)
-    }
-    return out
-  }
-  return value
-}

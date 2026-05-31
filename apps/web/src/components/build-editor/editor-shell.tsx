@@ -59,7 +59,6 @@ import {
   clearEditorDraft,
   loadEditorDraft,
   saveEditorDraft,
-  serializeDraft,
   type EditorDraftPayload,
 } from "@/lib/editor-draft"
 import { useHotkey } from "@/lib/hooks/hotkeys"
@@ -200,15 +199,19 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   // distinguish two consecutive new-build sessions on different items).
   const storeKey = buildSlug ?? `__new_build__:${category}:${slug}`
 
-  // Autosaved draft restore. Only on a *fresh* mount — when there's no
-  // in-memory cache for this build (a variant-switch remount keeps the cache,
-  // so we must not re-restore or re-toast then) and nothing more explicit
-  // (share link, import) is already driving hydration.
-  const [localDraft] = useState<EditorDraftPayload | null>(() => {
-    if (shareEncoded || draftId) return null
-    if (cachedVariants && cachedVariants.key === storeKey) return null
-    return loadEditorDraft(storeKey)
-  })
+  // Whether a draft exists on disk for this build, read once at mount. Null
+  // when a share link or import is driving hydration — we don't surface a
+  // stale draft as "active" in that case.
+  const [storedDraft] = useState<EditorDraftPayload | null>(() =>
+    shareEncoded || draftId ? null : loadEditorDraft(storeKey),
+  )
+  // Hydrate the editor from the draft only on a *fresh* mount. A variant-switch
+  // remount keeps the in-memory cache, so re-applying the draft (and re-firing
+  // the restore toast) would be wrong — but the draft still exists on disk, so
+  // `storedDraft` stays non-null to keep the badge visible.
+  const [localDraft] = useState<EditorDraftPayload | null>(() =>
+    cachedVariants && cachedVariants.key === storeKey ? null : storedDraft,
+  )
 
   // Full normalized saved data (all variants intact); used when persisting.
   const savedDataAll: SavedBuildData = useMemo(() => {
@@ -377,11 +380,9 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   )
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving">("idle")
   // Whether an autosaved draft is currently overriding the saved build. Seeded
-  // from storage (so it survives variant-switch remounts, where localDraft is
-  // intentionally null) and kept in sync by the autosave effect below.
-  const [hasDraft, setHasDraft] = useState(
-    () => localDraft !== null || loadEditorDraft(storeKey) !== null,
-  )
+  // from `storedDraft` (which survives variant-switch remounts, where
+  // localDraft is intentionally null) and kept in sync by the autosave effect.
+  const [hasDraft, setHasDraft] = useState(() => storedDraft !== null)
 
   const [visibility, setVisibility] = useState<PublishVisibility>(
     () => existingBuild?.visibility ?? "PUBLIC",
@@ -784,6 +785,10 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   }
 
   const handleSaveClick = () => {
+    // Guard re-entry: the Save button is disabled while saving, but the
+    // Ctrl/Cmd+S hotkey bypasses that, so a double-press could fire two
+    // concurrent saves (duplicate POST, double navigate/toast).
+    if (saveStatus === "saving") return
     if (!session?.user) {
       navigate({ to: "/auth/signin" })
       return
@@ -857,6 +862,9 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       // there's no longer a need for the inline error text in the header.
       setSaveStatus("idle")
       toast.error(apiErrorMessage(err, "Couldn't save the build"), {
+        // A failed save is important enough to stay until the user acts on it,
+        // rather than auto-dismissing after a few seconds.
+        duration: Infinity,
         action: {
           label: "Retry",
           onClick: () =>
@@ -953,41 +961,34 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
 
   // ─── Autosave draft ─────────────────────────────────────────────────
   // Debounce the full editor state to localStorage so a refresh doesn't wipe
-  // unsaved work. Skip the hydration render, and clear the draft when the
-  // state returns to its baseline (saved build, or pristine new build) so a
-  // reload doesn't resurrect a no-op "draft".
-  const draftBaselineRef = useRef<string | null>(null)
+  // unsaved work. The first run is the hydration render (no user edit yet), so
+  // skip it; after that, any change writes a draft. The draft is cleared on a
+  // successful save and by the explicit Reset/Discard control. We intentionally
+  // don't auto-clear on a manual revert-to-saved: that needed a baseline
+  // snapshot that was wrong after a variant-switch remount (it got re-seeded to
+  // the dirty state, so it could delete a live draft) — the visible badge plus
+  // Reset/Discard cover bailing out instead.
   const draftInitializedRef = useRef(false)
 
   useEffect(() => {
-    const payload: EditorDraftPayload = {
-      buildData: captureBuildData(),
-      buildName,
-      guideSummary,
-      guideDescription,
-    }
-    const snapshot = serializeDraft(payload)
     if (!draftInitializedRef.current) {
       draftInitializedRef.current = true
-      // A restored draft is already dirty vs the saved build — leave it in
-      // storage. Otherwise the mount state IS the baseline, so reverting back
-      // to it later should clear the draft.
-      if (localDraft === null) draftBaselineRef.current = snapshot
       return
     }
     const handle = window.setTimeout(() => {
-      if (snapshot === draftBaselineRef.current) {
-        clearEditorDraft(storeKey)
-        setHasDraft(false)
-      } else {
-        saveEditorDraft(storeKey, payload)
-        setHasDraft(true)
-      }
+      // Capture + serialize inside the debounce so a burst of edits costs one
+      // snapshot per idle window, not one per keystroke.
+      saveEditorDraft(storeKey, {
+        buildData: captureBuildData(),
+        buildName,
+        guideSummary,
+        guideDescription,
+      })
+      setHasDraft(true)
     }, 600)
     return () => window.clearTimeout(handle)
-    // Re-run on any edit. captureBuildData/serializeDraft read the values
-    // below; listing them keeps the snapshot current without re-binding the
-    // helpers in deps.
+    // Re-run on any edit. captureBuildData reads the values below; listing them
+    // keeps the snapshot current without re-binding the helper in deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     buildName,
