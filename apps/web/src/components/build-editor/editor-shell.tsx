@@ -37,7 +37,7 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import { EditorHeader } from "@/components/create-editor/editor-header"
@@ -55,6 +55,13 @@ import {
   SYNTHETIC_VARIANT_ID,
   SYNTHETIC_VARIANT_LABEL,
 } from "@/lib/codec/build-codec-adapter"
+import {
+  clearEditorDraft,
+  loadEditorDraft,
+  saveEditorDraft,
+  serializeDraft,
+  type EditorDraftPayload,
+} from "@/lib/editor-draft"
 import { useHotkey } from "@/lib/hooks/hotkeys"
 import { consumeDraft } from "@/lib/import-draft"
 import { arcanesQuery } from "@/lib/queries/arcanes-query"
@@ -187,9 +194,28 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     }
     return null
   })
+  // Identity for the in-memory cache and the localStorage draft bucket.
+  // `buildSlug` for an existing build; item+category for a new one (the
+  // EditorShell isn't re-keyed on item change, but the lookup must still
+  // distinguish two consecutive new-build sessions on different items).
+  const storeKey = buildSlug ?? `__new_build__:${category}:${slug}`
+
+  // Autosaved draft restore. Only on a *fresh* mount — when there's no
+  // in-memory cache for this build (a variant-switch remount keeps the cache,
+  // so we must not re-restore or re-toast then) and nothing more explicit
+  // (share link, import) is already driving hydration.
+  const [localDraft] = useState<EditorDraftPayload | null>(() => {
+    if (shareEncoded || draftId) return null
+    if (cachedVariants && cachedVariants.key === storeKey) return null
+    return loadEditorDraft(storeKey)
+  })
+
   // Full normalized saved data (all variants intact); used when persisting.
   const savedDataAll: SavedBuildData = useMemo(() => {
     if (draft) return draft.data
+    // A restored draft overrides the saved build — that's the whole point.
+    // The "Draft restored" toast + reset control keep it from being haunted.
+    if (localDraft) return localDraft.buildData
     if (existingBuild)
       return normalizeBuildData(
         existingBuild.buildData,
@@ -201,6 +227,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     return {} as SavedBuildData
   }, [
     draft,
+    localDraft,
     existingBuild,
     shareHydrated,
     allMods,
@@ -211,13 +238,8 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   // Track the variants list as mutable state so add/duplicate/delete can
   // mutate it before save without round-tripping through the URL.
   // EditorShell is re-keyed on variant switch, which would normally reset
-  // useState. The module-level cache below preserves the in-progress
-  // variants array across those remounts (keyed by buildSlug, single
-  // entry — replaced when switching to a different build).
-  // Include `item` and `category` so two consecutive new-build sessions on
-  // different items don't share the same cache bucket (the EditorShell isn't
-  // re-keyed on item change, but the cache lookup must still distinguish).
-  const storeKey = buildSlug ?? `__new_build__:${category}:${slug}`
+  // useState. The module-level cache (keyed by storeKey) preserves the
+  // in-progress variants array across those remounts.
   const [variants, _setVariants] = useState<SavedVariant[]>(() => {
     if (cachedVariants && cachedVariants.key === storeKey) {
       return cachedVariants.data
@@ -348,11 +370,18 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   const [buildName, setBuildName] = useState(
     () =>
       cachedShared?.buildName ??
+      localDraft?.buildName ??
       existingBuild?.name ??
       draft?.buildName ??
       item.name,
   )
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving">("idle")
+  // Whether an autosaved draft is currently overriding the saved build. Seeded
+  // from storage (so it survives variant-switch remounts, where localDraft is
+  // intentionally null) and kept in sync by the autosave effect below.
+  const [hasDraft, setHasDraft] = useState(
+    () => localDraft !== null || loadEditorDraft(storeKey) !== null,
+  )
 
   const [visibility, setVisibility] = useState<PublishVisibility>(
     () => existingBuild?.visibility ?? "PUBLIC",
@@ -396,11 +425,18 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   }
 
   const [guideSummary, setGuideSummary] = useState(
-    () => cachedShared?.guideSummary ?? existingBuild?.guide?.summary ?? "",
+    () =>
+      cachedShared?.guideSummary ??
+      localDraft?.guideSummary ??
+      existingBuild?.guide?.summary ??
+      "",
   )
   const [guideDescription, setGuideDescription] = useState(
     () =>
-      cachedShared?.guideDescription ?? existingBuild?.guide?.description ?? "",
+      cachedShared?.guideDescription ??
+      localDraft?.guideDescription ??
+      existingBuild?.guide?.description ??
+      "",
   )
   // Scope of the GuideEditor — build-wide vs a specific variant. Resets
   // to "build" on EditorShell remount (variant switches) which keeps the
@@ -776,15 +812,6 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     setPublishDialogOpen(false)
     setSaveStatus("saving")
     try {
-      // Snapshot the active variant's current editor state, then merge
-      // back into the full variants array. Single-variant builds emit
-      // a v1-shape payload (no `variants` field) for backwards-compat;
-      // multi-variant builds emit both top-level (mirroring active for
-      // legacy clients) and the variants array.
-      const activeSnapshot = captureActiveSnapshot()
-      const nextVariants = variants.map((v, i) =>
-        i === clampedActiveIndex ? activeSnapshot : v,
-      )
       const body = {
         name: buildName.trim() || item.name,
         visibility: nextVisibility,
@@ -794,29 +821,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
         // images are re-resolved by uniqueName at render time (viewer via
         // image-map.json, editor via the catalog), so storing them just bloats
         // the row and rots across image-scheme changes.
-        buildData: stripPersistedImages({
-          version: 1,
-          slots: slots.placed,
-          formaPolarities: slots.formaPolarities,
-          arcanes: arcanes.placed,
-          shards,
-          hasReactor,
-          helminth,
-          zawComponents,
-          kitgunComponents,
-          lichBonusElement: lichBonusElement ?? undefined,
-          incarnonEnabled,
-          incarnonPerks,
-          deploymentContext,
-          // Emit `variants` whenever there's more than one OR the single
-          // remaining variant has a user-assigned label/id — otherwise the
-          // synthetic placeholder from getVariants() would silently
-          // overwrite the user's label after delete-down-to-one.
-          ...((nextVariants.length > 1 ||
-            !isSyntheticVariant(nextVariants[0])) && {
-            variants: nextVariants,
-          }),
-        }),
+        buildData: captureBuildData(),
         guide: {
           summary: guideSummary.trim() || null,
           description: guideDescription.trim() || null,
@@ -840,8 +845,10 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       })
       await queryClient.invalidateQueries({ queryKey: ["build", slug] })
       // Drop the in-memory variants cache so a follow-up edit re-hydrates
-      // from the persisted server state rather than stale local edits.
+      // from the persisted server state rather than stale local edits, and
+      // clear the autosaved draft — the saved state is now the source of truth.
       cachedVariants = null
+      clearEditorDraft(storeKey)
       toast.success(isUpdate ? "Build saved" : "Build published")
       navigate({ to: "/builds/$slug", params: { slug } })
     } catch (err) {
@@ -911,6 +918,123 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       guideDescription: existing?.guideDescription,
     }
   }
+
+  // The full persistable buildData for the current editor state, with the
+  // active variant's live edits folded back into the variants array. Shared
+  // by the save path and the autosave draft writer so the two can't drift.
+  const captureBuildData = (): SavedBuildData => {
+    const activeSnapshot = captureActiveSnapshot()
+    const nextVariants = variants.map((v, i) =>
+      i === clampedActiveIndex ? activeSnapshot : v,
+    )
+    return stripPersistedImages({
+      version: 1,
+      slots: slots.placed,
+      formaPolarities: slots.formaPolarities,
+      arcanes: arcanes.placed,
+      shards,
+      hasReactor,
+      helminth,
+      zawComponents,
+      kitgunComponents,
+      lichBonusElement: lichBonusElement ?? undefined,
+      incarnonEnabled,
+      incarnonPerks,
+      deploymentContext,
+      // Emit `variants` whenever there's more than one OR the single
+      // remaining variant has a user-assigned label/id — otherwise the
+      // synthetic placeholder from getVariants() would silently overwrite
+      // the user's label after delete-down-to-one.
+      ...((nextVariants.length > 1 || !isSyntheticVariant(nextVariants[0])) && {
+        variants: nextVariants,
+      }),
+    })
+  }
+
+  // ─── Autosave draft ─────────────────────────────────────────────────
+  // Debounce the full editor state to localStorage so a refresh doesn't wipe
+  // unsaved work. Skip the hydration render, and clear the draft when the
+  // state returns to its baseline (saved build, or pristine new build) so a
+  // reload doesn't resurrect a no-op "draft".
+  const draftBaselineRef = useRef<string | null>(null)
+  const draftInitializedRef = useRef(false)
+
+  useEffect(() => {
+    const payload: EditorDraftPayload = {
+      buildData: captureBuildData(),
+      buildName,
+      guideSummary,
+      guideDescription,
+    }
+    const snapshot = serializeDraft(payload)
+    if (!draftInitializedRef.current) {
+      draftInitializedRef.current = true
+      // A restored draft is already dirty vs the saved build — leave it in
+      // storage. Otherwise the mount state IS the baseline, so reverting back
+      // to it later should clear the draft.
+      if (localDraft === null) draftBaselineRef.current = snapshot
+      return
+    }
+    const handle = window.setTimeout(() => {
+      if (snapshot === draftBaselineRef.current) {
+        clearEditorDraft(storeKey)
+        setHasDraft(false)
+      } else {
+        saveEditorDraft(storeKey, payload)
+        setHasDraft(true)
+      }
+    }, 600)
+    return () => window.clearTimeout(handle)
+    // Re-run on any edit. captureBuildData/serializeDraft read the values
+    // below; listing them keeps the snapshot current without re-binding the
+    // helpers in deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    buildName,
+    guideSummary,
+    guideDescription,
+    slots.placed,
+    slots.formaPolarities,
+    arcanes.placed,
+    shards,
+    hasReactor,
+    helminth,
+    zawComponents,
+    kitgunComponents,
+    lichBonusElement,
+    incarnonEnabled,
+    incarnonPerks,
+    deploymentContext,
+    variants,
+    clampedActiveIndex,
+  ])
+
+  // Clear the draft and reload so the editor re-hydrates from the saved build
+  // (or a blank new build). A reload is the simplest way to reset the live
+  // slot/arcane hooks, which only initialize at mount.
+  const resetToSaved = () => {
+    clearEditorDraft(storeKey)
+    resetEditorCache()
+    window.location.reload()
+  }
+
+  // Tell the user once, on the mount where we actually restored a draft, that
+  // their unsaved edits came back — with a one-click bail-out.
+  useEffect(() => {
+    if (localDraft === null) return
+    toast("Draft restored", {
+      // Stable id dedupes StrictMode's double-invoked mount effect (and any
+      // remount) into a single toast instead of stacking duplicates.
+      id: `draft-restored:${storeKey}`,
+      description: "Your unsaved edits from last time are back.",
+      action: {
+        label: isUpdate ? "Reset to saved" : "Discard",
+        onClick: resetToSaved,
+      },
+    })
+    // Fire once, for the restoring mount only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const newVariantId = () =>
     `v${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`
@@ -1018,6 +1142,14 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
         onSave={handleSaveClick}
         saveStatus={saveStatus}
         isSignedIn={!!session?.user}
+        draft={
+          hasDraft
+            ? {
+                label: isUpdate ? "Reset to saved" : "Discard draft",
+                onReset: resetToSaved,
+              }
+            : undefined
+        }
         settings={
           isUpdate
             ? { visibility, onEdit: () => setPublishDialogOpen(true) }

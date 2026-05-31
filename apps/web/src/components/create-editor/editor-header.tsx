@@ -4,6 +4,7 @@ import { useRef, useState } from "react"
 
 import { type PublishVisibility } from "@/components/build-editor"
 import { EndoFormaBadges } from "@/components/endo-forma-badges"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Kbd } from "@/components/ui/kbd"
@@ -37,6 +38,7 @@ export function EditorHeader({
   onSave,
   saveStatus,
   isSignedIn,
+  draft,
   settings,
   onShare,
 }: {
@@ -53,6 +55,9 @@ export function EditorHeader({
   onSave: () => void
   saveStatus: "idle" | "saving"
   isSignedIn: boolean
+  /** Present when an autosaved draft is overriding the saved build. `label`
+   *  reads "Reset to saved" (existing build) or "Discard draft" (new). */
+  draft?: { label: string; onReset: () => void }
   settings?: { visibility: PublishVisibility; onEdit: () => void }
   onShare: () => void
 }) {
@@ -115,15 +120,38 @@ export function EditorHeader({
             <span className="text-muted-foreground text-sm">
               {item.name} · {categoryLabel}
             </span>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
               <EndoFormaBadges
                 totalEndoCost={totalEndoCost}
                 formaCount={formaCount}
               />
+              {draft ? (
+                <span className="inline-flex items-center gap-1">
+                  <Badge
+                    variant="secondary"
+                    className="gap-1.5"
+                    title="Unsaved changes restored from a previous session"
+                  >
+                    <span
+                      className="size-1.5 rounded-full bg-amber-500"
+                      aria-hidden
+                    />
+                    Draft
+                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={draft.onReset}
+                    className="text-muted-foreground h-auto px-1.5 py-0.5 text-xs"
+                  >
+                    {draft.label}
+                  </Button>
+                </span>
+              ) : null}
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {settings && (
             <Button
               variant="outline"
@@ -161,6 +189,9 @@ export function EditorHeader({
             variant="outline"
             size="sm"
             nativeButton={false}
+            // Renders as an <a> (RouterLink), which browsers default to a
+            // pointer cursor — pin it to match the real <button> peers.
+            className="cursor-default"
             render={
               buildSlug ? (
                 <RouterLink to="/builds/$slug" params={{ slug: buildSlug }} />
