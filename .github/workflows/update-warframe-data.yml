@@ -30,6 +30,17 @@ jobs:
 
       - name: Sync upstream + rebuild items
         run: bun run data:bump
+        # data:bump runs `sync:images --skip-if-no-creds` as its last step;
+        # with these present it mirrors new images into R2 and rewrites the
+        # catalog to img.arsenyx.com, so the auto-PR already passes
+        # check:images. If any secret is unset, sync:images self-skips and the
+        # PR lands hotlinked (recoverable by running sync:images on the branch).
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
 
       # No typecheck/lint/test here — this job only refreshes data and opens a
       # PR. That PR triggers ci.yml, which runs the full gauntlet (web build →
@@ -76,9 +87,8 @@ jobs:
             Any new wiki Class strings or DE compatNames not yet curated
             will fail the build — fix `data/curated/` if so.
 
-            ⚠ This catalog still points at the upstream CDNs — the cron has
-            no R2 creds, so `sync:images` was skipped and CI's `check:images`
-            guard will fail. Before merging, check out this branch locally and
-            run `bun run sync:images` (mirrors new images into R2 + rewrites
-            the catalog to img.arsenyx.com), then push.
+            Images are mirrored to R2 and the catalog rewritten to
+            img.arsenyx.com automatically (the cron has R2 creds), so CI's
+            check:images guard should pass. If it fails, an R2 secret is
+            likely missing — check out this branch and run `bun run sync:images`.
           commit-message: "chore: refresh Warframe game data"
