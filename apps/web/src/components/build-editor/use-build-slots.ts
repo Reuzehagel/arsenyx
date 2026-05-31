@@ -191,6 +191,12 @@ export interface BuildSlotsState {
    * setState queue, which made the in-between states briefly visible.
    */
   setPlaced: (next: Partial<Record<SlotId, PlacedMod>>) => void
+  /**
+   * Replace the entire forma map at once. Used by undo/redo to restore a
+   * snapshot's forma in a single commit — `setForma` is per-slot and would
+   * need N calls plus a way to clear stale keys.
+   */
+  setFormaPolarities: (next: Partial<Record<SlotId, Polarity>>) => void
 }
 
 export function useBuildSlots(
@@ -351,6 +357,13 @@ export function useBuildSlots(
     [],
   )
 
+  const setFormaPolaritiesAll = useCallback(
+    (next: Partial<Record<SlotId, Polarity>>) => {
+      setFormaPolarities(next)
+    },
+    [],
+  )
+
   return {
     placed,
     usedNames,
@@ -365,5 +378,6 @@ export function useBuildSlots(
     setForma,
     swap,
     setPlaced: setPlacedAll,
+    setFormaPolarities: setFormaPolaritiesAll,
   }
 }

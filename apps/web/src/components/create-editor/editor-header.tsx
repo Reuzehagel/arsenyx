@@ -1,5 +1,13 @@
 import { Link as RouterLink } from "@tanstack/react-router"
-import { Pencil, Settings2, Share2, UploadCloud, X } from "lucide-react"
+import {
+  Pencil,
+  Redo2,
+  Settings2,
+  Share2,
+  Undo2,
+  UploadCloud,
+  X,
+} from "lucide-react"
 import { useRef, useState } from "react"
 
 import { type PublishVisibility } from "@/components/build-editor"
@@ -18,11 +26,12 @@ import {
 // Mac shows ⌘S; everything else shows Ctrl S. Computed once — the platform
 // doesn't change mid-session. The matching hotkey is registered in
 // editor-shell via useHotkey("mod+s").
-const SAVE_HINT =
+const IS_MAC =
   typeof navigator !== "undefined" &&
   /Mac|iPhone|iPad/.test(navigator.userAgent)
-    ? "⌘S"
-    : "Ctrl S"
+const SAVE_HINT = IS_MAC ? "⌘S" : "Ctrl S"
+const UNDO_HINT = IS_MAC ? "⌘Z" : "Ctrl Z"
+const REDO_HINT = IS_MAC ? "⌘⇧Z" : "Ctrl Shift Z"
 
 export function EditorHeader({
   item,
@@ -38,6 +47,7 @@ export function EditorHeader({
   onSave,
   saveStatus,
   isSignedIn,
+  history,
   draft,
   settings,
   onShare,
@@ -55,6 +65,13 @@ export function EditorHeader({
   onSave: () => void
   saveStatus: "idle" | "saving"
   isSignedIn: boolean
+  /** Undo/redo controls for the active variant's build state. */
+  history: {
+    canUndo: boolean
+    canRedo: boolean
+    onUndo: () => void
+    onRedo: () => void
+  }
   /** Present when an autosaved draft is overriding the saved build. `label`
    *  reads "Reset to saved" (existing build) or "Discard draft" (new). */
   draft?: { label: string; onReset: () => void }
@@ -152,6 +169,28 @@ export function EditorHeader({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon-sm"
+              onClick={history.onUndo}
+              disabled={!history.canUndo}
+              title={`Undo (${UNDO_HINT})`}
+              aria-label="Undo"
+            >
+              <Undo2 />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              onClick={history.onRedo}
+              disabled={!history.canRedo}
+              title={`Redo (${REDO_HINT})`}
+              aria-label="Redo"
+            >
+              <Redo2 />
+            </Button>
+          </div>
           {settings && (
             <Button
               variant="outline"

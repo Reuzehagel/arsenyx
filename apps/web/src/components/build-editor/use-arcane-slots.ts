@@ -18,6 +18,8 @@ export interface ArcaneSlotsState {
   remove: (index: number) => void
   select: (index: number | null) => void
   setRank: (index: number, rank: number) => void
+  /** Replace the entire arcane array at once — used by undo/redo restore. */
+  setPlaced: (next: (PlacedArcane | null)[]) => void
 }
 
 export function useArcaneSlots(
@@ -92,6 +94,10 @@ export function useArcaneSlots(
     })
   }, [])
 
+  const setPlacedAll = useCallback((next: (PlacedArcane | null)[]) => {
+    setPlaced(next)
+  }, [])
+
   const usedNames = useMemo(
     () =>
       new Set(
@@ -109,5 +115,6 @@ export function useArcaneSlots(
     remove,
     select,
     setRank,
+    setPlaced: setPlacedAll,
   }
 }

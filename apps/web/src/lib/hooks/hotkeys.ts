@@ -48,6 +48,16 @@ export const HOTKEYS: readonly Hotkey[] = [
   },
   {
     scope: "Build editor",
+    keys: ["Ctrl Z", "⌘ Z"],
+    description: "Undo the last change",
+  },
+  {
+    scope: "Build editor",
+    keys: ["Ctrl Shift Z", "⌘ ⇧ Z"],
+    description: "Redo",
+  },
+  {
+    scope: "Build editor",
     keys: ["`"],
     description: "Select the first empty slot",
   },
