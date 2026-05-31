@@ -1,5 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
+import { Hammer } from "lucide-react"
 
+import { BuildsEmptyState } from "@/components/builds/builds-empty-state"
 import {
   BuildsListView,
   buildsListLoaderDeps,
@@ -9,6 +11,7 @@ import {
 } from "@/components/builds/builds-list-view"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
+import { Button } from "@/components/ui/button"
 import { requireUser } from "@/lib/auth-guards"
 import { myBuildsQuery } from "@/lib/queries/builds-list-query"
 
@@ -42,22 +45,21 @@ function MineBuildsPage() {
             onUpdateSearch={onUpdateSearch}
             showFilters
             emptyState={
-              <>
-                <p className="text-muted-foreground">
-                  You haven't saved any builds yet.
-                </p>
-                <p className="text-muted-foreground mt-2 text-sm">
-                  Start one from{" "}
-                  <Link
-                    to="/browse"
-                    search={{ category: "warframes" }}
-                    className="text-primary underline"
+              <BuildsEmptyState
+                icon={Hammer}
+                title="No builds yet"
+                description="Builds you create will show up here."
+                action={
+                  <Button
+                    nativeButton={false}
+                    render={
+                      <Link to="/browse" search={{ category: "warframes" }} />
+                    }
                   >
-                    Browse
-                  </Link>
-                  .
-                </p>
-              </>
+                    Create your first build
+                  </Button>
+                }
+              />
             }
           />
         </div>

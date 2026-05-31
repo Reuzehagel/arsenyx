@@ -1,5 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
+import { Bookmark } from "lucide-react"
 
+import { BuildsEmptyState } from "@/components/builds/builds-empty-state"
 import {
   BuildsListView,
   buildsListLoaderDeps,
@@ -9,6 +11,7 @@ import {
 } from "@/components/builds/builds-list-view"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
+import { Button } from "@/components/ui/button"
 import { requireUser } from "@/lib/auth-guards"
 import { bookmarkedBuildsQuery } from "@/lib/queries/builds-list-query"
 
@@ -42,18 +45,16 @@ function BookmarksPage() {
             onUpdateSearch={onUpdateSearch}
             showFilters
             emptyState={
-              <>
-                <p className="text-muted-foreground">
-                  You haven't bookmarked any builds yet.
-                </p>
-                <p className="text-muted-foreground mt-2 text-sm">
-                  Browse{" "}
-                  <Link to="/builds" className="text-primary underline">
-                    public builds
-                  </Link>{" "}
-                  and tap the bookmark icon to save them here.
-                </p>
-              </>
+              <BuildsEmptyState
+                icon={Bookmark}
+                title="No bookmarks yet"
+                description="Tap the bookmark icon on any build to save it here for later."
+                action={
+                  <Button nativeButton={false} render={<Link to="/builds" />}>
+                    Browse community builds
+                  </Button>
+                }
+              />
             }
           />
         </div>

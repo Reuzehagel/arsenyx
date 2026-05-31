@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
+import { SearchX } from "lucide-react"
 import { useCallback, useEffect, useState, type ReactNode } from "react"
 
 import {
@@ -8,6 +9,7 @@ import {
   BuildRowSkeleton,
 } from "@/components/builds/build-card"
 import { BuildsCategoryTabs } from "@/components/builds/builds-category-tabs"
+import { BuildsEmptyState } from "@/components/builds/builds-empty-state"
 import { BuildsSortDropdown } from "@/components/builds/builds-sort-dropdown"
 import {
   BuildsLayoutToggle,
@@ -184,6 +186,10 @@ export function BuildsListView({
   }, [qLocal, q, patch])
 
   const activeFilterCount = (hasGuide ? 1 : 0) + (hasShards ? 1 : 0)
+  // A search, category tab, or toggle is narrowing the list. Zero results then
+  // means "nothing matched", not "this list is empty" — so the route's own
+  // empty state (its create-a-build CTA) shouldn't show.
+  const isFiltered = Boolean(q) || Boolean(category) || hasGuide || hasShards
 
   return (
     <div className="flex flex-col gap-6">
@@ -252,6 +258,7 @@ export function BuildsListView({
         query={query}
         page={page}
         q={q}
+        isFiltered={isFiltered}
         onPage={(p) => patch({ page: p > 1 ? p : undefined })}
         emptyState={emptyState}
       />
@@ -263,12 +270,14 @@ function Results({
   query,
   page,
   q,
+  isFiltered,
   onPage,
   emptyState,
 }: {
   query: BuildsQuery
   page: number
   q: string
+  isFiltered: boolean
   onPage: (p: number) => void
   emptyState: ReactNode
 }) {
@@ -287,7 +296,17 @@ function Results({
       </div>
 
       {data.builds.length === 0 ? (
-        <div className="py-16 text-center">{emptyState}</div>
+        <div className="py-16">
+          {isFiltered ? (
+            <BuildsEmptyState
+              icon={SearchX}
+              title="No builds match"
+              description="Try a different search, or clear your filters."
+            />
+          ) : (
+            emptyState
+          )}
+        </div>
       ) : (
         <div
           aria-busy={isFetching}

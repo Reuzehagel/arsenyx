@@ -1,5 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
+import { Compass } from "lucide-react"
 
+import { BuildsEmptyState } from "@/components/builds/builds-empty-state"
 import {
   BuildsListView,
   buildsListLoaderDeps,
@@ -9,6 +11,7 @@ import {
 } from "@/components/builds/builds-list-view"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
+import { Button } from "@/components/ui/button"
 import { publicBuildsQuery } from "@/lib/queries/builds-list-query"
 
 export const Route = createFileRoute("/builds/")({
@@ -40,20 +43,21 @@ function BuildsIndexPage() {
             onUpdateSearch={onUpdateSearch}
             showFilters
             emptyState={
-              <>
-                <p className="text-muted-foreground">No builds match.</p>
-                <p className="text-muted-foreground mt-2 text-sm">
-                  Try a different search, or head to{" "}
-                  <Link
-                    to="/browse"
-                    search={{ category: "warframes" }}
-                    className="text-primary underline"
+              <BuildsEmptyState
+                icon={Compass}
+                title="No community builds yet"
+                description="Be the first to publish one for everyone to find."
+                action={
+                  <Button
+                    nativeButton={false}
+                    render={
+                      <Link to="/browse" search={{ category: "warframes" }} />
+                    }
                   >
-                    Browse
-                  </Link>{" "}
-                  to publish one.
-                </p>
-              </>
+                    Create a build
+                  </Button>
+                }
+              />
             }
           />
         </div>
