@@ -6,6 +6,7 @@ import type { DetailItem } from "@/lib/warframe"
 import {
   getArcaneSlotConfig,
   getArcaneSlotCount,
+  getAuraSlotCount,
   resolveInitialArcanes,
 } from "./layout"
 import type { PlacedArcane } from "./use-arcane-slots"
@@ -71,6 +72,32 @@ describe("resolveInitialArcanes — kitgun re-bucketing", () => {
   it("leaves non-modular weapons' saved order untouched", () => {
     const saved = [placed(arc("Cascadia Flare", "Secondary"))]
     expect(resolveInitialArcanes(NORMAL_PISTOL, saved)).toBe(saved)
+  })
+})
+
+describe("getAuraSlotCount", () => {
+  it("gives a warframe one aura slot even when the innate polarity is null", () => {
+    // Excalibur / Nekros / Sevagoth ship with no default aura polarity but
+    // still have the slot in-game.
+    expect(getAuraSlotCount("warframes", { auraPolarity: null })).toBe(1)
+  })
+
+  it("gives a warframe one aura slot for a single innate polarity", () => {
+    expect(getAuraSlotCount("warframes", { auraPolarity: "madurai" })).toBe(1)
+  })
+
+  it("matches the slot count to a multi-aura array (Jade: 2)", () => {
+    expect(
+      getAuraSlotCount("warframes", { auraPolarity: ["naramon", "vazarin"] }),
+    ).toBe(2)
+  })
+
+  it("gives non-warframe categories no aura slot", () => {
+    expect(getAuraSlotCount("primary", { auraPolarity: null })).toBe(0)
+  })
+
+  it("gives railjack its single Plexus aura slot", () => {
+    expect(getAuraSlotCount("railjack", { auraPolarity: null })).toBe(1)
   })
 })
 

@@ -190,9 +190,11 @@ export function hasStanceSlot(
 }
 
 /**
- * Number of Aura slots for an item. Warframes derive from
- * `item.auraPolarity` — an array means multiple aura slots (Jade: 2).
- * Companions and other categories have none.
+ * Number of Aura slots for an item. Every warframe has at least one aura slot;
+ * `item.auraPolarity` only carries the *innate* polarity of that slot, which
+ * can be null (a frame with no default aura polarity — the slot still exists,
+ * accepts any aura mod, and costs full drain). An array means multiple aura
+ * slots (Jade: 2). Companions and other categories have none.
  */
 export function getAuraSlotCount(
   category: BrowseCategory,
@@ -204,8 +206,13 @@ export function getAuraSlotCount(
   // capacity math reuses `auraBonusForMod` without changes.
   if (category === "railjack") return 1
   if (category !== "warframes") return 0
+  // The slot's existence must NOT depend on a known innate polarity — a few
+  // frames (Excalibur, Nekros, Sevagoth) ship with `auraPolarity: null` yet
+  // still have an aura slot in-game. Only a multi-slot array overrides the
+  // default of one slot. `getAuraPolarities` pads missing indices with
+  // `undefined`, so a null-polarity slot renders without an innate icon.
   if (Array.isArray(item.auraPolarity)) return item.auraPolarity.length
-  return item.auraPolarity ? 1 : 0
+  return 1
 }
 
 // =============================================================================
