@@ -2,8 +2,8 @@
   "stats": {
     "weapons": {
       "de": 831,
-      "merged": 851,
-      "emitted": 692,
+      "merged": 852,
+      "emitted": 693,
       "unmatched": 0
     },
     "frames": {
@@ -24,7 +24,7 @@
       "archwing": 32,
       "warframes": 115,
       "necramechs": 2,
-      "secondary": 152,
+      "secondary": 153,
       "melee": 235,
       "primary": 199,
       "exalted-weapons": 38,
