@@ -6,18 +6,17 @@ import {
   isZawArcane,
   type ArcaneSlotType,
 } from "@arsenyx/shared/warframe/arcanes"
-import type { Arcane } from "@arsenyx/shared/warframe/types"
-
-import type { BrowseCategory, DetailItem } from "@/lib/warframe"
-
-import type { PlacedArcane } from "./use-arcane-slots"
-
 // Category-only slot facts live in shared (the api Overframe importer needs
 // them too). `getNormalSlotCount` is re-exported as-is; `hasExilusSlot` gets
 // an item-aware wrapper below (Necramech exalted weapons are the exception),
 // so the shared version is imported under an alias for the wrapper to delegate
 // to.
 import { hasExilusSlot as categoryHasExilusSlot } from "@arsenyx/shared/warframe/slot-layout"
+import type { Arcane } from "@arsenyx/shared/warframe/types"
+
+import type { BrowseCategory, DetailItem } from "@/lib/warframe"
+
+import type { PlacedArcane } from "./use-arcane-slots"
 
 export { getNormalSlotCount } from "@arsenyx/shared/warframe/slot-layout"
 

@@ -46,12 +46,13 @@ const ARQUEBEX: Pick<DetailItem, "displayClass" | "uniqueName" | "modPools"> = {
     "/Lotus/Types/Enemies/Orokin/Entrati/EntratiTech/NechroTech/ExaltedArtilleryWeapon",
   modPools: ["Archgun", "Arquebex"],
 }
-const IRONBRIDE: Pick<DetailItem, "displayClass" | "uniqueName" | "modPools"> = {
-  displayClass: "Exalted Weapon",
-  uniqueName:
-    "/Lotus/Types/Enemies/Orokin/Entrati/EntratiTech/NechroTech/AbilitySword/NechroTechSwordWeapon",
-  modPools: ["Archmelee", "Ironbride"],
-}
+const IRONBRIDE: Pick<DetailItem, "displayClass" | "uniqueName" | "modPools"> =
+  {
+    displayClass: "Exalted Weapon",
+    uniqueName:
+      "/Lotus/Types/Enemies/Orokin/Entrati/EntratiTech/NechroTech/AbilitySword/NechroTechSwordWeapon",
+    modPools: ["Archmelee", "Ironbride"],
+  }
 const EXALTED_BLADE: Pick<
   DetailItem,
   "displayClass" | "uniqueName" | "modPools"
