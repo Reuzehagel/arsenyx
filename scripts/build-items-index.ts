@@ -374,10 +374,14 @@ async function main() {
   // Mod display Name → wiki InternalName (= DE uniqueName). Resolves the
   // name-keyed `Incompatible` lists into uniqueNames below.
   const wikiModUniqueNameByName = new Map<string, string>()
-  // InternalName → the mod's `Incompatible` list (display Names). Mutually
+  // Owning mod display Name → its `Incompatible` list (display Names). Mutually
   // exclusive variant mods (Serration / Amalgam Serration / Spectral
-  // Serration, …) — see the conflict-graph build after mod merge.
-  const wikiIncompatByUniqueName = new Map<string, string[]>()
+  // Serration, …) — see the conflict-graph build after mod merge. Keyed by
+  // display Name (not InternalName) because the wiki's InternalName drifts from
+  // DE's uniqueName for some recent Primed mods, which silently dropped the
+  // edge; resolving both endpoints by display Name against the emitted catalog
+  // is robust to that drift.
+  const wikiIncompatByName = new Map<string, string[]>()
   for (const { internalName, record } of iterWikiRecords(wikiModsBlob)) {
     const name = record["Name"]
     if (typeof name === "string") {
@@ -398,11 +402,11 @@ async function main() {
       wikiConclaveMods.add(internalName)
     }
     const incompat = record["Incompatible"]
-    if (Array.isArray(incompat)) {
+    if (Array.isArray(incompat) && typeof name === "string") {
       // Some wiki entries carry placeholder `""` names; drop them so they
       // never become a dead lookup key.
-      wikiIncompatByUniqueName.set(
-        internalName,
+      wikiIncompatByName.set(
+        name,
         incompat.filter((x): x is string => typeof x === "string" && x !== ""),
       )
     }
@@ -647,6 +651,24 @@ async function main() {
   // variants, unreleased mods, Flawed mods we filter) are simply dropped — a
   // dead edge can't matter at runtime since the mod can never be placed.
   const emittedUniqueNames = new Set(mergedMods.map((m) => m.uniqueName))
+  // Display Name → emitted DE uniqueName. The authoritative resolver: DE's
+  // uniqueName is stable across wiki path renames, so keying on the shipped
+  // catalog's own names avoids the wiki-InternalName drift that previously
+  // dropped base↔Primed edges (Redirection, Steady Hands, Deadly Efficiency).
+  // First-wins on the rare duplicate display name.
+  const deNameToUniqueName = new Map<string, string>()
+  for (const m of mergedMods) {
+    if (!deNameToUniqueName.has(m.name)) deNameToUniqueName.set(m.name, m.uniqueName)
+  }
+  // Resolve a wiki display Name to an emitted uniqueName: prefer the DE catalog
+  // (stable), fall back to the wiki InternalName only when no shipped mod
+  // carries that name. Returns undefined when nothing emitted matches.
+  const resolveModName = (displayName: string): string | undefined => {
+    const de = deNameToUniqueName.get(displayName)
+    if (de) return de
+    const wiki = wikiModUniqueNameByName.get(displayName)
+    return wiki && emittedUniqueNames.has(wiki) ? wiki : undefined
+  }
   const conflictGraph = new Map<string, Set<string>>()
   const addConflictEdge = (a: string, b: string): void => {
     if (a === b) return
@@ -656,10 +678,32 @@ async function main() {
     conflictGraph.get(a)!.add(b)
     conflictGraph.get(b)!.add(a)
   }
-  for (const [uniqueName, names] of wikiIncompatByUniqueName) {
+  for (const [owningName, names] of wikiIncompatByName) {
+    const a = resolveModName(owningName)
+    if (!a) continue
     for (const conflictingName of names) {
-      const target = wikiModUniqueNameByName.get(conflictingName)
-      if (target) addConflictEdge(uniqueName, target)
+      const b = resolveModName(conflictingName)
+      if (b) addConflictEdge(a, b)
+    }
+  }
+  // Structural base↔variant edges. A Primed / Umbral / Amalgam / Archon mod is
+  // always mutually exclusive with its same-named base in-game, so derive those
+  // edges straight from the catalog rather than trusting the wiki to list them.
+  // This makes the "no two variants of one mod" guarantee independent of the
+  // wiki `Incompatible` field — which lagged DE for recent Primed mods
+  // (Redirection, Steady Hands, Deadly Efficiency), silently dropping the edge —
+  // and self-heals as new Primed mods ship instead of requiring a curated list.
+  // Cross-stem families (Sacrificial Pressure ↔ Pressure Point, Galvanized ↔
+  // base) don't share a name prefix and keep relying on the wiki edges above.
+  const VARIANT_PREFIXES = ["Primed ", "Umbral ", "Amalgam ", "Archon "]
+  let derivedVariantEdges = 0
+  for (const m of mergedMods) {
+    const prefix = VARIANT_PREFIXES.find((p) => m.name.startsWith(p))
+    if (!prefix) continue
+    const base = deNameToUniqueName.get(m.name.slice(prefix.length))
+    if (base && !conflictGraph.get(m.uniqueName)?.has(base)) {
+      addConflictEdge(m.uniqueName, base)
+      derivedVariantEdges++
     }
   }
   const modConflicts: Record<string, string[]> = {}
@@ -669,7 +713,8 @@ async function main() {
     conflictEdgeCount += set.size
   }
   console.log(
-    `  conflicts: ${conflictGraph.size} mods, ${conflictEdgeCount / 2} pairs`,
+    `  conflicts: ${conflictGraph.size} mods, ${conflictEdgeCount / 2} pairs ` +
+      `(${derivedVariantEdges} base↔variant derived structurally)`,
   )
 
   // ---------- 9. Write outputs ----------

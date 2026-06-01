@@ -400,20 +400,6 @@ export function useBuildSlots(
     [placed],
   )
 
-  const setPlacedAll = useCallback(
-    (next: Partial<Record<SlotId, PlacedMod>>) => {
-      setPlaced(next)
-    },
-    [],
-  )
-
-  const setFormaPolaritiesAll = useCallback(
-    (next: Partial<Record<SlotId, Polarity>>) => {
-      setFormaPolarities(next)
-    },
-    [],
-  )
-
   return {
     placed,
     usedNames,
@@ -427,7 +413,7 @@ export function useBuildSlots(
     setRank,
     setForma,
     swap,
-    setPlaced: setPlacedAll,
-    setFormaPolarities: setFormaPolaritiesAll,
+    setPlaced,
+    setFormaPolarities,
   }
 }

@@ -65,7 +65,11 @@ export const CLASS_DEFAULT_POOLS: Record<string, readonly string[]> = {
   "Blade and Whip": ["Melee", "Blade And Whip"],
   Warfan: ["Melee", "Warfans"],
   Nunchaku: ["Melee", "Nunchaku"],
-  Bayonet: ["Melee"],
+  // The Bayonet stance pool is singular ("Bayonet"), unlike the plural stance
+  // compatNames of other classes. Vinquibus is the only Bayonet-class melee and
+  // its sole stance (Harrowing Spire, compatName "Bayonet") routes via this
+  // pool — omitting it hid the stance entirely. (wiki.warframe.com/w/Harrowing_Spire)
+  Bayonet: ["Melee", "Bayonet"],
   "Sword and Shield": ["Melee", "Sword And Shield"],
   Claws: ["Melee", "Claws"],
   "Assault Saw": ["Melee", "Assault Saw"],

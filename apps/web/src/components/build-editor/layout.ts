@@ -3,7 +3,7 @@ import {
   getArcanesForSlot,
   getArcanesForWeapon,
   isKitgunWeapon,
-  isZawArcane,
+  isSecondSlotArcane,
   type ArcaneSlotType,
 } from "@arsenyx/shared/warframe/arcanes"
 // Category-only slot facts live in shared (the api Overframe importer needs
@@ -131,7 +131,7 @@ export function getArcaneSlotConfig(
     const regular: Arcane[] = []
     const exodia: Arcane[] = []
     for (const a of getArcanesForSlot(allArcanes, "melee")) {
-      ;(isZawArcane(a) ? exodia : regular).push(a)
+      ;(isSecondSlotArcane(a, true) ? exodia : regular).push(a)
     }
     return { options: [regular, exodia], labels: ["Melee Arcane", "Exodia"] }
   }
@@ -148,22 +148,19 @@ export function getArcaneSlotConfig(
     const weapon: Arcane[] = []
     const kitgun: Arcane[] = []
     for (const a of getArcanesForWeapon(allArcanes, category, item)) {
-      ;(a.slotType === "Kitgun" ? kitgun : weapon).push(a)
+      ;(isSecondSlotArcane(a, false) ? kitgun : weapon).push(a)
     }
     const label = category === "primary" ? "Primary Arcane" : "Secondary Arcane"
     return { options: [weapon, kitgun], labels: [label, "Pax / Residual"] }
   }
-  // Primary/secondary: gate the weapon-type sub-pools (Shotgun/Bow/Kitgun
-  // arcanes) by this weapon's own class so e.g. a rifle doesn't see shotgun
-  // or kitgun arcanes. Falls back to the broad per-category pool when we have
-  // no item to inspect.
-  if (category === "primary" || category === "secondary") {
-    const shared = item
+  // Primary/secondary with an item: gate the weapon-type sub-pools (Shotgun/
+  // Bow/Kitgun arcanes) by this weapon's own class so e.g. a rifle doesn't see
+  // shotgun or kitgun arcanes. Everything else (and primary/secondary with no
+  // item to inspect) falls back to the broad per-category pool.
+  const shared =
+    (category === "primary" || category === "secondary") && item
       ? getArcanesForWeapon(allArcanes, category, item)
       : getArcanesForCategory(allArcanes, category)
-    return { options: Array.from({ length: count }, () => shared) }
-  }
-  const shared = getArcanesForCategory(allArcanes, category)
   return { options: Array.from({ length: count }, () => shared) }
 }
 
@@ -184,9 +181,7 @@ export function resolveInitialArcanes(
   const isZaw = isZawComponent(item.displayClass)
   const isKitgun = !isZaw && isKitgunWeapon(item)
   if (!isZaw && !isKitgun) return arcanes
-  const toSecondSlot = isZaw
-    ? (a: PlacedArcane) => isZawArcane(a.arcane)
-    : (a: PlacedArcane) => a.arcane.slotType === "Kitgun"
+  const toSecondSlot = (a: PlacedArcane) => isSecondSlotArcane(a.arcane, isZaw)
   const out: (PlacedArcane | null)[] = [null, null]
   for (const a of arcanes) {
     if (!a) continue

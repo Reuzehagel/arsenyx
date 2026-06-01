@@ -41,6 +41,14 @@ export function isZawArcane(arcane: Arcane): boolean {
   return n.includes("exodia") || n.includes("zaw")
 }
 
+/** Whether an arcane belongs in a modular weapon's dedicated *second* arcane
+ *  slot — the Exodia slot for Zaws, the Pax/Residual slot for Kitguns. The
+ *  single source for the Zaw-vs-Kitgun bucketing rule the editor uses both to
+ *  build the per-slot option lists and to re-bucket saved/imported arcanes. */
+export function isSecondSlotArcane(arcane: Arcane, isZaw: boolean): boolean {
+  return isZaw ? isZawArcane(arcane) : arcane.slotType === "Kitgun"
+}
+
 /** Operator-side arcane (Operator / Amp / Tektolyst) — never on a
  *  weapon/frame slot. */
 function isOperatorOrAmpArcane(arcane: Arcane): boolean {

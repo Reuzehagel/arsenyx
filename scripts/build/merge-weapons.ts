@@ -51,7 +51,7 @@ export const KNOWN_MOD_POOLS = new Set<string>([
   "Tonfas", "Rapiers", "Glaives", "Gunblade",
   "Machetes", "Whips", "Blade And Whip",
   "Warfans", "Nunchaku", "Sword And Shield",
-  "Thrown Melee", "Claws", "Assault Saw",
+  "Thrown Melee", "Claws", "Assault Saw", "Bayonet",
   // Companion / archwing / railjack
   "Archgun", "Archmelee", "Archwing",
   "Sentinel", "BEAST", "COMPANION", "ROBOTIC", "Hound", "Moa", "Kavat", "Kubrow",
