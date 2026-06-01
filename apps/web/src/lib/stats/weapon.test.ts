@@ -135,3 +135,58 @@ describe("damage breakdown — innate + mod combination", () => {
     expect(map.has("cold")).toBe(false)
   })
 })
+
+describe("crit / status percent scaling", () => {
+  // Regression: Pox/Sporothrix have a 1% base crit. The wiki per-attack
+  // crit_chance is stored as a percentage (1 = 1%), so it must be used as-is.
+  // The old heuristic (×100 for any value ≤ 1) inflated it to 100%.
+  it("uses a sub-1% wiki attack crit_chance as a literal percent", () => {
+    const weapon = makeWeapon({
+      criticalChance: 0.0099999998,
+      procChance: 0.0099999998,
+      damage: { impact: 10 },
+      totalDamage: 10,
+      attacks: [
+        {
+          name: "Spore Impact",
+          damage: { impact: 10 },
+          crit_chance: 1,
+          crit_mult: 2,
+          status_chance: 1,
+        },
+      ],
+    })
+    const stats = calculateWeaponStats({ weapon, mods: [], arcanes: [] })
+    const mode = stats.attackModes[0]!
+    expect(mode.criticalChance.base).toBe(1)
+    expect(mode.criticalChance.modified).toBe(1)
+    expect(mode.statusChance.base).toBe(1)
+  })
+
+  it("keeps full-scale wiki attack crit_chance unchanged (35 → 35%)", () => {
+    const weapon = makeWeapon({
+      criticalChance: 0.35,
+      damage: { impact: 10 },
+      totalDamage: 10,
+      attacks: [
+        { name: "Normal Attack", damage: { impact: 10 }, crit_chance: 35 },
+      ],
+    })
+    const stats = calculateWeaponStats({ weapon, mods: [], arcanes: [] })
+    expect(stats.attackModes[0]!.criticalChance.base).toBe(35)
+  })
+
+  it("converts the DE 0–1 ratio for weapons without per-attack data", () => {
+    // No `attacks` array → falls back to weapon.criticalChance (a ratio).
+    const weapon = makeWeapon({
+      criticalChance: 0.05,
+      procChance: 0.1,
+      damage: { impact: 10 },
+      totalDamage: 10,
+    })
+    const stats = calculateWeaponStats({ weapon, mods: [], arcanes: [] })
+    const mode = stats.attackModes[0]!
+    expect(mode.criticalChance.base).toBe(5)
+    expect(mode.statusChance.base).toBeCloseTo(10)
+  })
+})

@@ -19,9 +19,9 @@ type AnyWeapon = Gun | Weapon
  * reconstructs zaws.
  *
  * Crit/status are emitted as integer percents to match the catalog's attack
- * convention (`crit_chance: 35`); `normalizeRate` in the stat calculator
- * accepts either form. Returns the weapon unchanged when the data isn't loaded
- * yet or the chamber/grip isn't found.
+ * convention (`crit_chance: 35`); the stat calculator consumes per-attack
+ * crit/status as percentages directly. Returns the weapon unchanged when the
+ * data isn't loaded yet or the chamber/grip isn't found.
  */
 export function adjustChamberForKitgun<T extends AnyWeapon>(
   weapon: T,

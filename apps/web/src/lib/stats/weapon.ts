@@ -81,9 +81,9 @@ export function calculateWeaponStats(input: WeaponCalcInput): WeaponStats {
           name: "Normal Attack",
           damage: weapon.damage,
           totalDamage: weapon.totalDamage,
-          crit: normalizeRate(weapon.criticalChance),
+          crit: ratioToPercent(weapon.criticalChance),
           critMult: weapon.criticalMultiplier,
-          status: normalizeRate(weapon.procChance),
+          status: ratioToPercent(weapon.procChance),
           fireRate: weapon.fireRate,
         },
         weapon,
@@ -104,9 +104,13 @@ export function calculateWeaponStats(input: WeaponCalcInput): WeaponStats {
             name: attack.name,
             damage,
             totalDamage,
-            crit: normalizeRate(attack.crit_chance ?? weapon.criticalChance),
+            // Wiki per-attack crit/status are already percentages (e.g. 35 =
+            // 35%, 1 = 1%); the DE weapon-level fallback is a 0–1 ratio.
+            // Convert only the ratio — never multiply the wiki value, or a
+            // sub-1% attack (Pox/Sporothrix at 1%) inflates to 100%.
+            crit: attack.crit_chance ?? ratioToPercent(weapon.criticalChance),
             critMult: attack.crit_mult ?? weapon.criticalMultiplier,
-            status: normalizeRate(attack.status_chance ?? weapon.procChance),
+            status: attack.status_chance ?? ratioToPercent(weapon.procChance),
             fireRate: attack.speed ?? weapon.fireRate,
           },
           weapon,
@@ -621,9 +625,11 @@ function applyDeploymentContext<T extends Gun | Melee | Weapon>(
   }
 }
 
-function normalizeRate(v: number | undefined): number {
-  if (v === undefined) return 0
-  return v > 1 ? v : v * 100
+/** DE stores crit chance / status chance as a 0–1 ratio; the UI shows a
+ *  percentage. Wiki per-attack values are already percentages and must NOT
+ *  pass through here. */
+function ratioToPercent(v: number | undefined): number {
+  return (v ?? 0) * 100
 }
 
 const round1 = (v: number) => round(v, 1)
