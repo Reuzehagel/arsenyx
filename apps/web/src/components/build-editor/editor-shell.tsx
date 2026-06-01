@@ -100,6 +100,7 @@ import {
 import { PublishDialog, type PublishVisibility } from "./publish-dialog"
 import { useArcaneSlots, type PlacedArcane } from "./use-arcane-slots"
 import {
+  dropOrphanSlots,
   useBuildSlots,
   slotKind,
   type PlacedMod,
@@ -780,9 +781,17 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   const allVariantSlots = useMemo(
     () =>
       variants.map((v, i) =>
-        i === clampedActiveIndex ? slots.placed : (v.slots ?? {}),
+        // The active variant's `placed` is already orphan-stripped by
+        // useBuildSlots. Inactive variants come straight from the saved doc, so
+        // strip them here too — otherwise a mod left in a slot this item no
+        // longer has (e.g. an Exilus mod on a legacy companion-weapon build)
+        // still feeds the auto-forma planner's capacity math and inflates that
+        // variant's `used`, producing phantom forma recommendations.
+        i === clampedActiveIndex
+          ? slots.placed
+          : dropOrphanSlots(v.slots ?? {}, layout),
       ),
-    [variants, clampedActiveIndex, slots.placed],
+    [variants, clampedActiveIndex, slots.placed, layout],
   )
   const reactiveAutoFormaPlan = useMemo<FullAutoFormaPlan | null>(() => {
     if (capacity.used <= capacity.max) return null
