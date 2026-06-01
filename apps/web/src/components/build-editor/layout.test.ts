@@ -24,7 +24,20 @@ const ARCANES: Arcane[] = [
   arc("Pax Bolt", "Kitgun"),
   arc("Residual Boils", "Kitgun", "Offensive"),
   arc("Shotgun Vendetta", "Shotgun", "Offensive"),
+  arc("Melee Influence", "Melee", "Offensive"),
+  arc("Exodia Force", "Zaw", "Offensive"),
 ]
+
+const ZAW_STRIKE: Pick<DetailItem, "name" | "displayClass" | "uniqueName"> = {
+  name: "Plague Keewar",
+  displayClass: "Zaw Polearm / Hammer",
+  uniqueName: "/Lotus/Weapons/Ostron/Melee/LordMelee/Tips/PlagueTip",
+}
+const GLAIVE: Pick<DetailItem, "name" | "displayClass" | "uniqueName"> = {
+  name: "Falcor",
+  displayClass: "Thrown",
+  uniqueName: "/Lotus/Weapons/Tenno/Melee/Thrown/Falcor/Falcor",
+}
 
 const KITGUN_SECONDARY: Pick<
   DetailItem,
@@ -254,6 +267,29 @@ describe("hasLockedStance / getLockedStance", () => {
     // A regular melee carrying the same fields wouldn't be a locked exalted.
     expect(hasLockedStance(DESERT_WIND, "melee")).toBe(false)
     expect(getLockedStance(DESERT_WIND, "melee")).toBeUndefined()
+  })
+})
+
+describe("getArcaneSlotConfig — melee Exodia gating", () => {
+  it("gives a Zaw a dedicated Exodia slot alongside the melee slot", () => {
+    const cfg = getArcaneSlotConfig(ARCANES, "melee", 2, ZAW_STRIKE)
+    expect(cfg.labels).toEqual(["Melee Arcane", "Exodia"])
+    expect(cfg.options[0]!.map((a) => a.name)).toEqual(["Melee Influence"])
+    expect(cfg.options[1]!.map((a) => a.name)).toEqual(["Exodia Force"])
+  })
+
+  it("keeps Exodia (Zaw-only) arcanes off an ordinary melee (glaive)", () => {
+    const cfg = getArcaneSlotConfig(ARCANES, "melee", 1, GLAIVE)
+    expect(cfg.options).toHaveLength(1)
+    expect(cfg.options[0]!.map((a) => a.name)).toEqual(["Melee Influence"])
+  })
+
+  it("keeps Exodia off an exalted melee weapon (Exalted Blade)", () => {
+    const cfg = getArcaneSlotConfig(ARCANES, "exalted-weapons", 1, {
+      ...EXALTED_BLADE,
+      name: "Exalted Blade",
+    })
+    expect(cfg.options[0]!.map((a) => a.name)).toEqual(["Melee Influence"])
   })
 })
 
