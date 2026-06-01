@@ -14,6 +14,13 @@ import type { Context, MiddlewareHandler } from "hono"
 // We detect the cookie by header rather than calling getSession() so this layer
 // stays DB-free and fail-safe: a forged/garbage token just bypasses the cache.
 
+// Substring matched against the Cookie header to detect an authenticated
+// request. This pins on Better Auth's default cookie name containing
+// `session_token` (e.g. `better-auth.session_token`). If the Better Auth
+// `cookiePrefix`/cookie name is ever customised to something without this
+// substring, anonymous-only caching silently breaks the WRONG way — it would
+// start caching authenticated responses — so keep this marker in sync with the
+// auth config (auth.ts).
 const SESSION_COOKIE_MARKER = "session_token"
 
 function hasSessionCookie(c: Context): boolean {
@@ -74,6 +81,15 @@ export function edgeCache(opts: { maxAge: number }): MiddlewareHandler {
     const headers = new Headers(cloned.headers)
     headers.delete("Set-Cookie")
     headers.set("Cache-Control", `public, max-age=${opts.maxAge}`)
+    // Vary on Cookie so the BROWSER (and any shared intermediary) never reuses
+    // this anonymous body for an authenticated request. Without it, a viewer who
+    // loads a build logged-out then logs in could be served the cached anonymous
+    // payload from their own HTTP cache for up to max-age — hiding their
+    // owner/like/bookmark state. Cloudflare's own Cache API ignores Vary at
+    // match() time (it only varies on Range/If-Modified-Since/If-None-Match), so
+    // this does NOT affect our edge hits: we key off a cookieless Request, so the
+    // edge keeps matching regardless. cache.put only rejects `Vary: *`.
+    headers.set("Vary", "Cookie")
     const stored = new Response(cloned.body, {
       status: cloned.status,
       statusText: cloned.statusText,
@@ -87,6 +103,14 @@ export function edgeCache(opts: { maxAge: number }): MiddlewareHandler {
 // this only evicts where the mutating request landed; other colos expire via
 // the short TTL above. Authenticated editors bypass the cache entirely, so they
 // always see their own writes immediately regardless of this.
+//
+// Scope note: callers purge the build DETAIL path only. The `GET /builds` LIST
+// is also edge-cached (maxAge 120s) but is NOT purged here — its entries are
+// keyed by every filter/sort/page param combination, and the Cache API has no
+// wildcard delete, so there's no tractable key to evict. Consequence: when a
+// build flips PUBLIC->PRIVATE or is deleted, its title/summary can linger in
+// cached listings for up to that 120s TTL. Accepted as a bounded, best-effort
+// window (the detail payload — the sensitive surface — is purged precisely).
 export function purgeEdge(c: Context, path: string): void {
   const cache = defaultCache()
   if (!cache) return
