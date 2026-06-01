@@ -255,8 +255,8 @@ export function useBuildSlots(
     stanceLocked: initial?.stanceLocked ?? false,
   }
 
-  const [placed, setPlaced] = useState<Partial<Record<SlotId, PlacedMod>>>(
-    () => dropOrphanSlots(initial?.placed ?? {}, layout),
+  const [placed, setPlaced] = useState<Partial<Record<SlotId, PlacedMod>>>(() =>
+    dropOrphanSlots(initial?.placed ?? {}, layout),
   )
   const [selected, setSelected] = useState<SlotId | null>(
     () => initial?.initialSelected ?? "normal-0",
