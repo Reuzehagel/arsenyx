@@ -4,6 +4,7 @@ import {
   getArcanesForWeapon,
   isKitgunWeapon,
   isSecondSlotArcane,
+  isZawArcane,
   type ArcaneSlotType,
 } from "@arsenyx/shared/warframe/arcanes"
 // Category-only slot facts live in shared (the api Overframe importer needs
@@ -125,15 +126,26 @@ export function getArcaneSlotConfig(
   }
   if (category === "exalted-weapons" && item) {
     const slot = getExaltedArcaneSlot(item)
-    return { options: [getArcanesForSlot(allArcanes, slot)] }
-  }
-  if (category === "melee" && item && isZawComponent(item.displayClass)) {
-    const regular: Arcane[] = []
-    const exodia: Arcane[] = []
-    for (const a of getArcanesForSlot(allArcanes, "melee")) {
-      ;(isSecondSlotArcane(a, true) ? exodia : regular).push(a)
+    const pool = getArcanesForSlot(allArcanes, slot)
+    // Exalted weapons are never Zaws, so Exodia (Zaw-only) arcanes never apply
+    // to an exalted-melee weapon's pool — strip them out.
+    return {
+      options: [slot === "melee" ? pool.filter((a) => !isZawArcane(a)) : pool],
     }
-    return { options: [regular, exodia], labels: ["Melee Arcane", "Exodia"] }
+  }
+  if (category === "melee" && item) {
+    const pool = getArcanesForSlot(allArcanes, "melee")
+    if (isZawComponent(item.displayClass)) {
+      const regular: Arcane[] = []
+      const exodia: Arcane[] = []
+      for (const a of pool) {
+        ;(isSecondSlotArcane(a, true) ? exodia : regular).push(a)
+      }
+      return { options: [regular, exodia], labels: ["Melee Arcane", "Exodia"] }
+    }
+    // Ordinary melee (glaives, swords, etc.) can't equip Exodia (Zaw-only)
+    // arcanes — the shared melee pool lumps them in, so filter them back out.
+    return { options: [pool.filter((a) => !isZawArcane(a))] }
   }
   // Kitguns get two arcane slots: the regular weapon-arcane slot plus a
   // dedicated Pax/Residual slot. Split the weapon-eligible pool so the
