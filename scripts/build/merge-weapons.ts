@@ -366,7 +366,14 @@ export function mergeWikiOnlyWeapon(
 
   const polarities = normalizePolarities(wiki.Polarities ?? [])
   const exilus = normalizePolarity(wiki.ExilusPolarity)
-  const stance = normalizePolarity(wiki.StancePolarity)
+  // Beast claws equip a Posture (stance) mod in a slot that is permanently
+  // Penjaga — DE/wiki don't emit a StancePolarity for them, so default it here
+  // so the editor surfaces the stance slot and a maxed Posture mod earns the
+  // doubled +10 capacity. (wiki.warframe.com/w/Companion: "Beast Claw Stance
+  // Mods and Slots all use the Penjaga Polarity".)
+  const stance =
+    normalizePolarity(wiki.StancePolarity) ??
+    (displayClass === "Claws (Beast)" ? "penjaga" : null)
   const dmg = buildDamageBlock(wiki.Attacks)
   return {
     // Wiki InternalName is DE's uniqueName when present; otherwise synthesize

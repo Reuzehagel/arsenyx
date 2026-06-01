@@ -16,13 +16,18 @@ export function getNormalSlotCount(category: BrowseCategory): number {
   return 8
 }
 
-/** Categories that have an Exilus slot. Necramechs, companions, every
- *  archwing-category item (suits, arch-guns, arch-melee), and the railjack
- *  Plexus don't. */
+/** Categories that have an Exilus slot. Necramechs, companions, companion
+ *  weapons, every archwing-category item (suits, arch-guns, arch-melee), and
+ *  the railjack Plexus don't. Robotic/Sentinel weapons have no Exilus slot
+ *  (and can't take Arcanes); beast claws carry a Posture (stance) slot instead
+ *  — neither variety of companion weapon has an Exilus slot.
+ *  (wiki.warframe.com/w/Sentinel: "Robotic weapons do not possess an Exilus
+ *  slot and cannot equip Arcane Enhancements.") */
 export function hasExilusSlot(category: BrowseCategory): boolean {
   return (
     category !== "necramechs" &&
     category !== "companions" &&
+    category !== "companion-weapons" &&
     category !== "archwing" &&
     category !== "railjack"
   )

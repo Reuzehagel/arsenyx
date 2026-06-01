@@ -127,6 +127,27 @@ export function getVisibleSlots(layout: SlotLayout): SlotId[] {
   return out
 }
 
+/**
+ * Drop seeded slot entries whose slot doesn't exist in this layout. A
+ * legacy or imported build can carry a mod (or forma) in a slot the current
+ * item lacks — e.g. a companion-weapon build saved when the editor still drew
+ * an Exilus slot for that category. Left in, such an entry renders nowhere yet
+ * still feeds the capacity/endo math (`calculateCapacity` reads `placed.exilus`
+ * directly), can't be removed, and is re-serialized on every save. Filtering by
+ * `getVisibleSlots` keeps exactly the slots the editor can surface.
+ */
+export function dropOrphanSlots<T>(
+  seed: Partial<Record<SlotId, T>>,
+  layout: SlotLayout,
+): Partial<Record<SlotId, T>> {
+  const visible = new Set<SlotId>(getVisibleSlots(layout))
+  const entries = Object.entries(seed) as [SlotId, T][]
+  if (entries.every(([id]) => visible.has(id))) return seed
+  const out: Partial<Record<SlotId, T>> = {}
+  for (const [id, v] of entries) if (visible.has(id)) out[id] = v
+  return out
+}
+
 /** Next slot in reading order. Stays put if `current` is the last slot. */
 export function getNextSlot(current: SlotId, layout: SlotLayout): SlotId {
   const list = getVisibleSlots(layout)
@@ -224,27 +245,6 @@ export function useBuildSlots(
     conflictMap?: ModConflictMap
   },
 ): BuildSlotsState {
-  const [placed, setPlaced] = useState<Partial<Record<SlotId, PlacedMod>>>(
-    () => {
-      const seed = initial?.placed ?? {}
-      // A locked exalted stance owns the stance slot (rendered read-only, not
-      // in `placed`). Drop any stale stance mod a legacy/imported build may
-      // carry there — otherwise it's invisible (the locked card renders
-      // instead), unremovable, and re-serialized on every save.
-      if (initial?.stanceLocked && seed.stance) {
-        const { stance: _dropped, ...rest } = seed
-        return rest
-      }
-      return seed
-    },
-  )
-  const [selected, setSelected] = useState<SlotId | null>(
-    () => initial?.initialSelected ?? "normal-0",
-  )
-  const [formaPolarities, setFormaPolarities] = useState<
-    Partial<Record<SlotId, Polarity>>
-  >(() => initial?.formaPolarities ?? {})
-
   const auraSlotCount = initial?.auraSlotCount ?? 0
   const conflictMap = initial?.conflictMap
   const layout: SlotLayout = {
@@ -254,6 +254,16 @@ export function useBuildSlots(
     showStance: initial?.showStance ?? false,
     stanceLocked: initial?.stanceLocked ?? false,
   }
+
+  const [placed, setPlaced] = useState<Partial<Record<SlotId, PlacedMod>>>(
+    () => dropOrphanSlots(initial?.placed ?? {}, layout),
+  )
+  const [selected, setSelected] = useState<SlotId | null>(
+    () => initial?.initialSelected ?? "normal-0",
+  )
+  const [formaPolarities, setFormaPolarities] = useState<
+    Partial<Record<SlotId, Polarity>>
+  >(() => dropOrphanSlots(initial?.formaPolarities ?? {}, layout))
 
   const place = useCallback(
     (mod: Mod) => {

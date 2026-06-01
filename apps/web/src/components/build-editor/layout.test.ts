@@ -40,6 +40,18 @@ const NORMAL_PISTOL: Pick<DetailItem, "displayClass" | "uniqueName"> = {
   uniqueName: "/Lotus/Weapons/Tenno/Pistol/Lex",
 }
 
+// Companion weapons split by displayClass: beast claws ("Claws (Beast)") carry
+// a Penjaga Posture slot rendered as the stance slot; robotic/sentinel weapons
+// have neither a stance nor an exilus slot.
+const ADARZA_CLAWS: Pick<DetailItem, "stancePolarity" | "displayClass"> = {
+  displayClass: "Claws (Beast)",
+  stancePolarity: "penjaga",
+}
+const SWEEPER: Pick<DetailItem, "stancePolarity" | "displayClass"> = {
+  displayClass: "Shotgun (Sentinel)",
+  stancePolarity: undefined,
+}
+
 // Voidrig's Arquebex (arch-gun) and Bonewidow's Ironbride (arch-melee) are the
 // only exalted weapons that mod from the Archgun/Archmelee pools. Mausolon
 // shares the Archgun pool but is a regular arch-gun (displayClass "Archgun").
@@ -107,6 +119,27 @@ describe("hasExilusSlot", () => {
   it("defers to the category for non-exalted items", () => {
     expect(hasExilusSlot("primary", NORMAL_PISTOL)).toBe(true)
     expect(hasExilusSlot("companions", NORMAL_PISTOL)).toBe(false)
+  })
+
+  it("denies an exilus slot to companion weapons (sentinel + beast)", () => {
+    // Robotic/Sentinel weapons have no exilus slot and can't take arcanes;
+    // beast claws carry a Posture (stance) slot instead.
+    expect(hasExilusSlot("companion-weapons", SWEEPER)).toBe(false)
+    expect(hasExilusSlot("companion-weapons", ADARZA_CLAWS)).toBe(false)
+  })
+})
+
+describe("hasStanceSlot", () => {
+  it("gives beast claws a stance (Posture) slot via their Penjaga polarity", () => {
+    expect(hasStanceSlot(ADARZA_CLAWS, "companion-weapons")).toBe(true)
+  })
+
+  it("denies a stance slot to sentinel weapons (no stancePolarity)", () => {
+    expect(hasStanceSlot(SWEEPER, "companion-weapons")).toBe(false)
+  })
+
+  it("never surfaces a stance slot on the Plexus", () => {
+    expect(hasStanceSlot({ stancePolarity: "naramon" }, "railjack")).toBe(false)
   })
 })
 
