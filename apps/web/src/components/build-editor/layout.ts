@@ -234,10 +234,20 @@ export function hasStanceSlot(
  * build, share URL, or undo step.
  */
 export function hasLockedStance(
-  item: Pick<DetailItem, "innateStance">,
+  item: Pick<DetailItem, "innateStance" | "stancePolarity">,
   category: BrowseCategory,
 ): boolean {
-  return category === "exalted-weapons" && Boolean(item.innateStance)
+  // Require stancePolarity as well as innateStance: the locked stance's +10
+  // capacity bonus must never apply without the slot actually rendering, and
+  // the slot renders only when `hasStanceSlot` (which gates on stancePolarity)
+  // is true. Today every `innateStance` item also carries stancePolarity, so
+  // this is belt-and-suspenders against a future data regen emitting one
+  // without the other — it keeps capacity and the visible slot in lockstep.
+  return (
+    category === "exalted-weapons" &&
+    Boolean(item.innateStance) &&
+    Boolean(item.stancePolarity)
+  )
 }
 
 export function getLockedStance(

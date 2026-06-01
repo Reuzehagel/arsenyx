@@ -23,6 +23,8 @@ export const PVE_USABLE_CONCLAVE_MODS: ReadonlySet<string> = new Set([
   "/Lotus/Powersuits/Rhino/IronSkinAugmentCard", // Iron Shrapnel (Rhino)
   "/Lotus/Powersuits/Ranger/RangerQuiverPvPAugmentCard", // Power of Three (Ivara)
   "/Lotus/Powersuits/Loki/DecoyPvPAugmentCard", // Deceptive Bond (Loki)
+  // Singularity is Nyx's Absorb augment (compatName "Nyx"), but DE files it
+  // under the /Jade/ powersuit folder — the path is correct, don't "fix" it.
   "/Lotus/Powersuits/Jade/SelfBulletAttractorPvPAugmentCard", // Singularity (Nyx)
   "/Lotus/Powersuits/Harlequin/PrismPvPAugmentCard", // Prism Guard (Mirage)
   "/Lotus/Powersuits/Frost/IceSpikeAugmentCard", // Ice Wave Impedance (Frost)

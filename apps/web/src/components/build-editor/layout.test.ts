@@ -129,20 +129,6 @@ describe("hasExilusSlot", () => {
   })
 })
 
-describe("hasStanceSlot", () => {
-  it("gives beast claws a stance (Posture) slot via their Penjaga polarity", () => {
-    expect(hasStanceSlot(ADARZA_CLAWS, "companion-weapons")).toBe(true)
-  })
-
-  it("denies a stance slot to sentinel weapons (no stancePolarity)", () => {
-    expect(hasStanceSlot(SWEEPER, "companion-weapons")).toBe(false)
-  })
-
-  it("never surfaces a stance slot on the Plexus", () => {
-    expect(hasStanceSlot({ stancePolarity: "naramon" }, "railjack")).toBe(false)
-  })
-})
-
 describe("resolveInitialArcanes — kitgun re-bucketing", () => {
   const placed = (a: Arcane): PlacedArcane => ({ arcane: a, rank: 0 })
 
@@ -221,14 +207,30 @@ const GARUDA_TALONS: Pick<
 
 describe("hasStanceSlot", () => {
   it("surfaces a stance slot for melee exalted weapons (locked and free)", () => {
+    // Exalted Blade et al. are frame *melee* exalteds: they carry
+    // stancePolarity + innateStance and render a locked stance slot.
     expect(hasStanceSlot(DESERT_WIND, "exalted-weapons")).toBe(true)
     expect(hasStanceSlot(GARUDA_TALONS, "exalted-weapons")).toBe(true)
   })
 
+  it("gives beast claws a stance (Posture) slot via their Penjaga polarity", () => {
+    expect(hasStanceSlot(ADARZA_CLAWS, "companion-weapons")).toBe(true)
+  })
+
   it("denies a stance slot to exalted guns / Necramech exalted (no stancePolarity)", () => {
+    // Arquebex (arch-gun) and Ironbride (Necramech arch-melee) carry no
+    // stancePolarity. (Exalted Blade is NOT here — it's a melee exalted with a
+    // locked stance, asserted true above.)
     expect(hasStanceSlot(ARQUEBEX, "exalted-weapons")).toBe(false)
     expect(hasStanceSlot(IRONBRIDE, "exalted-weapons")).toBe(false)
-    expect(hasStanceSlot(EXALTED_BLADE, "exalted-weapons")).toBe(false)
+  })
+
+  it("denies a stance slot to sentinel weapons (no stancePolarity)", () => {
+    expect(hasStanceSlot(SWEEPER, "companion-weapons")).toBe(false)
+  })
+
+  it("never surfaces a stance slot on the Plexus", () => {
+    expect(hasStanceSlot({ stancePolarity: "naramon" }, "railjack")).toBe(false)
   })
 })
 
