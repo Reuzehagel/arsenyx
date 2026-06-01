@@ -13,6 +13,14 @@
  *
  * Keyed by uniqueName (= wiki InternalName), which is stable across renames.
  * Verified against wiki.warframe.com, 2026-06-01.
+ *
+ * KNOWN TRADEOFF: the build emits these with `isConclave = false`, which makes
+ * them visible in the picker's PvE view (the goal) but hides them from the
+ * Conclave view — even though they're legal in both. `isConclave` is a single
+ * boolean, so it can't express "both"; PvE is the planner's primary mode, so we
+ * optimize for that. To show them in both views, add a `pveUsable` flag to the
+ * mod data (keep `isConclave = true`) and change the picker's PvE filter to
+ * hide `isConclave && !pveUsable` instead. Not done — Conclave is niche here.
  */
 export const PVE_USABLE_CONCLAVE_MODS: ReadonlySet<string> = new Set([
   // Weapon zoom mods — standard Exilus zoom, usable in PvE.
