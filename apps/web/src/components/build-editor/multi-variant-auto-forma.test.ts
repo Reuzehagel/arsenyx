@@ -5,6 +5,7 @@ import { calculateCapacity } from "./calculations"
 import {
   computeMultiVariantPlan,
   computeMultiVariantStage1Plan,
+  listFormaCandidates,
 } from "./multi-variant-auto-forma"
 import type { PlacedMod, SlotId } from "./use-build-slots"
 
@@ -150,6 +151,40 @@ describe("computeMultiVariantStage1Plan", () => {
     const next = { ...inputs, formaPolarities: plan!.formaPolarities }
     const cap = calculateCapacity({ ...next, placed: placedMap })
     expect(cap.used).toBeLessThanOrEqual(cap.max)
+  })
+})
+
+describe("listFormaCandidates — locked-stance guard", () => {
+  // A build with a stance slot in play (mod placed + innate polarity) so the
+  // stance branch is reachable; buckets offer a stance polarity that differs
+  // from the (empty) current forma, so a candidate would be produced.
+  const stanceInput = {
+    ...emptyInputs(),
+    variantSlots: [
+      { stance: placed("madurai", 10) } as Partial<Record<SlotId, PlacedMod>>,
+    ],
+    stanceInnate: "madurai" as Polarity,
+  }
+  const buckets = {
+    aura: [] as Polarity[],
+    exilus: [] as Polarity[],
+    stance: ["vazarin"] as Polarity[],
+    normal: [] as Polarity[],
+  }
+
+  it("offers a stance forma candidate for an ordinary (editable) stance slot", () => {
+    const out = listFormaCandidates(stanceInput, buckets)
+    expect(out.some((c) => c.id === "stance")).toBe(true)
+  })
+
+  it("omits the stance forma candidate when an exalted stance is locked", () => {
+    // The locked stance can't be forma'd — calculateCapacity ignores
+    // formaPolarities.stance here — so a stance candidate only wastes budget.
+    const out = listFormaCandidates(
+      { ...stanceInput, lockedStance: placed("madurai", 0) },
+      buckets,
+    )
+    expect(out.some((c) => c.id === "stance")).toBe(false)
   })
 })
 

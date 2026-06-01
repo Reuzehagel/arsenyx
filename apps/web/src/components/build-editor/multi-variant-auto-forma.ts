@@ -600,7 +600,11 @@ interface FormaSlotChoice {
   polarity: Polarity
 }
 
-function listFormaCandidates(
+// Exported for unit testing: the locked-stance guard below changes the
+// candidate list, not the planner's final output (calculateCapacity ignores
+// `formaPolarities.stance` under `lockedStance`), so it can't be asserted
+// through the public plan API — pin it directly.
+export function listFormaCandidates(
   input: MultiVariantInput,
   buckets: KindCandidates,
 ): FormaSlotChoice[] {
