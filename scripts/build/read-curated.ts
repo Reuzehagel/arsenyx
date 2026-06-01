@@ -8,6 +8,10 @@
  */
 
 import { CLASS_DEFAULT_POOLS, ALL_MENTIONED_POOLS } from "../../data/curated/class-pools"
+import {
+  EXALTED_STANCES,
+  type ExaltedStance,
+} from "../../data/curated/exalted-stances"
 import { MOD_POOL_OVERRIDES } from "../../data/curated/mod-pools"
 import { PLEXUS_BROWSE_ITEM, PLEXUS_DETAIL } from "../../data/curated/plexus"
 import {
@@ -28,6 +32,8 @@ export interface CuratedData {
   plexusDetail: typeof PLEXUS_DETAIL
   /** Name → { releaseDate?, vaulted? } from curated snapshot. */
   releaseHistory: Record<string, ReleaseHistoryEntry>
+  /** Weapon name → permanently-installed exalted stance (locked slot). */
+  exaltedStances: Record<string, ExaltedStance>
 }
 
 export function readCurated(): CuratedData {
@@ -40,5 +46,6 @@ export function readCurated(): CuratedData {
     plexusBrowse: PLEXUS_BROWSE_ITEM,
     plexusDetail: PLEXUS_DETAIL,
     releaseHistory: RELEASE_HISTORY,
+    exaltedStances: EXALTED_STANCES,
   }
 }

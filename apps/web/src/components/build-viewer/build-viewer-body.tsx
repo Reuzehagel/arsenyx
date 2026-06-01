@@ -158,6 +158,7 @@ function BuildViewerBodyInner({
     auraSlotCount,
     showExilus: layout.showExilus,
     showStance: layout.showStance,
+    stanceLocked: layout.stanceLocked,
     initialSelected: null,
   })
   const arcanes = useArcaneSlots(

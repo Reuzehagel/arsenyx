@@ -103,16 +103,20 @@ export interface SlotLayout {
   auraSlotCount: number
   showExilus: boolean
   showStance: boolean
+  /** A locked exalted stance is shown but read-only — exclude it from
+   *  selection/placement so the cursor and "place in first empty" skip it. */
+  stanceLocked?: boolean
 }
 
 /**
  * Ordered list of visible slots in reading order:
- * aura-0, stance?, exilus?, aura-1..N-1, normal-0..N.
+ * aura-0, stance?, exilus?, aura-1..N-1, normal-0..N. A locked stance is
+ * omitted — it's display-only and can't hold a user-placed mod.
  */
 export function getVisibleSlots(layout: SlotLayout): SlotId[] {
   const out: SlotId[] = []
   if (layout.auraSlotCount > 0) out.push("aura-0")
-  if (layout.showStance) out.push("stance")
+  if (layout.showStance && !layout.stanceLocked) out.push("stance")
   if (layout.showExilus) out.push("exilus")
   for (let i = 1; i < layout.auraSlotCount; i++) {
     out.push(`aura-${i}` as SlotId)
@@ -209,6 +213,9 @@ export function useBuildSlots(
     auraSlotCount?: number
     showExilus?: boolean
     showStance?: boolean
+    /** Exalted weapons with a permanently installed stance — the stance slot
+     *  is shown read-only, so keep it out of selection/placement. */
+    stanceLocked?: boolean
     /** Set to null for read-only views that shouldn't start with a focused slot. */
     initialSelected?: SlotId | null
     /** Mutual-exclusion graph. When supplied, `place` rejects a mod that
@@ -218,7 +225,18 @@ export function useBuildSlots(
   },
 ): BuildSlotsState {
   const [placed, setPlaced] = useState<Partial<Record<SlotId, PlacedMod>>>(
-    () => initial?.placed ?? {},
+    () => {
+      const seed = initial?.placed ?? {}
+      // A locked exalted stance owns the stance slot (rendered read-only, not
+      // in `placed`). Drop any stale stance mod a legacy/imported build may
+      // carry there — otherwise it's invisible (the locked card renders
+      // instead), unremovable, and re-serialized on every save.
+      if (initial?.stanceLocked && seed.stance) {
+        const { stance: _dropped, ...rest } = seed
+        return rest
+      }
+      return seed
+    },
   )
   const [selected, setSelected] = useState<SlotId | null>(
     () => initial?.initialSelected ?? "normal-0",
@@ -234,6 +252,7 @@ export function useBuildSlots(
     auraSlotCount,
     showExilus: initial?.showExilus ?? false,
     showStance: initial?.showStance ?? false,
+    stanceLocked: initial?.stanceLocked ?? false,
   }
 
   const place = useCallback(
@@ -289,6 +308,7 @@ export function useBuildSlots(
       layout.auraSlotCount,
       layout.showExilus,
       layout.showStance,
+      layout.stanceLocked,
     ],
   )
 

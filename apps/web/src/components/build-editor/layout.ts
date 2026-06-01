@@ -12,11 +12,12 @@ import {
 // so the shared version is imported under an alias for the wrapper to delegate
 // to.
 import { hasExilusSlot as categoryHasExilusSlot } from "@arsenyx/shared/warframe/slot-layout"
-import type { Arcane } from "@arsenyx/shared/warframe/types"
+import type { Arcane, Mod, Polarity } from "@arsenyx/shared/warframe/types"
 
 import type { BrowseCategory, DetailItem } from "@/lib/warframe"
 
 import type { PlacedArcane } from "./use-arcane-slots"
+import type { PlacedMod } from "./use-build-slots"
 
 export { getNormalSlotCount } from "@arsenyx/shared/warframe/slot-layout"
 
@@ -197,10 +198,14 @@ export function resolveInitialArcanes(
 
 /**
  * Whether to render a Stance slot. Driven by the item carrying a
- * `stancePolarity` (present on every melee and on some exalted melees).
- * Arch-melee weapons do not carry stancePolarity and so get no slot.
- * Exalted melees have a stance pre-applied in-game and the player cannot
- * swap it, so we skip the slot entirely for the `exalted-weapons` category.
+ * `stancePolarity` (present on every melee and on every melee exalted weapon).
+ * Arch-melee weapons and the Necramech exalteds do not carry stancePolarity
+ * and so get no slot.
+ *
+ * Exalted melees DO get a stance slot: most carry a permanently installed
+ * stance (rendered locked + pre-filled via `getLockedStance`), while Garuda
+ * Talons is the exception with a free Claw stance slot. Both cases are driven
+ * by the item's `stancePolarity`, so the same predicate covers them.
  *
  * Zaw strike components are user-built melees that carry no stancePolarity
  * on the strike entry but absolutely do equip a stance in-game — always
@@ -210,10 +215,50 @@ export function hasStanceSlot(
   item: Pick<DetailItem, "stancePolarity" | "displayClass">,
   category: BrowseCategory,
 ): boolean {
-  if (category === "exalted-weapons") return false
   if (category === "railjack") return false
   if (isZawComponent(item.displayClass)) return true
   return Boolean(item.stancePolarity)
+}
+
+/**
+ * Synthetic locked-stance mod for an exalted melee weapon whose stance is
+ * permanently installed (every melee exalted except Garuda Talons, which has a
+ * free Claw stance). Returns `undefined` when the item has no such stance.
+ *
+ * The mod is built from the item's curated `innateStance` (name + card image)
+ * and its `stancePolarity` (Zenurik), so a max-rank stance on a matching slot
+ * yields +10 capacity — the same economy as a maxed regular stance
+ * (baseDrain -2, fusionLimit 3 → |−2|+3 = 5, doubled on a polarity match). It
+ * lives outside `slots.placed`: the editor renders it read-only and the
+ * capacity math adds its bonus directly, so it never persists into a saved
+ * build, share URL, or undo step.
+ */
+export function hasLockedStance(
+  item: Pick<DetailItem, "innateStance">,
+  category: BrowseCategory,
+): boolean {
+  return category === "exalted-weapons" && Boolean(item.innateStance)
+}
+
+export function getLockedStance(
+  item: Pick<DetailItem, "uniqueName" | "innateStance" | "stancePolarity">,
+  category: BrowseCategory,
+): PlacedMod | undefined {
+  if (!hasLockedStance(item, category) || !item.innateStance) return undefined
+  const polarity = (item.stancePolarity ?? "zenurik") as Polarity
+  const mod: Mod = {
+    uniqueName: `arsenyx://exalted-stance/${item.uniqueName}`,
+    name: item.innateStance.name,
+    imageName: item.innateStance.imageName,
+    polarity,
+    rarity: "Rare",
+    baseDrain: -2,
+    fusionLimit: 3,
+    compatName: item.innateStance.name,
+    type: "Stance",
+    tradable: false,
+  }
+  return { mod, rank: 3 }
 }
 
 /**

@@ -84,6 +84,7 @@ import {
 } from "./build/read-de"
 import { readCurated } from "./build/read-curated"
 import { readWikiModule } from "./build/read-wiki"
+import { PVE_USABLE_CONCLAVE_MODS } from "../data/curated/pve-usable-conclave-mods"
 
 const REPO_ROOT = resolve(import.meta.dirname, "..")
 const WIKI_DIR = resolve(REPO_ROOT, "data/raw/wiki")
@@ -285,6 +286,20 @@ async function main() {
     }
   }
 
+  // Exalted-stance card images (Serene Storm, Primal Fury, …). DE doesn't
+  // export these locked stances as catalog mods, so register their wiki File
+  // names under synthetic uniqueNames here — that routes them through the same
+  // resolve + sync:images path as every other wiki image. Keyed by filename so
+  // variants sharing one card (Exalted Blade / Umbra / Prime) resolve once.
+  const exaltedStanceImageKey = (file: string) =>
+    `arsenyx://exalted-stance-image/${file}`
+  for (const { wikiImage } of Object.values(curated.exaltedStances)) {
+    const key = exaltedStanceImageKey(wikiImage)
+    if (!wikiImageFileByUniqueName.has(key)) {
+      wikiImageFileByUniqueName.set(key, wikiImage)
+    }
+  }
+
   // Walk the wiki Arcane module once, building everything keyed off arcane
   // records together:
   //   - arcaneWikiImageFile: full-art frame filename (DE only ships the small
@@ -375,7 +390,11 @@ async function main() {
     if (record["_IgnoreEntry"] === true) {
       wikiIgnoreMods.add(internalName)
     }
-    if (record["Conclave"] === true) {
+    // `Conclave = true` means "usable in Conclave", not "PvP-exclusive". A
+    // handful of ability augments + zoom mods are usable in PvE too (and one,
+    // Vexing Retaliation, is mis-flagged outright) — keep those out of the PvP
+    // set so the picker's PvE view shows them. See pve-usable-conclave-mods.ts.
+    if (record["Conclave"] === true && !PVE_USABLE_CONCLAVE_MODS.has(internalName)) {
       wikiConclaveMods.add(internalName)
     }
     const incompat = record["Incompatible"]
@@ -837,10 +856,22 @@ async function main() {
   for (const [catSlug, w] of weaponDetailByCatAndSlug) {
     const [cat, slug] = catSlug.split("|")
     if (!cat || !slug) continue
+    // Locked exalted stance (Serene Storm, Primal Fury, …): a permanently
+    // installed stance the player can't change. Emit it as item metadata so
+    // the editor renders a read-only, pre-filled stance slot (worth +10
+    // capacity). The stance's own polarity matches the slot's `stancePolarity`.
+    const stance = curated.exaltedStances[w.name]
+    const innateStance = stance
+      ? {
+          name: stance.stanceName,
+          imageName: imageByUniqueName.get(exaltedStanceImageKey(stance.wikiImage)),
+        }
+      : undefined
     await writeDetail(cat, slug, {
       ...w,
       imageName: imageByUniqueName.get(w.uniqueName),
       compatTags: pePlusWeaponTags.get(w.uniqueName),
+      ...(innateStance && { innateStance }),
     })
   }
   for (const f of [...mergedFrames, ...operators]) {

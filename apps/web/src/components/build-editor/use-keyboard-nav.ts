@@ -20,12 +20,14 @@ const COLS = 4
 
 function buildGrid(layout: SlotLayout): (SlotId | null)[][] {
   const grid: (SlotId | null)[][] = []
-  const { auraSlotCount, showExilus, showStance } = layout
-  if (auraSlotCount > 0 || showExilus || showStance) {
+  const { auraSlotCount, showExilus, showStance, stanceLocked } = layout
+  // A locked exalted stance renders but isn't selectable — keep it off the grid.
+  const navStance = showStance && !stanceLocked
+  if (auraSlotCount > 0 || showExilus || navStance) {
     // Reading order: aura-0, stance?, exilus?, aura-1..N-1
     const topOrder: SlotId[] = []
     if (auraSlotCount > 0) topOrder.push("aura-0" as SlotId)
-    if (showStance) topOrder.push("stance")
+    if (navStance) topOrder.push("stance")
     if (showExilus) topOrder.push("exilus")
     for (let i = 1; i < auraSlotCount; i++) {
       topOrder.push(`aura-${i}` as SlotId)

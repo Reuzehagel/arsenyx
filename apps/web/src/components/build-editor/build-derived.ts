@@ -14,10 +14,12 @@ import {
   getArcaneSlotConfig,
   getArcaneSlotCount,
   getAuraSlotCount,
+  getLockedStance,
   getMaxLevelCap,
   getNormalSlotCount,
   getPlexusGroupForIndex,
   hasExilusSlot,
+  hasLockedStance,
   hasStanceSlot,
 } from "./layout"
 import {
@@ -41,6 +43,8 @@ export interface BuildLayout {
   arcaneCount: number
   showExilus: boolean
   showStance: boolean
+  /** The stance slot is a locked, pre-filled exalted stance (read-only). */
+  stanceLocked: boolean
 }
 
 export function getBuildLayout(
@@ -54,6 +58,7 @@ export function getBuildLayout(
     arcaneCount: getArcaneSlotCount(category, item),
     showExilus: hasExilusSlot(category, item),
     showStance: hasStanceSlot(item, category),
+    stanceLocked: hasLockedStance(item, category),
   }
 }
 
@@ -98,6 +103,10 @@ export function useBuildDerived(input: {
   )
   const exilusInnate = useMemo(() => getExilusInnatePolarity(item), [item])
   const stanceInnate = useMemo(() => getStanceInnatePolarity(item), [item])
+  const lockedStance = useMemo(
+    () => getLockedStance(item, category),
+    [item, category],
+  )
   const normalInnates = useMemo(
     () =>
       Array.from({ length: normalSlotCount }, (_, i) =>
@@ -146,6 +155,7 @@ export function useBuildDerived(input: {
       normalInnates,
       hasReactor,
       maxLevelCap: getMaxLevelCap(category, item),
+      lockedStance,
       normalSlotConsumesDrain,
     }),
     [
@@ -156,6 +166,7 @@ export function useBuildDerived(input: {
       hasReactor,
       category,
       item,
+      lockedStance,
       normalSlotConsumesDrain,
     ],
   )

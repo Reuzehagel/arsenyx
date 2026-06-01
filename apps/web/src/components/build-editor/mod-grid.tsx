@@ -5,7 +5,7 @@ import { cn } from "@/lib/util/utils"
 import type { BrowseCategory, DetailItem } from "@/lib/warframe"
 
 import { ArcaneSlot } from "./arcane"
-import { PLEXUS_GROUPS } from "./layout"
+import { getLockedStance, PLEXUS_GROUPS } from "./layout"
 import { ModSlot } from "./mod-slot"
 import { CANONICAL_POLARITIES } from "./polarity"
 import type { ArcaneSlotsState } from "./use-arcane-slots"
@@ -117,6 +117,11 @@ export function ModGrid({
   // BuildLayout, so there's nothing to thread it down from.
   const auraPolarities = getAuraPolarities(item, auraSlotCount)
   const polarities = item.polarities ?? []
+  // Exalted melee weapons (except Garuda Talons) ship a permanently installed
+  // stance the player can't change. Render it locked + pre-filled; the slot is
+  // inert (no slotId → no drag/drop) and the +10 capacity is added by
+  // calculateCapacity, not from `slots.placed`.
+  const lockedStance = getLockedStance(item, category)
 
   const slotProps = (
     id: SlotId,
@@ -174,12 +179,21 @@ export function ModGrid({
               {...slotProps("aura-0" as SlotId, auraPolarities[0])}
             />
           )}
-          {showStance && (
-            <ModSlot
-              kind="stance"
-              {...slotProps("stance", getStanceInnatePolarity(item))}
-            />
-          )}
+          {showStance &&
+            (lockedStance ? (
+              <ModSlot
+                kind="stance"
+                slotPolarity={getStanceInnatePolarity(item)}
+                mod={lockedStance.mod}
+                rank={lockedStance.rank}
+                readOnly
+              />
+            ) : (
+              <ModSlot
+                kind="stance"
+                {...slotProps("stance", getStanceInnatePolarity(item))}
+              />
+            ))}
           {showExilus && (
             <ModSlot
               kind="exilus"

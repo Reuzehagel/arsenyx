@@ -71,6 +71,12 @@ export interface DetailItem extends BrowseItem {
   polarities?: string[]
   exilusPolarity?: string | null
   stancePolarity?: string
+  /** Exalted melee weapons (except Garuda Talons) carry a permanently
+   *  installed stance the player can't change. When present, the editor
+   *  renders a locked, pre-filled stance slot worth +10 capacity. The stance's
+   *  polarity matches `stancePolarity` (Zenurik). Absent on weapons with a
+   *  free/normal stance slot. */
+  innateStance?: { name: string; imageName?: string }
   meleeClass?: string
   // warframe
   health?: number

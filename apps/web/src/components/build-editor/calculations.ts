@@ -156,6 +156,11 @@ export interface CapacityInput {
   normalInnates: (Polarity | undefined)[]
   hasReactor: boolean
   maxLevelCap?: number
+  /** Permanently installed exalted stance (Serene Storm, Primal Fury, …).
+   * When set, its capacity bonus is added as if it were the stance slot's
+   * mod — these locked stances live outside `placed`, so this is how their
+   * +10 reaches the total. Takes precedence over `placed.stance`. */
+  lockedStance?: PlacedMod
   /** Per-normal-slot flag: when set and the entry for slot `i` is false,
    * that slot's drain is excluded from `used`. Used by the Plexus, whose
    * Battle and Tactical mods don't consume the Integrated capacity pool.
@@ -180,6 +185,7 @@ export function calculateCapacity(input: CapacityInput): CapacityResult {
     normalInnates,
     hasReactor,
     maxLevelCap,
+    lockedStance,
     normalSlotConsumesDrain,
   } = input
 
@@ -210,14 +216,18 @@ export function calculateCapacity(input: CapacityInput): CapacityResult {
   // Stances act like auras: their drain is negative, surfaced as a capacity
   // bonus rather than a cost. At max rank: +5 with no/universal polarity,
   // +10 on matching polarity, +4 on mismatch — same scaling as aura mods.
+  // A locked exalted stance lives outside `placed`, so prefer it when present
+  // (those weapons never have a user-placed stance — the picker hides them).
+  // Its slot can't be forma'd in-game, so ignore any stray `formaPolarities.stance`
+  // (e.g. from a crafted share URL) and score against the innate polarity — its
+  // own polarity always matches, so the bonus is a guaranteed +10.
   let stanceBonus = 0
-  const stance = placed.stance
+  const stance = lockedStance ?? placed.stance
   if (stance) {
-    stanceBonus = auraBonusForMod(
-      stance.mod,
-      stance.rank,
-      effectivePolarity(stanceInnate, formaPolarities.stance),
-    )
+    const stancePolarity = lockedStance
+      ? stanceInnate
+      : effectivePolarity(stanceInnate, formaPolarities.stance)
+    stanceBonus = auraBonusForMod(stance.mod, stance.rank, stancePolarity)
   }
   for (let i = 0; i < normalInnates.length; i++) {
     const id = `normal-${i}` as SlotId

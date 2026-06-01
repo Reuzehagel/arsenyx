@@ -60,6 +60,10 @@ export interface MultiVariantInput {
   normalInnates: (Polarity | undefined)[]
   hasReactor: boolean
   maxLevelCap?: number
+  /** Permanently installed exalted stance (+10 capacity). Must be forwarded
+   * into every `calculateCapacity` call or the planner under-counts the
+   * ceiling by 10 and recommends excess (or no) forma for exalted melees. */
+  lockedStance?: PlacedMod
   normalSlotConsumesDrain?: boolean[]
 }
 
@@ -84,6 +88,7 @@ function sharedFrom(
     normalInnates: input.normalInnates,
     hasReactor: input.hasReactor,
     maxLevelCap: input.maxLevelCap,
+    lockedStance: input.lockedStance,
     normalSlotConsumesDrain: input.normalSlotConsumesDrain,
   }
 }

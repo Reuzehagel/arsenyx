@@ -106,6 +106,42 @@ describe("calculateCapacity", () => {
   it("no stance placed → no bonus", () => {
     expect(calculateCapacity(emptyInput()).max).toBe(60)
   })
+
+  it("a locked exalted stance grants +10 without anything in `placed`", () => {
+    // Exalted melees ship a fixed Zenurik stance that lives outside `placed`.
+    const result = calculateCapacity(
+      emptyInput({
+        lockedStance: placedStance("zenurik"),
+        stanceInnate: "zenurik",
+      }),
+    )
+    expect(result.max).toBe(70) // 60 + 10
+    expect(result.used).toBe(0) // the stance is a bonus, not a cost
+  })
+
+  it("a locked stance takes precedence over any placed stance", () => {
+    const result = calculateCapacity(
+      emptyInput({
+        placed: { stance: placedStance("naramon") },
+        lockedStance: placedStance("zenurik"),
+        stanceInnate: "zenurik",
+      }),
+    )
+    expect(result.max).toBe(70)
+  })
+
+  it("a locked stance ignores stray stance forma (slot can't be forma'd)", () => {
+    // A crafted share URL could carry formaPolarities.stance; it must not
+    // degrade the locked stance's guaranteed +10 (the slot is read-only).
+    const result = calculateCapacity(
+      emptyInput({
+        lockedStance: placedStance("zenurik"),
+        stanceInnate: "zenurik",
+        formaPolarities: { stance: "madurai" },
+      }),
+    )
+    expect(result.max).toBe(70)
+  })
 })
 
 // Regression: issue #168 — an "any" (Universal) polarity aura, e.g. Dreamer's

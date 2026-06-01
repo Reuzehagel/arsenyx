@@ -2,6 +2,7 @@ import {
   getModsForItem,
   getPlexusSlotKind,
   isPlexusAuraMod,
+  isStanceMod,
   type PlexusSlotKind,
 } from "@arsenyx/shared/warframe/mods"
 import {
@@ -12,7 +13,11 @@ import { type Mod } from "@arsenyx/shared/warframe/types"
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { useEffect, useMemo, useState } from "react"
 
-import { ModSearchGrid, type ModSlotKind } from "@/components/build-editor"
+import {
+  hasLockedStance,
+  ModSearchGrid,
+  type ModSlotKind,
+} from "@/components/build-editor"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { type HelminthAbility } from "@/lib/queries/helminth-query"
 import { modsQuery } from "@/lib/queries/mods-query"
@@ -118,11 +123,19 @@ export function SearchPanel({
         extras.push(m)
       }
     }
-    const mods = [...base, ...extras]
+    // Locked-stance exalted weapons (Exalted Blade, Desert Wind, …) keep their
+    // stance permanently — the slot is read-only and pre-filled — so drop any
+    // stance mods from the picker. Without this, a class-matching stance (e.g.
+    // a Sword stance for Exalted Blade) would route into the locked slot and
+    // silently vanish from the render while polluting the saved build.
+    const all = [...base, ...extras]
+    const usable = hasLockedStance(item, category)
+      ? all.filter((m) => !isStanceMod(m))
+      : all
     if (isRivenEligible(category, item)) {
-      return [createSyntheticRiven(), ...mods]
+      return [createSyntheticRiven(), ...usable]
     }
-    return mods
+    return usable
   }, [allMods, item, category, helminth, plexusTab, selectedIsPlexusAura])
 
   return (

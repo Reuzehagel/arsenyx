@@ -160,8 +160,9 @@ describe("getModsForItem stance filtering", () => {
   it("admits sword stances on Exalted Blade (Swords is in its pool)", () => {
     // Exalted Blade: modPools=["Melee","Swords","Exalted Blade"]. Polearm
     // and Heavy Blade stances aren't in pool → filtered. A sword stance
-    // would pass — that's the picker's job to decide whether the slot is
-    // even editable (exalted melees have no stance slot in-game).
+    // would pass this pool filter — but Exalted Blade's stance is locked
+    // (Serene Storm-style fixed exalted stance), so the web picker drops
+    // stance mods for locked-stance exalteds (see SearchPanel + hasLockedStance).
     const result = getModsForItem(
       {
         uniqueName: "/Lotus/Powersuits/Excalibur/ExaltedBlade",

@@ -50,8 +50,11 @@ export const MOD_POOL_OVERRIDES: Record<string, readonly string[]> = {
   "Desert Wind Prime": ["Melee", "Sparring"],
   "Whipclaw": ["Melee"],
   "Whipclaw Prime": ["Melee"],
-  // Pseudo-exalted abilities — independently moddable with melee mods, but
-  // can't slot a stance, so no stance sub-pool. (Verified against the wiki.)
+  // Pseudo-exalted abilities — independently moddable with melee mods. They
+  // carry a *locked* exalted stance (its own +10-capacity Zenurik mod that the
+  // player can't change — handled via `data/curated/exalted-stances.ts`), so
+  // there's still no stance sub-pool here: the picker offers no class stances.
+  // (Verified against wiki.warframe.com/w/Exalted_Weapon.)
   "Landslide Fists": ["Melee"],
   "Landslide Fists Prime": ["Melee"],
   "Shattered Lash": ["Melee"],

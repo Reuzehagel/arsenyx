@@ -412,6 +412,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     arcaneCount,
     showExilus,
     showStance,
+    stanceLocked,
   } = layout
   const slots = useBuildSlots(normalSlotCount, {
     placed: savedData.slots,
@@ -421,11 +422,18 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     auraSlotCount,
     showExilus,
     showStance,
+    stanceLocked,
     conflictMap,
   })
   useSlotKeyboardNav({
     slots,
-    layout: { normalSlotCount, auraSlotCount, showExilus, showStance },
+    layout: {
+      normalSlotCount,
+      auraSlotCount,
+      showExilus,
+      showStance,
+      stanceLocked,
+    },
   })
   const arcanes = useArcaneSlots(
     arcaneCount,
