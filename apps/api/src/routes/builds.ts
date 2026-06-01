@@ -8,6 +8,7 @@ import { prisma, registerBackgroundWork } from "../db"
 import { Prisma } from "../generated/prisma/client"
 import { BuildVisibility } from "../generated/prisma/enums"
 import type { InputJsonValue } from "../generated/prisma/internal/prismaNamespace"
+import { edgeCache, purgeEdge } from "../lib/edge-cache"
 import { getSession } from "../lib/session"
 import { hasPrismaCode, parseJsonBody, trimToMax } from "../lib/validate"
 import { enforceAnonEdgeLimit, rateLimitUser } from "../middleware/rate-limit"
@@ -257,6 +258,7 @@ builds.patch("/:slug", rateLimitUser("mutate"), async (c) => {
     data,
     select: { id: true, slug: true },
   })
+  purgeEdge(c, `/builds/${slug}`)
   return c.json(updated)
 })
 
@@ -276,6 +278,7 @@ builds.delete("/:slug", rateLimitUser("mutate"), async (c) => {
   }
 
   await prisma.build.delete({ where: { id: existing.id } })
+  purgeEdge(c, `/builds/${slug}`)
   return c.body(null, 204)
 })
 
@@ -336,7 +339,7 @@ builds.post("/:slug/fork", rateLimitUser("mutate"), async (c) => {
   return c.json({ error: "slug_collision" }, 500)
 })
 
-builds.get("/", async (c) => {
+builds.get("/", edgeCache({ maxAge: 120 }), async (c) => {
   const result = await runList({
     filters: parseListQuery(c),
     baseWhere: { visibility: BuildVisibility.PUBLIC },
@@ -755,7 +758,7 @@ builds.delete("/:slug/bookmark", rateLimitUser("social"), async (c) => {
   })
 })
 
-builds.get("/:slug", async (c) => {
+builds.get("/:slug", edgeCache({ maxAge: 300 }), async (c) => {
   const slug = c.req.param("slug")
 
   // Fast path for the link-unfurl Worker (apps/web/worker/index.ts): skip the
@@ -824,11 +827,16 @@ builds.get("/:slug", async (c) => {
     viewerId != null && build.organizationId != null
       ? await isOrgMember(build.organizationId, viewerId)
       : false
+  // Admins bypass visibility so they can moderate any build — without this, an
+  // admin who sets someone else's build to PRIVATE immediately loses the right
+  // to view it back and the viewer 404s.
+  const isAdmin = session?.user.isAdmin === true
   const canView =
     build.visibility === "PUBLIC" ||
     build.visibility === "UNLISTED" ||
     (viewerId != null && build.userId === viewerId) ||
-    viewerIsOrgMember
+    viewerIsOrgMember ||
+    isAdmin
 
   if (!canView) return c.json({ error: "not_found" }, 404)
 

@@ -159,6 +159,7 @@ export function ViewerHeader({
             slug={build.slug}
             name={build.name}
             isOwner={build.isOwner}
+            visibility={build.visibility}
           />
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router"
-import { GitFork, MoreHorizontal, Trash2 } from "lucide-react"
+import { Eye, GitFork, MoreHorizontal, ShieldX, Trash2 } from "lucide-react"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -14,31 +14,56 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { authClient } from "@/lib/auth-client"
+import {
+  useAdminDeleteBuild,
+  useAdminSetBuildVisibility,
+} from "@/lib/queries/admin-actions"
 import { useDeleteBuild, useForkBuild } from "@/lib/queries/build-actions"
+import type { BuildDetail } from "@/lib/queries/build-query"
+import { formatVisibility } from "@/lib/util/user-display"
+
+type Visibility = BuildDetail["visibility"]
+const VISIBILITIES: Visibility[] = ["PUBLIC", "UNLISTED", "PRIVATE"]
 
 /**
  * "More actions" overflow menu for the viewer header: Fork (anyone signed
- * in), Delete (owner only, behind a confirm dialog).
+ * in), Delete (owner only, behind a confirm dialog). Admins additionally get
+ * an in-context moderation section — change visibility / delete — without a
+ * trip to the admin panel.
  */
 export function BuildActionsMenu({
   slug,
   name,
   isOwner,
+  visibility,
 }: {
   slug: string
   name: string
   isOwner: boolean
+  visibility: Visibility
 }) {
   const { data: session } = authClient.useSession()
+  const isAdmin =
+    (session?.user as { isAdmin?: boolean } | undefined)?.isAdmin === true
   const navigate = useNavigate()
   const fork = useForkBuild(slug)
   const del = useDeleteBuild(slug)
+  const adminSetVisibility = useAdminSetBuildVisibility(slug)
+  const adminDelete = useAdminDeleteBuild()
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [adminConfirmOpen, setAdminConfirmOpen] = useState(false)
 
   const onFork = () => {
     if (!session?.user) {
@@ -57,6 +82,16 @@ export function BuildActionsMenu({
       onSuccess: () => {
         setConfirmOpen(false)
         navigate({ to: "/builds/mine" })
+      },
+    })
+  }
+
+  const onAdminDelete = () => {
+    adminDelete.mutate(slug, {
+      onSuccess: () => {
+        setAdminConfirmOpen(false)
+        // The build is gone — returning to the viewer would 404.
+        navigate({ to: "/" })
       },
     })
   }
@@ -88,6 +123,42 @@ export function BuildActionsMenu({
               </DropdownMenuItem>
             </>
           ) : null}
+          {isAdmin ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>Admin</DropdownMenuLabel>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Eye />
+                    Visibility
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuRadioGroup
+                      value={visibility}
+                      onValueChange={(v) => {
+                        if (v === visibility) return
+                        adminSetVisibility.mutate(v as Visibility)
+                      }}
+                    >
+                      {VISIBILITIES.map((v) => (
+                        <DropdownMenuRadioItem key={v} value={v}>
+                          {formatVisibility(v)}
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => setAdminConfirmOpen(true)}
+                >
+                  <ShieldX />
+                  Delete (admin)
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </>
+          ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
@@ -112,6 +183,33 @@ export function BuildActionsMenu({
               disabled={del.isPending}
             >
               {del.isPending ? "Deleting…" : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={adminConfirmOpen} onOpenChange={setAdminConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete this build as admin?</DialogTitle>
+            <DialogDescription>
+              This permanently removes “{name}” from another user. This action
+              cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setAdminConfirmOpen(false)}
+              disabled={adminDelete.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={onAdminDelete}
+              disabled={adminDelete.isPending}
+            >
+              {adminDelete.isPending ? "Deleting…" : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -171,6 +171,24 @@ export function useAdminDeleteBuild() {
   })
 }
 
+export function useAdminSetBuildVisibility(slug: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (visibility: AdminBuildRow["visibility"]) =>
+      adminCall(`/admin/builds/${encodeURIComponent(slug)}`, {
+        method: "PATCH",
+        json: { visibility },
+      }),
+    onSuccess: () => {
+      // The viewer reads this build under ["build", slug]; refresh it so the
+      // header visibility badge tracks the change without a manual reload.
+      qc.invalidateQueries({ queryKey: ["build", slug] })
+      qc.invalidateQueries({ queryKey: ["admin", "builds"] })
+      qc.invalidateQueries({ queryKey: ["builds"] })
+    },
+  })
+}
+
 // ---------------- Orgs
 
 export type AdminOrg = {
