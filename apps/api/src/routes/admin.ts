@@ -2,12 +2,13 @@ import { Hono } from "hono"
 
 import { prisma } from "../db"
 import { Prisma } from "../generated/prisma/client"
-import { BuildVisibility } from "../generated/prisma/enums"
+import { purgeEdge } from "../lib/edge-cache"
 import { parseJsonBody } from "../lib/validate"
 import { rateLimitUser } from "../middleware/rate-limit"
 import { isPrismaNotFound, requireAdmin } from "./_admin"
 import { parseListQuery, runList } from "./_build-list"
 import { parsePage, trimQ } from "./_query"
+import { isVisibility } from "./builds"
 
 export const admin = new Hono()
 
@@ -19,15 +20,6 @@ const USER_FLAGS = [
   "isBanned",
 ] as const
 type UserFlag = (typeof USER_FLAGS)[number]
-
-// Local copy of the guard in builds.ts (not exported there) — admin visibility
-// edits don't go through the owner-gated PATCH, so they validate independently.
-function isVisibility(v: unknown): v is BuildVisibility {
-  return (
-    typeof v === "string" &&
-    Object.values(BuildVisibility).includes(v as BuildVisibility)
-  )
-}
 
 const LIST_PAGE = 24
 
@@ -228,6 +220,9 @@ admin.patch("/builds/:slug", adminMutateLimit, async (c) => {
       data: { visibility },
       select: { id: true, slug: true, visibility: true },
     })
+    // Evict any anonymous edge-cached detail so a build flipped to PRIVATE
+    // stops being served publicly — mirrors the owner PATCH (builds.ts).
+    purgeEdge(c, `/builds/${slug}`)
     return c.json(updated)
   } catch (err) {
     if (isPrismaNotFound(err)) return c.json({ error: "not_found" }, 404)
@@ -246,6 +241,9 @@ admin.delete("/builds/:slug", adminMutateLimit, async (c) => {
     if (isPrismaNotFound(err)) return c.json({ error: "not_found" }, 404)
     throw err
   }
+  // Drop the anonymous edge-cached detail of the now-deleted build — mirrors
+  // the owner DELETE (builds.ts).
+  purgeEdge(c, `/builds/${slug}`)
   return c.body(null, 204)
 })
 

@@ -90,11 +90,18 @@ export function edgeCache(opts: { maxAge: number }): MiddlewareHandler {
 export function purgeEdge(c: Context, path: string): void {
   const cache = defaultCache()
   if (!cache) return
-  const url = new URL(c.req.url)
-  url.pathname = path
-  url.search = ""
-  runInBackground(
-    c,
-    cache.delete(new Request(url.toString(), { method: "GET" })),
-  )
+  const base = new URL(c.req.url)
+  base.pathname = path
+  // The detail route caches two separate entries under distinct keys: the bare
+  // path (full payload) and `?embed=1` (slim link-unfurl payload, served to
+  // anonymous scrapers). Evict both, or a build set PRIVATE/deleted keeps
+  // leaking its name/description through the embed variant until TTL expiry.
+  for (const search of ["", "?embed=1"]) {
+    const url = new URL(base.toString())
+    url.search = search
+    // Build the delete key through the same cacheKey() the store path uses, so
+    // param normalization (searchParams.sort()) can never drift between the two
+    // and leave an un-evicted entry.
+    runInBackground(c, cache.delete(cacheKey(url)))
+  }
 }

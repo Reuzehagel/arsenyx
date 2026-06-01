@@ -39,7 +39,10 @@ const MAX_DESCRIPTION = 2000
 const MAX_GUIDE_SUMMARY = 400
 const MAX_GUIDE_DESCRIPTION = 50_000
 
-function isVisibility(v: unknown): v is BuildVisibility {
+// Exported so the admin visibility PATCH (admin.ts) validates against the same
+// guard rather than keeping a divergent copy — visibility logic stays centralised
+// here per apps/api/CLAUDE.md.
+export function isVisibility(v: unknown): v is BuildVisibility {
   return (
     typeof v === "string" &&
     Object.values(BuildVisibility).includes(v as BuildVisibility)
