@@ -26,24 +26,25 @@
  * isPrime, vaulted, releaseDate.
  */
 
-import { mkdir, rm, writeFile } from "node:fs/promises"
 import { readdirSync } from "node:fs"
+import { mkdir, rm, writeFile } from "node:fs/promises"
 import { resolve } from "node:path"
 
-import { slugify } from "@arsenyx/shared/warframe/slugs"
 import { INCARNON_EVOLUTIONS } from "@arsenyx/shared/warframe/incarnon-evolutions"
+import {
+  isKitgunChamber,
+  KITGUN_GRIPS,
+  KITGUN_LOADERS,
+} from "@arsenyx/shared/warframe/kitgun-data"
+import { slugify } from "@arsenyx/shared/warframe/slugs"
 import type { BrowseItem } from "@arsenyx/shared/warframe/types"
 import {
   ZAW_GRIPS,
   ZAW_LINKS,
   ZAW_STRIKES,
 } from "@arsenyx/shared/warframe/zaw-data"
-import {
-  isKitgunChamber,
-  KITGUN_GRIPS,
-  KITGUN_LOADERS,
-} from "@arsenyx/shared/warframe/kitgun-data"
 
+import { PVE_USABLE_CONCLAVE_MODS } from "../data/curated/pve-usable-conclave-mods"
 import {
   buildExaltedSet,
   categorizeCompanion,
@@ -62,17 +63,21 @@ import {
 } from "./build/images"
 import { mergeArcanes, type MergedArcane } from "./build/merge-arcanes"
 import { mergeCompanions, type MergedCompanion } from "./build/merge-companions"
-import { mergeFrame, operatorsFromWiki, type MergedFrame } from "./build/merge-frames"
+import {
+  mergeFrame,
+  operatorsFromWiki,
+  type MergedFrame,
+} from "./build/merge-frames"
 import { deriveHelminthAbilities } from "./build/merge-helminth"
-import { mergeModular } from "./build/merge-modular"
 import { mergeMods, type MergedMod } from "./build/merge-mods"
-import { readPePlusUpgrades, readPePlusWeaponTags } from "./build/read-pe-plus"
+import { mergeModular } from "./build/merge-modular"
 import {
   mergeWeapon,
   mergeWikiOnlyWeapon,
   validateCuratedAgainstKnown,
   type MergedWeapon,
 } from "./build/merge-weapons"
+import { readCurated } from "./build/read-curated"
 import {
   readDeArcanes,
   readDeFrames,
@@ -82,9 +87,8 @@ import {
   readDeWeapons,
   type DeSentinel,
 } from "./build/read-de"
-import { readCurated } from "./build/read-curated"
+import { readPePlusUpgrades, readPePlusWeaponTags } from "./build/read-pe-plus"
 import { readWikiModule } from "./build/read-wiki"
-import { PVE_USABLE_CONCLAVE_MODS } from "../data/curated/pve-usable-conclave-mods"
 
 const REPO_ROOT = resolve(import.meta.dirname, "..")
 const WIKI_DIR = resolve(REPO_ROOT, "data/raw/wiki")
@@ -133,7 +137,9 @@ async function main() {
   const deSentinelsBlob = readDeSentinels()
   const deManifest = readDeManifest()
   const deUpgrades = readDeUpgrades()
-  console.log(`DE: ${deWeapons.length} weapons, ${deFramesBlob.ExportWarframes.length} frames, ${deSentinelsBlob.ExportSentinels.length} sentinel-blob rows, ${deUpgrades.ExportUpgrades?.length ?? 0} upgrades`)
+  console.log(
+    `DE: ${deWeapons.length} weapons, ${deFramesBlob.ExportWarframes.length} frames, ${deSentinelsBlob.ExportSentinels.length} sentinel-blob rows, ${deUpgrades.ExportUpgrades?.length ?? 0} upgrades`,
+  )
 
   // Wiki weapon subpages — flat name → entry map.
   const wikiWeaponsByName = new Map<string, Record<string, unknown>>()
@@ -147,9 +153,13 @@ async function main() {
       }
     }
   }
-  console.log(`Wiki weapons (across subpages): ${wikiWeaponsByName.size} unique names`)
+  console.log(
+    `Wiki weapons (across subpages): ${wikiWeaponsByName.size} unique names`,
+  )
 
-  const wikiFramesBlob = readWikiModule(resolve(WIKI_DIR, "Warframes_data.lua")) as {
+  const wikiFramesBlob = readWikiModule(
+    resolve(WIKI_DIR, "Warframes_data.lua"),
+  ) as {
     Warframes?: Record<string, Record<string, unknown>>
     Archwings?: Record<string, Record<string, unknown>>
     Necramechs?: Record<string, Record<string, unknown>>
@@ -160,7 +170,9 @@ async function main() {
     resolve(WIKI_DIR, "Companions_data.lua"),
   ) as { Companions?: Record<string, Record<string, unknown>> }
   const wikiCompanions = wikiCompanionsBlob.Companions ?? {}
-  console.log(`Wiki: ${Object.keys(wikiFramesBlob.Warframes ?? {}).length} warframes, ${Object.keys(wikiCompanions).length} companions`)
+  console.log(
+    `Wiki: ${Object.keys(wikiFramesBlob.Warframes ?? {}).length} warframes, ${Object.keys(wikiCompanions).length} companions`,
+  )
 
   // Modular (Kitgun/Zaw) stat tables. Module:Modular/data is the only
   // verifiable source for the per-combination stats DE zeroes out; pass the
@@ -230,7 +242,9 @@ async function main() {
   const frameUnmatched = new Set<string>()
   const mergedFrames: MergedFrame[] = []
   for (const de of deFramesBlob.ExportWarframes) {
-    mergedFrames.push(mergeFrame(de, { wiki: wikiFramesBlob, unmatched: frameUnmatched }))
+    mergedFrames.push(
+      mergeFrame(de, { wiki: wikiFramesBlob, unmatched: frameUnmatched }),
+    )
   }
   const operators = operatorsFromWiki(wikiFramesBlob)
   stats.frames.de = deFramesBlob.ExportWarframes.length
@@ -240,7 +254,10 @@ async function main() {
   // ---------- 4. Merge companions ----------
   const deCompanionByName = new Map<string, DeSentinel>()
   for (const ent of deSentinelsBlob.ExportSentinels) {
-    if (ent.productCategory === "Sentinels" || ent.productCategory === "KubrowPets") {
+    if (
+      ent.productCategory === "Sentinels" ||
+      ent.productCategory === "KubrowPets"
+    ) {
       deCompanionByName.set(ent.name, ent)
     }
   }
@@ -334,7 +351,9 @@ async function main() {
     if (!wikiCache.urls[fn]) neededFilenames.add(fn)
   }
   if (neededFilenames.size > 0) {
-    console.log(`Resolving ${neededFilenames.size} wiki image URLs via MediaWiki API...`)
+    console.log(
+      `Resolving ${neededFilenames.size} wiki image URLs via MediaWiki API...`,
+    )
     const resolved = await resolveWikiImageUrls(neededFilenames)
     for (const [fn, url] of resolved) wikiCache.urls[fn] = url
     writeWikiImageCache(WIKI_IMAGE_CACHE, wikiCache)
@@ -371,6 +390,11 @@ async function main() {
   // (155 mods). The description "in Conclave" substring covers only ~14%
   // of them, so we route via this instead.
   const wikiConclaveMods = new Set<string>()
+  // PVE_USABLE_CONCLAVE_MODS entries we actually saw as Conclave-flagged
+  // records. Used to warn on drift: an entry that never matches (typo, or a
+  // wiki InternalName rename) silently stops excluding its mod and the mod
+  // vanishes from the PvE picker again — surface that at build time.
+  const pveUsableSeen = new Set<string>()
   // Mod display Name → wiki InternalName (= DE uniqueName). Resolves the
   // name-keyed `Incompatible` lists into uniqueNames below.
   const wikiModUniqueNameByName = new Map<string, string>()
@@ -394,8 +418,12 @@ async function main() {
     // handful of ability augments + zoom mods are usable in PvE too (and one,
     // Vexing Retaliation, is mis-flagged outright) — keep those out of the PvP
     // set so the picker's PvE view shows them. See pve-usable-conclave-mods.ts.
-    if (record["Conclave"] === true && !PVE_USABLE_CONCLAVE_MODS.has(internalName)) {
-      wikiConclaveMods.add(internalName)
+    if (record["Conclave"] === true) {
+      if (PVE_USABLE_CONCLAVE_MODS.has(internalName)) {
+        pveUsableSeen.add(internalName)
+      } else {
+        wikiConclaveMods.add(internalName)
+      }
     }
     const incompat = record["Incompatible"]
     if (Array.isArray(incompat)) {
@@ -407,6 +435,19 @@ async function main() {
       )
     }
   }
+  const unmatchedPveUsable = [...PVE_USABLE_CONCLAVE_MODS].filter(
+    (name) => !pveUsableSeen.has(name),
+  )
+  if (unmatchedPveUsable.length > 0) {
+    console.warn(
+      `  WARN pve-usable-conclave-mods.ts: ${unmatchedPveUsable.length} allowlist entr${
+        unmatchedPveUsable.length === 1 ? "y" : "ies"
+      } matched no Conclave-flagged wiki record (typo or wiki rename — these mods are no longer being un-hidden from the PvE picker):\n${unmatchedPveUsable
+        .map((n) => `         - ${n}`)
+        .join("\n")}`,
+    )
+  }
+
   const { mods: rawMergedMods, counts: modCounts } = mergeMods(
     deUpgrades.ExportUpgrades ?? [],
     deUpgrades.ExportModSet ?? [],
@@ -678,7 +719,9 @@ async function main() {
 
   const indexJson = JSON.stringify(byCategory)
   await writeFile(resolve(OUT_DIR, "items-index.json"), indexJson, "utf8")
-  console.log(`\n  OK  items-index.json (${(indexJson.length / 1024).toFixed(1)} KB)`)
+  console.log(
+    `\n  OK  items-index.json (${(indexJson.length / 1024).toFixed(1)} KB)`,
+  )
 
   await writeFile(
     resolve(OUT_DIR, "mods-all.json"),
@@ -844,15 +887,33 @@ async function main() {
   await mkdir(DETAIL_DIR, { recursive: true })
   let detailCount = 0
   let detailBytes = 0
-  function writeDetail(cat: string, slug: string, payload: unknown): Promise<void> {
-    return mkdir(resolve(DETAIL_DIR, cat), { recursive: true }).then(async () => {
-      const body = JSON.stringify(payload)
-      await writeFile(resolve(DETAIL_DIR, cat, `${slug}.json`), body, "utf8")
-      detailCount++
-      detailBytes += Buffer.byteLength(body, "utf8")
-    })
+  function writeDetail(
+    cat: string,
+    slug: string,
+    payload: unknown,
+  ): Promise<void> {
+    return mkdir(resolve(DETAIL_DIR, cat), { recursive: true }).then(
+      async () => {
+        const body = JSON.stringify(payload)
+        await writeFile(resolve(DETAIL_DIR, cat, `${slug}.json`), body, "utf8")
+        detailCount++
+        detailBytes += Buffer.byteLength(body, "utf8")
+      },
+    )
   }
 
+  // Exalted melees with a *free* (editable) stance rather than a locked one —
+  // the documented exception to "every exalted melee ships a locked stance".
+  // See data/curated/exalted-stances.ts.
+  const FREE_STANCE_EXALTED_MELEES = new Set([
+    "Garuda Talons",
+    "Garuda Prime Talons",
+  ])
+  // Exalted melees that render a stance slot (carry stancePolarity) but have no
+  // curated locked stance and aren't a known free-stance exception. The web
+  // editor would surface an *editable* stance slot for them, letting a user
+  // place a stance that's permanently locked in-game → an unbuildable build.
+  const exaltedMeleeMissingStance: string[] = []
   for (const [catSlug, w] of weaponDetailByCatAndSlug) {
     const [cat, slug] = catSlug.split("|")
     if (!cat || !slug) continue
@@ -864,15 +925,32 @@ async function main() {
     const innateStance = stance
       ? {
           name: stance.stanceName,
-          imageName: imageByUniqueName.get(exaltedStanceImageKey(stance.wikiImage)),
+          imageName: imageByUniqueName.get(
+            exaltedStanceImageKey(stance.wikiImage),
+          ),
         }
       : undefined
+    if (
+      cat === "exalted-weapons" &&
+      w.stancePolarity &&
+      !stance &&
+      !FREE_STANCE_EXALTED_MELEES.has(w.name)
+    ) {
+      exaltedMeleeMissingStance.push(w.name)
+    }
     await writeDetail(cat, slug, {
       ...w,
       imageName: imageByUniqueName.get(w.uniqueName),
       compatTags: pePlusWeaponTags.get(w.uniqueName),
       ...(innateStance && { innateStance }),
     })
+  }
+  if (exaltedMeleeMissingStance.length > 0) {
+    console.warn(
+      `  WARN exalted-stances.ts: ${exaltedMeleeMissingStance.length} exalted melee(s) carry a stance slot but no curated locked stance — the editor will show an EDITABLE stance slot for a locked-in-game weapon. Add to EXALTED_STANCES (or FREE_STANCE_EXALTED_MELEES if free):\n${exaltedMeleeMissingStance
+        .map((n) => `         - ${n}`)
+        .join("\n")}`,
+    )
   }
   for (const f of [...mergedFrames, ...operators]) {
     const cat = categorizeFrame(f)
@@ -942,7 +1020,9 @@ async function main() {
   )
 
   console.log("\nBy category:")
-  for (const [cat, n] of Object.entries(stats.perCategory).sort((a, b) => b[1] - a[1])) {
+  for (const [cat, n] of Object.entries(stats.perCategory).sort(
+    (a, b) => b[1] - a[1],
+  )) {
     console.log(`  ${cat.padEnd(20)} ${n}`)
   }
   console.log()

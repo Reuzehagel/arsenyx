@@ -623,7 +623,15 @@ function listFormaCandidates(
       out.push({ id: "exilus", polarity: p })
     }
   }
-  if (input.stanceInnate !== undefined || hasStanceSlotLike(input)) {
+  // A locked exalted stance sets `stanceInnate`, but its slot can't be
+  // forma'd — `calculateCapacity` ignores `formaPolarities.stance` when
+  // `lockedStance` is set — so a stance-forma candidate can never change
+  // feasibility. Skip it: leaving it in only wastes search budget (and could
+  // surface a non-applicable "forma the stance slot" / Omni step).
+  if (
+    !input.lockedStance &&
+    (input.stanceInnate !== undefined || hasStanceSlotLike(input))
+  ) {
     for (const p of buckets.stance) {
       if (input.formaPolarities.stance === p) continue
       out.push({ id: "stance", polarity: p })
