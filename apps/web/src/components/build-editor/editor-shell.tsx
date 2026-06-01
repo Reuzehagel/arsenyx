@@ -18,6 +18,7 @@ import {
   type KitgunComponents,
   kitgunGripsFor,
 } from "@arsenyx/shared/warframe/kitgun-data"
+import { getBlockedByConflict } from "@arsenyx/shared/warframe/mods"
 import { isRivenMod } from "@arsenyx/shared/warframe/rivens"
 import {
   DEFAULT_DEPLOYMENT_CONTEXT,
@@ -74,6 +75,7 @@ import {
   type HelminthAbility,
 } from "@/lib/queries/helminth-query"
 import { itemQuery } from "@/lib/queries/item-query"
+import { modConflictsQuery } from "@/lib/queries/mod-conflicts-query"
 import { modsQuery } from "@/lib/queries/mods-query"
 import { myOrgsQuery } from "@/lib/queries/org-query"
 import { padShards, type PlacedShard } from "@/lib/shards"
@@ -226,6 +228,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   const { data: allMods } = useSuspenseQuery(modsQuery)
   const { data: allArcanes } = useSuspenseQuery(arcanesQuery)
   const { data: helminthAbilities } = useSuspenseQuery(helminthQuery)
+  const { data: conflictMap } = useSuspenseQuery(modConflictsQuery)
   const [draft] = useState(() => consumeDraft(draftId))
   const [shareHydrated] = useState(() => {
     if (!shareEncoded) return null
@@ -418,6 +421,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     auraSlotCount,
     showExilus,
     showStance,
+    conflictMap,
   })
   useSlotKeyboardNav({
     slots,
@@ -426,6 +430,19 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   const arcanes = useArcaneSlots(
     arcaneCount,
     resolveInitialArcanes(item, savedData.arcanes),
+  )
+
+  // uniqueNames the picker should dim: mods mutually exclusive with one
+  // already equipped (e.g. a second Serration variant).
+  const conflictUniqueNames = useMemo(
+    () =>
+      getBlockedByConflict(
+        Object.values(slots.placed)
+          .filter((p) => p != null)
+          .map((p) => p.mod.uniqueName),
+        conflictMap,
+      ),
+    [slots.placed, conflictMap],
   )
 
   // Escape deselects the active mod/arcane slot, mirroring the
@@ -1393,6 +1410,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
               />
             }
             onEditRiven={riven.openForEdit}
+            conflicts={conflictMap}
           />
 
           <div className="bg-card rounded-lg border p-4">
@@ -1400,6 +1418,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
               item={item}
               category={category}
               usedModNames={slots.usedNames}
+              conflictUniqueNames={conflictUniqueNames}
               onSelect={handleModSelect}
               helminth={helminth}
               selectedSlotKind={

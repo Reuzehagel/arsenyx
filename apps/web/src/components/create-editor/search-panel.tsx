@@ -34,6 +34,7 @@ export function SearchPanel({
   item,
   category,
   usedModNames,
+  conflictUniqueNames,
   onSelect,
   selectedSlotKind,
   selectedSlot,
@@ -45,6 +46,9 @@ export function SearchPanel({
   item: DetailItem
   category: BrowseCategory
   usedModNames: Set<string>
+  /** uniqueNames of mods mutually exclusive with an equipped mod — dimmed in
+   *  the picker. */
+  conflictUniqueNames: Set<string>
   onSelect: (mod: Mod) => void
   selectedSlotKind?: ModSlotKind
   /** Active slot id (or null). Drives the tab auto-sync — depending on
@@ -86,6 +90,7 @@ export function SearchPanel({
         meleeClass: item.meleeClass,
         uniqueName: item.uniqueName,
         modPools: item.modPools,
+        compatTags: item.compatTags,
       },
       allMods,
     )
@@ -147,6 +152,7 @@ export function SearchPanel({
       <ModSearchGrid
         mods={compatible}
         usedModNames={usedModNames}
+        conflictUniqueNames={conflictUniqueNames}
         onSelect={onSelect}
         selectedSlotKind={selectedSlotKind}
       />

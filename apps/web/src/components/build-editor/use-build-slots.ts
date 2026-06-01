@@ -1,6 +1,8 @@
 import { clamp } from "@arsenyx/shared"
 import {
   getPlexusSlotKind,
+  type ModConflictMap,
+  modsConflict,
   isPlexusAuraMod as sharedIsPlexusAuraMod,
   isPlexusMod as sharedIsPlexusMod,
   isStanceMod,
@@ -209,6 +211,10 @@ export function useBuildSlots(
     showStance?: boolean
     /** Set to null for read-only views that shouldn't start with a focused slot. */
     initialSelected?: SlotId | null
+    /** Mutual-exclusion graph. When supplied, `place` rejects a mod that
+     *  conflicts with one already slotted (e.g. a second Serration variant),
+     *  mirroring the dedupe gate. Read-only views can omit it. */
+    conflictMap?: ModConflictMap
   },
 ): BuildSlotsState {
   const [placed, setPlaced] = useState<Partial<Record<SlotId, PlacedMod>>>(
@@ -222,6 +228,7 @@ export function useBuildSlots(
   >(() => initial?.formaPolarities ?? {})
 
   const auraSlotCount = initial?.auraSlotCount ?? 0
+  const conflictMap = initial?.conflictMap
   const layout: SlotLayout = {
     normalSlotCount,
     auraSlotCount,
@@ -233,6 +240,18 @@ export function useBuildSlots(
     (mod: Mod) => {
       setPlaced((prev) => {
         if (Object.values(prev).some((p) => p?.mod.name === mod.name)) {
+          return prev
+        }
+        // Reject a mod that's mutually exclusive with one already slotted
+        // (e.g. Serration when Amalgam Serration is equipped). The picker
+        // dims + un-focuses conflicting cards (so click/drag/keyboard can't
+        // reach them); this is the defense-in-depth gate for the click path.
+        if (
+          conflictMap &&
+          Object.values(prev).some((p) =>
+            modsConflict(mod.uniqueName, p!.mod.uniqueName, conflictMap),
+          )
+        ) {
           return prev
         }
 
@@ -266,6 +285,7 @@ export function useBuildSlots(
     [
       normalSlotCount,
       selected,
+      conflictMap,
       layout.auraSlotCount,
       layout.showExilus,
       layout.showStance,

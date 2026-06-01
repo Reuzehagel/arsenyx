@@ -112,6 +112,10 @@ export interface DetailItem extends BrowseItem {
    *  Emitted by the build on every weapon/frame/companion and consumed by
    *  `getModsForItem`. */
   modPools?: readonly string[]
+  /** Weapon intrinsic tags from OpenWF (`GRNBOW`, `SEMI_AUTO`, `PROJECTILE`,
+   *  …). Refined against mod `compatTags`/`incompatTags` in `getModsForItem`.
+   *  Weapons-only; absent on frames/companions (→ no tag restriction). */
+  compatTags?: readonly string[]
 }
 
 export const CATEGORIES: { id: BrowseCategory; label: string }[] = [

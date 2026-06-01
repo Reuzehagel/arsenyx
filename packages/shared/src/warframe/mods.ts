@@ -115,6 +115,11 @@ export function getModsForItem(
      *  pools ("Sniper", "Polearms"), the item's own name (for augments),
      *  and family/base names where applicable. */
     modPools?: readonly string[]
+    /** Weapon intrinsic tags (GRNBOW, SEMI_AUTO, PROJECTILE, …) used to
+     *  refine `compatName`-level routing against a mod's tag requirements.
+     *  Absent on frames/companions/untagged weapons → tag refinement is
+     *  skipped (permissive). */
+    compatTags?: readonly string[]
   },
   mods: Mod[],
 ): Mod[] {
@@ -123,6 +128,11 @@ export function getModsForItem(
   const meleeClass = item.meleeClass?.toLowerCase()
   const itemUniqueName = item.uniqueName
   const poolSet = new Set(item.modPools)
+  // Built once (not per-mod) so the tag refinement is O(1) membership.
+  const itemTags =
+    item.compatTags && item.compatTags.length > 0
+      ? new Set(item.compatTags)
+      : null
 
   return mods.filter((mod) => {
     // OpenWF augment gate: `compatItems` is a build-time-resolved
@@ -141,6 +151,31 @@ export function getModsForItem(
 
     const compatName = mod.compatName ?? ""
     if (!poolSet.has(compatName)) return false
+
+    // Tag refinement (OpenWF): `compatName` routes by broad class, but some
+    // mods only fit a subset the class can't express — e.g. Semi-Rifle
+    // Cannonade (Rifle, but semi-auto only) or Split Flights (Bow, but not
+    // Grineer bows like the Kuva Bramma). Only applied when the item carries
+    // tags (weapons); untagged items (frames/companions/wiki-only) are
+    // permissive so we never wrongly hide a mod.
+    if (itemTags) {
+      // Excluded if the item has any tag the mod forbids.
+      if (mod.incompatTags?.some((t) => itemTags.has(t))) return false
+      // If the mod requires tags, the item must have at least one (ANY-of).
+      // Stances are exempt: they're already routed by compatName/meleeClass
+      // below, and their `*_STANCE` requirement is absent on power/sentinel
+      // weapons (POWER_WEAPON/SENTINEL_WEAPON), so applying it would wrongly
+      // hide stances from exalted and companion melee.
+      if (
+        !isStanceMod(mod) &&
+        mod.compatTags &&
+        mod.compatTags.length > 0 &&
+        !mod.compatTags.some((t) => itemTags.has(t))
+      ) {
+        return false
+      }
+    }
+
     // Stance mods are class-specific. The item's modPools already
     // includes the stance-compat name (e.g. "Polearms") — but a
     // melee weapon's pool also includes the generic "Melee" pool,
@@ -153,4 +188,98 @@ export function getModsForItem(
     }
     return true
   })
+}
+
+// --- mutual-exclusion (conflict) helpers ---
+//
+// Some mods are variants of the same base — Serration / Amalgam Serration /
+// Spectral Serration all modify base damage — and the game forbids equipping
+// more than one. The dedupe-by-name gate doesn't catch this because the
+// variants have distinct names. The authoritative list lives in the wiki's
+// per-mod `Incompatible` field; the build pipeline resolves it into a
+// symmetric `uniqueName → uniqueName[]` graph and serves it as
+// `/data/mod-conflicts.json` (see scripts/build-items-index.ts).
+
+/** uniqueName → mod uniqueNames it's mutually exclusive with. Symmetric and
+ *  restricted to the emitted catalog. A mod with no conflicts is absent. */
+export type ModConflictMap = Record<string, readonly string[]>
+
+/** True when two mods are mutually exclusive. Order-independent (the map is
+ *  symmetric, but we check both directions to tolerate a one-sided map). */
+export function modsConflict(
+  a: string,
+  b: string,
+  conflicts: ModConflictMap,
+): boolean {
+  return Boolean(conflicts[a]?.includes(b) || conflicts[b]?.includes(a))
+}
+
+/** uniqueNames among `placed` that are mutually exclusive with at least one
+ *  *other* placed mod. Drives the read-only warning on an already-built
+ *  loadout. Returns a Set for O(1) membership. */
+export function getConflictingUniqueNames(
+  placed: readonly string[],
+  conflicts: ModConflictMap,
+): Set<string> {
+  const flagged = new Set<string>()
+  for (let i = 0; i < placed.length; i++) {
+    for (let j = i + 1; j < placed.length; j++) {
+      if (modsConflict(placed[i]!, placed[j]!, conflicts)) {
+        flagged.add(placed[i]!)
+        flagged.add(placed[j]!)
+      }
+    }
+  }
+  return flagged
+}
+
+/** uniqueNames that conflict with *any* currently-placed mod — the set the
+ *  picker dims so a user can't stack a second variant of a mod they already
+ *  run. The placed mods themselves are excluded (the dedupe gate owns those).
+ *  Symmetric data means the union of each placed mod's conflict list suffices. */
+export function getBlockedByConflict(
+  placed: readonly string[],
+  conflicts: ModConflictMap,
+): Set<string> {
+  const blocked = new Set<string>()
+  const placedSet = new Set(placed)
+  for (const un of placed) {
+    for (const c of conflicts[un] ?? []) {
+      if (!placedSet.has(c)) blocked.add(c)
+    }
+  }
+  return blocked
+}
+
+/** Connected components of mutually-exclusive placed mods, each a group of
+ *  ≥2 uniqueNames that can't legally coexist. Drives the warning banner's
+ *  per-group "keep only one" message. Mods with no conflict are omitted.
+ *  Input order is preserved within and across groups. */
+export function groupConflictingMods(
+  placed: readonly string[],
+  conflicts: ModConflictMap,
+): string[][] {
+  const flagged = getConflictingUniqueNames(placed, conflicts)
+  const seen = new Set<string>()
+  const groups: string[][] = []
+  for (const start of placed) {
+    if (!flagged.has(start) || seen.has(start)) continue
+    // Walk the conflict graph breadth-first, staying inside the placed set.
+    const group: string[] = []
+    const queue = [start]
+    seen.add(start)
+    while (queue.length > 0) {
+      const cur = queue.shift()!
+      group.push(cur)
+      for (const next of placed) {
+        if (seen.has(next) || !flagged.has(next)) continue
+        if (modsConflict(cur, next, conflicts)) {
+          seen.add(next)
+          queue.push(next)
+        }
+      }
+    }
+    if (group.length > 1) groups.push(group)
+  }
+  return groups
 }

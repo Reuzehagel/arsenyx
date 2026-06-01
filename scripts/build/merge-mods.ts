@@ -109,6 +109,12 @@ export interface MergedMod {
    *  Set by `build-items-index.ts`; absent on non-augment mods.
    *  Runtime check: `compatItems.includes(item.uniqueName)`. */
   compatItems?: string[]
+  /** OpenWF `compatibilityTags` — item must have ≥1 (e.g. `["SEMI_AUTO"]`).
+   *  Refined against the weapon's tags in `getModsForItem`. */
+  compatTags?: string[]
+  /** OpenWF `incompatibilityTags` — item must have none (e.g. `["GRNBOW"]`
+   *  on Split Flights, excluding the Grineer-bow Kuva Bramma). */
+  incompatTags?: string[]
 }
 
 interface FilterCounts {
@@ -255,6 +261,8 @@ function toMergedMod(
     modSet: parts.modSet,
     modSetStats: parts.modSetStats,
     compat: plus?.compat,
+    compatTags: plus?.compatibilityTags,
+    incompatTags: plus?.incompatibilityTags,
   }
 }
 

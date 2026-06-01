@@ -321,6 +321,13 @@ export interface Mod {
    *  Absent on non-augment mods — runtime treats missing as "no
    *  restriction". See `getModsForItem`. */
   compatItems?: string[]
+  /** OpenWF tag refinement (see `getModsForItem`). `compatTags`: the item
+   *  must have at least one (e.g. `["SEMI_AUTO"]` — Semi-Rifle Cannonade only
+   *  fits semi-auto weapons). `incompatTags`: the item must have none (e.g.
+   *  `["GRNBOW"]` — Split Flights excludes Grineer bows like the Kuva Bramma).
+   *  Refined against the weapon's own `compatTags`. */
+  compatTags?: string[]
+  incompatTags?: string[]
   type: string // e.g., "Warframe Mod", "Primary Mod", "Secondary Mod", "Melee Mod"
   tradable: boolean
   isAugment?: boolean

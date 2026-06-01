@@ -175,6 +175,10 @@ function FilterSelect<T extends string>({
 interface ModSearchGridProps {
   mods: Mod[]
   usedModNames?: Set<string>
+  /** uniqueNames of mods that are mutually exclusive with one already
+   *  equipped (e.g. a second Serration variant). Dimmed and non-selectable,
+   *  like used mods, but with a distinct tooltip. */
+  conflictUniqueNames?: Set<string>
   onSelect?: (mod: Mod) => void
   /**
    * When set, mods incompatible with this slot kind are dimmed (aura-only for
@@ -201,13 +205,17 @@ const SLOT_KIND_REASON: Record<"aura" | "stance" | "exilus", string> = {
 // and — deliberately — for a card dimmed only because it doesn't match the
 // search query: that's the user's own filter, so it needs no explanation.
 // "Already equipped" wins over the slot-kind reason; it's the more actionable
-// thing to tell someone hunting for a mod they can't find.
+// thing to tell someone hunting for a mod they can't find. A conflict (a
+// mutually-exclusive variant of an equipped mod) wins over the slot-kind
+// reason too, but ranks below "already equipped".
 function incompatibilityReason(
   mod: Mod,
   kind: ModSlotKind | undefined,
   isUsed: boolean,
+  isConflict: boolean,
 ): string | null {
   if (isUsed) return "Already equipped in this build"
+  if (isConflict) return "Conflicts with an equipped mod"
   if (!kind || kind === "normal") return null
   const pred = slotKindPredicate(kind)
   return pred && !pred(mod) ? SLOT_KIND_REASON[kind] : null
@@ -216,6 +224,7 @@ function incompatibilityReason(
 export function ModSearchGrid({
   mods,
   usedModNames,
+  conflictUniqueNames,
   onSelect,
   selectedSlotKind,
 }: ModSearchGridProps) {
@@ -327,10 +336,11 @@ export function ModSearchGrid({
     for (const m of displayed) {
       if (!matches.has(m.uniqueName)) continue
       if (usedModNames?.has(m.name)) continue
+      if (conflictUniqueNames?.has(m.uniqueName)) continue
       out.push(m.uniqueName)
     }
     return out
-  }, [displayed, matches, usedModNames])
+  }, [displayed, matches, usedModNames, conflictUniqueNames])
 
   // Grid is 2 rows, column-flow: displayed[i] sits at row = i % 2, col = i / 2.
   // Navigate in visual 2D, skipping dimmed/used cards by continuing in the
@@ -346,20 +356,38 @@ export function ModSearchGrid({
     for (let i = 0; i < displayed.length; i++) m.set(displayed[i].uniqueName, i)
     return m
   }, [displayed])
-  const navRef = useRef({ displayed, matches, usedModNames, index })
+  const navRef = useRef({
+    displayed,
+    matches,
+    usedModNames,
+    conflictUniqueNames,
+    index,
+  })
   useEffect(() => {
-    navRef.current = { displayed, matches, usedModNames, index }
-  }, [displayed, matches, usedModNames, index])
+    navRef.current = {
+      displayed,
+      matches,
+      usedModNames,
+      conflictUniqueNames,
+      index,
+    }
+  }, [displayed, matches, usedModNames, conflictUniqueNames, index])
 
   const moveFromDisplayedIndex = useCallback(
     (from: number, dir: Dir): number | null => {
-      const { displayed: cur, matches: m, usedModNames: u } = navRef.current
+      const {
+        displayed: cur,
+        matches: m,
+        usedModNames: u,
+        conflictUniqueNames: c,
+      } = navRef.current
       const row = from % GRID_ROWS
       const focusable = (i: number) =>
         i >= 0 &&
         i < cur.length &&
         m.has(cur[i].uniqueName) &&
-        !(u?.has(cur[i].name) ?? false)
+        !(u?.has(cur[i].name) ?? false) &&
+        !(c?.has(cur[i].uniqueName) ?? false)
 
       if (dir === "up") {
         if (row === 0) return null
@@ -535,16 +563,22 @@ export function ModSearchGrid({
       >
         {displayed.map((mod) => {
           const isUsed = usedModNames?.has(mod.name) ?? false
+          const isConflict = conflictUniqueNames?.has(mod.uniqueName) ?? false
           const isMatch = matches.has(mod.uniqueName)
-          const isFocusable = isMatch && !isUsed
+          const isFocusable = isMatch && !isUsed && !isConflict
           return (
             <PoolCardCell
               key={mod.uniqueName}
               mod={mod}
               isMatch={isMatch}
-              isUsed={isUsed}
+              isUsed={isUsed || isConflict}
               isFocusable={isFocusable}
-              reason={incompatibilityReason(mod, selectedSlotKind, isUsed)}
+              reason={incompatibilityReason(
+                mod,
+                selectedSlotKind,
+                isUsed,
+                isConflict,
+              )}
               draggable={!!onSelect}
               registerRef={registerCardRef}
               onSelect={cellOnSelect}

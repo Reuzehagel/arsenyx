@@ -66,7 +66,7 @@ import { mergeFrame, operatorsFromWiki, type MergedFrame } from "./build/merge-f
 import { deriveHelminthAbilities } from "./build/merge-helminth"
 import { mergeModular } from "./build/merge-modular"
 import { mergeMods, type MergedMod } from "./build/merge-mods"
-import { readPePlusUpgrades } from "./build/read-pe-plus"
+import { readPePlusUpgrades, readPePlusWeaponTags } from "./build/read-pe-plus"
 import {
   mergeWeapon,
   mergeWikiOnlyWeapon,
@@ -340,6 +340,10 @@ async function main() {
   // their specific weapon — strictly more reliable than the wiki-Class-based
   // modPools inference, which periodically drifted.
   const pePlusUpgrades = readPePlusUpgrades()
+  // Weapon intrinsic tags (GRNBOW, SEMI_AUTO, PROJECTILE, …) — refined
+  // against mod compat/incompat tags by getModsForItem. Attached to weapon
+  // detail items below.
+  const pePlusWeaponTags = readPePlusWeaponTags()
   const wikiExilus = new Map<string, boolean>()
   // Wiki convention: `_IgnoreEntry = true` flags records the wiki maintainers
   // consider unreleased / non-functional (e.g. "Primed Streamline" — exists
@@ -352,9 +356,19 @@ async function main() {
   // (155 mods). The description "in Conclave" substring covers only ~14%
   // of them, so we route via this instead.
   const wikiConclaveMods = new Set<string>()
+  // Mod display Name → wiki InternalName (= DE uniqueName). Resolves the
+  // name-keyed `Incompatible` lists into uniqueNames below.
+  const wikiModUniqueNameByName = new Map<string, string>()
+  // InternalName → the mod's `Incompatible` list (display Names). Mutually
+  // exclusive variant mods (Serration / Amalgam Serration / Spectral
+  // Serration, …) — see the conflict-graph build after mod merge.
+  const wikiIncompatByUniqueName = new Map<string, string[]>()
   for (const { internalName, record } of iterWikiRecords(wikiModsBlob)) {
     const name = record["Name"]
-    if (typeof name === "string") wikiKnownModNames.add(name)
+    if (typeof name === "string") {
+      wikiKnownModNames.add(name)
+      wikiModUniqueNameByName.set(name, internalName)
+    }
     if (typeof record["IsExilus"] === "boolean") {
       wikiExilus.set(internalName, record["IsExilus"])
     }
@@ -363,6 +377,15 @@ async function main() {
     }
     if (record["Conclave"] === true) {
       wikiConclaveMods.add(internalName)
+    }
+    const incompat = record["Incompatible"]
+    if (Array.isArray(incompat)) {
+      // Some wiki entries carry placeholder `""` names; drop them so they
+      // never become a dead lookup key.
+      wikiIncompatByUniqueName.set(
+        internalName,
+        incompat.filter((x): x is string => typeof x === "string" && x !== ""),
+      )
     }
   }
   const { mods: rawMergedMods, counts: modCounts } = mergeMods(
@@ -595,6 +618,41 @@ async function main() {
     `\n  compat: ${augmentCount} augment-style (kept), ${strippedCount} unresolved (stripped)`,
   )
 
+  // ---------- 8b. Mod conflict graph ----------
+  // The wiki tracks which mods are mutually exclusive (variants of the same
+  // base — e.g. Serration / Amalgam Serration / Spectral Serration — that the
+  // game forbids equipping together) via a per-mod name-keyed `Incompatible`
+  // list. Resolve those names to uniqueNames and emit a symmetric adjacency
+  // graph restricted to the mods we actually ship, so the editor/viewer can
+  // flag illegal loadouts. Names that don't resolve to an emitted mod (Conclave
+  // variants, unreleased mods, Flawed mods we filter) are simply dropped — a
+  // dead edge can't matter at runtime since the mod can never be placed.
+  const emittedUniqueNames = new Set(mergedMods.map((m) => m.uniqueName))
+  const conflictGraph = new Map<string, Set<string>>()
+  const addConflictEdge = (a: string, b: string): void => {
+    if (a === b) return
+    if (!emittedUniqueNames.has(a) || !emittedUniqueNames.has(b)) return
+    if (!conflictGraph.has(a)) conflictGraph.set(a, new Set())
+    if (!conflictGraph.has(b)) conflictGraph.set(b, new Set())
+    conflictGraph.get(a)!.add(b)
+    conflictGraph.get(b)!.add(a)
+  }
+  for (const [uniqueName, names] of wikiIncompatByUniqueName) {
+    for (const conflictingName of names) {
+      const target = wikiModUniqueNameByName.get(conflictingName)
+      if (target) addConflictEdge(uniqueName, target)
+    }
+  }
+  const modConflicts: Record<string, string[]> = {}
+  let conflictEdgeCount = 0
+  for (const [uniqueName, set] of conflictGraph) {
+    modConflicts[uniqueName] = [...set].sort()
+    conflictEdgeCount += set.size
+  }
+  console.log(
+    `  conflicts: ${conflictGraph.size} mods, ${conflictEdgeCount / 2} pairs`,
+  )
+
   // ---------- 9. Write outputs ----------
   await rm(OUT_DIR, { recursive: true, force: true })
   await mkdir(OUT_DIR, { recursive: true })
@@ -609,6 +667,15 @@ async function main() {
     "utf8",
   )
   console.log(`  OK  mods-all.json (${mergedMods.length} mods)`)
+
+  await writeFile(
+    resolve(OUT_DIR, "mod-conflicts.json"),
+    JSON.stringify(modConflicts),
+    "utf8",
+  )
+  console.log(
+    `  OK  mod-conflicts.json (${Object.keys(modConflicts).length} mods)`,
+  )
 
   await writeFile(
     resolve(OUT_DIR, "arcanes-all.json"),
@@ -773,6 +840,7 @@ async function main() {
     await writeDetail(cat, slug, {
       ...w,
       imageName: imageByUniqueName.get(w.uniqueName),
+      compatTags: pePlusWeaponTags.get(w.uniqueName),
     })
   }
   for (const f of [...mergedFrames, ...operators]) {

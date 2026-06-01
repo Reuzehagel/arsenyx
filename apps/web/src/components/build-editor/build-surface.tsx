@@ -1,3 +1,4 @@
+import type { ModConflictMap } from "@arsenyx/shared/warframe/mods"
 import type { ReactNode } from "react"
 
 import { cn } from "@/lib/util/utils"
@@ -10,6 +11,7 @@ import {
 } from "./item-sidebar"
 import { KeyboardHintsStrip } from "./keyboard-hints"
 import type { ArcaneSlotConfig } from "./layout"
+import { ModConflictBanner } from "./mod-conflict-banner"
 import { ArcaneRow, ModGrid } from "./mod-grid"
 import type { ArcaneSlotsState } from "./use-arcane-slots"
 import type { BuildSlotsState, SlotId } from "./use-build-slots"
@@ -55,6 +57,9 @@ export interface BuildSurfaceProps {
   topBarLayout: "row" | "centered" | "popover-only"
   /** Edit-only riven edit handler. */
   onEditRiven?: (slotId: SlotId) => void
+  /** Mutual-exclusion graph. When supplied, a warning banner appears above
+   *  the grid whenever the loadout stacks incompatible mods. */
+  conflicts?: ModConflictMap
 }
 
 export function BuildSurface({
@@ -75,6 +80,7 @@ export function BuildSurface({
   topBar,
   topBarLayout,
   onEditRiven,
+  conflicts,
 }: BuildSurfaceProps) {
   const readOnly = mode === "view"
 
@@ -133,6 +139,10 @@ export function BuildSurface({
               !embed && "hidden sm:inline-flex xl:hidden",
             )}
           />
+        )}
+
+        {conflicts && (
+          <ModConflictBanner placed={slots.placed} conflicts={conflicts} />
         )}
 
         <ModGrid

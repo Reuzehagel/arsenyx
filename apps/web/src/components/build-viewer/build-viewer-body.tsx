@@ -30,6 +30,7 @@ import {
 } from "@/lib/queries/helminth-query"
 import { imageMapQuery } from "@/lib/queries/image-map-query"
 import { itemQuery } from "@/lib/queries/item-query"
+import { modConflictsQuery } from "@/lib/queries/mod-conflicts-query"
 import { modsQuery } from "@/lib/queries/mods-query"
 import { padShards } from "@/lib/shards"
 import { authorName } from "@/lib/util/user-display"
@@ -106,6 +107,7 @@ function BuildViewerBodyInner({
 }) {
   const { data: item } = useSuspenseQuery(itemQuery(category, itemSlug))
   const { data: imageMap } = useSuspenseQuery(imageMapQuery)
+  const { data: conflictMap } = useSuspenseQuery(modConflictsQuery)
   const navigate = useNavigate()
 
   // Re-resolve mod/arcane/helminth images by uniqueName. New-format builds
@@ -246,6 +248,7 @@ function BuildViewerBodyInner({
           arcanes={arcanes}
           arcaneConfig={arcaneConfig}
           sidebarProps={sidebarProps}
+          conflicts={conflictMap}
           topBarLayout={variants.length > 1 ? "centered" : "popover-only"}
           topBar={
             variants.length > 1 ? (
