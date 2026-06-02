@@ -13,6 +13,103 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-06-02",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Build cards now show a forma count, and build lists can be sorted by forma.",
+      },
+      {
+        type: "feat",
+        description:
+          "Mods now settle into their slot with a subtle drop animation when placed.",
+      },
+    ],
+  },
+  {
+    date: "2026-06-01",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Mod validation now flags conflicting and incompatible mods directly in the editor, so you can see why a combination won't work.",
+      },
+      {
+        type: "fix",
+        description:
+          "Base and Primed versions of the same mod now conflict correctly, and Bayonet stances route to the right slot.",
+      },
+      {
+        type: "fix",
+        description:
+          "Exodia arcanes are now gated to Zaw melees instead of showing on every melee weapon.",
+      },
+      {
+        type: "fix",
+        description:
+          "Slot fixes for exalted stances, beast-claw Posture slots, and PvE / Conclave mod visibility.",
+      },
+      {
+        type: "fix",
+        description: "Corrected a critical-chance calculation.",
+      },
+      {
+        type: "refactor",
+        description:
+          "Data and assets are now cached at the edge for faster loads.",
+      },
+    ],
+  },
+  {
+    date: "2026-05-31",
+    changes: [
+      {
+        type: "feat",
+        description: "The build editor now supports undo and redo.",
+      },
+      {
+        type: "feat",
+        description:
+          "Editor drafts autosave to your browser, so you can pick up where you left off — with restore and reset controls.",
+      },
+      {
+        type: "feat",
+        description:
+          "The search grid now explains why a mod is dimmed instead of leaving you guessing.",
+      },
+      {
+        type: "refactor",
+        description:
+          "Build lists now show real empty states instead of a blank panel.",
+      },
+      {
+        type: "refactor",
+        description:
+          "UI consistency pass: link-button cursors, icon sizing, and accessibility labels, plus Sonner toasts replacing the old hand-rolled feedback.",
+      },
+      {
+        type: "fix",
+        description:
+          "Necramech exalted weapons (Arquebex, Ironbride, Mausolon) now show their Exilus and Arcane slots correctly.",
+      },
+      {
+        type: "fix",
+        description:
+          "Frames with no innate aura polarity now show their aura slot.",
+      },
+      {
+        type: "fix",
+        description:
+          "The editor re-hydrates correctly when you change a build's structure, and restored drafts re-resolve their mod images.",
+      },
+      {
+        type: "chore",
+        description: "Game data refreshed to the latest Warframe build.",
+      },
+    ],
+  },
+  {
     date: "2026-05-30",
     changes: [
       {
