@@ -58,6 +58,7 @@ export type BuildDetailResponse = {
   likeCount: number
   bookmarkCount: number
   viewCount: number
+  formaCount: number
   createdAt: string
   updatedAt: string
   user: BuildUserSummary
@@ -77,6 +78,7 @@ export type BuildListItemResponse = {
   likeCount: number
   bookmarkCount: number
   viewCount: number
+  formaCount: number
   hasGuide: boolean
   hasShards: boolean
   hideAuthor: boolean

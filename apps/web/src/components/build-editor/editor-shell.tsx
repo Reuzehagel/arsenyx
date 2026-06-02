@@ -1019,6 +1019,13 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
         // image-map.json, editor via the catalog), so storing them just bloats
         // the row and rots across image-scheme changes.
         buildData: captureBuildData(),
+        // Forma count is a projection of buildData + the item's innate
+        // polarities (catalog). Compute it here — the only place with the
+        // catalog — so the list endpoint can show/sort it without shipping
+        // buildData. `catalogVersion` stamps which catalog snapshot it was
+        // computed against (server stamps the calc version).
+        formaCount,
+        catalogVersion: __DATA_VERSION__,
         guide: {
           summary: guideSummary.trim() || null,
           description: guideDescription.trim() || null,

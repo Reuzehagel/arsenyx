@@ -18,6 +18,7 @@ export const LIST_SELECT = {
   likeCount: true,
   bookmarkCount: true,
   viewCount: true,
+  formaCount: true,
   hasGuide: true,
   hasShards: true,
   hideAuthor: true,
@@ -95,6 +96,7 @@ export function serializeBuildDetail(b: DetailRow, viewer: ViewerState | null) {
     likeCount: b.likeCount,
     bookmarkCount: b.bookmarkCount,
     viewCount: b.viewCount,
+    formaCount: b.formaCount,
     createdAt: b.createdAt,
     updatedAt: b.updatedAt,
     user: b.user,
@@ -119,6 +121,7 @@ export function serializeListRow(b: ListRow): BuildListItemResponse {
     likeCount: b.likeCount,
     bookmarkCount: b.bookmarkCount,
     viewCount: b.viewCount,
+    formaCount: b.formaCount,
     hasGuide: b.hasGuide,
     hasShards: b.hasShards,
     hideAuthor: b.hideAuthor,
@@ -183,6 +186,10 @@ function orderByForSort(sort: ListSort) {
       ]
     case "viewed":
       return [{ viewCount: "desc" as const }, { createdAt: "desc" as const }]
+    case "forma-asc":
+      return [{ formaCount: "asc" as const }, { createdAt: "desc" as const }]
+    case "forma-desc":
+      return [{ formaCount: "desc" as const }, { createdAt: "desc" as const }]
     case "newest":
     default:
       return [{ createdAt: "desc" as const }]
@@ -203,6 +210,10 @@ function tiebreakerSql(sort: ListSort) {
       return Prisma.sql`"bookmarkCount" DESC, "createdAt" DESC`
     case "viewed":
       return Prisma.sql`"viewCount" DESC, "createdAt" DESC`
+    case "forma-asc":
+      return Prisma.sql`"formaCount" ASC, "createdAt" DESC`
+    case "forma-desc":
+      return Prisma.sql`"formaCount" DESC, "createdAt" DESC`
     case "newest":
     default:
       return Prisma.sql`"createdAt" DESC`

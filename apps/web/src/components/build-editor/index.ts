@@ -50,14 +50,13 @@ export {
   type PlexusGroup,
   type PlexusGroupKind,
 } from "./layout"
+export { ArcaneRow, ModGrid } from "./mod-grid"
 export {
-  ArcaneRow,
   getAuraPolarities,
   getExilusInnatePolarity,
   getStanceInnatePolarity,
-  ModGrid,
   toPolarity,
-} from "./mod-grid"
+} from "./forma-count"
 export { ModCard } from "./mod-card"
 export { ModSearchGrid } from "./mod-search-grid"
 export { RivenDialog, type RivenDialogValues } from "./riven-dialog"
@@ -67,7 +66,7 @@ export {
   type PublishVisibility,
 } from "./publish-dialog"
 export { ModSlot, type ModSlotKind } from "./mod-slot"
-export { CANONICAL_POLARITIES, PolarityIcon, PolarityPicker } from "./polarity"
+export { PolarityIcon, PolarityPicker } from "./polarity"
 export {
   useBuildSlots,
   getNextSlot,

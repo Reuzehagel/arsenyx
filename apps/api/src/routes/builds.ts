@@ -1,5 +1,10 @@
 import { MAX_VARIANTS } from "@arsenyx/shared/warframe/build-doc"
 import { isValidCategory } from "@arsenyx/shared/warframe/categories"
+import {
+  FORMA_CALC_VERSION,
+  FORMA_UNSTAMPED,
+  MAX_FORMA_COUNT,
+} from "@arsenyx/shared/warframe/forma"
 import { Hono, type Context } from "hono"
 import { getCookie, setCookie } from "hono/cookie"
 import { customAlphabet, nanoid } from "nanoid"
@@ -64,6 +69,33 @@ function hasShardsInBuildData(buildData: unknown): boolean {
   return Array.isArray(shards) && shards.some((s) => s != null)
 }
 
+const MAX_CATALOG_VERSION = 64
+
+// Forma count is computed client-side (the only place with the game catalog of
+// innate polarities) and sent on save. We trust but bound it: a non-negative
+// integer ≤ MAX_FORMA_COUNT. Returns null when absent/invalid so callers can
+// decide whether that's a hard error (POST) or a no-op (PATCH without buildData).
+// The version stamp is set server-side from FORMA_CALC_VERSION — never trusted
+// from the client — so a stale client can't claim its count is current.
+function parseFormaFields(b: Record<string, unknown>): {
+  formaCount: number
+  formaCalcVersion: number
+  catalogVersion: string | null
+} | null {
+  const raw = b.formaCount
+  if (typeof raw !== "number" || !Number.isInteger(raw)) return null
+  if (raw < 0 || raw > MAX_FORMA_COUNT) return null
+  const catalogVersion =
+    typeof b.catalogVersion === "string"
+      ? b.catalogVersion.slice(0, MAX_CATALOG_VERSION)
+      : null
+  return {
+    formaCount: raw,
+    formaCalcVersion: FORMA_CALC_VERSION,
+    catalogVersion,
+  }
+}
+
 function parseGuide(input: unknown) {
   if (!input || typeof input !== "object") return null
   const g = input as Record<string, unknown>
@@ -115,6 +147,13 @@ builds.post("/", rateLimitUser("mutate"), async (c) => {
 
   const buildData = b.buildData as InputJsonValue
   const guide = parseGuide(b.guide)
+  // Lenient: a client that doesn't send a count (or sends a bad one) gets a
+  // sentinel `formaCalcVersion: 0` row, which the recompute backfill picks up.
+  const forma = parseFormaFields(b) ?? {
+    formaCount: 0,
+    formaCalcVersion: FORMA_UNSTAMPED,
+    catalogVersion: null,
+  }
 
   const orgResult = await resolveOrgAssignment(
     b.organizationId,
@@ -145,6 +184,9 @@ builds.post("/", rateLimitUser("mutate"), async (c) => {
           hideAuthor,
           buildData,
           hasShards: hasShardsInBuildData(buildData),
+          formaCount: forma.formaCount,
+          formaCalcVersion: forma.formaCalcVersion,
+          catalogVersion: forma.catalogVersion,
           hasGuide: guide?.hasGuide ?? false,
           buildGuide: guide?.hasGuide
             ? {
@@ -235,6 +277,18 @@ builds.patch("/:slug", rateLimitUser("mutate"), async (c) => {
     }
     data.buildData = b.buildData as InputJsonValue
     data.hasShards = hasShardsInBuildData(b.buildData)
+    // buildData changed → the forma count must move with it. Take the fresh
+    // count if the client sent a valid one; otherwise flag the row stale
+    // (formaCalcVersion 0) so the recompute backfill corrects it rather than
+    // leaving a silently-wrong count behind.
+    const forma = parseFormaFields(b)
+    if (forma) {
+      data.formaCount = forma.formaCount
+      data.formaCalcVersion = forma.formaCalcVersion
+      data.catalogVersion = forma.catalogVersion
+    } else {
+      data.formaCalcVersion = FORMA_UNSTAMPED
+    }
   }
   // The editor flips itemImageName when the incarnon toggle is applied;
   // accept it on PATCH so the build-overview thumbnail tracks the change.
@@ -304,6 +358,9 @@ builds.post("/:slug/fork", rateLimitUser("mutate"), async (c) => {
       name: true,
       buildData: true,
       hasShards: true,
+      formaCount: true,
+      formaCalcVersion: true,
+      catalogVersion: true,
     },
   })
   if (!source) return c.json({ error: "not_found" }, 404)
@@ -328,6 +385,9 @@ builds.post("/:slug/fork", rateLimitUser("mutate"), async (c) => {
           visibility: "PRIVATE",
           buildData: source.buildData as InputJsonValue,
           hasShards: source.hasShards,
+          formaCount: source.formaCount,
+          formaCalcVersion: source.formaCalcVersion,
+          catalogVersion: source.catalogVersion,
           forkedFromId: source.id,
         },
         select: { id: true, slug: true },

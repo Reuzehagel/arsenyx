@@ -176,6 +176,17 @@ model Build {
   hasShards Boolean @default(false)
   hasGuide  Boolean @default(false)
 
+  // Forma count is a projection of buildData (slot forma polarities) + the
+  // item's innate polarities (game catalog). Computed client-side at save
+  // time and stored here so the list endpoint can show/sort it without
+  // shipping buildData. `formaCalcVersion` records which derivation produced
+  // it (0 = never computed, e.g. pre-backfill rows) so a calc fix can target
+  // only stale rows; `catalogVersion` records the game-data snapshot it was
+  // computed against. See packages/shared/warframe/forma.ts + recompute-forma.ts.
+  formaCount       Int     @default(0)
+  formaCalcVersion Int     @default(0)
+  catalogVersion   String?
+
   // Maintained by Postgres trigger, not Prisma
   searchVector Unsupported("tsvector")?
 
@@ -208,6 +219,7 @@ model Build {
   @@index([visibility])
   @@index([likeCount])
   @@index([createdAt])
+  @@index([formaCount])
   @@index([visibility, likeCount])
   @@index([visibility, createdAt])
   @@index([userId, visibility])

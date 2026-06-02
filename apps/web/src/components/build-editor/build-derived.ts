@@ -5,10 +5,16 @@ import type { BrowseCategory, DetailItem } from "@/lib/warframe"
 
 import {
   calculateCapacity,
-  calculateFormaCount,
   calculateTotalEndoCost,
   type CapacityInput,
 } from "./calculations"
+import {
+  computeFormaCount,
+  getAuraPolarities,
+  getExilusInnatePolarity,
+  getStanceInnatePolarity,
+  toPolarity,
+} from "./forma-count"
 import {
   type ArcaneSlotConfig,
   getArcaneSlotConfig,
@@ -22,12 +28,6 @@ import {
   hasLockedStance,
   hasStanceSlot,
 } from "./layout"
-import {
-  getAuraPolarities,
-  getExilusInnatePolarity,
-  getStanceInnatePolarity,
-  toPolarity,
-} from "./mod-grid"
 import type { BuildSlotsState } from "./use-build-slots"
 
 /**
@@ -119,22 +119,12 @@ export function useBuildDerived(input: {
     () => calculateTotalEndoCost(slots.placed),
     [slots.placed],
   )
+  // Delegate to the shared pure helper so the editor, the card, and the
+  // offline recompute backfill all produce the same number. (The innate
+  // memos above stay — the capacity path still needs them.)
   const formaCount = useMemo(
-    () =>
-      calculateFormaCount({
-        auraInnates,
-        exilusInnate,
-        stanceInnate,
-        normalInnates,
-        formaPolarities: slots.formaPolarities,
-      }),
-    [
-      auraInnates,
-      exilusInnate,
-      stanceInnate,
-      normalInnates,
-      slots.formaPolarities,
-    ],
+    () => computeFormaCount(item, category, slots.formaPolarities),
+    [item, category, slots.formaPolarities],
   )
 
   const normalSlotConsumesDrain = useMemo(() => {

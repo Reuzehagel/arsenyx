@@ -10,6 +10,8 @@ export const LIST_SORTS = [
   "top",
   "bookmarked",
   "viewed",
+  "forma-asc",
+  "forma-desc",
 ] as const
 
 export type ListSort = (typeof LIST_SORTS)[number]

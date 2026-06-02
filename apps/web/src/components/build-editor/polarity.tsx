@@ -1,3 +1,4 @@
+import { CANONICAL_POLARITIES } from "@arsenyx/shared/warframe/polarities"
 import type { Polarity } from "@arsenyx/shared/warframe/types"
 import { X } from "lucide-react"
 
@@ -39,17 +40,6 @@ export function PolarityIcon({
     />
   )
 }
-
-/** The 7 canonical in-game polarities (no "any"/"universal"). */
-export const CANONICAL_POLARITIES: readonly Polarity[] = [
-  "madurai",
-  "vazarin",
-  "naramon",
-  "zenurik",
-  "unairu",
-  "penjaga",
-  "umbra",
-] as const
 
 // Picker order mirrors the legacy picker: 7 canonical + "any" (Omni Forma).
 // ✕ applies "universal" forma, which explicitly clears the slot.

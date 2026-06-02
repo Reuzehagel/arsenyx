@@ -8,7 +8,8 @@
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
     "test": "vitest run",
-    "deploy": "vite build && wrangler deploy"
+    "deploy": "vite build && wrangler deploy",
+    "recompute:forma": "bun --env-file=../api/.env scripts/recompute-forma.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",
@@ -27,6 +28,7 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "@neondatabase/serverless": "^1.1.0",
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.2.2",
     "@tanstack/router-devtools": "^1.95.1",

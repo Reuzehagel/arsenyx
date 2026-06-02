@@ -79,6 +79,38 @@ function BuildByline({
   )
 }
 
+/** Forma count on a build card. Hidden at 0 (a no-forma build), matching the
+ *  viewer's EndoFormaBadges behaviour. Uses the Forma currency icon rather than
+ *  a lucide glyph so it reads as the in-game resource at a glance. `withDivider`
+ *  prepends a hairline rule (card layout sets forma apart from the social stats;
+ *  the dense row omits it) — kept here so the show-at-all rule lives in one place. */
+function FormaStat({
+  count,
+  withDivider,
+}: {
+  count: number
+  withDivider?: boolean
+}) {
+  // `!(count > 0)` (not `count <= 0`) so a missing/undefined count — e.g. a
+  // stale React Query cache entry serialized before this field shipped — hides
+  // the badge instead of rendering "undefined forma".
+  if (!(count > 0)) return null
+  return (
+    <>
+      {withDivider && <span aria-hidden className="bg-border h-3 w-px" />}
+      <span className="flex items-center gap-1" title={`${count} forma`}>
+        <img
+          src="/icons/currency/Forma.png"
+          alt=""
+          aria-hidden
+          className="size-3 object-contain"
+        />
+        <span className="tabular-nums">{count}</span>
+      </span>
+    </>
+  )
+}
+
 export function BuildCard({ build }: { build: BuildListItem }) {
   const { timeAgo, imageUrl } = useBuildCardData(build)
 
@@ -113,6 +145,9 @@ export function BuildCard({ build }: { build: BuildListItem }) {
               <Eye className="size-3" />
               {build.viewCount}
             </span>
+            {/* Divider sets forma (a build property) apart from likes/views
+                (social signals) without the noise of a thumbnail overlay. */}
+            <FormaStat count={build.formaCount} withDivider />
           </span>
           <Tooltip>
             <TooltipTrigger render={<span>{timeAgo}</span>} />
@@ -161,6 +196,7 @@ export function BuildRow({ build }: { build: BuildListItem }) {
           <Eye className="size-3" />
           <span className="tabular-nums">{build.viewCount}</span>
         </span>
+        <FormaStat count={build.formaCount} />
         <Tooltip>
           <TooltipTrigger
             render={
