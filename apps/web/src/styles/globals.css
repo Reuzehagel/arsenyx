@@ -228,8 +228,44 @@ body {
   }
 }
 
+/* Drop settle: a placed/swapped mod card eases from 96% to rest so the action
+ * reads as landing rather than snapping in. Distinct from `mod-card-expand`,
+ * which scales from 0 for a first appearance. */
+@keyframes drop-settle {
+  0% {
+    transform: scale(0.96);
+  }
+  60% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-drop-settle {
+  animation: drop-settle 180ms ease-out;
+}
+
+/* Drop flash: a white wash over the destination slot that fades out, making a
+ * mod landing unmistakable. Paired with the subtler drop-settle scale. */
+@keyframes drop-flash {
+  0% {
+    opacity: 0.2;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-drop-flash {
+  animation: drop-flash 320ms ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .animate-pulse {
+  .animate-pulse,
+  .animate-drop-settle,
+  .animate-drop-flash {
     animation: none;
   }
 }

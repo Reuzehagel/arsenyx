@@ -1,7 +1,13 @@
 import { isRivenMod } from "@arsenyx/shared/warframe/rivens"
 import type { Mod, Polarity } from "@arsenyx/shared/warframe/types"
 import { Pencil, Plus, X, type LucideIcon } from "lucide-react"
-import { useState, type MouseEvent, type PointerEvent } from "react"
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type PointerEvent,
+} from "react"
 
 import {
   Popover,
@@ -29,6 +35,11 @@ import type { SlotId } from "./use-build-slots"
 import { useRankHotkey } from "./use-rank-hotkey"
 
 export type ModSlotKind = "normal" | "aura" | "exilus" | "stance"
+
+// Constructed once at module load (browser-only SPA). `.matches` reads live, so
+// it still reflects an OS setting the user toggles mid-session — we just avoid
+// allocating a fresh MediaQueryList on every drop in every slot.
+const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
 
 interface ModSlotProps {
   kind?: ModSlotKind
@@ -95,6 +106,27 @@ export function ModSlot({
   const isDragging = useIsDragSourceSlot(slotId)
   const isAnyDragging = useIsAnyDragActive()
   const canDrag = !readOnly && !!mod && !!slotId && kind !== "aura"
+  // Drop settle (issue #188), gated for prefers-reduced-motion: a one-shot
+  // scale when a mod lands. Driven by a state flag cleared on animationend —
+  // deliberately NOT a React `key`. Re-keying the wrapper would remount
+  // ModCard, which owns the hover-preview portal; remounting it out from under
+  // an open preview orphans that portal (preview stays stuck). The flag flips
+  // only when the mod identity changes to a non-empty mod, so it fires on
+  // placement/swap but never on initial load or rank-only changes.
+  const [settling, setSettling] = useState(false)
+  const prevModName = useRef<string | null>(mod?.name ?? null)
+  useEffect(() => {
+    const name = mod?.name ?? null
+    if (name !== prevModName.current) {
+      prevModName.current = name
+      // Gate the settle at the source: under prefers-reduced-motion the flash
+      // overlay's `animation: none` means its `animationend` never fires, so
+      // `settling` would latch true forever. Never flip it on instead — no
+      // overlay, no scale class, no stuck state.
+      setSettling(name != null && !reducedMotionQuery.matches)
+    }
+  }, [mod?.name])
+
   const onDragPointerDown = (e: PointerEvent) => {
     if (!canDrag || !startDrag || !mod || !slotId) return
     startDrag({ kind: "slot", slotId, mod, rank }, e)
@@ -189,18 +221,33 @@ export function ModSlot({
         >
           {mod && !isDragging ? (
             <>
-              <ModCard
-                mod={mod}
-                rank={rank}
-                disableHover={popoverOpen || isAnyDragging}
-                drainOverride={
-                  kind === "aura" || kind === "stance"
-                    ? auraBonusForMod(mod, rank, effective)
-                    : effectiveDrainForMod(mod, rank, effective)
-                }
-                matchState={getMatchState(mod.polarity, effective)}
-                hideDrain={hideDrain}
-              />
+              {/* No `key` here on purpose — see the `settling` comment above.
+                  The scale class is added while `settling` is true; ModCard
+                  underneath is never remounted. The flash overlay below owns
+                  clearing the flag (it's the longer of the two animations). */}
+              <div className={settling ? "animate-drop-settle" : undefined}>
+                <ModCard
+                  mod={mod}
+                  rank={rank}
+                  disableHover={popoverOpen || isAnyDragging}
+                  drainOverride={
+                    kind === "aura" || kind === "stance"
+                      ? auraBonusForMod(mod, rank, effective)
+                      : effectiveDrainForMod(mod, rank, effective)
+                  }
+                  matchState={getMatchState(mod.polarity, effective)}
+                  hideDrain={hideDrain}
+                />
+              </div>
+              {/* White wash confirming the drop. Isolated sibling overlay (no
+                  children), so its animationend can't be confused with a
+                  ModCard child animation. Clears `settling` when it ends. */}
+              {settling && (
+                <div
+                  className="animate-drop-flash pointer-events-none absolute inset-0 z-30 rounded-md bg-white opacity-0"
+                  onAnimationEnd={() => setSettling(false)}
+                />
+              )}
               {!readOnly && (onRemove || (isRivenMod(mod) && onEditRiven)) && (
                 // Mobile: always visible (no hover). Desktop: appear on slot
                 // hover via CSS group-hover (parent has `group`) so we don't
