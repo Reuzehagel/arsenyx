@@ -62,13 +62,21 @@ export type SavedBuildData = {
  *  under the historical name so existing consumers keep importing it here. */
 export type BuildDetail = BuildDetailResponse
 
-export const buildQuery = (slug: string) =>
+/**
+ * @param countView when `false`, fetches `/builds/:slug?view=0` so the server
+ *   skips the view-count bump (and its per-view cookie) and serves a
+ *   browser-cacheable response. Used by the embed entry — embed impressions
+ *   are not build views. The payload is identical either way, so the query key
+ *   stays `["build", slug]` (full page and embed never coexist in one document).
+ */
+export const buildQuery = (slug: string, opts?: { countView?: boolean }) =>
   queryOptions({
     queryKey: ["build", slug],
     queryFn: async (): Promise<BuildDetail> => {
+      const qs = opts?.countView === false ? "?view=0" : ""
       try {
         return await apiFetch<BuildDetail>(
-          `/builds/${encodeURIComponent(slug)}`,
+          `/builds/${encodeURIComponent(slug)}${qs}`,
         )
       } catch (err) {
         if (err instanceof ApiError && err.status === 404) throw notFound()

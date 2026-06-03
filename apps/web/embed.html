@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <script>
       // Apply stored theme before React mounts to avoid a flash of the wrong theme.
+      // In an iframe this reads arsenyx.com's own localStorage, so the embed
+      // matches the theme the visitor picked on the site.
       (function () {
         try {
           var t = localStorage.getItem("arsenyx-theme") || "system";
@@ -16,26 +18,24 @@
       })();
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
-    <meta name="theme-color" content="#09090b" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <title>Arsenyx — Warframe Build Planner</title>
-    <meta
-      name="description"
-      content="Open-source Warframe build planner. Fast, keyboard-first, and community-driven."
-    />
+    <title>Arsenyx build</title>
+    <!-- Warm the connections the embed needs before first paint. -->
+    <link rel="preconnect" href="https://api.arsenyx.com" />
+    <link rel="preconnect" href="https://img.arsenyx.com" />
+    <!-- Load Geist non-render-blocking: the embed paints immediately in the
+         system font and swaps when Geist arrives (minor FOUT), so a slow font
+         server never holds up the loadout. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap"
+      media="print"
+      onload="this.media='all'"
     />
-    <link rel="preconnect" href="https://api.arsenyx.com" />
-    <link rel="preconnect" href="https://img.arsenyx.com" />
-    <link rel="preconnect" href="https://wiki.warframe.com" />
   </head>
   <body class="antialiased">
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="/src/embed-main.tsx"></script>
   </body>
 </html>

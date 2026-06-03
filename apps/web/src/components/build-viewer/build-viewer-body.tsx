@@ -4,17 +4,19 @@ import {
   type Mod,
 } from "@arsenyx/shared/warframe/types"
 import { useSuspenseQuery } from "@tanstack/react-query"
-import { useNavigate } from "@tanstack/react-router"
-import { useMemo } from "react"
+import { lazy, Suspense, useMemo } from "react"
 
 import {
-  BuildSurface,
   getBuildLayout,
-  resolveInitialArcanes,
-  useArcaneSlots,
   useBuildDerived,
-  useBuildSlots,
-} from "@/components/build-editor"
+} from "@/components/build-editor/build-derived"
+// Deep imports (not the `@/components/build-editor` barrel) so the read-only
+// viewer doesn't drag in editor-only modules like ModSearchGrid — Rollup can't
+// tree-shake those back out of the barrel, and the embed entry must stay lean.
+import { BuildSurface } from "@/components/build-editor/build-surface"
+import { resolveInitialArcanes } from "@/components/build-editor/layout"
+import { useArcaneSlots } from "@/components/build-editor/use-arcane-slots"
+import { useBuildSlots } from "@/components/build-editor/use-build-slots"
 import {
   getVariants,
   isLegacyBuildData,
@@ -37,10 +39,21 @@ import { authorName } from "@/lib/util/user-display"
 import { getCategoryLabel, type BrowseCategory } from "@/lib/warframe"
 
 import { EmbedStrips } from "./embed-strips"
-import { GuideDisplay } from "./guide-display"
-import { RelatedBuildsStrip } from "./related-builds"
 import { VariantTabs } from "./variant-tabs"
-import { ViewerHeader } from "./viewer-header"
+
+// Full-page-only chrome. Lazy-loaded so the embed entry (and the embed branch
+// below, which never renders these) doesn't bundle TanStack Router's Link /
+// useNavigate (ViewerHeader, RelatedBuildsStrip) or react-markdown
+// (GuideDisplay) — that's what keeps the embed bundle off the full app shell.
+const ViewerHeader = lazy(() =>
+  import("./viewer-header").then((m) => ({ default: m.ViewerHeader })),
+)
+const RelatedBuildsStrip = lazy(() =>
+  import("./related-builds").then((m) => ({ default: m.RelatedBuildsStrip })),
+)
+const GuideDisplay = lazy(() =>
+  import("./guide-display").then((m) => ({ default: m.GuideDisplay })),
+)
 
 interface BuildViewerBodyProps {
   build: BuildDetail
@@ -50,6 +63,11 @@ interface BuildViewerBodyProps {
   /** Active variant index from `?v=`. Clamped against the variant count
    *  internally; pass `undefined` for the default (first variant). */
   activeIndex: number | undefined
+  /** Called when the user picks a variant tab. The parent owns how this is
+   *  persisted — the full page writes `?v=` via the router; the embed entry
+   *  keeps it in local state (no router). The index is already a valid
+   *  0-based tab index from VariantTabs. */
+  onSelectVariant: (index: number) => void
 }
 
 /**
@@ -100,6 +118,7 @@ function BuildViewerBodyInner({
   helminthAbilities,
   embed,
   activeIndex: rawActiveIndex,
+  onSelectVariant,
 }: BuildViewerBodyProps & {
   allMods: Mod[]
   allArcanes: Arcane[]
@@ -108,7 +127,6 @@ function BuildViewerBodyInner({
   const { data: item } = useSuspenseQuery(itemQuery(category, itemSlug))
   const { data: imageMap } = useSuspenseQuery(imageMapQuery)
   const { data: conflictMap } = useSuspenseQuery(modConflictsQuery)
-  const navigate = useNavigate()
 
   // Re-resolve mod/arcane/helminth images by uniqueName. New-format builds
   // carry stale inline imageNames (frozen at save time); legacy builds are
@@ -138,15 +156,6 @@ function BuildViewerBodyInner({
     () => selectVariant(savedAll, activeIndex),
     [savedAll, activeIndex],
   )
-
-  const setActiveIndex = (i: number) => {
-    navigate({
-      to: ".",
-      params: true,
-      search: (s) => (i === 0 ? { ...s, v: undefined } : { ...s, v: i }),
-      replace: true,
-    })
-  }
 
   const categoryLabel = getCategoryLabel(category)
   const layout = useMemo(() => getBuildLayout(item, category), [item, category])
@@ -205,16 +214,20 @@ function BuildViewerBodyInner({
   return (
     <>
       {!embed && (
-        <ViewerHeader
-          build={build}
-          categoryLabel={categoryLabel}
-          author={authorName(build.user)}
-          totalEndoCost={totalEndoCost}
-          formaCount={formaCount}
-          category={category}
-          itemSlug={itemSlug}
-          itemImageName={item.imageName ?? undefined}
-        />
+        // min-height reserves the header's vertical space so the loadout below
+        // doesn't jump when the lazy chunk resolves.
+        <Suspense fallback={<div className="min-h-24" />}>
+          <ViewerHeader
+            build={build}
+            categoryLabel={categoryLabel}
+            author={authorName(build.user)}
+            totalEndoCost={totalEndoCost}
+            formaCount={formaCount}
+            category={category}
+            itemSlug={itemSlug}
+            itemImageName={item.imageName ?? undefined}
+          />
+        </Suspense>
       )}
 
       <div className="flex flex-col gap-4">
@@ -256,16 +269,22 @@ function BuildViewerBodyInner({
               <VariantTabs
                 variants={variants}
                 activeIndex={activeIndex}
-                onSelect={setActiveIndex}
+                onSelect={onSelectVariant}
               />
             ) : undefined
           }
         />
 
-        {!embed ? <RelatedBuildsStrip slug={build.slug} /> : null}
+        {!embed ? (
+          <Suspense fallback={null}>
+            <RelatedBuildsStrip slug={build.slug} />
+          </Suspense>
+        ) : null}
 
         {!embed && (
-          <GuideDisplay build={build} activeVariant={variants[activeIndex]} />
+          <Suspense fallback={null}>
+            <GuideDisplay build={build} activeVariant={variants[activeIndex]} />
+          </Suspense>
         )}
       </div>
     </>

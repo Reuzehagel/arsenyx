@@ -47,5 +47,16 @@ export default defineConfig({
     // via autoCodeSplitting. Vendor manualChunks were tried and reverted —
     // they only shuffle code into eager modulepreloads, growing first paint.
     chunkSizeWarningLimit: 700,
+    rollupOptions: {
+      // Two entries: the full SPA (index.html) and a lightweight read-only
+      // viewer (embed.html → src/embed-main.tsx) the Worker serves for
+      // `/builds/:slug?embed=1`. The embed entry has its own (much smaller)
+      // chunk graph — no router, no route tree, no app chrome — so a guide
+      // page's many iframes don't each boot the whole app.
+      input: {
+        main: path.resolve(import.meta.dirname, "index.html"),
+        embed: path.resolve(import.meta.dirname, "embed.html"),
+      },
+    },
   },
 })

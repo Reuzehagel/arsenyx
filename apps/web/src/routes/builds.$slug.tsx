@@ -1,8 +1,6 @@
-import { clamp } from "@arsenyx/shared"
-import { MAX_VARIANT_PARSE_INDEX } from "@arsenyx/shared/warframe/build-doc"
 import { slugify } from "@arsenyx/shared/warframe/slugs"
 import { useSuspenseQuery } from "@tanstack/react-query"
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { Suspense } from "react"
 
 import {
@@ -12,6 +10,7 @@ import {
 } from "@/components/build-viewer"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
+import { clampEmbedParams } from "@/lib/embed-params"
 import { buildQuery } from "@/lib/queries/build-query"
 import { isValidCategory, type BrowseCategory } from "@/lib/warframe"
 
@@ -37,17 +36,13 @@ export const Route = createFileRoute("/builds/$slug")({
       const n = typeof v === "string" ? Number(v) : v
       return typeof n === "number" && Number.isFinite(n) ? n : undefined
     }
-    const rawScale = num(s.scale)
-    const scale = rawScale !== undefined ? clamp(rawScale, 0.1, 2) : undefined
-    const bg = typeof s.bg === "string" && s.bg.length > 0 ? s.bg : undefined
-    const rawV = num(s.v)
-    // 0-indexed; default (undefined) means "first variant". Clamped to a
-    // generous upper bound here; the viewer further clamps to the actual
-    // variant count.
-    const v =
-      rawV !== undefined && rawV >= 0
-        ? Math.min(MAX_VARIANT_PARSE_INDEX, Math.floor(rawV))
-        : undefined
+    // Bounds logic is shared with the embed entry's parseParams — see
+    // clampEmbedParams. Coerce the router's `unknown` values first, then clamp.
+    const { scale, bg, v } = clampEmbedParams({
+      scale: num(s.scale),
+      bg: typeof s.bg === "string" ? s.bg : undefined,
+      v: num(s.v),
+    })
     return {
       ...(embed && { embed }),
       ...(scale !== undefined && { scale }),
@@ -97,12 +92,24 @@ function BuildViewer({ embed = false }: { embed?: boolean }) {
   const { slug } = Route.useParams()
   const { v } = Route.useSearch()
   const { data: build } = useSuspenseQuery(buildQuery(slug))
+  const navigate = useNavigate()
 
   if (!isValidCategory(build.item.category)) {
     return <p className="text-muted-foreground">Unsupported category.</p>
   }
   const category = build.item.category as BrowseCategory
   const itemSlug = slugify(build.item.name)
+
+  // Persist the active variant in the URL (`?v=`) so a shared/bookmarked link
+  // reopens on the same variant. The embed entry owns this differently (local
+  // state, no router) — see src/embed-main.tsx.
+  const onSelectVariant = (i: number) =>
+    navigate({
+      to: ".",
+      params: true,
+      search: (s) => (i === 0 ? { ...s, v: undefined } : { ...s, v: i }),
+      replace: true,
+    })
 
   // Re-key on variant switch so the per-variant hooks (useBuildSlots /
   // useArcaneSlots) re-initialize from the new variant's projected data.
@@ -117,6 +124,7 @@ function BuildViewer({ embed = false }: { embed?: boolean }) {
         itemSlug={itemSlug}
         embed={embed}
         activeIndex={v}
+        onSelectVariant={onSelectVariant}
       />
     </Suspense>
   )

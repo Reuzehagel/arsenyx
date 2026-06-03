@@ -116,11 +116,13 @@ export function purgeEdge(c: Context, path: string): void {
   if (!cache) return
   const base = new URL(c.req.url)
   base.pathname = path
-  // The detail route caches two separate entries under distinct keys: the bare
-  // path (full payload) and `?embed=1` (slim link-unfurl payload, served to
-  // anonymous scrapers). Evict both, or a build set PRIVATE/deleted keeps
-  // leaking its name/description through the embed variant until TTL expiry.
-  for (const search of ["", "?embed=1"]) {
+  // The detail route caches three separate entries under distinct keys: the
+  // bare path (full payload), `?embed=1` (slim link-unfurl payload for anonymous
+  // scrapers), and `?view=0` (full payload for the embed viewer — same body,
+  // browser-cacheable, no view bump). Evict all three, or a build set
+  // PRIVATE/deleted keeps leaking its name/description/loadout through whichever
+  // variant is missed until TTL expiry.
+  for (const search of ["", "?embed=1", "?view=0"]) {
     const url = new URL(base.toString())
     url.search = search
     // Build the delete key through the same cacheKey() the store path uses, so

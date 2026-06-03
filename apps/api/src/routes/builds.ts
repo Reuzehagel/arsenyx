@@ -926,6 +926,17 @@ builds.get("/:slug", edgeCache({ maxAge: 300 }), async (c) => {
   const isOwner =
     viewerId != null && (build.userId === viewerId || viewerIsOrgMember)
 
+  // Embed loads (?view=0) increment no view and set no cookie, so an anonymous
+  // response is fully shareable — let the browser cache it too, not just the
+  // edge. A guide page with many embeds (and repeat visits) then skips the
+  // refetch entirely. Gate on no-session so a personalized (owner/like/bookmark)
+  // payload is never publicly cached; Vary: Cookie stops a logged-in viewer from
+  // reusing the anonymous body from their own HTTP cache.
+  if (!session && c.req.query("view") === "0") {
+    c.header("Cache-Control", "public, max-age=300")
+    c.header("Vary", "Cookie")
+  }
+
   return c.json(
     serializeBuildDetail(build, {
       isOwner,
@@ -951,6 +962,11 @@ async function maybeIncrementView(
   // viewCount — and the Set-Cookie we'd attach would also defeat the Worker's
   // edge cache. Skip the side effect (and the cookie) entirely.
   if (c.req.query("embed") === "1") return
+  // The embed viewer (apps/web/src/embed-main.tsx) appends ?view=0. An embed
+  // impression on a third-party guide page is not a build view, so skip the
+  // bump. Skipping also means no Set-Cookie, which lets the detail handler mark
+  // the response browser-cacheable (see below).
+  if (c.req.query("view") === "0") return
   const cookieName = `vw_${slug}`
   if (getCookie(c, cookieName)) return
   registerBackgroundWork(

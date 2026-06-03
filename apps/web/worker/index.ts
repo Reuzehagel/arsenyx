@@ -52,6 +52,31 @@ export default {
     const slug = extractSlug(url.pathname)
     if (!slug) return env.ASSETS.fetch(request)
 
+    // Embed iframes (`?embed=1`) get a dedicated lightweight shell instead of
+    // the full SPA index.html, so a guide page with many embeds doesn't boot
+    // the whole app once per iframe. embed.html reads the slug from the path
+    // (the iframe URL is unchanged), so we just serve its body for this URL.
+    //
+    // Static Assets' html_handling rewrites `/embed.html` → `/embed` with a
+    // redirect (same as `/index.html` → `/`). We must NOT pass that redirect
+    // back to the iframe — it would bounce to `/embed` and hit the SPA
+    // fallback. So request the clean `/embed` path (served 200) and, defensively,
+    // follow a redirect once if the binding still returns one.
+    if (isEmbedRequest(url)) {
+      let res = await env.ASSETS.fetch(
+        new Request(new URL("/embed", url).toString(), request),
+      )
+      if (res.status >= 300 && res.status < 400) {
+        const loc = res.headers.get("location")
+        if (loc) {
+          res = await env.ASSETS.fetch(
+            new Request(new URL(loc, url).toString(), request),
+          )
+        }
+      }
+      return res
+    }
+
     const ua = request.headers.get("user-agent") ?? ""
     if (!isUnfurlBot(ua)) return env.ASSETS.fetch(request)
 
@@ -114,6 +139,13 @@ function extractSlug(pathname: string): string | null {
 function isUnfurlBot(ua: string): boolean {
   const lower = ua.toLowerCase()
   return BOT_UA_FRAGMENTS.some((frag) => lower.includes(frag))
+}
+
+// Mirrors the SPA's `validateSearch` truthiness for `embed` (routes/
+// builds.$slug.tsx) so the Worker and client agree on what counts as an embed.
+function isEmbedRequest(url: URL): boolean {
+  const embed = url.searchParams.get("embed")
+  return embed === "1" || embed === "true"
 }
 
 async function fetchBuild(slug: string): Promise<BuildSummary | null> {
