@@ -56,9 +56,33 @@ export function EmbedStrips({
   lichBonusElement: LichBonusElement | null
   slug: string
 }) {
+  // Which curated strip (if any) applies. Each flag mirrors that strip's own
+  // render gate so we can tell synchronously whether ANY strip will show — and,
+  // if not, fall back to a bare header bar (item icon + name + "View on
+  // Arsenyx") so a plain weapon/archwing embed isn't left chrome-less. The
+  // warframe flag mirrors EmbedWarframeStrip's `hasAbilities || hasShards`.
+  // The incarnon flag is optimistic: EmbedIncarnonStrip can still bail after its
+  // async query (no choosable tiers), a rare data edge where we'd rather omit
+  // the header than risk rendering it twice.
+  const showWarframeStrip =
+    category === "warframes" && (abilities.length > 0 || shards.some(Boolean))
+  const showZawStrip =
+    category === "melee" && isZawStrike(itemName) && Boolean(zawComponents)
+  const showKitgunStrip =
+    (category === "primary" || category === "secondary") &&
+    Boolean(kitgunComponents)
+  const showIncarnonStrip = incarnonEnabled && incarnonPerks.some(Boolean)
+  const showLichStrip = lichBonusElement !== null
+  const showAnyStrip =
+    showWarframeStrip ||
+    showZawStrip ||
+    showKitgunStrip ||
+    showIncarnonStrip ||
+    showLichStrip
+
   return (
     <>
-      {category === "warframes" && (
+      {showWarframeStrip && (
         <EmbedWarframeStrip
           abilities={abilities}
           helminth={helminth}
@@ -68,7 +92,7 @@ export function EmbedStrips({
           itemImageName={itemImageName}
         />
       )}
-      {category === "melee" && isZawStrike(itemName) && zawComponents && (
+      {showZawStrip && zawComponents && (
         <EmbedZawStrip
           itemName={itemName}
           itemImageName={itemImageName}
@@ -77,17 +101,16 @@ export function EmbedStrips({
           slug={slug}
         />
       )}
-      {(category === "primary" || category === "secondary") &&
-        kitgunComponents && (
-          <EmbedKitgunStrip
-            itemName={itemName}
-            itemImageName={itemImageName}
-            grip={kitgunComponents.grip}
-            loader={kitgunComponents.loader}
-            slug={slug}
-          />
-        )}
-      {incarnonEnabled && incarnonPerks.some(Boolean) && (
+      {showKitgunStrip && kitgunComponents && (
+        <EmbedKitgunStrip
+          itemName={itemName}
+          itemImageName={itemImageName}
+          grip={kitgunComponents.grip}
+          loader={kitgunComponents.loader}
+          slug={slug}
+        />
+      )}
+      {showIncarnonStrip && (
         <Suspense fallback={null}>
           <EmbedIncarnonStrip
             weaponName={itemName}
@@ -97,9 +120,16 @@ export function EmbedStrips({
           />
         </Suspense>
       )}
-      {lichBonusElement !== null && (
+      {showLichStrip && (
         <EmbedLichStrip
           element={lichBonusElement}
+          itemName={itemName}
+          itemImageName={itemImageName}
+          slug={slug}
+        />
+      )}
+      {!showAnyStrip && (
+        <EmbedStripFrame
           itemName={itemName}
           itemImageName={itemImageName}
           slug={slug}
@@ -126,7 +156,9 @@ function EmbedStripFrame({
   itemImageName?: string
   slug: string
   warframeLayout?: boolean
-  children: ReactNode
+  /** Optional middle content. Omitted for the fallback header bar (item +
+   *  "View on Arsenyx") shown when a build qualifies for no curated strip. */
+  children?: ReactNode
 }) {
   const buildUrl = `${window.location.origin}/builds/${slug}`
   const footerLink = (
