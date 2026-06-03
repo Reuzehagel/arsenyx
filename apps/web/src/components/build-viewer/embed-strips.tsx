@@ -160,6 +160,11 @@ function EmbedStripFrame({
    *  "View on Arsenyx") shown when a build qualifies for no curated strip. */
   children?: ReactNode
 }) {
+  // The fallback header bar (no strip content) gives the name the whole row, so
+  // drop the compact 120px cap the curated strips need to leave room for their
+  // icons — it would otherwise truncate a name like "Panzer Vulpaphyla" despite
+  // ample space.
+  const headerOnly = children == null
   const buildUrl = `${window.location.origin}/builds/${slug}`
   const footerLink = (
     <a
@@ -177,7 +182,11 @@ function EmbedStripFrame({
       <div
         className={cn(
           "flex items-center gap-2",
-          warframeLayout ? "shrink-0" : "md:flex-1",
+          headerOnly
+            ? "min-w-0 md:flex-1"
+            : warframeLayout
+              ? "shrink-0"
+              : "md:flex-1",
         )}
       >
         <div className="bg-muted/10 relative flex size-8 shrink-0 overflow-hidden rounded">
@@ -187,7 +196,12 @@ function EmbedStripFrame({
             className="h-full w-full object-cover"
           />
         </div>
-        <span className="max-w-[120px] truncate text-sm font-semibold">
+        <span
+          className={cn(
+            "truncate text-sm font-semibold",
+            !headerOnly && "max-w-[120px]",
+          )}
+        >
           {itemName}
         </span>
       </div>
