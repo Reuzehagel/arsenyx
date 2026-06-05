@@ -125,6 +125,27 @@ describe("scrapeOverframeFromNextData", () => {
     expect(res.slots[0].polarityCode).toBe(4)
   })
 
+  it("maps polarity code 8 to umbra", () => {
+    // Confirmed via Umbral Vitality / Umbral Intensify (umbra mods) in code-8
+    // slots. Previously unmapped, so an umbra-forma'd slot imported as a
+    // spurious "universal" (cleared) forma and the count came up short.
+    const nextData = {
+      props: {
+        pageProps: {
+          data: {
+            title: "T",
+            name: "Valkyr Prime",
+            formas: 5,
+            slots: [{ slot_id: 6, mod: 695, rank: 10, polarity: 8 }],
+          },
+        },
+      },
+    }
+    const res = scrapeOverframeFromNextData(nextData, BUILD_URL)
+    expect(res.slots[0].polarity).toBe("umbra")
+    expect(res.slots[0].polarityCode).toBe(8)
+  })
+
   it("prefers the plain data.description guide over the link-marked guideMarkdown", () => {
     const nextData = {
       props: {

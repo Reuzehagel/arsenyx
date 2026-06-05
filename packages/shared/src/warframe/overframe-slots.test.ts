@@ -53,6 +53,28 @@ describe("overframe slot mapping round-trips", () => {
     })
   })
 
+  it("maps melee slot ids with a Stance slot at 9 (Exilus→10, Arcanes→11+)", () => {
+    expect(decodeOverframeSlotId(8, "melee")).toEqual({
+      kind: "mod",
+      slotType: "normal",
+      slotIndex: 0,
+    })
+    expect(decodeOverframeSlotId(9, "melee")).toEqual({
+      kind: "mod",
+      slotType: "stance",
+      slotIndex: 0,
+    })
+    expect(decodeOverframeSlotId(10, "melee")).toEqual({
+      kind: "mod",
+      slotType: "exilus",
+      slotIndex: 0,
+    })
+    expect(decodeOverframeSlotId(11, "melee")).toEqual({
+      kind: "arcane",
+      index: 0,
+    })
+  })
+
   it("counts companion normals down from the highest slot id", () => {
     // 10 normal slots → slot_id 1 is the last normal, slot_id 10 the first.
     expect(decodeOverframeSlotId(1, "companions")).toEqual({

@@ -1,6 +1,7 @@
 import {
   getNormalSlotCount,
   hasExilusSlot,
+  hasStanceSlot,
   isWarframeLike,
 } from "./slot-layout"
 import type { BrowseCategory } from "./types"
@@ -15,10 +16,19 @@ import type { BrowseCategory } from "./types"
 // It returns slot type + index (not a web `SlotId` string) so this stays free
 // of web-only types.
 
-export type OverframeSlotType = "normal" | "aura" | "exilus" | "arcane"
+export type OverframeSlotType =
+  | "normal"
+  | "aura"
+  | "exilus"
+  | "stance"
+  | "arcane"
 
 export type SlotMapping =
-  | { kind: "mod"; slotType: "normal" | "aura" | "exilus"; slotIndex: number }
+  | {
+      kind: "mod"
+      slotType: "normal" | "aura" | "exilus" | "stance"
+      slotIndex: number
+    }
   | { kind: "arcane"; index: number }
 
 /**
@@ -46,6 +56,15 @@ export function decodeOverframeSlotId(
   }
   if (slotId >= 1 && slotId <= 8) {
     return { kind: "mod", slotType: "normal", slotIndex: 8 - slotId }
+  }
+  // Melee inserts a Stance slot at slot_id 9, shifting Exilus to 10 and Arcanes
+  // to 11+. (Other exilus-bearing non-warframe categories — primary/secondary —
+  // have no stance, so Exilus sits at 9.)
+  if (hasStanceSlot(category)) {
+    if (slotId === 9) return { kind: "mod", slotType: "stance", slotIndex: 0 }
+    if (slotId === 10) return { kind: "mod", slotType: "exilus", slotIndex: 0 }
+    if (slotId >= 11) return { kind: "arcane", index: slotId - 11 }
+    return null
   }
   const warframeLike = isWarframeLike(category)
   if (slotId === 9) {
@@ -88,6 +107,21 @@ export function encodeOverframeSlotId(
     }
     return getNormalSlotCount(category) - slotIndex
   }
+  // Melee: Stance at 9, Exilus at 10, Arcanes at 11+ (inverse of decode above).
+  if (hasStanceSlot(category)) {
+    switch (slotType) {
+      case "normal":
+        return 8 - slotIndex
+      case "stance":
+        return 9
+      case "exilus":
+        return 10
+      case "arcane":
+        return 11 + slotIndex
+      case "aura":
+        throw new Error(`encodeOverframeSlotId: ${category} has no aura slot`)
+    }
+  }
   switch (slotType) {
     case "normal":
       return 8 - slotIndex
@@ -97,5 +131,7 @@ export function encodeOverframeSlotId(
       return warframeLike ? 10 : 9
     case "arcane":
       return warframeLike ? 11 + slotIndex : 10 + slotIndex
+    case "stance":
+      throw new Error(`encodeOverframeSlotId: ${category} has no stance slot`)
   }
 }

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest"
 import {
   auraBonusForMod,
   calculateCapacity,
+  calculateFormaCount,
   type CapacityInput,
   getMatchState,
 } from "./calculations"
@@ -185,5 +186,64 @@ describe('"any"-polarity mods match every polarized slot', () => {
       }),
     )
     expect(result.max).toBe(74) // 60 + 14
+  })
+})
+
+// Regression: forma must dedup within a slot type, never across types. A
+// forma'd Aura previously shared the normal pool and could cancel a
+// same-polarity normal forma, undercounting vs Overframe (matches OF here).
+describe("calculateFormaCount", () => {
+  const NO_NORMALS = Array<undefined>(8).fill(undefined)
+
+  it("does not let a forma'd aura offset a same-polarity normal forma", () => {
+    // Valkyr Prime (aura madurai + 3 madurai normals). Aura forma'd madurai→any,
+    // two blank normals forma'd to madurai, plus umbra/zenurik/vazarin. OF = 5.
+    const count = calculateFormaCount({
+      auraInnates: ["madurai"],
+      normalInnates: [
+        "madurai",
+        "madurai",
+        "madurai",
+        ...Array(5).fill(undefined),
+      ],
+      formaPolarities: {
+        "aura-0": "any",
+        "normal-2": "umbra",
+        "normal-3": "zenurik",
+        "normal-4": "madurai",
+        "normal-5": "vazarin",
+        "normal-6": "madurai",
+      },
+    })
+    expect(count).toBe(5)
+  })
+
+  it("dedups a polarity move within the interchangeable normal pool", () => {
+    // Sarofang Prime (1 innate naramon normal, stance madurai). naramon moved
+    // off slot 0 and onto slot 2 is 1 net forma; stance mod matches innate. OF = 5.
+    const count = calculateFormaCount({
+      auraInnates: [],
+      stanceInnate: "madurai",
+      normalInnates: ["naramon", ...Array(7).fill(undefined)],
+      formaPolarities: {
+        "normal-0": "madurai",
+        "normal-1": "madurai",
+        "normal-2": "naramon",
+        "normal-3": "madurai",
+        "normal-4": "madurai",
+        "normal-6": "madurai",
+      },
+    })
+    expect(count).toBe(5)
+  })
+
+  it("scores a forma'd exilus separately from the normal pool", () => {
+    const count = calculateFormaCount({
+      auraInnates: [],
+      exilusInnate: "madurai",
+      normalInnates: NO_NORMALS,
+      formaPolarities: { exilus: "vazarin", "normal-0": "madurai" },
+    })
+    expect(count).toBe(2)
   })
 })

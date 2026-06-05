@@ -30,6 +30,30 @@ export type ApplyWarning = {
   message: string
 }
 
+/**
+ * One row per Overframe slot, capturing how it was interpreted. Purely
+ * diagnostic — surfaced by the import page's "Copy debug JSON" so slot/forma
+ * mismaps are visible without re-deriving the decode by hand. `matchedType`
+ * (the matched mod's `type`, e.g. "Stance"/"Melee"/"Primary") is the tell for
+ * layout bugs: a Stance mod landing in `exilus`, or an exilus mod in `arcane`.
+ */
+export type OverframeSlotTrace = {
+  ofSlotId: number
+  ofName: string | null
+  ofPolarityCode: number
+  ofPolarity: string | null
+  rank: number
+  /** Where it landed: a SlotId ("normal-3"/"exilus"/"aura-0"), "arcane-N", or "unmapped". */
+  target: string
+  kind: "mod" | "arcane" | "unmapped"
+  /** Mod slots only: innate polarity, the forma we recorded, the matched mod. */
+  innate?: string | null
+  forma?: string | null
+  matched?: string | null
+  matchedType?: string
+  note?: string
+}
+
 export type ApplyResult = {
   item: BrowseItem
   category: BrowseCategory
@@ -37,6 +61,8 @@ export type ApplyResult = {
   buildName?: string
   /** Author's guide prose, normalized for our markdown renderer. */
   guideDescription?: string
+  /** Per-slot interpretation trace for the debug payload (not persisted). */
+  trace: OverframeSlotTrace[]
   warnings: ApplyWarning[]
 }
 
@@ -137,8 +163,8 @@ function interpretSlot(
   if (!mapping) return null
   if (mapping.kind === "arcane") return mapping
   const id: SlotId =
-    mapping.slotType === "exilus"
-      ? "exilus"
+    mapping.slotType === "exilus" || mapping.slotType === "stance"
+      ? mapping.slotType
       : (`${mapping.slotType}-${mapping.slotIndex}` as SlotId)
   return { kind: "mod", id }
 }
@@ -157,6 +183,9 @@ function innatePolarityFor(
   }
   if (slotId === "exilus") {
     return (detail.exilusPolarity ?? undefined) as Polarity | undefined
+  }
+  if (slotId === "stance") {
+    return (detail.stancePolarity ?? undefined) as Polarity | undefined
   }
   if (slotId.startsWith("normal-")) {
     const idx = Number(slotId.slice("normal-".length))
@@ -197,35 +226,69 @@ export function applyOverframeScrape(args: {
   )
   const arcanesByName = new Map(arcanes.map((a) => [normalizeName(a.name), a]))
 
+  const trace: OverframeSlotTrace[] = []
+
   for (const rawSlot of scrape.slots) {
+    const base = {
+      ofSlotId: rawSlot.slot_id,
+      ofName: rawSlot.overframeName ?? null,
+      ofPolarityCode: rawSlot.polarityCode,
+      ofPolarity: rawSlot.polarity ?? null,
+      rank: rawSlot.rank,
+    }
     const interp = interpretSlot(rawSlot.slot_id, category)
-    if (!interp) continue
+    if (!interp) {
+      trace.push({
+        ...base,
+        target: "unmapped",
+        kind: "unmapped",
+        note: `slot_id ${rawSlot.slot_id} has no ${category} mapping`,
+      })
+      continue
+    }
 
     if (interp.kind === "arcane") {
-      if (!rawSlot.overframeId || !rawSlot.overframeName) continue
+      const target = `arcane-${interp.index}`
+      if (!rawSlot.overframeId || !rawSlot.overframeName) {
+        trace.push({ ...base, target, kind: "arcane", matched: null })
+        continue
+      }
       const arcane = arcanesByName.get(normalizeName(rawSlot.overframeName))
       if (!arcane) {
         warnings.push({
           type: "arcane_not_found",
           message: `No arcane match for "${rawSlot.overframeName}"`,
         })
+        trace.push({
+          ...base,
+          target,
+          kind: "arcane",
+          matched: null,
+          note: "no arcane match",
+        })
         continue
       }
       while (arcaneSlots.length <= interp.index) arcaneSlots.push(null)
       arcaneSlots[interp.index] = { arcane, rank: rawSlot.rank }
+      trace.push({ ...base, target, kind: "arcane", matched: arcane.name })
       continue
     }
 
     const slotId = interp.id
     const importedPolarity = rawSlot.polarity as Polarity | undefined
     const innate = innatePolarityFor(detailItem, slotId)
+    let forma: Polarity | undefined
     if (importedPolarity && importedPolarity !== innate) {
+      forma = importedPolarity
       formaPolarities[slotId] = importedPolarity
     } else if (!importedPolarity && innate) {
       // OF reports no polarity but slot has innate → universal forma cleared it.
+      forma = "universal"
       formaPolarities[slotId] = "universal"
     }
 
+    let matchedName: string | null = null
+    let matchedType: string | undefined
     if (rawSlot.overframeId && rawSlot.overframeName) {
       const match = matchModByName(
         rawSlot.overframeName,
@@ -244,8 +307,21 @@ export function applyOverframeScrape(args: {
           Math.min(rawSlot.rank ?? 0, matched.fusionLimit ?? rawSlot.rank ?? 0),
         )
         slots[slotId] = { mod: matched, rank: boundedRank }
+        matchedName = matched.name
+        matchedType = matched.type
       }
     }
+
+    trace.push({
+      ...base,
+      target: slotId,
+      kind: "mod",
+      innate: innate ?? null,
+      forma: forma ?? null,
+      matched: matchedName,
+      matchedType,
+      note: rawSlot.overframeName && !matchedName ? "no mod match" : undefined,
+    })
   }
 
   // Helminth: warframes only.
@@ -284,6 +360,7 @@ export function applyOverframeScrape(args: {
     data,
     buildName: scrape.source.pageTitle,
     guideDescription: normalizeOverframeGuide(scrape.source.guideDescription),
+    trace,
     warnings,
   }
 }

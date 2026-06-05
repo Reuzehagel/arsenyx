@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input"
 import { requireUser } from "@/lib/auth-guards"
 import { saveDraft } from "@/lib/import-draft"
 import {
+  type ApplyResult,
   applyOverframeScrape,
   matchOverframeItem,
   type ScrapeResponse,
@@ -30,6 +31,7 @@ import { itemsIndexQuery } from "@/lib/queries/items-index-query"
 import { modsQuery } from "@/lib/queries/mods-query"
 import { apiErrorMessage, apiFetch, ApiError } from "@/lib/util/api-client"
 import { copyToClipboard } from "@/lib/util/clipboard"
+import type { BrowseCategory, BrowseItem, DetailItem } from "@/lib/warframe"
 
 export const Route = createFileRoute("/import")({
   // Import feeds the sign-in-only editor/save flow, and the API endpoints are
@@ -489,7 +491,14 @@ function ImportPage() {
                       </dd>
                     </dl>
                     <div className="mt-4 flex items-center justify-between">
-                      <CopyDebugButton payload={{ scrape: result, applied }} />
+                      <CopyDebugButton
+                        payload={buildImportDebug(
+                          result,
+                          applied,
+                          matchedItem,
+                          detailItem,
+                        )}
+                      />
                       <Button onClick={onOpenInEditor}>Open in editor</Button>
                     </div>
                   </div>
@@ -531,6 +540,85 @@ function ImportPage() {
       <Footer />
     </div>
   )
+}
+
+/**
+ * Compact, diagnostic debug payload for the "Copy debug JSON" button. The raw
+ * `scrape`/`applied` dump is huge (every mod's full `levelStats`) and hides the
+ * things that actually matter when an import looks wrong. This keeps only the
+ * signal: the item's innate polarities, the computed-vs-Overframe forma counts,
+ * and a per-slot trace (`applied.trace`) showing where every Overframe slot
+ * landed and the matched mod's `type` — so a Stance mod in `exilus`, an exilus
+ * mod mapped to `arcane`, or a spurious forma is obvious at a glance.
+ */
+function buildImportDebug(
+  result: ScrapeResponse,
+  applied: ApplyResult,
+  matchedItem: { item: BrowseItem; category: BrowseCategory },
+  detailItem: DetailItem | undefined,
+) {
+  const { category } = matchedItem
+  const auraInnates = detailItem
+    ? getAuraPolarities(detailItem, getAuraSlotCount(category, detailItem))
+    : []
+  const normalInnates = detailItem
+    ? Array.from({ length: getNormalSlotCount(category) }, (_, i) =>
+        toPolarity(detailItem.polarities?.[i]),
+      )
+    : []
+  const exilusInnate = detailItem
+    ? getExilusInnatePolarity(detailItem)
+    : undefined
+  const stanceInnate = detailItem
+    ? getStanceInnatePolarity(detailItem)
+    : undefined
+
+  return {
+    url: result.source.url,
+    buildId: result.source.buildId,
+    buildString: result.source.buildString,
+    item: {
+      name: matchedItem.item.name,
+      slug: matchedItem.item.slug,
+      category,
+      displayClass: matchedItem.item.displayClass,
+    },
+    innates: detailItem
+      ? {
+          aura: auraInnates.map((p) => p ?? null),
+          exilus: exilusInnate ?? null,
+          stance: stanceInnate ?? null,
+          normals: normalInnates.map((p) => p ?? null),
+        }
+      : null,
+    forma: {
+      computed: detailItem
+        ? calculateFormaCount({
+            auraInnates,
+            exilusInnate,
+            stanceInnate,
+            normalInnates,
+            formaPolarities: applied.data.formaPolarities ?? {},
+          })
+        : null,
+      ofReported: result.formaCount,
+    },
+    formaPolarities: applied.data.formaPolarities ?? {},
+    slots: applied.trace,
+    arcanes: (applied.data.arcanes ?? [])
+      .map((a, i) =>
+        a ? { index: i, name: a.arcane.name, rank: a.rank } : null,
+      )
+      .filter(Boolean),
+    helminth: applied.data.helminth
+      ? Object.entries(applied.data.helminth).map(([slot, ab]) => ({
+          slot: Number(slot),
+          name: ab.name,
+        }))
+      : null,
+    guideChars: applied.guideDescription?.length ?? 0,
+    warnings: { scrape: result.warnings, apply: applied.warnings },
+  }
 }
 
 function CopyDebugButton({ payload }: { payload: unknown }) {

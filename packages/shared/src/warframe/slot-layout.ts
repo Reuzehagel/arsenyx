@@ -38,3 +38,11 @@ export function hasExilusSlot(category: BrowseCategory): boolean {
 export function isWarframeLike(category: BrowseCategory): boolean {
   return category === "warframes" || category === "necramechs"
 }
+
+/** Categories whose Overframe slot numbering includes a Stance slot at slot_id
+ *  9 — which pushes Exilus to slot_id 10 and Arcanes to 11+. Only melee weapons
+ *  hit this here: beast companion weapons carry a Posture (stance) slot too, but
+ *  they have no Exilus/Arcane slots and are handled by the all-normal path. */
+export function hasStanceSlot(category: BrowseCategory): boolean {
+  return category === "melee"
+}

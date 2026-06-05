@@ -4,7 +4,9 @@
 // changes, so a targeted recompute can find stale rows with
 // `WHERE "formaCalcVersion" < FORMA_CALC_VERSION` instead of rescanning the
 // whole table. See scripts/recompute-forma.ts.
-export const FORMA_CALC_VERSION = 1
+// v2: forma is deduped within a slot type, not across them — a forma'd Aura no
+// longer cancels a same-polarity normal-slot forma (see calculateFormaCount).
+export const FORMA_CALC_VERSION = 2
 
 // `formaCalcVersion` value for a row whose count was never computed by the
 // current calc — a pre-backfill row, or a write that didn't carry a valid

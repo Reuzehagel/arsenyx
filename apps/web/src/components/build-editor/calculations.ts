@@ -268,25 +268,26 @@ export function calculateFormaCount(input: FormaCountInput): number {
     formaPolarities,
   } = input
 
-  // Aura, exilus, and normal slots share a single dedup pool: moving a
-  // polarity between them (e.g. exilus → normal) costs no net forma. Stance
-  // is separate — melee stance changes always cost forma.
-  const pool: NormalSlotEntry[] = [
-    ...auraInnates.map((innate, i) => ({
-      innate,
-      forma: formaPolarities[`aura-${i}` as SlotId],
-    })),
-    {
-      innate: exilusInnate,
-      forma: formaPolarities.exilus,
-    },
-    ...normalInnates.map((innate, i) => ({
-      innate,
-      forma: formaPolarities[`normal-${i}` as SlotId],
-    })),
-  ]
+  // Forma dedups WITHIN a slot type, never across types: an innate polarity
+  // only offsets a mod of its own slot type. A frame's innate Aura polarity
+  // can't make a normal-slot mod cheaper because a normal mod can't sit in the
+  // Aura slot — so a forma'd aura must not cancel a same-polarity normal forma.
+  // Normal slots are interchangeable, so they share one dedup pool; Aura (its
+  // own pool, for 2-aura frames like Jade), Exilus, and Stance are scored
+  // separately. This matches Overframe's forma count.
+  const normalPool: NormalSlotEntry[] = normalInnates.map((innate, i) => ({
+    innate,
+    forma: formaPolarities[`normal-${i}` as SlotId],
+  }))
+  const auraPool: NormalSlotEntry[] = auraInnates.map((innate, i) => ({
+    innate,
+    forma: formaPolarities[`aura-${i}` as SlotId],
+  }))
 
   return (
-    groupForma(pool) + singleSlotForma(stanceInnate, formaPolarities.stance)
+    groupForma(normalPool) +
+    groupForma(auraPool) +
+    singleSlotForma(exilusInnate, formaPolarities.exilus) +
+    singleSlotForma(stanceInnate, formaPolarities.stance)
   )
 }
