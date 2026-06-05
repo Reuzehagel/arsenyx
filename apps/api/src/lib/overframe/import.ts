@@ -8,7 +8,7 @@ import type {
 import { SafeFetchError, safeFetch } from "../safe-fetch"
 import { decodeOverframeBuildString } from "./decode"
 import { getOverframeItemsMap } from "./items-map"
-import { extractOverframeDataFromHtml } from "./next-data"
+import { extractOverframeData, extractOverframeDataFromHtml } from "./next-data"
 import { mapOverframePolarity } from "./polarity"
 
 export function isValidOverframeBuildUrl(value: string): boolean {
@@ -66,6 +66,16 @@ async function fetchOverframeHtml(url: string): Promise<string> {
     })
   } catch (err) {
     if (err instanceof SafeFetchError) {
+      // Overframe sits behind a Cloudflare managed challenge (Turnstile/JS
+      // interstitial) that returns 403 to every non-browser client. No UA or
+      // header tweak passes it — only a real browser can. Surface that plainly
+      // instead of a bare "HTTP 403" so users don't think it's an Arsenyx bug.
+      if (err.code === "upstream_status" && err.status === 403) {
+        throw new Error(
+          "Overframe is currently blocking automated imports (Cloudflare bot protection). This is on Overframe's side, not Arsenyx — please try again later.",
+          { cause: err },
+        )
+      }
       throw new Error(`Overframe fetch failed: ${safeFetchMessage(err)}`, {
         cause: err,
       })
@@ -144,11 +154,19 @@ function parseRawSlots(slots: unknown): OverframeRawSlot[] {
   return out
 }
 
+function buildIdFromUrl(url: string): string | undefined {
+  try {
+    const u = new URL(url)
+    const m = u.pathname.match(/^\/build\/(\d+)/)
+    return m?.[1]
+  } catch {
+    return undefined
+  }
+}
+
 export async function scrapeOverframeBuild(
   url: string,
 ): Promise<OverframeScrapeResponse> {
-  const warnings: OverframeImportWarning[] = []
-
   if (!isValidOverframeBuildUrl(url)) {
     return {
       source: { url },
@@ -183,17 +201,41 @@ export async function scrapeOverframeBuild(
     }
   }
 
-  const buildId = (() => {
-    try {
-      const u = new URL(url)
-      const m = u.pathname.match(/^\/build\/(\d+)/)
-      return m?.[1]
-    } catch {
-      return undefined
-    }
-  })()
+  const buildId = buildIdFromUrl(url)
+  return assembleScrapeResponse(
+    extractOverframeDataFromHtml(html, { url, buildId }),
+    url,
+    buildId,
+  )
+}
 
-  const extracted = extractOverframeDataFromHtml(html, { url, buildId })
+/**
+ * Fetch-less import: build the scrape response from a `__NEXT_DATA__` object
+ * the user copied off their own Overframe tab (via the bookmarklet). Their
+ * browser already cleared Cloudflare's challenge, so this sidesteps the 403
+ * that blocks the server-side {@link scrapeOverframeBuild} path. `rawUrl` is
+ * best-effort — only kept when it's a real Overframe build URL.
+ */
+export function scrapeOverframeFromNextData(
+  nextData: unknown,
+  rawUrl?: string,
+): OverframeScrapeResponse {
+  const url = rawUrl && isValidOverframeBuildUrl(rawUrl) ? rawUrl : ""
+  const buildId = url ? buildIdFromUrl(url) : undefined
+  return assembleScrapeResponse(
+    extractOverframeData(nextData, { url, buildId }),
+    url,
+    buildId,
+  )
+}
+
+function assembleScrapeResponse(
+  extracted: ReturnType<typeof extractOverframeData>,
+  url: string,
+  buildId: string | undefined,
+): OverframeScrapeResponse {
+  const warnings: OverframeImportWarning[] = []
+
   if (!extracted.nextData) {
     warnings.push({
       type: "next_data_missing",

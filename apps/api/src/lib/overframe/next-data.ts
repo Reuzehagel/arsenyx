@@ -166,7 +166,19 @@ export function extractOverframeDataFromHtml(
   html: string,
   source: OverframeBuildSource,
 ): ExtractedOverframeData {
-  const nextData = extractNextDataJson(html)
+  return extractOverframeData(extractNextDataJson(html), source)
+}
+
+/**
+ * Same extraction as {@link extractOverframeDataFromHtml} but starting from an
+ * already-parsed `__NEXT_DATA__` object. The paste/bookmarklet import path
+ * reads the JSON straight off the user's loaded Overframe tab (which has
+ * already cleared Cloudflare's challenge), so it never has HTML to regex.
+ */
+export function extractOverframeData(
+  nextData: unknown,
+  source: OverframeBuildSource,
+): ExtractedOverframeData {
   if (!nextData) {
     return {
       source,

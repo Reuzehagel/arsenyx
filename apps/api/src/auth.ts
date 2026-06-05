@@ -209,6 +209,14 @@ export const auth = betterAuth({
     cookieCache: { enabled: true, maxAge: 60 },
   },
   advanced: {
+    // On Cloudflare Workers the trusted client IP is `cf-connecting-ip` (set
+    // at the edge, overwrites any client-supplied value). Better Auth defaults
+    // to `x-forwarded-for`, which isn't reliably populated here — so it
+    // couldn't determine the IP, silently skipped its built-in rate limiting
+    // on the /auth/* surface, and logged a warning on every request. Point it
+    // at the right header to re-enable auth rate limiting and record accurate
+    // session IPs.
+    ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
     // Host-only cookies on api.arsenyx.com — web clients call /auth/get-session
     // cross-origin with credentials:include; no need for Domain=.arsenyx.com.
     crossSubDomainCookies: { enabled: false },
