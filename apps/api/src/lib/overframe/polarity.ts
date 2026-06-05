@@ -6,6 +6,9 @@ import type { Polarity } from "@arsenyx/shared/warframe/types"
 // 1 = madurai
 // 2 = vazarin
 // 3 = naramon
+// 4 = zenurik (confirmed via Prey of Dynar — a zenurik augment — sitting in a
+//     code-4 slot with polarity_match === 2, i.e. the slot equals the mod's
+//     own zenurik polarity)
 // 5 = penjaga
 // 9 = "any" — the Universal ("Any" / Aya) forma that matches every mod.
 //     NB: this is our `"any"` polarity, NOT `"universal"`. In calculations.ts
@@ -20,13 +23,14 @@ import type { Polarity } from "@arsenyx/shared/warframe/types"
 // like a zenurik match). Confirmed via Corrosive Projection (naramon) sitting
 // in a code-9 slot with its aura capacity doubled.
 //
-// Codes 4, 6, 7, 8 are not yet observed; zenurik / unairu / umbra mappings
-// remain unknown. Add them once a build with a confirmed match surfaces.
+// Codes 6, 7, 8 are not yet observed; unairu / umbra mappings remain unknown.
+// Add them once a build with a confirmed match surfaces.
 const OVERFRAME_POLARITY_CODE_MAP: Record<number, Polarity | undefined> = {
   0: undefined,
   1: "madurai",
   2: "vazarin",
   3: "naramon",
+  4: "zenurik",
   5: "penjaga",
   9: "any",
 }

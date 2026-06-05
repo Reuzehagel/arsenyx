@@ -104,6 +104,27 @@ describe("scrapeOverframeFromNextData", () => {
     expect(res.slots[0].polarityCode).toBe(9)
   })
 
+  it("maps polarity code 4 to zenurik", () => {
+    // Confirmed via Prey of Dynar (a zenurik augment) sitting in a code-4 slot
+    // with polarity_match === 2. Code 4 was previously unmapped, so the slot's
+    // zenurik forma was silently dropped and the forma count came up short.
+    const nextData = {
+      props: {
+        pageProps: {
+          data: {
+            title: "T",
+            name: "Voruna Prime",
+            formas: 5,
+            slots: [{ slot_id: 3, mod: 6745, rank: 3, polarity: 4 }],
+          },
+        },
+      },
+    }
+    const res = scrapeOverframeFromNextData(nextData, BUILD_URL)
+    expect(res.slots[0].polarity).toBe("zenurik")
+    expect(res.slots[0].polarityCode).toBe(4)
+  })
+
   it("prefers the plain data.description guide over the link-marked guideMarkdown", () => {
     const nextData = {
       props: {
