@@ -11,15 +11,25 @@ import { getOverframeItemsMap } from "./items-map"
 import { extractOverframeData, extractOverframeDataFromHtml } from "./next-data"
 import { mapOverframePolarity } from "./polarity"
 
-export function isValidOverframeBuildUrl(value: string): boolean {
+/**
+ * Parse an Overframe build URL into its numeric build id, or null if it isn't
+ * one. Single source for both the host/shape validation and the id extraction
+ * so the two can't drift (and the URL is only parsed once per call).
+ */
+export function parseOverframeBuildUrl(value: string): { id: string } | null {
   try {
     const url = new URL(value)
     if (url.hostname !== "overframe.gg" && url.hostname !== "www.overframe.gg")
-      return false
-    return /^\/build\/(\d+)(\/|$)/.test(url.pathname)
+      return null
+    const m = url.pathname.match(/^\/build\/(\d+)(\/|$)/)
+    return m ? { id: m[1] } : null
   } catch {
-    return false
+    return null
   }
+}
+
+export function isValidOverframeBuildUrl(value: string): boolean {
+  return parseOverframeBuildUrl(value) !== null
 }
 
 // Fetch wall-time / response-size / redirect caps. Without these a logged-in
@@ -154,20 +164,11 @@ function parseRawSlots(slots: unknown): OverframeRawSlot[] {
   return out
 }
 
-function buildIdFromUrl(url: string): string | undefined {
-  try {
-    const u = new URL(url)
-    const m = u.pathname.match(/^\/build\/(\d+)/)
-    return m?.[1]
-  } catch {
-    return undefined
-  }
-}
-
 export async function scrapeOverframeBuild(
   url: string,
 ): Promise<OverframeScrapeResponse> {
-  if (!isValidOverframeBuildUrl(url)) {
+  const parsed = parseOverframeBuildUrl(url)
+  if (!parsed) {
     return {
       source: { url },
       formaCount: null,
@@ -201,7 +202,7 @@ export async function scrapeOverframeBuild(
     }
   }
 
-  const buildId = buildIdFromUrl(url)
+  const buildId = parsed.id
   return assembleScrapeResponse(
     extractOverframeDataFromHtml(html, { url, buildId }),
     url,
@@ -220,8 +221,9 @@ export function scrapeOverframeFromNextData(
   nextData: unknown,
   rawUrl?: string,
 ): OverframeScrapeResponse {
-  const url = rawUrl && isValidOverframeBuildUrl(rawUrl) ? rawUrl : ""
-  const buildId = url ? buildIdFromUrl(url) : undefined
+  const parsed = rawUrl ? parseOverframeBuildUrl(rawUrl) : null
+  const url = parsed ? rawUrl! : ""
+  const buildId = parsed?.id
   return assembleScrapeResponse(
     extractOverframeData(nextData, { url, buildId }),
     url,

@@ -42,6 +42,13 @@ export const Route = createFileRoute("/import")({
   component: ImportPage,
 })
 
+/** Normalise an apiFetch failure into a user-facing import error. */
+function importError(err: unknown): Error {
+  const fallback =
+    err instanceof ApiError ? `Import failed: ${err.status}` : "Import failed"
+  return new Error(apiErrorMessage(err, fallback), { cause: err })
+}
+
 async function postOverframeImport(url: string): Promise<ScrapeResponse> {
   try {
     return await apiFetch<ScrapeResponse>(`/imports/overframe`, {
@@ -49,11 +56,13 @@ async function postOverframeImport(url: string): Promise<ScrapeResponse> {
       json: { url },
     })
   } catch (err) {
-    const fallback =
-      err instanceof ApiError ? `Import failed: ${err.status}` : "Import failed"
-    throw new Error(apiErrorMessage(err, fallback), { cause: err })
+    throw importError(err)
   }
 }
+
+/** Sentinel tagging the clipboard payload — shared by the bookmarklet that
+ * writes it (buildBookmarklet) and the parser that reads it back. */
+const OVERFRAME_PASTE_SOURCE = "arsenyx-overframe"
 
 /** Payload the bookmarklet copies to the clipboard. */
 type PastedOverframe = {
@@ -72,7 +81,13 @@ function parsePastedOverframe(text: string): {
   url?: string
 } {
   const obj = JSON.parse(text.trim()) as PastedOverframe
-  if (obj && typeof obj === "object" && obj.source === "arsenyx-overframe") {
+  // A non-object (number/string/array primitive, or null) is never a valid
+  // __NEXT_DATA__ blob — reject it here so the caller surfaces the friendly
+  // "doesn't look like Overframe build data" message instead of a bare 400.
+  if (!obj || typeof obj !== "object") {
+    throw new Error("Pasted data is not an object")
+  }
+  if (obj.source === OVERFRAME_PASTE_SOURCE) {
     return {
       nextData: obj.nextData,
       url: typeof obj.url === "string" ? obj.url : undefined,
@@ -96,9 +111,7 @@ async function importPastedOverframe(text: string): Promise<ScrapeResponse> {
       json: input,
     })
   } catch (err) {
-    const fallback =
-      err instanceof ApiError ? `Import failed: ${err.status}` : "Import failed"
-    throw new Error(apiErrorMessage(err, fallback), { cause: err })
+    throw importError(err)
   }
 }
 
@@ -109,7 +122,7 @@ async function importPastedOverframe(text: string): Promise<ScrapeResponse> {
  * prod points at www.arsenyx.com.
  */
 function buildBookmarklet(origin: string): string {
-  return `javascript:(function(){try{var e=document.getElementById('__NEXT_DATA__');if(!e){alert('Arsenyx: open an Overframe build page first — no build data found here.');return;}var p=JSON.stringify({source:'arsenyx-overframe',url:location.href,nextData:JSON.parse(e.textContent)});navigator.clipboard.writeText(p).then(function(){window.open(${JSON.stringify(`${origin}/import?paste=1`)},'_blank');},function(){alert('Arsenyx: the browser blocked clipboard access. Try clicking the bookmark again.');});}catch(x){alert('Arsenyx import failed: '+(x&&x.message?x.message:x));}})();`
+  return `javascript:(function(){try{var e=document.getElementById('__NEXT_DATA__');if(!e){alert('Arsenyx: open an Overframe build page first — no build data found here.');return;}var p=JSON.stringify({source:${JSON.stringify(OVERFRAME_PASTE_SOURCE)},url:location.href,nextData:JSON.parse(e.textContent)});navigator.clipboard.writeText(p).then(function(){window.open(${JSON.stringify(`${origin}/import?paste=1`)},'_blank');},function(){alert('Arsenyx: the browser blocked clipboard access. Try clicking the bookmark again.');});}catch(x){alert('Arsenyx import failed: '+(x&&x.message?x.message:x));}})();`
 }
 
 function ImportPage() {
@@ -123,26 +136,29 @@ function ImportPage() {
   const [pasteText, setPasteText] = useState("")
   const pasteRef = useRef<HTMLTextAreaElement>(null)
   const bookmarkRef = useRef<HTMLAnchorElement>(null)
-  const isPasteMode = useMemo(
-    () =>
-      typeof window !== "undefined" &&
-      new URLSearchParams(window.location.search).get("paste") === "1",
-    [],
-  )
+  const isPasteMode =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("paste") === "1"
 
   const mutation = useMutation({ mutationFn: postOverframeImport })
   const rawMutation = useMutation({ mutationFn: importPastedOverframe })
 
-  // Newest result wins so switching between URL and paste imports isn't
-  // confusing; same for the failure surfaced to the user.
-  const result = rawMutation.data ?? mutation.data
-  const isError = mutation.isError || rawMutation.isError
-  const errorMessage = (
-    (rawMutation.error ?? mutation.error) as Error | undefined
-  )?.message
+  // Only one import path is ever live at a time — each submit handler resets
+  // the other mutation (below). So whichever isn't idle is the active one, and
+  // result/error read from it as a single source instead of three coalesces
+  // that have to stay aligned.
+  const active =
+    rawMutation.isPending || rawMutation.data || rawMutation.isError
+      ? rawMutation
+      : mutation
+  const result = active.data
+  const isError = active.isError
+  const errorMessage = (active.error as Error | null)?.message
 
   const submitPaste = (text: string) => {
-    if (text.trim()) rawMutation.mutate(text)
+    if (!text.trim()) return
+    mutation.reset()
+    rawMutation.mutate(text)
   }
 
   // Set the bookmarklet href imperatively — React strips `javascript:` hrefs.
@@ -174,7 +190,14 @@ function ImportPage() {
   }, [])
 
   const fatalWarning = result?.warnings.find(
-    (w) => w.type === "invalid_url" || w.type === "fetch_failed",
+    (w) =>
+      w.type === "invalid_url" ||
+      w.type === "fetch_failed" ||
+      // The paste/bookmarklet path can't fail to fetch, so a missing
+      // __NEXT_DATA__ blob (wrong page copied, or Overframe changed shape) is
+      // its terminal failure — surface it as one clear error, not a soft
+      // warning followed by a confusing "could not match item".
+      w.type === "next_data_missing",
   )
 
   const matchedItem = useMemo(() => {
@@ -225,6 +248,7 @@ function ImportPage() {
     e.preventDefault()
     const trimmed = url.trim()
     if (!trimmed) return
+    rawMutation.reset()
     mutation.mutate(trimmed)
   }
 
