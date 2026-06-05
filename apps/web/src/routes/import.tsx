@@ -16,6 +16,7 @@ import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { requireUser } from "@/lib/auth-guards"
 import { saveDraft } from "@/lib/import-draft"
 import {
   applyOverframeScrape,
@@ -31,6 +32,9 @@ import { apiErrorMessage, apiFetch, ApiError } from "@/lib/util/api-client"
 import { copyToClipboard } from "@/lib/util/clipboard"
 
 export const Route = createFileRoute("/import")({
+  // Import feeds the sign-in-only editor/save flow, and the API endpoints are
+  // auth-gated — bounce anon users to sign-in instead of letting them hit a 401.
+  beforeLoad: () => requireUser(),
   loader: async ({ context }) => {
     await Promise.all([
       context.queryClient.ensureQueryData(itemsIndexQuery),
@@ -169,19 +173,18 @@ function ImportPage() {
   }, [])
 
   // Arriving via the bookmarklet (`?paste=1`): focus the box and best-effort
-  // pull the copied payload straight off the clipboard so the user just
-  // confirms. Clipboard read can be blocked without a gesture — that's fine,
-  // they can paste manually (Ctrl/Cmd+V).
+  // pre-fill it from the clipboard so the user just clicks Import. We fill but
+  // don't auto-submit — auto-POSTing whatever happens to be on the clipboard on
+  // page load is a surprising side effect; the explicit click is the confirm.
+  // Clipboard read can be blocked without a gesture — that's fine, they can
+  // paste manually (Ctrl/Cmd+V).
   useEffect(() => {
     if (!isPasteMode) return
     pasteRef.current?.focus()
     void (async () => {
       try {
         const text = await navigator.clipboard.readText()
-        if (text.trim()) {
-          setPasteText(text)
-          submitPaste(text)
-        }
+        if (text.trim()) setPasteText(text)
       } catch {
         // No clipboard permission without a gesture — manual paste still works.
       }

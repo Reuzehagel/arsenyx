@@ -4,6 +4,7 @@ import {
   scrapeOverframeBuild,
   scrapeOverframeFromNextData,
 } from "../lib/overframe/import"
+import { getSession } from "../lib/session"
 import { parseJsonBody } from "../lib/validate"
 import { rateLimitUser } from "../middleware/rate-limit"
 
@@ -15,6 +16,11 @@ export const imports = new Hono()
 const MAX_NEXT_DATA_BYTES = 1.5 * 1024 * 1024
 
 export async function handleOverframeImport(c: Context) {
+  // Import feeds the editor/save flow, which is sign-in-only — gate it like
+  // every other mutation so anon callers can't drive the server-side fetch.
+  const session = await getSession(c)
+  if (!session?.user) return c.json({ error: "unauthorized" }, 401)
+
   // Tiny cap — this endpoint only takes a URL.
   const parsed = await parseJsonBody(c, { maxBytes: 4 * 1024 })
   if (!parsed.ok) return parsed.response
@@ -38,6 +44,11 @@ export async function handleOverframeImport(c: Context) {
 // from their own (already-challenge-cleared) Overframe tab, so there's no
 // server-side fetch and no 403. `url` is optional context for the source.
 export async function handleOverframeRawImport(c: Context) {
+  // Sign-in-only: keeps the heavy 1.5MB parse + tree-walk off the anon surface
+  // (rateLimitUser is a no-op without a session, so this is the real gate).
+  const session = await getSession(c)
+  if (!session?.user) return c.json({ error: "unauthorized" }, 401)
+
   const parsed = await parseJsonBody(c, { maxBytes: MAX_NEXT_DATA_BYTES })
   if (!parsed.ok) return parsed.response
   const nextData = parsed.value.nextData

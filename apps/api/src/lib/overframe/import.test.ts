@@ -1,5 +1,5 @@
 import type { Context } from "hono"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 // Mock only safeFetch; keep the real SafeFetchError so the `instanceof` checks
 // in import.ts still match. fetchOverframeHtml streams the Response body, so
@@ -9,6 +9,11 @@ vi.mock("../safe-fetch", async (importActual) => {
   return { ...actual, safeFetch: vi.fn() }
 })
 
+// The raw route handler is now sign-in-gated; stub getSession so handler tests
+// can simulate signed-in (default) and signed-out callers without Better Auth.
+vi.mock("../../lib/session", () => ({ getSession: vi.fn() }))
+
+import { getSession } from "../../lib/session"
 import { SafeFetchError, safeFetch } from "../safe-fetch"
 import {
   isValidOverframeBuildUrl,
@@ -166,6 +171,26 @@ function fakeJsonContext(body: unknown): {
 }
 
 describe("handleOverframeRawImport", () => {
+  // Default to a signed-in caller; the 401 case overrides per-test.
+  beforeEach(() => {
+    vi.mocked(getSession).mockResolvedValue({
+      user: { id: "u1" },
+    } as never)
+  })
+
+  it("401s when the caller isn't signed in", async () => {
+    vi.mocked(getSession).mockResolvedValue(null as never)
+    const handle = await importHandler()
+    const { c, captured } = fakeJsonContext({
+      source: "arsenyx-overframe",
+      url: BUILD_URL,
+      nextData: makeNextData(),
+    })
+    await handle(c)
+    expect(captured.status).toBe(401)
+    expect(captured.body).toMatchObject({ error: "unauthorized" })
+  })
+
   it("400s when nextData is missing", async () => {
     const handle = await importHandler()
     const { c, captured } = fakeJsonContext({ url: BUILD_URL })
