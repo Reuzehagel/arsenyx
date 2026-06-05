@@ -43,7 +43,7 @@ function AboutPage() {
               love of the game.
             </p>
 
-            <h2>Open Source</h2>
+            <h2>Open source</h2>
             <p>
               Arsenyx is fully open source. Anyone can contribute code, suggest
               features, or report bugs.
@@ -64,7 +64,7 @@ function AboutPage() {
               </Button>
             </div>
 
-            <h2>Shoutouts</h2>
+            <h2>Shout-outs</h2>
             <p>
               Big thanks to{" "}
               <Link
@@ -78,12 +78,11 @@ function AboutPage() {
               opening PRs that made Arsenyx better.
             </p>
 
-            <h2>Community Focused</h2>
+            <h2>Where the data comes from</h2>
             <p>
-              From real-time stats updates to seamless sharing, every feature is
-              designed to help the Warframe community. Data is sourced directly
-              from Digital Extremes&apos; public game data and the Warframe wiki
-              to ensure accuracy.
+              Items, mods, and arcanes come straight from Digital Extremes&apos;
+              public game data, with the Warframe wiki filling the gaps. When
+              the game updates, the data does too.
             </p>
           </article>
         </div>

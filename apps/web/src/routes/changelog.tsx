@@ -13,6 +13,36 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-06-05",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Overframe imports now have a paste-and-bookmarklet fallback for builds the server can't fetch directly, so Cloudflare-protected builds still come through.",
+      },
+    ],
+  },
+  {
+    date: "2026-06-03",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Arsenyx now shows a one-click reload prompt when a new version ships, so you're not stuck on a stale tab.",
+      },
+      {
+        type: "feat",
+        description:
+          "Embedded builds that don't match a curated highlight strip — plain primaries and secondaries, archwings, and the like — now show a header bar with the item name and a link back to Arsenyx.",
+      },
+      {
+        type: "refactor",
+        description:
+          "Build embeds now load from a lightweight, router-free entry, so guide pages with many embedded builds load noticeably faster.",
+      },
+    ],
+  },
+  {
     date: "2026-06-02",
     changes: [
       {
@@ -71,7 +101,7 @@ const CHANGELOG: ChangelogEntry[] = [
       {
         type: "feat",
         description:
-          "Editor drafts autosave to your browser, so you can pick up where you left off — with restore and reset controls.",
+          "Editor drafts autosave to your browser, so you can pick up where you left off, with restore and reset controls.",
       },
       {
         type: "feat",
@@ -140,7 +170,7 @@ const CHANGELOG: ChangelogEntry[] = [
       {
         type: "chore",
         description:
-          "Game data is now sourced directly from the official Warframe export and the wiki, keeping items, mods, and arcanes more accurate and up to date.",
+          "Game data is now sourced directly from the official Warframe export and the wiki, so items, mods, and arcanes stay accurate and up to date.",
       },
       {
         type: "fix",

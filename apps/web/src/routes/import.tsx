@@ -342,7 +342,7 @@ function ImportPage() {
               <ol className="text-muted-foreground list-decimal space-y-1 pl-5">
                 <li>Open the Overframe build page you want to import.</li>
                 <li>
-                  Click the bookmarklet — it copies the build and reopens this
+                  Click the bookmarklet. It copies the build and reopens this
                   page.
                 </li>
                 <li>
