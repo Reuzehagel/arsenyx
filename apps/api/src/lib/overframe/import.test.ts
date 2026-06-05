@@ -81,6 +81,49 @@ describe("scrapeOverframeFromNextData", () => {
     expect(byId[9].polarity).toBe("vazarin") // code 2
   })
 
+  it('maps polarity code 9 to "any" (Universal forma), not zenurik', () => {
+    // The Universal ("Any") forma matches every mod, so Overframe still reports
+    // polarity_match === 2 for it — which is how code 9 was once mis-read as
+    // zenurik. It must map to "any" (matches everything, doubles aura), NOT
+    // "universal" (which means "slot cleared" in calculations.ts). See
+    // polarity.ts.
+    const nextData = {
+      props: {
+        pageProps: {
+          data: {
+            title: "T",
+            name: "Voruna Prime",
+            formas: 5,
+            slots: [{ slot_id: 9, mod: 303, rank: 5, polarity: 9 }],
+          },
+        },
+      },
+    }
+    const res = scrapeOverframeFromNextData(nextData, BUILD_URL)
+    expect(res.slots[0].polarity).toBe("any")
+    expect(res.slots[0].polarityCode).toBe(9)
+  })
+
+  it("prefers the plain data.description guide over the link-marked guideMarkdown", () => {
+    const nextData = {
+      props: {
+        pageProps: {
+          guideMarkdown:
+            "Use [\\[Hunt\\]](/items/arsenal/213/hunt/) early then nuke.",
+          data: {
+            title: "T",
+            name: "Voruna Prime",
+            formas: 5,
+            description: "Use Hunt early then nuke.",
+            slots: [{ slot_id: 1, mod: 1, rank: 0, polarity: 0 }],
+          },
+        },
+      },
+    }
+    const res = scrapeOverframeFromNextData(nextData, BUILD_URL)
+    expect(res.source.guideDescription).toBe("Use Hunt early then nuke.")
+  })
+
   it("keeps a valid url but ignores a non-overframe one", () => {
     expect(
       scrapeOverframeFromNextData(makeNextData(), BUILD_URL).source.url,

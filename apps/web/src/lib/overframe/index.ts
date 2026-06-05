@@ -35,7 +35,36 @@ export type ApplyResult = {
   category: BrowseCategory
   data: SavedBuildData
   buildName?: string
+  /** Author's guide prose, normalized for our markdown renderer. */
+  guideDescription?: string
   warnings: ApplyWarning[]
+}
+
+/**
+ * Normalize an Overframe guide into the markdown our viewer renders.
+ *
+ * - Overframe embeds videos with a `[[ youtube id="VIDEOID" ]]` shortcode our
+ *   renderer doesn't understand; rewrite it to a bare youtu.be URL on its own
+ *   line, which `MarkdownBody` auto-upgrades to an embedded player. The id may
+ *   carry a `?si=...` share suffix — keep only the leading id chars.
+ * - Overframe's `guideMarkdown` weaves in root-relative item links like
+ *   `[\[Hunt\]](/items/arsenal/213/hunt/)` that 404 anywhere off overframe.gg
+ *   (and `MarkdownBody` has no custom anchor renderer to rewrite them). Our
+ *   preferred source — `data.description` — has none, but the fallback does, so
+ *   drop the link wrapper and keep the de-escaped label text. Absolute external
+ *   links (e.g. `https://overframe.gg/...`) are left intact.
+ */
+function normalizeOverframeGuide(raw: string | undefined): string | undefined {
+  if (!raw) return undefined
+  const normalized = raw
+    .replace(
+      /\[\[\s*youtube\s+id=["']([A-Za-z0-9_-]+)[^"']*["']\s*\]\]/gi,
+      (_m, id: string) => `\n\nhttps://youtu.be/${id}\n\n`,
+    )
+    .replace(/\[((?:\\.|[^\]\\])*)\]\(\/[^)]*\)/g, (_m, label: string) =>
+      label.replace(/\\(.)/g, "$1"),
+    )
+  return normalized.trim() || undefined
 }
 
 export function matchOverframeItem(
@@ -254,6 +283,7 @@ export function applyOverframeScrape(args: {
     category,
     data,
     buildName: scrape.source.pageTitle,
+    guideDescription: normalizeOverframeGuide(scrape.source.guideDescription),
     warnings,
   }
 }

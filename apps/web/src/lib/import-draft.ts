@@ -5,6 +5,7 @@ const STORAGE_PREFIX = "arsenyx:import-draft:"
 export type ImportDraft = {
   data: SavedBuildData
   buildName?: string
+  guideDescription?: string
 }
 
 export function saveDraft(draft: ImportDraft): string {

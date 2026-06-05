@@ -260,6 +260,7 @@ function ImportPage() {
     const id = saveDraft({
       data: applied.data,
       buildName: applied.buildName,
+      guideDescription: applied.guideDescription,
     })
     navigate({
       to: "/create",
@@ -480,6 +481,12 @@ function ImportPage() {
                           </dd>
                         </>
                       )}
+                      <dt className="text-muted-foreground">Guide</dt>
+                      <dd>
+                        {applied.guideDescription
+                          ? `Imported (${applied.guideDescription.length.toLocaleString()} chars)`
+                          : "—"}
+                      </dd>
                     </dl>
                     <div className="mt-4 flex items-center justify-between">
                       <CopyDebugButton payload={{ scrape: result, applied }} />

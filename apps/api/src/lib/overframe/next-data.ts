@@ -231,14 +231,19 @@ export function extractOverframeData(
     "pageDescription",
   ])
 
+  // Two copies of the guide live in __NEXT_DATA__: `data.description` is the
+  // plain author text; `guideMarkdown` is the same prose with Overframe's
+  // internal item links woven in. Prefer the plain copy; either way the web
+  // importer's `normalizeOverframeGuide` sanitizes Overframe-specific markup
+  // before it's rendered.
   const guideMarkdown = readStringAtPath(nextData, [
     "props",
     "pageProps",
     "guideMarkdown",
   ])
   const guideDescription =
-    guideMarkdown ??
-    readStringAtPath(nextData, ["props", "pageProps", "data", "description"])
+    readStringAtPath(nextData, ["props", "pageProps", "data", "description"]) ??
+    guideMarkdown
 
   const helminthAbilityRes = findFirstHelminthAbility(nextData)
 

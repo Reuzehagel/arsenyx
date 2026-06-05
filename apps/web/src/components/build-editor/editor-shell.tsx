@@ -539,6 +539,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       cachedShared?.guideDescription ??
       localDraft?.guideDescription ??
       existingBuild?.guide?.description ??
+      draft?.guideDescription ??
       "",
   )
   // Scope of the GuideEditor — build-wide vs a specific variant. Resets
