@@ -21,14 +21,14 @@
       "kept": 1398
     },
     "perCategory": {
-      "archwing": 32,
+      "archwing": 33,
       "warframes": 115,
       "necramechs": 2,
       "secondary": 153,
       "melee": 235,
       "primary": 199,
-      "exalted-weapons": 38,
       "companion-weapons": 41,
+      "exalted-weapons": 37,
       "companions": 41,
       "railjack": 1
     }
