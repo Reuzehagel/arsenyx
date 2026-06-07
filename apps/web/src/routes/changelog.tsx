@@ -13,12 +13,41 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-06-07",
+    changes: [
+      {
+        type: "chore",
+        description: "Game data refreshed to the latest Warframe build.",
+      },
+    ],
+  },
+  {
     date: "2026-06-05",
     changes: [
       {
         type: "feat",
         description:
           "Overframe imports now have a paste-and-bookmarklet fallback for builds the server can't fetch directly, so Cloudflare-protected builds still come through.",
+      },
+      {
+        type: "feat",
+        description:
+          "Overframe imports now pull in the build's guide and any YouTube embeds, not just the mods.",
+      },
+      {
+        type: "fix",
+        description:
+          "Forma polarities now import from Overframe correctly across universal/Aya, zenurik, and umbra slots, so the forma count matches the original build.",
+      },
+      {
+        type: "fix",
+        description:
+          "Melee stance, exilus, and arcane mods from Overframe now land in the right slots instead of each shifting down by one.",
+      },
+      {
+        type: "fix",
+        description:
+          "Forma counts no longer come up short when an aura or exilus slot shares a polarity with a regular mod slot.",
       },
     ],
   },
