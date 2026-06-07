@@ -334,17 +334,27 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   const setVariants = (
     next: SavedVariant[] | ((prev: SavedVariant[]) => SavedVariant[]),
   ) => {
-    _setVariants((prev) => {
-      const value =
-        typeof next === "function"
-          ? (next as (p: SavedVariant[]) => SavedVariant[])(prev)
-          : next
-      // Preserve `shared` — setVariants only owns the variants array.
-      const sharedSlot =
-        cachedVariants?.key === storeKey ? cachedVariants.shared : undefined
-      cachedVariants = { key: storeKey, data: value, shared: sharedSlot }
-      return value
-    })
+    // Write the module cache SYNCHRONOUSLY rather than inside the React state
+    // updater. A structural mutation (add/duplicate/delete) calls setVariants
+    // and then navigate() + bumpVariantEpoch() in the same tick, which changes
+    // EditorShell's key and unmounts this fiber. React discards a queued
+    // updater on an unmounting fiber, so a cache write performed *inside* the
+    // updater is silently lost and the remount re-reads stale data. Computing
+    // the value here and writing the cache eagerly makes it survive the
+    // remount. Base off the cache (kept in lockstep with `variants`) so
+    // multiple setVariants in one tick — e.g. commitRename() then
+    // duplicateActive() — compose correctly instead of stranding the last one.
+    const base =
+      cachedVariants?.key === storeKey ? cachedVariants.data : variants
+    const value =
+      typeof next === "function"
+        ? (next as (p: SavedVariant[]) => SavedVariant[])(base)
+        : next
+    // Preserve `shared` — setVariants only owns the variants array.
+    const sharedSlot =
+      cachedVariants?.key === storeKey ? cachedVariants.shared : undefined
+    cachedVariants = { key: storeKey, data: value, shared: sharedSlot }
+    _setVariants(value)
   }
   const clampedActiveIndex = Math.min(
     Math.max(0, activeVariantIndex),
