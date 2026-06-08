@@ -36,8 +36,6 @@ import {
   KITGUN_GRIPS,
   KITGUN_LOADERS,
 } from "@arsenyx/shared/warframe/kitgun-data"
-import { slugify } from "@arsenyx/shared/warframe/slugs"
-import type { BrowseItem } from "@arsenyx/shared/warframe/types"
 import {
   ZAW_GRIPS,
   ZAW_LINKS,
@@ -45,23 +43,12 @@ import {
 } from "@arsenyx/shared/warframe/zaw-data"
 
 import { PVE_USABLE_CONCLAVE_MODS } from "../data/curated/pve-usable-conclave-mods"
-import {
-  buildExaltedSet,
-  categorizeCompanion,
-  categorizeFrame,
-  categorizeWeapon,
-  isExaltedWeapon,
-  type BrowseCategory,
-} from "./build/categorize"
-import {
-  buildDeImageLookup,
-  iterWikiImageEntries,
-  iterWikiRecords,
-  readWikiImageCache,
-  resolveWikiImageUrls,
-  writeWikiImageCache,
-} from "./build/images"
+import { buildBrowseIndex } from "./build/browse-index"
+import { iterWikiRecords } from "./build/images"
 import { mergeArcanes, type MergedArcane } from "./build/merge-arcanes"
+import { buildModConflicts } from "./build/mod-conflicts"
+import { resolveImages } from "./build/resolve-images"
+import { writeItemDetails } from "./build/write-details"
 import { mergeCompanions, type MergedCompanion } from "./build/merge-companions"
 import {
   mergeFrame,
@@ -112,19 +99,6 @@ const stats: BuildStats = {
   perCategory: {},
 }
 
-function frameDisplayClass(f: MergedFrame): string {
-  switch (f.category) {
-    case "warframes":
-      return "Warframe"
-    case "necramechs":
-      return "Necramech"
-    case "archwing":
-      return "Archwing"
-    case "operators":
-      return "Operator"
-  }
-}
-
 async function main() {
   console.log(`Output dir: ${OUT_DIR}\n`)
 
@@ -173,6 +147,11 @@ async function main() {
   console.log(
     `Wiki: ${Object.keys(wikiFramesBlob.Warframes ?? {}).length} warframes, ${Object.keys(wikiCompanions).length} companions`,
   )
+
+  // Mods + Arcane wiki modules — consumed by image resolution (phase 5) and
+  // the mod/arcane merge (phase 6).
+  const wikiModsBlob = readWikiModule(resolve(WIKI_DIR, "Mods_data.lua"))
+  const wikiArcanesBlob = readWikiModule(resolve(WIKI_DIR, "Arcane_data.lua"))
 
   // Modular (Kitgun/Zaw) stat tables. Module:Modular/data is the only
   // verifiable source for the per-combination stats DE zeroes out; pass the
@@ -269,104 +248,21 @@ async function main() {
   stats.companions.deOnly = unmatchedDeNames.length
 
   // ---------- 5. Image lookup ----------
-  // Primary source: DE PublicExport CDN (content.warframe.com), via the
-  // textureLocation field on each ExportManifest entry. Covers everything
-  // DE ships (~99% of items, including mods + arcanes).
-  const deImageUrls = buildDeImageLookup(deManifest)
-
-  // Fallback source: wiki MediaWiki API, for the small set of items DE
-  // doesn't manifest but the wiki documents with an `Image` field (beast
-  // claws, railjack ordnance, modular pieces, a handful of mods). We
-  // build a `uniqueName → wiki Image filename` map by walking the wiki
-  // module data we already loaded, then resolve any uncached filenames
-  // to direct `wiki.warframe.com/images/<…>?<ver>` URLs via the
-  // MediaWiki API (50 titles per batch) and persist to disk so
-  // subsequent builds are offline.
-  const wikiImageFileByUniqueName = new Map<string, string>()
-  const allWikiModules: unknown[] = [
+  const {
+    imageByUniqueName,
+    arcaneArtUrlByUniqueName,
+    arcaneSlotByUniqueName,
+    wikiArcaneNames,
+  } = await resolveImages({
+    deManifest,
     wikiFramesBlob,
     wikiCompanionsBlob,
-    ...[...wikiWeaponsByName.values()],
-  ]
-  // Also walk the Mods + Arcane modules for InternalName → Image pairs.
-  const wikiModsBlob = readWikiModule(resolve(WIKI_DIR, "Mods_data.lua"))
-  const wikiArcanesBlob = readWikiModule(resolve(WIKI_DIR, "Arcane_data.lua"))
-  allWikiModules.push(wikiModsBlob, wikiArcanesBlob)
-  for (const mod of allWikiModules) {
-    for (const { internalName, image } of iterWikiImageEntries(mod)) {
-      // First write wins; conflicts are wiki-side data issues. Skip
-      // any uniqueName DE already covers — DE CDN is faster + more stable.
-      if (deImageUrls.has(internalName)) continue
-      if (!wikiImageFileByUniqueName.has(internalName)) {
-        wikiImageFileByUniqueName.set(internalName, image)
-      }
-    }
-  }
-
-  // Exalted-stance card images (Serene Storm, Primal Fury, …). DE doesn't
-  // export these locked stances as catalog mods, so register their wiki File
-  // names under synthetic uniqueNames here — that routes them through the same
-  // resolve + sync:images path as every other wiki image. Keyed by filename so
-  // variants sharing one card (Exalted Blade / Umbra / Prime) resolve once.
-  const exaltedStanceImageKey = (file: string) =>
-    `arsenyx://exalted-stance-image/${file}`
-  for (const { wikiImage } of Object.values(curated.exaltedStances)) {
-    const key = exaltedStanceImageKey(wikiImage)
-    if (!wikiImageFileByUniqueName.has(key)) {
-      wikiImageFileByUniqueName.set(key, wikiImage)
-    }
-  }
-
-  // Walk the wiki Arcane module once, building everything keyed off arcane
-  // records together:
-  //   - arcaneWikiImageFile: full-art frame filename (DE only ships the small
-  //     "Projection" symbol-only PNG; the wiki ships the art players know).
-  //   - wikiArcaneNames: the canonical in-game arcane set (records carrying an
-  //     Image), used to drop DE's per-ability-slot dupes and cut entries.
-  //   - arcaneSlotByUniqueName: the wiki `Type` field — the authoritative
-  //     equip slot (Warframe, Primary, …); DE only ships an effect bucket.
-  const arcaneWikiImageFile = new Map<string, string>()
-  const wikiArcaneNames = new Set<string>()
-  const arcaneSlotByUniqueName = new Map<string, string>()
-  for (const { internalName, record } of iterWikiRecords(wikiArcanesBlob)) {
-    const image = record["Image"]
-    if (typeof image === "string" && image.length > 0) {
-      arcaneWikiImageFile.set(internalName, image)
-      wikiArcaneNames.add(internalName)
-    }
-    const t = record["Type"]
-    if (typeof t === "string" && t.length > 0) {
-      arcaneSlotByUniqueName.set(internalName, t)
-    }
-  }
-
-  const wikiCache = readWikiImageCache(WIKI_IMAGE_CACHE)
-  const neededFilenames = new Set<string>()
-  for (const fn of wikiImageFileByUniqueName.values()) {
-    if (!wikiCache.urls[fn]) neededFilenames.add(fn)
-  }
-  // Arcane wiki images override DE projections; resolve those too even when
-  // DE already covers them.
-  for (const fn of arcaneWikiImageFile.values()) {
-    if (!wikiCache.urls[fn]) neededFilenames.add(fn)
-  }
-  if (neededFilenames.size > 0) {
-    console.log(
-      `Resolving ${neededFilenames.size} wiki image URLs via MediaWiki API...`,
-    )
-    const resolved = await resolveWikiImageUrls(neededFilenames)
-    for (const [fn, url] of resolved) wikiCache.urls[fn] = url
-    writeWikiImageCache(WIKI_IMAGE_CACHE, wikiCache)
-    console.log(`  OK  resolved ${resolved.size} / ${neededFilenames.size}`)
-  }
-
-  /** Final lookup: DE URL if present, else wiki URL via cache. */
-  const imageByUniqueName = new Map<string, string>()
-  for (const [un, url] of deImageUrls) imageByUniqueName.set(un, url)
-  for (const [un, fn] of wikiImageFileByUniqueName) {
-    const url = wikiCache.urls[fn]
-    if (url) imageByUniqueName.set(un, url)
-  }
+    wikiWeaponsByName,
+    wikiModsBlob,
+    wikiArcanesBlob,
+    exaltedStances: curated.exaltedStances,
+    cachePath: WIKI_IMAGE_CACHE,
+  })
 
   // ---------- 6. Merge mods + arcanes ----------
   // OpenWF's `warframe-public-export-plus` provides the `compat` routing
@@ -479,136 +375,27 @@ async function main() {
   const mergedArcanes = allMergedArcanes.filter((a) =>
     wikiArcaneNames.has(a.uniqueName),
   )
-  const arcanesWithImages = mergedArcanes.map((a) => {
-    // Prefer the wiki full-art frame over DE's symbol-only Projection
-    // (see arcaneWikiImageFile above). Fall back to the generic lookup
-    // for the handful of arcanes the wiki doesn't list.
-    const wikiFn = arcaneWikiImageFile.get(a.uniqueName)
-    const wikiUrl = wikiFn ? wikiCache.urls[wikiFn] : undefined
-    return {
-      ...a,
-      imageName: wikiUrl ?? imageByUniqueName.get(a.uniqueName),
-      slotType: arcaneSlotByUniqueName.get(a.uniqueName),
-    }
-  })
+  const arcanesWithImages = mergedArcanes.map((a) => ({
+    ...a,
+    // Prefer the wiki full-art frame over DE's symbol-only Projection; fall
+    // back to the generic lookup for arcanes the wiki doesn't list.
+    imageName:
+      arcaneArtUrlByUniqueName.get(a.uniqueName) ??
+      imageByUniqueName.get(a.uniqueName),
+    slotType: arcaneSlotByUniqueName.get(a.uniqueName),
+  }))
 
   // ---------- 7. Build items-index.json ----------
-  const byCategory: Partial<Record<BrowseCategory, BrowseItem[]>> = {}
-  function push(cat: BrowseCategory, item: BrowseItem): void {
-    if (!byCategory[cat]) byCategory[cat] = []
-    byCategory[cat]!.push(item)
-  }
-
-  // Release-history enrichment is keyed by display name. Track resolved
-  // names so we can warn about dead curated entries.
-  const releaseHistoryResolved = new Set<string>()
-  function applyReleaseHistory(name: string, item: BrowseItem): void {
-    const rec = curated.releaseHistory[name]
-    if (!rec) return
-    releaseHistoryResolved.add(name)
-    if (rec.releaseDate) item.releaseDate = rec.releaseDate
-    if (rec.vaulted) item.vaulted = true
-  }
-
-  // Frames
-  for (const f of [...mergedFrames, ...operators]) {
-    const cat = categorizeFrame(f)
-    if (!cat) continue
-    const browseItem: BrowseItem = {
-      uniqueName: f.uniqueName,
-      name: f.name,
-      slug: slugify(f.name),
-      category: cat,
-      imageName: imageByUniqueName.get(f.uniqueName),
-      masteryReq: f.masteryReq,
-      isPrime: f.isPrime,
-      displayClass: frameDisplayClass(f),
-    }
-    applyReleaseHistory(f.name, browseItem)
-    push(cat, browseItem)
-    stats.frames.emitted++
-  }
-
-  // Weapons — pre-compute the exalted set from frames' exalted[] arrays
-  // so categorize picks up exalteds the wiki doesn't tag (Garuda Talons).
-  const exaltedSet = buildExaltedSet(mergedFrames)
-  const weaponDetailByCatAndSlug = new Map<string, MergedWeapon>()
-  // DE ships internal clones that share a display name (and thus slug) with a
-  // real weapon but carry a distinct uniqueName, so the uniqueName dedup above
-  // doesn't catch them — e.g. `TnDoppelgangerGrimoire` collides with the real
-  // `TnGrimoire`. Without a guard the clone emits a duplicate browse card and
-  // overwrites the real weapon's `${cat}|${slug}` detail entry. Key the guard
-  // on `${category}|${slug}` (the same unit the detail map and browse cards
-  // use) so two genuinely distinct weapons that happen to slugify alike in
-  // *different* categories both survive. First-wins: the real weapon precedes
-  // its clone in DE's export, so keep the first.
-  const seenWeaponSlugs = new Set<string>()
-  for (const w of mergedWeapons) {
-    const cats = categorizeWeapon(w, exaltedSet)
-    if (cats.length === 0) continue
-    const slug = slugify(w.name)
-    const slugKey = `${cats[0]!}|${slug}`
-    if (seenWeaponSlugs.has(slugKey)) continue
-    seenWeaponSlugs.add(slugKey)
-    const browseItem: BrowseItem = {
-      uniqueName: w.uniqueName,
-      name: w.name,
-      slug,
-      category: cats[0]!,
-      imageName: imageByUniqueName.get(w.uniqueName),
-      masteryReq: w.masteryReq,
-      isPrime: w.name.includes(" Prime"),
-      displayClass: w.displayClass ?? undefined,
-    }
-    applyReleaseHistory(w.name, browseItem)
-    const exalted = isExaltedWeapon(w, exaltedSet)
-    for (const c of cats) {
-      // Emit the detail file for every category so links resolve regardless
-      // of which path reaches the weapon.
-      weaponDetailByCatAndSlug.set(`${c}|${slug}`, w)
-      // Exalted weapons have their own "Exalted Weapons" tab; don't also list
-      // them in the generic weapon tabs (melee/primary/secondary) where they
-      // cluttered the list and double-rendered in the All view.
-      if (exalted && c !== "exalted-weapons") continue
-      push(c, { ...browseItem, category: c })
-    }
-    stats.weapons.emitted++
-  }
-
-  // Companions
-  for (const c of mergedCompanions) {
-    const cat = categorizeCompanion(c)
-    const browseItem: BrowseItem = {
-      uniqueName: c.uniqueName,
-      name: c.name,
-      slug: slugify(c.name),
-      category: cat,
-      imageName: imageByUniqueName.get(c.uniqueName),
-      masteryReq: c.masteryReq,
-      isPrime: c.isPrime,
-      displayClass: c.subType === "sentinel" ? "Sentinel" : "Beast Companion",
-    }
-    applyReleaseHistory(c.name, browseItem)
-    push(cat, browseItem)
-  }
-
-  // Synthetic Plexus — the only browseable Railjack item. Turrets,
-  // ordnance, and reactors stay in the catalog but are sidebar pickers
-  // inside the Plexus editor (see scripts/build/categorize.ts).
-  push("railjack", {
-    uniqueName: curated.plexusBrowse.uniqueName,
-    name: curated.plexusBrowse.name,
-    slug: curated.plexusBrowse.slug,
-    category: "railjack",
-    imageName: curated.plexusBrowse.imageName,
-    isPrime: false,
-    displayClass: "Plexus",
-  })
-
-  // Per-category counts
-  for (const [cat, arr] of Object.entries(byCategory)) {
-    stats.perCategory[cat] = arr?.length ?? 0
-  }
+  const { byCategory, weaponDetailByCatAndSlug, releaseHistoryResolved } =
+    buildBrowseIndex({
+      mergedFrames,
+      operators,
+      mergedWeapons,
+      mergedCompanions,
+      curated,
+      imageByUniqueName,
+      stats,
+    })
 
   // ---------- 8. Expand mod `compat` to per-item lists ----------
   // OpenWF's `compat` is one of three things:
@@ -683,79 +470,10 @@ async function main() {
   )
 
   // ---------- 8b. Mod conflict graph ----------
-  // The wiki tracks which mods are mutually exclusive (variants of the same
-  // base — e.g. Serration / Amalgam Serration / Spectral Serration — that the
-  // game forbids equipping together) via a per-mod name-keyed `Incompatible`
-  // list. Resolve those names to uniqueNames and emit a symmetric adjacency
-  // graph restricted to the mods we actually ship, so the editor/viewer can
-  // flag illegal loadouts. Names that don't resolve to an emitted mod (Conclave
-  // variants, unreleased mods, Flawed mods we filter) are simply dropped — a
-  // dead edge can't matter at runtime since the mod can never be placed.
-  const emittedUniqueNames = new Set(mergedMods.map((m) => m.uniqueName))
-  // Display Name → emitted DE uniqueName. The authoritative resolver: DE's
-  // uniqueName is stable across wiki path renames, so keying on the shipped
-  // catalog's own names avoids the wiki-InternalName drift that previously
-  // dropped base↔Primed edges (Redirection, Steady Hands, Deadly Efficiency).
-  // First-wins on the rare duplicate display name.
-  const deNameToUniqueName = new Map<string, string>()
-  for (const m of mergedMods) {
-    if (!deNameToUniqueName.has(m.name)) deNameToUniqueName.set(m.name, m.uniqueName)
-  }
-  // Resolve a wiki display Name to an emitted uniqueName: prefer the DE catalog
-  // (stable), fall back to the wiki InternalName only when no shipped mod
-  // carries that name. Returns undefined when nothing emitted matches.
-  const resolveModName = (displayName: string): string | undefined => {
-    const de = deNameToUniqueName.get(displayName)
-    if (de) return de
-    const wiki = wikiModUniqueNameByName.get(displayName)
-    return wiki && emittedUniqueNames.has(wiki) ? wiki : undefined
-  }
-  const conflictGraph = new Map<string, Set<string>>()
-  const addConflictEdge = (a: string, b: string): void => {
-    if (a === b) return
-    if (!emittedUniqueNames.has(a) || !emittedUniqueNames.has(b)) return
-    if (!conflictGraph.has(a)) conflictGraph.set(a, new Set())
-    if (!conflictGraph.has(b)) conflictGraph.set(b, new Set())
-    conflictGraph.get(a)!.add(b)
-    conflictGraph.get(b)!.add(a)
-  }
-  for (const [owningName, names] of wikiIncompatByName) {
-    const a = resolveModName(owningName)
-    if (!a) continue
-    for (const conflictingName of names) {
-      const b = resolveModName(conflictingName)
-      if (b) addConflictEdge(a, b)
-    }
-  }
-  // Structural base↔variant edges. A Primed / Umbral / Amalgam / Archon mod is
-  // always mutually exclusive with its same-named base in-game, so derive those
-  // edges straight from the catalog rather than trusting the wiki to list them.
-  // This makes the "no two variants of one mod" guarantee independent of the
-  // wiki `Incompatible` field — which lagged DE for recent Primed mods
-  // (Redirection, Steady Hands, Deadly Efficiency), silently dropping the edge —
-  // and self-heals as new Primed mods ship instead of requiring a curated list.
-  // Cross-stem families (Sacrificial Pressure ↔ Pressure Point, Galvanized ↔
-  // base) don't share a name prefix and keep relying on the wiki edges above.
-  const VARIANT_PREFIXES = ["Primed ", "Umbral ", "Amalgam ", "Archon "]
-  let derivedVariantEdges = 0
-  for (const m of mergedMods) {
-    const prefix = VARIANT_PREFIXES.find((p) => m.name.startsWith(p))
-    if (!prefix) continue
-    const base = deNameToUniqueName.get(m.name.slice(prefix.length))
-    if (base && !conflictGraph.get(m.uniqueName)?.has(base)) {
-      addConflictEdge(m.uniqueName, base)
-      derivedVariantEdges++
-    }
-  }
-  const modConflicts: Record<string, string[]> = {}
-  let conflictEdgeCount = 0
-  for (const [uniqueName, set] of conflictGraph) {
-    modConflicts[uniqueName] = [...set].sort()
-    conflictEdgeCount += set.size
-  }
-  console.log(
-    `  conflicts: ${conflictGraph.size} mods, ${conflictEdgeCount / 2} pairs ` +
-      `(${derivedVariantEdges} base↔variant derived structurally)`,
+  const modConflicts = buildModConflicts(
+    mergedMods,
+    wikiIncompatByName,
+    wikiModUniqueNameByName,
   )
 
   // ---------- 9. Write outputs ----------
@@ -928,102 +646,17 @@ async function main() {
     console.log(`  OK  kitgun-images.json (${kitgunTotal} components)`)
   }
 
-  // Per-item detail files: emit the merged weapon record verbatim.
-  await mkdir(DETAIL_DIR, { recursive: true })
-  let detailCount = 0
-  let detailBytes = 0
-  function writeDetail(
-    cat: string,
-    slug: string,
-    payload: unknown,
-  ): Promise<void> {
-    return mkdir(resolve(DETAIL_DIR, cat), { recursive: true }).then(
-      async () => {
-        const body = JSON.stringify(payload)
-        await writeFile(resolve(DETAIL_DIR, cat, `${slug}.json`), body, "utf8")
-        detailCount++
-        detailBytes += Buffer.byteLength(body, "utf8")
-      },
-    )
-  }
-
-  // Exalted melees with a *free* (editable) stance rather than a locked one —
-  // the documented exception to "every exalted melee ships a locked stance".
-  // See data/curated/exalted-stances.ts.
-  const FREE_STANCE_EXALTED_MELEES = new Set([
-    "Garuda Talons",
-    "Garuda Prime Talons",
-  ])
-  // Exalted melees that render a stance slot (carry stancePolarity) but have no
-  // curated locked stance and aren't a known free-stance exception. The web
-  // editor would surface an *editable* stance slot for them, letting a user
-  // place a stance that's permanently locked in-game → an unbuildable build.
-  const exaltedMeleeMissingStance: string[] = []
-  for (const [catSlug, w] of weaponDetailByCatAndSlug) {
-    const [cat, slug] = catSlug.split("|")
-    if (!cat || !slug) continue
-    // Locked exalted stance (Serene Storm, Primal Fury, …): a permanently
-    // installed stance the player can't change. Emit it as item metadata so
-    // the editor renders a read-only, pre-filled stance slot (worth +10
-    // capacity). The stance's own polarity matches the slot's `stancePolarity`.
-    const stance = curated.exaltedStances[w.name]
-    const innateStance = stance
-      ? {
-          name: stance.stanceName,
-          imageName: imageByUniqueName.get(
-            exaltedStanceImageKey(stance.wikiImage),
-          ),
-        }
-      : undefined
-    if (
-      cat === "exalted-weapons" &&
-      w.stancePolarity &&
-      !stance &&
-      !FREE_STANCE_EXALTED_MELEES.has(w.name)
-    ) {
-      exaltedMeleeMissingStance.push(w.name)
-    }
-    await writeDetail(cat, slug, {
-      ...w,
-      imageName: imageByUniqueName.get(w.uniqueName),
-      compatTags: pePlusWeaponTags.get(w.uniqueName),
-      ...(innateStance && { innateStance }),
-    })
-  }
-  if (exaltedMeleeMissingStance.length > 0) {
-    console.warn(
-      `  WARN exalted-stances.ts: ${exaltedMeleeMissingStance.length} exalted melee(s) carry a stance slot but no curated locked stance — the editor will show an EDITABLE stance slot for a locked-in-game weapon. Add to EXALTED_STANCES (or FREE_STANCE_EXALTED_MELEES if free):\n${exaltedMeleeMissingStance
-        .map((n) => `         - ${n}`)
-        .join("\n")}`,
-    )
-  }
-  for (const f of [...mergedFrames, ...operators]) {
-    const cat = categorizeFrame(f)
-    if (!cat) continue
-    await writeDetail(cat, slugify(f.name), {
-      ...f,
-      imageName: imageByUniqueName.get(f.uniqueName),
-      // Ability icons live in the DE manifest under the ability's own
-      // uniqueName (e.g. `.../SlashDashNewAbility` → `Power04.png`); DE
-      // doesn't populate `a.imageName` on the warframe record itself.
-      abilities: f.abilities.map((a) => ({
-        ...a,
-        imageName: imageByUniqueName.get(a.uniqueName) ?? a.imageName,
-      })),
-      displayClass: frameDisplayClass(f),
-    })
-  }
-  for (const c of mergedCompanions) {
-    await writeDetail("companions", slugify(c.name), {
-      ...c,
-      imageName: imageByUniqueName.get(c.uniqueName),
-    })
-  }
-  // Plexus
-  await writeDetail("railjack", curated.plexusDetail.slug, curated.plexusDetail)
-  console.log(
-    `  OK  ${detailCount} per-item details (${(detailBytes / 1024 / 1024).toFixed(2)} MB total)`,
-  )
+  // Per-item detail files (items/<cat>/<slug>.json).
+  await writeItemDetails({
+    detailDir: DETAIL_DIR,
+    weaponDetailByCatAndSlug,
+    mergedFrames,
+    operators,
+    mergedCompanions,
+    curated,
+    imageByUniqueName,
+    pePlusWeaponTags,
+  })
 
   // Meta
   await writeFile(

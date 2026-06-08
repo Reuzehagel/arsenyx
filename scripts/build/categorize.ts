@@ -50,6 +50,20 @@ export function categorizeCompanion(_c: MergedCompanion): BrowseCategory {
   return "companions"
 }
 
+/** The wiki "Class" label surfaced on a frame's browse card. */
+export function frameDisplayClass(f: MergedFrame): string {
+  switch (f.category) {
+    case "warframes":
+      return "Warframe"
+    case "necramechs":
+      return "Necramech"
+    case "archwing":
+      return "Archwing"
+    case "operators":
+      return "Operator"
+  }
+}
+
 /** A weapon is exalted if the wiki tags it "Exalted Weapon", OR a warframe/
  *  necramech lists it in its `exalted` array (the wiki sometimes labels them
  *  by melee Class instead, e.g. Garuda's Talons = "Claws") AND it's a summoned
