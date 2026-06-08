@@ -10,15 +10,7 @@ export type ModRarity =
   | "Amalgam"
   | "Galvanized"
 
-export type RarityGroup =
-  | "standard"
-  | "legendary"
-  | "riven"
-  | "amalgam"
-  | "galvanized"
-
 interface RarityConfig {
-  group: RarityGroup
   folder: string
   prefix: string
   textColor: string
@@ -26,49 +18,41 @@ interface RarityConfig {
 
 export const RARITY_CONFIG: Record<ModRarity, RarityConfig> = {
   Common: {
-    group: "standard",
     folder: "common",
     prefix: "Bronze",
     textColor: "#C79989",
   },
   Uncommon: {
-    group: "standard",
     folder: "uncommon",
     prefix: "Silver",
     textColor: "#BEC0C2",
   },
   Rare: {
-    group: "standard",
     folder: "rare",
     prefix: "Gold",
     textColor: "#FBECC4",
   },
   Legendary: {
-    group: "legendary",
     folder: "legendary",
     prefix: "Legendary",
     textColor: "#DFDFDF",
   },
   Peculiar: {
-    group: "legendary",
     folder: "legendary",
     prefix: "Legendary",
     textColor: "#DFDFDF",
   },
   Riven: {
-    group: "riven",
     folder: "riven",
     prefix: "Riven",
     textColor: "#D9A8FF",
   },
   Amalgam: {
-    group: "amalgam",
     folder: "amalgam",
     prefix: "Amalgam",
     textColor: "#98D9EB",
   },
   Galvanized: {
-    group: "galvanized",
     folder: "galvanized",
     prefix: "Galvanized",
     textColor: "#7CB8E4",
@@ -127,10 +111,6 @@ export function getModAssetUrl(rarity: ModRarity, asset: AssetKind): string {
 
 export function getRarityColor(rarity: ModRarity): string {
   return RARITY_CONFIG[rarity].textColor
-}
-
-export function getRarityGroup(rarity: ModRarity): RarityGroup {
-  return RARITY_CONFIG[rarity].group
 }
 
 const POLARITY_ICON_MAP: Record<Polarity, string> = {

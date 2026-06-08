@@ -51,7 +51,7 @@ export function CapacityBar({
       <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
         <div
           className={cn(
-            "h-full transition-all",
+            "h-full transition-[width,background-color]",
             over ? "bg-destructive" : "bg-primary",
           )}
           style={{ width: `${pctVal}%` }}

@@ -166,7 +166,7 @@ function printSummary(summary: Map<string, Map<string, FieldDelta>>): void {
       : ""
     let kind = ""
     if (d.removed === d.changed) kind = " [field gone from new]"
-    else if (d.added === d.changed) kind = " [field new in v2]"
+    else if (d.added === d.changed) kind = " [field added in new]"
     console.log(`  ${field.padEnd(14)} ${String(d.changed).padStart(4)} items${kind}${sample}`)
   }
 }

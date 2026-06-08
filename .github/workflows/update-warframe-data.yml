@@ -10,9 +10,16 @@ on:
 # and re-fetched here each run, so the only committed diff is the rebuilt
 # catalog under `apps/web/public/data/`.
 
+# Serialize runs so a manual dispatch can't race the Sunday cron on the shared
+# auto/update-warframe-data branch and its create-pull-request step.
+concurrency:
+  group: update-warframe-data
+  cancel-in-progress: false
+
 jobs:
   update-data:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
       pull-requests: write
@@ -23,6 +30,14 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.13 # keep in sync with ci.yml
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            bun-${{ runner.os }}-
 
       # --frozen-lockfile so a transitive lockfile bump can't ride into the
       # auto-PR unreviewed (the commit is also scoped via add-paths below).

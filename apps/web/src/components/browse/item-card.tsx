@@ -7,14 +7,12 @@ import { getImageUrl, getItemUrl, type BrowseItem } from "@/lib/warframe"
 
 interface ItemCardProps {
   item: BrowseItem
-  index?: number
 }
 
-export function ItemCard({ item, index }: ItemCardProps) {
+export function ItemCard({ item }: ItemCardProps) {
   return (
     <Link
       href={getItemUrl(item.category, item.slug)}
-      data-index={index}
       className="group focus-visible:ring-ring rounded-xl outline-none [contain-intrinsic-size:auto_280px] [content-visibility:auto] focus-visible:ring-2 focus-visible:ring-offset-2"
     >
       <Card className="hover:border-primary/50 group-focus-visible:border-primary/50 relative h-full gap-0 overflow-hidden py-0 transition-[box-shadow,border-color] duration-200 hover:shadow-md">

@@ -152,10 +152,14 @@ function EditorVariantBarMulti({
                   className="w-64 p-3"
                 >
                   <div className="flex flex-col gap-2">
-                    <label className="text-muted-foreground text-xs">
+                    <label
+                      htmlFor="variant-name"
+                      className="text-muted-foreground text-xs"
+                    >
                       Name
                     </label>
                     <Input
+                      id="variant-name"
                       ref={inputRef}
                       value={labelDraft}
                       maxLength={24}

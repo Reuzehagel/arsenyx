@@ -248,15 +248,11 @@ function BrowseContent() {
         </p>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-          {visible.map((item, i) => (
+          {visible.map((item) => (
             // Atmosphere arch-gun variants share `uniqueName` with their base
             // (e.g. Mausolon / Mausolon (Atmosphere)), so include the slug to
             // keep React keys unique within a category.
-            <ItemCard
-              key={`${item.uniqueName}|${item.slug}`}
-              item={item}
-              index={i}
-            />
+            <ItemCard key={`${item.uniqueName}|${item.slug}`} item={item} />
           ))}
         </div>
       )}

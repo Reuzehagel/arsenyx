@@ -268,8 +268,6 @@ function toMergedMod(
 
 export interface MergeModsResult {
   mods: MergedMod[]
-  /** Map by uniqueName → modset stats, so weapons can show set bonuses. */
-  setStats: Map<string, string[]>
   counts: FilterCounts
 }
 
@@ -446,6 +444,6 @@ export function mergeMods(
     counts.kept++
   }
 
-  return { mods, setStats, counts }
+  return { mods, counts }
 }
 

@@ -7,9 +7,10 @@
  * loud on every data bump after a new release.
  *
  * Entries here key by `uniqueName` and supply the minimum the merge needs
- * to emit a usable record. `stubUntil` is an ISO date — the build warns
- * for every active stub on every run, and CI fails outright once a stub is
- * past its expiry (forcing cleanup once the wiki catches up).
+ * to emit a usable record. `stubUntil` is an ISO date carried as an advisory
+ * cleanup reminder for whoever adds a stub — it is NOT currently read or
+ * enforced by the build (no expiry guard exists yet). WIKI_STUBS is empty
+ * today, so the field is latent.
  */
 
 export interface WikiStub {
@@ -23,7 +24,7 @@ export interface WikiStub {
   exilusPolarity?: string | null
   /** Variant family this weapon belongs to (e.g. "Bubonico" for variants). */
   family?: string
-  /** ISO date string after which CI fails. */
+  /** ISO date — advisory cleanup reminder only; not enforced by the build. */
   stubUntil: string
 }
 

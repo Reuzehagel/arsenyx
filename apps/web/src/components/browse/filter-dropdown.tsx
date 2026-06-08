@@ -77,7 +77,7 @@ export function FilterDropdown({ filters, onChange }: FilterDropdownProps) {
               </span>
             </div>
             <Slider
-              value={localMastery}
+              value={[localMastery]}
               onValueChange={(value) => {
                 setLocalMastery(typeof value === "number" ? value : value[0])
               }}

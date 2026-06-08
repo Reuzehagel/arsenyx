@@ -148,14 +148,6 @@ export function dropOrphanSlots<T>(
   return out
 }
 
-/** Next slot in reading order. Stays put if `current` is the last slot. */
-export function getNextSlot(current: SlotId, layout: SlotLayout): SlotId {
-  const list = getVisibleSlots(layout)
-  const idx = list.indexOf(current)
-  if (idx === -1 || idx >= list.length - 1) return current
-  return list[idx + 1]
-}
-
 /**
  * Next empty slot in reading order after `current`. Returns null when
  * every slot from `current` onward is occupied. Cursor skips filled

@@ -31,7 +31,6 @@
     "@neondatabase/serverless": "^1.1.0",
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.2.2",
-    "@tanstack/router-devtools": "^1.95.1",
     "@tanstack/router-plugin": "^1.95.1",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",

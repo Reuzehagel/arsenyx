@@ -86,7 +86,7 @@ export function useRivenDialog({
   return { openForPlacement, openForEdit, dialog }
 }
 
-export function findFreeNormalSlot(
+function findFreeNormalSlot(
   slots: BuildSlotsState,
   normalSlotCount: number,
 ): SlotId | null {

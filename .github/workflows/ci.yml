@@ -9,15 +9,31 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# CI only reads the repo and runs checks — it never needs write. Least-privilege
+# token so a compromised action/dependency can't push or open PRs with it.
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
 
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.13
+
+      # Cache only Bun's global install cache (not node_modules); Bun rebuilds
+      # node_modules from it. Keyed on the lockfile so a dep change busts it.
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            bun-${{ runner.os }}-
 
       - run: bun install --frozen-lockfile
         # Triggers apps/api's `postinstall: prisma generate` — no separate step needed.

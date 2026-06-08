@@ -41,6 +41,22 @@ export function decodeOverframeSlotId(
   slotId: number,
   category: BrowseCategory,
 ): SlotMapping | null {
+  // Necramechs are warframe-shaped for the base 8 slots (slot_id 8 → normal-0 …
+  // 1 → normal-7) but have 12 normal slots and NO aura/exilus/arcane — the 4
+  // extra slots continue ascending (slot_id 9 → normal-8 … 12 → normal-11).
+  // Verified against a real Overframe Voidrig export: slot_id 6 "Necramech
+  // Streamline" (polarity naramon, not forma'd) lands on normal-2, whose innate
+  // polarity is naramon, and slots 11/12 are normal mods (not arcanes).
+  if (category === "necramechs") {
+    if (slotId >= 1 && slotId <= 8) {
+      return { kind: "mod", slotType: "normal", slotIndex: 8 - slotId }
+    }
+    if (slotId >= 9 && slotId <= getNormalSlotCount(category)) {
+      return { kind: "mod", slotType: "normal", slotIndex: slotId - 1 }
+    }
+    return null
+  }
+
   // Categories with neither an aura nor an exilus slot (companions, archwing,
   // railjack) are all-normal; slot_id counts down from the highest.
   if (!isWarframeLike(category) && !hasExilusSlot(category)) {
@@ -94,6 +110,17 @@ export function encodeOverframeSlotId(
   slotIndex: number,
   category: BrowseCategory,
 ): number {
+  // Necramechs: exact inverse of the necramech decode above. Only normal slots
+  // exist — normal-0..7 → slot_id 8..1, normal-8..11 → slot_id 9..12.
+  if (category === "necramechs") {
+    if (slotType !== "normal") {
+      throw new Error(
+        `encodeOverframeSlotId: ${category} has no ${slotType} slot`,
+      )
+    }
+    return slotIndex <= 7 ? 8 - slotIndex : slotIndex + 1
+  }
+
   const warframeLike = isWarframeLike(category)
   if (!warframeLike && !hasExilusSlot(category)) {
     // companions / archwing / railjack only have normal slots. Asking for an

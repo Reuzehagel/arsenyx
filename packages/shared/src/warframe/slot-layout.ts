@@ -33,8 +33,12 @@ export function hasExilusSlot(category: BrowseCategory): boolean {
   )
 }
 
-/** Warframes and necramechs share the "aura at slot_id 9, exilus at 10" layout
- *  used when interpreting Overframe slot ids. */
+/** Warframes and necramechs are "warframe-shaped" for Overframe's base 8 mod
+ *  slots (slot_id 8 → normal-0 … 1 → normal-7). Warframes then put aura at
+ *  slot_id 9 and exilus at 10; necramechs instead have 4 more normal slots and
+ *  no aura/exilus/arcane, so `decodeOverframeSlotId` special-cases them. This
+ *  predicate keeps both OUT of the uniform all-normal path used by
+ *  companions/archwing/railjack. */
 export function isWarframeLike(category: BrowseCategory): boolean {
   return category === "warframes" || category === "necramechs"
 }

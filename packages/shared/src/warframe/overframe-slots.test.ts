@@ -53,6 +53,36 @@ describe("overframe slot mapping round-trips", () => {
     })
   })
 
+  it("maps necramech slot ids to 12 normal slots (no aura/exilus/arcane)", () => {
+    // First 8 are warframe-shaped (slot_id 8 → normal-0); the 4 extra slots
+    // continue as normal-8..11. Verified against a real Overframe Voidrig export
+    // (slots 11/12 are normal mods — previously mis-decoded as arcanes).
+    expect(decodeOverframeSlotId(1, "necramechs")).toEqual({
+      kind: "mod",
+      slotType: "normal",
+      slotIndex: 7,
+    })
+    expect(decodeOverframeSlotId(8, "necramechs")).toEqual({
+      kind: "mod",
+      slotType: "normal",
+      slotIndex: 0,
+    })
+    expect(decodeOverframeSlotId(9, "necramechs")).toEqual({
+      kind: "mod",
+      slotType: "normal",
+      slotIndex: 8,
+    })
+    expect(decodeOverframeSlotId(12, "necramechs")).toEqual({
+      kind: "mod",
+      slotType: "normal",
+      slotIndex: 11,
+    })
+    // Necramechs have no aura/exilus/arcane — encoding one must throw.
+    expect(() => encodeOverframeSlotId("aura", 0, "necramechs")).toThrow()
+    expect(() => encodeOverframeSlotId("exilus", 0, "necramechs")).toThrow()
+    expect(() => encodeOverframeSlotId("arcane", 0, "necramechs")).toThrow()
+  })
+
   it("maps melee slot ids with a Stance slot at 9 (Exilus→10, Arcanes→11+)", () => {
     expect(decodeOverframeSlotId(8, "melee")).toEqual({
       kind: "mod",

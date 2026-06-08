@@ -69,7 +69,6 @@ export { ModSlot, type ModSlotKind } from "./mod-slot"
 export { PolarityIcon, PolarityPicker } from "./polarity"
 export {
   useBuildSlots,
-  getNextSlot,
   getVisibleSlots,
   slotKind,
   type BuildSlotsState,

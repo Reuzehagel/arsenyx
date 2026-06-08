@@ -146,11 +146,9 @@ export function RankDots({
 export function RankCompleteLine({
   rarity,
   className,
-  disableAnimation,
 }: {
   rarity: ModRarity
   className?: string
-  disableAnimation?: boolean
 }) {
   return (
     <div className={cn("pointer-events-none overflow-hidden", className)}>
@@ -161,17 +159,15 @@ export function RankCompleteLine({
         style={{
           maskImage:
             "linear-gradient(90deg, transparent 0%, white 50%, transparent 100%)",
-          maskSize: disableAnimation ? "200% 100%" : "0% 100%",
+          maskSize: "0% 100%",
           maskPosition: "center",
           maskRepeat: "no-repeat",
           WebkitMaskImage:
             "linear-gradient(90deg, transparent 0%, white 50%, transparent 100%)",
-          WebkitMaskSize: disableAnimation ? "200% 100%" : "0% 100%",
+          WebkitMaskSize: "0% 100%",
           WebkitMaskPosition: "center",
           WebkitMaskRepeat: "no-repeat",
-          animation: disableAnimation
-            ? "none"
-            : "rankReveal 0.4s ease-out forwards",
+          animation: "rankReveal 0.4s ease-out forwards",
         }}
       />
     </div>

@@ -32,8 +32,8 @@ function levenshtein(a: string, b: string): number {
   const n = b.length
   if (m === 0) return n
   if (n === 0) return m
-  const prev = new Array<number>(n + 1)
-  const cur = new Array<number>(n + 1)
+  let prev = new Array<number>(n + 1)
+  let cur = new Array<number>(n + 1)
   for (let j = 0; j <= n; j++) prev[j] = j
   for (let i = 1; i <= m; i++) {
     cur[0] = i
@@ -43,7 +43,11 @@ function levenshtein(a: string, b: string): number {
       const cost = ca === cb ? 0 : 1
       cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost)
     }
-    for (let j = 0; j <= n; j++) prev[j] = cur[j]
+    // Swap rows instead of copying cur→prev each iteration; the freshly
+    // computed row becomes `prev` for the next pass and `cur` is overwritten.
+    const tmp = prev
+    prev = cur
+    cur = tmp
   }
   return prev[n]
 }

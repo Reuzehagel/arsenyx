@@ -205,7 +205,7 @@ export function parseArcaneStats(input: PlacedArcaneInput): ParsedStat[] {
 }
 
 /** Convert a RivenStats object into ParsedStats. Negatives already carry sign. */
-export function parseRivenStats(rivenStats: RivenStats): ParsedStat[] {
+function parseRivenStats(rivenStats: RivenStats): ParsedStat[] {
   const out: ParsedStat[] = []
   for (const p of rivenStats.positives) {
     const mapped = STAT_NAME_MAP[p.stat.toLowerCase()]

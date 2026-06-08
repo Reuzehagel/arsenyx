@@ -15,10 +15,3 @@ export interface OverframeBuildSource {
   buildId?: string
   buildString?: string
 }
-
-// Canonical definition lives in @arsenyx/shared so the web consumer can't
-// drift from the api producer. Imported for use below + re-exported for
-// existing `./types` consumers.
-import type { OverframeImportWarning } from "@arsenyx/shared/warframe/overframe-wire"
-
-export type { OverframeImportWarning }

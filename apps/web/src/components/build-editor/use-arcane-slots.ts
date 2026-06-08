@@ -94,10 +94,6 @@ export function useArcaneSlots(
     })
   }, [])
 
-  const setPlacedAll = useCallback((next: (PlacedArcane | null)[]) => {
-    setPlaced(next)
-  }, [])
-
   const usedNames = useMemo(
     () =>
       new Set(
@@ -115,6 +111,6 @@ export function useArcaneSlots(
     remove,
     select,
     setRank,
-    setPlaced: setPlacedAll,
+    setPlaced,
   }
 }
