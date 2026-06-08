@@ -12,6 +12,7 @@ import {
 } from "../lib/validate"
 import { rateLimitUser } from "../middleware/rate-limit"
 import { parseListQuery, runList } from "./_build-list"
+import { orgPublicScope } from "./_build-visibility"
 import { parsePage, trimQ } from "./_query"
 
 export const orgs = new Hono()
@@ -276,11 +277,7 @@ orgs.get("/:slug/builds", async (c) => {
 
   const result = await runList({
     filters: parseListQuery(c),
-    baseWhere: {
-      organizationId: org.id,
-      visibility: BuildVisibility.PUBLIC,
-    },
-    baseFilter: Prisma.sql`"organizationId" = ${org.id} AND visibility = 'PUBLIC'`,
+    ...orgPublicScope(org.id),
     defaultSort: "newest",
   })
   return c.json(result)

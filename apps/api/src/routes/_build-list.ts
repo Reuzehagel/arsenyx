@@ -310,7 +310,7 @@ export async function runList({
   defaultSort,
 }: {
   filters: ListFilters
-  baseWhere: Record<string, unknown>
+  baseWhere: Prisma.BuildWhereInput
   baseFilter: Prisma.Sql
   defaultSort: ListSort
 }) {

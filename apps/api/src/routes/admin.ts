@@ -7,6 +7,7 @@ import { parseJsonBody } from "../lib/validate"
 import { rateLimitUser } from "../middleware/rate-limit"
 import { isPrismaNotFound, requireAdmin } from "./_admin"
 import { parseListQuery, runList } from "./_build-list"
+import { allBuildsScope } from "./_build-visibility"
 import { parsePage, trimQ } from "./_query"
 import { isVisibility } from "./builds"
 
@@ -184,8 +185,7 @@ admin.get("/builds", adminSearchLimit, async (c) => {
 
   const result = await runList({
     filters: parseListQuery(c),
-    baseWhere: {},
-    baseFilter: Prisma.sql`TRUE`,
+    ...allBuildsScope(),
     defaultSort: "newest",
   })
   return c.json(result)

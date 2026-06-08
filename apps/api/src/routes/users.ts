@@ -1,9 +1,8 @@
 import { Hono } from "hono"
 
 import { prisma } from "../db"
-import { Prisma } from "../generated/prisma/client"
-import { BuildVisibility } from "../generated/prisma/enums"
 import { parseListQuery, runList } from "./_build-list"
+import { userPublicScope } from "./_build-visibility"
 
 export const users = new Hono()
 
@@ -35,11 +34,7 @@ users.get("/:username", async (c) => {
   if (!user || user.isBanned) return c.json({ error: "not_found" }, 404)
 
   const agg = await prisma.build.aggregate({
-    where: {
-      userId: user.id,
-      visibility: BuildVisibility.PUBLIC,
-      organizationId: null,
-    },
+    where: userPublicScope(user.id).baseWhere,
     _count: true,
     _sum: { likeCount: true, bookmarkCount: true, viewCount: true },
   })
@@ -77,12 +72,7 @@ users.get("/:username/builds", async (c) => {
 
   const result = await runList({
     filters: parseListQuery(c),
-    baseWhere: {
-      userId: user.id,
-      visibility: BuildVisibility.PUBLIC,
-      organizationId: null,
-    },
-    baseFilter: Prisma.sql`"userId" = ${user.id} AND visibility = 'PUBLIC' AND "organizationId" IS NULL`,
+    ...userPublicScope(user.id),
     defaultSort: "newest",
   })
   return c.json(result)

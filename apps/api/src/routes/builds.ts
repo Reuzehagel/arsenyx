@@ -26,6 +26,7 @@ import {
   serializeListRow,
 } from "./_build-list"
 import { toggleSocial } from "./_build-social"
+import { bookmarkedScope, ownerScope, publicScope } from "./_build-visibility"
 
 export const builds = new Hono()
 
@@ -406,8 +407,7 @@ builds.post("/:slug/fork", rateLimitUser("mutate"), async (c) => {
 builds.get("/", edgeCache({ maxAge: 120 }), async (c) => {
   const result = await runList({
     filters: parseListQuery(c),
-    baseWhere: { visibility: BuildVisibility.PUBLIC },
-    baseFilter: Prisma.sql`visibility = 'PUBLIC'`,
+    ...publicScope(),
     defaultSort: "newest",
   })
   return c.json(result)
@@ -641,8 +641,7 @@ builds.get("/mine", async (c) => {
 
   const result = await runList({
     filters: parseListQuery(c),
-    baseWhere: { userId: session.user.id },
-    baseFilter: Prisma.sql`"userId" = ${session.user.id}`,
+    ...ownerScope(session.user.id),
     defaultSort: "updated",
   })
   return c.json(result)
@@ -656,21 +655,7 @@ builds.get("/bookmarks", async (c) => {
   // Bookmarked AND visible to viewer (own / public / unlisted; not others' private).
   const result = await runList({
     filters: parseListQuery(c),
-    baseWhere: {
-      bookmarks: { some: { userId } },
-      OR: [
-        { visibility: BuildVisibility.PUBLIC },
-        { visibility: BuildVisibility.UNLISTED },
-        { userId },
-      ],
-    },
-    baseFilter: Prisma.sql`
-      EXISTS (
-        SELECT 1 FROM build_bookmarks bb
-        WHERE bb."buildId" = builds.id AND bb."userId" = ${userId}
-      )
-      AND (visibility IN ('PUBLIC', 'UNLISTED') OR "userId" = ${userId})
-    `,
+    ...bookmarkedScope(userId),
     defaultSort: "newest",
   })
   return c.json(result)
