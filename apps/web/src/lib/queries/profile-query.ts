@@ -6,7 +6,7 @@ import {
   type BuildListResponse,
   buildQueryString,
 } from "@/lib/queries/builds-list-query"
-import { apiFetch, ApiError } from "@/lib/util/api-client"
+import { apiFetch, ApiError, loaderError } from "@/lib/util/api-client"
 
 export type ProfileBadges = {
   verified: boolean
@@ -42,7 +42,7 @@ export const profileQuery = (username: string) =>
         return await apiFetch<Profile>(`/users/${encodeURIComponent(username)}`)
       } catch (err) {
         if (err instanceof ApiError && err.status === 404) throw notFound()
-        throw new Error("failed to load profile", { cause: err })
+        throw loaderError(err, "failed to load profile")
       }
     },
   })
@@ -62,7 +62,7 @@ export const profileBuildsQuery = (username: string, params: BuildListParams) =>
           `/users/${encodeURIComponent(username)}/builds${qs}`,
         )
       } catch (err) {
-        throw new Error("failed to load builds", { cause: err })
+        throw loaderError(err, "failed to load builds")
       }
     },
   })

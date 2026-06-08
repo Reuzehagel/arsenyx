@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
-import { apiFetch, ApiError, remapApiError } from "@/lib/util/api-client"
+import { apiFetch, remapApiError } from "@/lib/util/api-client"
 
 type ForkResponse = { id: string; slug: string }
 
@@ -37,13 +37,11 @@ export function useForkBuild(slug: string) {
           { method: "POST" },
         )
       } catch (err) {
-        if (err instanceof ApiError) {
-          if (err.status === 401)
-            throw new Error("unauthorized", { cause: err })
-          if (err.status === 404) throw new Error("not_found", { cause: err })
-          throw new Error("failed_fork", { cause: err })
-        }
-        throw err
+        throw remapApiError(err, {
+          401: "unauthorized",
+          404: "not_found",
+          default: "failed_fork",
+        })
       }
     },
     onSuccess: () => {

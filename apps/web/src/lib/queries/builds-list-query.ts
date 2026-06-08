@@ -5,7 +5,7 @@ import type {
 import { LIST_LIMIT, type ListSort } from "@arsenyx/shared/warframe/build-list"
 import { keepPreviousData, queryOptions } from "@tanstack/react-query"
 
-import { apiFetch, ApiError } from "@/lib/util/api-client"
+import { apiFetch, loaderError } from "@/lib/util/api-client"
 
 /** Mirrors LIST_LIMIT in the api. Skeleton bone counts use this so the
  *  placeholder grid matches the loaded grid. */
@@ -61,9 +61,11 @@ async function loadBuilds(
   try {
     return await apiFetch<BuildListResponse>(path)
   } catch (err) {
-    if (authRequired && err instanceof ApiError && err.status === 401)
-      throw new Error("unauthorized", { cause: err })
-    throw new Error("failed to load builds", { cause: err })
+    throw loaderError(
+      err,
+      "failed to load builds",
+      authRequired ? "unauthorized" : undefined,
+    )
   }
 }
 

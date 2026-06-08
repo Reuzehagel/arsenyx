@@ -6,7 +6,7 @@ import {
   type BuildListResponse,
   buildQueryString,
 } from "@/lib/queries/builds-list-query"
-import { apiFetch, ApiError } from "@/lib/util/api-client"
+import { apiFetch, ApiError, loaderError } from "@/lib/util/api-client"
 
 export type OrgRole = "ADMIN" | "MEMBER"
 
@@ -78,7 +78,7 @@ export const orgsDirectoryQuery = (page: number) =>
       try {
         return await apiFetch<OrgDirectoryResponse>(`/orgs/public${qs}`)
       } catch (err) {
-        throw new Error("failed to load organizations", { cause: err })
+        throw loaderError(err, "failed to load organizations")
       }
     },
   })
@@ -91,7 +91,7 @@ export const orgQuery = (slug: string) =>
         return await apiFetch<OrgProfile>(`/orgs/${encodeURIComponent(slug)}`)
       } catch (err) {
         if (err instanceof ApiError && err.status === 404) throw notFound()
-        throw new Error("failed to load organization", { cause: err })
+        throw loaderError(err, "failed to load organization")
       }
     },
   })
@@ -106,7 +106,7 @@ export const orgBuildsQuery = (slug: string, params: BuildListParams) =>
           `/orgs/${encodeURIComponent(slug)}/builds${qs}`,
         )
       } catch (err) {
-        throw new Error("failed to load builds", { cause: err })
+        throw loaderError(err, "failed to load builds")
       }
     },
   })
@@ -118,9 +118,7 @@ export const myOrgsQuery = () =>
       try {
         return await apiFetch<MyOrgsResponse>(`/orgs`)
       } catch (err) {
-        if (err instanceof ApiError && err.status === 401)
-          throw new Error("unauthorized", { cause: err })
-        throw new Error("failed to load organizations", { cause: err })
+        throw loaderError(err, "failed to load organizations", "unauthorized")
       }
     },
     retry: false,

@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query"
 
-import { apiErrorMessage, apiFetch, ApiError } from "@/lib/util/api-client"
+import { apiErrorMessage, apiFetch, loaderError } from "@/lib/util/api-client"
 import { API_URL } from "@/lib/util/constants"
 
 export async function downloadMyBuildsExport(): Promise<void> {
@@ -50,9 +50,7 @@ export const myApiKeysQuery = () =>
       try {
         return await apiFetch<MyApiKeysResponse>(`/me/api-keys`)
       } catch (err) {
-        if (err instanceof ApiError && err.status === 401)
-          throw new Error("unauthorized", { cause: err })
-        throw new Error("failed to load API keys", { cause: err })
+        throw loaderError(err, "failed to load API keys", "unauthorized")
       }
     },
     retry: false,

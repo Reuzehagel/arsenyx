@@ -44,6 +44,22 @@ export function remapApiError(
   return new Error(code, { cause: err })
 }
 
+/** Loader-side error normalizer: always returns an `Error` (never passes a
+ *  non-`ApiError` cause through), so a query loader surfaces a stable
+ *  user-facing failure regardless of the underlying cause. `on401` overrides
+ *  the message on a 401. The original is kept as `cause`. Use this in query
+ *  loaders; use `remapApiError` in mutations that need network errors to
+ *  propagate unchanged. */
+export function loaderError(
+  err: unknown,
+  fallback: string,
+  on401?: string,
+): Error {
+  if (on401 && err instanceof ApiError && err.status === 401)
+    return new Error(on401, { cause: err })
+  return new Error(fallback, { cause: err })
+}
+
 export interface ApiFetchInit extends Omit<RequestInit, "body"> {
   /** JSON-stringified into the request body with the right content-type. */
   json?: unknown

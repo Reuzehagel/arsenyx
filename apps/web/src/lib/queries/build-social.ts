@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
 import type { BuildDetail } from "@/lib/queries/build-query"
-import { apiFetch, ApiError } from "@/lib/util/api-client"
+import { apiFetch, remapApiError } from "@/lib/util/api-client"
 
 type LikeResponse = { hasLiked: boolean; likeCount: number }
 type BookmarkResponse = { hasBookmarked: boolean; bookmarkCount: number }
@@ -16,11 +16,7 @@ async function send<T>(
       method,
     })
   } catch (err) {
-    if (err instanceof ApiError && err.status === 401)
-      throw new Error("unauthorized", { cause: err })
-    if (err instanceof ApiError)
-      throw new Error(`failed_${kind}`, { cause: err })
-    throw err
+    throw remapApiError(err, { 401: "unauthorized", default: `failed_${kind}` })
   }
 }
 
