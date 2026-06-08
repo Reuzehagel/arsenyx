@@ -7,7 +7,7 @@ import {
 } from "@arsenyx/shared/warframe/forma"
 import { Hono, type Context } from "hono"
 import { getCookie, setCookie } from "hono/cookie"
-import { customAlphabet, nanoid } from "nanoid"
+import { customAlphabet } from "nanoid"
 
 import { prisma, registerBackgroundWork } from "../db"
 import { Prisma } from "../generated/prisma/client"
@@ -25,6 +25,7 @@ import {
   serializeBuildDetail,
   serializeListRow,
 } from "./_build-list"
+import { toggleSocial } from "./_build-social"
 
 export const builds = new Hono()
 
@@ -720,28 +721,19 @@ builds.post("/:slug/like", rateLimitUser("social"), async (c) => {
     return c.json({ error: "cannot_like_own_build" }, 400)
   }
 
-  // Single-statement CTE: INSERT … ON CONFLICT DO NOTHING avoids the
-  // findUnique+create race on rapid double-click, while the same statement
-  // bumps the counter by the number of rows actually inserted (0 or 1).
-  // Atomic — no partial-state on connection drop.
-  const rows = await prisma.$queryRaw<{ likeCount: number }[]>`
-    WITH inserted AS (
-      INSERT INTO build_likes (id, "userId", "buildId", value, "createdAt")
-      VALUES (${nanoid()}, ${userId}, ${build.id}, 1, NOW())
-      ON CONFLICT ("userId", "buildId") DO NOTHING
-      RETURNING 1
-    )
-    UPDATE builds
-    SET "likeCount" = "likeCount" + (SELECT count(*)::int FROM inserted)
-    WHERE id = ${build.id}
-    RETURNING "likeCount"
-  `
-  return c.json({
-    hasLiked: true,
-    likeCount: rows[0]?.likeCount ?? build.likeCount,
-  })
+  const likeCount = await toggleSocial(
+    "like",
+    "add",
+    build.id,
+    userId,
+    build.likeCount,
+  )
+  return c.json({ hasLiked: true, likeCount })
 })
 
+// No visibility re-check here (unlike POST): you can only remove a row you
+// already created, so a stale link can't leak anything — the toggle is a no-op
+// for a build the viewer never liked.
 builds.delete("/:slug/like", rateLimitUser("social"), async (c) => {
   const session = await getSession(c)
   if (!session?.user) return c.json({ error: "unauthorized" }, 401)
@@ -750,21 +742,14 @@ builds.delete("/:slug/like", rateLimitUser("social"), async (c) => {
   const build = await getBuildForSocial(c.req.param("slug"))
   if (!build) return c.json({ error: "not_found" }, 404)
 
-  const rows = await prisma.$queryRaw<{ likeCount: number }[]>`
-    WITH deleted AS (
-      DELETE FROM build_likes
-      WHERE "userId" = ${userId} AND "buildId" = ${build.id}
-      RETURNING 1
-    )
-    UPDATE builds
-    SET "likeCount" = GREATEST(0, "likeCount" - (SELECT count(*)::int FROM deleted))
-    WHERE id = ${build.id}
-    RETURNING "likeCount"
-  `
-  return c.json({
-    hasLiked: false,
-    likeCount: rows[0]?.likeCount ?? build.likeCount,
-  })
+  const likeCount = await toggleSocial(
+    "like",
+    "remove",
+    build.id,
+    userId,
+    build.likeCount,
+  )
+  return c.json({ hasLiked: false, likeCount })
 })
 
 builds.post("/:slug/bookmark", rateLimitUser("social"), async (c) => {
@@ -777,25 +762,21 @@ builds.post("/:slug/bookmark", rateLimitUser("social"), async (c) => {
   if (!(await canViewerSeeBuild(build, userId))) {
     return c.json({ error: "not_found" }, 404)
   }
+  // Unlike POST /like there's no self-bookmark guard: bookmarking your own
+  // Build to save it for later is allowed (see CONTEXT.md — Bookmark, unlike
+  // Like, has no "not your own" rule).
 
-  const rows = await prisma.$queryRaw<{ bookmarkCount: number }[]>`
-    WITH inserted AS (
-      INSERT INTO build_bookmarks (id, "userId", "buildId", "createdAt")
-      VALUES (${nanoid()}, ${userId}, ${build.id}, NOW())
-      ON CONFLICT ("userId", "buildId") DO NOTHING
-      RETURNING 1
-    )
-    UPDATE builds
-    SET "bookmarkCount" = "bookmarkCount" + (SELECT count(*)::int FROM inserted)
-    WHERE id = ${build.id}
-    RETURNING "bookmarkCount"
-  `
-  return c.json({
-    hasBookmarked: true,
-    bookmarkCount: rows[0]?.bookmarkCount ?? build.bookmarkCount,
-  })
+  const bookmarkCount = await toggleSocial(
+    "bookmark",
+    "add",
+    build.id,
+    userId,
+    build.bookmarkCount,
+  )
+  return c.json({ hasBookmarked: true, bookmarkCount })
 })
 
+// No visibility re-check here — same reasoning as DELETE /:slug/like.
 builds.delete("/:slug/bookmark", rateLimitUser("social"), async (c) => {
   const session = await getSession(c)
   if (!session?.user) return c.json({ error: "unauthorized" }, 401)
@@ -804,21 +785,14 @@ builds.delete("/:slug/bookmark", rateLimitUser("social"), async (c) => {
   const build = await getBuildForSocial(c.req.param("slug"))
   if (!build) return c.json({ error: "not_found" }, 404)
 
-  const rows = await prisma.$queryRaw<{ bookmarkCount: number }[]>`
-    WITH deleted AS (
-      DELETE FROM build_bookmarks
-      WHERE "userId" = ${userId} AND "buildId" = ${build.id}
-      RETURNING 1
-    )
-    UPDATE builds
-    SET "bookmarkCount" = GREATEST(0, "bookmarkCount" - (SELECT count(*)::int FROM deleted))
-    WHERE id = ${build.id}
-    RETURNING "bookmarkCount"
-  `
-  return c.json({
-    hasBookmarked: false,
-    bookmarkCount: rows[0]?.bookmarkCount ?? build.bookmarkCount,
-  })
+  const bookmarkCount = await toggleSocial(
+    "bookmark",
+    "remove",
+    build.id,
+    userId,
+    build.bookmarkCount,
+  )
+  return c.json({ hasBookmarked: false, bookmarkCount })
 })
 
 builds.get("/:slug", edgeCache({ maxAge: 300 }), async (c) => {
