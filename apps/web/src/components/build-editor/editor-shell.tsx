@@ -89,7 +89,7 @@ import { useBuildDerived, getBuildLayout } from "./build-derived"
 import { BuildSurface } from "./build-surface"
 import { DragController } from "./drag-controller"
 import { EditorVariantBar } from "./editor-variant-bar"
-import { GuideEditor, type GuideScope } from "./guide-editor"
+import { GuideEditor } from "./guide-editor"
 import { KeyboardHintBanner } from "./keyboard-hints"
 import { getPlexusGroupForIndex } from "./layout"
 import { resolveInitialArcanes } from "./layout"
@@ -114,6 +114,7 @@ import {
   type SlotId,
 } from "./use-build-slots"
 import { useEditorHistory } from "./use-editor-history"
+import { useGuideState } from "./use-guide-state"
 import { useSlotKeyboardNav } from "./use-keyboard-nav"
 import { useRankHotkey } from "./use-rank-hotkey"
 
@@ -588,26 +589,24 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     slots.place(mod)
   }
 
-  const [guideSummary, setGuideSummary] = useState(
-    () =>
+  // Guide state (build-wide summary/description + per-variant scope dispatch).
+  // Scope resets to "build" on remount (variant switches) so switching variants
+  // doesn't silently change which guide you're editing.
+  const guide = useGuideState({
+    initialSummary:
       cachedShared?.guideSummary ??
       localDraft?.guideSummary ??
       existingBuild?.guide?.summary ??
       "",
-  )
-  const [guideDescription, setGuideDescription] = useState(
-    () =>
+    initialDescription:
       cachedShared?.guideDescription ??
       localDraft?.guideDescription ??
       existingBuild?.guide?.description ??
       draft?.guideDescription ??
       "",
-  )
-  // Scope of the GuideEditor — build-wide vs a specific variant. Resets
-  // to "build" on EditorShell remount (variant switches) which keeps the
-  // UX predictable: switching variants doesn't silently change what
-  // guide you're editing.
-  const [guideScope, setGuideScope] = useState<GuideScope>({ kind: "build" })
+    variants,
+    setVariants,
+  })
 
   const [zawComponents, setZawComponents] = useState<
     { grip: string; link: string } | undefined
@@ -694,8 +693,8 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       kitgunComponents,
       lichBonusElement,
       buildName,
-      guideSummary,
-      guideDescription,
+      guideSummary: guide.buildSummary,
+      guideDescription: guide.buildDescription,
       formaPolarities: slots.formaPolarities,
     })
     // writeShared closes over storeKey; intentionally excluded — storeKey
@@ -708,8 +707,8 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     kitgunComponents,
     lichBonusElement,
     buildName,
-    guideSummary,
-    guideDescription,
+    guide.buildSummary,
+    guide.buildDescription,
     slots.formaPolarities,
   ])
   const setIncarnonPerkAt = (tierIndex: number, perk: string | null) => {
@@ -1089,8 +1088,8 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
         formaCount,
         catalogVersion: __DATA_VERSION__,
         guide: {
-          summary: guideSummary.trim() || null,
-          description: guideDescription.trim() || null,
+          summary: guide.buildSummary.trim() || null,
+          description: guide.buildDescription.trim() || null,
         },
         // itemImageName tracks the incarnon toggle (and any future image
         // change), so update it on PATCH too. The identity fields
@@ -1244,8 +1243,8 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       saveEditorDraft(storeKey, {
         buildData: captureBuildData(),
         buildName,
-        guideSummary,
-        guideDescription,
+        guideSummary: guide.buildSummary,
+        guideDescription: guide.buildDescription,
       })
       setHasDraft(true)
     }, 600)
@@ -1255,8 +1254,8 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     buildName,
-    guideSummary,
-    guideDescription,
+    guide.buildSummary,
+    guide.buildDescription,
     slots.placed,
     slots.formaPolarities,
     arcanes.placed,
@@ -1538,51 +1537,8 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
 
           <div className="bg-card rounded-lg border p-4 select-text">
             <GuideEditor
-              summary={
-                guideScope.kind === "build"
-                  ? guideSummary
-                  : (variants[guideScope.index]?.guideSummary ?? "")
-              }
-              onSummaryChange={(v) => {
-                if (guideScope.kind === "build") {
-                  setGuideSummary(v)
-                  return
-                }
-                const idx = guideScope.index
-                setVariants((prev) =>
-                  prev.map((sv, i) =>
-                    i === idx ? { ...sv, guideSummary: v } : sv,
-                  ),
-                )
-              }}
-              description={
-                guideScope.kind === "build"
-                  ? guideDescription
-                  : (variants[guideScope.index]?.guideDescription ?? "")
-              }
-              onDescriptionChange={(v) => {
-                if (guideScope.kind === "build") {
-                  setGuideDescription(v)
-                  return
-                }
-                const idx = guideScope.index
-                setVariants((prev) =>
-                  prev.map((sv, i) =>
-                    i === idx ? { ...sv, guideDescription: v } : sv,
-                  ),
-                )
-              }}
+              {...guide.editorProps}
               buildSlug={isUpdate ? existingBuild?.slug : undefined}
-              scopes={variants.map((v) => ({
-                id: v.id,
-                label: v.label,
-                hasContent: Boolean(
-                  (v.guideSummary && v.guideSummary.trim()) ||
-                  (v.guideDescription && v.guideDescription.trim()),
-                ),
-              }))}
-              activeScope={guideScope}
-              onScopeChange={setGuideScope}
             />
           </div>
         </div>
