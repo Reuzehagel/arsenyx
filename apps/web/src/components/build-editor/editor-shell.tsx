@@ -98,6 +98,12 @@ import {
   type FullAutoFormaPlan,
 } from "./multi-variant-auto-forma"
 import { PublishDialog, type PublishVisibility } from "./publish-dialog"
+import {
+  RankHoverProvider,
+  rankTargetsEqual,
+  type RankHoverApi,
+  type RankHoverTarget,
+} from "./rank-hover"
 import { useArcaneSlots, type PlacedArcane } from "./use-arcane-slots"
 import {
   dropOrphanSlots,
@@ -108,6 +114,7 @@ import {
 } from "./use-build-slots"
 import { useEditorHistory } from "./use-editor-history"
 import { useSlotKeyboardNav } from "./use-keyboard-nav"
+import { useRankHotkey } from "./use-rank-hotkey"
 
 // ─── In-memory editor cache ─────────────────────────────────────────────────
 //
@@ -477,6 +484,52 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     },
     { preventDefault: false },
   )
+
+  // ─── Rank hotkey (single owner) ─────────────────────────────────────
+  // One window listener for `-`/`+`, instead of one per slot/arcane card.
+  // Cards report which one the pointer is over via RankHoverProvider; this
+  // owner ranks `hovered ?? selected mod`. Routing through a single target is
+  // what fixes the multi-fire: a selected slot and a separately hovered slot
+  // used to each rank on one keypress. Arcanes rank on hover only (no
+  // selection fallback), preserving the prior per-card behavior.
+  const hoveredRankRef = useRef<RankHoverTarget | null>(null)
+  const rankHover = useMemo<RankHoverApi>(
+    () => ({
+      set: (target) => {
+        hoveredRankRef.current = target
+      },
+      clear: (target) => {
+        if (
+          hoveredRankRef.current &&
+          rankTargetsEqual(hoveredRankRef.current, target)
+        ) {
+          hoveredRankRef.current = null
+        }
+      },
+    }),
+    [],
+  )
+  useRankHotkey({
+    enabled: true,
+    onDelta: (delta) => {
+      const hovered = hoveredRankRef.current
+      if (hovered?.kind === "mod") {
+        const placed = slots.placed[hovered.id]
+        if (placed) slots.setRank(hovered.id, placed.rank + delta)
+        return
+      }
+      if (hovered?.kind === "arcane") {
+        const placed = arcanes.placed[hovered.index]
+        if (placed) arcanes.setRank(hovered.index, placed.rank + delta)
+        return
+      }
+      // Nothing hovered → act on the selected mod slot (keyboard-nav path).
+      if (slots.selected) {
+        const placed = slots.placed[slots.selected]
+        if (placed) slots.setRank(slots.selected, placed.rank + delta)
+      }
+    },
+  })
 
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -1344,7 +1397,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   }
 
   return (
-    <>
+    <RankHoverProvider value={rankHover}>
       <EditorHeader
         item={item}
         category={category}
@@ -1578,6 +1631,6 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
           onApply={() => applyAutoFormaPlan(pendingHeavyPlan)}
         />
       )}
-    </>
+    </RankHoverProvider>
   )
 }

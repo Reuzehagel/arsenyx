@@ -31,8 +31,8 @@ import {
 } from "./drag-controller"
 import { ModCard } from "./mod-card"
 import { PolarityIcon, PolarityPicker } from "./polarity"
+import { useRankHover } from "./rank-hover"
 import type { SlotId } from "./use-build-slots"
-import { useRankHotkey } from "./use-rank-hotkey"
 
 export type ModSlotKind = "normal" | "aura" | "exilus" | "stance"
 
@@ -96,8 +96,8 @@ export function ModSlot({
   hideDrain = false,
 }: ModSlotProps) {
   const effective = effectivePolarity(slotPolarity, formaPolarity)
-  const [hovered, setHovered] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const rankHover = useRankHover()
   // Drag-and-drop subscriptions. `useIsDropTarget` / `useIsDragSourceSlot`
   // only flip when *this* slot is the over/source slot, so each slot
   // re-renders at most twice per drag (becoming over, leaving over).
@@ -136,13 +136,11 @@ export function ModSlot({
   // on the previously-clicked slot without a separate close effect.
   const popoverOpen = pickerOpen && !!selected
 
-  // Enable on `selected` too, not just `hovered`: the picker popover steals
-  // hover when the user mouses onto it, and a clicked-but-not-hovered slot
-  // should still respond to -/+ for ranking down/up.
-  useRankHotkey({
-    enabled: !readOnly && !!mod && (hovered || !!selected) && !!onRankChange,
-    onDelta: (d) => onRankChange?.(d),
-  })
+  // Rank hotkeys are owned by a single listener in editor-shell (hovered ??
+  // selected). This slot only advertises itself as the hovered target while
+  // the pointer is over it; the owner resolves which one `-`/`+` acts on, so a
+  // selected slot and a separately hovered slot can't both rank at once.
+  const canRank = !readOnly && !!mod && !!slotId && !!onRankChange
 
   const handleContextMenu = (e: MouseEvent) => {
     if (readOnly) return
@@ -173,14 +171,18 @@ export function ModSlot({
           // native drag-and-drop on by default; suppress it so our
           // pointer-based drag controller owns the gesture.
           onDragStart={(e) => e.preventDefault()}
-          // Suppress hover state during any active drag — keeps the
-          // rank-hotkey enabled flag from flipping (and re-rendering this
-          // slot) as the drag ghost sweeps across slots.
+          // Register as the rank-hotkey target on hover. Suppressed during any
+          // active drag so the ghost sweeping across slots doesn't reassign the
+          // target. No-op when `rankHover` is absent (read-only viewer / embed).
           onMouseEnter={
-            readOnly || isAnyDragging ? undefined : () => setHovered(true)
+            canRank && rankHover && !isAnyDragging
+              ? () => rankHover.set({ kind: "mod", id: slotId! })
+              : undefined
           }
           onMouseLeave={
-            readOnly || isAnyDragging ? undefined : () => setHovered(false)
+            canRank && rankHover && !isAnyDragging
+              ? () => rankHover.clear({ kind: "mod", id: slotId! })
+              : undefined
           }
           className={cn(
             // Fixed 184×100 to match the underlying ModCard (mod-card-config.ts

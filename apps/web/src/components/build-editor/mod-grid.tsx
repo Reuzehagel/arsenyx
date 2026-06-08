@@ -38,6 +38,7 @@ export function ArcaneRow({
         <ArcaneSlot
           key={i}
           options={slotOptions}
+          slotIndex={i}
           label={labels?.[i]}
           placed={arcanes.placed[i]}
           usedNames={arcanes.usedNames}
