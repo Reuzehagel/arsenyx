@@ -116,6 +116,7 @@ import {
 import { useEditorHistory } from "./use-editor-history"
 import { useGuideState } from "./use-guide-state"
 import { useSlotKeyboardNav } from "./use-keyboard-nav"
+import { usePublishSettings } from "./use-publish-settings"
 import { useRankHotkey } from "./use-rank-hotkey"
 
 // ─── In-memory editor cache ─────────────────────────────────────────────────
@@ -548,20 +549,15 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   // localDraft is intentionally null) and kept in sync by the autosave effect.
   const [hasDraft, setHasDraft] = useState(() => storedDraft !== null)
 
-  const [visibility, setVisibility] = useState<PublishVisibility>(
-    () => existingBuild?.visibility ?? "PUBLIC",
-  )
-  const [organizationId, setOrganizationId] = useState<string | null>(
-    () => existingBuild?.organization?.id ?? null,
-  )
-  const [hideAuthor, setHideAuthor] = useState<boolean>(
-    () => existingBuild?.hideAuthor ?? false,
-  )
-  const [publishDialogOpen, setPublishDialogOpen] = useState(false)
+  const publish = usePublishSettings({
+    visibility: existingBuild?.visibility ?? "PUBLIC",
+    organizationId: existingBuild?.organization?.id ?? null,
+    hideAuthor: existingBuild?.hideAuthor ?? false,
+  })
 
   const { data: myOrgs } = useQuery({
     ...myOrgsQuery(),
-    enabled: !!session?.user && publishDialogOpen,
+    enabled: !!session?.user && publish.dialogOpen,
   })
   const organizations = myOrgs?.memberships.map((m) => m.organization) ?? []
 
@@ -1047,10 +1043,14 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       return
     }
     if (!isUpdate) {
-      setPublishDialogOpen(true)
+      publish.setDialogOpen(true)
       return
     }
-    void performSave(visibility, organizationId, hideAuthor)
+    void performSave(
+      publish.visibility,
+      publish.organizationId,
+      publish.hideAuthor,
+    )
   }
 
   // Ctrl/Cmd+S saves from anywhere in the editor, including while a text
@@ -1067,7 +1067,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       navigate({ to: "/auth/signin" })
       return
     }
-    setPublishDialogOpen(false)
+    publish.setDialogOpen(false)
     setSaveStatus("saving")
     try {
       const body = {
@@ -1427,7 +1427,10 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
         }
         settings={
           isUpdate
-            ? { visibility, onEdit: () => setPublishDialogOpen(true) }
+            ? {
+                visibility: publish.visibility,
+                onEdit: () => publish.setDialogOpen(true),
+              }
             : undefined
         }
         onShare={handleShare}
@@ -1545,11 +1548,11 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       </DragController>
 
       <PublishDialog
-        open={publishDialogOpen}
-        onOpenChange={setPublishDialogOpen}
-        initialVisibility={visibility}
-        initialOrganizationId={organizationId}
-        initialHideAuthor={hideAuthor}
+        open={publish.dialogOpen}
+        onOpenChange={publish.setDialogOpen}
+        initialVisibility={publish.visibility}
+        initialOrganizationId={publish.organizationId}
+        initialHideAuthor={publish.hideAuthor}
         owner={{
           name: session?.user?.name ?? "You",
           username:
@@ -1564,10 +1567,12 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
           organizationId: nextOrgId,
           hideAuthor: nextHideAuthor,
         }) => {
-          setVisibility(next)
-          setOrganizationId(nextOrgId)
-          setHideAuthor(nextHideAuthor)
-          setPublishDialogOpen(false)
+          publish.apply({
+            visibility: next,
+            organizationId: nextOrgId,
+            hideAuthor: nextHideAuthor,
+          })
+          publish.setDialogOpen(false)
           if (!isUpdate) void performSave(next, nextOrgId, nextHideAuthor)
         }}
       />
