@@ -4,7 +4,6 @@ import {
   encodeBuildDoc,
 } from "@arsenyx/shared/warframe/build-codec"
 import {
-  MAX_VARIANTS,
   projectVariant,
   type BuildDoc,
 } from "@arsenyx/shared/warframe/build-doc"
@@ -113,6 +112,7 @@ import { useGuideState } from "./use-guide-state"
 import { useSlotKeyboardNav } from "./use-keyboard-nav"
 import { usePublishSettings } from "./use-publish-settings"
 import { useRankHotkey } from "./use-rank-hotkey"
+import { useVariantActions } from "./use-variant-actions"
 
 // ─── In-memory editor cache ─────────────────────────────────────────────────
 //
@@ -1203,101 +1203,16 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const newVariantId = () =>
-    `v${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`
-
-  const switchVariant = (i: number) => {
-    if (i === clampedActiveIndex) return
-    const snapshot = captureActiveSnapshot()
-    const next = variants.map((v, idx) =>
-      idx === clampedActiveIndex ? snapshot : v,
-    )
-    setVariants(next)
-    navigate({
-      to: ".",
-      // When `share` is in the URL, `v: undefined` lets validateSearch's
-      // `activeVariantFromShare` fallback re-derive v from the share's
-      // encoded activeIndex — which silently overrides the user's click
-      // back to variant 0. Emit explicit `v: 0` in that case so the user's
-      // choice wins. Clean `v: undefined` when share is absent.
-      search: (s) => ({ ...s, v: i === 0 && !s.share ? undefined : i }),
-      replace: true,
-    })
-  }
-
-  const addVariant = () => {
-    if (variants.length >= MAX_VARIANTS) return
-    const snapshot = captureActiveSnapshot()
-    const seeded = variants.map((v, idx) =>
-      idx === clampedActiveIndex ? snapshot : v,
-    )
-    const blank: SavedVariant = {
-      id: newVariantId(),
-      label: `Variant ${seeded.length + 1}`,
-      slots: {},
-      arcanes: [],
-    }
-    const next = [...seeded, blank]
-    setVariants(next)
-    navigate({
-      to: ".",
-      search: (s) => ({ ...s, v: next.length - 1 }),
-      replace: true,
-    })
-    bumpVariantEpoch()
-  }
-
-  const duplicateActive = () => {
-    if (variants.length >= MAX_VARIANTS) return
-    const snapshot = captureActiveSnapshot()
-    const dup: SavedVariant = {
-      ...snapshot,
-      id: newVariantId(),
-      label: `${snapshot.label} (copy)`,
-    }
-    const seeded = variants.map((v, idx) =>
-      idx === clampedActiveIndex ? snapshot : v,
-    )
-    const insertAt = clampedActiveIndex + 1
-    const next = [...seeded.slice(0, insertAt), dup, ...seeded.slice(insertAt)]
-    setVariants(next)
-    navigate({
-      to: ".",
-      search: (s) => ({ ...s, v: insertAt === 0 ? undefined : insertAt }),
-      replace: true,
-    })
-    bumpVariantEpoch()
-  }
-
-  const deleteActive = () => {
-    if (variants.length <= 1) return
-    const next = variants.filter((_, i) => i !== clampedActiveIndex)
-    setVariants(next)
-    const newIdx = Math.min(clampedActiveIndex, next.length - 1)
-    navigate({
-      to: ".",
-      // Same share-aware fallback as switchVariant.
-      search: (s) => ({
-        ...s,
-        v: newIdx === 0 && !s.share ? undefined : newIdx,
-      }),
-      replace: true,
-    })
-    // Deleting a non-last active variant keeps `?v` unchanged (the next
-    // variant slides into this index), so the navigate alone won't remount.
-    // Bump the epoch to force the re-hydration regardless.
-    bumpVariantEpoch()
-  }
-
-  const renameActive = (label: string) => {
-    const trimmed =
-      label.trim().slice(0, 24) || `Variant ${clampedActiveIndex + 1}`
-    setVariants((prev) =>
-      prev.map((v, i) =>
-        i === clampedActiveIndex ? { ...v, label: trimmed } : v,
-      ),
-    )
-  }
+  // Variant CRUD handlers. The variants state + module cache + epoch stay here
+  // (composition root); this just sequences snapshot → mutate → navigate.
+  const variantActions = useVariantActions({
+    variants,
+    setVariants,
+    clampedActiveIndex,
+    captureActiveSnapshot,
+    navigate,
+    bumpVariantEpoch,
+  })
 
   return (
     <RankHoverProvider value={rankHover}>
@@ -1397,11 +1312,11 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
               <EditorVariantBar
                 variants={variants}
                 activeIndex={clampedActiveIndex}
-                onSwitch={switchVariant}
-                onAdd={addVariant}
-                onDuplicate={duplicateActive}
-                onDelete={deleteActive}
-                onRename={renameActive}
+                onSwitch={variantActions.switchVariant}
+                onAdd={variantActions.addVariant}
+                onDuplicate={variantActions.duplicateActive}
+                onDelete={variantActions.deleteActive}
+                onRename={variantActions.renameActive}
               />
             }
             onEditRiven={riven.openForEdit}
