@@ -1,6 +1,7 @@
 import type { Polarity } from "@arsenyx/shared/warframe/types"
 
 import {
+  baseDrainForMod,
   calculateCapacity,
   calculateFormaCount,
   effectivePolarity,
@@ -128,7 +129,10 @@ function gatherSlotSpecs(input: MultiVariantInput): SlotSpec[] {
         if (!slotPolarities.has(id)) slotPolarities.set(id, new Set())
         slotPolarities.get(id)!.add(p)
       }
-      const drain = Math.abs(mod.mod.baseDrain) + mod.rank
+      // Canonical drain (baseDrainForMod) so a riven — whose baseDrain is
+      // already its max-rank value — isn't double-counted by adding rank again.
+      // abs keeps this a magnitude for the heaviest-slot ordering below.
+      const drain = Math.abs(baseDrainForMod(mod.mod, mod.rank))
       const prev = slotWeights.get(id) ?? 0
       if (drain > prev) slotWeights.set(id, drain)
     }
@@ -454,7 +458,7 @@ function arrangeNormalsGreedy(
     indicesByPol.get(p)!.push(i)
   }
   const drainOf = (i: number): number =>
-    Math.abs(mods[i].mod.baseDrain) + mods[i].rank
+    Math.abs(baseDrainForMod(mods[i].mod, mods[i].rank))
   const takeHeaviest = (candidates: number[]): number | null => {
     let bestIdx = -1
     let bestD = -1
