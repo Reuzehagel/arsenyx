@@ -1,6 +1,12 @@
 import type { Arcane } from "@arsenyx/shared/warframe/types"
 import { Plus, Search, X } from "lucide-react"
-import { type MouseEvent, useDeferredValue, useMemo, useState } from "react"
+import {
+  type MouseEvent,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+} from "react"
 
 import {
   InputGroup,
@@ -60,6 +66,16 @@ export function ArcaneCard({
   // advertises itself as the hovered target. Arcanes rank on hover only (never
   // on selection), matching the prior behavior. No-op without a provider.
   const canRank = !disableHover && !!onRankChange && slotIndex != null
+
+  // When the picker opens, `disableHover` flips true and both mouse handlers
+  // below go undefined — so a stale hover registration could otherwise linger
+  // and let `-`/`+` rank this arcane behind the open picker. Clear it
+  // explicitly. `clear` is a no-op unless this card is still the active target.
+  useEffect(() => {
+    if (disableHover && rankHover && slotIndex != null) {
+      rankHover.clear({ kind: "arcane", index: slotIndex })
+    }
+  }, [disableHover, rankHover, slotIndex])
 
   const stats = statsAt(arcane, currentRank)
   const formattedStats = stats.join("\n")
