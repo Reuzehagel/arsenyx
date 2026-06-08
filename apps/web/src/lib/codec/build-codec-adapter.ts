@@ -1,3 +1,29 @@
+/**
+ * Adapters between the three build representations. They are deliberately
+ * distinct — each is shaped for its job — so this is the map of which converter
+ * bridges which pair, not redundancy to collapse:
+ *
+ *   - BuildDoc / BuildVariant (@arsenyx/shared/warframe/build-doc) — the compact
+ *     share-link wire format (v1/v2 base64). Optimized for URL size.
+ *   - SavedBuildData / SavedVariant (@/lib/queries/build-query) — the DB JSON
+ *     column + editor state. Flat Record<SlotId,…> for keyed editor lookups;
+ *     keeps top-level fields mirroring the active variant for legacy clients.
+ *   - BuildState (@arsenyx/shared/warframe/types) — the in-memory lingua franca
+ *     the stat / capacity / forma engines and the codec all speak.
+ *
+ * Conversion graph (→ = function that crosses the boundary):
+ *
+ *   share link ─decodeBuildDoc→ BuildDoc ─projectVariant→ BuildState
+ *                                  ─buildStateToSavedData→ SavedBuildData → editor
+ *   DB JSON ─normalizeBuildData→ SavedBuildData ─savedDataToBuildState→ BuildState
+ *   editor ─captureBuildData→ SavedBuildData ─stripPersistedImages→ DB JSON
+ *   BuildState ─encodeBuild / buildStateToBuildDoc+encodeBuildDoc→ share link
+ *
+ * Within SavedBuildData, getVariants / selectVariant move between the top-level
+ * mirror and a chosen variant; per-variant data is threaded through the single
+ * pickPerVariantData choke point below. The codec itself (build-codec.ts) shares
+ * one slot/meta primitive set across v1 and v2, so the wire formats can't drift.
+ */
 import { RIVEN_IMAGE_NAME } from "@arsenyx/shared/warframe/rivens"
 import type {
   Arcane,
