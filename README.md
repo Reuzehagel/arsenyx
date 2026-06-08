@@ -14,7 +14,6 @@ Live at **[www.arsenyx.com](https://www.arsenyx.com)**.
 - **Social layer** — vote, favorite, fork, and follow other players' builds
 - **Overframe import** — paste an Overframe URL and get a first-class Arsenyx build
 - **Shareable by link** — every build encodes to a short URL, no account needed to view
-- **Bearer-token API** — publish builds from scripts, bots, or external tools — see [arsenyx.com/docs/api](https://www.arsenyx.com/docs/api)
 
 ## Stack
 

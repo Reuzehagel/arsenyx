@@ -33,10 +33,10 @@ export function isValidOverframeBuildUrl(value: string): boolean {
 }
 
 // Fetch wall-time / response-size / redirect caps. Without these a logged-in
-// user (or a banned holder of an old PAT) could point this scrape at a page
-// that streams forever, redirects to a private host, or returns gigabytes of
-// HTML. `safeFetch` enforces the timeout + per-hop allowlist; the byte cap is
-// re-applied while streaming the body below.
+// user could point this scrape at a page that streams forever, redirects to a
+// private host, or returns gigabytes of HTML. `safeFetch` enforces the timeout
+// + per-hop allowlist; the byte cap is re-applied while streaming the body
+// below.
 const FETCH_TIMEOUT_MS = 8000
 const MAX_HTML_BYTES = 1024 * 1024 // 1 MB — Next.js pages are large but bounded.
 const MAX_REDIRECTS = 5

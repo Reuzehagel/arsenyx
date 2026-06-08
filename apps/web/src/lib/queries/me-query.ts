@@ -1,6 +1,3 @@
-import { queryOptions } from "@tanstack/react-query"
-
-import { apiErrorMessage, apiFetch, loaderError } from "@/lib/util/api-client"
 import { API_URL } from "@/lib/util/constants"
 
 export async function downloadMyBuildsExport(): Promise<void> {
@@ -20,63 +17,4 @@ export async function downloadMyBuildsExport(): Promise<void> {
   a.click()
   a.remove()
   URL.revokeObjectURL(url)
-}
-
-export type ApiKeySummary = {
-  id: string
-  name: string
-  keyPrefix: string
-  scopes: string[]
-  rateLimit: number
-  isActive: boolean
-  createdAt: string
-  expiresAt: string | null
-  lastUsedAt: string | null
-}
-
-export type MyApiKeysResponse = {
-  apiKeys: ApiKeySummary[]
-}
-
-export type CreateApiKeyResponse = {
-  token: string
-  apiKey: ApiKeySummary
-}
-
-export const myApiKeysQuery = () =>
-  queryOptions({
-    queryKey: ["me", "api-keys"],
-    queryFn: async (): Promise<MyApiKeysResponse> => {
-      try {
-        return await apiFetch<MyApiKeysResponse>(`/me/api-keys`)
-      } catch (err) {
-        throw loaderError(err, "failed to load API keys", "unauthorized")
-      }
-    },
-    retry: false,
-  })
-
-export async function createApiKey(input: {
-  name: string
-  expiresAt: string | null
-  scopes?: string[]
-}): Promise<CreateApiKeyResponse> {
-  try {
-    return await apiFetch<CreateApiKeyResponse>(`/me/api-keys`, {
-      method: "POST",
-      json: input,
-    })
-  } catch (err) {
-    throw new Error(apiErrorMessage(err, "Request failed"), { cause: err })
-  }
-}
-
-export async function revokeApiKey(id: string): Promise<void> {
-  try {
-    await apiFetch<void>(`/me/api-keys/${encodeURIComponent(id)}`, {
-      method: "DELETE",
-    })
-  } catch (err) {
-    throw new Error(apiErrorMessage(err, "Request failed"), { cause: err })
-  }
 }

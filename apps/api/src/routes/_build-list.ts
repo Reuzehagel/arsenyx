@@ -72,10 +72,9 @@ export type ViewerState = {
   hasBookmarked: boolean
 }
 
-// Single source of truth for the build-detail JSON shape, used by both the
-// session-cookie route (`GET /builds/:slug`) and the public PAT route
-// (`GET /api/v1/builds/:slug`). Pass `viewer` for the session route; omit
-// for the public API which doesn't have viewer-specific fields.
+// Single source of truth for the build-detail JSON shape, used by the
+// `GET /builds/:slug` route. Pass `viewer` for viewer-specific fields
+// (like/bookmark state); omit for anonymous/cacheable responses.
 export function serializeBuildDetail(b: DetailRow, viewer: ViewerState | null) {
   const base = {
     id: b.id,

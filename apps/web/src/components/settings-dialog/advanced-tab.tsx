@@ -99,9 +99,8 @@ export function AdvancedPanel() {
       <Field>
         <FieldLabel className="text-destructive">Delete account</FieldLabel>
         <FieldDescription>
-          Permanently deletes your account, all sessions, your API keys, your
-          builds, guides, votes, bookmarks, and organization memberships. This
-          cannot be undone.
+          Permanently deletes your account, all sessions, your builds, guides,
+          votes, bookmarks, and organization memberships. This cannot be undone.
         </FieldDescription>
         <div className="pt-1">
           <Button
@@ -160,8 +159,8 @@ function DeleteAccountDialog({
       <DialogContent className="md:max-w-md">
         <DialogTitle>Delete account</DialogTitle>
         <DialogDescription>
-          This permanently deletes your account, API keys, builds, guides,
-          votes, bookmarks, and organization memberships. Type{" "}
+          This permanently deletes your account, builds, guides, votes,
+          bookmarks, and organization memberships. Type{" "}
           <code className="font-mono">{expected}</code> to confirm.
         </DialogDescription>
         <div className="flex flex-col gap-3 pt-2">

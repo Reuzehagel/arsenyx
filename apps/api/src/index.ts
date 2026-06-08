@@ -14,7 +14,6 @@ import { imports } from "./routes/imports"
 import { me } from "./routes/me"
 import { orgs } from "./routes/orgs"
 import { users } from "./routes/users"
-import { v1 } from "./routes/v1"
 
 const app = new Hono()
 
@@ -52,7 +51,7 @@ app.onError((err, c) => {
 app.all("/auth/*", (c) => auth.handler(c.req.raw))
 
 // Origin/ban guards on session-cookie routes only — Better Auth handles its
-// own CSRF on /auth/*, and /api/v1 is the PAT-authed surface.
+// own CSRF on /auth/*.
 app.use("/builds/*", originGuard, banGuard)
 app.use("/imports/*", originGuard, banGuard)
 app.use("/me/*", originGuard, banGuard)
@@ -76,7 +75,6 @@ app.route("/imports", imports)
 app.route("/me", me)
 app.route("/orgs", orgs)
 app.route("/users", users)
-app.route("/api/v1", v1)
 
 app.get("/health", (c) => c.json({ ok: true }))
 

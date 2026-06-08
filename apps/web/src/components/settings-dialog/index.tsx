@@ -1,6 +1,5 @@
 import {
   Building2,
-  KeyRound,
   Lock,
   Paintbrush,
   Settings as SettingsIcon,
@@ -42,7 +41,6 @@ import {
 } from "@/components/ui/sidebar"
 
 import { AdvancedPanel } from "./advanced-tab"
-import { ApiKeysPanel } from "./api-keys-tab"
 import { AppearancePanel } from "./appearance-tab"
 import { OrganizationsPanel } from "./organizations-tab"
 import { PrivacyPanel } from "./privacy-tab"
@@ -53,7 +51,6 @@ type SectionId =
   | "profile"
   | "organizations"
   | "privacy"
-  | "api-keys"
   | "advanced"
 
 type Section = {
@@ -67,7 +64,6 @@ const SECTIONS: Section[] = [
   { id: "profile", name: "Profile", icon: User },
   { id: "organizations", name: "Organizations", icon: Building2 },
   { id: "privacy", name: "Privacy", icon: Lock },
-  { id: "api-keys", name: "API keys", icon: KeyRound },
   { id: "advanced", name: "Advanced", icon: SettingsIcon },
 ]
 
@@ -180,8 +176,6 @@ function SectionPanel({ id, onClose }: { id: SectionId; onClose: () => void }) {
       return <OrganizationsPanel onClose={onClose} />
     case "privacy":
       return <PrivacyPanel />
-    case "api-keys":
-      return <ApiKeysPanel />
     case "advanced":
       return <AdvancedPanel />
   }

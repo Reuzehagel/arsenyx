@@ -53,9 +53,8 @@ function PrivacyPage() {
                 API.
               </li>
               <li>
-                Whatever you create: builds, guides, votes, bookmarks,
-                organizations, and any API keys you generate. API keys are
-                stored as one-way hashes — we can&apos;t read them back.
+                Whatever you create: builds, guides, votes, bookmarks, and
+                organizations.
               </li>
             </ul>
             <p>

@@ -18,7 +18,6 @@ export const Route = createFileRoute("/docs")({
 const MOVED_HASHES: Record<string, string> = {
   "#public-api": "#public-read-api",
   "#public-read-api": "#public-read-api",
-  "#authenticated-write-api": "#authenticated-write-api",
   "#game-data": "#game-data",
 }
 
@@ -131,20 +130,6 @@ function DocsPage() {
             Votes signal which builds the community finds useful and feed into
             sort order on the browse listings. Bookmarks are private — only you
             see your own list, at <Link href="/bookmarks">/bookmarks</Link>.
-          </p>
-
-          <h2>API keys</h2>
-          <p>
-            For publishing builds from a script or bot, Arsenyx supports
-            bearer-token authentication. Open the user menu →{" "}
-            <strong>Settings</strong> → <strong>API keys</strong>, create one
-            with the <code>build:write</code> scope, and send it as an{" "}
-            <code>Authorization: Bearer</code> header. Keys are revocable from
-            the same page; revoking takes effect immediately.
-          </p>
-          <p>
-            Endpoint shapes and example payloads live in the{" "}
-            <Link href="/docs/api">API reference</Link>.
           </p>
 
           <h2>Open source</h2>

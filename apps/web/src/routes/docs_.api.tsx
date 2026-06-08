@@ -19,56 +19,6 @@ type Endpoint = {
   example: string
 }
 
-const WRITE_ENDPOINTS: Endpoint[] = [
-  {
-    method: "POST",
-    path: "/api/v1/builds",
-    summary:
-      "Create a build. Body specifies item, slots, arcanes, shards, and optional guide. Server resolves canonical refs and recomputes derived fields.",
-    example: `{
-  "name": "Rhino Tank",
-  "visibility": "PUBLIC",
-  "itemUniqueName": "/Lotus/Powersuits/Rhino/Rhino",
-  "itemCategory": "warframes",
-  "guide": { "summary": "...", "description": "..." },
-  "build": {
-    "hasReactor": true,
-    "slots": [
-      {
-        "slotId": "aura-0",
-        "mod": {
-          "uniqueName": "/Lotus/Upgrades/Mods/Aura/SteelCharge",
-          "rank": 5
-        }
-      }
-    ],
-    "arcanes": [],
-    "shards": [],
-    "helminthAbility": null
-  }
-}`,
-  },
-  {
-    method: "PUT",
-    path: "/api/v1/builds/:slug",
-    summary: "Update a build you own. Same payload shape as create.",
-    example: `{ "name": "...", "build": { ... } }`,
-  },
-  {
-    method: "POST",
-    path: "/api/v1/imports/overframe",
-    summary:
-      "Import an Overframe build by URL. If nameOverride / description / guide are omitted, Arsenyx preserves the Overframe metadata. Explicit null clears nullable fields.",
-    example: `{
-  "url": "https://overframe.gg/build/935570/",
-  "visibility": "PUBLIC",
-  "nameOverride": null,
-  "description": null,
-  "guide": null
-}`,
-  },
-]
-
 const PUBLIC_ENDPOINTS: Endpoint[] = [
   {
     method: "GET",
@@ -170,16 +120,15 @@ function DocsApiPage() {
           </div>
           <h1>API reference</h1>
           <p className="lead">
-            HTTP endpoints for reading public data and publishing builds from a
-            script. For concepts (orgs, visibility, API keys), see the{" "}
+            HTTP endpoints for reading public data. For concepts (orgs,
+            visibility), see the{" "}
             <Link href="/docs">documentation overview</Link>.
           </p>
 
           <h2 id="public-read-api">Public read API</h2>
           <p>
-            Base URL: <code>{EXTERNAL_LINKS.apiBase}</code>. Authentication is
-            cookie-based (Better Auth). The endpoints below are public and
-            read-only — no credentials required.
+            Base URL: <code>{EXTERNAL_LINKS.apiBase}</code>. The endpoints below
+            are public and read-only — no credentials required.
           </p>
           <ul className="not-prose flex list-none flex-col gap-4 pl-0">
             {PUBLIC_ENDPOINTS.map((ep) => (
@@ -191,59 +140,13 @@ function DocsApiPage() {
             in beta — pin to the commit you tested against.
           </p>
 
-          <h2 id="authenticated-write-api">Authenticated write API</h2>
-          <p>
-            Arsenyx supports bearer-token build publishing, so you can push
-            builds from a script or bot instead of clicking through the editor.
-            Sign in, open the user menu, head to <strong>Settings</strong> →{" "}
-            <strong>API keys</strong>, create one with the{" "}
-            <code>build:write</code> scope, and send it as{" "}
-            <code>Authorization: Bearer &lt;key&gt;</code>.
-          </p>
-          <ul className="not-prose flex list-none flex-col gap-4 pl-0">
-            {WRITE_ENDPOINTS.map((ep) => (
-              <EndpointCard key={`${ep.method} ${ep.path}`} ep={ep} />
-            ))}
-          </ul>
-          <p className="text-sm opacity-75">
-            The server resolves canonical item / mod / arcane / shard data,
-            recomputes derived capacity and forma fields, and rejects invalid
-            writes with structured <code>4xx</code> JSON errors.
-          </p>
-
           <h2 id="rate-limits">Rate limits</h2>
           <p>
             Requests are rate-limited per minute. Exceeding the limit returns{" "}
             <code>429</code> with body{" "}
-            <code>{`{ "error": "rate_limited" }`}</code>. API keys and cookie
-            sessions are throttled differently.
+            <code>{`{ "error": "rate_limited" }`}</code> and a{" "}
+            <code>Retry-After</code> header.
           </p>
-          <h3>API keys (bearer-token)</h3>
-          <p>
-            Each API key has a single per-key cap of{" "}
-            <strong>60 requests per minute</strong> by default, shared across
-            every endpoint. The cap is configurable per key — if a legitimate
-            workflow needs more, open an issue. Every response on the
-            authenticated path includes:
-          </p>
-          <ul>
-            <li>
-              <code>X-RateLimit-Limit</code> — the per-key cap currently in
-              effect.
-            </li>
-            <li>
-              <code>X-RateLimit-Remaining</code> — requests left in the current
-              minute window.
-            </li>
-            <li>
-              <code>X-RateLimit-Reset</code> — seconds until the window resets.
-            </li>
-            <li>
-              <code>Retry-After</code> — set on <code>429</code> responses;
-              seconds to wait before retrying.
-            </li>
-          </ul>
-          <h3>Cookie sessions (web app)</h3>
           <p>
             Traffic from the web app is bucketed by operation type, each bucket
             with its own per-user per-minute cap:

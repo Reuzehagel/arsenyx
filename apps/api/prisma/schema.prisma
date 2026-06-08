@@ -39,7 +39,6 @@ model User {
   builds                  Build[]
   likes                   BuildLike[]
   bookmarks               BuildBookmark[]
-  apiKeys                 ApiKey[]
   organizationMemberships OrganizationMember[]
   rateLimitWindows        UserRateLimitWindow[]
 
@@ -305,53 +304,11 @@ model BuildBookmark {
   @@map("build_bookmarks")
 }
 
-// =============================================================================
-// USER API KEYS
-// =============================================================================
-
-model ApiKey {
-  id String @id @default(cuid())
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  name      String
-  key       String @unique
-  keyPrefix String
-
-  scopes String[]
-
-  rateLimit Int @default(60)
-
-  isActive   Boolean   @default(true)
-  lastUsedAt DateTime?
-
-  createdAt DateTime  @default(now())
-  expiresAt DateTime?
-
-  rateLimitWindows ApiKeyRateLimitWindow[]
-
-  @@index([userId])
-  @@map("api_keys")
-}
-
-model ApiKeyRateLimitWindow {
-  apiKeyId String
-  apiKey   ApiKey   @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
-
-  windowStart  DateTime
-  requestCount Int      @default(0)
-
-  @@id([apiKeyId, windowStart])
-  @@index([windowStart])
-  @@map("api_key_rate_limit_windows")
-}
 
 // Per-user rate-limit windows for cookie-session mutations. Bucketed by action
 // kind ("mutate", "social", "import") so different tiers share one table.
-// Pruned opportunistically by the limiter middleware (see api-key-auth.ts
-// pattern). Same best-effort, racy semantics — fine for abuse throttling, not
-// for hard quotas.
+// Pruned opportunistically by the limiter middleware (see rate-limit.ts).
+// Best-effort, racy semantics — fine for abuse throttling, not for hard quotas.
 model UserRateLimitWindow {
   userId      String
   bucket      String

@@ -36,10 +36,9 @@ export type RateLimitOptions = {
   includeSafeMethods?: boolean
 }
 
-// Best-effort rate limiter for session-cookie routes. Same semantics as the
-// PAT limiter in api-key-auth.ts: the upsert is racy across Workers isolates
-// so short bursts can exceed the cap before any isolate observes it. Fine for
-// abuse throttling.
+// Best-effort rate limiter for session-cookie routes: the upsert is racy
+// across Workers isolates so short bursts can exceed the cap before any isolate
+// observes it. Fine for abuse throttling.
 export function rateLimitUser(
   bucket: RateLimitBucket,
   opts: RateLimitOptions = {},

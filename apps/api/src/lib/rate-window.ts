@@ -1,6 +1,5 @@
-// Shared helpers for the DB-backed per-minute rate limiters (PAT auth +
-// cookie-session middleware). Kept in one place so the window math and prune
-// policy can't drift between the two limiters.
+// Shared helpers for the DB-backed per-minute rate limiter (cookie-session
+// middleware): window-start bucketing and the opportunistic prune policy.
 
 /** Fraction of requests that opportunistically prune expired windows. */
 export const PRUNE_PROBABILITY = 0.01
