@@ -58,6 +58,23 @@ export type SavedBuildData = {
   variants?: SavedVariant[]
 }
 
+/**
+ * The per-variant *data* fields — the ones that differ between variants and are
+ * mirrored on top-level `SavedBuildData` for legacy clients. Derived from
+ * `SavedVariant` by excluding identity (`id`/`label`), the structural loadout
+ * (`slots`/`arcanes`, always present with a default), and the separately-handled
+ * per-variant guide. Deriving by exclusion makes the set self-maintaining: a new
+ * `SavedVariant` field automatically becomes a per-variant data field, and
+ * `pickPerVariantData` (build-codec-adapter.ts) — the single point every
+ * converter threads these through — then fails to compile until it's handled, so
+ * no converter can silently drop it. (Adding a field that's genuinely *not*
+ * per-variant data just means listing it in the exclusion below.)
+ */
+export type PerVariantDataField = Exclude<
+  keyof SavedVariant,
+  "id" | "label" | "slots" | "arcanes" | "guideSummary" | "guideDescription"
+>
+
 /** Canonical wire shape lives in `@arsenyx/shared/api/build-dto`; re-exported
  *  under the historical name so existing consumers keep importing it here. */
 export type BuildDetail = BuildDetailResponse

@@ -50,6 +50,7 @@ import {
   getVariants,
   isSyntheticVariant,
   normalizeBuildData,
+  pickPerVariantData,
   savedDataToBuildState,
   selectVariant,
   stripPersistedImages,
@@ -259,10 +260,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
           label: v.label,
           slots: data.slots ?? {},
           arcanes: data.arcanes ?? [],
-          helminth: data.helminth,
-          incarnonEnabled: data.incarnonEnabled,
-          incarnonPerks: data.incarnonPerks,
-          deploymentContext: data.deploymentContext,
+          ...pickPerVariantData(data),
           guideSummary: v.guideSummary,
           guideDescription: v.guideDescription,
         }
@@ -1178,10 +1176,12 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       label: existing?.label ?? SYNTHETIC_VARIANT_LABEL,
       slots: slots.placed,
       arcanes: arcanes.placed,
-      helminth,
-      incarnonEnabled,
-      incarnonPerks,
-      deploymentContext,
+      ...pickPerVariantData({
+        helminth,
+        incarnonEnabled,
+        incarnonPerks,
+        deploymentContext,
+      }),
       // Per-variant guide fields are owned by `variants[i]` directly
       // (GuideEditor writes through setVariants). Preserve them on
       // snapshot so a save while editing build-wide doesn't wipe them.

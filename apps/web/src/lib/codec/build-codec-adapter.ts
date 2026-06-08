@@ -13,7 +13,11 @@ import type {
 } from "@arsenyx/shared/warframe/types"
 
 import type { PlacedArcane, PlacedMod, SlotId } from "@/components/build-editor"
-import type { SavedBuildData, SavedVariant } from "@/lib/queries/build-query"
+import type {
+  PerVariantDataField,
+  SavedBuildData,
+  SavedVariant,
+} from "@/lib/queries/build-query"
 import type { HelminthAbility } from "@/lib/queries/helminth-query"
 import type { PlacedShard } from "@/lib/shards"
 
@@ -444,6 +448,31 @@ export function isSyntheticVariant(v: SavedVariant): boolean {
 }
 
 /**
+ * The per-variant data slice, copied from any source that carries these fields
+ * (top-level `SavedBuildData`, a `SavedVariant`, or live editor state). The
+ * single choke point that every per-variant data emission routes through:
+ * getVariants (synthesize from top-level), selectVariant (project a variant
+ * back), and the editor's variant capture all call this, so they can't disagree
+ * on what "per-variant" means or forget a field.
+ *
+ * Written as an explicit object (not a spread or a loop) typed to
+ * `PerVariantDataField` on both sides — so adding a per-variant field to
+ * `SavedVariant` makes this fail to compile until it's listed here, and requires
+ * the matching top-level mirror on `SavedBuildData` (the param `Pick`). Fields
+ * absent on the source stay `undefined`, exactly as the prior inline code did.
+ */
+export function pickPerVariantData(
+  src: Pick<SavedBuildData, PerVariantDataField>,
+): Pick<SavedVariant, PerVariantDataField> {
+  return {
+    helminth: src.helminth,
+    incarnonEnabled: src.incarnonEnabled,
+    incarnonPerks: src.incarnonPerks,
+    deploymentContext: src.deploymentContext,
+  }
+}
+
+/**
  * Returns the variants array, or a single synthetic "Main" variant
  * synthesized from the top-level fields when the build has no
  * `variants`. Always returns at least one entry.
@@ -456,10 +485,7 @@ export function getVariants(data: SavedBuildData): SavedVariant[] {
       label: SYNTHETIC_VARIANT_LABEL,
       slots: data.slots ?? {},
       arcanes: data.arcanes ?? [],
-      helminth: data.helminth,
-      incarnonEnabled: data.incarnonEnabled,
-      incarnonPerks: data.incarnonPerks,
-      deploymentContext: data.deploymentContext,
+      ...pickPerVariantData(data),
     },
   ]
 }
@@ -491,10 +517,7 @@ export function selectVariant(
     ...data,
     slots: v.slots,
     arcanes: v.arcanes,
-    helminth: v.helminth,
-    incarnonEnabled: v.incarnonEnabled,
-    incarnonPerks: v.incarnonPerks,
-    deploymentContext: v.deploymentContext,
+    ...pickPerVariantData(v),
     // formaPolarities, shards, hasReactor, zaw, kitgun, lich, buildName are
     // shared across variants and stay as-is.
   }
