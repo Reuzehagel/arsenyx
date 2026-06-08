@@ -385,10 +385,10 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       ...savedDataAll,
       slots: active.slots,
       arcanes: active.arcanes,
-      helminth: active.helminth,
-      incarnonEnabled: active.incarnonEnabled,
-      incarnonPerks: active.incarnonPerks,
-      deploymentContext: active.deploymentContext,
+      // Route per-variant fields through the single choke point (same as
+      // getVariants/selectVariant) so a future field can't be silently dropped
+      // here — it copies from `active` with no fallback to savedDataAll's mirror.
+      ...pickPerVariantData(active),
     }
     // Read once at mount — EditorShell re-keys on switch, so reading
     // stale variants[] state during this mount is the desired behavior.
