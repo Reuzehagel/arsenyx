@@ -675,6 +675,13 @@ async function getBuildForSocial(slug: string) {
   })
 }
 
+// Can this viewer ACT on the build (like / bookmark / fork / link as partner)?
+// Deliberately NO admin bypass — and that asymmetry with the GET /:slug view
+// check (which does let admins through) is intentional, not an oversight: an
+// admin may VIEW any build to moderate it, but must not be able to like,
+// bookmark, or fork a PRIVATE build they don't own. Acting on a build is a
+// member-level capability gated by real visibility; only viewing is a
+// moderation power. Keep this admin-free.
 async function canViewerSeeBuild(
   build: {
     userId: string
@@ -851,7 +858,9 @@ builds.get("/:slug", edgeCache({ maxAge: 300 }), async (c) => {
       : false
   // Admins bypass visibility so they can moderate any build — without this, an
   // admin who sets someone else's build to PRIVATE immediately loses the right
-  // to view it back and the viewer 404s.
+  // to view it back and the viewer 404s. This is a VIEW-only power: the social
+  // paths (like/bookmark/fork) go through canViewerSeeBuild, which has no admin
+  // bypass on purpose, so an admin can read but not act on a private build.
   const isAdmin = session?.user.isAdmin === true
   const canView =
     build.visibility === "PUBLIC" ||
