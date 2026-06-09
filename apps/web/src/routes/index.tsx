@@ -10,6 +10,7 @@ import {
 import { Link } from "@/components/link"
 import { Kbd } from "@/components/ui/kbd"
 import { itemsIndexQuery } from "@/lib/queries/items-index-query"
+import { isMac } from "@/lib/util/platform"
 import { formatDotDate } from "@/lib/util/relative-time"
 import { getImageUrl, getItemUrl } from "@/lib/warframe"
 
@@ -128,7 +129,7 @@ function Home() {
               detail="The command palette searches frames, weapons, mods, arcanes, and builds. Arrows move between slots in the editor. The full list is one keystroke away."
               demo={
                 <div className="bg-background flex items-center gap-2 rounded-md border px-3 py-2 font-mono text-xs">
-                  <Kbd>Ctrl K</Kbd>
+                  <Kbd>{isMac ? "⌘ K" : "Ctrl K"}</Kbd>
                   <span className="text-foreground">command palette</span>
                   <span className="text-muted-foreground ml-auto inline-flex items-center gap-1">
                     <Kbd>?</Kbd>

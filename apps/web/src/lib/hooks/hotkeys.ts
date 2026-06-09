@@ -20,7 +20,11 @@ export type HotkeyScope =
 
 export type Hotkey = {
   scope: HotkeyScope
-  /** Each entry is one renderable Kbd. Multiple entries = alternatives. */
+  /**
+   * Each entry is one renderable Kbd; multiple entries = alternatives. The
+   * `mod` and `shift` tokens render the platform-correct symbol (⌘/⇧ on Apple,
+   * Ctrl/Shift elsewhere) — see KbdKey — so a chord needs only one entry.
+   */
   keys: readonly string[]
   description: string
 }
@@ -28,7 +32,7 @@ export type Hotkey = {
 export const HOTKEYS: readonly Hotkey[] = [
   {
     scope: "Global",
-    keys: ["Ctrl K", "⌘ K"],
+    keys: ["mod K"],
     description: "Open the command palette",
   },
   {
@@ -43,17 +47,17 @@ export const HOTKEYS: readonly Hotkey[] = [
   },
   {
     scope: "Build editor",
-    keys: ["Ctrl S", "⌘ S"],
+    keys: ["mod S"],
     description: "Save the build",
   },
   {
     scope: "Build editor",
-    keys: ["Ctrl Z", "⌘ Z"],
+    keys: ["mod Z"],
     description: "Undo the last change",
   },
   {
     scope: "Build editor",
-    keys: ["Ctrl Shift Z", "⌘ ⇧ Z"],
+    keys: ["mod shift Z"],
     description: "Redo",
   },
   {
@@ -98,17 +102,17 @@ export const HOTKEYS: readonly Hotkey[] = [
   },
   {
     scope: "Guide editor",
-    keys: ["Ctrl B", "⌘ B"],
+    keys: ["mod B"],
     description: "Wrap selection in **bold**",
   },
   {
     scope: "Guide editor",
-    keys: ["Ctrl I", "⌘ I"],
+    keys: ["mod I"],
     description: "Wrap selection in _italic_",
   },
   {
     scope: "Guide editor",
-    keys: ["Tab", "Shift Tab"],
+    keys: ["Tab", "shift Tab"],
     description: "Indent / dedent the current line",
   },
   {

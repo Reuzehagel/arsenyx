@@ -15,6 +15,7 @@ import {
 import { UserMenu } from "@/components/user-menu"
 import { useHotkey } from "@/lib/hooks/hotkeys"
 import { SITE_CONFIG, NAV_ITEMS, ROUTES } from "@/lib/util/constants"
+import { isMac } from "@/lib/util/platform"
 
 const CommandPalette = lazy(() =>
   import("@/components/command-palette").then((m) => ({
@@ -99,7 +100,7 @@ export function Header() {
           >
             <Search data-icon="inline-start" />
             <span>Search…</span>
-            <Kbd className="ml-2">Ctrl K</Kbd>
+            <Kbd className="ml-2">{isMac ? "⌘ K" : "Ctrl K"}</Kbd>
           </Button>
           <Button
             variant="ghost"
