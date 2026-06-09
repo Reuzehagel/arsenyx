@@ -14,6 +14,7 @@ import { type PublishVisibility } from "@/components/build-editor"
 import { EndoFormaBadges } from "@/components/endo-forma-badges"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { ButtonGroup } from "@/components/ui/button-group"
 import { Input } from "@/components/ui/input"
 import { Kbd } from "@/components/ui/kbd"
 import { formatVisibility } from "@/lib/util/user-display"
@@ -169,7 +170,7 @@ export function EditorHeader({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1">
+          <ButtonGroup>
             <Button
               variant="outline"
               size="icon-sm"
@@ -190,7 +191,7 @@ export function EditorHeader({
             >
               <Redo2 />
             </Button>
-          </div>
+          </ButtonGroup>
           {settings && (
             <Button
               variant="outline"

@@ -4,6 +4,7 @@ import { Pencil } from "lucide-react"
 import { EndoFormaBadges } from "@/components/endo-forma-badges"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { ButtonGroup } from "@/components/ui/button-group"
 import {
   Tooltip,
   TooltipContent,
@@ -137,8 +138,10 @@ export function ViewerHeader({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <SocialActions build={build} />
-          <ShareMenu slug={build.slug} />
+          <ButtonGroup>
+            <SocialActions build={build} />
+            <ShareMenu slug={build.slug} />
+          </ButtonGroup>
           {build.isOwner ? (
             <Button
               size="sm"

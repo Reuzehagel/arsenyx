@@ -1,11 +1,11 @@
 import { useTheme } from "@/components/theme-provider"
-import { Button } from "@/components/ui/button"
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 
 const THEMES = [
   { value: "light" as const, label: "Light" },
@@ -22,18 +22,24 @@ export function AppearancePanel() {
         <FieldDescription>
           Choose how Arsenyx looks. System follows your OS preference.
         </FieldDescription>
-        <div className="flex gap-2 pt-1">
+        <ToggleGroup
+          value={[theme]}
+          onValueChange={(value) => {
+            const next = value[0]
+            if (next === "light" || next === "dark" || next === "system")
+              setTheme(next)
+          }}
+          variant="outline"
+          size="sm"
+          spacing={0}
+          className="mt-1"
+        >
           {THEMES.map((t) => (
-            <Button
-              key={t.value}
-              variant={theme === t.value ? "default" : "outline"}
-              size="sm"
-              onClick={() => setTheme(t.value)}
-            >
+            <ToggleGroupItem key={t.value} value={t.value}>
               {t.label}
-            </Button>
+            </ToggleGroupItem>
           ))}
-        </div>
+        </ToggleGroup>
       </Field>
     </FieldGroup>
   )
