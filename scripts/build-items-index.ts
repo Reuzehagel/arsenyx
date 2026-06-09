@@ -276,6 +276,11 @@ async function main() {
   // detail items below.
   const pePlusWeaponTags = readPePlusWeaponTags()
   const wikiExilus = new Map<string, boolean>()
+  // Wiki `Tradable` flag, keyed by InternalName (= DE uniqueName). DE's
+  // ExportUpgrades carries no tradability, so this is the only source — it
+  // gates the "Warframe Market" link on the build-view mod detail popover.
+  // Mods missing from this map default to non-tradable (no Market link).
+  const wikiTradable = new Map<string, boolean>()
   // Wiki convention: `_IgnoreEntry = true` flags records the wiki maintainers
   // consider unreleased / non-functional (e.g. "Primed Streamline" — exists
   // in DE ExportUpgrades but isn't a real in-game mod). We honor it.
@@ -311,6 +316,9 @@ async function main() {
     }
     if (typeof record["IsExilus"] === "boolean") {
       wikiExilus.set(internalName, record["IsExilus"])
+    }
+    if (typeof record["Tradable"] === "boolean") {
+      wikiTradable.set(internalName, record["Tradable"])
     }
     if (record["_IgnoreEntry"] === true) {
       wikiIgnoreMods.add(internalName)
@@ -358,6 +366,7 @@ async function main() {
     wikiIgnoreMods,
     wikiKnownModNames,
     wikiConclaveMods,
+    wikiTradable,
   )
   let mergedMods = rawMergedMods.map((m) => ({
     ...m,
@@ -466,6 +475,22 @@ async function main() {
     "utf8",
   )
   console.log(`  OK  mods-all.json (${mergedMods.length} mods)`)
+
+  // Compact non-tradable list (uniqueNames only). The build viewer skips the
+  // ~1.35 MB mods-all.json download for new-format builds, so it loads this to
+  // gate the "Warframe Market" link on the mod detail popover (absent = tradable;
+  // mods are ~97% tradable, so listing the exceptions stays tiny). See
+  // mod-tradable-query.ts + mod-slot.tsx.
+  const nonTradable = mergedMods
+    .filter((m) => !m.tradable)
+    .map((m) => m.uniqueName)
+    .sort()
+  await writeFile(
+    resolve(OUT_DIR, "mod-tradable.json"),
+    JSON.stringify(nonTradable),
+    "utf8",
+  )
+  console.log(`  OK  mod-tradable.json (${nonTradable.length} non-tradable)`)
 
   await writeFile(
     resolve(OUT_DIR, "mod-conflicts.json"),

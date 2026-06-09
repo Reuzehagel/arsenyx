@@ -1,5 +1,6 @@
 import { isRivenMod } from "@arsenyx/shared/warframe/rivens"
 import type { Mod, Polarity } from "@arsenyx/shared/warframe/types"
+import { useQuery } from "@tanstack/react-query"
 import { Pencil, Plus, X, type LucideIcon } from "lucide-react"
 import {
   useEffect,
@@ -14,7 +15,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { modTradableQuery } from "@/lib/queries/mod-tradable-query"
 import { cn } from "@/lib/util/utils"
+import { marketUrl, wikiUrl } from "@/lib/util/warframe-links"
+import { getImageUrl } from "@/lib/warframe"
 
 import {
   auraBonusForMod,
@@ -29,6 +33,7 @@ import {
   useIsDropTarget,
   useStartDrag,
 } from "./drag-controller"
+import { BuildItemDetail } from "./item-detail"
 import { ModCard } from "./mod-card"
 import { PolarityIcon, PolarityPicker } from "./polarity"
 import { useRankHover } from "./rank-hover"
@@ -79,6 +84,13 @@ const KIND_LABEL: Record<ModSlotKind, string> = {
   stance: "Stance",
 }
 
+/** Stat lines for a mod at a given rank, clamped to the available range. */
+function modStatsAt(mod: Mod, rank: number): string[] {
+  const levels = mod.levelStats
+  if (!levels || levels.length === 0) return []
+  return levels[Math.min(rank, levels.length - 1)]?.stats ?? []
+}
+
 export function ModSlot({
   kind = "normal",
   slotId,
@@ -97,6 +109,9 @@ export function ModSlot({
 }: ModSlotProps) {
   const effective = effectivePolarity(slotPolarity, formaPolarity)
   const [pickerOpen, setPickerOpen] = useState(false)
+  // View-mode "how to get it" detail popover. Distinct from the edit-mode
+  // polarity picker (pickerOpen) so the two can't fight over the same state.
+  const [detailOpen, setDetailOpen] = useState(false)
   const rankHover = useRankHover()
   // Drag-and-drop subscriptions. `useIsDropTarget` / `useIsDragSourceSlot`
   // only flip when *this* slot is the over/source slot, so each slot
@@ -153,9 +168,33 @@ export function ModSlot({
   // Absent when slotId is missing so non-grid uses don't get a stray attr.
   const dropAttr = slotId ? { [DROP_SLOT_ATTR]: slotId } : undefined
 
+  // In view mode the popover surfaces the mod detail (opened by click on a
+  // filled slot); in edit mode it's the polarity picker. Keeping the open
+  // state branched here means the trigger/content below just switch on
+  // `readOnly`.
+  const detailEnabled = readOnly && !!mod
+
+  // Compact non-tradable list (view-only fetch, deduped across all slots by
+  // React Query). Gates the Market link: a mod is tradable unless listed.
+  // Rivens carry a stub uniqueName with no Market page, so never link them.
+  const { data: nonTradable } = useQuery({
+    ...modTradableQuery,
+    enabled: detailEnabled,
+  })
+  const marketHref =
+    mod &&
+    nonTradable &&
+    !isRivenMod(mod) &&
+    !nonTradable.includes(mod.uniqueName)
+      ? marketUrl(mod.name)
+      : undefined
+
   return (
     <div className="relative" {...dropAttr}>
-      <Popover open={popoverOpen} onOpenChange={setPickerOpen}>
+      <Popover
+        open={readOnly ? detailOpen : popoverOpen}
+        onOpenChange={readOnly ? setDetailOpen : setPickerOpen}
+      >
         <PopoverTrigger
           nativeButton={false}
           // Slots are driven by arrow-key navigation (window-scoped, see
@@ -164,7 +203,9 @@ export function ModSlot({
           // focused slot relative to its neighbors.
           render={<div tabIndex={-1} />}
           data-build-slot
-          onClick={readOnly ? undefined : onClick}
+          onClick={
+            readOnly ? (mod ? () => setDetailOpen(true) : undefined) : onClick
+          }
           onContextMenu={handleContextMenu}
           onPointerDown={canDrag ? onDragPointerDown : undefined}
           // Mod cards contain <img> elements which the browser starts a
@@ -194,7 +235,7 @@ export function ModSlot({
             // default focus ring so a clicked-then-arrowed-away slot doesn't
             // keep highlighting alongside the new selection.
             "outline-none",
-            !readOnly && "cursor-pointer",
+            (!readOnly || detailEnabled) && "cursor-pointer",
             // Filled, draggable slots advertise grab affordance; the drag
             // overlay takes over once a real drag starts.
             !readOnly &&
@@ -231,7 +272,7 @@ export function ModSlot({
                 <ModCard
                   mod={mod}
                   rank={rank}
-                  disableHover={popoverOpen || isAnyDragging}
+                  disableHover={popoverOpen || detailOpen || isAnyDragging}
                   drainOverride={
                     kind === "aura" || kind === "stance"
                       ? auraBonusForMod(mod, rank, effective)
@@ -289,6 +330,21 @@ export function ModSlot({
             </>
           )}
         </PopoverTrigger>
+        {detailEnabled && mod && (
+          <PopoverContent className="w-auto p-3" align="center">
+            <BuildItemDetail
+              name={mod.name}
+              imageUrl={getImageUrl(mod.imageName)}
+              meta={mod.rarity}
+              rank={rank}
+              maxRank={(mod.levelStats?.length ?? 1) - 1}
+              stats={modStatsAt(mod, rank)}
+              description={mod.description}
+              wikiHref={wikiUrl(mod.name)}
+              marketHref={marketHref}
+            />
+          </PopoverContent>
+        )}
         {!readOnly && onPickPolarity && (
           <PopoverContent className="w-auto">
             <PolarityPicker

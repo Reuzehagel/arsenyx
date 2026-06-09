@@ -16,6 +16,11 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "feat",
         description:
+          "Click any mod or arcane on a build to open a detail card with its stats, description, and quick links to the Warframe Wiki and (for tradable items) Warframe Market — so you can check what something does or where to get it without leaving the build. It only shows when viewing a build, never while you're editing.",
+      },
+      {
+        type: "feat",
+        description:
           "Community builds can now be sorted by Trending, which ranks them by the views they've picked up over the last 30 days — so builds gaining traction show up, not just the all-time leaders.",
       },
       {

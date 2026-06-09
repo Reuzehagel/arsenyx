@@ -92,6 +92,10 @@ export interface MergedMod {
    *  The web mod picker filters these out by default — see the Game
    *  Mode toggle in `mod-search-grid.tsx`. */
   isConclave: boolean
+  /** Tradable on Warframe Market. DE ships no tradability for upgrades, so
+   *  this comes from wiki `Mods_data.Tradable` (keyed by uniqueName). Gates
+   *  the Market link on the build-view detail popover. Defaults false. */
+  tradable: boolean
   levelStats?: Array<{ stats: string[] }>
   modSet?: string
   modSetStats?: string[]
@@ -229,6 +233,7 @@ interface MergedModParts {
   isPrime: boolean
   isExilus: boolean
   isConclave: boolean
+  tradable: boolean
   /** Set-bonus reference + stats. Avionics carry neither, so both default
    *  to absent. */
   modSet?: string
@@ -257,6 +262,7 @@ function toMergedMod(
     isPrime: parts.isPrime,
     isExilus: parts.isExilus,
     isConclave: parts.isConclave,
+    tradable: parts.tradable,
     levelStats: raw.levelStats,
     modSet: parts.modSet,
     modSetStats: parts.modSetStats,
@@ -299,6 +305,9 @@ export function mergeMods(
    *  canonical PvP marker — the description "in Conclave" substring only
    *  catches ~14% of Conclave mods. */
   wikiConclave: Set<string> = new Set(),
+  /** Wiki-sourced `Tradable` flag keyed by mod `uniqueName`. Mods missing
+   *  from this map default to `false` (no Market link). */
+  wikiTradable: Map<string, boolean> = new Map(),
 ): MergeModsResult {
   // Build the mod-set index first so we can attach set stats per mod.
   const setStats = new Map<string, string[]>()
@@ -397,6 +406,7 @@ export function mergeMods(
         isPrime,
         isExilus: wikiExilus.get(raw.uniqueName) ?? false,
         isConclave: wikiConclave.has(raw.uniqueName),
+        tradable: wikiTradable.get(raw.uniqueName) ?? false,
         modSet: modSetRef,
         modSetStats,
       }),
@@ -438,6 +448,7 @@ export function mergeMods(
         isPrime: false,
         isExilus: false,
         isConclave: false,
+        tradable: false,
       }),
     )
     counts.total++

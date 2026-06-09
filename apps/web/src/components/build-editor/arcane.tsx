@@ -27,8 +27,10 @@ import {
 } from "@/components/ui/tooltip"
 import { getArcaneImageUrl } from "@/lib/util/arcane-images"
 import { cn } from "@/lib/util/utils"
+import { marketUrl, wikiUrl } from "@/lib/util/warframe-links"
 
 import { StatText } from "../stat-text"
+import { BuildItemDetail } from "./item-detail"
 import { useRankHover } from "./rank-hover"
 import type { PlacedArcane } from "./use-arcane-slots"
 
@@ -250,26 +252,21 @@ export function ArcaneSlot({
       {(!readOnly || placed) && (
         <PopoverContent className="w-auto p-3" align="center">
           {readOnly && placed ? (
-            <div className="flex flex-col gap-2" style={{ maxWidth: 280 }}>
-              <div className="flex items-center gap-3">
-                <img
-                  src={getArcaneImageUrl(placed.arcane.imageName)}
-                  alt=""
-                  className="size-12 shrink-0 rounded object-cover"
-                />
-                <div>
-                  <p className="text-sm font-semibold">{placed.arcane.name}</p>
-                  <p className="text-muted-foreground text-[10px] uppercase">
-                    Rank {placed.rank}
-                  </p>
-                </div>
-              </div>
-              {arcaneStats.length > 0 && (
-                <p className="text-xs leading-relaxed opacity-80">
-                  <StatText text={arcaneStats.join("\n")} />
-                </p>
-              )}
-            </div>
+            <BuildItemDetail
+              name={placed.arcane.name}
+              imageUrl={getArcaneImageUrl(placed.arcane.imageName)}
+              meta={placed.arcane.type}
+              rank={placed.rank}
+              maxRank={(placed.arcane.levelStats?.length ?? 1) - 1}
+              stats={arcaneStats}
+              description={placed.arcane.description}
+              wikiHref={wikiUrl(placed.arcane.name)}
+              marketHref={
+                placed.arcane.tradable
+                  ? marketUrl(placed.arcane.name)
+                  : undefined
+              }
+            />
           ) : (
             <ArcanePicker
               options={options}
