@@ -14,4 +14,9 @@ export interface Bindings {
   // Configured in wrangler.toml under [[unsafe.bindings]].
   ANON_SEARCH_LIMITER: RateLimitBinding
   ANON_READ_LIMITER: RateLimitBinding
+
+  // Cloudflare Hyperdrive — pools + caches connections to PlanetScale Postgres.
+  // `connectionString` is resolved at runtime (dynamic local port) and fed to
+  // the Prisma pg adapter in db.ts. Configured under [[hyperdrive]].
+  HYPERDRIVE: Hyperdrive
 }

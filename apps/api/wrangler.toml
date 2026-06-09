@@ -11,7 +11,9 @@ routes = [
 ]
 
 # Secrets (set via `bunx wrangler secret put <NAME>`):
-#   DATABASE_URL              — Neon production pooled connection string
+#   DATABASE_URL              — PlanetScale *direct* connection string. Used by
+#                               the Prisma CLI (db:push/studio/generate) ONLY.
+#                               The Worker runtime reads HYPERDRIVE instead.
 #   BETTER_AUTH_SECRET        — `openssl rand -base64 32`
 #   GITHUB_CLIENT_ID
 #   GITHUB_CLIENT_SECRET
@@ -40,6 +42,19 @@ name = "ANON_READ_LIMITER"
 type = "ratelimit"
 namespace_id = "1002"
 simple = { limit = 120, period = 60 }
+
+# Cloudflare Hyperdrive → PlanetScale Postgres. The Worker runtime connects via
+# env.HYPERDRIVE.connectionString (see src/db.ts); Hyperdrive owns the upstream
+# pool. Point it at PlanetScale's DIRECT endpoint (let Hyperdrive do pooling).
+#   Create with: bunx wrangler hyperdrive create arsenyx-pg \
+#     --connection-string="postgres://USER:PASS@HOST:5432/postgres?sslmode=require"
+#   then paste the returned id below.
+# TODO(cutover): replace the placeholder id before deploying.
+# localConnectionString lets `wrangler dev` reach a real Postgres without --remote.
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "REPLACE_WITH_HYPERDRIVE_ID"
+localConnectionString = "postgres://USER:PASS@HOST:5432/postgres?sslmode=require"
 
 [observability]
 enabled = true

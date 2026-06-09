@@ -2,6 +2,7 @@ import { Hono } from "hono"
 import { cors } from "hono/cors"
 
 import { auth } from "./auth"
+import type { Bindings } from "./bindings"
 import { withPrisma } from "./db"
 import { webOrigins } from "./env"
 import { rateLimitAnonRead } from "./middleware/rate-limit"
@@ -81,5 +82,7 @@ app.get("/health", (c) => c.json({ ok: true }))
 export default {
   port: 8787,
   fetch: (req: Request, env: unknown, ctx: ExecutionContext) =>
-    withPrisma(ctx, () => app.fetch(req, env, ctx)),
+    withPrisma((env as Bindings).HYPERDRIVE.connectionString, ctx, () =>
+      app.fetch(req, env, ctx),
+    ),
 }

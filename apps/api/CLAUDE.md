@@ -1,6 +1,6 @@
 # CLAUDE.md — apps/api
 
-Hono on Cloudflare Workers (Bun-compatible for local dev). Better Auth + Prisma 7 (`@prisma/adapter-neon`, `workerd` runtime) + Neon Postgres. Locally on `:8787`, deployed to `api.arsenyx.com`. Serves **user data only** — game data is static JSON under `apps/web/public/data/`.
+Hono on Cloudflare Workers (Bun-compatible for local dev). Better Auth + Prisma 7 (`@prisma/adapter-pg` + `pg`, `workerd` runtime) + PlanetScale Postgres reached through **Cloudflare Hyperdrive** (`env.HYPERDRIVE.connectionString`). Locally on `:8787`, deployed to `api.arsenyx.com`. Serves **user data only** — game data is static JSON under `apps/web/public/data/`.
 
 ## Conventions
 
@@ -16,7 +16,9 @@ Hono on Cloudflare Workers (Bun-compatible for local dev). Better Auth + Prisma 
 - Dev uses `bun run db:push`. Destructive migrations go in [scripts/migrations/](scripts/migrations/) as dated `.sql` files applied manually against Neon via `prisma db execute --file`.
 - Prisma 7 quirk: datasource `url` lives in [prisma.config.ts](prisma.config.ts), not the schema file.
 - Generator output: `src/generated/prisma` (gitignored). Import as `import { Prisma } from "../generated/prisma/client"`.
-- **PrismaClient is request-scoped** via `AsyncLocalStorage` in [src/db.ts](src/db.ts) — Workers reuses isolates across requests and the Neon Pool is request-scoped, so a module-level singleton leaks I/O between requests. Routes keep `import { prisma }` unchanged (Proxy reads the per-request client); the fetch handler in [src/index.ts](src/index.ts) wraps everything in `withPrisma`.
+- **PrismaClient is request-scoped** via `AsyncLocalStorage` in [src/db.ts](src/db.ts) — Workers reuses isolates across requests and the pg Pool is request-scoped, so a module-level singleton leaks I/O between requests. Routes keep `import { prisma }` unchanged (Proxy reads the per-request client); the fetch handler in [src/index.ts](src/index.ts) wraps everything in `withPrisma(env.HYPERDRIVE.connectionString, ctx, …)`. The connection string is a Hyperdrive **runtime binding** (not `process.env`); Hyperdrive owns the upstream pool so a fresh per-request client is cheap.
+- **Two connection paths:** the Worker **runtime** uses the `HYPERDRIVE` binding; the **Prisma CLI** (`db:push`/`db:studio`/`db:generate`, manual `db execute`) uses `DATABASE_URL` (PlanetScale **direct** string) via [prisma.config.ts](prisma.config.ts). Hyperdrive is Workers-only — CLI tools bypass it.
+- **Full-text search lives outside Prisma:** the `searchVector Unsupported("tsvector")` column, its GIN index, and the populating trigger are **not** in the schema or migrations — they exist only in the live DB. Any DB rebuild must come from a `pg_dump` of the live schema, **never `prisma db push`** (which would drop the GIN index + trigger and silently break search).
 
 ## Env
 

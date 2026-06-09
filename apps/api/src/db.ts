@@ -1,26 +1,31 @@
 import { AsyncLocalStorage } from "node:async_hooks"
 
-import { PrismaNeon } from "@prisma/adapter-neon"
+import { PrismaPg } from "@prisma/adapter-pg"
 
 import { PrismaClient } from "./generated/prisma/client"
 
-// Workers reuses isolates across requests, and the Neon driver's Pool is
-// request-scoped. A module-level PrismaClient singleton leaks I/O across
-// requests → `Cannot perform I/O on behalf of a different request`. We scope
-// one client per request via AsyncLocalStorage; routes keep using the
-// `prisma` proxy unchanged.
+// Workers reuses isolates across requests, and the pg Pool is request-scoped.
+// A module-level PrismaClient singleton leaks I/O across requests → `Cannot
+// perform I/O on behalf of a different request`. We scope one client per
+// request via AsyncLocalStorage; routes keep using the `prisma` proxy
+// unchanged.
+//
+// The connection string comes from the Hyperdrive binding
+// (`env.HYPERDRIVE.connectionString`), threaded in through `withPrisma`.
+// Unlike the old Neon `DATABASE_URL`, it can't be read from `process.env` —
+// it's a runtime binding with a dynamically-allocated local port. Hyperdrive
+// owns the upstream pool, so spinning up a fresh client per request is cheap.
 
 type RequestScope = {
+  connectionString: string
   client: PrismaClient | null
   pending: Set<Promise<unknown>>
 }
 
 const als = new AsyncLocalStorage<RequestScope>()
 
-function createPrismaClient() {
-  const adapter = new PrismaNeon({
-    connectionString: process.env.DATABASE_URL!,
-  })
+function createPrismaClient(connectionString: string) {
+  const adapter = new PrismaPg({ connectionString })
   return new PrismaClient({
     adapter,
     log:
@@ -42,11 +47,12 @@ function currentScope(): RequestScope {
 
 function currentClient(): PrismaClient {
   const scope = currentScope()
-  if (!scope.client) scope.client = createPrismaClient()
+  if (!scope.client) scope.client = createPrismaClient(scope.connectionString)
   return scope.client
 }
 
 export function withPrisma<T>(
+  connectionString: string,
   ctx: ExecutionContext,
   fn: () => T | Promise<T>,
 ): Promise<T> {
@@ -55,6 +61,7 @@ export function withPrisma<T>(
   // Better Auth's cookieCache (the common /auth/get-session path) never
   // pay the Prisma init cost.
   const scope: RequestScope = {
+    connectionString,
     client: null,
     pending: new Set(),
   }
