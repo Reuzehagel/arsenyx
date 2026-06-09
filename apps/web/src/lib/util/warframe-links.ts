@@ -1,3 +1,7 @@
+import { slugify } from "@arsenyx/shared/warframe/slugs"
+
+import { EXTERNAL_LINKS } from "./constants"
+
 /**
  * External "how to get it" links for mods and arcanes. We don't ship drop /
  * acquisition data in the static catalog (mods-all.json / arcanes-all.json
@@ -12,7 +16,7 @@
  * butchers_revelry, "Spring-Loaded Blade" → spring_loaded_blade.
  */
 
-const WIKI_BASE = "https://wiki.warframe.com/w"
+const WIKI_BASE = `${EXTERNAL_LINKS.wiki}/w`
 const MARKET_BASE = "https://warframe.market/items"
 
 /** Wiki article URL for a mod/arcane/item by its display name. */
@@ -20,14 +24,14 @@ export function wikiUrl(name: string): string {
   return `${WIKI_BASE}/${encodeURIComponent(name.replace(/ /g, "_"))}`
 }
 
-/** Warframe Market `url_name` slug for a tradable item's display name. */
+/**
+ * Warframe Market `url_name` slug for a tradable item's display name. Market
+ * uses the same normalization as our internal `slugify` (lowercase, drop
+ * apostrophes, "&" → "and", collapse separators) but joins with "_" instead
+ * of "-".
+ */
 export function marketSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/&/g, " and ") // padded so the run-collapse below absorbs the spaces
-    .replace(/'/g, "") // apostrophes are dropped, not replaced
-    .replace(/[^a-z0-9]+/g, "_") // any run of separators (space, "-", …) → one "_"
-    .replace(/^_+|_+$/g, "")
+  return slugify(name).replace(/-/g, "_")
 }
 
 /** Warframe Market listing URL for a tradable item by its display name. */

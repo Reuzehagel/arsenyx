@@ -176,12 +176,13 @@ export function ModSlot({
   // `readOnly`.
   const detailEnabled = readOnly && !!mod
 
-  // Compact non-tradable list (view-only fetch, deduped across all slots by
-  // React Query). Gates the Market link: a mod is tradable unless listed.
-  // Rivens carry a stub uniqueName with no Market page, so never link them.
+  // Compact non-tradable list (deduped across all slots by React Query).
+  // Gates the Market link: a mod is tradable unless listed. Rivens carry a stub
+  // uniqueName with no Market page, so never link them. Only fetched once a
+  // detail is actually opened — not on every filled slot of every build view.
   const { data: nonTradable } = useQuery({
     ...modTradableQuery,
-    enabled: detailEnabled,
+    enabled: detailEnabled && detailOpen,
   })
   const marketHref =
     mod &&
@@ -252,25 +253,25 @@ export function ModSlot({
           render={<div ref={triggerRef} tabIndex={-1} />}
           data-build-slot
           onClick={
-            readOnly
-              ? mod
-                ? (e) => {
-                    // Anchor on the same compact-card element the hover preview
-                    // centers on (not the slot box, which is taller and offset
-                    // by the hover overhang) so the pinned card lands pixel-for-
-                    // pixel where the hover card does.
-                    const host = e.currentTarget as HTMLElement
-                    const anchor =
-                      host.querySelector("[data-mod-compact]") ?? host
-                    const r = anchor.getBoundingClientRect()
-                    setDetailCenter({
-                      x: r.left + r.width / 2,
-                      y: r.top + r.height / 2,
-                    })
-                    setDetailOpen((o) => !o)
-                  }
-                : undefined
-              : onClick
+            detailEnabled
+              ? (e) => {
+                  // Anchor on the same compact-card element the hover preview
+                  // centers on (not the slot box, which is taller and offset
+                  // by the hover overhang) so the pinned card lands pixel-for-
+                  // pixel where the hover card does.
+                  const host = e.currentTarget as HTMLElement
+                  const anchor =
+                    host.querySelector("[data-mod-compact]") ?? host
+                  const r = anchor.getBoundingClientRect()
+                  setDetailCenter({
+                    x: r.left + r.width / 2,
+                    y: r.top + r.height / 2,
+                  })
+                  setDetailOpen((o) => !o)
+                }
+              : readOnly
+                ? undefined
+                : onClick
           }
           onContextMenu={handleContextMenu}
           onPointerDown={canDrag ? onDragPointerDown : undefined}
@@ -409,8 +410,7 @@ export function ModSlot({
           center — like the hover preview but interactive — so the mod shows in
           its full expanded form (works on mobile, which has no hover) with the
           Wiki/Market links beneath it. No second card spawns below the slot. */}
-      {detailEnabled &&
-        mod &&
+      {mod &&
         detailOpen &&
         detailCenter &&
         typeof document !== "undefined" &&
