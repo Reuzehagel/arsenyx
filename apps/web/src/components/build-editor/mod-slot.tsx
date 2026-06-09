@@ -246,6 +246,13 @@ export function ModSlot({
               selected &&
               !readOnly &&
               "rounded-md ring-2 ring-white/60",
+            // View mode: ring the in-grid card while its detail is open, so the
+            // mod itself reads as "active" rather than spawning a second copy.
+            mod &&
+              !isDragging &&
+              readOnly &&
+              detailOpen &&
+              "rounded-md ring-2 ring-white/60",
             // While this slot is the drag source, hide the mod card behind
             // a dashed "ghost" so it reads as a vacated slot (matches how
             // an empty slot looks). The drag overlay carries the real card.
@@ -323,29 +330,16 @@ export function ModSlot({
           )}
         </PopoverTrigger>
         {detailEnabled && mod && (
-          // The detail surface reuses the full ExpandedModCard (same visual as
-          // the desktop hover-preview, so no duplicate text in a second style)
-          // plus a "how to get it" link row. Opening it on click/tap is also
-          // what restores mod expansion on mobile, where hover never fires.
-          <PopoverContent className="w-auto p-2.5" align="center">
-            <div className="flex flex-col gap-2.5">
-              <ModCard
-                mod={mod}
-                rank={rank}
-                alwaysExpanded
-                drainOverride={
-                  kind === "aura" || kind === "stance"
-                    ? auraBonusForMod(mod, rank, effective)
-                    : effectiveDrainForMod(mod, rank, effective)
-                }
-                matchState={getMatchState(mod.polarity, effective)}
-                hideDrain={hideDrain}
-              />
-              <DetailLinks
-                wikiHref={wikiUrl(mod.name)}
-                marketHref={marketHref}
-              />
-            </div>
+          // View mode: the in-grid card gets the ring (above); here we drop just
+          // the Wiki/Market buttons directly beneath the slot — no second copy
+          // of the card. Anchored to this slot so it tracks the mod's position.
+          <PopoverContent
+            className="w-auto p-1.5"
+            align="center"
+            side="bottom"
+            sideOffset={6}
+          >
+            <DetailLinks wikiHref={wikiUrl(mod.name)} marketHref={marketHref} />
           </PopoverContent>
         )}
         {!readOnly && onPickPolarity && (
