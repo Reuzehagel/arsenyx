@@ -14,6 +14,21 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-06-09",
     changes: [
       {
+        type: "feat",
+        description:
+          "The build-guide editor is rebuilt around a real Markdown editor: a formatting toolbar (headings, bold/italic, lists, quotes, links, images, video embeds, code), a live side-by-side preview that renders exactly like the published guide, and templates — built-in starters plus ones you save yourself in this browser.",
+      },
+      {
+        type: "feat",
+        description:
+          "Build guides now treat a single line break as an actual line break, so your write-up reads the way you typed it instead of collapsing separate lines into one paragraph.",
+      },
+      {
+        type: "feat",
+        description:
+          "Keyboard-shortcut hints now show the modifier for your platform — ⌘ on Mac, Ctrl elsewhere — instead of listing both.",
+      },
+      {
         type: "fix",
         description:
           "Weapon and companion augment mods now show up on every variant of a weapon — Prime, Wraith, Vandal, and the like — instead of only the base version. For example, Velox Conclusion now appears when modding Velox Prime.",
