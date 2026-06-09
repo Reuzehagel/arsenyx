@@ -235,9 +235,14 @@ export function ModSlot({
             readOnly
               ? mod
                 ? (e) => {
-                    const r = (
-                      e.currentTarget as HTMLElement
-                    ).getBoundingClientRect()
+                    // Anchor on the same compact-card element the hover preview
+                    // centers on (not the slot box, which is taller and offset
+                    // by the hover overhang) so the pinned card lands pixel-for-
+                    // pixel where the hover card does.
+                    const host = e.currentTarget as HTMLElement
+                    const anchor =
+                      host.querySelector("[data-mod-compact]") ?? host
+                    const r = anchor.getBoundingClientRect()
                     setDetailCenter({
                       x: r.left + r.width / 2,
                       y: r.top + r.height / 2,
@@ -396,10 +401,13 @@ export function ModSlot({
         createPortal(
           <div
             ref={overlayRef}
-            className="fixed z-50 flex flex-col items-center gap-2"
+            className="fixed z-50"
             style={{
               top: detailCenter.y,
               left: detailCenter.x,
+              // Center only the card on the anchor (matching hover). The links
+              // hang below via absolute positioning so they don't shift the
+              // card's center.
               transform: "translate(-50%, -50%)",
               filter: "drop-shadow(0 0 20px rgba(0,0,0,0.85))",
             }}
@@ -416,7 +424,12 @@ export function ModSlot({
               matchState={getMatchState(mod.polarity, effective)}
               hideDrain={hideDrain}
             />
-            <DetailLinks wikiHref={wikiUrl(mod.name)} marketHref={marketHref} />
+            <div className="absolute top-full left-1/2 mt-2 -translate-x-1/2">
+              <DetailLinks
+                wikiHref={wikiUrl(mod.name)}
+                marketHref={marketHref}
+              />
+            </div>
           </div>,
           document.body,
         )}

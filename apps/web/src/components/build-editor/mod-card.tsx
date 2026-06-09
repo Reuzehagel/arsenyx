@@ -566,9 +566,12 @@ export function ModCard({
       onClick={onClick}
     >
       {/* Compact — always mounted, fades on hover so it crossfades into
-          the expanded card. */}
+          the expanded card. Tagged so the view-mode click-to-pin (mod-slot.tsx)
+          can measure the exact same anchor the hover preview centers on,
+          keeping the pinned card pixel-aligned with the hover card. */}
       <div
         ref={compactRef}
+        data-mod-compact
         className="absolute top-0 left-0 transition-opacity duration-100 ease-out"
         style={{
           width: DISPLAY_SIZE.compact.width,
