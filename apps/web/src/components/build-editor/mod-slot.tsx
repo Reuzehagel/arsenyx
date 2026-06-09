@@ -424,7 +424,7 @@ export function ModSlot({
               matchState={getMatchState(mod.polarity, effective)}
               hideDrain={hideDrain}
             />
-            <div className="absolute top-full left-1/2 mt-2 -translate-x-1/2">
+            <div className="absolute top-full left-1/2 mt-2 w-max -translate-x-1/2">
               <DetailLinks
                 wikiHref={wikiUrl(mod.name)}
                 marketHref={marketHref}
