@@ -32,6 +32,7 @@ import { marketUrl, wikiUrl } from "@/lib/util/warframe-links"
 import { StatText } from "../stat-text"
 import { BuildItemDetail } from "./item-detail"
 import { useRankHover } from "./rank-hover"
+import { arcaneMaxRank } from "./slot-ranks"
 import type { PlacedArcane } from "./use-arcane-slots"
 
 function statsAt(arcane: Arcane, rank: number): string[] {
@@ -257,7 +258,7 @@ export function ArcaneSlot({
               imageUrl={getArcaneImageUrl(placed.arcane.imageName)}
               meta={placed.arcane.type}
               rank={placed.rank}
-              maxRank={(placed.arcane.levelStats?.length ?? 1) - 1}
+              maxRank={arcaneMaxRank(placed.arcane)}
               stats={arcaneStats}
               description={placed.arcane.description}
               wikiHref={wikiUrl(placed.arcane.name)}

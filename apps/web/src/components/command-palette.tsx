@@ -132,46 +132,42 @@ export function CommandPalette({
             <CommandEmpty>No results.</CommandEmpty>
 
             {!debouncedQuery && (
-              <>
-                <CommandGroup heading="Navigation">
+              <CommandGroup heading="Navigation">
+                <CommandItem
+                  onSelect={() =>
+                    go(() =>
+                      navigate({
+                        to: "/browse",
+                        search: { category: "warframes" },
+                      }),
+                    )
+                  }
+                >
+                  <Compass />
+                  <span>Browse items</span>
+                </CommandItem>
+                <CommandItem
+                  onSelect={() => go(() => navigate({ to: "/builds" }))}
+                >
+                  <LayoutGrid />
+                  <span>Community builds</span>
+                </CommandItem>
+                {session?.user ? (
                   <CommandItem
-                    onSelect={() =>
-                      go(() =>
-                        navigate({
-                          to: "/browse",
-                          search: { category: "warframes" },
-                        }),
-                      )
-                    }
+                    onSelect={() => go(() => navigate({ to: "/builds/mine" }))}
                   >
-                    <Compass />
-                    <span>Browse items</span>
+                    <User />
+                    <span>My builds</span>
                   </CommandItem>
-                  <CommandItem
-                    onSelect={() => go(() => navigate({ to: "/builds" }))}
-                  >
-                    <LayoutGrid />
-                    <span>Community builds</span>
-                  </CommandItem>
-                  {session?.user ? (
-                    <CommandItem
-                      onSelect={() =>
-                        go(() => navigate({ to: "/builds/mine" }))
-                      }
-                    >
-                      <User />
-                      <span>My builds</span>
-                    </CommandItem>
-                  ) : null}
-                  <CommandItem
-                    onSelect={() => go(() => navigate({ to: "/changelog" }))}
-                  >
-                    <ScrollText />
-                    <span>Changelog</span>
-                    <CommandShortcut>what's new</CommandShortcut>
-                  </CommandItem>
-                </CommandGroup>
-              </>
+                ) : null}
+                <CommandItem
+                  onSelect={() => go(() => navigate({ to: "/changelog" }))}
+                >
+                  <ScrollText />
+                  <span>Changelog</span>
+                  <CommandShortcut>what's new</CommandShortcut>
+                </CommandItem>
+              </CommandGroup>
             )}
 
             {debouncedQuery && filteredItems.length > 0 ? (

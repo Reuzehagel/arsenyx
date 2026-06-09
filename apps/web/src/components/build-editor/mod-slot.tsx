@@ -191,9 +191,22 @@ export function ModSlot({
       ? marketUrl(mod.name)
       : undefined
 
-  // Dismiss the pinned detail on outside click / Escape / scroll. The trigger
-  // is excluded so a second click on the same slot toggles it shut via onClick
-  // instead of being treated as an outside click (which would race).
+  // Shared by the in-slot card and the pinned detail card so the two can't show
+  // a different drain / polarity-match for the same mod. Aura & stance slots
+  // contribute a bonus rather than draining capacity.
+  const cardDrain = mod
+    ? kind === "aura" || kind === "stance"
+      ? auraBonusForMod(mod, rank, effective)
+      : effectiveDrainForMod(mod, rank, effective)
+    : undefined
+  const cardMatch = mod ? getMatchState(mod.polarity, effective) : undefined
+
+  // Dismiss the pinned detail on outside click / Escape / scroll / resize. The
+  // overlay is position:fixed at coords captured on open, so any scroll or
+  // viewport resize (orientation change, zoom) would leave it detached from its
+  // slot — close it rather than let it float. The trigger is excluded from the
+  // outside-click check so a second click on the same slot toggles it shut via
+  // onClick instead of being treated as an outside click (which would race).
   useEffect(() => {
     if (!detailOpen) return
     const onPointerDown = (e: globalThis.PointerEvent) => {
@@ -204,19 +217,26 @@ export function ModSlot({
       setDetailOpen(false)
     }
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setDetailOpen(false)
+      if (e.key === "Escape") {
+        // Stop here so Escape only dismisses the detail, not an enclosing
+        // dialog/popover that also listens for it.
+        e.stopPropagation()
+        setDetailOpen(false)
+      }
     }
-    const onScroll = () => setDetailOpen(false)
+    const onReflow = () => setDetailOpen(false)
     document.addEventListener("pointerdown", onPointerDown, true)
     document.addEventListener("keydown", onKey)
-    window.addEventListener("scroll", onScroll, {
+    window.addEventListener("scroll", onReflow, {
       capture: true,
       passive: true,
     })
+    window.addEventListener("resize", onReflow, { passive: true })
     return () => {
       document.removeEventListener("pointerdown", onPointerDown, true)
       document.removeEventListener("keydown", onKey)
-      window.removeEventListener("scroll", onScroll, true)
+      window.removeEventListener("scroll", onReflow, true)
+      window.removeEventListener("resize", onReflow)
     }
   }, [detailOpen])
 
@@ -319,12 +339,8 @@ export function ModSlot({
                   mod={mod}
                   rank={rank}
                   disableHover={popoverOpen || detailOpen || isAnyDragging}
-                  drainOverride={
-                    kind === "aura" || kind === "stance"
-                      ? auraBonusForMod(mod, rank, effective)
-                      : effectiveDrainForMod(mod, rank, effective)
-                  }
-                  matchState={getMatchState(mod.polarity, effective)}
+                  drainOverride={cardDrain}
+                  matchState={cardMatch}
                   hideDrain={hideDrain}
                 />
               </div>
@@ -416,12 +432,8 @@ export function ModSlot({
               mod={mod}
               rank={rank}
               alwaysExpanded
-              drainOverride={
-                kind === "aura" || kind === "stance"
-                  ? auraBonusForMod(mod, rank, effective)
-                  : effectiveDrainForMod(mod, rank, effective)
-              }
-              matchState={getMatchState(mod.polarity, effective)}
+              drainOverride={cardDrain}
+              matchState={cardMatch}
               hideDrain={hideDrain}
             />
             <div className="absolute top-full left-1/2 mt-2 w-max -translate-x-1/2">
