@@ -47,6 +47,11 @@ export function TemplateMenu({
   const [userTemplates, setUserTemplates] = useState<GuideTemplate[]>(() =>
     loadUserTemplates(),
   )
+  // Control the menu's open state so opening it forces a re-render — `canSave`
+  // reads the live document via `getValue()`, and the memoized toolbar doesn't
+  // re-render on plain typing (no format change), so without this the disabled
+  // state would be stale (e.g. still disabled after typing a plain paragraph).
+  const [menuOpen, setMenuOpen] = useState(false)
   const [saveOpen, setSaveOpen] = useState(false)
   const [name, setName] = useState("")
 
@@ -70,7 +75,7 @@ export function TemplateMenu({
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger
           render={
             <Button type="button" variant="ghost" size="sm">
