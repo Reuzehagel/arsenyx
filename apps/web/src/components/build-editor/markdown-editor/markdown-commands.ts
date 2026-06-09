@@ -183,7 +183,8 @@ export function insertLink(view: EditorView): void {
   view.focus()
 }
 
-/** `![alt](url)` — append `|240` to the URL for a fixed display width. */
+/** `![alt](url)`. Tip: a `|240` suffix on the URL (e.g. `url|240`) sets a
+ *  fixed px display width — see MarkdownBody's parseSizedSrc. */
 export function insertImage(view: EditorView): void {
   const { state } = view
   const tr = state.changeByRange((range) => {

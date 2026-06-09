@@ -99,7 +99,9 @@ function ToolbarButton({
   )
 }
 
-const MOD = navigator.platform.toLowerCase().includes("mac") ? "⌘" : "Ctrl"
+// userAgent (not the deprecated navigator.platform) — matches editor-header
+// and catches iPadOS/iOS too.
+const MOD = /Mac|iPhone|iPad/i.test(navigator.userAgent) ? "⌘" : "Ctrl"
 
 const SHORTCUTS: { keys: string; label: string }[] = [
   { keys: `${MOD}+B / I`, label: "Bold / italic" },
@@ -277,41 +279,28 @@ export const MarkdownToolbar = memo(function MarkdownToolbar({
         <div className="ml-auto flex items-center gap-1">
           <ShortcutHint />
           <TemplateMenu getView={getView} getValue={getValue} />
-          {/* Segmented control. The ui/ component's spacing=0 corner rounding
-              keys off `data-horizontal`, which Base UI doesn't emit — so the
-              connected look is recreated here with overflow-hidden + a border
-              on the group and square inner items. */}
+          {/* Segmented Write / Split / Preview control. */}
           <ToggleGroup
             spacing={0}
+            variant="outline"
             value={[viewMode]}
             onValueChange={(next: string[]) => {
               const mode = next[0] as ViewMode | undefined
               if (mode) onViewModeChange(mode)
             }}
-            className="border-input divide-input divide-x overflow-hidden rounded-lg border"
           >
-            <ToggleGroupItem
-              value="write"
-              size="sm"
-              aria-label="Write"
-              className="rounded-none"
-            >
+            <ToggleGroupItem value="write" size="sm" aria-label="Write">
               <Pencil />
             </ToggleGroupItem>
             <ToggleGroupItem
               value="split"
               size="sm"
               aria-label="Split"
-              className="hidden rounded-none sm:inline-flex"
+              className="hidden sm:inline-flex"
             >
               <Columns2 />
             </ToggleGroupItem>
-            <ToggleGroupItem
-              value="preview"
-              size="sm"
-              aria-label="Preview"
-              className="rounded-none"
-            >
+            <ToggleGroupItem value="preview" size="sm" aria-label="Preview">
               <Eye />
             </ToggleGroupItem>
           </ToggleGroup>
