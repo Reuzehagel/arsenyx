@@ -10,7 +10,6 @@ import {
   Heading3,
   Image,
   Italic,
-  Keyboard,
   Link2,
   List,
   ListOrdered,
@@ -58,13 +57,11 @@ const ACTIVE_CLASS = "data-active:bg-muted data-active:text-foreground"
 
 function ToolbarButton({
   label,
-  shortcut,
   active,
   onRun,
   children,
 }: {
   label: string
-  shortcut?: string
   active?: boolean
   onRun: () => void
   children: React.ReactNode
@@ -89,52 +86,7 @@ function ToolbarButton({
       >
         {children}
       </TooltipTrigger>
-      <TooltipContent>
-        {label}
-        {shortcut ? (
-          <span className="text-muted-foreground ml-2">{shortcut}</span>
-        ) : null}
-      </TooltipContent>
-    </Tooltip>
-  )
-}
-
-// userAgent (not the deprecated navigator.platform) — matches editor-header
-// and catches iPadOS/iOS too.
-const MOD = /Mac|iPhone|iPad/i.test(navigator.userAgent) ? "⌘" : "Ctrl"
-
-const SHORTCUTS: { keys: string; label: string }[] = [
-  { keys: `${MOD}+B / I`, label: "Bold / italic" },
-  { keys: "Tab", label: "Indent · Shift+Tab outdents" },
-  { keys: "Enter", label: "Continues lists & quotes" },
-  { keys: "Paste", label: "URL over selection → link" },
-]
-
-function ShortcutHint() {
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Editor shortcuts"
-          />
-        }
-      >
-        <Keyboard />
-      </TooltipTrigger>
-      <TooltipContent className="max-w-xs">
-        <ul className="flex flex-col gap-1">
-          {SHORTCUTS.map((s) => (
-            <li key={s.label} className="flex items-baseline gap-2">
-              <span className="text-foreground/90 font-mono">{s.keys}</span>
-              <span className="text-muted-foreground">{s.label}</span>
-            </li>
-          ))}
-        </ul>
-      </TooltipContent>
+      <TooltipContent>{label}</TooltipContent>
     </Tooltip>
   )
 }
@@ -200,7 +152,6 @@ export const MarkdownToolbar = memo(function MarkdownToolbar({
 
         <ToolbarButton
           label="Bold"
-          shortcut={`${MOD}+B`}
           active={active.has("bold")}
           onRun={run((v) => toggleWrap(v, "**", "bold"))}
         >
@@ -208,7 +159,6 @@ export const MarkdownToolbar = memo(function MarkdownToolbar({
         </ToolbarButton>
         <ToolbarButton
           label="Italic"
-          shortcut={`${MOD}+I`}
           active={active.has("italic")}
           onRun={run((v) => toggleWrap(v, "_", "italic"))}
         >
@@ -277,7 +227,6 @@ export const MarkdownToolbar = memo(function MarkdownToolbar({
         </ToolbarButton>
 
         <div className="ml-auto flex items-center gap-1">
-          <ShortcutHint />
           <TemplateMenu getView={getView} getValue={getValue} />
           {/* Segmented Write / Split / Preview control. */}
           <ToggleGroup
