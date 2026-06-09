@@ -45,16 +45,16 @@ simple = { limit = 120, period = 60 }
 
 # Cloudflare Hyperdrive → PlanetScale Postgres. The Worker runtime connects via
 # env.HYPERDRIVE.connectionString (see src/db.ts); Hyperdrive owns the upstream
-# pool. Point it at PlanetScale's DIRECT endpoint (let Hyperdrive do pooling).
-#   Create with: bunx wrangler hyperdrive create arsenyx-pg \
-#     --connection-string="postgres://USER:PASS@HOST:5432/postgres?sslmode=require"
-#   then paste the returned id below.
-# TODO(cutover): replace the placeholder id before deploying.
-# localConnectionString lets `wrangler dev` reach a real Postgres without --remote.
+# pool, pointed at PlanetScale's direct endpoint. Recreate (e.g. after a role
+# rotation) with:
+#   bunx wrangler hyperdrive update c99d68f482634c9b944449a03bc6b13d \
+#     --connection-string="postgresql://USER:PASS@HOST:5432/postgres?sslmode=verify-full"
 [[hyperdrive]]
 binding = "HYPERDRIVE"
-id = "REPLACE_WITH_HYPERDRIVE_ID"
-localConnectionString = "postgres://USER:PASS@HOST:5432/postgres?sslmode=require"
+id = "c99d68f482634c9b944449a03bc6b13d"
+# Local dev connection is read from a gitignored env var so the credential is
+# never committed: set CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE
+# in apps/api/.env (see .env.example).
 
 [observability]
 enabled = true
