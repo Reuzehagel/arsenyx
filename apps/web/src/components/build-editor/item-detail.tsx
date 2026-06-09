@@ -73,10 +73,29 @@ export function BuildItemDetail({
         </p>
       )}
 
-      <div className="flex flex-wrap gap-2 border-t border-current/10 pt-2.5">
-        <DetailLink href={wikiHref}>Wiki</DetailLink>
-        {marketHref && <DetailLink href={marketHref}>Market</DetailLink>}
+      <div className="border-t border-current/10 pt-2.5">
+        <DetailLinks wikiHref={wikiHref} marketHref={marketHref} />
       </div>
+    </div>
+  )
+}
+
+/**
+ * "How to get it" link row — Wiki (always) and Warframe Market (tradable only).
+ * Shared by the arcane text card (BuildItemDetail) and the mod popover, which
+ * renders it under a full ExpandedModCard.
+ */
+export function DetailLinks({
+  wikiHref,
+  marketHref,
+}: {
+  wikiHref: string
+  marketHref?: string
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <DetailLink href={wikiHref}>Wiki</DetailLink>
+      {marketHref && <DetailLink href={marketHref}>Market</DetailLink>}
     </div>
   )
 }

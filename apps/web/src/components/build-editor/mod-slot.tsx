@@ -18,7 +18,6 @@ import {
 import { modTradableQuery } from "@/lib/queries/mod-tradable-query"
 import { cn } from "@/lib/util/utils"
 import { marketUrl, wikiUrl } from "@/lib/util/warframe-links"
-import { getImageUrl } from "@/lib/warframe"
 
 import {
   auraBonusForMod,
@@ -33,7 +32,7 @@ import {
   useIsDropTarget,
   useStartDrag,
 } from "./drag-controller"
-import { BuildItemDetail } from "./item-detail"
+import { DetailLinks } from "./item-detail"
 import { ModCard } from "./mod-card"
 import { PolarityIcon, PolarityPicker } from "./polarity"
 import { useRankHover } from "./rank-hover"
@@ -82,13 +81,6 @@ const KIND_LABEL: Record<ModSlotKind, string> = {
   aura: "Aura",
   exilus: "Exilus",
   stance: "Stance",
-}
-
-/** Stat lines for a mod at a given rank, clamped to the available range. */
-function modStatsAt(mod: Mod, rank: number): string[] {
-  const levels = mod.levelStats
-  if (!levels || levels.length === 0) return []
-  return levels[Math.min(rank, levels.length - 1)]?.stats ?? []
 }
 
 export function ModSlot({
@@ -331,18 +323,29 @@ export function ModSlot({
           )}
         </PopoverTrigger>
         {detailEnabled && mod && (
-          <PopoverContent className="w-auto p-3" align="center">
-            <BuildItemDetail
-              name={mod.name}
-              imageUrl={getImageUrl(mod.imageName)}
-              meta={mod.rarity}
-              rank={rank}
-              maxRank={(mod.levelStats?.length ?? 1) - 1}
-              stats={modStatsAt(mod, rank)}
-              description={mod.description}
-              wikiHref={wikiUrl(mod.name)}
-              marketHref={marketHref}
-            />
+          // The detail surface reuses the full ExpandedModCard (same visual as
+          // the desktop hover-preview, so no duplicate text in a second style)
+          // plus a "how to get it" link row. Opening it on click/tap is also
+          // what restores mod expansion on mobile, where hover never fires.
+          <PopoverContent className="w-auto p-2.5" align="center">
+            <div className="flex flex-col gap-2.5">
+              <ModCard
+                mod={mod}
+                rank={rank}
+                alwaysExpanded
+                drainOverride={
+                  kind === "aura" || kind === "stance"
+                    ? auraBonusForMod(mod, rank, effective)
+                    : effectiveDrainForMod(mod, rank, effective)
+                }
+                matchState={getMatchState(mod.polarity, effective)}
+                hideDrain={hideDrain}
+              />
+              <DetailLinks
+                wikiHref={wikiUrl(mod.name)}
+                marketHref={marketHref}
+              />
+            </div>
           </PopoverContent>
         )}
         {!readOnly && onPickPolarity && (
