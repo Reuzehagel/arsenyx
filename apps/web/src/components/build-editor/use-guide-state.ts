@@ -17,6 +17,9 @@ export interface GuideEditorProps {
   scopes: { id: string; label: string; hasContent: boolean }[]
   activeScope: GuideScope
   onScopeChange: (scope: GuideScope) => void
+  /** Copy the build-wide guide into a variant that has none yet — used when
+   *  enabling per-variant guides so existing text isn't seemingly lost. */
+  seedVariantFromBuild: (index: number) => void
 }
 
 export interface GuideState {
@@ -80,6 +83,31 @@ export function useGuideState(opts: {
     )
   }
 
+  // Carry the build-wide guide into a variant the first time it's edited
+  // per-variant. Only seeds an empty variant guide, so re-toggling never
+  // clobbers text the user already wrote for that variant.
+  const seedVariantFromBuild = (index: number): void => {
+    setVariants((prev) =>
+      prev.map((sv, i) => {
+        if (i !== index) return sv
+        // Seed each field independently: a variant with only a summary should
+        // still get the build-wide description carried into its empty one.
+        const hasSummary = Boolean(sv.guideSummary && sv.guideSummary.trim())
+        const hasDescription = Boolean(
+          sv.guideDescription && sv.guideDescription.trim(),
+        )
+        if (hasSummary && hasDescription) return sv
+        return {
+          ...sv,
+          guideSummary: hasSummary ? sv.guideSummary : buildSummary,
+          guideDescription: hasDescription
+            ? sv.guideDescription
+            : buildDescription,
+        }
+      }),
+    )
+  }
+
   const scopes = variants.map((v) => ({
     id: v.id,
     label: v.label,
@@ -100,6 +128,7 @@ export function useGuideState(opts: {
       scopes,
       activeScope: scope,
       onScopeChange: setScope,
+      seedVariantFromBuild,
     },
   }
 }

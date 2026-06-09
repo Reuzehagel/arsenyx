@@ -1,5 +1,6 @@
 import { useMemo } from "react"
 import ReactMarkdown, { type Components } from "react-markdown"
+import remarkBreaks from "remark-breaks"
 import remarkGfm from "remark-gfm"
 
 import { proxyImage } from "@/lib/util/image-proxy"
@@ -9,6 +10,11 @@ import { getVideoEmbed } from "@/lib/util/video-embed"
  * Renders user-authored markdown for build guides. Bare YouTube/Vimeo URLs
  * on their own line are upgraded to embedded iframes; inline links stay
  * regular anchors. Raw HTML in the source is escaped — no rehype-raw.
+ *
+ * `remark-breaks` turns a single newline into a line break (instead of GFM's
+ * default soft-wrap-to-space). Build-guide authors write line-by-line and
+ * expect Discord/chat-style breaks; the bare-GFM behaviour was a repeat source
+ * of "why did my newline vanish" confusion.
  */
 export function MarkdownBody({
   source,
@@ -20,7 +26,10 @@ export function MarkdownBody({
   const prepared = useMemo(() => isolateVideoLines(source), [source])
   return (
     <div className={className}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkBreaks]}
+        components={components}
+      >
         {prepared}
       </ReactMarkdown>
     </div>
