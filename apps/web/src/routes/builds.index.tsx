@@ -16,7 +16,7 @@ import { publicBuildsQuery } from "@/lib/queries/builds-list-query"
 
 export const Route = createFileRoute("/builds/")({
   validateSearch: (search): BuildsListSearch => parseBuildsListSearch(search),
-  loaderDeps: ({ search }) => buildsListLoaderDeps(search, "newest"),
+  loaderDeps: ({ search }) => buildsListLoaderDeps(search, "updated"),
   loader: ({ context, deps }) =>
     context.queryClient.ensureQueryData(publicBuildsQuery(deps)),
   component: BuildsIndexPage,
@@ -25,10 +25,10 @@ export const Route = createFileRoute("/builds/")({
 function BuildsIndexPage() {
   const search = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
-  const params = buildsListLoaderDeps(search, "newest")
+  const params = buildsListLoaderDeps(search, "updated")
 
   const onUpdateSearch = (next: BuildsListSearch) =>
-    navigate({ search: nextBuildsListSearch(next, "newest"), replace: true })
+    navigate({ search: nextBuildsListSearch(next, "updated"), replace: true })
 
   return (
     <div className="relative flex min-h-screen flex-col">

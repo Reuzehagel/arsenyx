@@ -202,6 +202,7 @@ model Build {
 
   likes         BuildLike[]
   bookmarks     BuildBookmark[]
+  viewDays      BuildViewDay[]
   linkedFrom    BuildLink[]     @relation("LinkedFromBuild")
   linkedTo      BuildLink[]     @relation("LinkedToBuild")
   // Symmetric self-M:N. Prisma requires declaring both sides of a self
@@ -230,6 +231,24 @@ model Build {
   @@index([userId, visibility, likeCount])
   @@index([itemCategory, visibility, likeCount])
   @@map("builds")
+}
+
+// Per-day view buckets feeding the "trending" sort. `viewCount` on Build is the
+// all-time counter; this table records views per calendar day (UTC) so the list
+// endpoint can sum the trailing 30-day window. Written alongside the viewCount
+// bump in maybeIncrementView (builds.ts), under the same dedup/embed guards.
+// Rows past the window are pruned opportunistically, so the table stays bounded
+// to ~31 days × active builds.
+model BuildViewDay {
+  buildId String
+  build   Build  @relation(fields: [buildId], references: [id], onDelete: Cascade)
+
+  day   DateTime @db.Date
+  count Int      @default(0)
+
+  @@id([buildId, day])
+  @@index([day])
+  @@map("build_view_days")
 }
 
 model BuildGuide {

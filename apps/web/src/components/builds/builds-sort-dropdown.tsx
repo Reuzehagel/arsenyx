@@ -4,6 +4,7 @@ import type { BuildListSort } from "@/lib/queries/builds-list-query"
 const SORT_ITEMS = [
   { value: "newest", label: "Newest" },
   { value: "updated", label: "Recently Updated" },
+  { value: "trending", label: "Trending" },
   { value: "top", label: "Most Liked" },
   { value: "bookmarked", label: "Most Bookmarked" },
   { value: "viewed", label: "Most Viewed" },

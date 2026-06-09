@@ -82,7 +82,7 @@ export function CommandPalette({
 
   const filteredItems = useMemo<ItemEntry[]>(() => {
     const q = debouncedQuery.toLowerCase()
-    if (!q) return allItems.slice(0, 6)
+    if (!q) return []
     return allItems
       .filter(
         (it) =>
@@ -164,30 +164,6 @@ export function CommandPalette({
                     <CommandShortcut>what's new</CommandShortcut>
                   </CommandItem>
                 </CommandGroup>
-                {filteredItems.length > 0 ? (
-                  <>
-                    <CommandSeparator />
-                    <CommandGroup heading="Popular items">
-                      {filteredItems.map((item) => (
-                        <ItemRow
-                          key={item.slug}
-                          item={item}
-                          onSelect={() =>
-                            go(() =>
-                              navigate({
-                                to: "/browse/$category/$slug",
-                                params: {
-                                  category: item.category,
-                                  slug: item.slug,
-                                },
-                              }),
-                            )
-                          }
-                        />
-                      ))}
-                    </CommandGroup>
-                  </>
-                ) : null}
               </>
             )}
 

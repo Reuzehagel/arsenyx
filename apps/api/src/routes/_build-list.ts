@@ -185,6 +185,11 @@ function orderByForSort(sort: ListSort) {
       ]
     case "viewed":
       return [{ viewCount: "desc" as const }, { createdAt: "desc" as const }]
+    case "trending":
+      // Trending ranks by a 30-day view-sum join (build_view_days) that can't be
+      // expressed as a Prisma scalar orderBy — runList routes it through raw SQL
+      // (trendingBuildIds). This fallback is defensive and should be unreachable.
+      return [{ createdAt: "desc" as const }]
     case "forma-asc":
       return [{ formaCount: "asc" as const }, { createdAt: "desc" as const }]
     case "forma-desc":
@@ -209,6 +214,8 @@ function tiebreakerSql(sort: ListSort) {
       return Prisma.sql`"bookmarkCount" DESC, "createdAt" DESC`
     case "viewed":
       return Prisma.sql`"viewCount" DESC, "createdAt" DESC`
+    case "trending":
+      return Prisma.sql`COALESCE(tv.s, 0) DESC, "createdAt" DESC`
     case "forma-asc":
       return Prisma.sql`"formaCount" ASC, "createdAt" DESC`
     case "forma-desc":
@@ -217,6 +224,33 @@ function tiebreakerSql(sort: ListSort) {
     default:
       return Prisma.sql`"createdAt" DESC`
   }
+}
+
+// Trailing 30-day view-sum per build, joined as `tv` for the "trending" sort.
+// Pairs with the `tv.s` reference in tiebreakerSql("trending").
+const TRENDING_JOIN = Prisma.sql`
+  LEFT JOIN (
+    SELECT "buildId", SUM(count)::int AS s
+    FROM build_view_days
+    WHERE day >= CURRENT_DATE - INTERVAL '30 days'
+    GROUP BY "buildId"
+  ) tv ON tv."buildId" = builds.id
+`
+
+// Shared raw-SQL fragment for the optional list filters (category / item /
+// guide / shards). Each clause is `AND …`, so it appends to an existing WHERE.
+function listFiltersSql(f: {
+  category: string | undefined
+  item: string | undefined
+  hasGuide: boolean
+  hasShards: boolean
+}) {
+  return Prisma.sql`
+    ${f.category ? Prisma.sql`AND "itemCategory" = ${f.category}` : Prisma.empty}
+    ${f.item ? Prisma.sql`AND "itemUniqueName" = ${f.item}` : Prisma.empty}
+    ${f.hasGuide ? Prisma.sql`AND "hasGuide" = true` : Prisma.empty}
+    ${f.hasShards ? Prisma.sql`AND "hasShards" = true` : Prisma.empty}
+  `
 }
 
 async function searchBuildIds(params: {
@@ -262,30 +296,19 @@ async function searchBuildIds(params: {
     " AND ",
   )})`
   const matchFilter = Prisma.sql`("searchVector" @@ ${query} OR ("searchVector" IS NULL AND ${ilikeMatch}))`
-  const categoryFilter = category
-    ? Prisma.sql`AND "itemCategory" = ${category}`
-    : Prisma.empty
-  const itemFilter = item
-    ? Prisma.sql`AND "itemUniqueName" = ${item}`
-    : Prisma.empty
-  const guideFilter = hasGuide
-    ? Prisma.sql`AND "hasGuide" = true`
-    : Prisma.empty
-  const shardsFilter = hasShards
-    ? Prisma.sql`AND "hasShards" = true`
-    : Prisma.empty
+  const filtersSql = listFiltersSql({ category, item, hasGuide, hasShards })
   const tiebreaker = tiebreakerSql(sort)
+  // The trending tiebreaker references `tv.s`; only join the window when used.
+  const trendingJoin = sort === "trending" ? TRENDING_JOIN : Prisma.empty
 
   const [rows, totalRows] = await Promise.all([
     prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
       SELECT id
       FROM builds
+      ${trendingJoin}
       WHERE ${matchFilter}
         AND ${baseFilter}
-        ${categoryFilter}
-        ${itemFilter}
-        ${guideFilter}
-        ${shardsFilter}
+        ${filtersSql}
       ORDER BY ts_rank(COALESCE("searchVector", ''::tsvector), ${query}) DESC, ${tiebreaker}
       LIMIT ${take} OFFSET ${skip}
     `),
@@ -294,13 +317,57 @@ async function searchBuildIds(params: {
       FROM builds
       WHERE ${matchFilter}
         AND ${baseFilter}
-        ${categoryFilter}
-        ${itemFilter}
-        ${guideFilter}
-        ${shardsFilter}
+        ${filtersSql}
     `),
   ])
   return { ids: rows.map((r) => r.id), total: totalRows[0]?.n ?? 0 }
+}
+
+// Non-search "trending" path: rank build IDs by their trailing-30-day view sum.
+// Like the search path, this returns an ordered ID list (the window sum can't be
+// a Prisma scalar orderBy) that runList hydrates via fetchOrdered.
+async function trendingBuildIds(params: {
+  baseFilter: Prisma.Sql
+  category: string | undefined
+  item: string | undefined
+  hasGuide: boolean
+  hasShards: boolean
+  skip: number
+  take: number
+}): Promise<string[]> {
+  const { baseFilter, skip, take, ...filters } = params
+  const filtersSql = listFiltersSql(filters)
+  const rows = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+    SELECT id
+    FROM builds
+    ${TRENDING_JOIN}
+    WHERE ${baseFilter}
+      ${filtersSql}
+    ORDER BY COALESCE(tv.s, 0) DESC, "createdAt" DESC
+    LIMIT ${take} OFFSET ${skip}
+  `)
+  return rows.map((r) => r.id)
+}
+
+// The raw-SQL paths (search, trending) return IDs in rank order. Prisma's
+// `id: { in: [...] }` doesn't preserve that order, so we re-sort the hydrated
+// rows to match. Shared so both paths serialize identically.
+async function fetchOrdered(
+  ids: string[],
+  total: number,
+  page: number,
+  limit: number,
+) {
+  if (ids.length === 0) return { builds: [], total, page, limit }
+  const rows = await prisma.build.findMany({
+    where: { id: { in: ids } },
+    select: LIST_SELECT,
+  })
+  const byId = new Map(rows.map((r) => [r.id, r]))
+  const ordered = ids
+    .map((id) => byId.get(id))
+    .filter((r): r is ListRow => r != null)
+  return { builds: ordered.map(serializeListRow), total, page, limit }
 }
 
 export async function runList({
@@ -336,23 +403,23 @@ export async function runList({
       skip,
       take: limit,
     })
-    if (ids.length === 0) {
-      return { builds: [], total, page, limit }
-    }
-    const rows = await prisma.build.findMany({
-      where: { id: { in: ids } },
-      select: LIST_SELECT,
-    })
-    const byId = new Map(rows.map((r) => [r.id, r]))
-    const ordered = ids
-      .map((id) => byId.get(id))
-      .filter((r): r is ListRow => r != null)
-    return {
-      builds: ordered.map(serializeListRow),
-      total,
-      page,
-      limit,
-    }
+    return fetchOrdered(ids, total, page, limit)
+  }
+
+  if (sort === "trending") {
+    const [ids, total] = await Promise.all([
+      trendingBuildIds({
+        baseFilter,
+        category,
+        item,
+        hasGuide,
+        hasShards,
+        skip,
+        take: limit,
+      }),
+      prisma.build.count({ where }),
+    ])
+    return fetchOrdered(ids, total, page, limit)
   }
 
   const [rows, total] = await Promise.all([

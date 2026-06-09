@@ -16,6 +16,21 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "feat",
         description:
+          "Community builds can now be sorted by Trending, which ranks them by the views they've picked up over the last 30 days — so builds gaining traction show up, not just the all-time leaders.",
+      },
+      {
+        type: "chore",
+        description:
+          "The community builds page now opens on Recently Updated by default.",
+      },
+      {
+        type: "chore",
+        description:
+          "The Ctrl+K quick search no longer shows a list of items before you type — it stays on the page shortcuts until you start searching.",
+      },
+      {
+        type: "feat",
+        description:
           "The build-guide editor is rebuilt around a real Markdown editor: a formatting toolbar (headings, bold/italic, lists, quotes, links, images, video embeds, code), a live side-by-side preview that renders exactly like the published guide, and templates — built-in starters plus ones you save yourself in this browser.",
       },
       {

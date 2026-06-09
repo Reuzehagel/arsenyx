@@ -8,6 +8,7 @@ export const LIST_SORTS = [
   "newest",
   "updated",
   "top",
+  "trending",
   "bookmarked",
   "viewed",
   "forma-asc",

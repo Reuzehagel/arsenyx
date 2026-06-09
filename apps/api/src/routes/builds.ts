@@ -942,6 +942,26 @@ async function maybeIncrementView(
       UPDATE builds SET "viewCount" = "viewCount" + 1 WHERE id = ${buildId}
     `.catch((err) => console.error("view count update failed", err)),
   )
+  // Per-day bucket for the trailing-30-day "trending" sort. Same dedup/embed
+  // guards as the all-time counter above, so bots and iframes don't inflate it.
+  registerBackgroundWork(
+    prisma.$executeRaw`
+      INSERT INTO build_view_days ("buildId", day, count)
+      VALUES (${buildId}, CURRENT_DATE, 1)
+      ON CONFLICT ("buildId", day)
+        DO UPDATE SET count = build_view_days.count + 1
+    `.catch((err) => console.error("view day bucket update failed", err)),
+  )
+  // Opportunistic prune so the bucket table stays bounded to the window. No cron
+  // needed: counted views are already rare (12h dedup), and a ~2% sample keeps
+  // the table trimmed without a DELETE on every request.
+  if (Math.random() < 0.02) {
+    registerBackgroundWork(
+      prisma.$executeRaw`
+        DELETE FROM build_view_days WHERE day < CURRENT_DATE - INTERVAL '31 days'
+      `.catch((err) => console.error("view day prune failed", err)),
+    )
+  }
   const isProd = process.env.NODE_ENV === "production"
   setCookie(c, cookieName, "1", {
     path: "/",
