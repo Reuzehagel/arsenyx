@@ -9,6 +9,7 @@ import {
   type MouseEvent,
   type PointerEvent,
 } from "react"
+import { createPortal } from "react-dom"
 
 import {
   Popover,
@@ -101,9 +102,18 @@ export function ModSlot({
 }: ModSlotProps) {
   const effective = effectivePolarity(slotPolarity, formaPolarity)
   const [pickerOpen, setPickerOpen] = useState(false)
-  // View-mode "how to get it" detail popover. Distinct from the edit-mode
-  // polarity picker (pickerOpen) so the two can't fight over the same state.
+  // View-mode detail: clicking a placed mod pins its expanded card in place
+  // (an interactive twin of the desktop hover-preview, so mobile sees the full
+  // mod too) with the Wiki/Market links beneath it. Portaled at the slot's
+  // viewport center so it escapes the grid's clipping and never spawns a
+  // second card below the slot.
   const [detailOpen, setDetailOpen] = useState(false)
+  const [detailCenter, setDetailCenter] = useState<{
+    x: number
+    y: number
+  } | null>(null)
+  const triggerRef = useRef<HTMLDivElement>(null)
+  const overlayRef = useRef<HTMLDivElement>(null)
   const rankHover = useRankHover()
   // Drag-and-drop subscriptions. `useIsDropTarget` / `useIsDragSourceSlot`
   // only flip when *this* slot is the over/source slot, so each slot
@@ -181,22 +191,61 @@ export function ModSlot({
       ? marketUrl(mod.name)
       : undefined
 
+  // Dismiss the pinned detail on outside click / Escape / scroll. The trigger
+  // is excluded so a second click on the same slot toggles it shut via onClick
+  // instead of being treated as an outside click (which would race).
+  useEffect(() => {
+    if (!detailOpen) return
+    const onPointerDown = (e: globalThis.PointerEvent) => {
+      const t = e.target as Node
+      if (overlayRef.current?.contains(t) || triggerRef.current?.contains(t)) {
+        return
+      }
+      setDetailOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDetailOpen(false)
+    }
+    const onScroll = () => setDetailOpen(false)
+    document.addEventListener("pointerdown", onPointerDown, true)
+    document.addEventListener("keydown", onKey)
+    window.addEventListener("scroll", onScroll, {
+      capture: true,
+      passive: true,
+    })
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown, true)
+      document.removeEventListener("keydown", onKey)
+      window.removeEventListener("scroll", onScroll, true)
+    }
+  }, [detailOpen])
+
   return (
     <div className="relative" {...dropAttr}>
-      <Popover
-        open={readOnly ? detailOpen : popoverOpen}
-        onOpenChange={readOnly ? setDetailOpen : setPickerOpen}
-      >
+      <Popover open={popoverOpen} onOpenChange={setPickerOpen}>
         <PopoverTrigger
           nativeButton={false}
           // Slots are driven by arrow-key navigation (window-scoped, see
           // use-keyboard-nav.ts), not by Tab traversal. Keeping them out of the
           // tab order avoids the browser focus ring visually enlarging the
           // focused slot relative to its neighbors.
-          render={<div tabIndex={-1} />}
+          render={<div ref={triggerRef} tabIndex={-1} />}
           data-build-slot
           onClick={
-            readOnly ? (mod ? () => setDetailOpen(true) : undefined) : onClick
+            readOnly
+              ? mod
+                ? (e) => {
+                    const r = (
+                      e.currentTarget as HTMLElement
+                    ).getBoundingClientRect()
+                    setDetailCenter({
+                      x: r.left + r.width / 2,
+                      y: r.top + r.height / 2,
+                    })
+                    setDetailOpen((o) => !o)
+                  }
+                : undefined
+              : onClick
           }
           onContextMenu={handleContextMenu}
           onPointerDown={canDrag ? onDragPointerDown : undefined}
@@ -245,13 +294,6 @@ export function ModSlot({
               !isDragging &&
               selected &&
               !readOnly &&
-              "rounded-md ring-2 ring-white/60",
-            // View mode: ring the in-grid card while its detail is open, so the
-            // mod itself reads as "active" rather than spawning a second copy.
-            mod &&
-              !isDragging &&
-              readOnly &&
-              detailOpen &&
               "rounded-md ring-2 ring-white/60",
             // While this slot is the drag source, hide the mod card behind
             // a dashed "ghost" so it reads as a vacated slot (matches how
@@ -329,19 +371,6 @@ export function ModSlot({
             </>
           )}
         </PopoverTrigger>
-        {detailEnabled && mod && (
-          // View mode: the in-grid card gets the ring (above); here we drop just
-          // the Wiki/Market buttons directly beneath the slot — no second copy
-          // of the card. Anchored to this slot so it tracks the mod's position.
-          <PopoverContent
-            className="w-auto p-1.5"
-            align="center"
-            side="bottom"
-            sideOffset={6}
-          >
-            <DetailLinks wikiHref={wikiUrl(mod.name)} marketHref={marketHref} />
-          </PopoverContent>
-        )}
         {!readOnly && onPickPolarity && (
           <PopoverContent className="w-auto">
             <PolarityPicker
@@ -354,6 +383,43 @@ export function ModSlot({
           </PopoverContent>
         )}
       </Popover>
+
+      {/* Pinned in-place detail (view mode). Portaled at the slot's viewport
+          center — like the hover preview but interactive — so the mod shows in
+          its full expanded form (works on mobile, which has no hover) with the
+          Wiki/Market links beneath it. No second card spawns below the slot. */}
+      {detailEnabled &&
+        mod &&
+        detailOpen &&
+        detailCenter &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={overlayRef}
+            className="fixed z-50 flex flex-col items-center gap-2"
+            style={{
+              top: detailCenter.y,
+              left: detailCenter.x,
+              transform: "translate(-50%, -50%)",
+              filter: "drop-shadow(0 0 20px rgba(0,0,0,0.85))",
+            }}
+          >
+            <ModCard
+              mod={mod}
+              rank={rank}
+              alwaysExpanded
+              drainOverride={
+                kind === "aura" || kind === "stance"
+                  ? auraBonusForMod(mod, rank, effective)
+                  : effectiveDrainForMod(mod, rank, effective)
+              }
+              matchState={getMatchState(mod.polarity, effective)}
+              hideDrain={hideDrain}
+            />
+            <DetailLinks wikiHref={wikiUrl(mod.name)} marketHref={marketHref} />
+          </div>,
+          document.body,
+        )}
     </div>
   )
 }
