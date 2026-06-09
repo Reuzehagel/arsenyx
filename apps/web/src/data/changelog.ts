@@ -11,6 +11,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-06-09",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Weapon and companion augment mods now show up on every variant of a weapon — Prime, Wraith, Vandal, and the like — instead of only the base version. For example, Velox Conclusion now appears when modding Velox Prime.",
+      },
+    ],
+  },
+  {
     date: "2026-06-07",
     changes: [
       {

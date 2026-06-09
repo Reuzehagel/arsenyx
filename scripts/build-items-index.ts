@@ -44,11 +44,9 @@ import {
 
 import { PVE_USABLE_CONCLAVE_MODS } from "../data/curated/pve-usable-conclave-mods"
 import { buildBrowseIndex } from "./build/browse-index"
+import { buildFamilyIndex, makeExpandCompat } from "./build/expand-compat"
 import { iterWikiRecords } from "./build/images"
 import { mergeArcanes, type MergedArcane } from "./build/merge-arcanes"
-import { buildModConflicts } from "./build/mod-conflicts"
-import { resolveImages } from "./build/resolve-images"
-import { writeItemDetails } from "./build/write-details"
 import { mergeCompanions, type MergedCompanion } from "./build/merge-companions"
 import {
   mergeFrame,
@@ -64,6 +62,7 @@ import {
   validateCuratedAgainstKnown,
   type MergedWeapon,
 } from "./build/merge-weapons"
+import { buildModConflicts } from "./build/mod-conflicts"
 import { readCurated } from "./build/read-curated"
 import {
   readDeArcanes,
@@ -76,6 +75,8 @@ import {
 } from "./build/read-de"
 import { readPePlusUpgrades, readPePlusWeaponTags } from "./build/read-pe-plus"
 import { readWikiModule } from "./build/read-wiki"
+import { resolveImages } from "./build/resolve-images"
+import { writeItemDetails } from "./build/write-details"
 
 const REPO_ROOT = resolve(import.meta.dirname, "..")
 const WIKI_DIR = resolve(REPO_ROOT, "data/raw/wiki")
@@ -398,27 +399,10 @@ async function main() {
     })
 
   // ---------- 8. Expand mod `compat` to per-item lists ----------
-  // OpenWF's `compat` is one of three things:
-  //
-  //   1. A specific item uniqueName (e.g. weapon augments) — direct match.
-  //   2. A frame "BaseSuit" anchor like `/Lotus/Powersuits/Excalibur/
-  //      ExcaliburBaseSuit`. DE's `parentName` chain doesn't fully resolve
-  //      (intermediate suits like `DarkExcalibur` aren't first-class
-  //      records), so we use a path-prefix heuristic: BaseSuit compat
-  //      expands to every catalog frame in the same `/Lotus/Powersuits/
-  //      <Family>/` directory. This covers Excalibur ↔ ExcaliburPrime ↔
-  //      ExcaliburUmbra without depending on DE shipping the full chain.
-  //   3. A generic class anchor (e.g. `.../PlayerMeleeWeapon`) — strip,
-  //      `modPools` already covers the equivalent routing.
-  //
-  // Output field is `compatItems: string[]` — a closed list of item
-  // uniqueNames the augment fits. Runtime check collapses to a single
-  // `includes(item.uniqueName)`.
+  // See scripts/build/expand-compat.ts for the three-case routing. Output
+  // field is `compatItems: string[]` — the closed list of item uniqueNames the
+  // augment fits; the runtime check collapses to `includes(item.uniqueName)`.
   const knownItemUniqueNames = new Set<string>()
-  /** Track each item's category so BaseSuit expansion can stay within
-   *  warframes (Excalibur's directory also contains the Exalted Blade
-   *  exalted weapon — without a category gate the path-prefix heuristic
-   *  would pull the exalted weapon in as a "frame variant"). */
   const categoryByUniqueName = new Map<string, string>()
   for (const [cat, arr] of Object.entries(byCategory)) {
     if (!arr) continue
@@ -428,29 +412,19 @@ async function main() {
     }
   }
 
-  // BaseSuit/BaseMechSuit → all frames in the same family directory. The
-  // path prefix alone over-matches (exalted weapons share the directory),
-  // so each anchor also requires a matching item category.
-  const BASE_SUIT_ANCHORS = [
-    { token: "BaseSuit", cat: "warframes" },
-    { token: "BaseMechSuit", cat: "necramechs" },
-  ] as const
-
-  function expandCompat(compat: string): string[] {
-    if (knownItemUniqueNames.has(compat)) return [compat]
-    for (const { token, cat } of BASE_SUIT_ANCHORS) {
-      if (!compat.includes(token)) continue
-      const dir = compat.slice(0, compat.lastIndexOf("/") + 1)
-      const out: string[] = []
-      for (const un of knownItemUniqueNames) {
-        if (un.startsWith(dir) && categoryByUniqueName.get(un) === cat) {
-          out.push(un)
-        }
-      }
-      return out
-    }
-    return []
-  }
+  // `family` lives on the merged records — the lightweight `byCategory` browse
+  // projection drops it — so build the variant-family index from
+  // mergedWeapons/Companions, gated to real catalog items by category.
+  const { familyKeyByUniqueName, familyMembers } = buildFamilyIndex(
+    [...mergedWeapons, ...mergedCompanions],
+    categoryByUniqueName,
+  )
+  const expandCompat = makeExpandCompat({
+    knownItemUniqueNames,
+    categoryByUniqueName,
+    familyKeyByUniqueName,
+    familyMembers,
+  })
 
   let augmentCount = 0
   let strippedCount = 0
