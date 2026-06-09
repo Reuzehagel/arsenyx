@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { authClient } from "@/lib/auth-client"
+import { fuzzyRank } from "@/lib/fuzzy"
 import { itemsIndexQuery } from "@/lib/queries/items-index-query"
 import { CATEGORIES, getImageUrl, type BrowseItem } from "@/lib/warframe"
 
@@ -80,17 +81,23 @@ export function CommandPalette({
     return [...byKey.values()]
   }, [items])
 
-  const filteredItems = useMemo<ItemEntry[]>(() => {
-    const q = debouncedQuery.toLowerCase()
-    if (!q) return []
-    return allItems
-      .filter(
-        (it) =>
-          it.name.toLowerCase().includes(q) ||
-          it.displayClass?.toLowerCase().includes(q),
-      )
-      .slice(0, 10)
-  }, [allItems, debouncedQuery])
+  // Searchable text per item, aligned by index with `allItems`. Folding in
+  // displayClass lets a class term ("excalibur umbra") match alongside the name.
+  const haystack = useMemo(
+    () =>
+      allItems.map((it) =>
+        it.displayClass ? `${it.name} ${it.displayClass}` : it.name,
+      ),
+    [allItems],
+  )
+
+  const filteredItems = useMemo<ItemEntry[]>(
+    () =>
+      fuzzyRank(haystack, debouncedQuery)
+        .slice(0, 10)
+        .map((i) => allItems[i]),
+    [allItems, haystack, debouncedQuery],
+  )
 
   useEffect(() => {
     setSelected(filteredItems[0] ? `item:${filteredItems[0].slug}` : "")
