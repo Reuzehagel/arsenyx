@@ -4,15 +4,14 @@
  * Invoked by scripts/setup.ts at the end of `just setup`. Safe to re-run.
  *
  * Bypasses Prisma entirely because the API's Prisma client is generated with
- * `runtime = "workerd"` and won't load outside wrangler. Talks to Neon via
- * @neondatabase/serverless and hashes the password with Better Auth's own
- * utility so the resulting account is indistinguishable from one created via
- * `/auth/sign-up/email`.
+ * `runtime = "workerd"` and won't load outside wrangler. Talks to Postgres via
+ * `pg` and hashes the password with Better Auth's own utility so the resulting
+ * account is indistinguishable from one created via `/auth/sign-up/email`.
  */
 
-import { neon } from "@neondatabase/serverless"
 import { hashPassword } from "better-auth/crypto"
 import { nanoid } from "nanoid"
+import { Client } from "pg"
 
 // Refuse to run outside local development. A misconfigured NODE_ENV in CI/prod
 // would otherwise create a known-credential admin account.
@@ -30,98 +29,132 @@ const USERNAME = process.env.SEED_ADMIN_USERNAME ?? "admin"
 const PASSWORD_FROM_ENV = process.env.SEED_ADMIN_PASSWORD
 const PASSWORD = PASSWORD_FROM_ENV ?? nanoid(20)
 
-async function main() {
+// Build a pg Client from DATABASE_URL. Strip libpq-only params node's `pg`
+// can't honour: `sslrootcert=system` would make it readFileSync("system") and
+// crash, and `sslnegotiation` is unknown. TLS is verified against Node's
+// built-in CA bundle, which covers PlanetScale's public certificate.
+function makeClient(): Client {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is not set")
-  const sql = neon(process.env.DATABASE_URL)
+  const url = new URL(process.env.DATABASE_URL)
+  const sslmode = url.searchParams.get("sslmode") ?? "require"
+  url.searchParams.delete("sslrootcert")
+  url.searchParams.delete("sslnegotiation")
+  return new Client({
+    connectionString: url.toString(),
+    ssl: sslmode === "disable" ? false : { rejectUnauthorized: true },
+  })
+}
 
-  const passwordHash = await hashPassword(PASSWORD)
+async function main() {
+  const client = makeClient()
+  await client.connect()
 
-  // Match strictly by email. Matching on username too (the previous behaviour)
-  // would clobber a developer's real local user if they happened to pick the
-  // same username — we'd email-migrate them and overwrite their password hash.
-  const existing = (await sql`
-    SELECT id FROM users WHERE email = ${EMAIL} LIMIT 1
-  `) as Array<{ id: string }>
-  if (existing.length > 0) {
-    const row = existing[0]!
-    // Upsert the credential row: an OAuth-only user (no providerId='credential'
-    // row) needs one created; an existing credential row gets its password
-    // rotated so the freshly-printed password actually works.
-    const updated = (await sql`
-      UPDATE accounts
-      SET password = ${passwordHash}, "updatedAt" = NOW()
-      WHERE "userId" = ${row.id} AND "providerId" = 'credential'
-      RETURNING id
+  // Tagged-template helper mirroring @neondatabase/serverless's `sql`: turns
+  // sql`… ${a} … ${b}` into a parameterised query ($1, $2, …) and returns rows.
+  const sql = async (
+    strings: TemplateStringsArray,
+    ...values: unknown[]
+  ): Promise<unknown[]> => {
+    const text = strings.reduce(
+      (acc, s, i) => acc + s + (i < values.length ? `$${i + 1}` : ""),
+      "",
+    )
+    const { rows } = await client.query(text, values)
+    return rows
+  }
+
+  try {
+    const passwordHash = await hashPassword(PASSWORD)
+
+    // Match strictly by email. Matching on username too (the previous behaviour)
+    // would clobber a developer's real local user if they happened to pick the
+    // same username — we'd email-migrate them and overwrite their password hash.
+    const existing = (await sql`
+      SELECT id FROM users WHERE email = ${EMAIL} LIMIT 1
     `) as Array<{ id: string }>
-    if (updated.length === 0) {
-      await sql`
-        INSERT INTO accounts (
-          id, "userId", "accountId", "providerId", password,
-          "createdAt", "updatedAt"
-        ) VALUES (
-          ${nanoid()}, ${row.id}, ${row.id}, 'credential', ${passwordHash},
-          NOW(), NOW()
-        )
-      `
+    if (existing.length > 0) {
+      const row = existing[0]!
+      // Upsert the credential row: an OAuth-only user (no providerId='credential'
+      // row) needs one created; an existing credential row gets its password
+      // rotated so the freshly-printed password actually works.
+      const updated = (await sql`
+        UPDATE accounts
+        SET password = ${passwordHash}, "updatedAt" = NOW()
+        WHERE "userId" = ${row.id} AND "providerId" = 'credential'
+        RETURNING id
+      `) as Array<{ id: string }>
+      if (updated.length === 0) {
+        await sql`
+          INSERT INTO accounts (
+            id, "userId", "accountId", "providerId", password,
+            "createdAt", "updatedAt"
+          ) VALUES (
+            ${nanoid()}, ${row.id}, ${row.id}, 'credential', ${passwordHash},
+            NOW(), NOW()
+          )
+        `
+        if (!PASSWORD_FROM_ENV) {
+          console.log(`✓ ${EMAIL} credential added → ${PASSWORD}`)
+        } else {
+          console.log(`✓ ${EMAIL} credential added`)
+        }
+        return
+      }
       if (!PASSWORD_FROM_ENV) {
-        console.log(`✓ ${EMAIL} credential added → ${PASSWORD}`)
+        console.log(`✓ ${EMAIL} password rotated → ${PASSWORD}`)
       } else {
-        console.log(`✓ ${EMAIL} credential added`)
+        console.log(`✓ ${EMAIL} password rotated`)
       }
       return
     }
-    if (!PASSWORD_FROM_ENV) {
-      console.log(`✓ ${EMAIL} password rotated → ${PASSWORD}`)
-    } else {
-      console.log(`✓ ${EMAIL} password rotated`)
+
+    // Refuse to clobber another user that already owns the requested username.
+    // (The seed previously took it over; safer to fail loudly.)
+    const usernameClash = (await sql`
+      SELECT id FROM users WHERE username = ${USERNAME} LIMIT 1
+    `) as Array<{ id: string }>
+    if (usernameClash.length > 0) {
+      console.error(
+        `seed-admin: username "${USERNAME}" is already taken by a different user — refusing to overwrite. ` +
+          `Set SEED_ADMIN_USERNAME to a different value or delete the existing row.`,
+      )
+      process.exit(1)
     }
-    return
-  }
 
-  // Refuse to clobber another user that already owns the requested username.
-  // (The seed previously took it over; safer to fail loudly.)
-  const usernameClash = (await sql`
-    SELECT id FROM users WHERE username = ${USERNAME} LIMIT 1
-  `) as Array<{ id: string }>
-  if (usernameClash.length > 0) {
-    console.error(
-      `seed-admin: username "${USERNAME}" is already taken by a different user — refusing to overwrite. ` +
-        `Set SEED_ADMIN_USERNAME to a different value or delete the existing row.`,
-    )
-    process.exit(1)
-  }
+    const userId = nanoid()
+    const accountId = nanoid()
 
-  const userId = nanoid()
-  const accountId = nanoid()
+    await sql`
+      INSERT INTO users (
+        id, name, email, "emailVerified",
+        username, "displayUsername",
+        "isAdmin", "isVerified",
+        "defaultBuildVisibility", "createdAt", "updatedAt"
+      ) VALUES (
+        ${userId}, ${USERNAME}, ${EMAIL}, true,
+        ${USERNAME}, ${USERNAME},
+        true, true,
+        'PUBLIC', NOW(), NOW()
+      )
+    `
 
-  await sql`
-    INSERT INTO users (
-      id, name, email, "emailVerified",
-      username, "displayUsername",
-      "isAdmin", "isVerified",
-      "defaultBuildVisibility", "createdAt", "updatedAt"
-    ) VALUES (
-      ${userId}, ${USERNAME}, ${EMAIL}, true,
-      ${USERNAME}, ${USERNAME},
-      true, true,
-      'PUBLIC', NOW(), NOW()
-    )
-  `
+    await sql`
+      INSERT INTO accounts (
+        id, "userId", "accountId", "providerId", password,
+        "createdAt", "updatedAt"
+      ) VALUES (
+        ${accountId}, ${userId}, ${userId}, 'credential', ${passwordHash},
+        NOW(), NOW()
+      )
+    `
 
-  await sql`
-    INSERT INTO accounts (
-      id, "userId", "accountId", "providerId", password,
-      "createdAt", "updatedAt"
-    ) VALUES (
-      ${accountId}, ${userId}, ${userId}, 'credential', ${passwordHash},
-      NOW(), NOW()
-    )
-  `
-
-  if (!PASSWORD_FROM_ENV) {
-    console.log(`✓ seeded ${EMAIL} / ${PASSWORD} (admin)`)
-  } else {
-    console.log(`✓ seeded ${EMAIL} (admin)`)
+    if (!PASSWORD_FROM_ENV) {
+      console.log(`✓ seeded ${EMAIL} / ${PASSWORD} (admin)`)
+    } else {
+      console.log(`✓ seeded ${EMAIL} (admin)`)
+    }
+  } finally {
+    await client.end()
   }
 }
 
