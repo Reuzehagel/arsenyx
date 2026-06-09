@@ -81,6 +81,11 @@ import { myOrgsQuery } from "@/lib/queries/org-query"
 import { padShards, type PlacedShard } from "@/lib/shards"
 import { apiErrorMessage, apiFetch } from "@/lib/util/api-client"
 import { copyToClipboard } from "@/lib/util/clipboard"
+import { EXTERNAL_LINKS } from "@/lib/util/constants"
+import {
+  hasShownDonationNudge,
+  markDonationNudgeShown,
+} from "@/lib/util/donation-nudge"
 import { getCategoryLabel, type BrowseCategory } from "@/lib/warframe"
 
 import { AutoFormaDialog } from "./auto-forma-dialog"
@@ -1019,6 +1024,37 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       cachedVariants = null
       clearEditorDraft(storeKey)
       toast.success(isUpdate ? "Build saved" : "Build published")
+      // Moment-of-value donation ask: only after a *new* build is published
+      // (not on edits), and only ever once per browser — whether the user
+      // tips, dismisses, or ignores it. Kept as a dismissible toast, never a
+      // modal/banner, so it stays gentle.
+      if (!isUpdate && !hasShownDonationNudge()) {
+        markDonationNudgeShown()
+        toast(
+          <div className="flex flex-col gap-2">
+            <div>
+              <p className="font-medium">Thanks for building with Arsenyx</p>
+              <p className="text-muted-foreground text-sm">
+                It&apos;s free and runs on ~$5/mo of server costs. If it&apos;s
+                useful to you, a small tip keeps it online.
+              </p>
+            </div>
+            <div className="flex gap-4 text-sm">
+              <a
+                href={EXTERNAL_LINKS.koFi}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium underline underline-offset-2"
+              >
+                Support on Ko-fi
+              </a>
+            </div>
+          </div>,
+          // Explicit close button — dismissal shouldn't rely on the user
+          // knowing they can swipe a toast away.
+          { duration: 12000, closeButton: true },
+        )
+      }
       navigate({ to: "/builds/$slug", params: { slug } })
     } catch (err) {
       // Re-enable the Save button and surface the failure as a toast with a

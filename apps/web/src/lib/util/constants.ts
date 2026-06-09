@@ -39,6 +39,8 @@ export const EXTERNAL_LINKS = {
   github: "https://github.com/Reuzehagel/arsenyx",
   wiki: "https://wiki.warframe.com",
   apiBase: "https://api.arsenyx.com",
+  // Donation destination surfaced by the footer + post-publish nudge.
+  koFi: "https://ko-fi.com/reuzehagel",
 } as const
 
 // Navigation items for header
