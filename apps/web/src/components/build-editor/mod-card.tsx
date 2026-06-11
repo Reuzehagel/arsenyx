@@ -304,11 +304,12 @@ function ExpandedModCard({
   // Set bonus (DE ExportModSet, one tier per equipped set member — tier
   // count == set size for every set). With n set mods equipped show the
   // active tier; with none (mod picker, browse) preview the max tier.
+  // modSetStats is ordered ascending (tier 1 = one member … tier N = full set).
+  // With n members equipped show tier n (capped at the set size); with none
+  // equipped — the picker/browse preview — show the full-set max tier.
   const setSize = mod.modSetStats?.length ?? 0
-  const setBonus =
-    setSize > 0
-      ? mod.modSetStats?.[Math.min(Math.max(setCount, 1), setSize) - 1]
-      : undefined
+  const setTier = setCount > 0 ? Math.min(setCount, setSize) : setSize
+  const setBonus = setSize > 0 ? mod.modSetStats?.[setTier - 1] : undefined
   const maxRank = modMaxRank(mod)
   const drain = drainOverride ?? baseDrainForMod(mod, rank)
   const compatLabel =
