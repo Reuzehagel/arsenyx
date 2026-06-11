@@ -91,6 +91,14 @@ export function ModGrid({
   // calculateCapacity, not from `slots.placed`.
   const lockedStance = getLockedStance(item, category)
 
+  // Equipped count per mod set (modSet path → n). Drives the set-bonus tier
+  // and Umbral scaling on each placed set mod's expanded card.
+  const setCounts = new Map<string, number>()
+  for (const placed of Object.values(slots.placed)) {
+    const set = placed?.mod.modSet
+    if (set) setCounts.set(set, (setCounts.get(set) ?? 0) + 1)
+  }
+
   const slotProps = (
     id: SlotId,
     innate?: Polarity,
@@ -104,6 +112,9 @@ export function ModGrid({
       formaPolarity: forma,
       mod: placed?.mod,
       rank: placed?.rank,
+      setCount: placed?.mod.modSet
+        ? (setCounts.get(placed.mod.modSet) ?? 0)
+        : 0,
       selected: slots.selected === id,
       onClick: () => slots.select(id),
       onRemove: placed ? () => slots.remove(id) : undefined,

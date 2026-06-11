@@ -58,6 +58,9 @@ interface ModSlotProps {
   formaPolarity?: Polarity
   mod?: Mod
   rank?: number
+  /** Equipped mods from this mod's set (this one included). Drives the
+   * active set-bonus tier + Umbral scaling on the expanded card. */
+  setCount?: number
   /** Whether this slot is the current placement target. */
   selected?: boolean
   /** LClick: toggle select / open picker (fires for both empty and filled). */
@@ -91,6 +94,7 @@ export function ModSlot({
   formaPolarity,
   mod,
   rank = 0,
+  setCount = 0,
   selected,
   onClick,
   onRemove,
@@ -339,6 +343,7 @@ export function ModSlot({
                 <ModCard
                   mod={mod}
                   rank={rank}
+                  setCount={setCount}
                   disableHover={popoverOpen || detailOpen || isAnyDragging}
                   drainOverride={cardDrain}
                   matchState={cardMatch}
@@ -431,6 +436,7 @@ export function ModSlot({
             <ModCard
               mod={mod}
               rank={rank}
+              setCount={setCount}
               alwaysExpanded
               drainOverride={cardDrain}
               matchState={cardMatch}
