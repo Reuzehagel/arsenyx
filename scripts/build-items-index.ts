@@ -76,6 +76,7 @@ import {
 import { readPePlusUpgrades, readPePlusWeaponTags } from "./build/read-pe-plus"
 import { readWikiModule } from "./build/read-wiki"
 import { resolveImages } from "./build/resolve-images"
+import { validateOutputs } from "./build/validate-output"
 import { writeItemDetails } from "./build/write-details"
 
 const REPO_ROOT = resolve(import.meta.dirname, "..")
@@ -459,6 +460,28 @@ async function main() {
     wikiModUniqueNameByName,
   )
 
+  // ---------- 8c. Validate before touching the output dir ----------
+  // Shape-check every emitted record and compare counts against the previous
+  // build's meta.json (see validate-output.ts). Throws before the rm below,
+  // so a broken merge can't replace a good catalog with a hollowed-out one.
+  const prevMeta = await Bun.file(resolve(OUT_DIR, "meta.json"))
+    .json()
+    .catch(() => undefined)
+  const nextCounts = {
+    itemCount: Object.values(stats.perCategory).reduce((a, b) => a + b, 0),
+    modCount: mergedMods.length,
+    arcaneCount: arcanesWithImages.length,
+    perCategory: stats.perCategory,
+  }
+  validateOutputs({
+    byCategory: byCategory as Record<string, Array<Record<string, unknown>>>,
+    mods: mergedMods as unknown as Array<Record<string, unknown>>,
+    arcanes: arcanesWithImages as unknown as Array<Record<string, unknown>>,
+    prevMeta,
+    nextCounts,
+  })
+  console.log("  OK  validation (shape + count regression vs previous build)")
+
   // ---------- 9. Write outputs ----------
   await rm(OUT_DIR, { recursive: true, force: true })
   await mkdir(OUT_DIR, { recursive: true })
@@ -665,8 +688,10 @@ async function main() {
         generatedAt: new Date().toISOString(),
         source: "DE PublicExport + wiki Lua (v2 pipeline)",
         pipelineVersion: 2,
-        itemCount: Object.values(stats.perCategory).reduce((a, b) => a + b, 0),
-        modCount: mergedMods.length,
+        itemCount: nextCounts.itemCount,
+        modCount: nextCounts.modCount,
+        arcaneCount: nextCounts.arcaneCount,
+        perCategory: nextCounts.perCategory,
         unmatchedWeapons: stats.weapons.unmatched,
         unmatchedFrames: frameUnmatched.size,
       },
