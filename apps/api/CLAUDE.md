@@ -13,7 +13,7 @@ Hono on Cloudflare Workers (Bun-compatible for local dev). Better Auth + Prisma 
 ## Prisma
 
 - Schema: [prisma/schema.prisma](prisma/schema.prisma) (single file). Generator has `runtime = "workerd"` — emits the `wasm-compiler-edge` runtime so the bundle works on Workers (no `fileURLToPath`, no `node:fs` at init).
-- Dev uses `bun run db:push`. Destructive migrations go in [scripts/migrations/](scripts/migrations/) as dated `.sql` files applied manually against Neon via `prisma db execute --file`.
+- Dev uses `bun run db:push`. Destructive migrations go in [scripts/migrations/](scripts/migrations/) as dated `.sql` files applied manually against PlanetScale via `prisma db execute --file`.
 - Prisma 7 quirk: datasource `url` lives in [prisma.config.ts](prisma.config.ts), not the schema file.
 - Generator output: `src/generated/prisma` (gitignored). Import as `import { Prisma } from "../generated/prisma/client"`.
 - **PrismaClient is request-scoped** via `AsyncLocalStorage` in [src/db.ts](src/db.ts) — Workers reuses isolates across requests and the pg Pool is request-scoped, so a module-level singleton leaks I/O between requests. Routes keep `import { prisma }` unchanged (Proxy reads the per-request client); the fetch handler in [src/index.ts](src/index.ts) wraps everything in `withPrisma(env.HYPERDRIVE.connectionString, ctx, …)`. The connection string is a Hyperdrive **runtime binding** (not `process.env`); Hyperdrive owns the upstream pool so a fresh per-request client is cheap.

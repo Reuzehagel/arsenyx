@@ -27,7 +27,7 @@ Oxlint / oxfmt config lives at the repo root (`.oxlintrc.json`, `.oxfmtrc.json`)
 
 ## Database (apps/api)
 
-Postgres is on Neon — no local Postgres process. Connection string lives in `apps/api/.env`.
+Postgres is on PlanetScale (via Cloudflare Hyperdrive at runtime) — no local Postgres process. The Prisma CLI uses the direct `DATABASE_URL` in `apps/api/.env`.
 
 ```bash
 bun --cwd apps/api run db:push     # dev: push schema without migrations

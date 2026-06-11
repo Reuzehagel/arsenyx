@@ -178,8 +178,19 @@ function contentTypeForKey(key: string): string {
  *  the edge to HIT for all types; this header makes browsers cache long too. */
 const CACHE_CONTROL = "public, max-age=31536000, immutable"
 
+// Upstream fetches go through fetchRetry (per-attempt timeout + backoff), but
+// the R2 S3 calls below were bare `aws.fetch` — behind the same kind of
+// Cloudflare edge where a half-open connection can stall forever with no
+// feedback. Same fix as scripts/build/http.ts: abort per attempt. 60s covers
+// the PUTs (multi-MB bodies on a slow uplink), which is generous for
+// HEAD/CopyObject too.
+const R2_TIMEOUT_MS = 60_000
+
 async function existsInBucket(key: string): Promise<boolean> {
-  const res = await aws.fetch(objectUrl(key), { method: "HEAD" })
+  const res = await aws.fetch(objectUrl(key), {
+    method: "HEAD",
+    signal: AbortSignal.timeout(R2_TIMEOUT_MS),
+  })
   if (res.status === 200) return true
   if (res.status === 404) return false
   throw new Error(`HEAD ${key} → HTTP ${res.status}`)
@@ -191,6 +202,7 @@ async function existsInBucket(key: string): Promise<boolean> {
 async function refreshMetadata(key: string): Promise<void> {
   const res = await aws.fetch(objectUrl(key), {
     method: "PUT",
+    signal: AbortSignal.timeout(R2_TIMEOUT_MS),
     headers: {
       "x-amz-copy-source": `/${BUCKET}/${encodeURI(key)}`,
       "x-amz-metadata-directive": "REPLACE",
@@ -224,6 +236,7 @@ async function ensureUploaded(url: string, key: string): Promise<UploadResult> {
   const put = await aws.fetch(objectUrl(key), {
     method: "PUT",
     body,
+    signal: AbortSignal.timeout(R2_TIMEOUT_MS),
     headers: {
       // Set Content-Type from our key's extension, not the upstream
       // response — see MIME_BY_EXT comment above. Content-Disposition:
