@@ -1,4 +1,5 @@
 import { MarkdownBody } from "@/components/markdown-body"
+import type { GuideRefResolver } from "@/lib/guide-refs"
 import type { BuildDetail } from "@/lib/queries/build-query"
 import type { SavedVariant } from "@/lib/queries/build-query"
 
@@ -16,9 +17,13 @@ import type { SavedVariant } from "@/lib/queries/build-query"
 export function GuideDisplay({
   build,
   activeVariant,
+  resolveGuideRef,
 }: {
   build: Pick<BuildDetail, "guide">
   activeVariant: SavedVariant | undefined
+  /** Resolves `[Name](mod:…)` references against the build's stored
+   *  snapshots — see lib/guide-refs.ts. */
+  resolveGuideRef?: GuideRefResolver
 }) {
   const variantSummary = activeVariant?.guideSummary?.trim()
   const variantDescription = activeVariant?.guideDescription?.trim()
@@ -39,6 +44,7 @@ export function GuideDisplay({
         <MarkdownBody
           source={effectiveDescription}
           className="prose prose-sm dark:prose-invert max-w-none"
+          resolveGuideRef={resolveGuideRef}
         />
       ) : null}
     </div>

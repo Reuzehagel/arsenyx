@@ -1,6 +1,5 @@
 import { isRivenMod } from "@arsenyx/shared/warframe/rivens"
 import type { Mod, Polarity } from "@arsenyx/shared/warframe/types"
-import { useQuery } from "@tanstack/react-query"
 import { Pencil, Plus, X, type LucideIcon } from "lucide-react"
 import {
   useEffect,
@@ -16,9 +15,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { modTradableQuery } from "@/lib/queries/mod-tradable-query"
+import { useModMarketHref } from "@/lib/queries/mod-tradable-query"
 import { cn } from "@/lib/util/utils"
-import { marketUrl, wikiUrl } from "@/lib/util/warframe-links"
+import { wikiUrl } from "@/lib/util/warframe-links"
 
 import {
   auraBonusForMod,
@@ -180,21 +179,10 @@ export function ModSlot({
   // `readOnly`.
   const detailEnabled = readOnly && !!mod
 
-  // Compact non-tradable list (deduped across all slots by React Query).
-  // Gates the Market link: a mod is tradable unless listed. Rivens carry a stub
-  // uniqueName with no Market page, so never link them. Only fetched once a
-  // detail is actually opened — not on every filled slot of every build view.
-  const { data: nonTradable } = useQuery({
-    ...modTradableQuery,
-    enabled: detailEnabled && detailOpen,
-  })
-  const marketHref =
-    mod &&
-    nonTradable &&
-    !isRivenMod(mod) &&
-    !nonTradable.includes(mod.uniqueName)
-      ? marketUrl(mod.name)
-      : undefined
+  // Market link, gated on the compact non-tradable index (deduped across all
+  // slots by React Query). Only fetched once a detail is actually opened —
+  // not on every filled slot of every build view.
+  const marketHref = useModMarketHref(mod, detailEnabled && detailOpen)
 
   // Shared by the in-slot card and the pinned detail card so the two can't show
   // a different drain / polarity-match for the same mod. Aura & stance slots

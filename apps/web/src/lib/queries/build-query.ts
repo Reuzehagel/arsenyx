@@ -8,6 +8,7 @@ import { queryOptions } from "@tanstack/react-query"
 import { notFound } from "@tanstack/react-router"
 
 import type { PlacedArcane, PlacedMod, SlotId } from "@/components/build-editor"
+import type { GuideRefs } from "@/lib/guide-refs"
 import type { HelminthAbility } from "@/lib/queries/helminth-query"
 import type { PlacedShard } from "@/lib/shards"
 import { apiFetch, ApiError } from "@/lib/util/api-client"
@@ -56,6 +57,11 @@ export type SavedBuildData = {
   // and the top-level mod/arcane fields mirror variants[0] for legacy
   // viewer compatibility.
   variants?: SavedVariant[]
+
+  /** Snapshots of mods/arcanes referenced from guide text via
+   *  `[Name](mod:…)` links — see lib/guide-refs.ts. Build-wide (covers the
+   *  build guide and every per-variant guide), recomputed on each save. */
+  guideRefs?: GuideRefs
 }
 
 /**

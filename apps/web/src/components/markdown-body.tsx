@@ -1,10 +1,16 @@
 import { useMemo } from "react"
-import ReactMarkdown, { type Components } from "react-markdown"
+import ReactMarkdown, {
+  defaultUrlTransform,
+  type Components,
+} from "react-markdown"
 import remarkBreaks from "remark-breaks"
 import remarkGfm from "remark-gfm"
 
+import { GuideRefLink } from "@/components/guide-ref-link"
+import { parseGuideRefHref, type GuideRefResolver } from "@/lib/guide-refs"
 import { proxyImage } from "@/lib/util/image-proxy"
 import { getVideoEmbed } from "@/lib/util/video-embed"
+import { wikiUrl } from "@/lib/util/warframe-links"
 
 /**
  * Renders user-authored markdown for build guides. Bare YouTube/Vimeo URLs
@@ -19,21 +25,74 @@ import { getVideoEmbed } from "@/lib/util/video-embed"
 export function MarkdownBody({
   source,
   className,
+  resolveGuideRef,
 }: {
   source: string
   className?: string
+  /** Resolves `[Name](mod:…)` / `[Name](arcane:…)` references to hover-card
+   *  data (issue #228). Omitted → those links render as plain wiki links. */
+  resolveGuideRef?: GuideRefResolver
 }) {
   const prepared = useMemo(() => isolateVideoLines(source), [source])
+  const mergedComponents = useMemo<Components>(
+    () => ({ ...components, a: makeAnchorRenderer(resolveGuideRef) }),
+    [resolveGuideRef],
+  )
   return (
     <div className={className}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkBreaks]}
-        components={components}
+        components={mergedComponents}
+        // Let the custom mod:/arcane: schemes through; everything else gets
+        // react-markdown's default sanitization.
+        urlTransform={(url) =>
+          parseGuideRefHref(url) ? url : defaultUrlTransform(url)
+        }
       >
         {prepared}
       </ReactMarkdown>
     </div>
   )
+}
+
+/**
+ * Anchor renderer that intercepts guide-ref hrefs. Resolved refs become the
+ * interactive hover card; unresolved ones (old build without snapshots, name
+ * removed from the game) degrade to a plain wiki link on the link text, which
+ * is still a useful destination. Normal links render as before.
+ */
+function makeAnchorRenderer(
+  resolveGuideRef: GuideRefResolver | undefined,
+): Components["a"] {
+  return function Anchor({ node: _node, href, children, ...rest }) {
+    const ref = href ? parseGuideRefHref(href) : null
+    if (ref) {
+      const target = resolveGuideRef?.(ref.kind, ref.uniqueName)
+      if (target) return <GuideRefLink target={target}>{children}</GuideRefLink>
+      const label = textOf(children)
+      return (
+        <a
+          {...rest}
+          href={wikiUrl(label)}
+          target="_blank"
+          rel="noreferrer noopener"
+        >
+          {children}
+        </a>
+      )
+    }
+    return (
+      <a {...rest} href={href}>
+        {children}
+      </a>
+    )
+  }
+}
+
+function textOf(children: React.ReactNode): string {
+  if (typeof children === "string") return children
+  if (Array.isArray(children)) return children.map(textOf).join("")
+  return ""
 }
 
 /**

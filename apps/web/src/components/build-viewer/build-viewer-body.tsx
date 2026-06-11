@@ -24,6 +24,7 @@ import {
   refreshImagesFromMap,
   selectVariant,
 } from "@/lib/codec/build-codec-adapter"
+import { makeRefResolver } from "@/lib/guide-refs"
 import { arcanesQuery } from "@/lib/queries/arcanes-query"
 import type { BuildDetail } from "@/lib/queries/build-query"
 import {
@@ -146,6 +147,14 @@ function BuildViewerBodyInner({
   )
 
   const variants = useMemo(() => getVariants(savedAll), [savedAll])
+  // Memoized so MarkdownBody's anchor renderer keeps a stable component
+  // identity across re-renders — a fresh resolver each render would remount
+  // every guide-ref hover card (and drop open popovers) on variant switches.
+  const resolveGuideRef = useMemo(
+    () =>
+      makeRefResolver(savedAll.guideRefs?.mods, savedAll.guideRefs?.arcanes),
+    [savedAll.guideRefs],
+  )
   const activeIndex = useMemo(() => {
     const raw = rawActiveIndex ?? 0
     if (raw < 0) return 0
@@ -283,7 +292,11 @@ function BuildViewerBodyInner({
 
         {!embed && (
           <Suspense fallback={null}>
-            <GuideDisplay build={build} activeVariant={variants[activeIndex]} />
+            <GuideDisplay
+              build={build}
+              activeVariant={variants[activeIndex]}
+              resolveGuideRef={resolveGuideRef}
+            />
           </Suspense>
         )}
       </div>

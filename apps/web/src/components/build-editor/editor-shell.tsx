@@ -62,6 +62,7 @@ import {
   saveEditorDraft,
   type EditorDraftPayload,
 } from "@/lib/editor-draft"
+import { collectGuideRefs } from "@/lib/guide-refs"
 import { useHotkey } from "@/lib/hooks/hotkeys"
 import { consumeDraft } from "@/lib/import-draft"
 import { arcanesQuery } from "@/lib/queries/arcanes-query"
@@ -1137,6 +1138,14 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     const nextVariants = variants.map((v, i) =>
       i === clampedActiveIndex ? activeSnapshot : v,
     )
+    // Snapshot every mod/arcane referenced from guide text (build-wide +
+    // per-variant) so the viewer renders hover cards without the catalog —
+    // see lib/guide-refs.ts.
+    const guideRefs = collectGuideRefs(
+      [guide.buildDescription, ...nextVariants.map((v) => v.guideDescription)],
+      allMods,
+      allArcanes,
+    )
     return stripPersistedImages({
       version: 1,
       slots: slots.placed,
@@ -1151,6 +1160,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       incarnonEnabled,
       incarnonPerks,
       deploymentContext,
+      guideRefs,
       // Emit `variants` whenever there's more than one OR the single
       // remaining variant has a user-assigned label/id — otherwise the
       // synthetic placeholder from getVariants() would silently overwrite

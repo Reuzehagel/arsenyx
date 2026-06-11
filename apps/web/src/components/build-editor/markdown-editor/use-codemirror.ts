@@ -12,6 +12,7 @@ import { useEffect, useRef } from "react"
 
 import { arsenyxEditorTheme } from "./codemirror-theme"
 import { markdownFormatKeymap, pasteLinkHandler } from "./markdown-commands"
+import { refAutocomplete, type RefCandidate } from "./ref-autocomplete"
 
 /**
  * Mounts a raw CodeMirror 6 instance and keeps it in sync with React state.
@@ -38,6 +39,9 @@ export function useCodeMirror(opts: {
   onStateChange?: (state: EditorView["state"]) => void
   /** Fires on editor scroll — drives split-view scroll sync. */
   onScroll?: (scroller: HTMLElement) => void
+  /** Candidates for the `[[` mod/arcane reference typeahead. Read through a
+   *  ref at completion time, so async catalog loads need no editor rebuild. */
+  getRefCandidates?: () => RefCandidate[]
 }) {
   const { value, placeholder: ph, autoFocus, viewRef, onReady } = opts
   const containerRef = useRef<HTMLDivElement>(null)
@@ -47,6 +51,8 @@ export function useCodeMirror(opts: {
   onStateChangeRef.current = opts.onStateChange
   const onScrollRef = useRef(opts.onScroll)
   onScrollRef.current = opts.onScroll
+  const getRefCandidatesRef = useRef(opts.getRefCandidates)
+  getRefCandidatesRef.current = opts.getRefCandidates
 
   useEffect(() => {
     const parent = containerRef.current
@@ -66,6 +72,7 @@ export function useCodeMirror(opts: {
         Prec.high(keymap.of(markdownFormatKeymap)),
         keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
         placeholder(ph),
+        refAutocomplete(() => getRefCandidatesRef.current?.() ?? []),
         EditorView.domEventHandlers({ paste: pasteLinkHandler }),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {

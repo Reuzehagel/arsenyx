@@ -32,14 +32,8 @@ import { marketUrl, wikiUrl } from "@/lib/util/warframe-links"
 import { StatText } from "../stat-text"
 import { BuildItemDetail } from "./item-detail"
 import { useRankHover } from "./rank-hover"
-import { arcaneMaxRank } from "./slot-ranks"
+import { arcaneMaxRank, arcaneStatsAt as statsAt } from "./slot-ranks"
 import type { PlacedArcane } from "./use-arcane-slots"
-
-function statsAt(arcane: Arcane, rank: number): string[] {
-  if (!arcane.levelStats || arcane.levelStats.length === 0) return []
-  const i = Math.min(rank, arcane.levelStats.length - 1)
-  return arcane.levelStats[i]?.stats ?? []
-}
 
 interface ArcaneCardProps {
   arcane: Arcane

@@ -296,6 +296,22 @@ export function buildStateToSavedData(
  * full catalog. Legacy builds already get fresh images via `toEditorPlacedMod`,
  * so this is a no-op for them. Falls back to the stored value on a map miss.
  */
+/** Apply `fn` to every mod/arcane snapshot in an optional `guideRefs` —
+ *  shared by the image refresh (below) and strip (stripPersistedImages)
+ *  passes so the two can't drift. The casts are safe: `fn` only adds or
+ *  removes `imageName`, never changes the entry's identity. */
+type GuideRefEntry = { uniqueName: string; imageName?: string }
+function mapGuideRefs(
+  refs: SavedBuildData["guideRefs"],
+  fn: (entry: GuideRefEntry) => GuideRefEntry,
+): SavedBuildData["guideRefs"] {
+  if (!refs) return refs
+  return {
+    ...(refs.mods && { mods: refs.mods.map((m) => fn(m) as Mod) }),
+    ...(refs.arcanes && { arcanes: refs.arcanes.map((a) => fn(a) as Arcane) }),
+  }
+}
+
 export function refreshImagesFromMap(
   data: SavedBuildData,
   imageMap: Record<string, string> | undefined,
@@ -353,6 +369,11 @@ export function refreshImagesFromMap(
     slots: fixSlots(data.slots),
     arcanes: fixArcanes(data.arcanes),
     helminth: fixHelminth(data.helminth),
+    // Guide-ref snapshots persist without imageName, same as placed slots.
+    guideRefs: mapGuideRefs(data.guideRefs, (entry) => {
+      const fresh = url(entry.uniqueName)
+      return fresh ? { ...entry, imageName: fresh } : entry
+    }),
     variants: data.variants?.map((v) => ({
       ...v,
       slots: fixSlots(v.slots) ?? v.slots,
@@ -415,6 +436,10 @@ export function stripPersistedImages(data: SavedBuildData): SavedBuildData {
     slots: stripSlots(data.slots),
     arcanes: stripArcanes(data.arcanes),
     helminth: stripHelminth(data.helminth),
+    guideRefs: mapGuideRefs(data.guideRefs, (entry) => {
+      const { imageName: _drop, ...rest } = entry
+      return rest
+    }),
     variants: data.variants?.map((v) => ({
       ...v,
       slots: stripSlots(v.slots) ?? v.slots,

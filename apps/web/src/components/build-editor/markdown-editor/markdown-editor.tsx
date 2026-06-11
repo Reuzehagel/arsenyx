@@ -1,8 +1,13 @@
+import { isRivenMod } from "@arsenyx/shared/warframe/rivens"
 import { type EditorState } from "@codemirror/state"
 import { type EditorView } from "@codemirror/view"
-import { memo, useCallback, useEffect, useRef, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { MarkdownBody } from "@/components/markdown-body"
+import { makeRefResolver, type GuideRefResolver } from "@/lib/guide-refs"
+import { arcanesQuery } from "@/lib/queries/arcanes-query"
+import { modsQuery } from "@/lib/queries/mods-query"
 import { cn } from "@/lib/util/utils"
 
 import {
@@ -11,6 +16,7 @@ import {
   type ActiveFormat,
 } from "./markdown-active"
 import { MarkdownToolbar, type ViewMode } from "./markdown-toolbar"
+import type { RefCandidate } from "./ref-autocomplete"
 import { useCodeMirror } from "./use-codemirror"
 
 /** Shared prose styling for the live preview — matches the published guide. */
@@ -24,6 +30,7 @@ function CodeEditor({
   viewRef,
   onStateChange,
   onScroll,
+  getRefCandidates,
 }: {
   value: string
   onChange: (value: string) => void
@@ -31,6 +38,7 @@ function CodeEditor({
   viewRef: React.RefObject<EditorView | null>
   onStateChange: (state: EditorState) => void
   onScroll: (scroller: HTMLElement) => void
+  getRefCandidates: () => RefCandidate[]
 }) {
   const containerRef = useCodeMirror({
     value,
@@ -39,13 +47,20 @@ function CodeEditor({
     viewRef,
     onStateChange,
     onScroll,
+    getRefCandidates,
   })
   return <div ref={containerRef} className="h-full min-h-64" />
 }
 
 // Memoized so a parent re-render (every keystroke) doesn't re-parse markdown
 // when the (debounced) source is unchanged. react-markdown isn't cheap.
-const Preview = memo(function Preview({ source }: { source: string }) {
+const Preview = memo(function Preview({
+  source,
+  resolveGuideRef,
+}: {
+  source: string
+  resolveGuideRef: GuideRefResolver
+}) {
   if (!source.trim()) {
     return (
       <p className="text-muted-foreground p-3 text-sm italic">
@@ -55,7 +70,11 @@ const Preview = memo(function Preview({ source }: { source: string }) {
   }
   return (
     <div className="p-3">
-      <MarkdownBody source={source} className={PREVIEW_PROSE_CLASS} />
+      <MarkdownBody
+        source={source}
+        className={PREVIEW_PROSE_CLASS}
+        resolveGuideRef={resolveGuideRef}
+      />
     </div>
   )
 })
@@ -85,6 +104,37 @@ export function MarkdownEditor({
 }) {
   const viewRef = useRef<EditorView | null>(null)
   const previewRef = useRef<HTMLDivElement>(null)
+  // Catalogs for the `[[` reference typeahead + live-preview hover cards.
+  // Both are cached app-wide (the editor routes ensureQueryData them), so
+  // this is a cache read, not a fresh ~1.35 MB download.
+  const { data: allMods } = useQuery(modsQuery)
+  const { data: allArcanes } = useQuery(arcanesQuery)
+  const refCandidates = useMemo<RefCandidate[]>(() => {
+    const out: RefCandidate[] = []
+    for (const m of allMods ?? []) {
+      // Rivens carry stub uniqueNames that resolve to nothing useful.
+      if (isRivenMod(m)) continue
+      out.push({
+        kind: "mod",
+        uniqueName: m.uniqueName,
+        name: m.name,
+        detail: m.compatName || m.type,
+      })
+    }
+    for (const a of allArcanes ?? []) {
+      out.push({
+        kind: "arcane",
+        uniqueName: a.uniqueName,
+        name: a.name,
+        detail: "Arcane",
+      })
+    }
+    return out
+  }, [allMods, allArcanes])
+  const resolveGuideRef = useMemo(
+    () => makeRefResolver(allMods, allArcanes),
+    [allMods, allArcanes],
+  )
   // Split is the default on a roomy screen; on narrow ones it stacks awkwardly,
   // so start in single-pane write mode there.
   const [viewMode, setViewMode] = useState<ViewMode>(() =>
@@ -167,10 +217,16 @@ export function MarkdownEditor({
             key={docKey ?? "build"}
             value={value}
             onChange={onChange}
-            placeholder={placeholder ?? "Write your build guide in Markdown…"}
+            placeholder={
+              placeholder ??
+              "Write your build guide in Markdown… Type [[ to link a mod or arcane."
+            }
             viewRef={viewRef}
             onStateChange={handleStateChange}
             onScroll={handleScroll}
+            // Identity doesn't matter: useCodeMirror reads this through its
+            // own ref at completion time.
+            getRefCandidates={() => refCandidates}
           />
         </div>
         {showPreview ? (
@@ -184,7 +240,7 @@ export function MarkdownEditor({
                 "border-input border-t sm:border-t-0 sm:border-l",
             )}
           >
-            <Preview source={previewSource} />
+            <Preview source={previewSource} resolveGuideRef={resolveGuideRef} />
           </div>
         ) : null}
       </div>

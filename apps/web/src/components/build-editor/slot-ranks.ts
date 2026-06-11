@@ -15,3 +15,10 @@ export function modMaxRank(mod: Mod): number {
 export function arcaneMaxRank(arcane: Arcane): number {
   return arcane.levelStats ? arcane.levelStats.length - 1 : 5
 }
+
+/** Stat lines an arcane shows at the given rank, clamped to its level data. */
+export function arcaneStatsAt(arcane: Arcane, rank: number): string[] {
+  if (!arcane.levelStats || arcane.levelStats.length === 0) return []
+  const i = Math.min(rank, arcane.levelStats.length - 1)
+  return arcane.levelStats[i]?.stats ?? []
+}
