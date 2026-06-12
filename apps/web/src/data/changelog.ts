@@ -11,6 +11,26 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-06-12",
+    changes: [
+      {
+        type: "feat",
+        description:
+          'Build guides can now reference mods and arcanes by name: type [[ in the guide editor and pick from the suggestions. Readers who hover the reference (or tap it on a phone) see the full mod card with Wiki and Market links — the same card build slots show — so a guide can say "swap in Adaptation here" without sending anyone off to look it up.',
+      },
+    ],
+  },
+  {
+    date: "2026-06-11",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Set mods (Gladiator, Augur, Vigilante, and the rest) now show their set bonus on the expanded card: the active tier based on how many pieces of the set your build has equipped, or the full-set bonus as a preview while you're still picking.",
+      },
+    ],
+  },
+  {
     date: "2026-06-09",
     changes: [
       {
