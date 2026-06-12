@@ -12,6 +12,20 @@ if (import.meta.env.DEV) {
   setupCssStudio()
 }
 
+// Cloudflare Web Analytics — cookieless beacon, injected here (not index.html)
+// so dev/preview traffic never pollutes the stats and the embed entry
+// (embed-main.tsx, iframed by external guide pages) stays untracked.
+const cfBeaconToken = import.meta.env?.VITE_CF_BEACON_TOKEN as
+  | string
+  | undefined
+if (import.meta.env.PROD && cfBeaconToken) {
+  const beacon = document.createElement("script")
+  beacon.src = "https://static.cloudflareinsights.com/beacon.min.js"
+  beacon.defer = true
+  beacon.dataset.cfBeacon = JSON.stringify({ token: cfBeaconToken })
+  document.head.append(beacon)
+}
+
 function setupCssStudio() {
   const KEY = "arsenyx.cssstudio"
   const params = new URLSearchParams(location.search)
