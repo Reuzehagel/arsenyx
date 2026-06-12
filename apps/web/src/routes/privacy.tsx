@@ -9,7 +9,7 @@ export const Route = createFileRoute("/privacy")({
   component: PrivacyPage,
 })
 
-const LAST_UPDATED = "2026-05-26"
+const LAST_UPDATED = "2026-06-12"
 
 function PrivacyPage() {
   return (
@@ -23,9 +23,9 @@ function PrivacyPage() {
           <article className="prose prose-neutral dark:prose-invert max-w-none">
             <p>
               {SITE_CONFIG.name} is a free, open-source Warframe build planner
-              run by one person in the Netherlands. No company, no ads, no
-              analytics, no tracking. This page tells you what data the site has
-              on you and what you can do about it.
+              run by one person in the Netherlands. No company, no ads, and no
+              tracking beyond a cookieless page-view counter. This page tells
+              you what data the site has on you and what you can do about it.
             </p>
 
             <h2>What we store</h2>
@@ -58,19 +58,28 @@ function PrivacyPage() {
               </li>
             </ul>
             <p>
-              Cloudflare (hosting) and Neon (database, hosted in Frankfurt) may
-              also keep short-lived request logs containing IP addresses for the
-              purpose of detecting abuse and diagnosing outages.
+              Cloudflare (hosting) and PlanetScale (database, hosted in
+              Frankfurt) may also keep short-lived request logs containing IP
+              addresses for the purpose of detecting abuse and diagnosing
+              outages.
+            </p>
+
+            <h2>Analytics</h2>
+            <p>
+              We use Cloudflare Web Analytics to count page views. It is
+              cookieless: it sets no cookies, stores nothing on your device, and
+              does not fingerprint you via your IP address or user agent. We
+              only see aggregate numbers — page views, referrers, countries, and
+              page-load times — never anything tied to an individual visitor.
             </p>
 
             <h2>What we don&apos;t do</h2>
             <p>
-              We don&apos;t use third-party analytics, advertising trackers,
-              fingerprinting, or A/B-testing. We don&apos;t sell or share your
-              data with anyone for marketing. The only cookies the site sets are
-              the ones Better Auth needs to keep you signed in: a session token
-              and a short-lived session-cache cookie. No tracking cookies, no
-              third-party cookies.
+              We don&apos;t use advertising trackers, fingerprinting, or
+              A/B-testing. We don&apos;t sell or share your data with anyone for
+              marketing. The only cookies the site sets are the ones Better Auth
+              needs to keep you signed in: a session token and a short-lived
+              session-cache cookie. No tracking cookies, no third-party cookies.
             </p>
 
             <h2>Deleting your account</h2>
