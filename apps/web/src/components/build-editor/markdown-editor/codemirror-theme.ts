@@ -50,6 +50,39 @@ const editorTheme = EditorView.theme({
   ".cm-selectionMatch": {
     backgroundColor: "color-mix(in oklab, var(--primary) 14%, transparent)",
   },
+  // Tooltips (the `[[` ref autocomplete) otherwise fall back to CM's default
+  // light theme — a white box that's unreadable in dark mode. Mirror the
+  // site's popover tokens instead.
+  ".cm-tooltip": {
+    backgroundColor: "var(--popover)",
+    color: "var(--popover-foreground)",
+    border: "1px solid var(--border)",
+    borderRadius: "var(--radius)",
+    overflow: "hidden",
+    boxShadow:
+      "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+  },
+  ".cm-tooltip.cm-tooltip-autocomplete > ul": {
+    fontFamily: "var(--font-geist-mono)",
+    fontSize: "0.8125rem",
+  },
+  ".cm-tooltip.cm-tooltip-autocomplete > ul > li": {
+    padding: "0.25rem 0.5rem",
+  },
+  ".cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]": {
+    backgroundColor: "var(--accent)",
+    color: "var(--accent-foreground)",
+  },
+  ".cm-completionDetail": {
+    color: "var(--muted-foreground)",
+    fontStyle: "normal",
+    marginLeft: "0.5rem",
+  },
+  ".cm-completionMatchedText": {
+    textDecoration: "none",
+    color: "var(--primary)",
+    fontWeight: "600",
+  },
 })
 
 /**
