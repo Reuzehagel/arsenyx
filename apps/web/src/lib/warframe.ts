@@ -6,6 +6,11 @@
 
 import type { BrowseCategory, BrowseItem } from "@arsenyx/shared/warframe/types"
 export type { BrowseCategory, BrowseItem } from "@arsenyx/shared/warframe/types"
+import { CATEGORY_LABELS } from "@arsenyx/shared/warframe/categories"
+export {
+  getCategoryLabel,
+  isValidCategory,
+} from "@arsenyx/shared/warframe/categories"
 
 const PLACEHOLDER_URL =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128' viewBox='0 0 128 128'%3E%3Crect fill='%23374151' width='128' height='128' rx='8'/%3E%3Ctext x='64' y='72' text-anchor='middle' fill='%236b7280' font-family='system-ui' font-size='48' font-weight='bold'%3E%3F%3C/text%3E%3C/svg%3E"
@@ -124,26 +129,27 @@ export interface DetailItem extends BrowseItem {
   compatTags?: readonly string[]
 }
 
-export const CATEGORIES: { id: BrowseCategory; label: string }[] = [
-  { id: "warframes", label: "Warframes" },
-  { id: "primary", label: "Primary" },
-  { id: "secondary", label: "Secondary" },
-  { id: "melee", label: "Melee" },
-  { id: "companions", label: "Companions" },
-  { id: "companion-weapons", label: "Companion Weapons" },
-  { id: "archwing", label: "Archwing" },
-  { id: "necramechs", label: "Necramechs" },
-  { id: "exalted-weapons", label: "Exalted" },
-  // Railjack tab only surfaces the Plexus (the mod-equip entry point).
-  // Turrets, ordnance, and reactors are sidebar pickers inside the Plexus
-  // editor — they live in the catalog but are not browseable items.
-  { id: "railjack", label: "Railjack" },
-]
+// Browse-tab display order. Intentionally differs from the canonical id order in
+// `@arsenyx/shared` `BROWSE_CATEGORY_IDS` (e.g. companions grouped before
+// necramechs); labels come from the shared `CATEGORY_LABELS` single source.
+// `satisfies` rejects typos / non-categories at compile time; warframe.test.ts
+// asserts the list stays complete, so a new category can't be silently dropped
+// from every browse surface.
+// Railjack tab only surfaces the Plexus (the mod-equip entry point). Turrets,
+// ordnance, and reactors are sidebar pickers inside the Plexus editor — they
+// live in the catalog but are not browseable items.
+const CATEGORY_TAB_ORDER = [
+  "warframes",
+  "primary",
+  "secondary",
+  "melee",
+  "companions",
+  "companion-weapons",
+  "archwing",
+  "necramechs",
+  "exalted-weapons",
+  "railjack",
+] as const satisfies readonly BrowseCategory[]
 
-export function isValidCategory(value: string): value is BrowseCategory {
-  return CATEGORIES.some((c) => c.id === value)
-}
-
-export function getCategoryLabel(category: string): string {
-  return CATEGORIES.find((c) => c.id === category)?.label ?? category
-}
+export const CATEGORIES: { id: BrowseCategory; label: string }[] =
+  CATEGORY_TAB_ORDER.map((id) => ({ id, label: CATEGORY_LABELS[id] }))

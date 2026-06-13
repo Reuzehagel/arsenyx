@@ -102,21 +102,20 @@ describe("getArcanesForSlot — routes by authoritative wiki slotType", () => {
     expect(w).not.toContain("Magus Aggress")
   })
 
-  it("falls back to name tokens when an arcane has no slotType", () => {
-    const legacy: Arcane[] = [
-      arc("Arcane Pistoleer"), // no slotType, no weapon token → frame
-      arc("Primary Demolisher"), // no slotType, "primary" token → primary
-      arc("Exodia Contagion"), // no slotType, "exodia" token → melee
-    ]
-    expect(getArcanesForSlot(legacy, "warframe").map((a) => a.name)).toEqual([
-      "Arcane Pistoleer",
-    ])
-    expect(getArcanesForSlot(legacy, "primary").map((a) => a.name)).toEqual([
-      "Primary Demolisher",
-    ])
-    expect(getArcanesForSlot(legacy, "melee").map((a) => a.name)).toEqual([
-      "Exodia Contagion",
-    ])
+  it("places an arcane with no slotType in no slot (fail-closed)", () => {
+    // Every catalog arcane carries a slotType; routing is purely slotType-based,
+    // so a slotType-less arcane is un-routable rather than name-guessed.
+    const orphan: Arcane[] = [arc("Arcane Pistoleer")] // no slotType
+    for (const slot of [
+      "warframe",
+      "primary",
+      "secondary",
+      "melee",
+      "weapon",
+      "operator",
+    ] as const) {
+      expect(getArcanesForSlot(orphan, slot)).toEqual([])
+    }
   })
 })
 
@@ -203,7 +202,7 @@ describe("isKitgunWeapon", () => {
 })
 
 describe("isZawArcane", () => {
-  it("matches Exodia / Zaw arcanes by name", () => {
+  it("matches arcanes with the Zaw slotType", () => {
     expect(isZawArcane(arc("Exodia Force", "Zaw"))).toBe(true)
     expect(isZawArcane(arc("Arcane Energize", "Warframe"))).toBe(false)
   })

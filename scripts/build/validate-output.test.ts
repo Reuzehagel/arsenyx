@@ -81,11 +81,27 @@ describe("validateBrowseItems", () => {
 })
 
 describe("validateArcanes", () => {
+  const goodArcane = {
+    uniqueName: "/Lotus/Upgrades/CosmeticEnhancers/Offensive/GraceArcane",
+    name: "Arcane Grace",
+    slotType: "Warframe",
+  }
+
+  it("passes a well-formed arcane", () => {
+    expect(run((i) => validateArcanes([goodArcane], i))).toEqual([])
+  })
+
   it("flags missing names", () => {
     const issues = run((i) =>
-      validateArcanes([{ uniqueName: "/Lotus/A", name: "" }], i),
+      validateArcanes([{ ...goodArcane, name: "" }], i),
     )
     expect(issues.map((x) => x.msg)).toEqual(["missing/empty name"])
+  })
+
+  it("flags a missing slotType (would silently vanish from every slot picker)", () => {
+    const { slotType: _drop, ...noSlot } = goodArcane
+    const issues = run((i) => validateArcanes([noSlot], i))
+    expect(issues.map((x) => x.msg)).toEqual(["missing/empty slotType"])
   })
 })
 

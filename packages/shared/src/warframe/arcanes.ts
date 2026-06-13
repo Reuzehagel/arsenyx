@@ -3,8 +3,9 @@
  * arcanes array emitted by `scripts/build/merge-arcanes.ts`. Slot eligibility
  * routes on each arcane's wiki `slotType` (the authoritative equip slot:
  * Warframe / Primary / Secondary / Melee / Kitgun / Zaw / Operator / …). DE's
- * `type` is an effect bucket (Offensive/Utility/…), not a slot; the name-token
- * heuristic below is only a fallback for arcanes missing a `slotType`.
+ * `type` is an effect bucket (Offensive/Utility/…), not a slot, so it is never
+ * used for routing. Every catalog arcane carries a `slotType`; one that somehow
+ * lacks it is treated as un-routable (placed in no slot) rather than guessed at.
  */
 
 import type { Arcane, BrowseCategory } from "./types"
@@ -17,28 +18,10 @@ export type ArcaneSlotType =
   | "melee"
   | "weapon"
 
-// Fallback name tokens — used only for the rare arcane that lacks a wiki
-// `slotType`. DE's sub-path bucket (Utility/Defensive/…) is an effect type,
-// not an equip slot, so these approximate the slot from the name.
-const PRIMARY_TOKENS = ["primary", "residua", "fractal"] as const
-const SECONDARY_TOKENS = ["secondary", "pax"] as const
-const MELEE_TOKENS = ["melee", "zaw", "exodia"] as const
-const WEAPON_TOKENS = [
-  ...PRIMARY_TOKENS,
-  ...SECONDARY_TOKENS,
-  ...MELEE_TOKENS,
-] as const
-
-function nameMatches(arcane: Arcane, tokens: readonly string[]): boolean {
-  const n = arcane.name.toLowerCase()
-  return tokens.some((t) => n.includes(t))
-}
-
-/** Exodia / Zaw-only arcane — detected by name so callers can split the
- *  melee pool into Exodia (Zaw) vs ordinary melee arcanes. */
+/** Exodia / Zaw-only arcane — lets callers split the melee pool into Exodia
+ *  (Zaw) vs ordinary melee arcanes. */
 export function isZawArcane(arcane: Arcane): boolean {
-  const n = arcane.name.toLowerCase()
-  return n.includes("exodia") || n.includes("zaw")
+  return arcane.slotType === "Zaw"
 }
 
 /** Whether an arcane belongs in a modular weapon's dedicated *second* arcane
@@ -47,14 +30,6 @@ export function isZawArcane(arcane: Arcane): boolean {
  *  build the per-slot option lists and to re-bucket saved/imported arcanes. */
 export function isSecondSlotArcane(arcane: Arcane, isZaw: boolean): boolean {
   return isZaw ? isZawArcane(arcane) : arcane.slotType === "Kitgun"
-}
-
-/** Operator-side arcane (Operator / Amp / Tektolyst) — never on a
- *  weapon/frame slot. */
-function isOperatorOrAmpArcane(arcane: Arcane): boolean {
-  const slot = arcane.slotType
-  if (slot) return isOperatorSlot(slot)
-  return arcane.type === "Operator" || arcane.type === "Amp"
 }
 
 /** Map the wiki `slotType` to one of our equip-slot buckets. Kitgun arcanes
@@ -120,8 +95,7 @@ export function getArcanesForWeapon(
       case "Bow":
         return !kitgun && dc === "Bow"
       default:
-        // Generic Primary/Secondary arcanes, or fallback-routed arcanes with
-        // no wiki slotType, fit any weapon in their base slot.
+        // Generic Primary/Secondary arcanes fit any weapon in their base slot.
         return true
     }
   })
@@ -131,25 +105,11 @@ export function getArcanesForSlot(
   arcanes: Arcane[],
   slotType: ArcaneSlotType,
 ): Arcane[] {
-  return arcanes.filter((arcane) => {
-    // Authoritative: route on the wiki equip slot.
-    if (arcane.slotType) return slotTypeMatches(arcane.slotType, slotType)
-    // Fallback (no wiki slotType): legacy name-token routing.
-    if (slotType === "operator") return isOperatorOrAmpArcane(arcane)
-    if (isOperatorOrAmpArcane(arcane)) return false
-    switch (slotType) {
-      case "warframe":
-        return !nameMatches(arcane, WEAPON_TOKENS)
-      case "primary":
-        return nameMatches(arcane, PRIMARY_TOKENS)
-      case "secondary":
-        return nameMatches(arcane, SECONDARY_TOKENS)
-      case "melee":
-        return nameMatches(arcane, MELEE_TOKENS)
-      case "weapon":
-        return nameMatches(arcane, WEAPON_TOKENS)
-    }
-  })
+  // Route purely on the authoritative wiki equip slot. An arcane with no
+  // slotType (absent from all shipping data) is placed in no slot.
+  return arcanes.filter(
+    (arcane) => !!arcane.slotType && slotTypeMatches(arcane.slotType, slotType),
+  )
 }
 
 /** Arcanes compatible with a browse category. */

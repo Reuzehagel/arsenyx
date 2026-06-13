@@ -4,10 +4,6 @@ import {
   encodeBuildDoc,
 } from "@arsenyx/shared/warframe/build-codec"
 import {
-  projectVariant,
-  type BuildDoc,
-} from "@arsenyx/shared/warframe/build-doc"
-import {
   getIncarnonGenesisImage,
   isInnateIncarnon,
 } from "@arsenyx/shared/warframe/incarnon-data"
@@ -45,11 +41,12 @@ import { SearchPanel } from "@/components/create-editor/search-panel"
 import { useRivenDialog } from "@/components/create-editor/use-riven-dialog"
 import { authClient } from "@/lib/auth-client"
 import {
-  buildStateToSavedData,
+  buildDocFromVariants,
   getVariants,
   isSyntheticVariant,
   normalizeBuildData,
   pickPerVariantData,
+  savedDataFromBuildDoc,
   savedDataToBuildState,
   selectVariant,
   stripPersistedImages,
@@ -244,33 +241,13 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   const [draft] = useState(() => consumeDraft(draftId))
   const [shareHydrated] = useState(() => {
     if (!shareEncoded) return null
-    // decodeBuildDoc handles both v1 (wrapped as single-variant doc) and v2.
+    // decodeBuildDoc handles both v1 (wrapped as single-variant doc) and v2;
+    // savedDataFromBuildDoc owns the BuildDoc→editor projection (and the
+    // per-variant/shared split) so it can't drift from the encode side.
     const doc = decodeBuildDoc(shareEncoded)
-    if (doc) {
-      const activeIdx = 0
-      const activeState = projectVariant(doc, activeIdx)
-      const { data: activeData } = buildStateToSavedData(
-        activeState,
-        allMods,
-        allArcanes,
-      )
-      if (doc.variants.length === 1) return { data: activeData }
-      const savedVariants: SavedVariant[] = doc.variants.map((v, i) => {
-        const state = projectVariant(doc, i)
-        const { data } = buildStateToSavedData(state, allMods, allArcanes)
-        return {
-          id: v.id,
-          label: v.label,
-          slots: data.slots ?? {},
-          arcanes: data.arcanes ?? [],
-          ...pickPerVariantData(data),
-          guideSummary: v.guideSummary,
-          guideDescription: v.guideDescription,
-        }
-      })
-      return { data: { ...activeData, variants: savedVariants } }
-    }
-    return null
+    return doc
+      ? { data: savedDataFromBuildDoc(doc, allMods, allArcanes) }
+      : null
   })
   // Identity for the in-memory cache and the localStorage draft bucket.
   // `buildSlug` for an existing build; item+category for a new one (the
@@ -843,7 +820,10 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   const isUpdate = !!existingBuild && existingBuild.isOwner
 
   const handleShare = () => {
-    const state = savedDataToBuildState({
+    // Build-wide fields + the active variant's per-variant slice. Both share
+    // paths (single + multi) and the BuildDoc projection in the adapter read
+    // from this one base.
+    const base = {
       item: {
         uniqueName: item.uniqueName,
         name: item.name,
@@ -866,78 +846,22 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       normalSlotCount,
       auraSlotCount,
       showStance,
-    })
+    }
     let encoded: string
     if (variants.length > 1) {
-      // Build a BuildDoc that mirrors the current editor state: shared
-      // fields from `state`, per-variant data from the in-memory variants
-      // array (with the active variant's slice replaced by the live
-      // editor state so unsaved tweaks make it into the share URL).
+      // Replace the active variant's slice with the live editor state so
+      // unsaved tweaks make it into the share URL; the adapter handles the
+      // BuildDoc projection (and the build-wide/per-variant field split).
       const activeSnapshot = captureActiveSnapshot()
       const allVariants = variants.map((v, i) =>
         i === clampedActiveIndex ? activeSnapshot : v,
       )
-      const doc: BuildDoc = {
-        itemUniqueName: state.itemUniqueName,
-        itemName: state.itemName,
-        itemCategory: state.itemCategory,
-        itemImageName: state.itemImageName,
-        hasReactor: state.hasReactor,
-        shardSlots: state.shardSlots,
-        helminthAbility: state.helminthAbility,
-        zawComponents: state.zawComponents,
-        kitgunComponents: state.kitgunComponents,
-        lichBonusElement: state.lichBonusElement,
-        buildName: state.buildName,
-        variants: allVariants.map((sv) => {
-          // Project each saved variant into a BuildVariant shape. The
-          // expensive slot reconstruction (ModSlot[]) is reused via
-          // savedDataToBuildState by overlaying the variant's slots
-          // onto the same shared editor state.
-          const variantState = savedDataToBuildState({
-            item: {
-              uniqueName: state.itemUniqueName,
-              name: state.itemName,
-              imageName: state.itemImageName,
-            },
-            category,
-            buildName: state.buildName,
-            hasReactor,
-            slots: sv.slots,
-            // Forma polarities are build-wide in Warframe (shared across
-            // variants), so passing the active variant's value to every
-            // per-variant projection is intentional.
-            formaPolarities: slots.formaPolarities,
-            arcanes: sv.arcanes,
-            shards,
-            helminth,
-            zawComponents,
-            kitgunComponents,
-            lichBonusElement: lichBonusElement ?? undefined,
-            incarnonEnabled: sv.incarnonEnabled ?? incarnonEnabled,
-            incarnonPerks: sv.incarnonPerks ?? incarnonPerks,
-            deploymentContext: sv.deploymentContext ?? deploymentContext,
-            normalSlotCount,
-            auraSlotCount,
-            showStance,
-          })
-          return {
-            id: sv.id,
-            label: sv.label,
-            auraSlots: variantState.auraSlots,
-            exilusSlot: variantState.exilusSlot,
-            stanceSlot: variantState.stanceSlot,
-            normalSlots: variantState.normalSlots,
-            arcaneSlots: variantState.arcaneSlots,
-            incarnonEnabled: variantState.incarnonEnabled,
-            incarnonPerks: variantState.incarnonPerks,
-            deploymentContext: variantState.deploymentContext,
-          }
-        }),
-      }
-      encoded = encodeBuildDoc(doc, clampedActiveIndex)
+      encoded = encodeBuildDoc(
+        buildDocFromVariants(base, allVariants),
+        clampedActiveIndex,
+      )
     } else {
-      encoded = encodeBuild(state)
+      encoded = encodeBuild(savedDataToBuildState(base))
     }
     const url = `${window.location.origin}/create?item=${encodeURIComponent(slug)}&category=${encodeURIComponent(category)}&share=${encodeURIComponent(encoded)}`
     void copyToClipboard(url, "Build link copied")

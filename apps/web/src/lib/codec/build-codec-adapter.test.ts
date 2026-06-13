@@ -3,11 +3,14 @@ import type { Arcane, Mod } from "@arsenyx/shared/warframe/types"
 import { describe, expect, it } from "vitest"
 
 import type { PlacedArcane, PlacedMod, SlotId } from "@/components/build-editor"
-import type { SavedBuildData } from "@/lib/queries/build-query"
+import type { SavedBuildData, SavedVariant } from "@/lib/queries/build-query"
+import type { HelminthAbility } from "@/lib/queries/helminth-query"
 
 import {
+  buildDocFromVariants,
   normalizeBuildData,
   refreshImagesFromMap,
+  savedDataFromBuildDoc,
   stripPersistedImages,
 } from "./build-codec-adapter"
 
@@ -65,6 +68,93 @@ function arcane(uniqueName: string, imageName?: string): Arcane {
 function placedArcane(uniqueName: string, imageName?: string): PlacedArcane {
   return { arcane: arcane(uniqueName, imageName), rank: 5 }
 }
+
+describe("buildDocFromVariants ⇄ savedDataFromBuildDoc round trip", () => {
+  const roar: HelminthAbility = {
+    uniqueName: "/Abilities/Roar",
+    name: "Roar",
+    source: "Rhino",
+    description: "",
+  }
+  // Build-wide editor state + the active variant's slice (the share base).
+  const base = {
+    item: { uniqueName: "/Warframes/Rhino", name: "Rhino" },
+    category: "warframes" as const,
+    buildName: "Test Build",
+    hasReactor: true,
+    slots: { "normal-0": placedMod("/Mods/Serration") },
+    formaPolarities: {},
+    arcanes: [placedArcane("/Arcanes/Avenger")],
+    shards: [],
+    helminth: { 0: roar }, // build-wide: must broadcast to every variant
+    lichBonusElement: "Heat" as const,
+    incarnonEnabled: true,
+    incarnonPerks: ["perk-a"],
+    normalSlotCount: 2,
+    auraSlotCount: 0,
+    showStance: false,
+  }
+  const variants: SavedVariant[] = [
+    {
+      id: "v0",
+      label: "Main",
+      slots: { "normal-0": placedMod("/Mods/Serration") },
+      arcanes: [placedArcane("/Arcanes/Avenger")],
+      incarnonEnabled: true,
+      incarnonPerks: ["perk-a"],
+    },
+    {
+      id: "v1",
+      label: "Alt",
+      slots: { "normal-1": placedMod("/Mods/Vitality") },
+      arcanes: [],
+      incarnonEnabled: false,
+      incarnonPerks: [],
+    },
+  ]
+  const catalog = [mod("/Mods/Serration"), mod("/Mods/Vitality")]
+  const arcaneCatalog = [arcane("/Arcanes/Avenger")]
+
+  it("keeps helminth build-wide on the doc (absent from BuildVariant)", () => {
+    const doc = buildDocFromVariants(base, variants)
+    expect(doc.helminthAbility?.ability.uniqueName).toBe("/Abilities/Roar")
+    // BuildVariant has no helminth field — the doc-level value is the only copy.
+    expect(doc.variants).toHaveLength(2)
+    expect(doc.variants[0]).not.toHaveProperty("helminth")
+  })
+
+  it("round-trips per-variant slots/arcanes/incarnon back to SavedBuildData", () => {
+    const doc = buildDocFromVariants(base, variants)
+    const saved = savedDataFromBuildDoc(doc, catalog, arcaneCatalog)
+    expect(saved.variants).toHaveLength(2)
+    expect(
+      saved.variants?.[0]?.slots["normal-0" as SlotId]?.mod.uniqueName,
+    ).toBe("/Mods/Serration")
+    expect(
+      saved.variants?.[1]?.slots["normal-1" as SlotId]?.mod.uniqueName,
+    ).toBe("/Mods/Vitality")
+    expect(saved.variants?.[0]?.arcanes[0]?.arcane.uniqueName).toBe(
+      "/Arcanes/Avenger",
+    )
+    expect(saved.variants?.[0]?.incarnonEnabled).toBe(true)
+    expect(saved.variants?.[1]?.incarnonEnabled).toBe(false)
+  })
+
+  it("broadcasts the build-wide helminth + lich to every decoded variant", () => {
+    const doc = buildDocFromVariants(base, variants)
+    const saved = savedDataFromBuildDoc(doc, catalog, arcaneCatalog)
+    // The encode side stores helminth once (doc-level); projectVariant
+    // re-broadcasts it, so both variants surface it on decode.
+    expect(saved.variants?.[0]?.helminth?.[0]?.uniqueName).toBe(
+      "/Abilities/Roar",
+    )
+    expect(saved.variants?.[1]?.helminth?.[0]?.uniqueName).toBe(
+      "/Abilities/Roar",
+    )
+    expect(saved.hasReactor).toBe(true)
+    expect(saved.lichBonusElement).toBe("Heat")
+  })
+})
 
 describe("stripPersistedImages", () => {
   it("drops imageName from mods, arcanes, and helminth", () => {

@@ -2,18 +2,9 @@ import { useSuspenseQuery } from "@tanstack/react-query"
 import { Undo2, Zap } from "lucide-react"
 import { Suspense, useMemo, useState } from "react"
 
+import { TapPopover } from "@/components/tap-popover"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import {
   helminthQuery,
   type HelminthAbility,
@@ -32,7 +23,6 @@ export function AbilityIcon({
   canSubsume: boolean
   onSelectHelminth: (ability: HelminthAbility | null) => void
 }) {
-  const [open, setOpen] = useState(false)
   const triggerButton = (
     <button
       type="button"
@@ -58,22 +48,20 @@ export function AbilityIcon({
   )
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <Tooltip>
-        <TooltipTrigger render={<PopoverTrigger render={triggerButton} />} />
-        <TooltipContent side="bottom" className="max-w-xs">
+    <TapPopover
+      trigger={triggerButton}
+      tooltipClassName="max-w-xs"
+      popoverClassName={canSubsume ? "w-72" : "max-w-xs p-3"}
+      tooltip={
+        <>
           <p className="font-semibold">{ability.name}</p>
           <p className="text-muted-foreground mt-0.5 whitespace-pre-line">
             {ability.description}
           </p>
-        </TooltipContent>
-      </Tooltip>
-      <PopoverContent
-        side="bottom"
-        align="center"
-        className={canSubsume ? "w-72" : "max-w-xs p-3"}
-      >
-        {canSubsume ? (
+        </>
+      }
+      popover={(close) =>
+        canSubsume ? (
           <Suspense
             fallback={<p className="text-muted-foreground text-xs">Loading…</p>}
           >
@@ -81,7 +69,7 @@ export function AbilityIcon({
               isHelminth={isHelminth}
               onPick={(ab) => {
                 onSelectHelminth(ab)
-                setOpen(false)
+                close()
               }}
             />
           </Suspense>
@@ -95,9 +83,9 @@ export function AbilityIcon({
               {ability.description}
             </p>
           </div>
-        )}
-      </PopoverContent>
-    </Popover>
+        )
+      }
+    />
   )
 }
 

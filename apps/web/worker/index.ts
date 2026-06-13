@@ -18,6 +18,10 @@
 // shared package the same way), so the file stays free of heavy/runtime deps.
 
 import { buildMetaTitle, buildOgType } from "@arsenyx/shared/seo/build-meta"
+import {
+  getCategoryLabel,
+  isValidCategory,
+} from "@arsenyx/shared/warframe/categories"
 
 interface Env {
   ASSETS: { fetch: (request: Request) => Promise<Response> }
@@ -34,20 +38,6 @@ const RESERVED_BUILD_SUBPATHS = new Set(["mine", "bookmarks", "new"])
 // upper bound that still cheaply rejects amplification attempts that try to
 // pin Postgres findUnique with megabyte-sized strings.
 const MAX_SLUG_LENGTH = 64
-
-// Sync with CATEGORIES in src/lib/warframe.ts.
-const CATEGORY_LABELS: Record<string, string> = {
-  warframes: "Warframes",
-  primary: "Primary",
-  secondary: "Secondary",
-  melee: "Melee",
-  companions: "Companions",
-  "companion-weapons": "Companion Weapons",
-  archwing: "Archwing",
-  necramechs: "Necramechs",
-  "exalted-weapons": "Exalted",
-  railjack: "Railjack",
-}
 
 // Sync with the `head` options in src/routes/*.tsx.
 const STATIC_META: Record<string, { title: string; description?: string }> = {
@@ -311,7 +301,7 @@ function extractItemPath(
   const m = /^\/browse\/([a-z-]+)\/([a-z0-9-]+)$/.exec(pathname)
   if (!m) return null
   const [, category, slug] = m
-  if (!(category in CATEGORY_LABELS)) return null
+  if (!isValidCategory(category)) return null
   if (slug.length > MAX_SLUG_LENGTH) return null
   return { category, slug }
 }
@@ -338,7 +328,7 @@ async function handleItemPage(
   }
   if (!item) return rewriteMeta(shellRes, {})
 
-  const label = CATEGORY_LABELS[category]
+  const label = getCategoryLabel(category)
   const description = item.description
     ? clamp(
         `${collapseWs(item.description)} Plan and share ${item.name} builds on Arsenyx.`,
@@ -412,8 +402,8 @@ async function handleGenericPage(
     // the edge canonical (bare /browse) disagree for junk category values.
     const raw = url.searchParams.get("category")
     const category =
-      raw === "all" || (raw && raw in CATEGORY_LABELS) ? raw : "warframes"
-    const label = category === "all" ? "All Items" : CATEGORY_LABELS[category]
+      raw === "all" || (raw && isValidCategory(raw)) ? raw : "warframes"
+    const label = category === "all" ? "All Items" : getCategoryLabel(category)
     return rewriteMeta(shellRes, {
       title: `Browse ${label} — ${SITE_NAME}`,
       // Filtered/sorted/search variants collapse onto the category canonical.
