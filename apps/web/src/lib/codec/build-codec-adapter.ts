@@ -652,18 +652,14 @@ export function savedDataFromBuildDoc(
   mods: Mod[],
   arcanes: Arcane[],
 ): SavedBuildData {
-  const { data: activeData } = buildStateToSavedData(
-    projectVariant(doc, 0),
-    mods,
-    arcanes,
-  )
+  const project = (i: number) =>
+    buildStateToSavedData(projectVariant(doc, i), mods, arcanes).data
+  const activeData = project(0)
   if (doc.variants.length === 1) return activeData
   const variants: SavedVariant[] = doc.variants.map((v, i) => {
-    const { data } = buildStateToSavedData(
-      projectVariant(doc, i),
-      mods,
-      arcanes,
-    )
+    // i === 0 is the active variant — reuse its projection rather than
+    // reconstructing the same slots a second time.
+    const data = i === 0 ? activeData : project(i)
     return {
       id: v.id,
       label: v.label,
