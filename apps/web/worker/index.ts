@@ -8,6 +8,13 @@
 //
 // Titles/descriptions here mirror the client-side route heads
 // (src/routes/*.tsx `head` options + src/lib/seo.ts). Keep them in sync.
+//
+// Build-page title/author/og:type are derived from the SAME shared module the
+// client route uses (@arsenyx/shared/seo/build-meta) so the two head layers
+// can't drift. wrangler bundles this import inline (the api Worker imports the
+// shared package the same way), so the file stays free of heavy/runtime deps.
+
+import { buildMetaTitle, buildOgType } from "@arsenyx/shared/seo/build-meta"
 
 interface Env {
   ASSETS: { fetch: (request: Request) => Promise<Response> }
@@ -265,21 +272,11 @@ function buildMeta(
   slug: string,
   imageMap: Record<string, string> | null,
 ): Meta {
-  // `hideAuthor` means "this is an org build — don't reveal the underlying
-  // user, just show the org". Falling back to null when hideAuthor=true
-  // would drop the org credit entirely, which is the opposite of intent.
-  const author = b.hideAuthor
-    ? (b.organization?.name ?? null)
-    : (b.organization?.name ??
-      b.user.displayUsername ??
-      b.user.username ??
-      b.user.name)
-
-  const title = collapseWs(
-    author
-      ? `${b.item.name} Build by ${author} — ${SITE_NAME}`
-      : `${b.item.name} Build — ${SITE_NAME}`,
-  )
+  // Title/author/og:type come from the shared module so this layer and the
+  // client route (builds.$slug.tsx) can't disagree. This Worker only enriches
+  // PUBLIC builds (handleBuildPage returns early otherwise), so og:type is
+  // always "article" here, but route it through buildOgType for one source.
+  const title = collapseWs(`${buildMetaTitle(b)} — ${SITE_NAME}`)
 
   const summary = collapseWs(b.guide?.summary ?? b.description ?? "")
   const stats = `${formatCount(b.likeCount)} likes · ${formatCount(b.viewCount)} views`
@@ -297,7 +294,7 @@ function buildMeta(
     description,
     canonical: `${SITE_URL}/builds/${slug}`,
     image: imageUrl(resolvedImage),
-    ogType: "article",
+    ogType: buildOgType(b.visibility),
   }
 }
 

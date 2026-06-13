@@ -1,3 +1,4 @@
+import { buildMetaTitle, buildOgType } from "@arsenyx/shared/seo/build-meta"
 import { slugify } from "@arsenyx/shared/warframe/slugs"
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
@@ -109,36 +110,21 @@ export const Route = createFileRoute("/builds/$slug")({
     if (!loaderData) return seo()
     const { build, ogImage } = loaderData
     return seo({
-      title: buildTitle(build),
+      title: buildMetaTitle(build),
       description: buildDescription(build),
       canonicalPath: `/builds/${params.slug}`,
       // Raw catalog/build imageName — seo() absolutizes against the image CDN.
       image: ogImage ?? undefined,
-      // Match the Worker: it emits og:type="article" only on the PUBLIC enrich
-      // path (worker/index.ts buildMeta). Keeping these in step avoids two
-      // conflicting og:type tags in the hydrated head.
-      ogType: build.visibility === "PUBLIC" ? "article" : undefined,
+      // Title/og:type come from @arsenyx/shared/seo/build-meta — the same
+      // source the Worker uses (worker/index.ts buildMeta) — so the two head
+      // layers can't disagree.
+      ogType: buildOgType(build.visibility),
       noindex: build.visibility !== "PUBLIC",
     })
   },
   component: BuildPage,
   notFoundComponent: BuildNotFound,
 })
-
-function buildAuthor(b: BuildDetail): string | null {
-  if (b.hideAuthor) return b.organization?.name ?? null
-  return (
-    b.organization?.name ??
-    b.user.displayUsername ??
-    b.user.username ??
-    b.user.name
-  )
-}
-
-function buildTitle(b: BuildDetail): string {
-  const author = buildAuthor(b)
-  return author ? `${b.item.name} Build by ${author}` : `${b.item.name} Build`
-}
 
 function buildDescription(b: BuildDetail): string {
   const summary = (b.guide?.summary ?? b.description ?? "")

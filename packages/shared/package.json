@@ -8,7 +8,8 @@
     "./warframe": "./src/warframe/index.ts",
     "./warframe/*": "./src/warframe/*.ts",
     "./util/*": "./src/util/*.ts",
-    "./api/*": "./src/api/*.ts"
+    "./api/*": "./src/api/*.ts",
+    "./seo/*": "./src/seo/*.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
