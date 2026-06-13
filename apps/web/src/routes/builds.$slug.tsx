@@ -20,7 +20,11 @@ import { itemQuery } from "@/lib/queries/item-query"
 import { modConflictsQuery } from "@/lib/queries/mod-conflicts-query"
 import { modsQuery } from "@/lib/queries/mods-query"
 import { seo } from "@/lib/seo"
-import { isValidCategory, type BrowseCategory } from "@/lib/warframe"
+import {
+  type BrowseCategory,
+  type DetailItem,
+  isValidCategory,
+} from "@/lib/warframe"
 
 interface BuildSearch {
   /** When true, render a chrome-less view suitable for embedding. */
@@ -61,6 +65,11 @@ export const Route = createFileRoute("/builds/$slug")({
   loader: async ({ context, params }) => {
     const qc = context.queryClient
     const build = await qc.ensureQueryData(buildQuery(params.slug))
+    // The build's stored item.imageName is denormalized and rots across
+    // image-scheme changes, so it's only a fallback for the OG card; the live
+    // catalog item's imageName (resolved below) is preferred. Mirrors the
+    // Worker's buildMeta so the server- and client-rendered og:image agree.
+    let ogImageName = build.item.imageName ?? null
     // Warm what BuildViewerBodyInner suspends on so the loadout paints complete
     // instead of swapping a "Loading item…" placeholder for the full grid — the
     // shift that drove the build pages' CLS into the red. prefetchQuery is
@@ -75,6 +84,11 @@ export const Route = createFileRoute("/builds/$slug")({
         qc.prefetchQuery(imageMapQuery),
         qc.prefetchQuery(modConflictsQuery),
       ])
+      // Prefer the freshly-warmed catalog item's image over the build's stale
+      // copy (same source the SPA header uses — see viewer-header.tsx).
+      ogImageName =
+        qc.getQueryData<DetailItem>(itemQuery(category, itemSlug).queryKey)
+          ?.imageName ?? ogImageName
       // Legacy-shape builds rebuild their mods from the full mod/arcane/
       // helminth catalogs (~1.35MB). Warm them but don't gate navigation on the
       // download — the height-reserving BuildViewerFallback absorbs the CLS
@@ -85,7 +99,7 @@ export const Route = createFileRoute("/builds/$slug")({
         void qc.prefetchQuery(helminthQuery)
       }
     }
-    return build
+    return { build, ogImage: absoluteOgImage(ogImageName) }
   },
   // Mirrors the title/description formula the Worker injects for unfurl bots
   // (worker/index.ts buildMeta) so the server-sent and client-rendered head
@@ -93,17 +107,35 @@ export const Route = createFileRoute("/builds/$slug")({
   // to the clean URL via the canonical.
   head: ({ loaderData, params }) => {
     if (!loaderData) return seo()
+    const { build, ogImage } = loaderData
     return seo({
-      title: buildTitle(loaderData),
-      description: buildDescription(loaderData),
+      title: buildTitle(build),
+      description: buildDescription(build),
       canonicalPath: `/builds/${params.slug}`,
-      image: loaderData.item.imageName ?? undefined,
-      noindex: loaderData.visibility !== "PUBLIC",
+      image: ogImage,
+      noindex: build.visibility !== "PUBLIC",
     })
   },
   component: BuildPage,
   notFoundComponent: BuildNotFound,
 })
+
+// Absolutize an item image for og:image/twitter:image: pass through http(s)
+// URLs (current catalog data ships absolute https://img.arsenyx.com/… URLs) and
+// prepend the CDN root for legacy bare filenames. Mirrors the Worker's
+// imageUrl() (worker/index.ts) so the server- and client-rendered cards match.
+function absoluteOgImage(imageName: string | null): string | undefined {
+  if (!imageName) return undefined
+  if (/^https?:\/\//i.test(imageName)) return imageName
+  try {
+    return new URL(
+      imageName.replace(/^\/+/, ""),
+      "https://img.arsenyx.com/",
+    ).toString()
+  } catch {
+    return undefined
+  }
+}
 
 function buildAuthor(b: BuildDetail): string | null {
   if (b.hideAuthor) return b.organization?.name ?? null
