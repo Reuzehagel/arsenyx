@@ -102,10 +102,14 @@ export const Route = createFileRoute("/builds/$slug")({
     }
     return { build, ogImage: ogImageName }
   },
-  // Mirrors the title/description formula the Worker injects for unfurl bots
-  // (worker/index.ts buildMeta) so the server-sent and client-rendered head
-  // agree. Non-public builds are noindexed; the ?embed=1 duplicate resolves
-  // to the clean URL via the canonical.
+  // Title / canonical / og:image / og:type mirror what the Worker injects for
+  // crawlers (worker/index.ts buildMeta); title and og:type are single-sourced
+  // via @arsenyx/shared/seo/build-meta, so they can't drift. og:description
+  // DELIBERATELY differs: the edge layer enriches it with live like/view stats
+  // for unfurls (the only consumer that reads server-injected meta), while this
+  // client copy — seen only during in-app SPA navigation — stays lightweight.
+  // Non-public builds are noindexed; the ?embed=1 duplicate resolves to the
+  // clean URL via the canonical.
   head: ({ loaderData, params }) => {
     if (!loaderData) return seo()
     const { build, ogImage } = loaderData

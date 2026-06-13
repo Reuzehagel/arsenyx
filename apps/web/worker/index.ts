@@ -6,8 +6,11 @@
 // HTML response — no JS rendering required. Every user agent gets the same
 // rewritten HTML (serving it to bots only would be cloaking).
 //
-// Titles/descriptions here mirror the client-side route heads
-// (src/routes/*.tsx `head` options + src/lib/seo.ts). Keep them in sync.
+// Titles/canonicals/og tags here mirror the client-side route heads
+// (src/routes/*.tsx `head` options + src/lib/seo.ts) — keep them in sync. Build
+// title/og:type are single-sourced via @arsenyx/shared/seo/build-meta so they
+// can't drift. Build og:description intentionally does NOT mirror the client:
+// this edge layer enriches it with live like/view stats for unfurls.
 //
 // Build-page title/author/og:type are derived from the SAME shared module the
 // client route uses (@arsenyx/shared/seo/build-meta) so the two head layers
