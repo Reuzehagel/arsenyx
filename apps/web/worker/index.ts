@@ -403,10 +403,14 @@ async function handleGenericPage(
   }
 
   if (path === "/browse") {
-    const category = url.searchParams.get("category") ?? "warframes"
-    const label =
-      category === "all" ? "All Items" : (CATEGORY_LABELS[category] ?? null)
-    if (!label) return rewriteMeta(shellRes, { canonical: `${SITE_URL}/browse` })
+    // Mirror the SPA's validateSearch coercion (routes/browse.tsx): "all" is a
+    // valid pseudo-category; any other unknown value collapses to "warframes".
+    // Without matching it here the client canonical (?category=warframes) and
+    // the edge canonical (bare /browse) disagree for junk category values.
+    const raw = url.searchParams.get("category")
+    const category =
+      raw === "all" || (raw && raw in CATEGORY_LABELS) ? raw : "warframes"
+    const label = category === "all" ? "All Items" : CATEGORY_LABELS[category]
     return rewriteMeta(shellRes, {
       title: `Browse ${label} — ${SITE_NAME}`,
       // Filtered/sorted/search variants collapse onto the category canonical.

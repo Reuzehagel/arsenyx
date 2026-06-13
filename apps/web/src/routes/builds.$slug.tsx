@@ -99,7 +99,7 @@ export const Route = createFileRoute("/builds/$slug")({
         void qc.prefetchQuery(helminthQuery)
       }
     }
-    return { build, ogImage: absoluteOgImage(ogImageName) }
+    return { build, ogImage: ogImageName }
   },
   // Mirrors the title/description formula the Worker injects for unfurl bots
   // (worker/index.ts buildMeta) so the server-sent and client-rendered head
@@ -112,30 +112,14 @@ export const Route = createFileRoute("/builds/$slug")({
       title: buildTitle(build),
       description: buildDescription(build),
       canonicalPath: `/builds/${params.slug}`,
-      image: ogImage,
+      // Raw catalog/build imageName — seo() absolutizes against the image CDN.
+      image: ogImage ?? undefined,
       noindex: build.visibility !== "PUBLIC",
     })
   },
   component: BuildPage,
   notFoundComponent: BuildNotFound,
 })
-
-// Absolutize an item image for og:image/twitter:image: pass through http(s)
-// URLs (current catalog data ships absolute https://img.arsenyx.com/… URLs) and
-// prepend the CDN root for legacy bare filenames. Mirrors the Worker's
-// imageUrl() (worker/index.ts) so the server- and client-rendered cards match.
-function absoluteOgImage(imageName: string | null): string | undefined {
-  if (!imageName) return undefined
-  if (/^https?:\/\//i.test(imageName)) return imageName
-  try {
-    return new URL(
-      imageName.replace(/^\/+/, ""),
-      "https://img.arsenyx.com/",
-    ).toString()
-  } catch {
-    return undefined
-  }
-}
 
 function buildAuthor(b: BuildDetail): string | null {
   if (b.hideAuthor) return b.organization?.name ?? null

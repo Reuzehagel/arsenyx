@@ -5,6 +5,24 @@
 
 export const SITE_URL = "https://www.arsenyx.com"
 export const SITE_NAME = "Arsenyx"
+const IMAGE_CDN = "https://img.arsenyx.com/"
+
+// Absolutize an item image for og:image/twitter:image. Current catalog data
+// ships absolute https://img.arsenyx.com/… URLs, but denormalized/legacy values
+// (e.g. a build's stored item.imageName) may be bare filenames, which crawlers
+// can't resolve against a relative og:image. Pass http(s) URLs through; prepend
+// the CDN root for bare names. Mirrors the edge Worker's imageUrl()
+// (worker/index.ts) so the server- and client-rendered cards match. Lives here
+// so every seo() caller is defended by one implementation.
+function absoluteImage(image: string | undefined): string | undefined {
+  if (!image) return undefined
+  if (/^https?:\/\//i.test(image)) return image
+  try {
+    return new URL(image.replace(/^\/+/, ""), IMAGE_CDN).toString()
+  } catch {
+    return undefined
+  }
+}
 
 export const DEFAULT_TITLE = "Arsenyx — Warframe Build Planner"
 export const DEFAULT_DESCRIPTION =
@@ -20,7 +38,8 @@ export interface SeoOptions {
    *  May include a query string for pages whose identity lives in search
    *  params (e.g. "/browse?category=melee"). Omit to skip the canonical. */
   canonicalPath?: string
-  /** Absolute URL for og:image. */
+  /** og:image: an absolute URL or a bare CDN filename; `seo()` absolutizes it
+   *  against the image CDN, so callers may pass a raw `item.imageName`. */
   image?: string
   /** Auth/editor/user-private pages that should stay out of the index. */
   noindex?: boolean
@@ -47,10 +66,11 @@ export function seo(opts: SeoOptions = {}) {
     { name: "twitter:description", content: description },
   ]
   if (canonical) meta.push({ property: "og:url", content: canonical })
-  if (opts.image) {
+  const image = absoluteImage(opts.image)
+  if (image) {
     meta.push(
-      { property: "og:image", content: opts.image },
-      { name: "twitter:image", content: opts.image },
+      { property: "og:image", content: image },
+      { name: "twitter:image", content: image },
     )
   }
   if (opts.noindex) meta.push({ name: "robots", content: "noindex" })
