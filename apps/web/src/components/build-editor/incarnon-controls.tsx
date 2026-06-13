@@ -12,6 +12,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Tooltip,
   TooltipContent,
@@ -24,9 +25,9 @@ export function IncarnonTierGridSkeleton() {
   return (
     <div className="flex flex-wrap justify-around gap-1.5">
       {Array.from({ length: 4 }).map((_, i) => (
-        <div
+        <Skeleton
           key={i}
-          className="border-muted-foreground/10 size-10 animate-pulse rounded-sm border border-dashed"
+          className="border-muted-foreground/10 size-10 rounded-sm border border-dashed bg-transparent"
         />
       ))}
     </div>

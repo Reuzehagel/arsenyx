@@ -2,6 +2,7 @@ import { MAX_VARIANTS } from "@arsenyx/shared/warframe/build-doc"
 import { useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import {
   Popover,
@@ -10,6 +11,8 @@ import {
 } from "@/components/ui/popover"
 import type { SavedVariant } from "@/lib/queries/build-query"
 import { cn } from "@/lib/util/utils"
+
+import { VariantTab } from "../build-viewer/variant-tab"
 
 /**
  * Editor's per-variant tab bar with add / rename / duplicate / delete
@@ -106,20 +109,16 @@ function EditorVariantBarMulti({
         const isActive = i === activeIndex
         return (
           <div key={v.id || i} className="flex items-center gap-0.5">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={isActive}
+            <VariantTab
+              active={isActive}
               onClick={() => onSwitch(i)}
               className={cn(
-                "rounded-l-md border px-3 py-1 text-sm transition-colors",
-                isActive
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "bg-muted/30 hover:bg-muted text-muted-foreground hover:text-foreground rounded-md border-transparent",
+                "px-3 py-1 text-sm",
+                isActive ? "rounded-l-md" : "rounded-md",
               )}
             >
               {v.label || `Variant ${i + 1}`}
-            </button>
+            </VariantTab>
             {isActive ? (
               <Popover
                 open={settingsOpen}
@@ -151,13 +150,10 @@ function EditorVariantBarMulti({
                   align="center"
                   className="w-64 p-3"
                 >
-                  <div className="flex flex-col gap-2">
-                    <label
-                      htmlFor="variant-name"
-                      className="text-muted-foreground text-xs"
-                    >
+                  <Field>
+                    <FieldLabel htmlFor="variant-name" className="text-xs">
                       Name
-                    </label>
+                    </FieldLabel>
                     <Input
                       id="variant-name"
                       ref={inputRef}
@@ -206,7 +202,7 @@ function EditorVariantBarMulti({
                         Delete
                       </Button>
                     </div>
-                  </div>
+                  </Field>
                 </PopoverContent>
               </Popover>
             ) : null}

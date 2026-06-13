@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Skeleton } from "@/components/ui/skeleton"
 import { authClient } from "@/lib/auth-client"
 import { ROUTES } from "@/lib/util/constants"
 import { proxyImage } from "@/lib/util/image-proxy"
@@ -22,7 +23,7 @@ export function UserMenu() {
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   if (isPending) {
-    return <div className="bg-muted size-8 animate-pulse rounded-full" />
+    return <Skeleton className="size-8 rounded-full" />
   }
 
   if (!session) {

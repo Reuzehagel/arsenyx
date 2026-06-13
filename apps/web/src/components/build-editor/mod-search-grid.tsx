@@ -498,7 +498,7 @@ export function ModSearchGrid({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <InputGroup className="flex-1">
           <InputGroupAddon>
-            <Search className="size-4" />
+            <Search />
           </InputGroupAddon>
           <InputGroupInput
             ref={searchRef}

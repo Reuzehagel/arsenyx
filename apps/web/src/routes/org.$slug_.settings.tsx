@@ -293,7 +293,7 @@ function MembersCard({ org }: { org: OrgProfile }) {
                   className="text-destructive hover:text-destructive"
                   aria-label={`Remove ${display}`}
                 >
-                  <X className="size-4" />
+                  <X />
                 </Button>
               </li>
             )

@@ -20,7 +20,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { FieldError } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { UserAvatar } from "@/components/user-avatar"
 import { authClient } from "@/lib/auth-client"
@@ -168,16 +173,19 @@ function SearchBar({
     onChange(local.trim())
   }
   return (
-    <form onSubmit={onSubmit} className="flex gap-2">
-      <Input
-        value={local}
-        onChange={(e) => setLocal(e.target.value)}
-        placeholder={placeholder}
-        className="max-w-sm"
-      />
-      <Button type="submit" variant="secondary">
-        Search
-      </Button>
+    <form onSubmit={onSubmit}>
+      <InputGroup className="max-w-sm">
+        <InputGroupInput
+          value={local}
+          onChange={(e) => setLocal(e.target.value)}
+          placeholder={placeholder}
+        />
+        <InputGroupAddon align="inline-end">
+          <InputGroupButton type="submit" variant="secondary">
+            Search
+          </InputGroupButton>
+        </InputGroupAddon>
+      </InputGroup>
     </form>
   )
 }

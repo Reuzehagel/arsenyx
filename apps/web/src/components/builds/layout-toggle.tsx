@@ -7,7 +7,7 @@ import { cn } from "@/lib/util/utils"
 export function BuildsLayoutToggle() {
   const [layout, setLayout] = useBuildLayout()
   return (
-    <div className="bg-card inline-flex shrink-0 items-center rounded-md border p-0.5">
+    <div className="bg-card inline-flex shrink-0 items-center rounded-md border p-px">
       <ToggleButton
         active={layout === "cards"}
         label="Card view"

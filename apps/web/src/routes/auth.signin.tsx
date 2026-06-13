@@ -5,6 +5,7 @@ import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { Icons } from "@/components/icons"
 import { Button } from "@/components/ui/button"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { authClient } from "@/lib/auth-client"
 import { seo } from "@/lib/seo"
@@ -116,21 +117,31 @@ function DevSignInForm({ redirect }: { redirect: string | undefined }) {
         </span>
         <div className="bg-border h-px flex-1" />
       </div>
-      <form onSubmit={onSubmit} className="flex flex-col gap-2">
-        <Input
-          type="email"
-          autoComplete="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="admin@admin.com"
-        />
-        <Input
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="admin"
-        />
+      <form onSubmit={onSubmit}>
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="dev-email">Email</FieldLabel>
+            <Input
+              id="dev-email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@admin.com"
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="dev-password">Password</FieldLabel>
+            <Input
+              id="dev-password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="admin"
+            />
+          </Field>
+        </FieldGroup>
         {error ? <p className="text-destructive text-sm">{error}</p> : null}
         <Button type="submit" variant="secondary" disabled={busy}>
           Sign in

@@ -5,6 +5,7 @@ import {
 import { TriangleAlert } from "lucide-react"
 import { useMemo } from "react"
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { cn } from "@/lib/util/utils"
 
 import type { PlacedMod, SlotId } from "./use-build-slots"
@@ -42,24 +43,23 @@ export function ModConflictBanner({
   if (groups.length === 0) return null
 
   return (
-    <div
-      role="alert"
-      className={cn(
-        "border-destructive/40 bg-destructive/10 text-destructive flex flex-col gap-1 rounded-md border px-3 py-2 text-sm",
-        className,
-      )}
+    <Alert
+      variant="destructive"
+      className={cn("border-destructive/40 bg-destructive/10", className)}
     >
-      <div className="flex items-center gap-2 font-medium">
-        <TriangleAlert className="size-4 shrink-0" />
+      <TriangleAlert />
+      <AlertTitle>
         {groups.length === 1
           ? "These mods can't be equipped together"
           : "Some mods can't be equipped together"}
-      </div>
-      <ul className="text-destructive/90 ml-6 list-disc">
-        {groups.map((group) => (
-          <li key={group.join("|")}>Keep only one of: {group.join(", ")}</li>
-        ))}
-      </ul>
-    </div>
+      </AlertTitle>
+      <AlertDescription>
+        <ul className="ml-6 list-disc">
+          {groups.map((group) => (
+            <li key={group.join("|")}>Keep only one of: {group.join(", ")}</li>
+          ))}
+        </ul>
+      </AlertDescription>
+    </Alert>
   )
 }

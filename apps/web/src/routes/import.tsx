@@ -14,8 +14,11 @@ import {
 } from "@/components/build-editor"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { requireUser } from "@/lib/auth-guards"
 import { saveDraft } from "@/lib/import-draft"
 import {
@@ -32,6 +35,7 @@ import { modsQuery } from "@/lib/queries/mods-query"
 import { seo } from "@/lib/seo"
 import { apiErrorMessage, apiFetch, ApiError } from "@/lib/util/api-client"
 import { copyToClipboard } from "@/lib/util/clipboard"
+import { cn } from "@/lib/util/utils"
 import type { BrowseCategory, BrowseItem, DetailItem } from "@/lib/warframe"
 
 export const Route = createFileRoute("/import")({
@@ -283,7 +287,7 @@ function ImportPage() {
         <div className="flex flex-col gap-8">
           <div className="flex flex-col gap-2">
             <h1 className="flex items-center gap-3 text-4xl font-bold tracking-tight">
-              <UploadCloud className="h-9 w-9" />
+              <UploadCloud className="size-9" />
               Import from Overframe
             </h1>
             <p className="text-muted-foreground">
@@ -293,27 +297,29 @@ function ImportPage() {
           </div>
 
           <form onSubmit={onSubmit} className="flex flex-col gap-3">
-            <label htmlFor="overframe-url" className="text-sm font-medium">
-              Overframe build URL
-            </label>
-            <div className="flex gap-2">
-              <Input
-                id="overframe-url"
-                type="url"
-                placeholder="https://overframe.gg/build/123456/..."
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                disabled={mutation.isPending}
-                className="flex-1"
-                autoFocus
-              />
-              <Button
-                type="submit"
-                disabled={mutation.isPending || !url.trim()}
-              >
-                {mutation.isPending ? "Importing…" : "Import"}
-              </Button>
-            </div>
+            <Field>
+              <FieldLabel htmlFor="overframe-url">
+                Overframe build URL
+              </FieldLabel>
+              <div className="flex gap-2">
+                <Input
+                  id="overframe-url"
+                  type="url"
+                  placeholder="https://overframe.gg/build/123456/..."
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  disabled={mutation.isPending}
+                  className="flex-1"
+                  autoFocus
+                />
+                <Button
+                  type="submit"
+                  disabled={mutation.isPending || !url.trim()}
+                >
+                  {mutation.isPending ? "Importing…" : "Import"}
+                </Button>
+              </div>
+            </Field>
           </form>
 
           <details
@@ -341,7 +347,7 @@ function ImportPage() {
                   className="border-primary/40 bg-primary/10 text-primary inline-flex cursor-grab items-center gap-2 rounded-md border px-3 py-1.5 font-medium"
                   title="Drag me to your bookmarks bar"
                 >
-                  <UploadCloud className="h-4 w-4" /> Import to Arsenyx
+                  <UploadCloud className="size-4" /> Import to Arsenyx
                 </a>
               </div>
               <ol className="text-muted-foreground list-decimal space-y-1 pl-5">
@@ -355,14 +361,14 @@ function ImportPage() {
                   automatically, then Import.
                 </li>
               </ol>
-              <textarea
+              <Textarea
                 ref={pasteRef}
                 value={pasteText}
                 onChange={(e) => setPasteText(e.target.value)}
                 placeholder="Paste copied Overframe build data here…"
                 rows={4}
                 disabled={rawMutation.isPending}
-                className="border-input bg-background focus-visible:ring-ring w-full rounded-md border px-3 py-2 font-mono text-xs focus-visible:ring-2 focus-visible:outline-none"
+                className="font-mono text-xs"
               />
               <div>
                 <Button
@@ -370,7 +376,7 @@ function ImportPage() {
                   onClick={() => submitPaste(pasteText)}
                   disabled={rawMutation.isPending || !pasteText.trim()}
                 >
-                  <ClipboardPaste className="h-4 w-4" />
+                  <ClipboardPaste className="size-4" />
                   {rawMutation.isPending ? "Importing…" : "Import pasted data"}
                 </Button>
               </div>
@@ -635,7 +641,7 @@ function CopyDebugButton({ payload }: { payload: unknown }) {
         )
       }
     >
-      <Copy className="h-4 w-4" /> Copy debug JSON
+      <Copy data-icon="inline-start" /> Copy debug JSON
     </Button>
   )
 }
@@ -650,22 +656,28 @@ function WarningBox({
   items: { tag: string; text: string }[]
 }) {
   return (
-    <div
-      className={`rounded-md border p-4 text-sm ${
+    <Alert
+      variant={fatal ? "destructive" : "default"}
+      className={cn(
+        "p-4",
         fatal
-          ? "border-destructive/50 bg-destructive/10 text-destructive"
-          : "border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-      }`}
+          ? "border-destructive/50 bg-destructive/10"
+          : "border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+      )}
     >
-      <div className="mb-2 font-medium">{title}</div>
-      <ul className="flex flex-col gap-1">
-        {items.map((it, i) => (
-          <li key={i}>
-            <span className="font-mono text-xs opacity-70">{it.tag}</span> —{" "}
-            {it.text}
-          </li>
-        ))}
-      </ul>
-    </div>
+      <AlertTitle>{title}</AlertTitle>
+      <AlertDescription
+        className={cn(!fatal && "text-amber-700 dark:text-amber-400")}
+      >
+        <ul className="flex flex-col gap-1">
+          {items.map((it, i) => (
+            <li key={i}>
+              <span className="font-mono text-xs opacity-70">{it.tag}</span> —{" "}
+              {it.text}
+            </li>
+          ))}
+        </ul>
+      </AlertDescription>
+    </Alert>
   )
 }

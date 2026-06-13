@@ -28,9 +28,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { cn } from "@/lib/util/utils"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 
 import { PolarityIcon } from "./polarity"
 
@@ -143,31 +143,34 @@ export function RivenDialog({
 
         <div className="flex flex-col gap-4">
           <div className="flex gap-3">
-            <div className="flex-1">
-              <Label className="mb-1.5 text-xs">Polarity</Label>
-              <div className="flex gap-1">
+            <Field className="flex-1">
+              <FieldLabel className="text-xs">Polarity</FieldLabel>
+              <ToggleGroup
+                value={[polarity]}
+                onValueChange={(v) => {
+                  const next = v[0]
+                  if (next) setPolarity(next as Polarity)
+                }}
+                variant="outline"
+                size="sm"
+                className="flex gap-1"
+              >
                 {RIVEN_POLARITIES.map((p) => (
-                  <button
+                  <ToggleGroupItem
                     key={p}
-                    type="button"
-                    onClick={() => setPolarity(p)}
-                    className={cn(
-                      "hover:bg-muted flex h-8 flex-1 items-center justify-center gap-1.5 rounded-md border text-xs capitalize transition-colors",
-                      polarity === p
-                        ? "border-primary/60 bg-muted ring-primary/60 ring-1"
-                        : "border-border",
-                    )}
+                    value={p}
+                    className="data-pressed:border-primary/60 data-pressed:ring-primary/60 h-8 flex-1 capitalize data-pressed:ring-1"
                   >
                     <PolarityIcon polarity={p} className="size-3.5" />
                     {p}
-                  </button>
+                  </ToggleGroupItem>
                 ))}
-              </div>
-            </div>
-            <div className="w-24">
-              <Label className="mb-1.5 text-xs" htmlFor="riven-drain">
+              </ToggleGroup>
+            </Field>
+            <Field className="w-24">
+              <FieldLabel className="text-xs" htmlFor="riven-drain">
                 Drain
-              </Label>
+              </FieldLabel>
               <Input
                 id="riven-drain"
                 type="number"
@@ -178,13 +181,13 @@ export function RivenDialog({
                 max={RIVEN_MAX_DRAIN}
                 className="h-8 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
               />
-            </div>
+            </Field>
           </div>
 
-          <div>
-            <Label className="mb-1.5 block text-xs text-green-400">
+          <Field>
+            <FieldLabel className="block text-xs text-green-400">
               Positives
-            </Label>
+            </FieldLabel>
             <div className="flex flex-col gap-2">
               {positives.map((row, i) => (
                 <StatRow
@@ -197,12 +200,12 @@ export function RivenDialog({
                 />
               ))}
             </div>
-          </div>
+          </Field>
 
-          <div>
-            <Label className="mb-1.5 block text-xs text-red-400">
+          <Field>
+            <FieldLabel className="block text-xs text-red-400">
               Negative
-            </Label>
+            </FieldLabel>
             <StatRow
               row={negative}
               options={statOptions}
@@ -210,7 +213,7 @@ export function RivenDialog({
               onChangeStat={(s) => setNegative((p) => ({ ...p, stat: s }))}
               onChangeValue={(v) => setNegative((p) => ({ ...p, value: v }))}
             />
-          </div>
+          </Field>
         </div>
 
         <DialogFooter>

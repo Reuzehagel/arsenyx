@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query"
 import { ChevronDown, Link2, TriangleAlert, X } from "lucide-react"
 import { lazy, Suspense, useEffect, useMemo, useState } from "react"
 
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
   Command,
@@ -11,6 +12,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command"
+import { Field, FieldLabel, FieldDescription } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -18,6 +20,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import {
   partnerBuildsQuery,
@@ -28,6 +31,8 @@ import {
 } from "@/lib/queries/partner-builds-query"
 import { cn } from "@/lib/util/utils"
 import { getImageUrl } from "@/lib/warframe"
+
+import { VariantTab } from "../build-viewer/variant-tab"
 
 // CodeMirror lives behind this lazy boundary so it code-splits out of the main
 // route chunk (and never reaches the read-only embed bundle).
@@ -181,13 +186,8 @@ export function GuideEditor({
         </div>
       ) : null}
 
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="guide-summary">Summary</Label>
-          <span className="text-muted-foreground text-xs tabular-nums">
-            {summary.length}/{SUMMARY_MAX}
-          </span>
-        </div>
+      <Field>
+        <FieldLabel htmlFor="guide-summary">Summary</FieldLabel>
         <Input
           id="guide-summary"
           placeholder="One-line pitch — what makes this build tick?"
@@ -195,7 +195,10 @@ export function GuideEditor({
           maxLength={SUMMARY_MAX}
           onChange={(e) => onSummaryChange(e.target.value)}
         />
-      </div>
+        <FieldDescription className="tabular-nums">
+          {summary.length}/{SUMMARY_MAX}
+        </FieldDescription>
+      </Field>
 
       <div className="flex flex-col gap-2">
         <Label>Description</Label>
@@ -229,10 +232,10 @@ export function GuideEditor({
             className="h-9 w-full justify-between font-normal"
           >
             <span className="inline-flex items-center gap-2">
-              <Link2 className="size-4" />
+              <Link2 />
               Save the build to link partners…
             </span>
-            <ChevronDown className="size-4 opacity-50" />
+            <ChevronDown className="opacity-50" />
           </Button>
         )}
       </div>
@@ -252,17 +255,10 @@ function ScopeChip({
   onClick: () => void
 }) {
   return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={active}
+    <VariantTab
+      active={active}
       onClick={onClick}
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs transition-colors",
-        active
-          ? "border-primary bg-primary text-primary-foreground"
-          : "bg-muted/30 hover:bg-muted text-muted-foreground hover:text-foreground border-transparent",
-      )}
+      className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs"
     >
       <span>{label}</span>
       {hasContent ? (
@@ -274,7 +270,7 @@ function ScopeChip({
           )}
         />
       ) : null}
-    </button>
+    </VariantTab>
   )
 }
 
@@ -304,10 +300,10 @@ function PartnerBuildsField({ buildSlug }: { buildSlug: string }) {
           }
         >
           <span className="inline-flex items-center gap-2">
-            <Link2 className="size-4" />
+            <Link2 />
             Search builds to link…
           </span>
-          <ChevronDown className="size-4 opacity-50" />
+          <ChevronDown className="opacity-50" />
         </PopoverTrigger>
         <PopoverContent className="w-[var(--anchor-width)] p-0" align="start">
           <Command shouldFilter={false}>
@@ -403,8 +399,8 @@ function PartnerChip({
 function MarkdownEditorSkeleton() {
   return (
     <div className="flex flex-col gap-2">
-      <div className="border-input bg-muted/30 h-10 rounded-lg border" />
-      <div className="border-input bg-muted/10 min-h-64 rounded-lg border" />
+      <Skeleton className="border-input h-10 rounded-lg border" />
+      <Skeleton className="border-input min-h-64 rounded-lg border" />
     </div>
   )
 }
@@ -417,9 +413,9 @@ function DiscordImageWarning({ source }: { source: string }) {
   }, [source])
   if (!hasDiscordUrl) return null
   return (
-    <div className="text-foreground/90 mt-2 flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs">
-      <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-500" />
-      <p>
+    <Alert className="mt-2 border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-500">
+      <TriangleAlert />
+      <AlertDescription className="text-foreground/90 text-xs">
         Discord image links expire and will eventually 404 for other viewers.
         Re-upload images to{" "}
         <a
@@ -431,7 +427,7 @@ function DiscordImageWarning({ source }: { source: string }) {
           Imgur
         </a>{" "}
         or another permanent host instead.
-      </p>
-    </div>
+      </AlertDescription>
+    </Alert>
   )
 }

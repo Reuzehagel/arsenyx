@@ -17,7 +17,7 @@ function FooterLink({ label, href, external }: NavLink) {
         })}
       >
         {label}
-        {external && <Icons.externalLink className="h-3 w-3" />}
+        {external && <Icons.externalLink className="size-3" />}
       </Link>
     </li>
   )

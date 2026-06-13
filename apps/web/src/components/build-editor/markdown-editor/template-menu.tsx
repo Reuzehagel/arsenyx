@@ -20,8 +20,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 
 import {
   BUILTIN_TEMPLATES,
@@ -148,8 +148,8 @@ export function TemplateMenu({
               browser only.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="template-name">Template name</Label>
+          <Field>
+            <FieldLabel htmlFor="template-name">Template name</FieldLabel>
             <Input
               id="template-name"
               autoFocus
@@ -163,7 +163,7 @@ export function TemplateMenu({
                 }
               }}
             />
-          </div>
+          </Field>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSaveOpen(false)}>
               Cancel

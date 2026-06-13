@@ -9,6 +9,7 @@ import {
 } from "@/components/landing/use-recent-items"
 import { Link } from "@/components/link"
 import { Kbd } from "@/components/ui/kbd"
+import { Skeleton } from "@/components/ui/skeleton"
 import { itemsIndexQuery } from "@/lib/queries/items-index-query"
 import { seo } from "@/lib/seo"
 import { isMac } from "@/lib/util/platform"
@@ -60,7 +61,7 @@ function Home() {
                   </div>
                 </Link>
               ) : (
-                <div className="bg-muted/40 mx-auto h-[280px] w-full max-w-sm animate-pulse rounded-lg" />
+                <Skeleton className="mx-auto h-[280px] w-full max-w-sm rounded-lg" />
               )}
             </div>
 
@@ -94,7 +95,7 @@ function Home() {
                 <p className="text-muted-foreground font-mono text-[11px] tracking-[0.22em] uppercase">
                   Recently added
                 </p>
-                <ul className="mt-3 space-y-1.5">
+                <ul className="mt-3 flex flex-col gap-1.5">
                   {recent.slice(1, 6).map((it) => (
                     <li
                       key={`${it.category}-${it.slug}`}

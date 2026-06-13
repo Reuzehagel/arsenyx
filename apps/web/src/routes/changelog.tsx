@@ -2,8 +2,10 @@ import { createFileRoute } from "@tanstack/react-router"
 
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
+import { Badge } from "@/components/ui/badge"
 import { CHANGELOG, type ChangelogEntry } from "@/data/changelog"
 import { seo } from "@/lib/seo"
+import { cn } from "@/lib/util/utils"
 
 const TYPE_LABELS: Record<ChangelogEntry["changes"][number]["type"], string> = {
   feat: "New",
@@ -73,11 +75,15 @@ function ChangelogPage() {
                     .sort((a, b) => TYPE_ORDER[a.type] - TYPE_ORDER[b.type])
                     .map((change, i) => (
                       <li key={i} className="flex items-start gap-3">
-                        <span
-                          className={`mt-0.5 inline-flex w-24 shrink-0 items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium ${TYPE_COLORS[change.type]}`}
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "mt-0.5 w-24 shrink-0 rounded-md",
+                            TYPE_COLORS[change.type],
+                          )}
                         >
                           {TYPE_LABELS[change.type]}
-                        </span>
+                        </Badge>
                         <span className="text-sm">{change.description}</span>
                       </li>
                     ))}

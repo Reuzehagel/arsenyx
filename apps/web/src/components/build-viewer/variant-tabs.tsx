@@ -1,9 +1,10 @@
-import { cn } from "@/lib/util/utils"
+import { VariantTab } from "./variant-tab"
 
 /**
  * Read-only tab bar for switching between a build's variants in the
- * viewer. Mirrors the styling of `EditorVariantBar` (active = primary
- * fill) without the settings popover or add/duplicate/delete affordances.
+ * viewer. Shares the `VariantTab` styling with `EditorVariantBar` (active =
+ * primary fill) without the settings popover or add/duplicate/delete
+ * affordances.
  */
 export function VariantTabs({
   variants,
@@ -20,26 +21,16 @@ export function VariantTabs({
       aria-label="Build variants"
       className="flex flex-wrap items-center justify-center gap-1.5 pb-1"
     >
-      {variants.map((v, i) => {
-        const active = i === activeIndex
-        return (
-          <button
-            key={v.id || i}
-            type="button"
-            role="tab"
-            aria-selected={active}
-            onClick={() => onSelect(i)}
-            className={cn(
-              "rounded-md border px-3 py-1 text-sm transition-colors",
-              active
-                ? "border-primary bg-primary text-primary-foreground"
-                : "bg-muted/30 hover:bg-muted text-muted-foreground hover:text-foreground border-transparent",
-            )}
-          >
-            {v.label || `Variant ${i + 1}`}
-          </button>
-        )
-      })}
+      {variants.map((v, i) => (
+        <VariantTab
+          key={v.id || i}
+          active={i === activeIndex}
+          onClick={() => onSelect(i)}
+          className="rounded-md px-3 py-1 text-sm"
+        >
+          {v.label || `Variant ${i + 1}`}
+        </VariantTab>
+      ))}
     </div>
   )
 }

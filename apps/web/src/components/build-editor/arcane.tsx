@@ -309,7 +309,7 @@ function ArcanePicker({
     <div className="flex flex-col gap-2" style={{ width: 448 }}>
       <InputGroup>
         <InputGroupAddon>
-          <Search className="size-4" />
+          <Search />
         </InputGroupAddon>
         <InputGroupInput
           autoFocus

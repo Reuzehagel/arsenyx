@@ -11,6 +11,7 @@ import {
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field"
@@ -160,19 +161,24 @@ function DeleteAccountDialog({
         <DialogTitle>Delete account</DialogTitle>
         <DialogDescription>
           This permanently deletes your account, builds, guides, votes,
-          bookmarks, and organization memberships. Type{" "}
-          <code className="font-mono">{expected}</code> to confirm.
+          bookmarks, and organization memberships.
         </DialogDescription>
         <div className="flex flex-col gap-3 pt-2">
-          <Input
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            placeholder={expected}
-            autoComplete="off"
-          />
-          {del.error ? (
-            <p className="text-destructive text-sm">{del.error.message}</p>
-          ) : null}
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="delete-confirm">
+                Type <code className="font-mono">{expected}</code> to confirm
+              </FieldLabel>
+              <Input
+                id="delete-confirm"
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                placeholder={expected}
+                autoComplete="off"
+              />
+            </Field>
+            {del.error ? <FieldError>{del.error.message}</FieldError> : null}
+          </FieldGroup>
           <div className="flex justify-end gap-2">
             <Button
               type="button"
