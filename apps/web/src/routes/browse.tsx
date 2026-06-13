@@ -25,8 +25,10 @@ import {
 import { Kbd } from "@/components/ui/kbd"
 import { useHotkey } from "@/lib/hooks/hotkeys"
 import { itemsIndexQuery } from "@/lib/queries/items-index-query"
+import { seo } from "@/lib/seo"
 import {
   CATEGORIES,
+  getCategoryLabel,
   isValidCategory,
   type BrowseCategory,
   type BrowseItem,
@@ -83,6 +85,17 @@ export const Route = createFileRoute("/browse")({
     return { category, q, sort, mastery, prime, vaulted, incarnon }
   },
   loader: ({ context }) => context.queryClient.ensureQueryData(itemsIndexQuery),
+  // Each category view is its own indexable page; the canonical strips
+  // search/sort/filter params so filtered variants collapse onto it.
+  head: ({ match }) => {
+    const category = match.search.category
+    const label = category === "all" ? "All Items" : getCategoryLabel(category)
+    return seo({
+      title: `Browse ${label}`,
+      description: `Browse every ${label === "All Items" ? "item" : label.replace(/s$/, "").toLowerCase()} in Warframe and jump into a build with mods, arcanes, and stats.`,
+      canonicalPath: `/browse?category=${category}`,
+    })
+  },
   component: BrowsePage,
 })
 

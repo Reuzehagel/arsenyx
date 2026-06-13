@@ -38,6 +38,7 @@ import {
   useAdminDeleteUser,
   useAdminPatchUser,
 } from "@/lib/queries/admin-actions"
+import { seo } from "@/lib/seo"
 import { authorName } from "@/lib/util/user-display"
 
 const TABS = ["users", "content", "orgs", "stats"] as const
@@ -66,6 +67,7 @@ function parseSearch(search: Record<string, unknown>): AdminSearch {
 }
 
 export const Route = createFileRoute("/admin")({
+  head: () => seo({ title: "Admin", noindex: true }),
   validateSearch: (search): AdminSearch => parseSearch(search),
   beforeLoad: () => requireAdmin(),
   component: AdminPage,

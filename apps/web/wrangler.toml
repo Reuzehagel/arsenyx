@@ -10,11 +10,12 @@ routes = [
   { pattern = "arsenyx.com", custom_domain = true },
 ]
 
-# A tiny Worker (`worker/index.ts`) runs in front of Workers Static Assets so
-# that Discord's link-unfurl bot gets build-specific OG meta tags on
-# /builds/:slug pages. Everything else — and every non-bot
-# request to /builds/* — falls straight through to the assets binding, which
-# applies the `_headers` / `_redirects` rules from `public/_headers`.
+# A tiny Worker (`worker/index.ts`) runs in front of Workers Static Assets for
+# every HTML navigation. It 301s the apex host onto www and injects per-page
+# <title>/<meta>/<link rel=canonical> into the SPA shell (builds, item pages,
+# static routes) so crawlers and unfurl bots see real metadata in the initial
+# response. Static asset directories are excluded below and served directly
+# by the assets binding, which applies the rules from `public/_headers`.
 #
 # `not_found_handling = "single-page-application"` makes any unmatched route
 # return `/index.html` with a 200, so TanStack Router can take over client-side.
@@ -24,9 +25,20 @@ main = "./worker/index.ts"
 directory = "./dist"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
-# Run the Worker first only for build detail pages; all other routes (assets,
-# data JSON, other SPA routes) bypass the Worker entirely.
-run_worker_first = ["/builds/*"]
+run_worker_first = [
+  "/*",
+  "!/assets/*",
+  "!/data/*",
+  "!/icons/*",
+  "!/img/*",
+  "!/mod-set-icons/*",
+  "!/mod-components/*",
+  "!/focus-schools/*",
+  "!/favicon.svg",
+  "!/apple-touch-icon.png",
+  "!/robots.txt",
+  "!/sitemap.xml",
+]
 
 [observability]
 enabled = true

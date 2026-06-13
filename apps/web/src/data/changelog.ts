@@ -11,6 +11,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-06-13",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Arsenyx pages are now properly visible to search engines: every item page, build page, and category gets its own title, description, and preview card (instead of one generic title for the whole site), there's a sitemap so Google can find all ~850 item pages, and arsenyx.com now redirects to www.arsenyx.com so links all count toward the same site. Sharing a build or item link anywhere — not just Discord — now shows a proper preview.",
+      },
+    ],
+  },
+  {
     date: "2026-06-12",
     changes: [
       {

@@ -23,17 +23,28 @@ import {
   orgQuery,
   type OrgProfile,
 } from "@/lib/queries/org-query"
+import { seo } from "@/lib/seo"
 import { authorName } from "@/lib/util/user-display"
 
 export const Route = createFileRoute("/org/$slug")({
   validateSearch: (search): BuildsListSearch => parseBuildsListSearch(search),
   loaderDeps: ({ search }) => buildsListLoaderDeps(search, "newest"),
   loader: async ({ context, params, deps }) => {
-    await Promise.all([
+    const [org] = await Promise.all([
       context.queryClient.ensureQueryData(orgQuery(params.slug)),
       context.queryClient.ensureQueryData(orgBuildsQuery(params.slug, deps)),
     ])
+    return org
   },
+  head: ({ loaderData, params }) =>
+    seo({
+      title: loaderData ? `${loaderData.name} — Organization` : undefined,
+      description:
+        loaderData?.description ??
+        `Warframe builds published by ${loaderData?.name ?? "this organization"} on Arsenyx.`,
+      canonicalPath: `/org/${params.slug}`,
+      image: loaderData?.image ?? undefined,
+    }),
   component: OrgPage,
   notFoundComponent: OrgNotFound,
 })

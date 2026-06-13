@@ -46,9 +46,11 @@ import {
   type OrgProfile,
   type OrgRole,
 } from "@/lib/queries/org-query"
+import { seo } from "@/lib/seo"
 import { authorName } from "@/lib/util/user-display"
 
 export const Route = createFileRoute("/org/$slug_/settings")({
+  head: () => seo({ title: "Organization Settings", noindex: true }),
   beforeLoad: async ({ context, params }) => {
     await requireUser()
     const org = await context.queryClient.ensureQueryData(orgQuery(params.slug))

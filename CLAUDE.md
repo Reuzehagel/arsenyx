@@ -4,7 +4,7 @@ Game data (items, mods, arcanes) is static JSON precomputed at build time and se
 
 ## Deployment
 
-- Web (Vite SPA) → Cloudflare Workers (Static Assets), `www.arsenyx.com` + `arsenyx.com`. SPA fallback + cache headers via [apps/web/wrangler.toml](apps/web/wrangler.toml) and [apps/web/public/\_headers](apps/web/public/_headers).
+- Web (Vite SPA) → Cloudflare Workers (Static Assets), `www.arsenyx.com` (canonical; the Worker 301s `arsenyx.com` → www). SPA fallback + cache headers via [apps/web/wrangler.toml](apps/web/wrangler.toml) and [apps/web/public/\_headers](apps/web/public/_headers). The edge Worker also injects per-page SEO meta — see [apps/web/CLAUDE.md](apps/web/CLAUDE.md).
 - API (Hono on Workers) → `api.arsenyx.com`, Prisma 7 + `@prisma/adapter-pg` (workerd runtime)
 - DB → PlanetScale Postgres, reached through Cloudflare Hyperdrive (see [apps/api/CLAUDE.md](apps/api/CLAUDE.md))
 - CI deploys both Workers on push to `main` via Workers Builds (configured in the CF dashboard). Secrets live in the CF dashboard, not in `.env`.

@@ -10,8 +10,16 @@ import {
 } from "@/components/build-viewer"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
+import { isLegacyBuildData } from "@/lib/codec/build-codec-adapter"
 import { clampEmbedParams } from "@/lib/embed-params"
-import { buildQuery } from "@/lib/queries/build-query"
+import { arcanesQuery } from "@/lib/queries/arcanes-query"
+import { buildQuery, type BuildDetail } from "@/lib/queries/build-query"
+import { helminthQuery } from "@/lib/queries/helminth-query"
+import { imageMapQuery } from "@/lib/queries/image-map-query"
+import { itemQuery } from "@/lib/queries/item-query"
+import { modConflictsQuery } from "@/lib/queries/mod-conflicts-query"
+import { modsQuery } from "@/lib/queries/mods-query"
+import { seo } from "@/lib/seo"
 import { isValidCategory, type BrowseCategory } from "@/lib/warframe"
 
 interface BuildSearch {
@@ -50,11 +58,76 @@ export const Route = createFileRoute("/builds/$slug")({
       ...(v !== undefined && { v }),
     }
   },
-  loader: ({ context, params }) =>
-    context.queryClient.ensureQueryData(buildQuery(params.slug)),
+  loader: async ({ context, params }) => {
+    const qc = context.queryClient
+    const build = await qc.ensureQueryData(buildQuery(params.slug))
+    // Warm what BuildViewerBodyInner suspends on so the loadout paints complete
+    // instead of swapping a "Loading item…" placeholder for the full grid — the
+    // shift that drove the build pages' CLS into the red. prefetchQuery is
+    // best-effort (never throws), so a miss just falls back to the body's own
+    // useSuspenseQuery rather than breaking navigation.
+    if (isValidCategory(build.item.category)) {
+      const category = build.item.category as BrowseCategory
+      const itemSlug = slugify(build.item.name)
+      // Gate the transition only on the small static files the loadout needs.
+      await Promise.all([
+        qc.prefetchQuery(itemQuery(category, itemSlug)),
+        qc.prefetchQuery(imageMapQuery),
+        qc.prefetchQuery(modConflictsQuery),
+      ])
+      // Legacy-shape builds rebuild their mods from the full mod/arcane/
+      // helminth catalogs (~1.35MB). Warm them but don't gate navigation on the
+      // download — the height-reserving BuildViewerFallback absorbs the CLS
+      // while BuildViewerBodyWithCatalog's own useSuspenseQuery streams them in.
+      if (isLegacyBuildData(build.buildData)) {
+        void qc.prefetchQuery(arcanesQuery)
+        void qc.prefetchQuery(modsQuery)
+        void qc.prefetchQuery(helminthQuery)
+      }
+    }
+    return build
+  },
+  // Mirrors the title/description formula the Worker injects for unfurl bots
+  // (worker/index.ts buildMeta) so the server-sent and client-rendered head
+  // agree. Non-public builds are noindexed; the ?embed=1 duplicate resolves
+  // to the clean URL via the canonical.
+  head: ({ loaderData, params }) => {
+    if (!loaderData) return seo()
+    return seo({
+      title: buildTitle(loaderData),
+      description: buildDescription(loaderData),
+      canonicalPath: `/builds/${params.slug}`,
+      image: loaderData.item.imageName ?? undefined,
+      noindex: loaderData.visibility !== "PUBLIC",
+    })
+  },
   component: BuildPage,
   notFoundComponent: BuildNotFound,
 })
+
+function buildAuthor(b: BuildDetail): string | null {
+  if (b.hideAuthor) return b.organization?.name ?? null
+  return (
+    b.organization?.name ??
+    b.user.displayUsername ??
+    b.user.username ??
+    b.user.name
+  )
+}
+
+function buildTitle(b: BuildDetail): string {
+  const author = buildAuthor(b)
+  return author ? `${b.item.name} Build by ${author}` : `${b.item.name} Build`
+}
+
+function buildDescription(b: BuildDetail): string {
+  const summary = (b.guide?.summary ?? b.description ?? "")
+    .replace(/\s+/g, " ")
+    .trim()
+  const lead = b.name === b.item.name ? "" : `${b.name}. `
+  const body = summary || `${b.item.name} build with mods, arcanes, and stats.`
+  return `${lead}${body}`.slice(0, 280)
+}
 
 function BuildPage() {
   const { embed, scale, bg } = Route.useSearch()
@@ -76,14 +149,26 @@ function BuildPage() {
       <Header />
       <main className="flex-1">
         <div className="wrap py-4 md:py-6">
-          <Suspense
-            fallback={<p className="text-muted-foreground">Loading build…</p>}
-          >
+          <Suspense fallback={<BuildViewerFallback />}>
             <BuildViewer />
           </Suspense>
         </div>
       </main>
       <Footer />
+    </div>
+  )
+}
+
+// Reserves roughly a viewport of height while the viewer (or its data) is
+// pending so the footer stays parked below the fold instead of jumping up to
+// meet a one-line placeholder and then back down — the layout-shift the build
+// pages were being dinged for. After the loader's prefetch this rarely shows on
+// a cold load, but it still guards slow connections and client-side variant
+// re-suspends.
+function BuildViewerFallback() {
+  return (
+    <div className="flex min-h-[70vh] items-start justify-center pt-16">
+      <p className="text-muted-foreground">Loading build…</p>
     </div>
   )
 }
@@ -116,7 +201,7 @@ function BuildViewer({ embed = false }: { embed?: boolean }) {
   // Without this, the hooks keep their initial state across ?v= changes
   // and the loadout grid stays frozen on variant 0.
   return (
-    <Suspense fallback={<p className="text-muted-foreground">Loading item…</p>}>
+    <Suspense fallback={<BuildViewerFallback />}>
       <BuildViewerBody
         key={`${slug}-${v ?? 0}`}
         build={build}

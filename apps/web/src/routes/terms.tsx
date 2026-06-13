@@ -3,9 +3,11 @@ import { createFileRoute } from "@tanstack/react-router"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { Link } from "@/components/link"
+import { seo } from "@/lib/seo"
 import { EXTERNAL_LINKS, SITE_CONFIG } from "@/lib/util/constants"
 
 export const Route = createFileRoute("/terms")({
+  head: () => seo({ title: "Terms of Service", canonicalPath: "/terms" }),
   component: TermsPage,
 })
 

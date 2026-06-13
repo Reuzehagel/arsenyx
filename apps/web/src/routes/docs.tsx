@@ -6,9 +6,17 @@ import { Header } from "@/components/header"
 import { Icons } from "@/components/icons"
 import { Link } from "@/components/link"
 import { Button } from "@/components/ui/button"
+import { seo } from "@/lib/seo"
 import { EXTERNAL_LINKS, SITE_CONFIG } from "@/lib/util/constants"
 
 export const Route = createFileRoute("/docs")({
+  head: () =>
+    seo({
+      title: "Docs",
+      description:
+        "Documentation for Arsenyx — embedding builds, the public API, and integrating with the Warframe build planner.",
+      canonicalPath: "/docs",
+    }),
   component: DocsPage,
 })
 

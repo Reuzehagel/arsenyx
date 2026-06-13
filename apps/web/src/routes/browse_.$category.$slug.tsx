@@ -15,7 +15,12 @@ import { RouteNotFound } from "@/components/route-not-found"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { itemQuery } from "@/lib/queries/item-query"
-import { isValidCategory, type BrowseCategory } from "@/lib/warframe"
+import { SITE_URL, seo } from "@/lib/seo"
+import {
+  getCategoryLabel,
+  isValidCategory,
+  type BrowseCategory,
+} from "@/lib/warframe"
 
 export const Route = createFileRoute("/browse_/$category/$slug")({
   beforeLoad: ({ params }) => {
@@ -25,9 +30,56 @@ export const Route = createFileRoute("/browse_/$category/$slug")({
     context.queryClient.ensureQueryData(
       itemQuery(params.category as BrowseCategory, params.slug),
     ),
+  head: ({ loaderData, params }) => {
+    if (!loaderData) return seo()
+    const path = `/browse/${params.category}/${params.slug}`
+    const label = getCategoryLabel(params.category)
+    return seo({
+      title: `${loaderData.name} Builds`,
+      description: clampDescription(
+        loaderData.description
+          ? `${loaderData.description} Plan and share ${loaderData.name} builds on Arsenyx.`
+          : `Plan and share ${loaderData.name} (${label}) builds with mods, arcanes, and stats on Arsenyx.`,
+      ),
+      canonicalPath: path,
+      image: loaderData.imageName ?? undefined,
+      jsonLd: {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Browse",
+            item: `${SITE_URL}/browse`,
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: label,
+            item: `${SITE_URL}/browse?category=${params.category}`,
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: loaderData.name,
+            item: `${SITE_URL}${path}`,
+          },
+        ],
+      },
+    })
+  },
   component: ItemDetailPage,
   notFoundComponent: ItemNotFound,
 })
+
+// Meta descriptions get truncated in SERPs around ~160 chars; clip on a word
+// boundary so codex flavor text doesn't end mid-word.
+function clampDescription(s: string): string {
+  if (s.length <= 160) return s
+  const cut = s.slice(0, 159)
+  return `${cut.slice(0, Math.max(cut.lastIndexOf(" "), 120))}…`
+}
 
 function ItemDetailPage() {
   const { category, slug } = Route.useParams()

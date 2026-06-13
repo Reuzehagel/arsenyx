@@ -13,12 +13,20 @@ import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { publicBuildsQuery } from "@/lib/queries/builds-list-query"
+import { seo } from "@/lib/seo"
 
 export const Route = createFileRoute("/builds/")({
   validateSearch: (search): BuildsListSearch => parseBuildsListSearch(search),
   loaderDeps: ({ search }) => buildsListLoaderDeps(search, "updated"),
   loader: ({ context, deps }) =>
     context.queryClient.ensureQueryData(publicBuildsQuery(deps)),
+  head: () =>
+    seo({
+      title: "Community Builds",
+      description:
+        "Browse community-made Warframe builds — filter by frame, weapon, and category, and share your own.",
+      canonicalPath: "/builds",
+    }),
   component: BuildsIndexPage,
 })
 

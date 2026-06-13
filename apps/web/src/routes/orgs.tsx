@@ -16,10 +16,18 @@ import {
 } from "@/components/ui/card"
 import { UserAvatar } from "@/components/user-avatar"
 import { orgsDirectoryQuery } from "@/lib/queries/org-query"
+import { seo } from "@/lib/seo"
 
 type OrgsSearch = { page?: number }
 
 export const Route = createFileRoute("/orgs")({
+  head: () =>
+    seo({
+      title: "Organizations",
+      description:
+        "Warframe clans and communities publishing builds together on Arsenyx.",
+      canonicalPath: "/orgs",
+    }),
   validateSearch: (search): OrgsSearch => {
     const raw = (search as { page?: unknown }).page
     const n = typeof raw === "number" ? raw : parseInt(String(raw ?? ""), 10)

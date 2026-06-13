@@ -20,18 +20,32 @@ import {
   profileQuery,
   type Profile,
 } from "@/lib/queries/profile-query"
+import { seo } from "@/lib/seo"
 import { authorName } from "@/lib/util/user-display"
 
 export const Route = createFileRoute("/profile/$username")({
   validateSearch: (search): BuildsListSearch => parseBuildsListSearch(search),
   loaderDeps: ({ search }) => buildsListLoaderDeps(search, "newest"),
   loader: async ({ context, params, deps }) => {
-    await Promise.all([
+    const [profile] = await Promise.all([
       context.queryClient.ensureQueryData(profileQuery(params.username)),
       context.queryClient.ensureQueryData(
         profileBuildsQuery(params.username, deps),
       ),
     ])
+    return profile
+  },
+  head: ({ loaderData, params }) => {
+    const name = loaderData
+      ? (loaderData.displayUsername ?? loaderData.username ?? params.username)
+      : params.username
+    return seo({
+      title: `${name}'s Builds`,
+      description:
+        loaderData?.bio ?? `Warframe builds shared by ${name} on Arsenyx.`,
+      canonicalPath: `/profile/${params.username}`,
+      image: loaderData?.image ?? undefined,
+    })
   },
   component: ProfilePage,
   notFoundComponent: ProfileNotFound,

@@ -4,11 +4,13 @@ import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { Link } from "@/components/link"
 import { Button } from "@/components/ui/button"
+import { seo } from "@/lib/seo"
 import { ROUTES } from "@/lib/util/constants"
 
 type ErrorSearch = { error?: string; error_description?: string }
 
 export const Route = createFileRoute("/auth/error")({
+  head: () => seo({ title: "Sign-in error", noindex: true }),
   component: AuthErrorPage,
   validateSearch: (search: Record<string, unknown>): ErrorSearch => ({
     error: typeof search.error === "string" ? search.error : undefined,

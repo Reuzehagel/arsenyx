@@ -17,6 +17,7 @@ import { BuildSurface } from "@/components/build-editor/build-surface"
 import { resolveInitialArcanes } from "@/components/build-editor/layout"
 import { useArcaneSlots } from "@/components/build-editor/use-arcane-slots"
 import { useBuildSlots } from "@/components/build-editor/use-build-slots"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   getVariants,
   isLegacyBuildData,
@@ -26,7 +27,7 @@ import {
 } from "@/lib/codec/build-codec-adapter"
 import { makeRefResolver } from "@/lib/guide-refs"
 import { arcanesQuery } from "@/lib/queries/arcanes-query"
-import type { BuildDetail } from "@/lib/queries/build-query"
+import { type BuildDetail, hasGuideContent } from "@/lib/queries/build-query"
 import {
   helminthQuery,
   type HelminthAbility,
@@ -166,6 +167,13 @@ function BuildViewerBodyInner({
     [savedAll, activeIndex],
   )
 
+  // Reserve height for the guide's lazy chunk only when GuideDisplay will
+  // actually render something (else the reservation leaves an empty gap above
+  // the footer). hasGuideContent is the same resolver GuideDisplay renders
+  // through, so the two can't drift.
+  const activeVariant = variants[activeIndex]
+  const hasGuide = hasGuideContent(build, activeVariant)
+
   const categoryLabel = getCategoryLabel(category)
   const layout = useMemo(() => getBuildLayout(item, category), [item, category])
   const { isCompanion, normalSlotCount, auraSlotCount, arcaneCount } = layout
@@ -223,9 +231,14 @@ function BuildViewerBodyInner({
   return (
     <>
       {!embed && (
-        // min-height reserves the header's vertical space so the loadout below
-        // doesn't jump when the lazy chunk resolves.
-        <Suspense fallback={<div className="min-h-24" />}>
+        // The fallback mirrors ViewerHeader's exact DOM structure (same card,
+        // same clamp-sized image box, same row/column flex rules) so it
+        // occupies the identical height at every breakpoint. A plain min-height
+        // under-reserved on desktop and the header's lazy chunk resolving then
+        // shoved the loadout ~50px down — the page's last remaining layout
+        // shift. A structural skeleton tracks the real height responsively, so
+        // the swap moves nothing.
+        <Suspense fallback={<ViewerHeaderSkeleton />}>
           <ViewerHeader
             build={build}
             categoryLabel={categoryLabel}
@@ -291,15 +304,49 @@ function BuildViewerBodyInner({
         ) : null}
 
         {!embed && (
-          <Suspense fallback={null}>
+          <Suspense fallback={hasGuide ? <div className="min-h-40" /> : null}>
             <GuideDisplay
               build={build}
-              activeVariant={variants[activeIndex]}
+              activeVariant={activeVariant}
               resolveGuideRef={resolveGuideRef}
             />
           </Suspense>
         )}
       </div>
     </>
+  )
+}
+
+/**
+ * Height-matched placeholder for the lazy {@link ViewerHeader}. Deliberately
+ * mirrors that component's outer structure — the `bg-card … p-4` card, the
+ * clamp-sized image box (which dominates the card height on desktop), and the
+ * same row/column flex rules — so it reserves the identical height across
+ * breakpoints and the loadout below doesn't shift when the real header swaps
+ * in. Keep this in sync with viewer-header.tsx's outer layout. `animate-pulse`
+ * marks it as a loading state; `aria-hidden` keeps the bars out of the a11y
+ * tree.
+ */
+function ViewerHeaderSkeleton() {
+  return (
+    <div className="bg-card mb-4 rounded-lg border p-4" aria-hidden>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex min-w-0 flex-1 items-center gap-4">
+          <Skeleton className="size-[clamp(4rem,8vw,6rem)] shrink-0" />
+          <div className="flex min-w-0 flex-1 flex-col justify-center gap-2">
+            <Skeleton className="h-6 w-1/2" />
+            <Skeleton className="h-4 w-2/3" />
+            <div className="flex flex-wrap items-center gap-2">
+              <Skeleton className="h-5 w-20 rounded-full" />
+              <Skeleton className="h-5 w-24 rounded-full" />
+              <Skeleton className="h-5 w-28 rounded-full" />
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-9 w-32" />
+        </div>
+      </div>
+    </div>
   )
 }

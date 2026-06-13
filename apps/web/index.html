@@ -19,11 +19,11 @@
     <meta name="theme-color" content="#09090b" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <title>Arsenyx — Warframe Build Planner</title>
-    <meta
-      name="description"
-      content="Open-source Warframe build planner. Fast, keyboard-first, and community-driven."
-    />
+    <!-- No static <title>/<meta description>: the edge Worker
+         (worker/index.ts) injects per-page ones into every HTML response,
+         and <HeadContent /> manages them client-side. A static copy here
+         would duplicate them and shadow the per-route description for
+         crawlers (first-in-document wins). -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

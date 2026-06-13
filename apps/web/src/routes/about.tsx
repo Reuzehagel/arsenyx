@@ -1,13 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router"
+import { Heart } from "lucide-react"
 
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { Icons } from "@/components/icons"
 import { Link } from "@/components/link"
 import { Button } from "@/components/ui/button"
+import { seo } from "@/lib/seo"
 import { SITE_CONFIG, EXTERNAL_LINKS } from "@/lib/util/constants"
 
 export const Route = createFileRoute("/about")({
+  head: () =>
+    seo({
+      title: "About",
+      description:
+        "What Arsenyx is, who builds it, and why it's open source. A fast, community-driven Warframe build planner.",
+      canonicalPath: "/about",
+    }),
   component: AboutPage,
 })
 
@@ -40,8 +49,26 @@ function AboutPage() {
             <p>
               It&apos;s just me. No team, no company, no roadmap meetings
               &mdash; just one Tenno building the tool I wished existed, for the
-              love of the game.
+              love of the game. Arsenyx is free and ad-free; if it&apos;s useful
+              to you, a small tip helps cover the server costs.
             </p>
+            <div className="not-prose">
+              <Button
+                variant="outline"
+                size="sm"
+                render={
+                  <Link
+                    href={EXTERNAL_LINKS.koFi}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  />
+                }
+                nativeButton={false}
+              >
+                <Heart data-icon="inline-start" />
+                Support on Ko-fi
+              </Button>
+            </div>
 
             <h2>Open source</h2>
             <p>

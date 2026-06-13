@@ -86,6 +86,43 @@ export type PerVariantDataField = Exclude<
 export type BuildDetail = BuildDetailResponse
 
 /**
+ * Resolves the guide content GuideDisplay would render for a given view: a
+ * per-variant guide (if the active variant has one) supersedes the build-wide
+ * guide wholesale — we don't mix fields. Trimmed so whitespace-only guides
+ * read as empty. Lives here (not in guide-display.tsx) so the build viewer can
+ * reserve layout space for the guide's lazy chunk without statically importing
+ * react-markdown into the embed bundle. The component and the space-reservation
+ * stay in sync because both go through this.
+ */
+export function resolveGuide(
+  build: Pick<BuildDetail, "guide">,
+  activeVariant: SavedVariant | undefined,
+): { summary: string; description: string } {
+  const variantSummary = activeVariant?.guideSummary?.trim()
+  const variantDescription = activeVariant?.guideDescription?.trim()
+  if (variantSummary || variantDescription) {
+    return {
+      summary: variantSummary ?? "",
+      description: variantDescription ?? "",
+    }
+  }
+  return {
+    summary: build.guide?.summary?.trim() ?? "",
+    description: build.guide?.description?.trim() ?? "",
+  }
+}
+
+/** Whether {@link resolveGuide} yields any content — i.e. whether GuideDisplay
+ *  will render something for this view. */
+export function hasGuideContent(
+  build: Pick<BuildDetail, "guide">,
+  activeVariant: SavedVariant | undefined,
+): boolean {
+  const { summary, description } = resolveGuide(build, activeVariant)
+  return Boolean(summary || description)
+}
+
+/**
  * @param countView when `false`, fetches `/builds/:slug?view=0` so the server
  *   skips the view-count bump (and its per-view cookie) and serves a
  *   browser-cacheable response. Used by the embed entry — embed impressions

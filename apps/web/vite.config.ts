@@ -4,7 +4,7 @@ import path from "node:path"
 import tailwindcss from "@tailwindcss/vite"
 import { TanStackRouterVite } from "@tanstack/router-plugin/vite"
 import react from "@vitejs/plugin-react"
-import { defineConfig } from "vite"
+import { defineConfig, type Plugin } from "vite"
 
 /** Stamp the static-data version into the bundle so `/data/` fetches can append
  * `?v=` and the CDN can cache them `immutable` (see lib/queries/static-data-query.ts
@@ -27,6 +27,71 @@ function dataVersion(): string {
   return "0"
 }
 
+/** Emit /sitemap.xml at build time from the committed catalog. Item pages are
+ * the bulk of the indexable surface (~850 URLs) and Google discovers a
+ * JS-rendered SPA slowly without one. Reads the same items-index.json the app
+ * serves, so the sitemap can never drift from the deployed catalog. Public
+ * build pages are intentionally absent — they live in Postgres, not the
+ * catalog; crawlers reach them through on-site links. */
+function sitemap(): Plugin {
+  const SITE_URL = "https://www.arsenyx.com"
+  const STATIC_PATHS = [
+    "/",
+    "/builds",
+    "/orgs",
+    "/about",
+    "/docs",
+    "/docs/api",
+    "/changelog",
+    "/privacy",
+    "/terms",
+  ]
+  return {
+    name: "arsenyx:sitemap",
+    apply: "build",
+    generateBundle() {
+      let index: Record<string, { slug: string }[]> = {}
+      let lastmod: string | undefined
+      try {
+        index = JSON.parse(
+          readFileSync(
+            path.resolve(import.meta.dirname, "public/data/items-index.json"),
+            "utf8",
+          ),
+        )
+        const version = Number(dataVersion()) // epoch ms of meta.json generatedAt
+        if (version > 0) lastmod = new Date(version).toISOString().slice(0, 10)
+      } catch {
+        // Fresh checkout before build:items — ship the static URLs only.
+      }
+
+      const urls: string[] = STATIC_PATHS.map(
+        (p) => `<url><loc>${SITE_URL}${p}</loc></url>`,
+      )
+      for (const [category, items] of Object.entries(index)) {
+        urls.push(
+          `<url><loc>${SITE_URL}/browse?category=${category}</loc></url>`.replace(
+            /&/g,
+            "&amp;",
+          ),
+        )
+        for (const item of items) {
+          const mod = lastmod ? `<lastmod>${lastmod}</lastmod>` : ""
+          urls.push(
+            `<url><loc>${SITE_URL}/browse/${category}/${item.slug}</loc>${mod}</url>`,
+          )
+        }
+      }
+
+      this.emitFile({
+        type: "asset",
+        fileName: "sitemap.xml",
+        source: `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join("\n")}\n</urlset>\n`,
+      })
+    },
+  }
+}
+
 export default defineConfig({
   define: {
     __DATA_VERSION__: JSON.stringify(dataVersion()),
@@ -35,6 +100,7 @@ export default defineConfig({
     TanStackRouterVite({ autoCodeSplitting: true }),
     react(),
     tailwindcss(),
+    sitemap(),
   ],
   resolve: {
     alias: {

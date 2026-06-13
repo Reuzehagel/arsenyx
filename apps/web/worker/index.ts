@@ -1,25 +1,91 @@
-// Bundled by wrangler (see wrangler.toml `main`). Runs only for paths matched
-// by `run_worker_first` — everything else is served by Workers Static Assets
-// directly. We use it to enrich link-unfurl meta tags for /builds/:slug pages
-// so Discord previews show the build name + author + summary instead of the
-// generic site description from index.html.
+// Bundled by wrangler (see wrangler.toml `main`). Runs for every HTML
+// navigation (run_worker_first excludes static asset directories) and acts as
+// a lightweight edge "SSR head": it 301s the apex host onto the canonical
+// www origin and injects per-page <title>/<meta>/<link rel=canonical> into
+// the SPA shell so crawlers and unfurl bots get real metadata in the initial
+// HTML response — no JS rendering required. Every user agent gets the same
+// rewritten HTML (serving it to bots only would be cloaking).
+//
+// Titles/descriptions here mirror the client-side route heads
+// (src/routes/*.tsx `head` options + src/lib/seo.ts). Keep them in sync.
 
 interface Env {
   ASSETS: { fetch: (request: Request) => Promise<Response> }
 }
 
 const API_BASE = "https://api.arsenyx.com"
+const SITE_URL = "https://www.arsenyx.com"
+const SITE_NAME = "Arsenyx"
+const DEFAULT_DESCRIPTION =
+  "Open-source Warframe build planner. Fast, keyboard-first, and community-driven."
+
 const RESERVED_BUILD_SUBPATHS = new Set(["mine", "bookmarks", "new"])
 // Real slugs are nanoid(10) from a 56-char alphabet; 64 is a generous
 // upper bound that still cheaply rejects amplification attempts that try to
 // pin Postgres findUnique with megabyte-sized strings.
 const MAX_SLUG_LENGTH = 64
 
-// UA fragment for Discord's link-unfurl bot. Deliberately excludes search
-// crawlers (googlebot/bingbot/applebot): serving them rewritten HTML that
-// real users never see is cloaking, and indexing UNLISTED build URLs would
-// defeat their "link-only" intent. Matching is case-insensitive substring.
-const BOT_UA_FRAGMENTS = ["discordbot"]
+// Sync with CATEGORIES in src/lib/warframe.ts.
+const CATEGORY_LABELS: Record<string, string> = {
+  warframes: "Warframes",
+  primary: "Primary",
+  secondary: "Secondary",
+  melee: "Melee",
+  companions: "Companions",
+  "companion-weapons": "Companion Weapons",
+  archwing: "Archwing",
+  necramechs: "Necramechs",
+  "exalted-weapons": "Exalted",
+  railjack: "Railjack",
+}
+
+// Sync with the `head` options in src/routes/*.tsx.
+const STATIC_META: Record<string, { title: string; description?: string }> = {
+  "/": { title: `${SITE_NAME} — Warframe Build Planner` },
+  "/builds": {
+    title: `Community Builds — ${SITE_NAME}`,
+    description:
+      "Browse community-made Warframe builds — filter by frame, weapon, and category, and share your own.",
+  },
+  "/orgs": {
+    title: `Organizations — ${SITE_NAME}`,
+    description:
+      "Warframe clans and communities publishing builds together on Arsenyx.",
+  },
+  "/about": {
+    title: `About — ${SITE_NAME}`,
+    description:
+      "What Arsenyx is, who builds it, and why it's open source. A fast, community-driven Warframe build planner.",
+  },
+  "/docs": {
+    title: `Docs — ${SITE_NAME}`,
+    description:
+      "Documentation for Arsenyx — embedding builds, the public API, and integrating with the Warframe build planner.",
+  },
+  "/docs/api": {
+    title: `API Reference — ${SITE_NAME}`,
+    description:
+      "Public API reference for Arsenyx — endpoints for builds, items, and embeds.",
+  },
+  "/changelog": {
+    title: `Changelog — ${SITE_NAME}`,
+    description:
+      "What's new on Arsenyx — features, fixes, and improvements to the Warframe build planner.",
+  },
+  "/privacy": { title: `Privacy Policy — ${SITE_NAME}` },
+  "/terms": { title: `Terms of Service — ${SITE_NAME}` },
+}
+
+// Tool/account pages: serve a noindex hint in the initial HTML so crawlers
+// don't have to render JS to learn it. robots.txt blocks most of these too.
+const NOINDEX_PATHS = new Set([
+  "/admin",
+  "/create",
+  "/import",
+  "/bookmarks",
+  "/builds/mine",
+  "/profile",
+])
 
 type BuildSummary = {
   name: string
@@ -49,67 +115,338 @@ export default {
 
     if (request.method !== "GET") return env.ASSETS.fetch(request)
 
-    const slug = extractSlug(url.pathname)
-    if (!slug) return env.ASSETS.fetch(request)
-
-    // Embed iframes (`?embed=1`) get a dedicated lightweight shell instead of
-    // the full SPA index.html, so a guide page with many embeds doesn't boot
-    // the whole app once per iframe. embed.html reads the slug from the path
-    // (the iframe URL is unchanged), so we just serve its body for this URL.
-    //
-    // Static Assets' html_handling rewrites `/embed.html` → `/embed` with a
-    // redirect (same as `/index.html` → `/`). We must NOT pass that redirect
-    // back to the iframe — it would bounce to `/embed` and hit the SPA
-    // fallback. So request the clean `/embed` path (served 200) and, defensively,
-    // follow a redirect once if the binding still returns one.
-    if (isEmbedRequest(url)) {
-      let res = await env.ASSETS.fetch(
-        new Request(new URL("/embed", url).toString(), request),
-      )
-      if (res.status >= 300 && res.status < 400) {
-        const loc = res.headers.get("location")
-        if (loc) {
-          res = await env.ASSETS.fetch(
-            new Request(new URL(loc, url).toString(), request),
-          )
-        }
-      }
-      return res
+    // Canonical-host redirect: apex → www. Without it both hosts serve the
+    // full site and split ranking signals. Only the exact production apex —
+    // localhost / *.workers.dev previews pass through untouched.
+    if (url.hostname === "arsenyx.com") {
+      const target = new URL(url.pathname + url.search, SITE_URL)
+      return new Response(null, {
+        status: 301,
+        headers: {
+          location: target.toString(),
+          "strict-transport-security": "max-age=31536000; includeSubDomains",
+        },
+      })
     }
 
-    const ua = request.headers.get("user-agent") ?? ""
-    if (!isUnfurlBot(ua)) return env.ASSETS.fetch(request)
+    const buildSlug = extractBuildSlug(url.pathname)
+    if (buildSlug) return handleBuildPage(request, env, url, buildSlug)
 
-    // Workers Static Assets redirects `/index.html` → `/` by default
-    // (html_handling), so we ask for the original path and let the SPA
-    // fallback (`not_found_handling = "single-page-application"`) serve
-    // index.html with a 200. The ASSETS binding bypasses the Worker, so
-    // there's no infinite loop here.
-    const [shellRes, build] = await Promise.all([
-      env.ASSETS.fetch(request),
-      fetchBuild(slug),
-    ])
+    const item = extractItemPath(url.pathname)
+    if (item) return handleItemPage(request, env, url, item)
 
-    // Only inject meta for PUBLIC builds. UNLISTED is "link-only, don't
-    // surface this anywhere" — we honour that by leaving the generic
-    // site-wide shell in place for unfurls of unlisted URLs.
-    if (!build || build.visibility !== "PUBLIC") return shellRes
-    const contentType = shellRes.headers.get("content-type") ?? ""
-    if (!shellRes.ok || !contentType.includes("text/html")) return shellRes
-
-    // Builds persist a denormalized item imageName that rots across
-    // image-scheme changes (see scripts/sync-images.ts). Re-resolve the OG
-    // image by the item's stable uniqueName against the same image-map.json the
-    // SPA uses, falling back to the stored value on a miss.
-    const imageMap = await fetchImageMap(env, url)
-    const canonical = new URL(`/builds/${slug}`, url).toString()
-    return rewriteMeta(shellRes, buildMeta(build, canonical, imageMap))
+    return handleGenericPage(request, env, url)
   },
 }
 
+// ---------------------------------------------------------------------------
+// /builds/:slug — build detail pages
+// ---------------------------------------------------------------------------
+
+async function handleBuildPage(
+  request: Request,
+  env: Env,
+  url: URL,
+  slug: string,
+): Promise<Response> {
+  // Embed iframes (`?embed=1`) get a dedicated lightweight shell instead of
+  // the full SPA index.html, so a guide page with many embeds doesn't boot
+  // the whole app once per iframe. embed.html reads the slug from the path
+  // (the iframe URL is unchanged), so we just serve its body for this URL.
+  //
+  // Static Assets' html_handling rewrites `/embed.html` → `/embed` with a
+  // redirect (same as `/index.html` → `/`). We must NOT pass that redirect
+  // back to the iframe — it would bounce to `/embed` and hit the SPA
+  // fallback. So request the clean `/embed` path (served 200) and, defensively,
+  // follow a redirect once if the binding still returns one.
+  if (isEmbedRequest(url)) {
+    let res = await env.ASSETS.fetch(
+      new Request(new URL("/embed", url).toString(), request),
+    )
+    if (res.status >= 300 && res.status < 400) {
+      const loc = res.headers.get("location")
+      if (loc) {
+        res = await env.ASSETS.fetch(
+          new Request(new URL(loc, url).toString(), request),
+        )
+      }
+    }
+    return res
+  }
+
+  // Workers Static Assets redirects `/index.html` → `/` by default
+  // (html_handling), so we ask for the original path and let the SPA
+  // fallback (`not_found_handling = "single-page-application"`) serve
+  // index.html with a 200. The ASSETS binding bypasses the Worker, so
+  // there's no infinite loop here.
+  const [shellRes, build] = await Promise.all([
+    env.ASSETS.fetch(request),
+    fetchBuild(slug),
+  ])
+
+  const contentType = shellRes.headers.get("content-type") ?? ""
+  if (!shellRes.ok || !contentType.includes("text/html")) return shellRes
+
+  // Dead link: keep the shell (the SPA renders its not-found page) but send a
+  // real 404 status so search engines drop the URL instead of indexing a
+  // soft-404. Owners viewing their own PRIVATE build also land here (the
+  // anonymous API call can't see it) — the SPA still renders it fine; the
+  // status code only matters to crawlers.
+  if (build === "not-found") {
+    return rewriteMeta(
+      new Response(shellRes.body, { status: 404, headers: shellRes.headers }),
+      { noindex: true },
+    )
+  }
+  // API error/timeout: shell with default meta.
+  if (!build) return rewriteMeta(shellRes, {})
+
+  // Only enrich PUBLIC builds. UNLISTED is "link-only, don't surface this
+  // anywhere" — leave the generic shell in place and add noindex so a leaked
+  // link never puts the page in a search index.
+  if (build.visibility !== "PUBLIC") {
+    return rewriteMeta(shellRes, { noindex: true })
+  }
+
+  // Builds persist a denormalized item imageName that rots across
+  // image-scheme changes (see scripts/sync-images.ts). Re-resolve the OG
+  // image by the item's stable uniqueName against the same image-map.json the
+  // SPA uses, falling back to the stored value on a miss.
+  const imageMap = await fetchImageMap(env, url)
+  return rewriteMeta(shellRes, buildMeta(build, slug, imageMap))
+}
+
+function extractBuildSlug(pathname: string): string | null {
+  if (!pathname.startsWith("/builds/")) return null
+  const rest = pathname.slice("/builds/".length)
+  const slug = rest.split("/")[0]
+  if (!slug || slug.length > MAX_SLUG_LENGTH) return null
+  if (RESERVED_BUILD_SUBPATHS.has(slug)) return null
+  return slug
+}
+
+// Mirrors the SPA's `validateSearch` truthiness for `embed` (routes/
+// builds.$slug.tsx) so the Worker and client agree on what counts as an embed.
+function isEmbedRequest(url: URL): boolean {
+  const embed = url.searchParams.get("embed")
+  return embed === "1" || embed === "true"
+}
+
+async function fetchBuild(
+  slug: string,
+): Promise<BuildSummary | "not-found" | null> {
+  try {
+    // `embed=1` tells the API to return a slim payload and skip
+    // maybeIncrementView — otherwise every page load would bump viewCount
+    // (the Worker never forwards the vw_<slug> cookie).
+    // The 2.5s abort keeps a slow API from blocking the page's TTFB — on
+    // timeout we fall back to the generic shell.
+    const res = await fetch(
+      `${API_BASE}/builds/${encodeURIComponent(slug)}?embed=1`,
+      {
+        headers: { accept: "application/json" },
+        signal: AbortSignal.timeout(2500),
+        cf: { cacheTtl: 60, cacheEverything: true },
+      } as RequestInit,
+    )
+    if (res.status === 404) return "not-found"
+    if (!res.ok) return null
+    return (await res.json()) as BuildSummary
+  } catch {
+    return null
+  }
+}
+
+function buildMeta(
+  b: BuildSummary,
+  slug: string,
+  imageMap: Record<string, string> | null,
+): Meta {
+  // `hideAuthor` means "this is an org build — don't reveal the underlying
+  // user, just show the org". Falling back to null when hideAuthor=true
+  // would drop the org credit entirely, which is the opposite of intent.
+  const author = b.hideAuthor
+    ? (b.organization?.name ?? null)
+    : (b.organization?.name ??
+      b.user.displayUsername ??
+      b.user.username ??
+      b.user.name)
+
+  const title = collapseWs(
+    author
+      ? `${b.item.name} Build by ${author} — ${SITE_NAME}`
+      : `${b.item.name} Build — ${SITE_NAME}`,
+  )
+
+  const summary = collapseWs(b.guide?.summary ?? b.description ?? "")
+  const stats = `${formatCount(b.likeCount)} likes · ${formatCount(b.viewCount)} views`
+  const category = prettyCategory(b.item.category)
+
+  const description = summary
+    ? clamp(`${summary} · ${stats}`, 280)
+    : `${b.item.name} (${category}) build on Arsenyx · ${stats}`
+
+  const resolvedImage =
+    (imageMap && b.item.uniqueName ? imageMap[b.item.uniqueName] : null) ??
+    b.item.imageName
+  return {
+    title,
+    description,
+    canonical: `${SITE_URL}/builds/${slug}`,
+    image: imageUrl(resolvedImage),
+    ogType: "article",
+  }
+}
+
+// ---------------------------------------------------------------------------
+// /browse/:category/:slug — item detail pages (static catalog)
+// ---------------------------------------------------------------------------
+
+function extractItemPath(
+  pathname: string,
+): { category: string; slug: string } | null {
+  const m = /^\/browse\/([a-z-]+)\/([a-z0-9-]+)$/.exec(pathname)
+  if (!m) return null
+  const [, category, slug] = m
+  if (!(category in CATEGORY_LABELS)) return null
+  if (slug.length > MAX_SLUG_LENGTH) return null
+  return { category, slug }
+}
+
+async function handleItemPage(
+  request: Request,
+  env: Env,
+  url: URL,
+  { category, slug }: { category: string; slug: string },
+): Promise<Response> {
+  const [shellRes, item] = await Promise.all([
+    env.ASSETS.fetch(request),
+    fetchItem(env, url, category, slug),
+  ])
+
+  const contentType = shellRes.headers.get("content-type") ?? ""
+  if (!shellRes.ok || !contentType.includes("text/html")) return shellRes
+
+  if (item === "not-found") {
+    return rewriteMeta(
+      new Response(shellRes.body, { status: 404, headers: shellRes.headers }),
+      { noindex: true },
+    )
+  }
+  if (!item) return rewriteMeta(shellRes, {})
+
+  const label = CATEGORY_LABELS[category]
+  const description = item.description
+    ? clamp(
+        `${collapseWs(item.description)} Plan and share ${item.name} builds on Arsenyx.`,
+        160,
+      )
+    : `Plan and share ${item.name} (${label}) builds with mods, arcanes, and stats on Arsenyx.`
+
+  return rewriteMeta(shellRes, {
+    title: `${item.name} Builds — ${SITE_NAME}`,
+    description,
+    canonical: `${SITE_URL}/browse/${category}/${slug}`,
+    image: imageUrl(item.imageName ?? null),
+  })
+}
+
+// The catalog item JSON the SPA itself loads, fetched through the ASSETS
+// binding (same colo, no external hop). A miss falls through to the SPA
+// fallback and comes back as HTML — that's our 404 signal.
+async function fetchItem(
+  env: Env,
+  base: URL,
+  category: string,
+  slug: string,
+): Promise<
+  { name: string; description?: string; imageName?: string } | "not-found" | null
+> {
+  try {
+    const req = new Request(
+      new URL(`/data/items/${category}/${slug}.json`, base).toString(),
+    )
+    const res = await env.ASSETS.fetch(req)
+    const type = res.headers.get("content-type") ?? ""
+    if (!res.ok || !type.includes("json")) return "not-found"
+    return (await res.json()) as {
+      name: string
+      description?: string
+      imageName?: string
+    }
+  } catch {
+    return null
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Everything else — static route meta, noindex hints, canonicals
+// ---------------------------------------------------------------------------
+
+async function handleGenericPage(
+  request: Request,
+  env: Env,
+  url: URL,
+): Promise<Response> {
+  const shellRes = await env.ASSETS.fetch(request)
+  const contentType = shellRes.headers.get("content-type") ?? ""
+  if (!shellRes.ok || !contentType.includes("text/html")) return shellRes
+
+  const path = stripTrailingSlash(url.pathname)
+
+  if (
+    NOINDEX_PATHS.has(path) ||
+    path.startsWith("/auth/") ||
+    /^\/org\/[^/]+\/settings$/.test(path)
+  ) {
+    return rewriteMeta(shellRes, { noindex: true })
+  }
+
+  if (path === "/browse") {
+    const category = url.searchParams.get("category") ?? "warframes"
+    const label =
+      category === "all" ? "All Items" : (CATEGORY_LABELS[category] ?? null)
+    if (!label) return rewriteMeta(shellRes, { canonical: `${SITE_URL}/browse` })
+    return rewriteMeta(shellRes, {
+      title: `Browse ${label} — ${SITE_NAME}`,
+      // Filtered/sorted/search variants collapse onto the category canonical.
+      canonical: `${SITE_URL}/browse?category=${category}`,
+    })
+  }
+
+  const staticMeta = STATIC_META[path]
+  if (staticMeta) {
+    return rewriteMeta(shellRes, {
+      title: staticMeta.title,
+      description: staticMeta.description,
+      canonical: `${SITE_URL}${path === "/" ? "/" : path}`,
+    })
+  }
+
+  // Dynamic pages we can't cheaply resolve at the edge (profiles, orgs):
+  // self-canonical with the query stripped; the client route head fills in
+  // the real title for rendering crawlers.
+  if (/^\/(profile|org)\/[^/]+$/.test(path)) {
+    return rewriteMeta(shellRes, { canonical: `${SITE_URL}${path}` })
+  }
+
+  // Unknown SPA route: default meta so the raw HTML still carries a title.
+  return rewriteMeta(shellRes, {})
+}
+
+function stripTrailingSlash(pathname: string): string {
+  return pathname.length > 1 && pathname.endsWith("/")
+    ? pathname.slice(0, -1)
+    : pathname
+}
+
+// ---------------------------------------------------------------------------
+// Shared helpers
+// ---------------------------------------------------------------------------
+
 // Compact `uniqueName → current imageName` map emitted by
 // scripts/build-items-index.ts and served from Static Assets. Fetched through
-// the ASSETS binding (same colo, no external hop) only on the unfurl path.
+// the ASSETS binding only on the build-page path.
 async function fetchImageMap(
   env: Env,
   base: URL,
@@ -125,91 +462,6 @@ async function fetchImageMap(
   } catch {
     return null
   }
-}
-
-function extractSlug(pathname: string): string | null {
-  if (!pathname.startsWith("/builds/")) return null
-  const rest = pathname.slice("/builds/".length)
-  const slug = rest.split("/")[0]
-  if (!slug || slug.length > MAX_SLUG_LENGTH) return null
-  if (RESERVED_BUILD_SUBPATHS.has(slug)) return null
-  return slug
-}
-
-function isUnfurlBot(ua: string): boolean {
-  const lower = ua.toLowerCase()
-  return BOT_UA_FRAGMENTS.some((frag) => lower.includes(frag))
-}
-
-// Mirrors the SPA's `validateSearch` truthiness for `embed` (routes/
-// builds.$slug.tsx) so the Worker and client agree on what counts as an embed.
-function isEmbedRequest(url: URL): boolean {
-  const embed = url.searchParams.get("embed")
-  return embed === "1" || embed === "true"
-}
-
-async function fetchBuild(slug: string): Promise<BuildSummary | null> {
-  try {
-    // `embed=1` tells the API to return a slim payload and skip
-    // maybeIncrementView — otherwise every Discord scrape would bump viewCount
-    // (the Worker never forwards the vw_<slug> cookie).
-    // The 2.5s abort keeps a slow API from blocking the unfurl past Discord's
-    // ~3-5s patience window — on timeout we fall back to the generic shell.
-    const res = await fetch(
-      `${API_BASE}/builds/${encodeURIComponent(slug)}?embed=1`,
-      {
-        headers: { accept: "application/json" },
-        signal: AbortSignal.timeout(2500),
-        cf: { cacheTtl: 60, cacheEverything: true },
-      } as RequestInit,
-    )
-    if (!res.ok) return null
-    return (await res.json()) as BuildSummary
-  } catch {
-    return null
-  }
-}
-
-type Meta = {
-  title: string
-  description: string
-  image: string | null
-  url: string
-}
-
-function buildMeta(
-  b: BuildSummary,
-  url: string,
-  imageMap: Record<string, string> | null,
-): Meta {
-  // `hideAuthor` means "this is an org build — don't reveal the underlying
-  // user, just show the org". Falling back to null when hideAuthor=true
-  // would drop the org credit entirely, which is the opposite of intent.
-  const author = b.hideAuthor
-    ? (b.organization?.name ?? null)
-    : (b.organization?.name ??
-      b.user.displayUsername ??
-      b.user.username ??
-      b.user.name)
-
-  const title = collapseWs(
-    author
-      ? `${b.item.name} build by ${author} — Arsenyx`
-      : `${b.item.name} build — Arsenyx`,
-  )
-
-  const summary = collapseWs(b.guide?.summary ?? b.description ?? "")
-  const stats = `${formatCount(b.likeCount)} likes · ${formatCount(b.viewCount)} views`
-  const category = prettyCategory(b.item.category)
-
-  const description = summary
-    ? clamp(`${summary} · ${stats}`, 280)
-    : `${b.item.name} (${category}) build on Arsenyx · ${stats}`
-
-  const resolvedImage =
-    (imageMap && b.item.uniqueName ? imageMap[b.item.uniqueName] : null) ??
-    b.item.imageName
-  return { title, description, image: imageUrl(resolvedImage), url }
 }
 
 // Collapse all whitespace (including embedded newlines / tabs) to single
@@ -260,39 +512,55 @@ function clamp(s: string, max: number): string {
     .trimEnd()}…`
 }
 
+type Meta = {
+  title?: string
+  description?: string
+  canonical?: string
+  image?: string | null
+  ogType?: string
+  noindex?: boolean
+}
+
+// index.html ships with NO static <title>/<meta description> — this is the
+// single server-side source of them, so it always injects both (falling back
+// to the site defaults). Client-side, <HeadContent /> hoists its own copies
+// earlier in <head>; for enriched routes the content is identical by design.
 function rewriteMeta(res: Response, meta: Meta): Response {
-  const esc = {
-    title: escapeAttr(meta.title),
-    description: escapeAttr(meta.description),
-    url: escapeAttr(meta.url),
-    image: meta.image ? escapeAttr(meta.image) : null,
+  const title = escapeAttr(meta.title ?? `${SITE_NAME} — Warframe Build Planner`)
+  const desc = escapeAttr(meta.description ?? DEFAULT_DESCRIPTION)
+  const parts: string[] = [
+    `<title>${title}</title>`,
+    `<meta name="description" content="${desc}" />`,
+    `<meta property="og:site_name" content="${SITE_NAME}" />`,
+    `<meta property="og:type" content="${meta.ogType ?? "website"}" />`,
+    `<meta property="og:title" content="${title}" />`,
+    `<meta property="og:description" content="${desc}" />`,
+    `<meta name="twitter:card" content="summary" />`,
+    `<meta name="twitter:title" content="${title}" />`,
+    `<meta name="twitter:description" content="${desc}" />`,
+  ]
+  if (meta.noindex) parts.push(`<meta name="robots" content="noindex" />`)
+  if (meta.canonical) {
+    const href = escapeAttr(meta.canonical)
+    parts.push(`<link rel="canonical" href="${href}" />`)
+    parts.push(`<meta property="og:url" content="${href}" />`)
   }
-  const injected =
-    `<meta property="og:type" content="article" />` +
-    `<meta property="og:site_name" content="Arsenyx" />` +
-    `<meta property="og:title" content="${esc.title}" />` +
-    `<meta property="og:description" content="${esc.description}" />` +
-    `<meta property="og:url" content="${esc.url}" />` +
-    (esc.image ? `<meta property="og:image" content="${esc.image}" />` : "")
+  if (meta.image) {
+    const image = escapeAttr(meta.image)
+    parts.push(
+      `<meta property="og:image" content="${image}" />`,
+      `<meta name="twitter:image" content="${image}" />`,
+    )
+  }
 
   // `HTMLRewriter` is a workerd global; we don't pull in the full types here
   // to keep this file dependency-free.
   const Rewriter = (globalThis as { HTMLRewriter: HTMLRewriterCtor })
     .HTMLRewriter
   return new Rewriter()
-    .on("title", {
-      element(el) {
-        el.setInnerContent(meta.title)
-      },
-    })
-    .on('meta[name="description"]', {
-      element(el) {
-        el.setAttribute("content", meta.description)
-      },
-    })
     .on("head", {
       element(el) {
-        el.append(injected, { html: true })
+        el.append(parts.join(""), { html: true })
       },
     })
     .transform(res)

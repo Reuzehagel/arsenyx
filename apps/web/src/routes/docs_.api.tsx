@@ -6,9 +6,17 @@ import { Header } from "@/components/header"
 import { Icons } from "@/components/icons"
 import { Link } from "@/components/link"
 import { Button } from "@/components/ui/button"
+import { seo } from "@/lib/seo"
 import { EXTERNAL_LINKS } from "@/lib/util/constants"
 
 export const Route = createFileRoute("/docs_/api")({
+  head: () =>
+    seo({
+      title: "API Reference",
+      description:
+        "Public API reference for Arsenyx — endpoints for builds, items, and embeds.",
+      canonicalPath: "/docs/api",
+    }),
   component: DocsApiPage,
 })
 

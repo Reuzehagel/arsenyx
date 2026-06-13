@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+# Tool/account pages — no content for crawlers (also meta-noindexed).
+Disallow: /admin
+Disallow: /create
+Disallow: /import
+Disallow: /bookmarks
+Disallow: /builds/mine
+Disallow: /auth/
+# Embed iframes are duplicates of /builds/:slug; keep crawl budget on the real page.
+Disallow: /*?*embed=
+
+Sitemap: https://www.arsenyx.com/sitemap.xml

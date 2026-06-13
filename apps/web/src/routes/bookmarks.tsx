@@ -14,8 +14,10 @@ import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { requireUser } from "@/lib/auth-guards"
 import { bookmarkedBuildsQuery } from "@/lib/queries/builds-list-query"
+import { seo } from "@/lib/seo"
 
 export const Route = createFileRoute("/bookmarks")({
+  head: () => seo({ title: "Bookmarks", noindex: true }),
   validateSearch: (search): BuildsListSearch => parseBuildsListSearch(search),
   beforeLoad: () => requireUser(),
   loaderDeps: ({ search }) => buildsListLoaderDeps(search, "newest"),

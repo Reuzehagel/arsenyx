@@ -29,11 +29,13 @@ import { helminthQuery } from "@/lib/queries/helminth-query"
 import { itemQuery } from "@/lib/queries/item-query"
 import { itemsIndexQuery } from "@/lib/queries/items-index-query"
 import { modsQuery } from "@/lib/queries/mods-query"
+import { seo } from "@/lib/seo"
 import { apiErrorMessage, apiFetch, ApiError } from "@/lib/util/api-client"
 import { copyToClipboard } from "@/lib/util/clipboard"
 import type { BrowseCategory, BrowseItem, DetailItem } from "@/lib/warframe"
 
 export const Route = createFileRoute("/import")({
+  head: () => seo({ title: "Import Builds", noindex: true }),
   // Import feeds the sign-in-only editor/save flow, and the API endpoints are
   // auth-gated — bounce anon users to sign-in instead of letting them hit a 401.
   beforeLoad: () => requireUser(),

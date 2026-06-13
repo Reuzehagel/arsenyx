@@ -1,7 +1,7 @@
 import { MarkdownBody } from "@/components/markdown-body"
 import type { GuideRefResolver } from "@/lib/guide-refs"
-import type { BuildDetail } from "@/lib/queries/build-query"
-import type { SavedVariant } from "@/lib/queries/build-query"
+import type { BuildDetail, SavedVariant } from "@/lib/queries/build-query"
+import { resolveGuide } from "@/lib/queries/build-query"
 
 /**
  * Renders the build guide below the loadout. Per-variant guide content
@@ -25,15 +25,8 @@ export function GuideDisplay({
    *  snapshots — see lib/guide-refs.ts. */
   resolveGuideRef?: GuideRefResolver
 }) {
-  const variantSummary = activeVariant?.guideSummary?.trim()
-  const variantDescription = activeVariant?.guideDescription?.trim()
-  const hasVariantGuide = Boolean(variantSummary || variantDescription)
-  const effectiveSummary = hasVariantGuide
-    ? (variantSummary ?? "")
-    : (build.guide?.summary ?? "")
-  const effectiveDescription = hasVariantGuide
-    ? (variantDescription ?? "")
-    : (build.guide?.description ?? "")
+  const { summary: effectiveSummary, description: effectiveDescription } =
+    resolveGuide(build, activeVariant)
   if (!effectiveSummary && !effectiveDescription) return null
   return (
     <div className="bg-card rounded-lg border p-4">

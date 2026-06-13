@@ -20,6 +20,7 @@ import { buildQuery } from "@/lib/queries/build-query"
 import { helminthQuery } from "@/lib/queries/helminth-query"
 import { itemQuery } from "@/lib/queries/item-query"
 import { modsQuery } from "@/lib/queries/mods-query"
+import { seo } from "@/lib/seo"
 import { isValidCategory, type BrowseCategory } from "@/lib/warframe"
 
 // Decode a share link far enough to learn which variant it was generated on.
@@ -33,6 +34,9 @@ function activeVariantFromShare(share: string): number | undefined {
 }
 
 export const Route = createFileRoute("/create")({
+  // The editor is a tool, not content — keep its parameterised URLs out of
+  // the index so crawl budget goes to item and build pages.
+  head: () => seo({ title: "Build Editor", noindex: true }),
   validateSearch: (search: Record<string, unknown>): EditorShellSearch => {
     const item = typeof search.item === "string" ? search.item : ""
     const category =

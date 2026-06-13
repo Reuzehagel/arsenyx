@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { CHANGELOG, type ChangelogEntry } from "@/data/changelog"
+import { seo } from "@/lib/seo"
 
 const TYPE_LABELS: Record<ChangelogEntry["changes"][number]["type"], string> = {
   feat: "New",
@@ -28,6 +29,13 @@ const TYPE_ORDER: Record<ChangelogEntry["changes"][number]["type"], number> = {
 }
 
 export const Route = createFileRoute("/changelog")({
+  head: () =>
+    seo({
+      title: "Changelog",
+      description:
+        "What's new on Arsenyx — features, fixes, and improvements to the Warframe build planner.",
+      canonicalPath: "/changelog",
+    }),
   component: ChangelogPage,
 })
 
