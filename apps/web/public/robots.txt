@@ -1,13 +1,13 @@
 User-agent: *
 Allow: /
-# Tool/account pages — no content for crawlers (also meta-noindexed).
-Disallow: /admin
-Disallow: /create
-Disallow: /import
-Disallow: /bookmarks
-Disallow: /builds/mine
-Disallow: /auth/
-# Embed iframes are duplicates of /builds/:slug; keep crawl budget on the real page.
+# Tool/account pages (/admin, /create, /import, /bookmarks, /builds/mine,
+# /auth/*, /profile, /org/*/settings) are NOT disallowed here on purpose: the
+# edge Worker serves them with <meta name="robots" content="noindex">, and
+# Google can only honor that noindex if it's allowed to crawl the page. A
+# Disallow would block the crawl, hide the noindex, and let the URL still get
+# indexed URL-only. See worker/index.ts NOINDEX_PATHS.
+# Embed iframes are duplicates of /builds/:slug; keep crawl budget on the real
+# page (the canonical points at the non-embed URL, so indexing is unaffected).
 Disallow: /*?*embed=
 
 Sitemap: https://www.arsenyx.com/sitemap.xml

@@ -43,6 +43,11 @@ export interface SeoOptions {
   image?: string
   /** Auth/editor/user-private pages that should stay out of the index. */
   noindex?: boolean
+  /** og:type. Defaults to "website". Must match what the edge Worker injects
+   *  for the same URL (worker/index.ts buildMeta emits "article" for public
+   *  build pages) — a mismatch leaves two conflicting og:type tags in the
+   *  hydrated head, and og's "first tag wins" can pick the wrong one. */
+  ogType?: string
   /** JSON-LD payload, rendered as <script type="application/ld+json">. */
   jsonLd?: object
 }
@@ -58,7 +63,7 @@ export function seo(opts: SeoOptions = {}) {
     { title },
     { name: "description", content: description },
     { property: "og:site_name", content: SITE_NAME },
-    { property: "og:type", content: "website" },
+    { property: "og:type", content: opts.ogType ?? "website" },
     { property: "og:title", content: title },
     { property: "og:description", content: description },
     { name: "twitter:card", content: "summary" },

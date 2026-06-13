@@ -25,6 +25,10 @@ main = "./worker/index.ts"
 directory = "./dist"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
+# Pinned to the current Cloudflare default. The embed path (handleBuildPage)
+# relies on /embed.html redirecting to /embed; pinning keeps that contract if
+# the platform default ever changes.
+html_handling = "auto-trailing-slash"
 run_worker_first = [
   "/*",
   "!/assets/*",

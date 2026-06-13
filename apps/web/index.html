@@ -22,8 +22,9 @@
     <!-- No static <title>/<meta description>: the edge Worker
          (worker/index.ts) injects per-page ones into every HTML response,
          and <HeadContent /> manages them client-side. A static copy here
-         would duplicate them and shadow the per-route description for
-         crawlers (first-in-document wins). -->
+         would be a third, always-stale source duplicating both — and Google
+         discards rel=canonical entirely when it sees multiple, so duplicate
+         head tags are a liability, not a fallback. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

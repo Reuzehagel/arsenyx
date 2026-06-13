@@ -118,14 +118,17 @@ export default {
     // Canonical-host redirect: apex → www. Without it both hosts serve the
     // full site and split ranking signals. Only the exact production apex —
     // localhost / *.workers.dev previews pass through untouched.
+    //
+    // No Strict-Transport-Security header here: RFC 6797 §7.2 forbids sending
+    // it on a response that may have traveled over insecure transport (a plain
+    // http://arsenyx.com request that wasn't already upgraded), and browsers
+    // ignore it over HTTP anyway. The canonical www response carries HSTS via
+    // public/_headers once the browser follows this 301.
     if (url.hostname === "arsenyx.com") {
       const target = new URL(url.pathname + url.search, SITE_URL)
       return new Response(null, {
         status: 301,
-        headers: {
-          location: target.toString(),
-          "strict-transport-security": "max-age=31536000; includeSubDomains",
-        },
+        headers: { location: target.toString() },
       })
     }
 
@@ -177,8 +180,8 @@ async function handleBuildPage(
   // Workers Static Assets redirects `/index.html` → `/` by default
   // (html_handling), so we ask for the original path and let the SPA
   // fallback (`not_found_handling = "single-page-application"`) serve
-  // index.html with a 200. The ASSETS binding bypasses the Worker, so
-  // there's no infinite loop here.
+  // index.html with a 200. env.ASSETS.fetch returns an asset-server response
+  // and does not re-invoke this Worker, so there's no recursion here.
   const [shellRes, build] = await Promise.all([
     env.ASSETS.fetch(request),
     fetchBuild(slug),
@@ -527,8 +530,13 @@ type Meta = {
 
 // index.html ships with NO static <title>/<meta description> — this is the
 // single server-side source of them, so it always injects both (falling back
-// to the site defaults). Client-side, <HeadContent /> hoists its own copies
-// earlier in <head>; for enriched routes the content is identical by design.
+// to the site defaults). Non-JS crawlers and unfurl bots read ONLY this
+// server-injected set. Client-side, React/<HeadContent /> renders its own
+// copies on hydration and navigation; those values are kept in step with this
+// Worker (see src/lib/seo.ts), except og:description, which this layer enriches
+// with live like/view stats. A JS-rendering crawler therefore sees both sets —
+// they must agree (see the og:type note in seo.ts) since duplicate-but-
+// conflicting tags are resolved unpredictably.
 function rewriteMeta(res: Response, meta: Meta): Response {
   const title = escapeAttr(meta.title ?? `${SITE_NAME} — Warframe Build Planner`)
   const desc = escapeAttr(meta.description ?? DEFAULT_DESCRIPTION)

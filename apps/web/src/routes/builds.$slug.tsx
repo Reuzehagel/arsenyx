@@ -114,6 +114,10 @@ export const Route = createFileRoute("/builds/$slug")({
       canonicalPath: `/builds/${params.slug}`,
       // Raw catalog/build imageName — seo() absolutizes against the image CDN.
       image: ogImage ?? undefined,
+      // Match the Worker: it emits og:type="article" only on the PUBLIC enrich
+      // path (worker/index.ts buildMeta). Keeping these in step avoids two
+      // conflicting og:type tags in the hydrated head.
+      ogType: build.visibility === "PUBLIC" ? "article" : undefined,
       noindex: build.visibility !== "PUBLIC",
     })
   },
