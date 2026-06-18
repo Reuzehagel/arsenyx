@@ -1,15 +1,15 @@
 {
   "stats": {
     "weapons": {
-      "de": 831,
-      "merged": 852,
-      "emitted": 693,
-      "unmatched": 0
+      "de": 836,
+      "merged": 856,
+      "emitted": 697,
+      "unmatched": 4
     },
     "frames": {
-      "de": 122,
-      "merged": 122,
-      "emitted": 122,
+      "de": 125,
+      "merged": 124,
+      "emitted": 124,
       "operators": 2
     },
     "companions": {
@@ -17,24 +17,32 @@
       "deOnly": 0
     },
     "mods": {
-      "de": 1644,
-      "kept": 1398
+      "de": 1646,
+      "kept": 1399
     },
     "perCategory": {
       "archwing": 33,
-      "warframes": 115,
+      "warframes": 117,
       "necramechs": 2,
       "secondary": 153,
-      "melee": 235,
-      "primary": 199,
+      "melee": 238,
+      "primary": 200,
       "companion-weapons": 41,
       "exalted-weapons": 37,
       "companions": 41,
       "railjack": 1
     }
   },
-  "weaponsUnmatched": [],
-  "framesUnmatched": [],
+  "weaponsUnmatched": [
+    "Afentis Prime",
+    "Pride",
+    "War Prime",
+    "Wrath"
+  ],
+  "framesUnmatched": [
+    "Orion & Sirius",
+    "Sirius & Orion"
+  ],
   "companionsUnmatched": [],
   "skippedModularComponents": [
     "ADRA MUTAGEN",
