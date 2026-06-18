@@ -520,6 +520,7 @@ export function pickPerVariantData(
     incarnonEnabled: src.incarnonEnabled,
     incarnonPerks: src.incarnonPerks,
     deploymentContext: src.deploymentContext,
+    formIndex: src.formIndex,
   }
 }
 

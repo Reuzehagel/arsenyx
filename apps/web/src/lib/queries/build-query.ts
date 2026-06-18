@@ -30,6 +30,9 @@ export type SavedVariant = {
   incarnonEnabled?: boolean
   incarnonPerks?: (string | null)[]
   deploymentContext?: DeploymentContext
+  /** Twin-frame (Sirius & Orion) form this variant builds — indexes the
+   *  catalog item's `forms` array (0 = primary). Absent for normal frames. */
+  formIndex?: number
   /** Optional per-variant guide. When absent, the viewer falls back to
    *  the build-wide guide from BuildDetail.guide. Stored inside
    *  `buildData.variants[i]` (JSON column) — no separate DB row. */
@@ -52,6 +55,9 @@ export type SavedBuildData = {
   incarnonEnabled?: boolean
   incarnonPerks?: (string | null)[]
   deploymentContext?: DeploymentContext
+  /** Top-level mirror of the active variant's `formIndex` (per-variant data;
+   *  see `PerVariantDataField`). */
+  formIndex?: number
 
   // Multi-variant support (added 2026-05-23). When present, length >= 1
   // and the top-level mod/arcane fields mirror variants[0] for legacy

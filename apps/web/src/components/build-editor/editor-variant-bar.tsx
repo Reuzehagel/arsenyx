@@ -1,6 +1,7 @@
 import { MAX_VARIANTS } from "@arsenyx/shared/warframe/build-doc"
 import { useRef, useState } from "react"
 
+import { FormToggle } from "@/components/form-toggle"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -24,6 +25,9 @@ export function EditorVariantBar({
   onDuplicate,
   onDelete,
   onRename,
+  formNames,
+  activeFormIndex,
+  onSwitchForm,
 }: {
   variants: SavedVariant[]
   activeIndex: number
@@ -32,11 +36,18 @@ export function EditorVariantBar({
   onDuplicate: () => void
   onDelete: () => void
   onRename: (label: string) => void
+  /** Twin-frames (Sirius & Orion): the switchable form names. When present,
+   *  a top-level form toggle renders above the variant tabs and `variants`
+   *  is already filtered to the active form. */
+  formNames?: string[]
+  activeFormIndex?: number
+  onSwitchForm?: (formIndex: number) => void
 }) {
   // Hide the bar for single-variant builds until the user opts in via
   // "+ Variant". Keeps the editor visually identical to before for
-  // anyone not using variants.
-  if (variants.length === 1) {
+  // anyone not using variants. Twin-frames (formNames present) always show
+  // the bar so the form picker stays reachable even with one variant.
+  if (variants.length === 1 && !formNames) {
     return (
       <div className="flex items-center justify-end">
         <button
@@ -51,6 +62,8 @@ export function EditorVariantBar({
     )
   }
   const active = variants[activeIndex]
+  // `variants` is the active form's list for twin-frames, so this length is the
+  // per-form count → the cap is naturally per-form.
   const atCap = variants.length >= MAX_VARIANTS
   return (
     <EditorVariantBarMulti
@@ -63,6 +76,9 @@ export function EditorVariantBar({
       onDuplicate={onDuplicate}
       onDelete={onDelete}
       onRename={onRename}
+      formNames={formNames}
+      activeFormIndex={activeFormIndex}
+      onSwitchForm={onSwitchForm}
     />
   )
 }
@@ -77,6 +93,9 @@ function EditorVariantBarMulti({
   onDuplicate,
   onDelete,
   onRename,
+  formNames,
+  activeFormIndex = 0,
+  onSwitchForm,
 }: {
   variants: SavedVariant[]
   activeIndex: number
@@ -87,6 +106,9 @@ function EditorVariantBarMulti({
   onDuplicate: () => void
   onDelete: () => void
   onRename: (label: string) => void
+  formNames?: string[]
+  activeFormIndex?: number
+  onSwitchForm?: (formIndex: number) => void
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [labelDraft, setLabelDraft] = useState(active.label)
@@ -101,136 +123,151 @@ function EditorVariantBarMulti({
     onRename(normalized)
   }
   return (
-    <div className="flex flex-wrap items-center justify-center gap-1.5 pb-1">
-      {variants.map((v, i) => {
-        const isActive = i === activeIndex
-        return (
-          <div key={v.id || i} className="flex items-center gap-0.5">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={isActive}
-              onClick={() => onSwitch(i)}
-              className={cn(
-                "rounded-l-md border px-3 py-1 text-sm transition-colors",
-                isActive
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "bg-muted/30 hover:bg-muted text-muted-foreground hover:text-foreground rounded-md border-transparent",
-              )}
-            >
-              {v.label || `Variant ${i + 1}`}
-            </button>
-            {isActive ? (
-              <Popover
-                open={settingsOpen}
-                onOpenChange={(o) => {
-                  setSettingsOpen(o)
-                  if (o) {
-                    setLabelDraft(active.label)
-                    requestAnimationFrame(() => {
-                      inputRef.current?.focus()
-                      inputRef.current?.select()
-                    })
-                  }
-                }}
+    <div className="flex flex-col items-center gap-1.5 pb-1">
+      {formNames && onSwitchForm ? (
+        <FormToggle
+          formNames={formNames}
+          activeFormIndex={activeFormIndex}
+          onSelect={onSwitchForm}
+        />
+      ) : null}
+      <div className="flex flex-wrap items-center justify-center gap-1.5">
+        {variants.map((v, i) => {
+          const isActive = i === activeIndex
+          return (
+            <div key={v.id || i} className="flex items-center gap-0.5">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => onSwitch(i)}
+                className={cn(
+                  "rounded-l-md border px-3 py-1 text-sm transition-colors",
+                  isActive
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "bg-muted/30 hover:bg-muted text-muted-foreground hover:text-foreground rounded-md border-transparent",
+                )}
               >
-                <PopoverTrigger
-                  render={
-                    <button
-                      type="button"
-                      title="Variant settings"
-                      aria-label="Variant settings"
-                      className="border-primary bg-primary text-primary-foreground rounded-r-md border border-l-0 px-1.5 py-1 text-sm"
-                    >
-                      ⚙
-                    </button>
-                  }
-                />
-                <PopoverContent
-                  side="bottom"
-                  align="center"
-                  className="w-64 p-3"
+                {v.label || `Variant ${i + 1}`}
+              </button>
+              {isActive ? (
+                <Popover
+                  open={settingsOpen}
+                  onOpenChange={(o) => {
+                    setSettingsOpen(o)
+                    if (o) {
+                      setLabelDraft(active.label)
+                      requestAnimationFrame(() => {
+                        inputRef.current?.focus()
+                        inputRef.current?.select()
+                      })
+                    }
+                  }}
                 >
-                  <div className="flex flex-col gap-2">
-                    <label
-                      htmlFor="variant-name"
-                      className="text-muted-foreground text-xs"
-                    >
-                      Name
-                    </label>
-                    <Input
-                      id="variant-name"
-                      ref={inputRef}
-                      value={labelDraft}
-                      maxLength={24}
-                      onChange={(e) => setLabelDraft(e.target.value)}
-                      onBlur={commitRename}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          commitRename()
-                          setSettingsOpen(false)
-                        } else if (e.key === "Escape") {
-                          setSettingsOpen(false)
-                        }
-                      }}
-                      className="h-8 text-sm"
-                    />
-                    <div className="mt-1 flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          commitRename()
-                          onDuplicate()
-                          setSettingsOpen(false)
-                        }}
-                        disabled={atCap}
-                        title={
-                          atCap
-                            ? `Maximum of ${MAX_VARIANTS} variants per build`
-                            : "Duplicate this variant"
-                        }
-                        className="flex-1"
+                  <PopoverTrigger
+                    render={
+                      <button
+                        type="button"
+                        title="Variant settings"
+                        aria-label="Variant settings"
+                        className="border-primary bg-primary text-primary-foreground rounded-r-md border border-l-0 px-1.5 py-1 text-sm"
                       >
-                        Duplicate
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => {
-                          onDelete()
-                          setSettingsOpen(false)
-                        }}
-                        className="flex-1"
+                        ⚙
+                      </button>
+                    }
+                  />
+                  <PopoverContent
+                    side="bottom"
+                    align="center"
+                    className="w-64 p-3"
+                  >
+                    <div className="flex flex-col gap-2">
+                      <label
+                        htmlFor="variant-name"
+                        className="text-muted-foreground text-xs"
                       >
-                        Delete
-                      </Button>
+                        Name
+                      </label>
+                      <Input
+                        id="variant-name"
+                        ref={inputRef}
+                        value={labelDraft}
+                        maxLength={24}
+                        onChange={(e) => setLabelDraft(e.target.value)}
+                        onBlur={commitRename}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            commitRename()
+                            setSettingsOpen(false)
+                          } else if (e.key === "Escape") {
+                            setSettingsOpen(false)
+                          }
+                        }}
+                        className="h-8 text-sm"
+                      />
+                      <div className="mt-1 flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            commitRename()
+                            onDuplicate()
+                            setSettingsOpen(false)
+                          }}
+                          disabled={atCap}
+                          title={
+                            atCap
+                              ? `Maximum of ${MAX_VARIANTS} variants per build`
+                              : "Duplicate this variant"
+                          }
+                          className="flex-1"
+                        >
+                          Duplicate
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => {
+                            onDelete()
+                            setSettingsOpen(false)
+                          }}
+                          disabled={variants.length <= 1}
+                          title={
+                            variants.length <= 1
+                              ? "Each form keeps at least one variant"
+                              : "Delete this variant"
+                          }
+                          className="flex-1"
+                        >
+                          Delete
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            ) : null}
-          </div>
-        )
-      })}
-      <button
-        type="button"
-        onClick={onAdd}
-        disabled={atCap}
-        title={
-          atCap
-            ? `Maximum of ${MAX_VARIANTS} variants per build`
-            : "Add a build variant"
-        }
-        className={cn(
-          "rounded-md border border-dashed px-2.5 py-1 text-sm",
-          atCap
-            ? "border-muted-foreground/20 text-muted-foreground/40 cursor-not-allowed"
-            : "border-muted-foreground/40 text-muted-foreground hover:bg-muted/40 hover:text-foreground",
-        )}
-      >
-        + Variant
-      </button>
+                  </PopoverContent>
+                </Popover>
+              ) : null}
+            </div>
+          )
+        })}
+        <button
+          type="button"
+          onClick={onAdd}
+          disabled={atCap}
+          title={
+            atCap
+              ? `Maximum of ${MAX_VARIANTS} variants per build`
+              : "Add a build variant"
+          }
+          className={cn(
+            "rounded-md border border-dashed px-2.5 py-1 text-sm",
+            atCap
+              ? "border-muted-foreground/20 text-muted-foreground/40 cursor-not-allowed"
+              : "border-muted-foreground/40 text-muted-foreground hover:bg-muted/40 hover:text-foreground",
+          )}
+        >
+          + Variant
+        </button>
+      </div>
     </div>
   )
 }

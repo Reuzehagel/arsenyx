@@ -136,6 +136,8 @@ interface EncodedVariant extends EncodedSlotGroup {
   dc?: DeploymentContext
   gs?: string
   gd?: string
+  /** Twin-frame form index (omitted when 0/absent). */
+  fi?: number
 }
 
 // =============================================================================
@@ -416,6 +418,7 @@ function encodeVariant(v: BuildVariant): EncodedVariant {
     ev.dc = v.deploymentContext
   if (v.guideSummary) ev.gs = v.guideSummary
   if (v.guideDescription) ev.gd = v.guideDescription
+  if (v.formIndex) ev.fi = v.formIndex
   return ev
 }
 
@@ -429,6 +432,9 @@ function decodeVariant(ev: EncodedVariant, index: number): BuildVariant {
   if (ev.dc) variant.deploymentContext = ev.dc
   if (ev.gs) variant.guideSummary = ev.gs
   if (ev.gd) variant.guideDescription = ev.gd
+  if (typeof ev.fi === "number" && ev.fi > 0) {
+    variant.formIndex = Math.floor(ev.fi)
+  }
   return variant
 }
 
@@ -438,7 +444,9 @@ function decodeVariant(ev: EncodedVariant, index: number): BuildVariant {
  * Multi-variant docs emit v2.
  */
 export function encodeBuildDoc(doc: BuildDoc, activeIndex = 0): string {
-  if (doc.variants.length === 1) {
+  // The v1 wire format has no slot for `formIndex`, so a single-variant build
+  // that selects a non-primary twin-frame form must still go out as v2.
+  if (doc.variants.length === 1 && !doc.variants[0].formIndex) {
     return encodeBuild(projectVariant(doc, 0))
   }
   const encoded: EncodedBuildV2 = {

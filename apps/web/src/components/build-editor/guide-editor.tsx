@@ -51,6 +51,7 @@ export function GuideEditor({
   activeScope,
   onScopeChange,
   seedVariantFromBuild,
+  formNames,
 }: {
   summary: string
   onSummaryChange: (v: string) => void
@@ -67,7 +68,12 @@ export function GuideEditor({
    * length <= 1), the chip row is hidden and the editor behaves as a
    * single build-wide guide editor.
    */
-  scopes?: { id: string; label: string; hasContent: boolean }[]
+  scopes?: {
+    id: string
+    label: string
+    hasContent: boolean
+    formIndex?: number
+  }[]
   /**
    * Currently-edited scope. `build` edits the build-wide guide;
    * `variant` edits the per-variant guide at the given index.
@@ -75,6 +81,12 @@ export function GuideEditor({
   activeScope?: GuideScope
   onScopeChange?: (scope: GuideScope) => void
   seedVariantFromBuild?: (index: number) => void
+  /**
+   * Twin-frames (Sirius & Orion): form names. When present, the per-variant
+   * guide chips are grouped under their form so identically-labeled variants
+   * across forms (e.g. two "Variant 2") are distinguishable.
+   */
+  formNames?: string[]
 }) {
   const hasMultipleVariants =
     scopes !== undefined &&
@@ -159,23 +171,64 @@ export function GuideEditor({
               <span className="text-muted-foreground text-xs">
                 Editing guide for:
               </span>
-              <div
-                role="tablist"
-                aria-label="Guide scope"
-                className="flex flex-wrap items-center gap-1.5"
-              >
-                {scopes.map((s, i) => (
-                  <ScopeChip
-                    key={s.id || i}
-                    label={s.label || `Variant ${i + 1}`}
-                    active={
-                      activeScope.kind === "variant" && activeScope.index === i
-                    }
-                    hasContent={s.hasContent}
-                    onClick={() => onScopeChange({ kind: "variant", index: i })}
-                  />
-                ))}
-              </div>
+              {(() => {
+                // One labeled row per form for twin-frames (so identically-
+                // named variants across forms — two "Variant 2" — are
+                // distinguishable), else a single unlabeled row. The non-twin
+                // case is just the one-group degenerate of the grouped render.
+                const twin = formNames && formNames.length > 1
+                const rows = twin
+                  ? formNames.map((fname, fi) => ({
+                      key: String(fi),
+                      label: fname,
+                      ariaLabel: `${fname} guide scope`,
+                      items: scopes
+                        .map((s, i) => ({ s, i }))
+                        .filter(({ s }) => (s.formIndex ?? 0) === fi),
+                    }))
+                  : [
+                      {
+                        key: "all",
+                        label: undefined,
+                        ariaLabel: "Guide scope",
+                        items: scopes.map((s, i) => ({ s, i })),
+                      },
+                    ]
+                return (
+                  <div className="flex flex-col gap-2">
+                    {rows.map((row) =>
+                      row.items.length === 0 ? null : (
+                        <div
+                          key={row.key}
+                          role="tablist"
+                          aria-label={row.ariaLabel}
+                          className="flex flex-wrap items-center gap-1.5"
+                        >
+                          {row.label !== undefined && (
+                            <span className="text-muted-foreground w-12 shrink-0 text-xs font-medium">
+                              {row.label}
+                            </span>
+                          )}
+                          {row.items.map(({ s, i }) => (
+                            <ScopeChip
+                              key={s.id || i}
+                              label={s.label || `Variant ${i + 1}`}
+                              active={
+                                activeScope.kind === "variant" &&
+                                activeScope.index === i
+                              }
+                              hasContent={s.hasContent}
+                              onClick={() =>
+                                onScopeChange({ kind: "variant", index: i })
+                              }
+                            />
+                          ))}
+                        </div>
+                      ),
+                    )}
+                  </div>
+                )
+              })()}
             </div>
           ) : null}
         </div>

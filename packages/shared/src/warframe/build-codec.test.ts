@@ -90,6 +90,26 @@ describe("encodeBuildDoc / decodeBuildDoc round-trip", () => {
     expect(decoded.variants[1].guideDescription).toBeUndefined()
   })
 
+  it("round-trips per-variant formIndex on multi-variant docs", () => {
+    const doc = makeDoc([
+      makeVariant({ id: "sirius", label: "Sirius", formIndex: 0 }),
+      makeVariant({ id: "orion", label: "Orion", formIndex: 1 }),
+    ])
+    const decoded = decodeBuildDoc(encodeBuildDoc(doc))!
+    // formIndex 0 is the default → omitted → surfaces as undefined.
+    expect(decoded.variants[0].formIndex).toBeUndefined()
+    expect(decoded.variants[1].formIndex).toBe(1)
+  })
+
+  it("forces v2 so a single-variant non-primary form survives", () => {
+    const doc = makeDoc([
+      makeVariant({ id: "orion", label: "Orion", formIndex: 1 }),
+    ])
+    const encoded = encodeBuildDoc(doc)
+    // Would be lost if emitted as v1 (no `fi` slot) — must round-trip.
+    expect(decodeBuildDoc(encoded)!.variants[0].formIndex).toBe(1)
+  })
+
   it("rejects unknown lichBonusElement on v2 decode", () => {
     const doc = makeDoc([makeVariant(), makeVariant({ id: "v1", label: "B" })])
     const encoded = encodeBuildDoc({

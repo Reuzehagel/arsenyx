@@ -43,6 +43,11 @@ export interface Warframe extends BaseItem {
   passiveDescription?: string
   sex?: "Male" | "Female"
   exalted?: string[]
+  /** Twin-frames (e.g. Sirius & Orion) ship as two switchable forms with
+   *  distinct abilities. When present, `forms[0]` is the primary form and
+   *  the top-level `abilities`/`passiveDescription`/`exalted` mirror it, so
+   *  consumers unaware of forms keep rendering the primary form. */
+  forms?: FrameForm[]
 }
 
 export interface Ability {
@@ -50,6 +55,15 @@ export interface Ability {
   name: string
   description: string
   imageName?: string
+}
+
+/** One switchable form of a twin-frame. Mods/auras/arcanes are tracked on the
+ *  build (per-variant); only ability-set, passive, and exalted differ here. */
+export interface FrameForm {
+  name: string
+  abilities: Ability[]
+  passiveDescription?: string
+  exalted?: string[]
 }
 
 // Weapon base interface

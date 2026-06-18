@@ -25,8 +25,9 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   const recent = useRecentItems(10)
-  const hero =
-    recent.find((it) => it.category === "warframes" && it.isPrime) ?? recent[0]
+  // Showcase the newest frame; fall back to the newest item of any kind when
+  // no frame is among the recent releases.
+  const hero = recent.find((it) => it.category === "warframes") ?? recent[0]
 
   return (
     <div className="relative flex min-h-screen flex-col">
@@ -95,27 +96,30 @@ function Home() {
                   Recently added
                 </p>
                 <ul className="mt-3 space-y-1.5">
-                  {recent.slice(1, 6).map((it) => (
-                    <li
-                      key={`${it.category}-${it.slug}`}
-                      className="flex items-baseline gap-3 text-sm"
-                    >
-                      <span className="text-muted-foreground font-mono text-[11px] tabular-nums">
-                        {formatDotDate(it.releaseDate)}
-                      </span>
-                      <Link
-                        href={getItemUrl(it.category, it.slug)}
-                        className="text-foreground truncate hover:underline"
+                  {recent
+                    .filter((it) => it !== hero)
+                    .slice(0, 5)
+                    .map((it) => (
+                      <li
+                        key={`${it.category}-${it.slug}`}
+                        className="flex items-baseline gap-3 text-sm"
                       >
-                        {it.name}
-                      </Link>
-                      {it.isPrime && !isPrimeRedundant(it.name) && (
-                        <span className="text-muted-foreground font-mono text-[10px] tracking-[0.2em] uppercase">
-                          prime
+                        <span className="text-muted-foreground font-mono text-[11px] tabular-nums">
+                          {formatDotDate(it.releaseDate)}
                         </span>
-                      )}
-                    </li>
-                  ))}
+                        <Link
+                          href={getItemUrl(it.category, it.slug)}
+                          className="text-foreground truncate hover:underline"
+                        >
+                          {it.name}
+                        </Link>
+                        {it.isPrime && !isPrimeRedundant(it.name) && (
+                          <span className="text-muted-foreground font-mono text-[10px] tracking-[0.2em] uppercase">
+                            prime
+                          </span>
+                        )}
+                      </li>
+                    ))}
                 </ul>
               </div>
             </div>

@@ -62,6 +62,7 @@ import {
   saveEditorDraft,
   type EditorDraftPayload,
 } from "@/lib/editor-draft"
+import { deriveFormAxis } from "@/lib/form-axis"
 import { collectGuideRefs } from "@/lib/guide-refs"
 import { useHotkey } from "@/lib/hooks/hotkeys"
 import { consumeDraft } from "@/lib/import-draft"
@@ -254,7 +255,13 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
         allMods,
         allArcanes,
       )
-      if (doc.variants.length === 1) return { data: activeData }
+      // `formIndex` isn't carried through BuildState, so lift it off the
+      // decoded variant directly onto the top-level mirror (and each variant).
+      const withForm = {
+        ...activeData,
+        formIndex: doc.variants[activeIdx].formIndex,
+      }
+      if (doc.variants.length === 1) return { data: withForm }
       const savedVariants: SavedVariant[] = doc.variants.map((v, i) => {
         const state = projectVariant(doc, i)
         const { data } = buildStateToSavedData(state, allMods, allArcanes)
@@ -264,11 +271,12 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
           slots: data.slots ?? {},
           arcanes: data.arcanes ?? [],
           ...pickPerVariantData(data),
+          formIndex: v.formIndex,
           guideSummary: v.guideSummary,
           guideDescription: v.guideDescription,
         }
       })
-      return { data: { ...activeData, variants: savedVariants } }
+      return { data: { ...withForm, variants: savedVariants } }
     }
     return null
   })
@@ -336,8 +344,27 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       return cachedVariants.data
     }
     const initial = getVariants(savedDataAll)
-    cachedVariants = { key: storeKey, data: initial }
-    return initial
+    // Fresh twin-frame build (Sirius & Orion): seed one variant per form so
+    // both forms are present and switchable from the start. Only when the
+    // build is brand-new (a single synthetic variant) — saved/shared builds
+    // already carry their own variants.
+    const forms = item.forms
+    const seeded =
+      forms &&
+      forms.length > 1 &&
+      initial.length === 1 &&
+      isSyntheticVariant(initial[0])
+        ? // Each form's first variant keeps the synthetic "Main" label — the
+          // form name lives on the form toggle, so labeling the variant by form
+          // would just duplicate it. Distinct ids so they don't collide.
+          forms.map((_form, i) => ({
+            ...initial[0],
+            id: i === 0 ? initial[0].id : `form${i}`,
+            formIndex: i,
+          }))
+        : initial
+    cachedVariants = { key: storeKey, data: seeded }
+    return seeded
   })
   const setVariants = (
     next: SavedVariant[] | ((prev: SavedVariant[]) => SavedVariant[]),
@@ -367,6 +394,24 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   const clampedActiveIndex = Math.min(
     Math.max(0, activeVariantIndex),
     variants.length - 1,
+  )
+
+  // Twin-frames (Sirius & Orion): the active variant picks which switchable
+  // form it builds, and the variant bar shows only that form's variants (each
+  // form has its own MAX_VARIANTS budget). Read live from `variants` (not the
+  // mount-frozen savedData) so changing a variant's form updates the ability
+  // strip and tabs immediately. Shared with the viewer via `deriveFormAxis`;
+  // no-op for normal frames (activeFormIndex 0, formVariants = all variants).
+  const {
+    activeFormIndex,
+    formAbilities,
+    helminthAllowed,
+    formNames,
+    formVariants,
+    formActiveLocalIndex,
+  } = useMemo(
+    () => deriveFormAxis(item, variants, clampedActiveIndex),
+    [item, variants, clampedActiveIndex],
   )
 
   // Slice projected for this variant — feeds the existing slot/arcane
@@ -868,15 +913,19 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       showStance,
     })
     let encoded: string
-    if (variants.length > 1) {
+    const activeSnapshot = captureActiveSnapshot()
+    const allVariants = variants.map((v, i) =>
+      i === clampedActiveIndex ? activeSnapshot : v,
+    )
+    // A single twin-frame variant on a non-primary form still needs the v2
+    // doc encoder — v1 can't carry `formIndex`.
+    const needsDoc =
+      allVariants.length > 1 || Boolean(allVariants[0]?.formIndex)
+    if (needsDoc) {
       // Build a BuildDoc that mirrors the current editor state: shared
       // fields from `state`, per-variant data from the in-memory variants
       // array (with the active variant's slice replaced by the live
       // editor state so unsaved tweaks make it into the share URL).
-      const activeSnapshot = captureActiveSnapshot()
-      const allVariants = variants.map((v, i) =>
-        i === clampedActiveIndex ? activeSnapshot : v,
-      )
       const doc: BuildDoc = {
         itemUniqueName: state.itemUniqueName,
         itemName: state.itemName,
@@ -932,6 +981,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
             incarnonEnabled: variantState.incarnonEnabled,
             incarnonPerks: variantState.incarnonPerks,
             deploymentContext: variantState.deploymentContext,
+            formIndex: sv.formIndex,
           }
         }),
       }
@@ -1121,6 +1171,9 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
         incarnonEnabled,
         incarnonPerks,
         deploymentContext,
+        // formIndex is a variant property (set via the form selector), not
+        // live editor state — preserve it from the existing variant.
+        formIndex: existing?.formIndex,
       }),
       // Per-variant guide fields are owned by `variants[i]` directly
       // (GuideEditor writes through setVariants). Preserve them on
@@ -1258,6 +1311,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     captureActiveSnapshot,
     navigate,
     bumpVariantEpoch,
+    activeFormIndex,
   })
 
   return (
@@ -1352,17 +1406,24 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
               onSetDeploymentContext: setDeploymentContext,
               placedMods: slots.placed,
               placedArcanes: arcanes.placed,
+              formAbilities,
+              helminthAllowed,
             }}
             topBarLayout="row"
             topBar={
               <EditorVariantBar
-                variants={variants}
-                activeIndex={clampedActiveIndex}
-                onSwitch={variantActions.switchVariant}
+                variants={formVariants.map((f) => f.v)}
+                activeIndex={formActiveLocalIndex}
+                onSwitch={(local) =>
+                  variantActions.switchVariant(formVariants[local].globalIndex)
+                }
                 onAdd={variantActions.addVariant}
                 onDuplicate={variantActions.duplicateActive}
                 onDelete={variantActions.deleteActive}
                 onRename={variantActions.renameActive}
+                formNames={formNames}
+                activeFormIndex={activeFormIndex}
+                onSwitchForm={variantActions.switchForm}
               />
             }
             onEditRiven={riven.openForEdit}
@@ -1408,6 +1469,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
             <GuideEditor
               {...guide.editorProps}
               buildSlug={isUpdate ? existingBuild?.slug : undefined}
+              formNames={formNames}
             />
           </div>
         </div>

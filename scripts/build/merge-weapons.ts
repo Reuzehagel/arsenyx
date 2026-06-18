@@ -21,47 +21,118 @@
  *   - Computed modPool member not in KNOWN_MOD_POOLS
  *
  * Soft-loud assertions (logged warnings, not throws):
- *   - DE weapon with no wiki match — emitted with empty modPools, displayClass null
+ *   - DE weapon with no wiki match — `displayClass` is null and most
+ *     wiki-sourced fields (polarities, traits, attacks) are empty. If DE has
+ *     given it a riven disposition (a real playable weapon), it still gets a
+ *     generic per-slot mod pool by productCategory (see PRODUCT_CATEGORY_POOL)
+ *     so it stays MODDABLE until the wiki documents it; otherwise modPools is
+ *     just its own name and `categorizeWeapon` drops it as noise.
  */
 
-import { KNOWN_PRODUCT_CATEGORIES, type DeWeapon } from "./read-de"
-import type { CuratedData } from "./read-curated"
 import {
   buildDamageBlock,
   damageFromDePerShot,
   type AttackOut,
 } from "./merge-damage"
-import { normalizePolarity, normalizePolarities } from "./polarity"
 import { cleanDeName } from "./names"
+import { normalizePolarity, normalizePolarities } from "./polarity"
+import type { CuratedData } from "./read-curated"
+import { KNOWN_PRODUCT_CATEGORIES, type DeWeapon } from "./read-de"
 
 /** Closed set of mod pools the build will route to. Asserted on; extend
  *  here when you also extend `CLASS_DEFAULT_POOLS` or `mod-pools.ts`. */
 export const KNOWN_MOD_POOLS = new Set<string>([
   // Generic per-slot pools
-  "Rifle", "Shotgun", "Pistol", "Melee",
+  "Rifle",
+  "Shotgun",
+  "Pistol",
+  "Melee",
   // Refinements
-  "Sniper", "Bow", "Tome", "Thrown",
-  "Assault Rifle", "Rifle (No Aoe)", "Pistol (No Aoe)",
+  "Sniper",
+  "Bow",
+  "Tome",
+  "Thrown",
+  "Assault Rifle",
+  "Rifle (No Aoe)",
+  "Pistol (No Aoe)",
   // Stance compat (note PLURAL in DE compatName)
-  "Polearms", "Hammers", "Swords", "Dual Swords",
-  "Heavy Blade", "Heavy Scythe", "Scythes",
-  "Daggers", "Dual Daggers",
-  "Fists", "Sparring", "Staves",
-  "Nikanas", "Dual Nikanas", "Two-Handed Nikana",
-  "Tonfas", "Rapiers", "Glaives", "Gunblade",
-  "Machetes", "Whips", "Blade And Whip",
-  "Warfans", "Nunchaku", "Sword And Shield",
-  "Thrown Melee", "Claws", "Assault Saw", "Bayonet",
+  "Polearms",
+  "Hammers",
+  "Swords",
+  "Dual Swords",
+  "Heavy Blade",
+  "Heavy Scythe",
+  "Scythes",
+  "Daggers",
+  "Dual Daggers",
+  "Fists",
+  "Sparring",
+  "Staves",
+  "Nikanas",
+  "Dual Nikanas",
+  "Two-Handed Nikana",
+  "Tonfas",
+  "Rapiers",
+  "Glaives",
+  "Gunblade",
+  "Machetes",
+  "Whips",
+  "Blade And Whip",
+  "Warfans",
+  "Nunchaku",
+  "Sword And Shield",
+  "Thrown Melee",
+  "Claws",
+  "Assault Saw",
+  "Bayonet",
   // Companion / archwing / railjack
-  "Archgun", "Archmelee", "Archwing",
-  "Sentinel", "BEAST", "COMPANION", "ROBOTIC", "Hound", "Moa", "Kavat", "Kubrow",
-  "Kavat Claws", "Kubrow Claws", "Helminth Claws", "BeastClaws",
+  "Archgun",
+  "Archmelee",
+  "Archwing",
+  "Sentinel",
+  "BEAST",
+  "COMPANION",
+  "ROBOTIC",
+  "Hound",
+  "Moa",
+  "Kavat",
+  "Kubrow",
+  "Kavat Claws",
+  "Kubrow Claws",
+  "Helminth Claws",
+  "BeastClaws",
   // Operator / modular / synthetic
-  "Necramech", "Parazon", "Plexus", "Amp", "K-Drive",
+  "Necramech",
+  "Parazon",
+  "Plexus",
+  "Amp",
+  "K-Drive",
   // Frame umbrella (matched by warframe items, not weapons — kept here so a
   // Class entry that hits "Warframe" doesn't accidentally assert false)
-  "WARFRAME", "AURA", "ANY",
+  "WARFRAME",
+  "AURA",
+  "ANY",
 ])
+
+/** Generic per-slot mod pool keyed by DE productCategory. The fallback that
+ *  keeps a brand-new weapon — present in DE but not yet documented on the wiki
+ *  (so no Class → no class pool) — MODDABLE until the wiki catches up. Applied
+ *  only to weapons DE has assigned a riven disposition (`omegaAttenuation`),
+ *  which it does for real playable weapons, so DE's internal/unreleased noise
+ *  stays out. */
+const PRODUCT_CATEGORY_POOL: Record<string, string> = {
+  LongGuns: "Rifle",
+  Pistols: "Pistol",
+  Melee: "Melee",
+  SpaceGuns: "Archgun",
+  SpaceMelee: "Archmelee",
+  // NOTE: keep in sync with the wikiless `productCategory` switch in
+  // `categorizeWeapon` (categorize.ts). A category that routes there but is
+  // missing here emits a wikiless weapon with no generic pool (own name only).
+  // `SentinelWeapons` is deliberately absent: which generic pool sentinel
+  // weapons accept is a game-mechanic fact we won't guess — add it (with a
+  // verified pool) the day a wikiless sentinel weapon actually ships.
+}
 
 export interface MergedWeapon {
   uniqueName: string
@@ -89,6 +160,9 @@ export interface MergedWeapon {
   masteryReq: number
   /** Kept from DE for low-level routing — coarse 8-value enum. */
   productCategory: string
+  /** DE riven disposition. Present only on real, playable weapons — used as
+   *  the "this is a genuine weapon" signal when a weapon has no wiki page. */
+  omegaAttenuation?: number
   /** Raw DE stats — DE wins for numeric game values. */
   fireRate?: number
   magazineSize?: number
@@ -175,10 +249,7 @@ export interface MergeWeaponOpts {
   unmatched: Set<string>
 }
 
-export function mergeWeapon(
-  de: DeWeapon,
-  opts: MergeWeaponOpts,
-): MergedWeapon {
+export function mergeWeapon(de: DeWeapon, opts: MergeWeaponOpts): MergedWeapon {
   if (!KNOWN_PRODUCT_CATEGORIES.has(de.productCategory)) {
     throw new Error(
       `Unknown DE productCategory "${de.productCategory}" on ${de.name} ` +
@@ -232,11 +303,19 @@ export function mergeWeapon(
   //   4. class default (from class-pools.ts)
   //   5. weapon's own name (for augment matching)
   //   6. base name if it's a Coda/Kuva/Tenet variant
+  //   7. wiki-less fallback: a brand-new real weapon (has a riven disposition)
+  //      not yet on the wiki gets a generic per-slot pool by DE productCategory
+  //      so it's still moddable. See PRODUCT_CATEGORY_POOL.
+  const wikilessPool =
+    de.omegaAttenuation !== undefined
+      ? PRODUCT_CATEGORY_POOL[de.productCategory]
+      : undefined
   const baseList =
     opts.curated.modPoolOverrides[cleanName] ??
     stub?.modPools ??
     (archPool ? [archPool] : undefined) ??
     (displayClass ? opts.curated.classPools[displayClass] : undefined) ??
+    (wikilessPool ? [wikilessPool] : undefined) ??
     []
   const modPoolsSet = new Set<string>(baseList)
   modPoolsSet.add(cleanName)
@@ -267,14 +346,18 @@ export function mergeWeapon(
   // damagePerShot[20] when the wiki has no attacks (railjack, modular).
   const dmg = buildDamageBlock(wiki?.Attacks)
   const fallbackDamage =
-    !dmg.damage && de.damagePerShot ? damageFromDePerShot(de.damagePerShot) : undefined
+    !dmg.damage && de.damagePerShot
+      ? damageFromDePerShot(de.damagePerShot)
+      : undefined
 
   // Arch-guns deployed atmospherically have a separate wiki entry
   // (`Foo (Atmosphere)`) with different damage tables. Fold those into
   // atmospheric* fields on the base weapon so the browse list stays
   // consolidated; the editor toggles between presentations.
   const atmosWiki = opts.wikiByName.get(`${cleanName} (Atmosphere)`)
-  const atmosDmg = atmosWiki?.Attacks ? buildDamageBlock(atmosWiki.Attacks) : null
+  const atmosDmg = atmosWiki?.Attacks
+    ? buildDamageBlock(atmosWiki.Attacks)
+    : null
 
   return {
     uniqueName: de.uniqueName,
@@ -289,6 +372,7 @@ export function mergeWeapon(
     traits: (wiki?.Traits as readonly string[] | undefined) ?? [],
     masteryReq: (wiki?.Mastery ?? de.masteryReq ?? 0) as number,
     productCategory: de.productCategory,
+    omegaAttenuation: de.omegaAttenuation,
     fireRate: de.fireRate,
     magazineSize: de.magazineSize,
     reloadTime: de.reloadTime,

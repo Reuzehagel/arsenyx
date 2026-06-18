@@ -49,6 +49,7 @@ import { iterWikiRecords } from "./build/images"
 import { mergeArcanes, type MergedArcane } from "./build/merge-arcanes"
 import { mergeCompanions, type MergedCompanion } from "./build/merge-companions"
 import {
+  collapseTwinFrames,
   mergeFrame,
   operatorsFromWiki,
   type MergedFrame,
@@ -221,12 +222,15 @@ async function main() {
 
   // ---------- 3. Merge frames ----------
   const frameUnmatched = new Set<string>()
-  const mergedFrames: MergedFrame[] = []
+  const rawFrames: MergedFrame[] = []
   for (const de of deFramesBlob.ExportWarframes) {
-    mergedFrames.push(
+    rawFrames.push(
       mergeFrame(de, { wiki: wikiFramesBlob, unmatched: frameUnmatched }),
     )
   }
+  // Collapse twin-frames (e.g. Sirius & Orion ships as two DE rows) into one
+  // entity carrying both forms, before any downstream consumer sees the list.
+  const mergedFrames = collapseTwinFrames(rawFrames)
   const operators = operatorsFromWiki(wikiFramesBlob)
   stats.frames.de = deFramesBlob.ExportWarframes.length
   stats.frames.merged = mergedFrames.length

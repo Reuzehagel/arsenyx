@@ -111,16 +111,28 @@ export async function writeItemDetails(opts: {
   for (const f of [...mergedFrames, ...operators]) {
     const cat = categorizeFrame(f)
     if (!cat) continue
+    // Ability icons live in the DE manifest under the ability's own
+    // uniqueName (e.g. `.../SlashDashNewAbility` → `Power04.png`); DE
+    // doesn't populate `a.imageName` on the warframe record itself.
+    const resolveAbilityImage = <
+      T extends { uniqueName: string; imageName?: string },
+    >(
+      a: T,
+    ): T => ({
+      ...a,
+      imageName: imageByUniqueName.get(a.uniqueName) ?? a.imageName,
+    })
     await writeDetail(cat, slugify(f.name), {
       ...f,
       imageName: imageByUniqueName.get(f.uniqueName),
-      // Ability icons live in the DE manifest under the ability's own
-      // uniqueName (e.g. `.../SlashDashNewAbility` → `Power04.png`); DE
-      // doesn't populate `a.imageName` on the warframe record itself.
-      abilities: f.abilities.map((a) => ({
-        ...a,
-        imageName: imageByUniqueName.get(a.uniqueName) ?? a.imageName,
-      })),
+      abilities: f.abilities.map(resolveAbilityImage),
+      // Twin-frames: resolve icons for each form's ability set too.
+      ...(f.forms && {
+        forms: f.forms.map((form) => ({
+          ...form,
+          abilities: form.abilities.map(resolveAbilityImage),
+        })),
+      }),
       displayClass: frameDisplayClass(f),
     })
   }

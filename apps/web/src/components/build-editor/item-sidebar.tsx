@@ -48,7 +48,11 @@ import {
   type WeaponStats,
 } from "@/lib/stats"
 import { cn } from "@/lib/util/utils"
-import { type BrowseCategory, type DetailItem } from "@/lib/warframe"
+import {
+  type BrowseCategory,
+  type DetailItem,
+  type ItemAbility,
+} from "@/lib/warframe"
 import { adjustStrikeForZaw } from "@/lib/zaw-stats"
 
 import { AbilityIcon } from "./ability-icon"
@@ -115,6 +119,13 @@ export interface ItemSidebarProps {
   onSetDeploymentContext?: (value: DeploymentContext) => void
   placedMods: Partial<Record<SlotId, PlacedMod>>
   placedArcanes: (PlacedArcane | null)[]
+  /** Twin-frames (Sirius & Orion): the active form's ability set, overriding
+   *  `item.abilities`. Absent for normal frames. */
+  formAbilities?: ItemAbility[]
+  /** Twin-frames: Helminth can only be infused on the primary form, so the
+   *  subsume UI (and the helminth replacement display) is suppressed on
+   *  non-primary forms. Defaults to true. */
+  helminthAllowed?: boolean
   readOnly?: boolean
   /**
    * When true, render without the outer card chrome and without the mobile
@@ -153,6 +164,8 @@ export function ItemSidebar({
   onSetDeploymentContext,
   placedMods,
   placedArcanes,
+  formAbilities,
+  helminthAllowed = true,
   readOnly = false,
   bare = false,
 }: ItemSidebarProps) {
@@ -184,7 +197,7 @@ export function ItemSidebar({
   const showLichBonus = isWeapon && isLichWeapon(item)
   const showShards = category === "warframes"
   const skipRankUpBonus = category === "necramechs" || isArchwingSuit
-  const abilities = item.abilities ?? []
+  const abilities = formAbilities ?? item.abilities ?? []
   const boosterLabel = isWarframe ? "Reactor" : "Catalyst"
 
   const showIncarnon = isWeapon && hasIncarnon(item.name)
@@ -337,7 +350,9 @@ export function ItemSidebar({
           <>
             <div className="flex justify-around p-3">
               {abilities.slice(0, 4).map((a, i) => {
-                const replaced = helminth[i]
+                // Helminth lives on the primary form only — on a secondary
+                // twin-frame form, show the raw ability with no replacement.
+                const replaced = helminthAllowed ? helminth[i] : undefined
                 const displayed = replaced
                   ? {
                       uniqueName: replaced.uniqueName,
@@ -351,7 +366,7 @@ export function ItemSidebar({
                     key={i}
                     ability={displayed}
                     isHelminth={Boolean(replaced)}
-                    canSubsume={isPureWarframe && !readOnly}
+                    canSubsume={isPureWarframe && !readOnly && helminthAllowed}
                     onSelectHelminth={(ab) => onSetHelminth(i, ab)}
                   />
                 )
