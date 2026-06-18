@@ -58,12 +58,17 @@ export interface Ability {
 }
 
 /** One switchable form of a twin-frame. Mods/auras/arcanes are tracked on the
- *  build (per-variant); only ability-set, passive, and exalted differ here. */
+ *  build (per-variant). Forms have separate upgrade menus in game, so the
+ *  ability-set, passive, exalted, AND polarities differ per form (Sirius aura
+ *  = Vazarin, Orion aura = Naramon). */
 export interface FrameForm {
   name: string
   abilities: Ability[]
   passiveDescription?: string
   exalted?: string[]
+  polarities?: string[]
+  auraPolarity?: string | string[] | null
+  exilusPolarity?: string | null
 }
 
 // Weapon base interface

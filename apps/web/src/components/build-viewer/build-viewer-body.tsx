@@ -188,9 +188,27 @@ function BuildViewerBodyInner({
     formNames,
     formVariants,
     formActiveLocalIndex,
+    formPolarities,
+    formAuraPolarity,
+    formExilusPolarity,
   } = useMemo(
     () => deriveFormAxis(item, variants, activeIndex),
     [item, variants, activeIndex],
+  )
+  // Active form's innate polarities differ per form (Sirius aura Vazarin, Orion
+  // aura Naramon); feed a polarity-overridden item to the layout, slot grid,
+  // and forma/capacity maths. Same reference as `item` for normal frames.
+  const effectiveItem = useMemo(
+    () =>
+      isTwin
+        ? {
+            ...item,
+            polarities: formPolarities ?? [],
+            auraPolarity: formAuraPolarity ?? null,
+            exilusPolarity: formExilusPolarity ?? null,
+          }
+        : item,
+    [isTwin, item, formPolarities, formAuraPolarity, formExilusPolarity],
   )
   const selectForm = (formIndex: number) => {
     const target = variants.findIndex((v) => (v.formIndex ?? 0) === formIndex)
@@ -198,7 +216,10 @@ function BuildViewerBodyInner({
   }
 
   const categoryLabel = getCategoryLabel(category)
-  const layout = useMemo(() => getBuildLayout(item, category), [item, category])
+  const layout = useMemo(
+    () => getBuildLayout(effectiveItem, category),
+    [effectiveItem, category],
+  )
   const { isCompanion, normalSlotCount, auraSlotCount, arcaneCount } = layout
 
   const slots = useBuildSlots(normalSlotCount, {
@@ -226,7 +247,7 @@ function BuildViewerBodyInner({
     saved.deploymentContext ?? DEFAULT_DEPLOYMENT_CONTEXT
 
   const { arcaneConfig, totalEndoCost, formaCount, capacity } = useBuildDerived(
-    { item, category, layout, slots, allArcanes, hasReactor },
+    { item: effectiveItem, category, layout, slots, allArcanes, hasReactor },
   )
 
   const sidebarProps = {
@@ -297,7 +318,7 @@ function BuildViewerBodyInner({
         <BuildSurface
           mode="view"
           embed={embed}
-          item={item}
+          item={effectiveItem}
           category={category}
           isCompanion={isCompanion}
           normalSlotCount={normalSlotCount}

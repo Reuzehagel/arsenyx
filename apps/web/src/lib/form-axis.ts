@@ -33,6 +33,12 @@ export interface FormAxis {
   formVariants: { v: SavedVariant; globalIndex: number }[]
   /** The active variant's index within `formVariants` (local space). */
   formActiveLocalIndex: number
+  /** The active form's innate polarities, overriding the item's. Forms have
+   *  separate upgrade menus, so each has its own (Sirius aura = Vazarin, Orion
+   *  aura = Naramon). Undefined for normal frames (use the item's directly). */
+  formPolarities: string[] | undefined
+  formAuraPolarity: string | string[] | null | undefined
+  formExilusPolarity: string | null | undefined
 }
 
 export function deriveFormAxis(
@@ -42,13 +48,14 @@ export function deriveFormAxis(
 ): FormAxis {
   const forms = item.forms
   const activeFormIndex = variants[activeIndex]?.formIndex ?? 0
+  const activeForm = forms?.[activeFormIndex]
   const formVariants = variants
     .map((v, globalIndex) => ({ v, globalIndex }))
     .filter(({ v }) => (v.formIndex ?? 0) === activeFormIndex)
   return {
     isTwin: Boolean(forms && forms.length > 1),
     activeFormIndex,
-    formAbilities: forms?.[activeFormIndex]?.abilities,
+    formAbilities: activeForm?.abilities,
     helminthAllowed: activeFormIndex === 0,
     formNames: forms?.map((f) => f.name.split(/\s*&\s*/)[0]),
     formVariants,
@@ -56,5 +63,8 @@ export function deriveFormAxis(
       0,
       formVariants.findIndex((f) => f.globalIndex === activeIndex),
     ),
+    formPolarities: activeForm?.polarities,
+    formAuraPolarity: activeForm?.auraPolarity,
+    formExilusPolarity: activeForm?.exilusPolarity,
   }
 }
