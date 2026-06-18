@@ -414,15 +414,35 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   // strip and tabs immediately. Shared with the viewer via `deriveFormAxis`;
   // no-op for normal frames (activeFormIndex 0, formVariants = all variants).
   const {
+    isTwin,
     activeFormIndex,
     formAbilities,
     helminthAllowed,
     formNames,
     formVariants,
     formActiveLocalIndex,
+    formPolarities,
+    formAuraPolarity,
+    formExilusPolarity,
   } = useMemo(
     () => deriveFormAxis(item, variants, clampedActiveIndex),
     [item, variants, clampedActiveIndex],
+  )
+  // The active form's innate polarities differ per form (Sirius aura Vazarin,
+  // Orion aura Naramon), so the layout, slot grid, and forma/capacity maths use
+  // a polarity-overridden view of the item. Identical reference to `item` for
+  // normal frames — they pay nothing.
+  const effectiveItem = useMemo(
+    () =>
+      isTwin
+        ? {
+            ...item,
+            polarities: formPolarities ?? [],
+            auraPolarity: formAuraPolarity ?? null,
+            exilusPolarity: formExilusPolarity ?? null,
+          }
+        : item,
+    [isTwin, item, formPolarities, formAuraPolarity, formExilusPolarity],
   )
 
   // Slice projected for this variant — feeds the existing slot/arcane
@@ -479,7 +499,10 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
 
   const categoryLabel = getCategoryLabel(category)
 
-  const layout = useMemo(() => getBuildLayout(item, category), [item, category])
+  const layout = useMemo(
+    () => getBuildLayout(effectiveItem, category),
+    [effectiveItem, category],
+  )
   const {
     isCompanion,
     normalSlotCount,
@@ -931,7 +954,14 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     formaCount,
     capacity,
     capacitySharedInputs,
-  } = useBuildDerived({ item, category, layout, slots, allArcanes, hasReactor })
+  } = useBuildDerived({
+    item: effectiveItem,
+    category,
+    layout,
+    slots,
+    allArcanes,
+    hasReactor,
+  })
 
   // Auto-forma planning (cheap reactive plan + heavy preview cascade). Forma is
   // build-wide in Warframe, so the planner considers every variant's slots
@@ -1433,7 +1463,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
           <KeyboardHintBanner />
           <BuildSurface
             mode="edit"
-            item={item}
+            item={effectiveItem}
             category={category}
             isCompanion={isCompanion}
             normalSlotCount={normalSlotCount}

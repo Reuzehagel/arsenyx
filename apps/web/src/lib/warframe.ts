@@ -134,6 +134,12 @@ export interface FrameForm {
   abilities: ItemAbility[]
   passiveDescription?: string
   exalted?: string[]
+  /** Forms have separate upgrade menus, so each has its own innate polarities
+   *  (e.g. Sirius aura = Vazarin, Orion aura = Naramon). Same shape as the
+   *  top-level `DetailItem` polarity fields. */
+  polarities?: string[]
+  auraPolarity?: string | string[] | null
+  exilusPolarity?: string | null
 }
 
 export const CATEGORIES: { id: BrowseCategory; label: string }[] = [

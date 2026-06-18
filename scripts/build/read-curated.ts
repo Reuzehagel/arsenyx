@@ -7,11 +7,18 @@
  * to know which file each curated table lives in.
  */
 
-import { CLASS_DEFAULT_POOLS, ALL_MENTIONED_POOLS } from "../../data/curated/class-pools"
+import {
+  CLASS_DEFAULT_POOLS,
+  ALL_MENTIONED_POOLS,
+} from "../../data/curated/class-pools"
 import {
   EXALTED_STANCES,
   type ExaltedStance,
 } from "../../data/curated/exalted-stances"
+import {
+  FRAME_POLARITY_OVERRIDES,
+  type FramePolarityOverride,
+} from "../../data/curated/frame-polarities"
 import { MOD_POOL_OVERRIDES } from "../../data/curated/mod-pools"
 import { PLEXUS_BROWSE_ITEM, PLEXUS_DETAIL } from "../../data/curated/plexus"
 import {
@@ -34,6 +41,9 @@ export interface CuratedData {
   releaseHistory: Record<string, ReleaseHistoryEntry>
   /** Weapon name → permanently-installed exalted stance (locked slot). */
   exaltedStances: Record<string, ExaltedStance>
+  /** Frame name → wiki-verified polarity fallback (for frames the wiki data
+   *  module hasn't catalogued yet). The wiki wins when it has data. */
+  framePolarities: Record<string, FramePolarityOverride>
 }
 
 export function readCurated(): CuratedData {
@@ -47,5 +57,6 @@ export function readCurated(): CuratedData {
     plexusDetail: PLEXUS_DETAIL,
     releaseHistory: RELEASE_HISTORY,
     exaltedStances: EXALTED_STANCES,
+    framePolarities: FRAME_POLARITY_OVERRIDES,
   }
 }

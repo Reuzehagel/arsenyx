@@ -225,7 +225,11 @@ async function main() {
   const rawFrames: MergedFrame[] = []
   for (const de of deFramesBlob.ExportWarframes) {
     rawFrames.push(
-      mergeFrame(de, { wiki: wikiFramesBlob, unmatched: frameUnmatched }),
+      mergeFrame(de, {
+        wiki: wikiFramesBlob,
+        unmatched: frameUnmatched,
+        polarityOverrides: curated.framePolarities,
+      }),
     )
   }
   // Collapse twin-frames (e.g. Sirius & Orion ships as two DE rows) into one
