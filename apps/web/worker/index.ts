@@ -223,6 +223,12 @@ async function handleBuildPage(
     if (hit) return hit
   }
 
+  // Kick off the OG image-map fetch up front so it overlaps the asset + API
+  // fetches below; only the PUBLIC branch awaits it. fetchImageMap never
+  // rejects (returns null on error), so the not-found / non-public early
+  // returns can leave it unawaited safely.
+  const imageMapPromise = fetchImageMap(env, url)
+
   // Workers Static Assets redirects `/index.html` → `/` by default
   // (html_handling), so we ask for the original path and let the SPA
   // fallback (`not_found_handling = "single-page-application"`) serve
@@ -257,12 +263,13 @@ async function handleBuildPage(
     return rewriteMeta(shellRes, { noindex: true })
   }
 
-  // Builds persist a denormalized item imageName that rots across
-  // image-scheme changes (see scripts/sync-images.ts). Re-resolve the OG
-  // image by the item's stable uniqueName against the same image-map.json the
-  // SPA uses, falling back to the stored value on a miss.
-  const imageMap = await fetchImageMap(env, url)
-  const res = rewriteMeta(shellRes, buildMeta(build, slug, imageMap))
+  // Re-resolve the OG image by the item's stable uniqueName (the denormalized
+  // build imageName rots across image-scheme changes — see sync-images.ts),
+  // awaiting the map kicked off above; falls back to the stored value on a miss.
+  const res = rewriteMeta(
+    shellRes,
+    buildMeta(build, slug, await imageMapPromise),
+  )
 
   // Only the fully-enriched PUBLIC HTML is cached. 404s, API-error fallbacks,
   // and private/unlisted shells are left uncached so a transient blip or a

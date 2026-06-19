@@ -648,8 +648,8 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   // (EditorShell re-keys on variant/form switch — see savedData's note).
   const initialFormShards = useMemo<Record<number, (PlacedShard | null)[]>>(
     () => {
-      const forms = item.forms
-      const formCount = forms && forms.length > 1 ? forms.length : 1
+      // Reuse the twin signal from deriveFormAxis rather than re-deriving it.
+      const formCount = isTwin && item.forms ? item.forms.length : 1
       const map: Record<number, (PlacedShard | null)[]> = {}
       for (let i = 0; i < formCount; i++) {
         map[i] = padShards(shardsForFormSaved(savedDataAll, i))

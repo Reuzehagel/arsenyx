@@ -186,9 +186,7 @@ export function mergeFrame(de: DeFrame, opts: MergeFramesOpts): MergedFrame {
     : (override?.polarities ?? [])
   const auraPolarity =
     normalizeAuraPolarity(wiki?.AuraPolarity) ??
-    (override?.auraPolarity
-      ? normalizeAuraPolarity(override.auraPolarity)
-      : null)
+    normalizeAuraPolarity(override?.auraPolarity)
   const exilusPolarity =
     normalizePolarity(wiki?.ExilusPolarity) ??
     normalizePolarity(override?.exilusPolarity)
