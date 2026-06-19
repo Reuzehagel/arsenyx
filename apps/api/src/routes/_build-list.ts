@@ -361,6 +361,11 @@ async function fetchOrdered(
   if (ids.length === 0) return { builds: [], total, page, limit }
   const rows = await prisma.build.findMany({
     where: { id: { in: ids } },
+    // `join` (default is `query`) folds the user + organization relations into a
+    // single LATERAL-join SELECT instead of issuing one extra query per relation
+    // per page. Prisma's per-relation queries were a large share of total DB
+    // query volume (see PlanetScale query insights) even though each is sub-ms.
+    relationLoadStrategy: "join",
     select: LIST_SELECT,
   })
   const byId = new Map(rows.map((r) => [r.id, r]))
@@ -428,6 +433,7 @@ export async function runList({
       orderBy: orderByForSort(sort),
       skip,
       take: limit,
+      relationLoadStrategy: "join",
       select: LIST_SELECT,
     }),
     prisma.build.count({ where }),
