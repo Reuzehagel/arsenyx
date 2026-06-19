@@ -44,5 +44,13 @@ run_worker_first = [
   "!/sitemap.xml",
 ]
 
+# Per-deploy version metadata (id/tag/timestamp). The edge Worker mixes the
+# deploy `id` into its build-page HTML cache key so each deploy starts a fresh
+# cache namespace — otherwise the per-colo Cache API (which survives deploys)
+# could serve a pre-deploy shell whose hashed /assets/*.js have rotated away
+# (now 404 → SPA-fallback HTML), white-screening the SPA until the TTL expired.
+[version_metadata]
+binding = "CF_VERSION_METADATA"
+
 [observability]
 enabled = true

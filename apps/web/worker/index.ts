@@ -21,6 +21,11 @@ import { buildMetaTitle, buildOgType } from "@arsenyx/shared/seo/build-meta"
 
 interface Env {
   ASSETS: { fetch: (request: Request) => Promise<Response> }
+  // Per-deploy version metadata (wrangler [version_metadata] binding). Its `id`
+  // changes on every deploy; we mix it into the build-page cache key so a deploy
+  // starts a fresh cache namespace (see handleBuildPage). Optional so local /
+  // dry-run runs without the binding still type-check.
+  CF_VERSION_METADATA?: { id: string }
 }
 
 // Minimal shape of the Workers ExecutionContext — we only use waitUntil, to let
@@ -216,8 +221,18 @@ async function handleBuildPage(
   // visitor — safe to share across users. The key drops the query string so
   // tracking params (utm_*, fbclid, …) don't fragment the one hot slug; the
   // ?embed=1 variant already returned above, so it never reaches this key.
+  //
+  // The key is namespaced by the deploy version: the cached shell embeds this
+  // deploy's hashed /assets/*.js tags, which rotate on the next deploy and then
+  // 404 → SPA-fallback HTML (white screen). The per-colo Cache API survives
+  // deploys, so without this a warm colo would serve the pre-deploy shell for
+  // the whole TTL; a new version id orphans old entries (never matched again)
+  // and they age out by TTL.
   const cache = edgeCache()
-  const cacheKey = new Request(url.origin + url.pathname)
+  const version = env.CF_VERSION_METADATA?.id ?? "dev"
+  const cacheKey = new Request(
+    `${url.origin}${url.pathname}?__v=${encodeURIComponent(version)}`,
+  )
   if (cache) {
     const hit = await cache.match(cacheKey)
     if (hit) return hit
