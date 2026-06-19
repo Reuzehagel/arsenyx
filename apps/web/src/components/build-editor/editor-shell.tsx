@@ -52,6 +52,7 @@ import {
   pickPerVariantData,
   savedDataToBuildState,
   selectVariant,
+  shardsForFormSaved,
   stripPersistedImages,
   SYNTHETIC_VARIANT_ID,
   SYNTHETIC_VARIANT_LABEL,
@@ -132,7 +133,11 @@ import { useVariantActions } from "./use-variant-actions"
 
 type SharedEditorOverrides = {
   hasReactor?: boolean
-  shards?: (PlacedShard | null)[]
+  /** Per-form Archon Shards, keyed by form index. Twin-frames (Sirius & Orion)
+   *  give each form ("half") its own set; normal frames only ever use index 0.
+   *  Holds every form so the inactive half's shards survive the remount that a
+   *  form switch triggers (the live `shards` state only edits the active one). */
+  formShards?: Record<number, (PlacedShard | null)[]>
   zawComponents?: { grip: string; link: string } | undefined
   kitgunComponents?: KitgunComponents | undefined
   lichBonusElement?: LichBonusElement | null
@@ -257,9 +262,15 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       )
       // `formIndex` isn't carried through BuildState, so lift it off the
       // decoded variant directly onto the top-level mirror (and each variant).
+      // Shards/formShards come straight off the doc (canonical: form 0 in
+      // `shards`, twin-frame halves in `formShards`) rather than from the
+      // active variant's projection, so a share link opened on Orion still
+      // hydrates Sirius's shards too.
       const withForm = {
         ...activeData,
         formIndex: doc.variants[activeIdx].formIndex,
+        shards: doc.shardSlots,
+        formShards: doc.formShardSlots,
       }
       if (doc.variants.length === 1) return { data: withForm }
       const savedVariants: SavedVariant[] = doc.variants.map((v, i) => {
@@ -610,8 +621,30 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   const [hasReactor, setHasReactor] = useState(
     () => cachedShared?.hasReactor ?? savedData.hasReactor ?? true,
   )
+
+  // Shards are per-form ("half") on twin-frames. The base map seeds every
+  // form's shards from the saved build once at mount; the live `shards` state
+  // below edits only the active form, and the cache holds the rest so they
+  // survive the remount a form switch triggers. Mount-frozen like `savedData`
+  // (EditorShell re-keys on variant/form switch — see savedData's note).
+  const initialFormShards = useMemo<Record<number, (PlacedShard | null)[]>>(
+    () => {
+      const forms = item.forms
+      const formCount = forms && forms.length > 1 ? forms.length : 1
+      const map: Record<number, (PlacedShard | null)[]> = {}
+      for (let i = 0; i < formCount; i++) {
+        map[i] = padShards(shardsForFormSaved(savedDataAll, i))
+      }
+      return map
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  )
   const [shards, setShards] = useState<(PlacedShard | null)[]>(
-    () => cachedShared?.shards ?? padShards(savedData.shards),
+    () =>
+      cachedShared?.formShards?.[activeFormIndex] ??
+      initialFormShards[activeFormIndex] ??
+      padShards(undefined),
   )
   const setShard = (i: number, s: PlacedShard | null) => {
     setShards((prev) => {
@@ -619,6 +652,32 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       next[i] = s
       return next
     })
+  }
+  // The active form's live edits overlaid on every other form's set — the
+  // single source for persisting/sharing shards. Always overlays the live
+  // `shards` so a capture that races ahead of the sync effect still sees it.
+  const collectFormShards = (): Record<number, (PlacedShard | null)[]> => ({
+    ...initialFormShards,
+    ...(cachedShared?.formShards ?? {}),
+    [activeFormIndex]: shards,
+  })
+  // Split the per-form map into the wire/DB shape: form 0 in `shards`,
+  // twin-frame halves (non-empty only) in `formShards`.
+  const splitFormShards = (): {
+    shards: (PlacedShard | null)[]
+    formShards?: Record<number, (PlacedShard | null)[]>
+  } => {
+    const all = collectFormShards()
+    const formShards: Record<number, (PlacedShard | null)[]> = {}
+    for (const [key, slots] of Object.entries(all)) {
+      const idx = Number(key)
+      if (idx === 0) continue
+      if (slots.some((s) => s !== null)) formShards[idx] = slots
+    }
+    return {
+      shards: all[0] ?? [],
+      ...(Object.keys(formShards).length > 0 && { formShards }),
+    }
   }
 
   const riven = useRivenDialog({ slots, normalSlotCount, category })
@@ -730,7 +789,9 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   useEffect(() => {
     writeShared({
       hasReactor,
-      shards,
+      // Persist every form's shards so switching halves doesn't drop the
+      // inactive one; the active form mirrors the live `shards` state.
+      formShards: collectFormShards(),
       zawComponents,
       kitgunComponents,
       lichBonusElement,
@@ -926,13 +987,18 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       // fields from `state`, per-variant data from the in-memory variants
       // array (with the active variant's slice replaced by the live
       // editor state so unsaved tweaks make it into the share URL).
+      // Per-form shards: form 0 is canonical (`shardSlots`); twin-frame halves
+      // ride along in `formShardSlots`. `state.shardSlots` is only the active
+      // form, so derive both from the full per-form map instead.
+      const sharded = splitFormShards()
       const doc: BuildDoc = {
         itemUniqueName: state.itemUniqueName,
         itemName: state.itemName,
         itemCategory: state.itemCategory,
         itemImageName: state.itemImageName,
         hasReactor: state.hasReactor,
-        shardSlots: state.shardSlots,
+        shardSlots: sharded.shards,
+        formShardSlots: sharded.formShards,
         helminthAbility: state.helminthAbility,
         zawComponents: state.zawComponents,
         kitgunComponents: state.kitgunComponents,
@@ -1204,7 +1270,8 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       slots: slots.placed,
       formaPolarities: slots.formaPolarities,
       arcanes: arcanes.placed,
-      shards,
+      // Per-form: form 0 in `shards`, twin-frame halves in `formShards`.
+      ...splitFormShards(),
       hasReactor,
       helminth,
       zawComponents,

@@ -83,8 +83,17 @@ export function variantsOverCap(buildData: unknown): boolean {
 
 function hasShardsInBuildData(buildData: unknown): boolean {
   if (!buildData || typeof buildData !== "object") return false
-  const shards = (buildData as Record<string, unknown>).shards
-  return Array.isArray(shards) && shards.some((s) => s != null)
+  const data = buildData as Record<string, unknown>
+  const anyPlaced = (v: unknown): boolean =>
+    Array.isArray(v) && v.some((s) => s != null)
+  if (anyPlaced(data.shards)) return true
+  // Twin-frames (Sirius & Orion) store each form's shards in `formShards`
+  // (keyed by form index); a half can carry shards while form 0 is empty.
+  const formShards = data.formShards
+  if (formShards && typeof formShards === "object") {
+    return Object.values(formShards as Record<string, unknown>).some(anyPlaced)
+  }
+  return false
 }
 
 const MAX_CATALOG_VERSION = 64

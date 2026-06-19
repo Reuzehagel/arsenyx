@@ -52,7 +52,15 @@ export interface BuildDoc {
   itemCategory: BrowseCategory
   itemImageName?: string
   hasReactor: boolean
+  /** The primary form's (form 0) Archon Shards — and the only shard set for
+   *  every normal frame. Kept as the canonical field so existing builds and
+   *  share links (which only ever had one shard set) read as the primary
+   *  form's shards with no migration. */
   shardSlots: (PlacedShard | null)[]
+  /** Twin-frames (Sirius & Orion): each form ("half") owns its own shards.
+   *  Keyed by form index for forms ≥ 1; form 0 lives in `shardSlots` above.
+   *  Absent for normal frames. */
+  formShardSlots?: Record<number, (PlacedShard | null)[]>
   helminthAbility?: BuildState["helminthAbility"]
   zawComponents?: BuildState["zawComponents"]
   kitgunComponents?: BuildState["kitgunComponents"]
@@ -68,6 +76,19 @@ export interface BuildDoc {
 }
 
 /**
+ * Resolve the Archon Shard set for a form. Form 0 (and every normal frame)
+ * reads the canonical `shardSlots`; twin-frame forms ≥ 1 read their own slice
+ * of `formShardSlots`, defaulting to empty so each "half" is independent.
+ */
+export function shardsForForm(
+  doc: Pick<BuildDoc, "shardSlots" | "formShardSlots">,
+  formIndex: number,
+): (PlacedShard | null)[] {
+  if (formIndex === 0) return doc.shardSlots
+  return doc.formShardSlots?.[formIndex] ?? []
+}
+
+/**
  * Project a (doc, index) pair back into a `BuildState` that the existing
  * stat engine, capacity calc, and mod search already understand. Capacity
  * fields are zeroed because every consumer recomputes them downstream.
@@ -80,7 +101,9 @@ export function projectVariant(doc: BuildDoc, index: number): BuildState {
     itemCategory: doc.itemCategory,
     itemImageName: doc.itemImageName,
     hasReactor: doc.hasReactor,
-    shardSlots: doc.shardSlots,
+    // A variant's shards follow its form ("half"): twin-frames give each form
+    // its own set; normal frames always resolve to `shardSlots`.
+    shardSlots: shardsForForm(doc, v?.formIndex ?? 0),
     helminthAbility: doc.helminthAbility,
     zawComponents: doc.zawComponents,
     kitgunComponents: doc.kitgunComponents,

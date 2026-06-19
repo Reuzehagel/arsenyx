@@ -46,7 +46,13 @@ export type SavedBuildData = {
   slots?: Partial<Record<SlotId, PlacedMod>>
   formaPolarities?: Partial<Record<SlotId, Polarity>>
   arcanes?: (PlacedArcane | null)[]
+  /** Primary form's (form 0) Archon Shards — the only shard set for normal
+   *  frames. Twin-frame forms ≥ 1 store theirs in `formShards`. */
   shards?: (PlacedShard | null)[]
+  /** Twin-frames (Sirius & Orion): per-form shards for forms ≥ 1, keyed by
+   *  form index. Build-wide like `shards` (not per-variant), so it lives at the
+   *  top level — not in `SavedVariant`/`PerVariantDataField`. */
+  formShards?: Record<number, (PlacedShard | null)[]>
   hasReactor?: boolean
   helminth?: Record<number, HelminthAbility>
   zawComponents?: { grip: string; link: string }

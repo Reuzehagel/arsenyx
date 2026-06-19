@@ -543,10 +543,26 @@ export function getVariants(data: SavedBuildData): SavedVariant[] {
 }
 
 /**
+ * Resolve a form's Archon Shard set from saved build data. Form 0 (and every
+ * normal frame) reads the canonical `shards`; twin-frame forms ≥ 1 read their
+ * own slice of `formShards`, defaulting to empty so each "half" is independent.
+ * Mirrors `shardsForForm` (build-doc.ts) for the SavedBuildData shape.
+ */
+export function shardsForFormSaved(
+  data: Pick<SavedBuildData, "shards" | "formShards">,
+  formIndex: number,
+): (PlacedShard | null)[] {
+  if (formIndex === 0) return data.shards ?? []
+  return data.formShards?.[formIndex] ?? []
+}
+
+/**
  * Project a single variant back into a `SavedBuildData` shape that the
- * existing viewer/editor pipelines consume unchanged. Shared fields
- * (shards, forma, reactor, helminth, lich, zaw, name) come from the
- * top-level doc; per-variant fields override.
+ * existing viewer/editor pipelines consume unchanged. Build-wide fields
+ * (forma, reactor, helminth, lich, zaw, name) come from the top-level doc;
+ * per-variant fields override. Shards follow the variant's form ("half"):
+ * `.shards` is resolved to that form's set so the viewer renders the right
+ * shards on a twin-frame, and is a no-op for normal frames.
  */
 export function selectVariant(
   data: SavedBuildData,
@@ -570,8 +586,9 @@ export function selectVariant(
     slots: v.slots,
     arcanes: v.arcanes,
     ...pickPerVariantData(v),
-    // formaPolarities, shards, hasReactor, zaw, kitgun, lich, buildName are
-    // shared across variants and stay as-is.
+    // Resolve shards to the variant's form. formaPolarities, hasReactor, zaw,
+    // kitgun, lich, buildName are shared across variants and stay as-is.
+    shards: shardsForFormSaved(data, v.formIndex ?? 0),
   }
 }
 

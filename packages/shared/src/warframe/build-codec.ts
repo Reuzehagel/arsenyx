@@ -101,6 +101,9 @@ interface EncodedSlotGroup {
  *  v2. */
 interface EncodedSharedMeta {
   sh?: number[]
+  /** Twin-frame per-form shards for forms ≥ 1 (form 0 lives in `sh`). Keyed by
+   *  form index. Omitted for normal frames. */
+  shf?: Record<number, number[]>
   h?: EncodedHelminth
   zc?: { g: string; l: string }
   kc?: { g: string; l: string }
@@ -299,6 +302,7 @@ function decodeSlotGroup(g: EncodedSlotGroup): SlotGroupSource {
 type SharedMetaSource = Pick<
   BuildDoc,
   | "shardSlots"
+  | "formShardSlots"
   | "helminthAbility"
   | "zawComponents"
   | "kitgunComponents"
@@ -316,6 +320,17 @@ function encodeSharedMeta(
     src.shardSlots.some((s) => s !== null)
   )
     target.sh = encodeShards(src.shardSlots)
+  if (src.formShardSlots) {
+    const shf: Record<number, number[]> = {}
+    for (const [formIndex, slots] of Object.entries(src.formShardSlots)) {
+      // Form 0 is always `sh`; skip it here and skip empty sets so a twin
+      // frame with no shards on a half doesn't bloat the link.
+      if (Number(formIndex) === 0) continue
+      if (slots && slots.length > 0 && slots.some((s) => s !== null))
+        shf[Number(formIndex)] = encodeShards(slots)
+    }
+    if (Object.keys(shf).length > 0) target.shf = shf
+  }
   if (src.helminthAbility) {
     target.h = {
       si: src.helminthAbility.slotIndex,
@@ -337,8 +352,16 @@ function encodeSharedMeta(
 function decodeSharedMeta(encoded: EncodedSharedMeta): SharedMetaSource & {
   shardSlots: (PlacedShard | null)[]
 } {
+  let formShardSlots: Record<number, (PlacedShard | null)[]> | undefined
+  if (encoded.shf) {
+    formShardSlots = {}
+    for (const [formIndex, slots] of Object.entries(encoded.shf)) {
+      formShardSlots[Number(formIndex)] = decodeShards(slots)
+    }
+  }
   return {
     shardSlots: encoded.sh ? decodeShards(encoded.sh) : [],
+    formShardSlots,
     helminthAbility: encoded.h
       ? {
           slotIndex: encoded.h.si,

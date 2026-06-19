@@ -110,6 +110,33 @@ describe("encodeBuildDoc / decodeBuildDoc round-trip", () => {
     expect(decodeBuildDoc(encoded)!.variants[0].formIndex).toBe(1)
   })
 
+  it("round-trips per-form shards on a twin-frame doc", () => {
+    const doc: BuildDoc = {
+      ...makeDoc([
+        makeVariant({ id: "sirius", label: "Sirius", formIndex: 0 }),
+        makeVariant({ id: "orion", label: "Orion", formIndex: 1 }),
+      ]),
+      shardSlots: [
+        { color: "crimson", stat: "Ability Strength", tauforged: true },
+      ],
+      formShardSlots: {
+        1: [{ color: "azure", stat: "Health", tauforged: false }],
+      },
+    }
+    const decoded = decodeBuildDoc(encodeBuildDoc(doc))!
+    // Form 0 stays in the canonical `shardSlots`; form 1 keeps its own set.
+    expect(decoded.shardSlots[0]).toEqual({
+      color: "crimson",
+      stat: "Ability Strength",
+      tauforged: true,
+    })
+    expect(decoded.formShardSlots?.[1]?.[0]).toEqual({
+      color: "azure",
+      stat: "Health",
+      tauforged: false,
+    })
+  })
+
   it("rejects unknown lichBonusElement on v2 decode", () => {
     const doc = makeDoc([makeVariant(), makeVariant({ id: "v1", label: "B" })])
     const encoded = encodeBuildDoc({
