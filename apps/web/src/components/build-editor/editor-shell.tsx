@@ -1137,9 +1137,11 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
               </a>
             </div>
           </div>,
-          // Explicit close button — dismissal shouldn't rely on the user
-          // knowing they can swipe a toast away.
-          { duration: 15000, closeButton: true },
+          // Persist until manually dismissed (duration: Infinity) so the ask
+          // isn't missed — paired with an explicit close button so dismissal
+          // doesn't rely on the user knowing they can swipe a toast away. Still
+          // fires at most once per browser (markDonationNudgeShown above).
+          { duration: Infinity, closeButton: true },
         )
       }
       navigate({ to: "/builds/$slug", params: { slug } })
