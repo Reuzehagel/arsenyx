@@ -528,41 +528,61 @@ export function pickPerVariantData(
  * Returns the variants array, or a single synthetic "Main" variant
  * synthesized from the top-level fields when the build has no
  * `variants`. Always returns at least one entry.
+ *
+ * Copy-on-load: a build saved before per-variant shards has variants with no
+ * `shards`. Resolve each here, the single choke point both editor and viewer
+ * read through, so every variant becomes independent at load — editing one
+ * variant's shards can never drag a still-unmigrated sibling along via the
+ * shared top-level mirror.
  */
 export function getVariants(data: SavedBuildData): SavedVariant[] {
-  if (data.variants && data.variants.length > 0) return data.variants
+  if (data.variants && data.variants.length > 0) {
+    // The common case (every variant already carries `shards`) returns the
+    // array by reference; only legacy builds missing some `shards` allocate.
+    if (data.variants.every((v) => v.shards)) return data.variants
+    return data.variants.map((v) =>
+      v.shards
+        ? v
+        : { ...v, shards: shardsForFormSaved(data, v.formIndex ?? 0) },
+    )
+  }
   return [
     {
       id: SYNTHETIC_VARIANT_ID,
       label: SYNTHETIC_VARIANT_LABEL,
       slots: data.slots ?? {},
       arcanes: data.arcanes ?? [],
+      shards: data.shards ?? [],
       ...pickPerVariantData(data),
     },
   ]
 }
 
 /**
- * Resolve a form's Archon Shard set from saved build data. Form 0 (and every
- * normal frame) reads the canonical `shards`; twin-frame forms ≥ 1 read their
- * own slice of `formShards`, defaulting to empty so each "half" is independent.
- * Mirrors `shardsForForm` (build-doc.ts) for the SavedBuildData shape.
+ * Copy-on-load fallback for a variant that has no `shards` of its own — i.e. a
+ * build saved before per-variant shards. Resolves from the legacy top-level
+ * fields: form 0 (and every normal frame) reads `shards`; a twin-frame form ≥ 1
+ * reads its slice of the short-lived per-form `formShards`, falling back to
+ * `shards` so the build's single saved set copies onto every variant.
+ * File-private: `getVariants` is the only copy-on-load entry point.
  */
-export function shardsForFormSaved(
+function shardsForFormSaved(
   data: Pick<SavedBuildData, "shards" | "formShards">,
   formIndex: number,
 ): (PlacedShard | null)[] {
-  if (formIndex === 0) return data.shards ?? []
-  return data.formShards?.[formIndex] ?? []
+  if (formIndex !== 0) {
+    const forForm = data.formShards?.[formIndex]
+    if (forForm) return forForm
+  }
+  return data.shards ?? []
 }
 
 /**
  * Project a single variant back into a `SavedBuildData` shape that the
  * existing viewer/editor pipelines consume unchanged. Build-wide fields
  * (forma, reactor, helminth, lich, zaw, name) come from the top-level doc;
- * per-variant fields override. Shards follow the variant's form ("half"):
- * `.shards` is resolved to that form's set so the viewer renders the right
- * shards on a twin-frame, and is a no-op for normal frames.
+ * per-variant fields override. `.shards` is the variant's own set; copy-on-load
+ * for legacy builds is handled upstream in `getVariants`.
  */
 export function selectVariant(
   data: SavedBuildData,
@@ -586,9 +606,10 @@ export function selectVariant(
     slots: v.slots,
     arcanes: v.arcanes,
     ...pickPerVariantData(v),
-    // Resolve shards to the variant's form. formaPolarities, hasReactor, zaw,
+    // `v` came through getVariants, which already resolved copy-on-load for
+    // legacy builds, so `v.shards` is set. formaPolarities, hasReactor, zaw,
     // kitgun, lich, buildName are shared across variants and stay as-is.
-    shards: shardsForFormSaved(data, v.formIndex ?? 0),
+    shards: v.shards ?? [],
   }
 }
 

@@ -60,12 +60,13 @@ describe("golden: existing v1 links still decode", () => {
   })
   it("preserves arcanes, shards, helminth, incarnon", () => {
     expect(doc.variants[0].arcaneSlots[0]?.rank).toBe(5)
-    expect(doc.shardSlots[0]).toEqual({
+    // Pre-per-variant links stored one shard set; it now seeds variant 0.
+    expect(doc.variants[0].shardSlots[0]).toEqual({
       color: "crimson",
       stat: "Ability Strength",
       tauforged: true,
     })
-    expect(doc.shardSlots[1]).toEqual({
+    expect(doc.variants[0].shardSlots[1]).toEqual({
       color: "azure",
       stat: "Health",
       tauforged: false,

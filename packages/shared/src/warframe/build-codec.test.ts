@@ -18,6 +18,7 @@ function makeVariant(overrides: Partial<BuildVariant> = {}): BuildVariant {
     auraSlots: [emptyAuraSlot(0)],
     normalSlots: Array.from({ length: 8 }, (_, i) => emptyNormalSlot(i)),
     arcaneSlots: [],
+    shardSlots: [],
     ...overrides,
   }
 }
@@ -28,7 +29,6 @@ function makeDoc(variants: BuildVariant[]): BuildDoc {
     itemName: "Excalibur",
     itemCategory: "warframes",
     hasReactor: true,
-    shardSlots: [],
     variants,
   }
 }
@@ -110,31 +110,61 @@ describe("encodeBuildDoc / decodeBuildDoc round-trip", () => {
     expect(decodeBuildDoc(encoded)!.variants[0].formIndex).toBe(1)
   })
 
-  it("round-trips per-form shards on a twin-frame doc", () => {
-    const doc: BuildDoc = {
-      ...makeDoc([
-        makeVariant({ id: "sirius", label: "Sirius", formIndex: 0 }),
-        makeVariant({ id: "orion", label: "Orion", formIndex: 1 }),
-      ]),
-      shardSlots: [
-        { color: "crimson", stat: "Ability Strength", tauforged: true },
-      ],
-      formShardSlots: {
-        1: [{ color: "azure", stat: "Health", tauforged: false }],
-      },
-    }
-    const decoded = decodeBuildDoc(encodeBuildDoc(doc))!
-    // Form 0 stays in the canonical `shardSlots`; form 1 keeps its own set.
-    expect(decoded.shardSlots[0]).toEqual({
+  it("round-trips per-variant shards", () => {
+    const shardA = {
       color: "crimson",
       stat: "Ability Strength",
       tauforged: true,
-    })
-    expect(decoded.formShardSlots?.[1]?.[0]).toEqual({
-      color: "azure",
-      stat: "Health",
-      tauforged: false,
-    })
+    } as const
+    const shardB = { color: "azure", stat: "Health", tauforged: false } as const
+    const doc = makeDoc([
+      makeVariant({ id: "sirius", label: "Sirius", shardSlots: [shardA] }),
+      makeVariant({ id: "orion", label: "Orion", shardSlots: [shardB] }),
+    ])
+    const decoded = decodeBuildDoc(encodeBuildDoc(doc))!
+    // Each variant keeps its own shard set — no sharing across variants.
+    expect(decoded.variants[0].shardSlots[0]).toEqual(shardA)
+    expect(decoded.variants[1].shardSlots[0]).toEqual(shardB)
+  })
+
+  it("seeds per-variant shards from a legacy top-level set (copy-on-load)", () => {
+    // Synthesize an OLD link (top-level `sh` for form 0, `shf` for form 1, no
+    // per-variant `sh`) by rewriting a modern link's base64. The decoder must
+    // seed every variant from the legacy set its form maps to.
+    const shardA = {
+      color: "crimson",
+      stat: "Ability Strength",
+      tauforged: true,
+    } as const
+    const shardB = { color: "azure", stat: "Health", tauforged: false } as const
+    const modern = encodeBuildDoc(
+      makeDoc([
+        makeVariant({
+          id: "s",
+          label: "S",
+          formIndex: 0,
+          shardSlots: [shardA],
+        }),
+        makeVariant({
+          id: "o",
+          label: "O",
+          formIndex: 1,
+          shardSlots: [shardB],
+        }),
+        // A second form-1 variant with none of its own → inherits form 1's set.
+        makeVariant({ id: "o2", label: "O2", formIndex: 1, shardSlots: [] }),
+      ]),
+    )
+    // atob/btoa match the codec's node base64 path for ASCII payloads.
+    const json = JSON.parse(atob(modern))
+    json.sh = json.vs[0].sh
+    json.shf = { 1: json.vs[1].sh }
+    for (const v of json.vs) delete v.sh
+    const legacyLink = btoa(JSON.stringify(json))
+    const decoded = decodeBuildDoc(legacyLink)!
+    expect(decoded.variants[0].shardSlots[0]).toEqual(shardA)
+    expect(decoded.variants[1].shardSlots[0]).toEqual(shardB)
+    expect(decoded.variants[2].shardSlots[0]).toEqual(shardB)
   })
 
   it("rejects unknown lichBonusElement on v2 decode", () => {

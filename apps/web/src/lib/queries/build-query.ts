@@ -26,6 +26,11 @@ export type SavedVariant = {
   label: string
   slots: Partial<Record<SlotId, PlacedMod>>
   arcanes: (PlacedArcane | null)[]
+  /** This variant's Archon Shards. Per-variant: each loadout installs its own
+   *  set. Absent on builds saved before per-variant shards — load resolves it
+   *  from the legacy top-level `shards`/`formShards` (copy-on-load), so an old
+   *  build's single set shows on every variant until one is edited. */
+  shards?: (PlacedShard | null)[]
   helminth?: Record<number, HelminthAbility>
   incarnonEnabled?: boolean
   incarnonPerks?: (string | null)[]
@@ -46,12 +51,15 @@ export type SavedBuildData = {
   slots?: Partial<Record<SlotId, PlacedMod>>
   formaPolarities?: Partial<Record<SlotId, Polarity>>
   arcanes?: (PlacedArcane | null)[]
-  /** Primary form's (form 0) Archon Shards — the only shard set for normal
-   *  frames. Twin-frame forms ≥ 1 store theirs in `formShards`. */
+  /** Top-level mirror of the active variant's Archon Shards (per-variant; see
+   *  `SavedVariant.shards`). Kept populated for legacy clients that ignore the
+   *  `variants` array, and it's the sole shard set for synthetic single-variant
+   *  builds. Pre-per-variant builds stored their only set here. */
   shards?: (PlacedShard | null)[]
-  /** Twin-frames (Sirius & Orion): per-form shards for forms ≥ 1, keyed by
-   *  form index. Build-wide like `shards` (not per-variant), so it lives at the
-   *  top level — not in `SavedVariant`/`PerVariantDataField`. */
+  /** @deprecated Legacy twin-frame per-form shards (the short-lived per-form
+   *  model), keyed by form index. Read-only for copy-on-load when a variant has
+   *  no `shards` of its own; new saves write per-variant `SavedVariant.shards`
+   *  instead and never emit this. */
   formShards?: Record<number, (PlacedShard | null)[]>
   hasReactor?: boolean
   helminth?: Record<number, HelminthAbility>
@@ -90,7 +98,13 @@ export type SavedBuildData = {
  */
 export type PerVariantDataField = Exclude<
   keyof SavedVariant,
-  "id" | "label" | "slots" | "arcanes" | "guideSummary" | "guideDescription"
+  | "id"
+  | "label"
+  | "slots"
+  | "arcanes"
+  | "shards"
+  | "guideSummary"
+  | "guideDescription"
 >
 
 /** Canonical wire shape lives in `@arsenyx/shared/api/build-dto`; re-exported

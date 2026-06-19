@@ -3,10 +3,11 @@ import type { FrameForm, ItemAbility } from "@/lib/warframe"
 
 /**
  * Twin-frames (e.g. Sirius & Orion) ship as ONE catalog entity with two
- * switchable "forms" sharing the frame/shards but differing in abilities,
- * Helminth, and the build variants attached to each. Form is the top axis:
+ * switchable "forms" sharing the frame but differing in abilities, Helminth,
+ * polarities, and the build variants attached to each. Form is the top axis:
  * each form owns its own variant budget. A variant's `formIndex` selects its
- * form (absent / 0 = primary).
+ * form (absent / 0 = primary). Shards are per-variant (not per-form), so each
+ * half's variants carry their own.
  *
  * Both the editor (`EditorShell`) and the read-only viewer (`BuildViewerBody`)
  * need the same derived view — the active form, its ability set, whether

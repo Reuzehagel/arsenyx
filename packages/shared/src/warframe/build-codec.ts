@@ -100,9 +100,13 @@ interface EncodedSlotGroup {
 /** Build-level metadata shared across every variant, identical between v1 and
  *  v2. */
 interface EncodedSharedMeta {
+  /** v1 single-loadout shards. On v2 it's a LEGACY field: pre-per-variant
+   *  links stored the (form 0) shard set here and `shf` held the other forms;
+   *  current v2 encodes put shards on each variant (`EncodedVariant.sh`) and
+   *  leave these unset. Still decoded to seed old links — see `decodeVariant`. */
   sh?: number[]
-  /** Twin-frame per-form shards for forms ≥ 1 (form 0 lives in `sh`). Keyed by
-   *  form index. Omitted for normal frames. */
+  /** @deprecated Legacy twin-frame per-form shards for forms ≥ 1 (form 0 was
+   *  `sh`), keyed by form index. Read-only for backward compat; never written. */
   shf?: Record<number, number[]>
   h?: EncodedHelminth
   zc?: { g: string; l: string }
@@ -141,6 +145,8 @@ interface EncodedVariant extends EncodedSlotGroup {
   gd?: string
   /** Twin-frame form index (omitted when 0/absent). */
   fi?: number
+  /** This variant's Archon Shards (omitted when none placed). */
+  sh?: number[]
 }
 
 // =============================================================================
@@ -299,10 +305,13 @@ function decodeSlotGroup(g: EncodedSlotGroup): SlotGroupSource {
   }
 }
 
-type SharedMetaSource = Pick<
+// Build-level metadata shared across variants. `shardSlots` is optional and
+// only carries a value on the v1 (single-loadout) path — v2 docs hold shards
+// per-variant, so a `BuildDoc` (no top-level shards) writes no top-level `sh`.
+type SharedMetaSource = {
+  shardSlots?: (PlacedShard | null)[]
+} & Pick<
   BuildDoc,
-  | "shardSlots"
-  | "formShardSlots"
   | "helminthAbility"
   | "zawComponents"
   | "kitgunComponents"
@@ -320,17 +329,6 @@ function encodeSharedMeta(
     src.shardSlots.some((s) => s !== null)
   )
     target.sh = encodeShards(src.shardSlots)
-  if (src.formShardSlots) {
-    const shf: Record<number, number[]> = {}
-    for (const [formIndex, slots] of Object.entries(src.formShardSlots)) {
-      // Form 0 is always `sh`; skip it here and skip empty sets so a twin
-      // frame with no shards on a half doesn't bloat the link.
-      if (Number(formIndex) === 0) continue
-      if (slots && slots.length > 0 && slots.some((s) => s !== null))
-        shf[Number(formIndex)] = encodeShards(slots)
-    }
-    if (Object.keys(shf).length > 0) target.shf = shf
-  }
   if (src.helminthAbility) {
     target.h = {
       si: src.helminthAbility.slotIndex,
@@ -349,9 +347,14 @@ function encodeSharedMeta(
   if (src.buildName) target.n = src.buildName
 }
 
-function decodeSharedMeta(encoded: EncodedSharedMeta): SharedMetaSource & {
+// Decoded shared meta carries the legacy shard fields too — used to seed
+// per-variant `shardSlots` when an old link has no per-variant shards.
+type DecodedSharedMeta = SharedMetaSource & {
   shardSlots: (PlacedShard | null)[]
-} {
+  formShardSlots?: Record<number, (PlacedShard | null)[]>
+}
+
+function decodeSharedMeta(encoded: EncodedSharedMeta): DecodedSharedMeta {
   let formShardSlots: Record<number, (PlacedShard | null)[]> | undefined
   if (encoded.shf) {
     formShardSlots = {}
@@ -442,14 +445,38 @@ function encodeVariant(v: BuildVariant): EncodedVariant {
   if (v.guideSummary) ev.gs = v.guideSummary
   if (v.guideDescription) ev.gd = v.guideDescription
   if (v.formIndex) ev.fi = v.formIndex
+  if (v.shardSlots.some((s) => s !== null)) ev.sh = encodeShards(v.shardSlots)
   return ev
 }
 
-function decodeVariant(ev: EncodedVariant, index: number): BuildVariant {
+/**
+ * Seed a decoded variant's shards from an OLD link's top-level shard fields
+ * (copy-on-load): pre-per-variant links stored one shard set on form 0 (`sh`)
+ * and, briefly, per-form sets in `shf`. A variant resolves to its form's set
+ * and falls back to form 0's — so a link's single saved set copies onto every
+ * variant. Current links carry per-variant `ev.sh` and skip this entirely.
+ */
+function seedLegacyShards(
+  legacy: DecodedSharedMeta,
+  formIndex: number,
+): (PlacedShard | null)[] {
+  if (formIndex !== 0) {
+    const forForm = legacy.formShardSlots?.[formIndex]
+    if (forForm) return forForm
+  }
+  return legacy.shardSlots
+}
+
+function decodeVariant(
+  ev: EncodedVariant,
+  index: number,
+  legacy: DecodedSharedMeta,
+): BuildVariant {
   const variant: BuildVariant = {
     id: ev.id ?? `v${index}`,
     label: ev.l,
     ...decodeSlotGroup(ev),
+    shardSlots: [],
   }
   applyIncarnon(variant, ev.ic)
   if (ev.dc) variant.deploymentContext = ev.dc
@@ -458,6 +485,9 @@ function decodeVariant(ev: EncodedVariant, index: number): BuildVariant {
   if (typeof ev.fi === "number" && ev.fi > 0) {
     variant.formIndex = Math.floor(ev.fi)
   }
+  variant.shardSlots = ev.sh
+    ? decodeShards(ev.sh)
+    : seedLegacyShards(legacy, variant.formIndex ?? 0)
   return variant
 }
 
@@ -505,13 +535,17 @@ export function decodeBuildDoc(base64String: string): BuildDoc | null {
 }
 
 function decodeV2(encoded: EncodedBuildV2): BuildDoc {
+  // The legacy top-level shard fields seed any variant lacking its own `sh`
+  // (old links); they never live on the doc, so strip them before spreading.
+  const legacy = decodeSharedMeta(encoded)
+  const { shardSlots: _sh, formShardSlots: _shf, ...meta } = legacy
   const doc: BuildDoc = {
     itemUniqueName: encoded.i,
     itemCategory: encoded.c as BrowseCategory,
     itemName: "",
     hasReactor: encoded.r,
-    ...decodeSharedMeta(encoded),
-    variants: encoded.vs.map(decodeVariant),
+    ...meta,
+    variants: encoded.vs.map((ev, i) => decodeVariant(ev, i, legacy)),
   }
   if (typeof encoded.ai === "number") {
     const ai = Math.floor(encoded.ai)
@@ -529,7 +563,6 @@ function buildStateToBuildDoc(state: Partial<BuildState>): BuildDoc {
     itemCategory: (state.itemCategory ?? "warframes") as BrowseCategory,
     itemImageName: state.itemImageName,
     hasReactor: state.hasReactor ?? false,
-    shardSlots: state.shardSlots ?? [],
     helminthAbility: state.helminthAbility,
     zawComponents: state.zawComponents,
     kitgunComponents: state.kitgunComponents,
@@ -544,6 +577,7 @@ function buildStateToBuildDoc(state: Partial<BuildState>): BuildDoc {
         stanceSlot: state.stanceSlot,
         normalSlots: state.normalSlots ?? [],
         arcaneSlots: state.arcaneSlots ?? [],
+        shardSlots: state.shardSlots ?? [],
         incarnonEnabled: state.incarnonEnabled,
         incarnonPerks: state.incarnonPerks,
         deploymentContext: state.deploymentContext,

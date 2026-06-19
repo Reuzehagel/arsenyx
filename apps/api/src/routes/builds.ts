@@ -86,9 +86,22 @@ function hasShardsInBuildData(buildData: unknown): boolean {
   const data = buildData as Record<string, unknown>
   const anyPlaced = (v: unknown): boolean =>
     Array.isArray(v) && v.some((s) => s != null)
+  // Top-level `shards` mirrors the active variant (and is the only set for
+  // single-loadout builds).
   if (anyPlaced(data.shards)) return true
-  // Twin-frames (Sirius & Orion) store each form's shards in `formShards`
-  // (keyed by form index); a half can carry shards while form 0 is empty.
+  // Shards are per-variant — any variant carrying its own set counts.
+  if (Array.isArray(data.variants)) {
+    if (
+      data.variants.some(
+        (v) =>
+          v &&
+          typeof v === "object" &&
+          anyPlaced((v as Record<string, unknown>).shards),
+      )
+    )
+      return true
+  }
+  // Legacy twin-frame per-form shards (pre per-variant builds).
   const formShards = data.formShards
   if (formShards && typeof formShards === "object") {
     return Object.values(formShards as Record<string, unknown>).some(anyPlaced)

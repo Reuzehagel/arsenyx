@@ -69,6 +69,9 @@ export function useVariantActions(opts: {
     label,
     slots: {},
     arcanes: [],
+    // Explicit empty set so a freshly-added variant starts with NO shards
+    // (independent), rather than copy-on-load inheriting the build's set.
+    shards: [],
     formIndex,
   })
 
