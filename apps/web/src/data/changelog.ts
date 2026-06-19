@@ -23,6 +23,11 @@ export const CHANGELOG: ChangelogEntry[] = [
         description:
           "Build pages open faster for logged-out visitors — they're now served from a cache instead of being rebuilt on every view.",
       },
+      {
+        type: "chore",
+        description:
+          "Likes, edits, and new builds now show up across build lists (and for logged-out visitors) within about a minute, instead of taking several minutes to appear.",
+      },
     ],
   },
   {

@@ -442,7 +442,7 @@ builds.post("/:slug/fork", rateLimitUser("mutate"), async (c) => {
   return c.json({ error: "slug_collision" }, 500)
 })
 
-builds.get("/", edgeCache({ maxAge: 300 }), async (c) => {
+builds.get("/", edgeCache({ maxAge: 60 }), async (c) => {
   const result = await runList({
     filters: parseListQuery(c),
     ...publicScope(),
@@ -560,7 +560,7 @@ async function loadPartnerContext(slug: string, partnerSlug: string) {
 // can linger in an anon cache entry for up to maxAge — the partner mutations
 // don't purge this path (no tractable per-key eviction). Bounded and low-risk:
 // the strip only shows a title/thumbnail, never the loadout.
-builds.get("/:slug/partners", edgeCache({ maxAge: 300 }), async (c) => {
+builds.get("/:slug/partners", edgeCache({ maxAge: 60 }), async (c) => {
   const slug = c.req.param("slug")
   const session = await getSession(c)
   const viewerId = session?.user.id
@@ -838,7 +838,7 @@ builds.delete("/:slug/bookmark", rateLimitUser("social"), async (c) => {
   return c.json({ hasBookmarked: false, bookmarkCount })
 })
 
-builds.get("/:slug", edgeCache({ maxAge: 300 }), async (c) => {
+builds.get("/:slug", edgeCache({ maxAge: 60 }), async (c) => {
   const slug = c.req.param("slug")
 
   // Fast path for the link-unfurl Worker (apps/web/worker/index.ts): skip the

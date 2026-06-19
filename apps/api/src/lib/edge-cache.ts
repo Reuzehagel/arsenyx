@@ -104,11 +104,11 @@ export function edgeCache(opts: { maxAge: number }): MiddlewareHandler {
 // always see their own writes immediately regardless of this.
 //
 // Scope note: callers purge the build DETAIL path only. The `GET /builds` LIST
-// (and the `/:slug/partners` strip) are also edge-cached (maxAge 300s) but are
+// (and the `/:slug/partners` strip) are also edge-cached (maxAge 60s) but are
 // NOT purged here — their entries are keyed by every filter/sort/page param
 // combination, and the Cache API has no wildcard delete, so there's no
 // tractable key to evict. Consequence: when a build flips PUBLIC->PRIVATE or is
-// deleted, its title/summary can linger in cached listings for up to that 300s
+// deleted, its title/summary can linger in cached listings for up to that 60s
 // TTL. Accepted as a bounded, best-effort window (the detail payload — the
 // sensitive surface — is purged precisely).
 export function purgeEdge(c: Context, path: string): void {
