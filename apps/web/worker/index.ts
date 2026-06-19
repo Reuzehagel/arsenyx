@@ -23,6 +23,13 @@ interface Env {
   ASSETS: { fetch: (request: Request) => Promise<Response> }
 }
 
+// Minimal shape of the Workers ExecutionContext — we only use waitUntil, to let
+// a cache write finish after the response has been returned. (The full
+// @cloudflare types aren't a dep of apps/web; this file is bundled by wrangler.)
+interface ExecutionCtx {
+  waitUntil(promise: Promise<unknown>): void
+}
+
 const API_BASE = "https://api.arsenyx.com"
 const SITE_URL = "https://www.arsenyx.com"
 const SITE_NAME = "Arsenyx"
@@ -34,6 +41,15 @@ const RESERVED_BUILD_SUBPATHS = new Set(["mine", "bookmarks", "new"])
 // upper bound that still cheaply rejects amplification attempts that try to
 // pin Postgres findUnique with megabyte-sized strings.
 const MAX_SLUG_LENGTH = 64
+
+// Per-colo Cache API TTL for fully-rewritten PUBLIC build-page HTML. One hot
+// slug dominates traffic, so caching the rendered shell lets repeat hits in a
+// colo skip the asset fetch, the API round-trip, and the HTMLRewriter pass.
+// Tradeoff: the build name/description/like/view counts baked into the <head>
+// meta — and a just-flipped visibility — can lag by up to this window. Only the
+// crawler-facing meta is affected; the page BODY is always live (the SPA
+// refetches client-side). Lower this if meta freshness matters more than hit rate.
+const BUILD_HTML_TTL = 300
 
 // Sync with CATEGORIES in src/lib/warframe.ts.
 const CATEGORY_LABELS: Record<string, string> = {
@@ -120,7 +136,7 @@ type BuildSummary = {
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionCtx): Promise<Response> {
     const url = new URL(request.url)
 
     if (request.method !== "GET") return env.ASSETS.fetch(request)
@@ -143,7 +159,7 @@ export default {
     }
 
     const buildSlug = extractBuildSlug(url.pathname)
-    if (buildSlug) return handleBuildPage(request, env, url, buildSlug)
+    if (buildSlug) return handleBuildPage(request, env, url, buildSlug, ctx)
 
     const item = extractItemPath(url.pathname)
     if (item) return handleItemPage(request, env, url, item)
@@ -161,6 +177,7 @@ async function handleBuildPage(
   env: Env,
   url: URL,
   slug: string,
+  ctx: ExecutionCtx,
 ): Promise<Response> {
   // Embed iframes (`?embed=1`) get a dedicated lightweight shell instead of
   // the full SPA index.html, so a guide page with many embeds doesn't boot
@@ -185,6 +202,18 @@ async function handleBuildPage(
       }
     }
     return res
+  }
+
+  // Per-colo edge cache for the rendered PUBLIC build shell. The injected meta
+  // is derived from an anonymous API read, so the HTML is identical for every
+  // visitor — safe to share across users. The key drops the query string so
+  // tracking params (utm_*, fbclid, …) don't fragment the one hot slug; the
+  // ?embed=1 variant already returned above, so it never reaches this key.
+  const cache = edgeCache()
+  const cacheKey = new Request(url.origin + url.pathname)
+  if (cache) {
+    const hit = await cache.match(cacheKey)
+    if (hit) return hit
   }
 
   // Workers Static Assets redirects `/index.html` → `/` by default
@@ -226,7 +255,13 @@ async function handleBuildPage(
   // image by the item's stable uniqueName against the same image-map.json the
   // SPA uses, falling back to the stored value on a miss.
   const imageMap = await fetchImageMap(env, url)
-  return rewriteMeta(shellRes, buildMeta(build, slug, imageMap))
+  const res = rewriteMeta(shellRes, buildMeta(build, slug, imageMap))
+
+  // Only the fully-enriched PUBLIC HTML is cached. 404s, API-error fallbacks,
+  // and private/unlisted shells are left uncached so a transient blip or a
+  // just-changed visibility can't pin a wrong response for the whole TTL.
+  if (!cache) return res
+  return cacheStore(res, cacheKey, cache, ctx)
 }
 
 function extractBuildSlug(pathname: string): string | null {
@@ -259,7 +294,18 @@ async function fetchBuild(
       {
         headers: { accept: "application/json" },
         signal: AbortSignal.timeout(2500),
-        cf: { cacheTtl: 60, cacheEverything: true },
+        // Per-status TTL rather than a blanket cacheTtl: never cache a 5xx (a
+        // transient API blip would otherwise pin a degraded shell for the whole
+        // window), briefly cache 404s to blunt dead-link hammering, and cache
+        // good meta for the same window as the rendered HTML.
+        cf: {
+          cacheEverything: true,
+          cacheTtlByStatus: {
+            "200-299": BUILD_HTML_TTL,
+            "404": 10,
+            "500-599": 0,
+          },
+        },
       } as RequestInit,
     )
     if (res.status === 404) return "not-found"
@@ -451,6 +497,33 @@ function stripTrailingSlash(pathname: string): string {
 // Shared helpers
 // ---------------------------------------------------------------------------
 
+// Per-colo Cache API handle. `caches.default` is a workerd global; we cast it
+// the same way we cast HTMLRewriter rather than pulling in the full CF types.
+// Returns null if absent (e.g. a non-workerd test runtime) so callers fall back
+// to the uncached path.
+function edgeCache(): EdgeCache | null {
+  const c = (globalThis as { caches?: { default?: EdgeCache } }).caches
+  return c?.default ?? null
+}
+
+// Store a clone of the streamed rewrite result while the original streams to the
+// user (waitUntil keeps the put alive past the response). We re-wrap to own the
+// headers: the asset shell can carry _headers-derived Cache-Control, and a
+// shared cache must never hold a Set-Cookie — so overwrite the TTL and strip any
+// cookie explicitly. Cloning a streaming body tees it, so no manual buffering.
+function cacheStore(
+  res: Response,
+  key: Request,
+  cache: EdgeCache,
+  ctx: ExecutionCtx,
+): Response {
+  const out = new Response(res.body, res)
+  out.headers.delete("set-cookie")
+  out.headers.set("cache-control", `public, s-maxage=${BUILD_HTML_TTL}`)
+  ctx.waitUntil(cache.put(key, out.clone()))
+  return out
+}
+
 // Compact `uniqueName → current imageName` map emitted by
 // scripts/build-items-index.ts and served from Static Assets. Fetched through
 // the ASSETS binding only on the build-page path.
@@ -591,6 +664,11 @@ function escapeAttr(s: string): string {
 // wrangler at deploy time, not by Vite.
 interface HTMLRewriterCtor {
   new (): HTMLRewriterInst
+}
+// Subset of the workerd Cache API surface we touch (caches.default).
+interface EdgeCache {
+  match(request: Request): Promise<Response | undefined>
+  put(request: Request, response: Response): Promise<void>
 }
 interface HTMLRewriterInst {
   on(selector: string, handlers: ElementHandlers): HTMLRewriterInst
