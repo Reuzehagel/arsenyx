@@ -74,8 +74,8 @@ export function Footer() {
                 Arsenyx is free and ad-free
               </span>
               <span className="text-muted-foreground">
-                , running on ~$10/mo of server costs. If it&apos;s useful to
-                you, a small tip keeps it online.
+                , and costs me about $10 a month to keep online. If it&apos;s
+                useful to you, a small tip helps cover it.
               </span>
             </p>
             <Button

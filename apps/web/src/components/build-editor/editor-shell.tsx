@@ -1122,8 +1122,8 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
             <div>
               <p className="font-medium">Thanks for building with Arsenyx</p>
               <p className="text-muted-foreground text-sm">
-                It&apos;s free and ad-free, running on ~$10/mo of server costs.
-                If it&apos;s useful to you, a small tip keeps it online.
+                It&apos;s free and ad-free, and costs me about $10 a month to
+                run. If it&apos;s useful to you, a small tip keeps it going.
               </p>
             </div>
             <div className="flex text-sm">
