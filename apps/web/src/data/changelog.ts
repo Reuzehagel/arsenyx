@@ -11,6 +11,21 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-06-19",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Sirius & Orion now carry Archon Shards per form: Sirius and Orion each keep their own shard install, so you can plan a separate shard setup for each half and switching forms no longer overwrites the other's. The shards travel in the share URL too, so a link opens with both forms' shards intact.",
+      },
+      {
+        type: "chore",
+        description:
+          "Build pages load faster — the public version of a build page is now cached at the edge, so the common case renders without waiting on an extra round-trip.",
+      },
+    ],
+  },
+  {
     date: "2026-06-18",
     changes: [
       {
