@@ -51,6 +51,13 @@ const MAX_SLUG_LENGTH = 64
 // refetches client-side). Lower this if meta freshness matters more than hit rate.
 const BUILD_HTML_TTL = 300
 
+// TTL for the anonymous API meta subrequest — the cold-miss shield behind the
+// HTML cache above. Kept short and decoupled from BUILD_HTML_TTL so the two
+// caches don't compound: a freshly-written HTML entry carries meta at most this
+// stale, bounding worst-case staleness to ~BUILD_HTML_TTL + BUILD_META_TTL
+// rather than 2×BUILD_HTML_TTL.
+const BUILD_META_TTL = 60
+
 // Sync with CATEGORIES in src/lib/warframe.ts.
 const CATEGORY_LABELS: Record<string, string> = {
   warframes: "Warframes",
@@ -297,11 +304,12 @@ async function fetchBuild(
         // Per-status TTL rather than a blanket cacheTtl: never cache a 5xx (a
         // transient API blip would otherwise pin a degraded shell for the whole
         // window), briefly cache 404s to blunt dead-link hammering, and cache
-        // good meta for the same window as the rendered HTML.
+        // good meta only briefly — this is the cold-miss shield behind the HTML
+        // cache, kept short (BUILD_META_TTL) so the two TTLs don't compound.
         cf: {
           cacheEverything: true,
           cacheTtlByStatus: {
-            "200-299": BUILD_HTML_TTL,
+            "200-299": BUILD_META_TTL,
             "404": 10,
             "500-599": 0,
           },
@@ -519,7 +527,14 @@ function cacheStore(
 ): Response {
   const out = new Response(res.body, res)
   out.headers.delete("set-cookie")
-  out.headers.set("cache-control", `public, s-maxage=${BUILD_HTML_TTL}`)
+  // max-age=0 + must-revalidate keeps browsers revalidating every navigation
+  // (so a fresh Worker run picks up updated meta), while s-maxage lets the
+  // shared per-colo Cache API serve the entry for the TTL. Without max-age a
+  // browser could heuristically cache the shell and pin stale <head> meta.
+  out.headers.set(
+    "cache-control",
+    `public, max-age=0, s-maxage=${BUILD_HTML_TTL}, must-revalidate`,
+  )
   ctx.waitUntil(cache.put(key, out.clone()))
   return out
 }

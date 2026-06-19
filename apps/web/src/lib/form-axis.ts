@@ -41,6 +41,37 @@ export interface FormAxis {
   formExilusPolarity: string | null | undefined
 }
 
+/** Item fields a form's innate polarities override. */
+type ItemPolarityFields = {
+  polarities?: string[]
+  auraPolarity?: string | string[] | null
+  exilusPolarity?: string | null
+}
+
+/**
+ * Overlay the active form's innate polarities onto an item so the layout, slot
+ * grid, and forma/capacity maths use the right ones. Twin-frame forms have
+ * separate upgrade menus (Sirius aura = Vazarin, Orion aura = Naramon), so each
+ * renders its own; a half with none falls back to empty (never the other
+ * half's). Returns the same `item` reference for normal frames — they pay
+ * nothing. Single source for the overlay shared by the editor and the viewer.
+ */
+export function applyFormPolarities<T extends ItemPolarityFields>(
+  item: T,
+  axis: Pick<
+    FormAxis,
+    "isTwin" | "formPolarities" | "formAuraPolarity" | "formExilusPolarity"
+  >,
+): T {
+  if (!axis.isTwin) return item
+  return {
+    ...item,
+    polarities: axis.formPolarities ?? [],
+    auraPolarity: axis.formAuraPolarity ?? null,
+    exilusPolarity: axis.formExilusPolarity ?? null,
+  } as T
+}
+
 export function deriveFormAxis(
   item: { forms?: FrameForm[] },
   variants: SavedVariant[],

@@ -25,7 +25,7 @@ import {
   refreshImagesFromMap,
   selectVariant,
 } from "@/lib/codec/build-codec-adapter"
-import { deriveFormAxis } from "@/lib/form-axis"
+import { applyFormPolarities, deriveFormAxis } from "@/lib/form-axis"
 import { makeRefResolver } from "@/lib/guide-refs"
 import { arcanesQuery } from "@/lib/queries/arcanes-query"
 import { type BuildDetail, hasGuideContent } from "@/lib/queries/build-query"
@@ -195,19 +195,16 @@ function BuildViewerBodyInner({
     () => deriveFormAxis(item, variants, activeIndex),
     [item, variants, activeIndex],
   )
-  // Active form's innate polarities differ per form (Sirius aura Vazarin, Orion
-  // aura Naramon); feed a polarity-overridden item to the layout, slot grid,
-  // and forma/capacity maths. Same reference as `item` for normal frames.
+  // Polarity-overridden view of the item (active form's innate polarities) for
+  // the layout, slot grid, and forma/capacity maths — see `applyFormPolarities`.
   const effectiveItem = useMemo(
     () =>
-      isTwin
-        ? {
-            ...item,
-            polarities: formPolarities ?? [],
-            auraPolarity: formAuraPolarity ?? null,
-            exilusPolarity: formExilusPolarity ?? null,
-          }
-        : item,
+      applyFormPolarities(item, {
+        isTwin,
+        formPolarities,
+        formAuraPolarity,
+        formExilusPolarity,
+      }),
     [isTwin, item, formPolarities, formAuraPolarity, formExilusPolarity],
   )
   const selectForm = (formIndex: number) => {

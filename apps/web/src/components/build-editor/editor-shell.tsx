@@ -63,7 +63,7 @@ import {
   saveEditorDraft,
   type EditorDraftPayload,
 } from "@/lib/editor-draft"
-import { deriveFormAxis } from "@/lib/form-axis"
+import { applyFormPolarities, deriveFormAxis } from "@/lib/form-axis"
 import { collectGuideRefs } from "@/lib/guide-refs"
 import { useHotkey } from "@/lib/hooks/hotkeys"
 import { consumeDraft } from "@/lib/import-draft"
@@ -428,20 +428,16 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     () => deriveFormAxis(item, variants, clampedActiveIndex),
     [item, variants, clampedActiveIndex],
   )
-  // The active form's innate polarities differ per form (Sirius aura Vazarin,
-  // Orion aura Naramon), so the layout, slot grid, and forma/capacity maths use
-  // a polarity-overridden view of the item. Identical reference to `item` for
-  // normal frames — they pay nothing.
+  // Polarity-overridden view of the item (active form's innate polarities) for
+  // the layout, slot grid, and forma/capacity maths — see `applyFormPolarities`.
   const effectiveItem = useMemo(
     () =>
-      isTwin
-        ? {
-            ...item,
-            polarities: formPolarities ?? [],
-            auraPolarity: formAuraPolarity ?? null,
-            exilusPolarity: formExilusPolarity ?? null,
-          }
-        : item,
+      applyFormPolarities(item, {
+        isTwin,
+        formPolarities,
+        formAuraPolarity,
+        formExilusPolarity,
+      }),
     [isTwin, item, formPolarities, formAuraPolarity, formExilusPolarity],
   )
 
