@@ -49,13 +49,12 @@ function AboutPage() {
             <p>
               It&apos;s just me. No team, no company, no roadmap meetings
               &mdash; just one Tenno building the tool I wished existed, for the
-              love of the game. Arsenyx is free and ad-free; if it&apos;s useful
-              to you, a small tip helps cover the server costs.
+              love of the game. Arsenyx is free and ad-free, running on ~$10/mo
+              of server costs out of my own pocket. If it&apos;s useful to you,
+              a small tip keeps it online &mdash; it genuinely helps.
             </p>
             <div className="not-prose">
               <Button
-                variant="outline"
-                size="sm"
                 render={
                   <Link
                     href={EXTERNAL_LINKS.koFi}

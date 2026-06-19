@@ -1118,20 +1118,20 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       if (!isUpdate && !hasShownDonationNudge()) {
         markDonationNudgeShown()
         toast(
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             <div>
               <p className="font-medium">Thanks for building with Arsenyx</p>
               <p className="text-muted-foreground text-sm">
-                It&apos;s free and runs on ~$5/mo of server costs. If it&apos;s
-                useful to you, a small tip keeps it online.
+                It&apos;s free and ad-free, running on ~$10/mo of server costs.
+                If it&apos;s useful to you, a small tip keeps it online.
               </p>
             </div>
-            <div className="flex gap-4 text-sm">
+            <div className="flex text-sm">
               <a
                 href={EXTERNAL_LINKS.koFi}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-medium underline underline-offset-2"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center rounded-md px-3 py-1.5 font-medium transition-colors"
               >
                 Support on Ko-fi
               </a>
@@ -1139,7 +1139,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
           </div>,
           // Explicit close button — dismissal shouldn't rely on the user
           // knowing they can swipe a toast away.
-          { duration: 12000, closeButton: true },
+          { duration: 15000, closeButton: true },
         )
       }
       navigate({ to: "/builds/$slug", params: { slug } })
