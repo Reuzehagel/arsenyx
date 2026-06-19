@@ -108,20 +108,21 @@ function versionFile(): Plugin {
       const main = Object.values(bundle).find(
         (c) => c.type === "chunk" && c.isEntry && c.name === "main",
       )
-      // Fail loud rather than ship {entry:null}: a silent null would disable
-      // update detection for every client with no other signal. Fires if the
-      // `main` rollup input key (build.rollupOptions.input) is ever renamed.
+      // Fail the build rather than ship {entry:null}: a silent null would
+      // disable update detection for every client with no other signal.
+      // `this.error` throws (aborts the build); `this.warn` would only log and
+      // still emit the broken file. Fires if the `main` rollup input key
+      // (build.rollupOptions.input) is ever renamed.
       if (!main) {
-        this.warn(
+        this.error(
           "versionFile: no `main` entry chunk found; /version.json won't detect deploys",
         )
       }
       // `entry` mirrors the `src` Vite injects into index.html (base "/").
-      const entry = main ? `/${main.fileName}` : null
       this.emitFile({
         type: "asset",
         fileName: "version.json",
-        source: `${JSON.stringify({ entry })}\n`,
+        source: `${JSON.stringify({ entry: `/${main.fileName}` })}\n`,
       })
     },
   }
