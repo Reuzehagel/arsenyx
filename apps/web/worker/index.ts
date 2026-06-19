@@ -229,9 +229,8 @@ async function handleBuildPage(
   // the whole TTL; a new version id orphans old entries (never matched again)
   // and they age out by TTL.
   const cache = edgeCache()
-  const version = env.CF_VERSION_METADATA?.id ?? "dev"
   const cacheKey = new Request(
-    `${url.origin}${url.pathname}?__v=${encodeURIComponent(version)}`,
+    buildPageCacheKeyUrl(url, env.CF_VERSION_METADATA?.id),
   )
   if (cache) {
     const hit = await cache.match(cacheKey)
@@ -526,6 +525,21 @@ function stripTrailingSlash(pathname: string): string {
 // ---------------------------------------------------------------------------
 // Shared helpers
 // ---------------------------------------------------------------------------
+
+// Cache key URL for a build page's rendered shell. Two invariants, both
+// load-bearing (see handleBuildPage's cache comment + tests in index.test.ts):
+//   - drops the query string, so tracking params (utm_*, fbclid, …) can't
+//     fragment the one hot slug across many cache entries;
+//   - namespaces by the deploy version, so a deploy starts a fresh namespace —
+//     the cached shell embeds this deploy's hashed /assets/*.js, which 404 after
+//     the next deploy. Falls back to "dev" when the binding is absent.
+// Exported for unit tests; the synthetic `?__v=` is only ever a cache key.
+export function buildPageCacheKeyUrl(
+  url: URL,
+  version: string | undefined,
+): string {
+  return `${url.origin}${url.pathname}?__v=${encodeURIComponent(version ?? "dev")}`
+}
 
 // Per-colo Cache API handle. `caches.default` is a workerd global; we cast it
 // the same way we cast HTMLRewriter rather than pulling in the full CF types.
