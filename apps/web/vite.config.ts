@@ -92,6 +92,41 @@ function sitemap(): Plugin {
   }
 }
 
+/** Emit /version.json holding the SPA's content-hashed entry filename. The
+ * app-update hook (lib/hooks/use-app-update.ts) polls this tiny file to detect
+ * new deploys — a code change ships a new entry hash, so the file's `entry`
+ * differs from the one the running tab loaded with. It's a plain static asset
+ * (excluded from `run_worker_first` in wrangler.toml, short-TTL in
+ * public/_headers), so each poll is a cheap CDN 304 with ZERO Worker
+ * invocations — unlike polling `/index.html`, which ran the edge Worker and
+ * 307-redirected (two hits per poll). */
+function versionFile(): Plugin {
+  return {
+    name: "arsenyx:version-file",
+    apply: "build",
+    generateBundle(_options, bundle) {
+      const main = Object.values(bundle).find(
+        (c) => c.type === "chunk" && c.isEntry && c.name === "main",
+      )
+      // Fail loud rather than ship {entry:null}: a silent null would disable
+      // update detection for every client with no other signal. Fires if the
+      // `main` rollup input key (build.rollupOptions.input) is ever renamed.
+      if (!main) {
+        this.warn(
+          "versionFile: no `main` entry chunk found; /version.json won't detect deploys",
+        )
+      }
+      // `entry` mirrors the `src` Vite injects into index.html (base "/").
+      const entry = main ? `/${main.fileName}` : null
+      this.emitFile({
+        type: "asset",
+        fileName: "version.json",
+        source: `${JSON.stringify({ entry })}\n`,
+      })
+    },
+  }
+}
+
 export default defineConfig({
   define: {
     __DATA_VERSION__: JSON.stringify(dataVersion()),
@@ -101,6 +136,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     sitemap(),
+    versionFile(),
   ],
   resolve: {
     alias: {

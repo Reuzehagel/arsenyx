@@ -22,6 +22,13 @@
 /robots.txt
   Cache-Control: public, max-age=3600
 
+# Deploy marker polled by the app-update hook (lib/hooks/use-app-update.ts).
+# must-revalidate so a returning tab learns about a new deploy promptly; tiny
+# body + ETag means each poll is a cheap 304, served by the assets binding with
+# no Worker invocation (excluded in wrangler.toml run_worker_first).
+/version.json
+  Cache-Control: public, max-age=0, must-revalidate
+
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
