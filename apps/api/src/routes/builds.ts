@@ -442,7 +442,7 @@ builds.post("/:slug/fork", rateLimitUser("mutate"), async (c) => {
   return c.json({ error: "slug_collision" }, 500)
 })
 
-builds.get("/", edgeCache({ maxAge: 120 }), async (c) => {
+builds.get("/", edgeCache({ maxAge: 300 }), async (c) => {
   const result = await runList({
     filters: parseListQuery(c),
     ...publicScope(),
@@ -550,7 +550,16 @@ async function loadPartnerContext(slug: string, partnerSlug: string) {
   return { own, partner }
 }
 
-builds.get("/:slug/partners", async (c) => {
+// Edge-cached like the detail route: this fires on every full build-detail
+// page view (the "Related builds" strip), so an uncached query here doubles
+// the DB hits per anonymous view. Session-cookie requests bypass the cache
+// (edgeCache checks the Cookie header), so authenticated viewers still get
+// their viewer-specific partner visibility. Accepted staleness, same class as
+// the GET /builds list: if a partner flips PUBLIC->PRIVATE or is unlinked, it
+// can linger in an anon cache entry for up to maxAge — the partner mutations
+// don't purge this path (no tractable per-key eviction). Bounded and low-risk:
+// the strip only shows a title/thumbnail, never the loadout.
+builds.get("/:slug/partners", edgeCache({ maxAge: 300 }), async (c) => {
   const slug = c.req.param("slug")
   const session = await getSession(c)
   const viewerId = session?.user.id

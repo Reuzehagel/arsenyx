@@ -1,11 +1,10 @@
 import type { Context, MiddlewareHandler } from "hono"
 
 // Best-effort edge caching for anonymous public reads, using the Cloudflare
-// Cache API (`caches.default`). The point is purely to let Neon's autosuspend
-// fire: every cache HIT is a request that never touches Postgres, so the DB
-// can actually sleep during quiet periods instead of being kept awake by a
-// constant trickle of reads. (Neon Free bills compute-hours and its 5-minute
-// autosuspend is non-configurable, so "fewer wakeups" is the only lever.)
+// Cache API (`caches.default`). Every cache HIT is a request that never touches
+// Postgres (nor Hyperdrive), so this directly cuts query volume against the
+// Hyperdrive Free-plan daily query cap — the dominant lever now that anonymous
+// reads (site browsing + Discord/embed traffic) make up most of the load.
 //
 // Correctness invariant — we ONLY cache responses for requests with no session
 // cookie. Authenticated detail/list responses are personalized (isOwner /
@@ -105,12 +104,13 @@ export function edgeCache(opts: { maxAge: number }): MiddlewareHandler {
 // always see their own writes immediately regardless of this.
 //
 // Scope note: callers purge the build DETAIL path only. The `GET /builds` LIST
-// is also edge-cached (maxAge 120s) but is NOT purged here — its entries are
-// keyed by every filter/sort/page param combination, and the Cache API has no
-// wildcard delete, so there's no tractable key to evict. Consequence: when a
-// build flips PUBLIC->PRIVATE or is deleted, its title/summary can linger in
-// cached listings for up to that 120s TTL. Accepted as a bounded, best-effort
-// window (the detail payload — the sensitive surface — is purged precisely).
+// (and the `/:slug/partners` strip) are also edge-cached (maxAge 300s) but are
+// NOT purged here — their entries are keyed by every filter/sort/page param
+// combination, and the Cache API has no wildcard delete, so there's no
+// tractable key to evict. Consequence: when a build flips PUBLIC->PRIVATE or is
+// deleted, its title/summary can linger in cached listings for up to that 300s
+// TTL. Accepted as a bounded, best-effort window (the detail payload — the
+// sensitive surface — is purged precisely).
 export function purgeEdge(c: Context, path: string): void {
   const cache = defaultCache()
   if (!cache) return
