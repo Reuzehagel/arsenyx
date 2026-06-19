@@ -25,6 +25,7 @@ import {
   refreshImagesFromMap,
   selectVariant,
 } from "@/lib/codec/build-codec-adapter"
+import { deriveFormAxis } from "@/lib/form-axis"
 import { makeRefResolver } from "@/lib/guide-refs"
 import { arcanesQuery } from "@/lib/queries/arcanes-query"
 import { type BuildDetail, hasGuideContent } from "@/lib/queries/build-query"
@@ -174,6 +175,28 @@ function BuildViewerBodyInner({
   const activeVariant = variants[activeIndex]
   const hasGuide = hasGuideContent(build, activeVariant)
 
+  // Twin-frames (Sirius & Orion): the active variant's form picks the ability
+  // set (Helminth shows only on the primary form), and the variant tabs show
+  // only that form's variants. Shared with the editor via `deriveFormAxis`;
+  // no-op for normal frames. The form toggle jumps to the target form's first
+  // variant.
+  const {
+    isTwin,
+    activeFormIndex,
+    formAbilities,
+    helminthAllowed,
+    formNames,
+    formVariants,
+    formActiveLocalIndex,
+  } = useMemo(
+    () => deriveFormAxis(item, variants, activeIndex),
+    [item, variants, activeIndex],
+  )
+  const selectForm = (formIndex: number) => {
+    const target = variants.findIndex((v) => (v.formIndex ?? 0) === formIndex)
+    if (target >= 0) onSelectVariant(target)
+  }
+
   const categoryLabel = getCategoryLabel(category)
   const layout = useMemo(() => getBuildLayout(item, category), [item, category])
   const { isCompanion, normalSlotCount, auraSlotCount, arcaneCount } = layout
@@ -225,6 +248,8 @@ function BuildViewerBodyInner({
     deploymentContext,
     placedMods: slots.placed,
     placedArcanes: arcanes.placed,
+    formAbilities,
+    helminthAllowed,
     readOnly: true as const,
   }
 
@@ -258,8 +283,8 @@ function BuildViewerBodyInner({
             category={category}
             itemName={item.name}
             itemImageName={item.imageName ?? undefined}
-            abilities={item.abilities ?? []}
-            helminth={helminth}
+            abilities={formAbilities ?? item.abilities ?? []}
+            helminth={helminthAllowed ? helminth : {}}
             shards={shards}
             zawComponents={zawComponents}
             kitgunComponents={kitgunComponents}
@@ -285,13 +310,20 @@ function BuildViewerBodyInner({
           arcaneConfig={arcaneConfig}
           sidebarProps={sidebarProps}
           conflicts={conflictMap}
-          topBarLayout={variants.length > 1 ? "centered" : "popover-only"}
+          topBarLayout={
+            variants.length > 1 || isTwin ? "centered" : "popover-only"
+          }
           topBar={
-            variants.length > 1 ? (
+            variants.length > 1 || isTwin ? (
               <VariantTabs
-                variants={variants}
-                activeIndex={activeIndex}
-                onSelect={onSelectVariant}
+                variants={formVariants.map((f) => f.v)}
+                activeIndex={formActiveLocalIndex}
+                onSelect={(local) =>
+                  onSelectVariant(formVariants[local].globalIndex)
+                }
+                formNames={isTwin ? formNames : undefined}
+                activeFormIndex={activeFormIndex}
+                onSelectForm={isTwin ? selectForm : undefined}
               />
             ) : undefined
           }

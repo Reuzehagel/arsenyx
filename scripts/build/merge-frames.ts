@@ -4,20 +4,36 @@
  * not in DE — we include it from the wiki side only.
  *
  * DE ships everything in a single flat `ExportWarframes` array, with
- * `productCategory ∈ {"Suits","SpaceSuits","MechSuits"}` differentiating
- * the rows. Archwing frames also carry a `<ARCHWING> ` prefix on the DE
- * name that needs stripping to match wiki keys.
+ * `productCategory ∈ {"Suits","SpaceSuits","MechSuits","SpecialItems"}`
+ * differentiating the rows ("SpecialItems" is the Orion & Sirius twin-frame,
+ * treated as a warframe — see `categoryOf`). Archwing frames also carry a
+ * `<ARCHWING> ` prefix on the DE name that needs stripping to match wiki keys.
  *
  * Polarity data comes from the wiki — DE doesn't ship frame polarities or
  * aura polarities at all. The wiki carries `Polarities` and `AuraPolarity`
  * on each frame entry.
  */
 
-import type { DeFrame } from "./read-de"
-import { normalizePolarity, normalizePolarities } from "./polarity"
 import { cleanDeName } from "./names"
+import { normalizePolarity, normalizePolarities } from "./polarity"
+import type { DeFrame } from "./read-de"
 
 type FrameCategory = "warframes" | "archwing" | "necramechs" | "operators"
+
+interface FrameAbility {
+  uniqueName: string
+  name: string
+  description: string
+  imageName?: string
+}
+
+/** One switchable form of a twin-frame (e.g. Sirius & Orion). */
+export interface MergedFrameForm {
+  name: string
+  abilities: readonly FrameAbility[]
+  passiveDescription?: string
+  exalted: readonly string[]
+}
 
 export interface MergedFrame {
   uniqueName: string
@@ -38,12 +54,10 @@ export interface MergedFrame {
    *  `modPools.includes(mod.compatName)` predicate uniformly. */
   modPools: readonly string[]
   /** Each frame's four standard abilities, plus the passive on warframes. */
-  abilities: ReadonlyArray<{
-    uniqueName: string
-    name: string
-    description: string
-    imageName?: string
-  }>
+  abilities: readonly FrameAbility[]
+  /** Twin-frames only: the switchable forms (`forms[0]` is the primary and
+   *  mirrors the top-level `abilities`/`passiveDescription`/`exalted`). */
+  forms?: readonly MergedFrameForm[]
   /** Lowercase polarity names from wiki Polarities (8 slots). */
   polarities: readonly string[]
   /** Aura slot polarity (warframes + archwing + necramech only). Array
@@ -80,6 +94,11 @@ function categoryOf(productCategory: string): FrameCategory {
   switch (productCategory) {
     case "Suits":
       return "warframes"
+    // DE buckets the Orion & Sirius twin-frame under "SpecialItems" rather
+    // than "Suits" (uniqueName /Lotus/Powersuits/SiriusOrion/OrionSuit). It's
+    // a regular Warframe — full stats/abilities/passive — so treat it as one.
+    case "SpecialItems":
+      return "warframes"
     case "SpaceSuits":
       return "archwing"
     case "MechSuits":
@@ -97,7 +116,10 @@ interface FrameWikiTable {
 }
 
 /** Look up the wiki record across all four sub-tables. */
-function findWikiFrame(name: string, wiki: FrameWikiTable): WikiFrame | undefined {
+function findWikiFrame(
+  name: string,
+  wiki: FrameWikiTable,
+): WikiFrame | undefined {
   return (
     wiki.Warframes?.[name] ??
     wiki.Archwings?.[name] ??
@@ -121,7 +143,10 @@ export interface MergeFramesOpts {
  *
  *  Necramechs / Archwings each have their own pool, plus per-name
  *  augments. Operators take no mods (they use Focus, not mods). */
-function modPoolsForFrame(name: string, category: FrameCategory): readonly string[] {
+function modPoolsForFrame(
+  name: string,
+  category: FrameCategory,
+): readonly string[] {
   switch (category) {
     case "warframes": {
       const pools = new Set<string>(["WARFRAME", "AURA", name])
@@ -137,10 +162,7 @@ function modPoolsForFrame(name: string, category: FrameCategory): readonly strin
   }
 }
 
-export function mergeFrame(
-  de: DeFrame,
-  opts: MergeFramesOpts,
-): MergedFrame {
+export function mergeFrame(de: DeFrame, opts: MergeFramesOpts): MergedFrame {
   const cleanName = cleanDeName(de.name)
   const wiki = findWikiFrame(cleanName, opts.wiki)
   if (!wiki) opts.unmatched.add(cleanName)
@@ -176,6 +198,56 @@ export function mergeFrame(
     exilusPolarity: normalizePolarity(wiki?.ExilusPolarity),
     isPrime: cleanName.includes(" Prime"),
   }
+}
+
+/** Twin-frames that DE ships as two separate `ExportWarframes` rows sharing a
+ *  uniqueName prefix (one codex-visible "Suits" row + one `excludeFromCodex`
+ *  "SpecialItems" row). We collapse each pair into ONE catalog entity carrying
+ *  both ability sets under `forms`. `primaryUnique` is the form players control
+ *  by default and the one Helminth can infuse on — it becomes `forms[0]` and
+ *  the top-level (back-compat) abilities/passive/exalted. */
+const TWIN_FRAMES: ReadonlyArray<{ prefix: string; primaryUnique: string }> = [
+  {
+    prefix: "/Lotus/Powersuits/SiriusOrion/",
+    primaryUnique: "/Lotus/Powersuits/SiriusOrion/SiriusSuit",
+  },
+]
+
+function toForm(f: MergedFrame): MergedFrameForm {
+  return {
+    name: f.name,
+    abilities: f.abilities,
+    passiveDescription: f.passiveDescription,
+    exalted: f.exalted,
+  }
+}
+
+/** Collapse known twin-frame pairs (see `TWIN_FRAMES`) into single entities.
+ *  Unmatched/solo rows pass through untouched, so this is safe to run over the
+ *  full merged-frame list before any downstream consumer (browse index, detail
+ *  emit, helminth derivation, exalted union). */
+export function collapseTwinFrames(frames: MergedFrame[]): MergedFrame[] {
+  let out = frames
+  for (const twin of TWIN_FRAMES) {
+    const members = out.filter((f) => f.uniqueName.startsWith(twin.prefix))
+    if (members.length < 2) continue // DE shape drifted — leave as-is.
+    const primary =
+      members.find((f) => f.uniqueName === twin.primaryUnique) ?? members[0]
+    const others = members.filter((f) => f !== primary)
+    const ordered = [primary, ...others]
+    const merged: MergedFrame = {
+      ...primary,
+      modPools: [...new Set(ordered.flatMap((f) => f.modPools))],
+      exalted: [...new Set(ordered.flatMap((f) => f.exalted))],
+      forms: ordered.map(toForm),
+    }
+    // Swap the merged entity in for the primary and drop the other members.
+    const otherSet = new Set(others)
+    out = out
+      .filter((f) => f === primary || !otherSet.has(f))
+      .map((f) => (f === primary ? merged : f))
+  }
+  return out
 }
 
 /** Add wiki-only Operator entries (no DE rows for these). */

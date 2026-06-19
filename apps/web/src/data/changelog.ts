@@ -11,6 +11,26 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-06-18",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Sirius & Orion — the new twin Warframe — is in the planner as a single frame with a form toggle above the variant tabs. Each form (Sirius and Orion) keeps its own abilities, Helminth, and set of build variants, so you can plan both loadouts side by side under one build and flip between them. Helminth stays on the primary form, matching how the frame works in game.",
+      },
+      {
+        type: "feat",
+        description:
+          "The latest gear is in the catalog — Sirius & Orion, Styanax Prime, Afentis Prime, and the Pride and Wrath melees, among others. Brand-new weapons the Wiki hasn't documented yet still show up and can be modded; their detailed stats fill in automatically once the Wiki catches up.",
+      },
+      {
+        type: "feat",
+        description:
+          "The home page now leads with the newest Warframe, and the “Recently added” list reliably shows the latest releases.",
+      },
+    ],
+  },
+  {
     date: "2026-06-13",
     changes: [
       {

@@ -33,6 +33,10 @@ export interface BuildVariant {
   deploymentContext?: DeploymentContext
   guideSummary?: string
   guideDescription?: string
+  /** Twin-frames (e.g. Sirius & Orion): which switchable form this variant
+   *  builds. Indexes into the catalog item's `forms` array (0 = primary).
+   *  Absent / 0 for every normal frame. */
+  formIndex?: number
 }
 
 /**

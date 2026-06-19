@@ -127,6 +127,18 @@ export interface DetailItem extends BrowseItem {
    *  …). Refined against mod `compatTags`/`incompatTags` in `getModsForItem`.
    *  Weapons-only; absent on frames/companions (→ no tag restriction). */
   compatTags?: readonly string[]
+  /** Twin-frames (Sirius & Orion) ship two switchable forms with distinct
+   *  ability sets. `forms[0]` is the primary and mirrors the top-level
+   *  `abilities`/`passiveDescription`/`exalted`; the build's per-variant
+   *  `formIndex` selects which form a variant uses. */
+  forms?: FrameForm[]
+}
+
+export interface FrameForm {
+  name: string
+  abilities: ItemAbility[]
+  passiveDescription?: string
+  exalted?: string[]
 }
 
 // Browse-tab display order. Intentionally differs from the canonical id order in

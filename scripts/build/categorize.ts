@@ -149,9 +149,11 @@ export function categorizeWeapon(
       return []
     case undefined:
     case null:
-      // No wiki Slot. Fall back to DE productCategory only if we have
-      // some wiki data (displayClass) — drops SpecialItems noise.
-      if (!w.displayClass) return []
+      // No wiki Slot. Fall back to DE productCategory when we have either some
+      // wiki data (displayClass) OR a riven disposition — the latter lets a
+      // brand-new real weapon (in DE, not yet on the wiki) still emit, while
+      // disposition-less SpecialItems noise stays dropped.
+      if (!w.displayClass && w.omegaAttenuation === undefined) return []
       switch (w.productCategory) {
         case "LongGuns":
           out.push("primary")

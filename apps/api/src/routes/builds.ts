@@ -56,13 +56,29 @@ export function isVisibility(v: unknown): v is BuildVisibility {
   )
 }
 
-// Defense in depth: the editor caps `variants` at MAX_VARIANTS, but a
+// Defense in depth: the editor caps `variants` at MAX_VARIANTS *per form*
+// (twin-frames like Sirius & Orion give each form its own budget), but a
 // crafted request could send more. Persisting an unbounded array would
-// bloat the Build.buildData JSON column.
-function variantsOverCap(buildData: unknown): boolean {
+// bloat the Build.buildData JSON column. Group by `formIndex` and reject if
+// any single form exceeds the cap, or there are implausibly many forms.
+const MAX_FORMS = 4
+export function variantsOverCap(buildData: unknown): boolean {
   if (!buildData || typeof buildData !== "object") return false
   const variants = (buildData as Record<string, unknown>).variants
-  return Array.isArray(variants) && variants.length > MAX_VARIANTS
+  if (!Array.isArray(variants)) return false
+  const perForm = new Map<number, number>()
+  for (const v of variants) {
+    const fi =
+      v &&
+      typeof v === "object" &&
+      typeof (v as Record<string, unknown>).formIndex === "number"
+        ? ((v as Record<string, unknown>).formIndex as number)
+        : 0
+    perForm.set(fi, (perForm.get(fi) ?? 0) + 1)
+  }
+  if (perForm.size > MAX_FORMS) return true
+  for (const count of perForm.values()) if (count > MAX_VARIANTS) return true
+  return false
 }
 
 function hasShardsInBuildData(buildData: unknown): boolean {

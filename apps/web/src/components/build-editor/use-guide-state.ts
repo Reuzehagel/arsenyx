@@ -14,7 +14,14 @@ export interface GuideEditorProps {
   onSummaryChange: (v: string) => void
   description: string
   onDescriptionChange: (v: string) => void
-  scopes: { id: string; label: string; hasContent: boolean }[]
+  scopes: {
+    id: string
+    label: string
+    hasContent: boolean
+    /** Twin-frames: which form this variant belongs to, so the guide picker
+     *  can group chips by form. */
+    formIndex?: number
+  }[]
   activeScope: GuideScope
   onScopeChange: (scope: GuideScope) => void
   /** Copy the build-wide guide into a variant that has none yet — used when
@@ -111,6 +118,7 @@ export function useGuideState(opts: {
   const scopes = variants.map((v) => ({
     id: v.id,
     label: v.label,
+    formIndex: v.formIndex,
     hasContent: Boolean(
       (v.guideSummary && v.guideSummary.trim()) ||
       (v.guideDescription && v.guideDescription.trim()),

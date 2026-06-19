@@ -524,6 +524,7 @@ export function pickPerVariantData(
     incarnonEnabled: src.incarnonEnabled,
     incarnonPerks: src.incarnonPerks,
     deploymentContext: src.deploymentContext,
+    formIndex: src.formIndex,
   }
 }
 
@@ -634,6 +635,10 @@ export function buildDocFromVariants(
         incarnonEnabled: vs.incarnonEnabled,
         incarnonPerks: vs.incarnonPerks,
         deploymentContext: vs.deploymentContext,
+        // formIndex lives only on the saved variant (not threaded through
+        // BuildState), so carry it straight across — twin-frame share links
+        // depend on it to pick the right form.
+        formIndex: sv.formIndex,
       }
     }),
   }
@@ -654,7 +659,11 @@ export function savedDataFromBuildDoc(
 ): SavedBuildData {
   const project = (i: number) =>
     buildStateToSavedData(projectVariant(doc, i), mods, arcanes).data
-  const activeData = project(0)
+  // `formIndex` isn't carried through BuildState (projectVariant drops it), so
+  // lift it off the decoded doc variants directly — onto the top-level mirror
+  // (a single twin-frame variant on a non-primary form needs it) and each
+  // projected variant.
+  const activeData = { ...project(0), formIndex: doc.variants[0].formIndex }
   if (doc.variants.length === 1) return activeData
   const variants: SavedVariant[] = doc.variants.map((v, i) => {
     // i === 0 is the active variant — reuse its projection rather than
@@ -666,6 +675,7 @@ export function savedDataFromBuildDoc(
       slots: data.slots ?? {},
       arcanes: data.arcanes ?? [],
       ...pickPerVariantData(data),
+      formIndex: v.formIndex,
       guideSummary: v.guideSummary,
       guideDescription: v.guideDescription,
     }
