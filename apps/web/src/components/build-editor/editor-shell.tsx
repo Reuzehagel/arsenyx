@@ -408,7 +408,6 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     isTwin,
     activeFormIndex,
     formAbilities,
-    helminthAllowed,
     formNames,
     formVariants,
     formActiveLocalIndex,
@@ -1449,7 +1448,6 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
               placedMods: slots.placed,
               placedArcanes: arcanes.placed,
               formAbilities,
-              helminthAllowed,
             }}
             topBarLayout="row"
             topBar={

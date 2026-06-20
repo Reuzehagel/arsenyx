@@ -11,6 +11,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-06-20",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Sirius & Orion: you can now subsume a Helminth ability on Orion, not just Sirius. Each brother keeps his own subsume, so it lands on whoever's in front.",
+      },
+    ],
+  },
+  {
     date: "2026-06-19",
     changes: [
       {

@@ -176,15 +176,14 @@ function BuildViewerBodyInner({
   const hasGuide = hasGuideContent(build, activeVariant)
 
   // Twin-frames (Sirius & Orion): the active variant's form picks the ability
-  // set (Helminth shows only on the primary form), and the variant tabs show
-  // only that form's variants. Shared with the editor via `deriveFormAxis`;
+  // set (each form carries its own per-variant Helminth), and the variant tabs
+  // show only that form's variants. Shared with the editor via `deriveFormAxis`;
   // no-op for normal frames. The form toggle jumps to the target form's first
   // variant.
   const {
     isTwin,
     activeFormIndex,
     formAbilities,
-    helminthAllowed,
     formNames,
     formVariants,
     formActiveLocalIndex,
@@ -267,7 +266,6 @@ function BuildViewerBodyInner({
     placedMods: slots.placed,
     placedArcanes: arcanes.placed,
     formAbilities,
-    helminthAllowed,
     readOnly: true as const,
   }
 
@@ -302,7 +300,7 @@ function BuildViewerBodyInner({
             itemName={item.name}
             itemImageName={item.imageName ?? undefined}
             abilities={formAbilities ?? item.abilities ?? []}
-            helminth={helminthAllowed ? helminth : {}}
+            helminth={helminth}
             shards={shards}
             zawComponents={zawComponents}
             kitgunComponents={kitgunComponents}

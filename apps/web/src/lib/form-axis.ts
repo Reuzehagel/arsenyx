@@ -9,11 +9,16 @@ import type { FrameForm, ItemAbility } from "@/lib/warframe"
  * form (absent / 0 = primary). Shards are per-variant (not per-form), so each
  * half's variants carry their own.
  *
+ * Either brother can be the "Primary Son" who holds the subsumed ability —
+ * the player picks, and in the planner the active form is that primary — so
+ * Helminth is allowed on whichever form a variant builds (each variant carries
+ * its own per-variant Helminth state).
+ *
  * Both the editor (`EditorShell`) and the read-only viewer (`BuildViewerBody`)
- * need the same derived view — the active form, its ability set, whether
- * Helminth is allowed, the short toggle labels, and the global↔local index
- * mapping for the form-filtered variant tabs. This is the single source so the
- * two can't drift. Pure (no React) so callers wrap it in `useMemo`.
+ * need the same derived view — the active form, its ability set, the short
+ * toggle labels, and the global↔local index mapping for the form-filtered
+ * variant tabs. This is the single source so the two can't drift. Pure (no
+ * React) so callers wrap it in `useMemo`.
  */
 export interface FormAxis {
   /** True when the item has more than one switchable form. */
@@ -23,8 +28,6 @@ export interface FormAxis {
   /** The active form's ability set, overriding `item.abilities`. Undefined for
    *  normal frames (the caller falls back to `item.abilities`). */
   formAbilities: ItemAbility[] | undefined
-  /** Helminth is infused on the primary form only. */
-  helminthAllowed: boolean
   /** Short toggle labels — DE names the controlled form first in the combined
    *  name ("Sirius & Orion" → "Sirius", "Orion & Sirius" → "Orion"). Undefined
    *  for normal frames. */
@@ -88,7 +91,6 @@ export function deriveFormAxis(
     isTwin: Boolean(forms && forms.length > 1),
     activeFormIndex,
     formAbilities: activeForm?.abilities,
-    helminthAllowed: activeFormIndex === 0,
     formNames: forms?.map((f) => f.name.split(/\s*&\s*/)[0]),
     formVariants,
     formActiveLocalIndex: Math.max(

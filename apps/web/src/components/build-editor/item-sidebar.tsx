@@ -122,10 +122,6 @@ export interface ItemSidebarProps {
   /** Twin-frames (Sirius & Orion): the active form's ability set, overriding
    *  `item.abilities`. Absent for normal frames. */
   formAbilities?: ItemAbility[]
-  /** Twin-frames: Helminth can only be infused on the primary form, so the
-   *  subsume UI (and the helminth replacement display) is suppressed on
-   *  non-primary forms. Defaults to true. */
-  helminthAllowed?: boolean
   readOnly?: boolean
   /**
    * When true, render without the outer card chrome and without the mobile
@@ -165,7 +161,6 @@ export function ItemSidebar({
   placedMods,
   placedArcanes,
   formAbilities,
-  helminthAllowed = true,
   readOnly = false,
   bare = false,
 }: ItemSidebarProps) {
@@ -350,9 +345,9 @@ export function ItemSidebar({
           <>
             <div className="flex justify-around p-3">
               {abilities.slice(0, 4).map((a, i) => {
-                // Helminth lives on the primary form only — on a secondary
-                // twin-frame form, show the raw ability with no replacement.
-                const replaced = helminthAllowed ? helminth[i] : undefined
+                // Helminth is per-variant (and so per-form): each twin-frame
+                // form shows its own subsume, or the raw ability when unset.
+                const replaced = helminth[i]
                 const displayed = replaced
                   ? {
                       uniqueName: replaced.uniqueName,
@@ -366,7 +361,7 @@ export function ItemSidebar({
                     key={i}
                     ability={displayed}
                     isHelminth={Boolean(replaced)}
-                    canSubsume={isPureWarframe && !readOnly && helminthAllowed}
+                    canSubsume={isPureWarframe && !readOnly}
                     onSelectHelminth={(ab) => onSetHelminth(i, ab)}
                   />
                 )
