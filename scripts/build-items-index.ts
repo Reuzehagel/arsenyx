@@ -42,6 +42,7 @@ import {
   ZAW_STRIKES,
 } from "@arsenyx/shared/warframe/zaw-data"
 
+import { ARCANE_KEEP } from "../data/curated/arcane-keep"
 import { PVE_USABLE_CONCLAVE_MODS } from "../data/curated/pve-usable-conclave-mods"
 import { buildBrowseIndex } from "./build/browse-index"
 import { buildFamilyIndex, makeExpandCompat } from "./build/expand-compat"
@@ -390,9 +391,11 @@ async function main() {
   // 5 records — one per ability + on-cast) and a handful of cut entries
   // (e.g. "Arcane Liquid") that aren't in-game. `wikiArcaneNames` (built in
   // the single arcane-module walk above) is the canonical in-game list;
-  // intersect against it to drop both.
-  const mergedArcanes = allMergedArcanes.filter((a) =>
-    wikiArcaneNames.has(a.uniqueName),
+  // intersect against it to drop both. `ARCANE_KEEP` rescues verified real
+  // arcanes the wiki module has momentarily dropped (see arcane-keep.ts), so a
+  // wiki hiccup can't silently delete obtainable content.
+  const mergedArcanes = allMergedArcanes.filter(
+    (a) => wikiArcaneNames.has(a.uniqueName) || ARCANE_KEEP.has(a.uniqueName),
   )
   const arcanesWithImages = mergedArcanes.map((a) => ({
     ...a,
