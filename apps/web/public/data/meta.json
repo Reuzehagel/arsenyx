@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-06-18T13:11:36.198Z",
+  "generatedAt": "2026-06-21T06:57:15.661Z",
   "source": "DE PublicExport + wiki Lua (v2 pipeline)",
   "pipelineVersion": 2,
   "itemCount": 863,
   "modCount": 1399,
-  "arcaneCount": 157,
+  "arcaneCount": 160,
   "perCategory": {
     "archwing": 33,
     "warframes": 117,
@@ -17,6 +17,6 @@
     "companions": 41,
     "railjack": 1
   },
-  "unmatchedWeapons": 4,
-  "unmatchedFrames": 2
+  "unmatchedWeapons": 0,
+  "unmatchedFrames": 1
 }

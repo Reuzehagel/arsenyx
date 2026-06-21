@@ -4,7 +4,7 @@
       "de": 836,
       "merged": 856,
       "emitted": 697,
-      "unmatched": 4
+      "unmatched": 0
     },
     "frames": {
       "de": 125,
@@ -33,15 +33,9 @@
       "railjack": 1
     }
   },
-  "weaponsUnmatched": [
-    "Afentis Prime",
-    "Pride",
-    "War Prime",
-    "Wrath"
-  ],
+  "weaponsUnmatched": [],
   "framesUnmatched": [
-    "Orion & Sirius",
-    "Sirius & Orion"
+    "Orion & Sirius"
   ],
   "companionsUnmatched": [],
   "skippedModularComponents": [
