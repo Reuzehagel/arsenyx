@@ -180,15 +180,22 @@ export function mergeFrame(de: DeFrame, opts: MergeFramesOpts): MergedFrame {
   // wiki data module hasn't catalogued yet (e.g. the Sirius & Orion twin-frame,
   // whose two forms have different aura polarities).
   const override = opts.polarityOverrides?.[cleanName]
-  const wikiPolarities = normalizePolarities(wiki?.Polarities ?? [])
+  // A twin-frame's two forms share ONE combined wiki entry whose
+  // Polarities/AuraPolarity list both halves' slots (aura markers inline) and
+  // can't be split back per-form — left to the wiki the primary form renders
+  // two aura slots and a doubled polarity bar. A `force` override suppresses
+  // the wiki's polarity data for that frame; every other frame keeps the wiki
+  // authoritative (it still drives match/unmatched detection above).
+  const polarityWiki = override?.force ? undefined : wiki
+  const wikiPolarities = normalizePolarities(polarityWiki?.Polarities ?? [])
   const polarities = wikiPolarities.length
     ? wikiPolarities
     : (override?.polarities ?? [])
   const auraPolarity =
-    normalizeAuraPolarity(wiki?.AuraPolarity) ??
+    normalizeAuraPolarity(polarityWiki?.AuraPolarity) ??
     normalizeAuraPolarity(override?.auraPolarity)
   const exilusPolarity =
-    normalizePolarity(wiki?.ExilusPolarity) ??
+    normalizePolarity(polarityWiki?.ExilusPolarity) ??
     normalizePolarity(override?.exilusPolarity)
   const category = categoryOf(de.productCategory)
 
