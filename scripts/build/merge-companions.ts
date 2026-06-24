@@ -9,8 +9,8 @@
  * weapon-style "iterate DE, look up wiki".
  */
 
-import type { DeSentinel } from "./read-de"
 import { normalizePolarities } from "./polarity"
+import type { DeSentinel } from "./read-de"
 
 export type CompanionCategory = "sentinel" | "beast" | "moa" | "hound"
 
@@ -38,22 +38,52 @@ export interface MergedCompanion {
  *  into the legacy `getModsForItem` predicate, but reshaped as data:
  *
  *  - All companions: "COMPANION" (generic pool), own name (augments).
- *  - Sentinels: + "Sentinel".
- *  - Beasts (Kubrow/Kavat/Vulpaphyla/Predasite/Helminth): + "BEAST".
+ *  - Sentinels: + "Sentinel", + "ROBOTIC" (sentinels are robotic
+ *    companions — they take the shared robotic pool: Vacuum, Guardian,
+ *    Medi-Ray, Manifold Bond, …).
+ *  - Beasts (Kubrow/Kavat/Vulpaphyla/Predasite/Helminth): + "BEAST", plus a
+ *    breed pool. Kavats/Vulpaphyla take generic "Kavat" mods (Tek set, …);
+ *    Kubrows/Predasites take "Kubrow" mods. Vulpaphyla are infested catbrows
+ *    (Kavat lineage) and Predasites infested kubrows, so they additionally
+ *    carry their own precept pool ("VULPAPHYLA" / "PREDASITE"). Breed-
+ *    *specific* mods (compatName "Smeeta Kavat", …) still route via the
+ *    companion's own name, already added above.
  *  - MOAs: + "Moa", + "ROBOTIC".
- *  - Hounds: + "Hound", + "ROBOTIC". */
-function modPoolsForCompanion(
+ *  - Hounds: + "Hound", + "ROBOTIC".
+ *
+ *  `wikiType` is the fine-grained wiki `Type` ("Kavat" | "Kubrow" |
+ *  "Vulpaphyla" | "Predasite" | …); `subType` collapses all four beast
+ *  breeds to "beast", so the breed pool needs the un-collapsed value. */
+export function modPoolsForCompanion(
   name: string,
   subType: CompanionCategory,
+  wikiType: string | undefined,
 ): readonly string[] {
   const pools = new Set<string>(["COMPANION", name])
   if (name.endsWith(" Prime")) pools.add(name.slice(0, -" Prime".length))
   switch (subType) {
     case "sentinel":
       pools.add("Sentinel")
+      pools.add("ROBOTIC")
       break
     case "beast":
       pools.add("BEAST")
+      switch ((wikiType ?? "").toLowerCase()) {
+        case "kavat":
+          pools.add("Kavat")
+          break
+        case "kubrow":
+          pools.add("Kubrow")
+          break
+        case "vulpaphyla":
+          pools.add("Kavat")
+          pools.add("VULPAPHYLA")
+          break
+        case "predasite":
+          pools.add("Kubrow")
+          pools.add("PREDASITE")
+          break
+      }
       break
     case "moa":
       pools.add("Moa")
@@ -111,9 +141,10 @@ export interface MergeCompanionsOpts {
   deByName: Map<string, DeSentinel>
 }
 
-export function mergeCompanions(
-  opts: MergeCompanionsOpts,
-): { companions: MergedCompanion[]; unmatchedDeNames: string[] } {
+export function mergeCompanions(opts: MergeCompanionsOpts): {
+  companions: MergedCompanion[]
+  unmatchedDeNames: string[]
+} {
   const companions: MergedCompanion[] = []
   const seenInternalNames = new Set<string>()
 
@@ -127,10 +158,14 @@ export function mergeCompanions(
       // Prefer DE's uniqueName (it's the canonical game ID and what the
       // game's RPC layer uses). The wiki InternalName for some Primes
       // points at the base entry, which would conflate Wyrm + Wyrm Prime.
-      uniqueName: de?.uniqueName || internal || `/Lotus/Companions/${name.replace(/\s+/g, "")}`,
+      uniqueName:
+        de?.uniqueName ||
+        internal ||
+        `/Lotus/Companions/${name.replace(/\s+/g, "")}`,
       name,
       subType,
-      description: (wiki.Description as string | undefined) ?? de?.description ?? "",
+      description:
+        (wiki.Description as string | undefined) ?? de?.description ?? "",
       health: (wiki.Health as number | undefined) ?? de?.health ?? 0,
       shield: (wiki.Shield as number | undefined) ?? de?.shield ?? 0,
       armor: (wiki.Armor as number | undefined) ?? de?.armor ?? 0,
@@ -138,7 +173,7 @@ export function mergeCompanions(
       masteryReq: (wiki.Mastery as number | undefined) ?? de?.masteryReq ?? 0,
       polarities: normalizePolarities(wiki.Polarities ?? []),
       isPrime: name.includes(" Prime"),
-      modPools: modPoolsForCompanion(name, subType),
+      modPools: modPoolsForCompanion(name, subType, wiki.Type),
     })
   }
 

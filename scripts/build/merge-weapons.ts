@@ -47,6 +47,12 @@ export const KNOWN_MOD_POOLS = new Set<string>([
   "Shotgun",
   "Pistol",
   "Melee",
+  // Slot-wide pools (DE compatName for mods that fit any weapon in a slot —
+  // e.g. Hunter Munitions / Vigilante set / Aero Periphery are "PRIMARY", not
+  // "Rifle"). Supersets of the granular pools above; added by addSlotWidePools.
+  "PRIMARY",
+  "SECONDARY",
+  "MELEE",
   // Refinements
   "Sniper",
   "Bow",
@@ -230,6 +236,33 @@ export function addNoAoePools(
   if (pools.has("Pistol")) pools.add("Pistol (No Aoe)")
 }
 
+/** Granular slot pools that imply membership in a slot-wide DE pool. A weapon
+ *  taking any "Rifle"/"Shotgun"/"Bow"/… mod also takes "PRIMARY" mods (Hunter
+ *  Munitions, Vigilante set, Aero Periphery), and likewise for SECONDARY/MELEE.
+ *  Beast claws (BeastClaws/Claws pools) and archwing pools deliberately don't
+ *  appear here — they have their own routing. */
+const PRIMARY_GRANULAR_POOLS = [
+  "Rifle",
+  "Shotgun",
+  "Sniper",
+  "Bow",
+  "Assault Rifle",
+] as const
+const SECONDARY_GRANULAR_POOLS = ["Pistol", "Thrown", "Tome"] as const
+
+/**
+ * Add the slot-wide DE pool ("PRIMARY"/"SECONDARY"/"MELEE") implied by the
+ * granular slot pools already present. DE ships slot-wide mods (Hunter
+ * Munitions, Vigilante Armaments, Aero Periphery, …) with compatName "PRIMARY"
+ * rather than "Rifle", so without this they match no weapon. Mutates in place;
+ * call last so it sees the final granular pools.
+ */
+export function addSlotWidePools(pools: Set<string>): void {
+  if (PRIMARY_GRANULAR_POOLS.some((p) => pools.has(p))) pools.add("PRIMARY")
+  if (SECONDARY_GRANULAR_POOLS.some((p) => pools.has(p))) pools.add("SECONDARY")
+  if (pools.has("Melee")) pools.add("MELEE")
+}
+
 /** Strip the Coda / Kuva / Tenet prefix from a variant name to recover the
  *  base weapon name (for augment-mod matching). */
 const VARIANT_PREFIXES = ["Coda ", "Kuva ", "Tenet "] as const
@@ -322,6 +355,7 @@ export function mergeWeapon(de: DeWeapon, opts: MergeWeaponOpts): MergedWeapon {
   const base = baseWeaponName(cleanName)
   if (base) modPoolsSet.add(base)
   addNoAoePools(modPoolsSet, wiki?.CompatibilityTags)
+  addSlotWidePools(modPoolsSet)
   const modPools = [...modPoolsSet]
 
   // Fail loud only on the "structural" pool buckets — weapon-name pool
@@ -435,8 +469,16 @@ export function mergeWikiOnlyWeapon(
   // per-pet mods (compat "Adarza Kavat") to the right weapons.
   if (displayClass === "Claws (Beast)" && wiki.Users && wiki.Users.length > 0) {
     const user = wiki.Users[0]!
-    if (user.endsWith(" Kavat")) modPoolsSet.add("Kavat Claws")
-    if (user.endsWith(" Kubrow")) modPoolsSet.add("Kubrow Claws")
+    // Vulpaphyla are infested catbrows and Predasites infested kubrows, so
+    // their claws share the Kavat/Kubrow claw pools (e.g. Swipe — "Kavat
+    // Claws" — equips on Sly/Crescent/Panzer Claws in-game; the wiki groups
+    // the category as "Kavat Claws (Vulpaphyla Claws)").
+    if (user.endsWith(" Kavat") || user.endsWith(" Vulpaphyla")) {
+      modPoolsSet.add("Kavat Claws")
+    }
+    if (user.endsWith(" Kubrow") || user.endsWith(" Predasite")) {
+      modPoolsSet.add("Kubrow Claws")
+    }
     if (user === "Helminth Charger") {
       modPoolsSet.add("Helminth Claws")
       modPoolsSet.add("Kubrow Claws")
@@ -446,6 +488,7 @@ export function mergeWikiOnlyWeapon(
     // add them here; companion modPools handle that.
   }
   addNoAoePools(modPoolsSet, wiki.CompatibilityTags)
+  addSlotWidePools(modPoolsSet)
   const modPools = [...modPoolsSet]
 
   const polarities = normalizePolarities(wiki.Polarities ?? [])
