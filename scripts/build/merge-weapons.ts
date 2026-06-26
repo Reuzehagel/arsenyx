@@ -249,6 +249,7 @@ const PRIMARY_GRANULAR_POOLS = [
   "Assault Rifle",
 ] as const
 const SECONDARY_GRANULAR_POOLS = ["Pistol", "Thrown", "Tome"] as const
+const MELEE_GRANULAR_POOLS = ["Melee"] as const
 
 /**
  * Add the slot-wide DE pool ("PRIMARY"/"SECONDARY"/"MELEE") implied by the
@@ -260,7 +261,7 @@ const SECONDARY_GRANULAR_POOLS = ["Pistol", "Thrown", "Tome"] as const
 export function addSlotWidePools(pools: Set<string>): void {
   if (PRIMARY_GRANULAR_POOLS.some((p) => pools.has(p))) pools.add("PRIMARY")
   if (SECONDARY_GRANULAR_POOLS.some((p) => pools.has(p))) pools.add("SECONDARY")
-  if (pools.has("Melee")) pools.add("MELEE")
+  if (MELEE_GRANULAR_POOLS.some((p) => pools.has(p))) pools.add("MELEE")
 }
 
 /** Strip the Coda / Kuva / Tenet prefix from a variant name to recover the
