@@ -135,22 +135,31 @@ export function BuildCard({ build }: { build: BuildListItem }) {
           {build.item.name}
         </p>
         <BuildByline build={build} variant="card" />
-        <div className="text-muted-foreground flex items-center justify-between text-xs">
-          <span className="flex items-center gap-2">
+        <div className="text-muted-foreground flex items-center justify-between gap-x-2 text-xs">
+          {/* Stats wrap as a group when a long view count would otherwise crowd
+              the date — keeps the date on one line (it's shrink-0/nowrap below)
+              instead of breaking "1d ago" across two rows. */}
+          <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
             <span className="flex items-center gap-1">
               <Heart className="size-3" />
               <span className="tabular-nums">{build.likeCount}</span>
             </span>
             <span className="flex items-center gap-1">
               <Eye className="size-3" />
-              {build.viewCount}
+              <span className="tabular-nums">
+                {build.viewCount.toLocaleString("en-US")}
+              </span>
             </span>
             {/* Divider sets forma (a build property) apart from likes/views
                 (social signals) without the noise of a thumbnail overlay. */}
             <FormaStat count={build.formaCount} withDivider />
           </span>
           <Tooltip>
-            <TooltipTrigger render={<span>{timeAgo}</span>} />
+            <TooltipTrigger
+              render={
+                <span className="shrink-0 whitespace-nowrap">{timeAgo}</span>
+              }
+            />
             <TooltipContent>
               Updated {formatAbsoluteTime(build.updatedAt)}
             </TooltipContent>
