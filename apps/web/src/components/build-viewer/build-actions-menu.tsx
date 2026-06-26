@@ -1,5 +1,13 @@
 import { useNavigate } from "@tanstack/react-router"
-import { Eye, GitFork, MoreHorizontal, ShieldX, Trash2 } from "lucide-react"
+import {
+  Code2,
+  Eye,
+  GitFork,
+  Link2,
+  MoreHorizontal,
+  ShieldX,
+  Trash2,
+} from "lucide-react"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -32,6 +40,7 @@ import {
 } from "@/lib/queries/admin-actions"
 import { useDeleteBuild, useForkBuild } from "@/lib/queries/build-actions"
 import type { BuildDetail } from "@/lib/queries/build-query"
+import { copyToClipboard } from "@/lib/util/clipboard"
 import { formatVisibility } from "@/lib/util/user-display"
 
 type Visibility = BuildDetail["visibility"]
@@ -64,6 +73,14 @@ export function BuildActionsMenu({
   const adminDelete = useAdminDeleteBuild()
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [adminConfirmOpen, setAdminConfirmOpen] = useState(false)
+
+  const buildUrl = () => `${window.location.origin}/builds/${slug}`
+  const onCopyLink = () => void copyToClipboard(buildUrl(), "Link copied")
+  const onCopyEmbed = () =>
+    void copyToClipboard(
+      `<iframe src="${buildUrl()}?embed=1" style="width:100%;border:none" height="1" loading="lazy"></iframe>`,
+      "Embed code copied",
+    )
 
   const onFork = () => {
     if (!session?.user) {
@@ -106,7 +123,16 @@ export function BuildActionsMenu({
         >
           <MoreHorizontal />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-40">
+        <DropdownMenuContent align="end" className="min-w-44">
+          <DropdownMenuItem onClick={onCopyLink}>
+            <Link2 />
+            Copy link
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onCopyEmbed}>
+            <Code2 />
+            Copy embed code
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={onFork} disabled={fork.isPending}>
             <GitFork />
             {fork.isPending ? "Forking…" : "Fork"}
