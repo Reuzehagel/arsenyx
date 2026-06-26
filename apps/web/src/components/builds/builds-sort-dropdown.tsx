@@ -26,7 +26,10 @@ export function BuildsSortDropdown({
       items={SORT_ITEMS}
       value={value}
       onChange={onChange}
-      triggerWidth="w-44"
+      // Stretches to fill the stacked toolbar row on phones (so the layout
+      // toggle and Filters button pin to the row's edges instead of leaving a
+      // ragged gap); fixed width once it sits inline beside the search at sm+.
+      triggerWidth="flex-1 sm:w-44 sm:flex-none"
     />
   )
 }
