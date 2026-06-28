@@ -8,7 +8,7 @@ import {
   type BuildDoc,
 } from "@arsenyx/shared/warframe/build-doc"
 import {
-  getIncarnonGenesisImage,
+  getIncarnonBaseName,
   isInnateIncarnon,
 } from "@arsenyx/shared/warframe/incarnon-data"
 import {
@@ -76,6 +76,7 @@ import {
   helminthQuery,
   type HelminthAbility,
 } from "@/lib/queries/helminth-query"
+import { incarnonAdapterImagesQuery } from "@/lib/queries/incarnon-query"
 import { itemQuery } from "@/lib/queries/item-query"
 import { modConflictsQuery } from "@/lib/queries/mod-conflicts-query"
 import { modsQuery } from "@/lib/queries/mods-query"
@@ -240,6 +241,9 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   const { data: allMods } = useSuspenseQuery(modsQuery)
   const { data: allArcanes } = useSuspenseQuery(arcanesQuery)
   const { data: helminthAbilities } = useSuspenseQuery(helminthQuery)
+  const { data: incarnonAdapterImages } = useSuspenseQuery(
+    incarnonAdapterImagesQuery,
+  )
   const { data: conflictMap } = useSuspenseQuery(modConflictsQuery)
   const [draft] = useState(() => consumeDraft(draftId))
   const [shareHydrated] = useState(() => {
@@ -788,9 +792,12 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     })
   }
 
-  const displayImageName = incarnonEnabled
-    ? (getIncarnonGenesisImage(item.name) ?? item.imageName ?? undefined)
-    : (item.imageName ?? undefined)
+  const incarnonBaseName = getIncarnonBaseName(item.name)
+  const incarnonAdapterImage =
+    incarnonEnabled && incarnonBaseName
+      ? incarnonAdapterImages[incarnonBaseName]
+      : undefined
+  const displayImageName = incarnonAdapterImage ?? item.imageName ?? undefined
 
   const [helminth, setHelminth] = useState<Record<number, HelminthAbility>>(
     () => savedData.helminth ?? {},

@@ -18,6 +18,7 @@ import { Header } from "@/components/header"
 import { arcanesQuery } from "@/lib/queries/arcanes-query"
 import { buildQuery } from "@/lib/queries/build-query"
 import { helminthQuery } from "@/lib/queries/helminth-query"
+import { incarnonAdapterImagesQuery } from "@/lib/queries/incarnon-query"
 import { itemQuery } from "@/lib/queries/item-query"
 import { modsQuery } from "@/lib/queries/mods-query"
 import { seo } from "@/lib/seo"
@@ -85,6 +86,7 @@ export const Route = createFileRoute("/create")({
       context.queryClient.ensureQueryData(itemQuery(deps.category, deps.item)),
       context.queryClient.ensureQueryData(modsQuery),
       context.queryClient.ensureQueryData(arcanesQuery),
+      context.queryClient.ensureQueryData(incarnonAdapterImagesQuery),
     ]
     if (deps.category === "warframes") {
       tasks.push(context.queryClient.ensureQueryData(helminthQuery))

@@ -30,6 +30,7 @@ import { readdirSync } from "node:fs"
 import { mkdir, rm, writeFile } from "node:fs/promises"
 import { resolve } from "node:path"
 
+import { INCARNON_GENESIS_IMAGES } from "@arsenyx/shared/warframe/incarnon-data"
 import { INCARNON_EVOLUTIONS } from "@arsenyx/shared/warframe/incarnon-evolutions"
 import {
   isKitgunChamber,
@@ -677,6 +678,39 @@ async function main() {
     )
   } else {
     console.log(`  OK  kitgun-images.json (${kitgunTotal} components)`)
+  }
+
+  // Incarnon Genesis adapter icons. The adapters aren't catalog items, so
+  // resolve their DE CDN URLs from the manifest by matching each weapon's
+  // adapter texture filename (the values in INCARNON_GENESIS_IMAGES), like the
+  // zaw thumbnails. Keyed by base weapon name for the editor's incarnon view.
+  // Flows through sync:images → R2 like every other catalog image. Innate
+  // incarnons have no adapter, so they're absent from INCARNON_GENESIS_IMAGES
+  // and from this map.
+  const adapterByFile = new Map<string, string>()
+  for (const url of imageByUniqueName.values()) {
+    if (!url.includes("/IncarnonWeapons/")) continue
+    const file = url.split("/").pop()?.split("!")[0]
+    if (file && !adapterByFile.has(file)) adapterByFile.set(file, url)
+  }
+  const incarnonAdapterImages: Record<string, string> = {}
+  for (const [name, file] of Object.entries(INCARNON_GENESIS_IMAGES)) {
+    const url = adapterByFile.get(file)
+    if (url) incarnonAdapterImages[name] = url
+  }
+  await writeFile(
+    resolve(OUT_DIR, "incarnon-adapter-images.json"),
+    JSON.stringify(incarnonAdapterImages),
+    "utf8",
+  )
+  const adapterTotal = Object.keys(INCARNON_GENESIS_IMAGES).length
+  const adapterResolved = Object.keys(incarnonAdapterImages).length
+  if (adapterResolved < adapterTotal) {
+    console.warn(
+      `  WARN incarnon-adapter-images.json resolved ${adapterResolved}/${adapterTotal} — some adapter textures missing from the manifest`,
+    )
+  } else {
+    console.log(`  OK  incarnon-adapter-images.json (${adapterTotal} adapters)`)
   }
 
   // Per-item detail files (items/<cat>/<slug>.json).
