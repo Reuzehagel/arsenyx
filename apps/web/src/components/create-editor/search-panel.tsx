@@ -1,4 +1,5 @@
 import {
+  getAugmentAbility,
   getModsForItem,
   getPlexusSlotKind,
   isPlexusAuraMod,
@@ -96,6 +97,7 @@ export function SearchPanel({
         uniqueName: item.uniqueName,
         modPools: item.modPools,
         compatTags: item.compatTags,
+        trigger: item.trigger,
       },
       allMods,
     )
@@ -114,12 +116,11 @@ export function SearchPanel({
     const extras: Mod[] = []
     for (const ability of Object.values(helminth)) {
       const source = ability.source.toLowerCase()
-      const prefix = `${ability.name.toLowerCase()} augment:`
+      const abilityName = ability.name.toLowerCase()
       for (const m of allMods) {
         if (!m.isAugment) continue
         if ((m.compatName ?? "").toLowerCase() !== source) continue
-        const desc = (m.levelStats?.[0]?.stats?.[0] ?? "").toLowerCase()
-        if (!desc.startsWith(prefix)) continue
+        if (getAugmentAbility(m)?.toLowerCase() !== abilityName) continue
         extras.push(m)
       }
     }
