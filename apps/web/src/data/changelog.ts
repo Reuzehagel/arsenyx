@@ -11,6 +11,21 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-06-28",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Five more incarnons have their evolution trees in the planner: Vectis, Ballistica, Stug, Destreza, and Obex. Turn on Incarnon and you get the same tier-by-tier perk picker as the rest.",
+      },
+      {
+        type: "fix",
+        description:
+          "The Incarnon Genesis adapter icon now shows when you enable Incarnon on a Steel Path weapon. Every genesis weapon used to fall back to a blank placeholder there.",
+      },
+    ],
+  },
+  {
     date: "2026-06-20",
     changes: [
       {
