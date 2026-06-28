@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-06-24T00:00:00.000Z",
+  "generatedAt": "2026-06-28T06:25:59.779Z",
   "source": "DE PublicExport + wiki Lua (v2 pipeline)",
   "pipelineVersion": 2,
-  "itemCount": 863,
+  "itemCount": 864,
   "modCount": 1399,
   "arcaneCount": 161,
   "perCategory": {
@@ -11,7 +11,7 @@
     "necramechs": 2,
     "secondary": 153,
     "melee": 238,
-    "primary": 200,
+    "primary": 201,
     "companion-weapons": 41,
     "exalted-weapons": 37,
     "companions": 41,
