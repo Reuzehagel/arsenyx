@@ -11,6 +11,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-06-30",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Arcanes Crepuscular, Sculptor, and Steadfast now show their correct art. Crepuscular used to come up as a blank blue glyph, and Sculptor and Steadfast were showing the wrong icons.",
+      },
+    ],
+  },
+  {
     date: "2026-06-28",
     changes: [
       {
