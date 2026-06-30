@@ -48,7 +48,7 @@ export const MOD_POOL_OVERRIDES: Record<string, readonly string[]> = {
   "Diwata Prime": ["Melee", "Swords"],
   "Desert Wind": ["Melee", "Sparring"],
   "Desert Wind Prime": ["Melee", "Sparring"],
-  "Whipclaw": ["Melee"],
+  Whipclaw: ["Melee"],
   "Whipclaw Prime": ["Melee"],
   // Pseudo-exalted abilities — independently moddable with melee mods. They
   // carry a *locked* exalted stance (its own +10-capacity Zenurik mod that the

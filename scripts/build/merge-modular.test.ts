@@ -48,7 +48,10 @@ const WIKI = new Map<string, Record<string, unknown>>([
     "Sporelacer (Primary)",
     {
       Attacks: [
-        { AttackName: "Normal Attack", Damage: { Impact: 0, Puncture: 0, Slash: 0 } },
+        {
+          AttackName: "Normal Attack",
+          Damage: { Impact: 0, Puncture: 0, Slash: 0 },
+        },
         { AttackName: "Explosion", Damage: { Toxin: 0 } },
       ],
     },

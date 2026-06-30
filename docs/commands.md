@@ -44,23 +44,36 @@ curated overrides under `data/curated/`.
 `data/raw/` is **gitignored** — it's a network mirror, not source. The built
 catalog under `apps/web/public/data/` is what's committed and what ships, so a
 plain clone runs the app fine. You only need the raw mirror to *rebuild* the
-catalog: run `bun run data:sync` once on a fresh clone before `build:items`
-(or just run `data:bump`, which syncs first).
+catalog.
+
+One orchestrator does everything; the rest are primitives it chains:
 
 ```bash
+bun run data:refresh               # do-it-all: data:sync + build:items + sync:images (weekly CI cron runs this)
+bun run data:refresh --skip-sync   # rebuild from the on-disk mirror only (fast inner loop; skips re-pulling upstream)
+
+# primitives (run individually when you need just one stage):
 bun run data:sync                  # mirror DE PublicExport + wiki Lua into data/raw/
 bun run build:items                # regenerate apps/web/public/data/ (emits UPSTREAM image URLs)
 bun run sync:images                # mirror emitted images into R2, rewrite catalog → img.arsenyx.com
-bun run check:images               # guard (CI): fail if catalog still hotlinks content/wiki.warframe.com
-just build-items-index             # build:items + sync:images — the everyday "rebuild" pair
-bun run data:bump                  # data:sync + build:items + sync:images (full refresh; weekly CI cron)
+
+# guards (CI) + manual-edit helper:
+bun run check:images               # fail if catalog still hotlinks content/wiki.warframe.com
+bun run check:data-version         # fail if catalog changed but meta.json generatedAt didn't
+bun run data:stamp                 # bump meta.json generatedAt — run after any HAND-edit to apps/web/public/data/
 ```
 
 `build:items` alone leaves upstream CDN URLs in the catalog; `sync:images`
 mirrors the bytes into R2 and rewrites them to `img.arsenyx.com`. Always pair
-them (use `just build-items-index`) — `check:images` blocks a hotlinked
+them (`data:refresh --skip-sync` does) — `check:images` blocks a hotlinked
 catalog from merging. `sync:images` needs R2 creds in the root `.env` (see
 `.env.example`); run via the build chain it self-skips when they're absent.
+
+Hand-editing the catalog directly (a quick data fix without a full rebuild)?
+Run `data:stamp` afterward — it's served `immutable` and cache-busted by
+`?v=<generatedAt>`, so without a fresh `generatedAt` clients keep the stale
+bytes. `data:refresh` and `build:items` stamp it for free; `check:data-version`
+enforces it in CI.
 
 Occasional dev tools (run by path, not aliased):
 

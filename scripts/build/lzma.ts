@@ -32,9 +32,7 @@ const lzma = lzmaPkg as unknown as LzmaModule
 /** Decompress LZMA1 bytes. Throws on decode failure. Returns a string when
  *  the payload decodes as valid UTF-8 (the common case for DE's exports),
  *  otherwise the raw Uint8Array. Internal — callers use `lzmaDecompressText`. */
-function lzmaDecompress(
-  bytes: Uint8Array,
-): Promise<DecompressResult> {
+function lzmaDecompress(bytes: Uint8Array): Promise<DecompressResult> {
   return new Promise((resolve, reject) => {
     lzma.decompress(bytes, (result, err) => {
       if (err) reject(err)

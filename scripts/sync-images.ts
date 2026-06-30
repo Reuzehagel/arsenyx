@@ -212,7 +212,9 @@ async function refreshMetadata(key: string): Promise<void> {
     },
   })
   if (!res.ok) {
-    throw new Error(`CopyObject ${key} → HTTP ${res.status} ${await res.text()}`)
+    throw new Error(
+      `CopyObject ${key} → HTTP ${res.status} ${await res.text()}`,
+    )
   }
 }
 
@@ -261,13 +263,16 @@ async function pMap<T, R>(
 ): Promise<R[]> {
   const out: R[] = new Array(items.length)
   let next = 0
-  const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
-    while (true) {
-      const i = next++
-      if (i >= items.length) return
-      out[i] = await fn(items[i]!, i)
-    }
-  })
+  const workers = Array.from(
+    { length: Math.min(concurrency, items.length) },
+    async () => {
+      while (true) {
+        const i = next++
+        if (i >= items.length) return
+        out[i] = await fn(items[i]!, i)
+      }
+    },
+  )
   await Promise.all(workers)
   return out
 }
@@ -290,7 +295,9 @@ async function refreshAllMetadata(files: readonly string[]): Promise<void> {
     for (const u of extractSourceUrls(text)) keys.add(keyForUrl(u))
     for (const m of text.matchAll(ourUrlRe)) keys.add(decodeURIComponent(m[1]!))
   }
-  console.log(`\n--refresh-metadata: re-applying Content-Type / Content-Disposition / Cache-Control on ${keys.size} objects`)
+  console.log(
+    `\n--refresh-metadata: re-applying Content-Type / Content-Disposition / Cache-Control on ${keys.size} objects`,
+  )
 
   let fixed = 0
   let absent = 0
@@ -303,10 +310,14 @@ async function refreshAllMetadata(files: readonly string[]): Promise<void> {
       absent++
     }
     if ((i + 1) % 200 === 0 || i === list.length - 1) {
-      console.log(`  ${i + 1}/${list.length}  (${fixed} refreshed, ${absent} not in bucket)`)
+      console.log(
+        `  ${i + 1}/${list.length}  (${fixed} refreshed, ${absent} not in bucket)`,
+      )
     }
   })
-  console.log(`\nMetadata refresh complete: ${fixed} refreshed, ${absent} not in bucket`)
+  console.log(
+    `\nMetadata refresh complete: ${fixed} refreshed, ${absent} not in bucket`,
+  )
 }
 
 async function main(): Promise<void> {
@@ -324,10 +335,14 @@ async function main(): Promise<void> {
   for (const f of files) {
     for (const u of extractSourceUrls(readFileSync(f, "utf8"))) sources.add(u)
   }
-  console.log(`\n${sources.size} unique source URLs across ${files.length} JSONs`)
+  console.log(
+    `\n${sources.size} unique source URLs across ${files.length} JSONs`,
+  )
 
   if (sources.size === 0) {
-    console.log("Nothing to mirror — either build:items hasn't run, or all URLs are already on our CDN.")
+    console.log(
+      "Nothing to mirror — either build:items hasn't run, or all URLs are already on our CDN.",
+    )
     return
   }
 
@@ -361,7 +376,9 @@ async function main(): Promise<void> {
   console.log(`\nUpload pass complete:`)
   console.log(`  ${uploaded} uploaded`)
   console.log(`  ${skipped} already in R2`)
-  console.log(`  ${missingUrls.length} upstream missing (will 404 from our CDN too)`)
+  console.log(
+    `  ${missingUrls.length} upstream missing (will 404 from our CDN too)`,
+  )
   if (missingUrls.length > 0) {
     // Surface the gaps explicitly — these are the only catalog images that
     // won't resolve from our CDN, because upstream itself 404s. Fix the
@@ -380,7 +397,9 @@ async function main(): Promise<void> {
       rewrittenFiles++
     }
   }
-  console.log(`\nRewrote ${rewrittenFiles} JSON files to point at ${PUBLIC_URL}`)
+  console.log(
+    `\nRewrote ${rewrittenFiles} JSON files to point at ${PUBLIC_URL}`,
+  )
 }
 
 await main()

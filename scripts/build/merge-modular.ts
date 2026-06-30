@@ -124,7 +124,11 @@ function buildChamber(
     if (fireRate === undefined) continue
     grips[grip] = {
       fireRate,
-      attacks: allocateDamage(lowerDamage(dmgMap), wikiAttacks, `${label} ${grip}`),
+      attacks: allocateDamage(
+        lowerDamage(dmgMap),
+        wikiAttacks,
+        `${label} ${grip}`,
+      ),
     }
   }
   return {

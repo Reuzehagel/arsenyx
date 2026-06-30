@@ -41,7 +41,10 @@ export function buildDeImageLookup(
     if (typeof loc !== "string" || loc.length === 0) continue
     // The manifest occasionally ships Windows-style backslashes; normalize.
     const path = loc.replace(/\\/g, "/")
-    out.set(ent.uniqueName, `${DE_CDN_BASE}${path.startsWith("/") ? "" : "/"}${path}`)
+    out.set(
+      ent.uniqueName,
+      `${DE_CDN_BASE}${path.startsWith("/") ? "" : "/"}${path}`,
+    )
   }
   return out
 }
@@ -101,7 +104,10 @@ export async function resolveWikiImageUrls(
     const canonicalToRequested = new Map<string, string>()
     for (const { from, to } of json.query?.normalized ?? []) {
       if (from && to) {
-        canonicalToRequested.set(to.replace(/^File:/, ""), from.replace(/^File:/, ""))
+        canonicalToRequested.set(
+          to.replace(/^File:/, ""),
+          from.replace(/^File:/, ""),
+        )
       }
     }
     const pages = json.query?.pages ?? {}
@@ -187,4 +193,3 @@ export function* iterWikiRecords(
     if (v && typeof v === "object") yield* iterWikiRecords(v)
   }
 }
-

@@ -110,7 +110,10 @@ export function validateMods(
     // The set-bonus card renders modSetStats[n-1] keyed off modSet — one
     // without the other means the ExportModSet join drifted.
     if ((m["modSetStats"] !== undefined) !== (m["modSet"] !== undefined)) {
-      issues.push({ where, msg: "modSet/modSetStats present without the other" })
+      issues.push({
+        where,
+        msg: "modSet/modSetStats present without the other",
+      })
     }
   }
 }
@@ -185,7 +188,8 @@ export function validateOutputs(opts: {
       .slice(0, 50)
       .map((i) => `  - [${i.where}] ${i.msg}`)
       .join("\n")
-    const more = issues.length > 50 ? `\n  … and ${issues.length - 50} more` : ""
+    const more =
+      issues.length > 50 ? `\n  … and ${issues.length - 50} more` : ""
     throw new Error(
       `Catalog validation failed (${issues.length} issue${issues.length === 1 ? "" : "s"}) — nothing was written, the previous catalog is untouched:\n${list}${more}`,
     )

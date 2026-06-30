@@ -74,7 +74,7 @@ async function main() {
     // DE's exports occasionally contain literal NUL bytes inside string values
     // -- strip them so JSON.parse doesn't choke and so the file diffs cleanly
     // when DE re-uploads with cosmetic-only changes.
-    const clean = raw.replace(/\x00/g, "")
+    const clean = raw.replaceAll("\x00", "")
     // Round-trip through JSON.parse / JSON.stringify so we:
     //   - validate the payload is well-formed JSON before committing
     //   - normalize whitespace (DE's output is minified; pretty-print so git

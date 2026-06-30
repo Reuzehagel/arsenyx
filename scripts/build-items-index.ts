@@ -48,8 +48,8 @@ import { PVE_USABLE_CONCLAVE_MODS } from "../data/curated/pve-usable-conclave-mo
 import { buildBrowseIndex } from "./build/browse-index"
 import { buildFamilyIndex, makeExpandCompat } from "./build/expand-compat"
 import { iterWikiRecords } from "./build/images"
-import { mergeArcanes, type MergedArcane } from "./build/merge-arcanes"
-import { mergeCompanions, type MergedCompanion } from "./build/merge-companions"
+import { mergeArcanes } from "./build/merge-arcanes"
+import { mergeCompanions } from "./build/merge-companions"
 import {
   collapseTwinFrames,
   mergeFrame,
@@ -57,7 +57,7 @@ import {
   type MergedFrame,
 } from "./build/merge-frames"
 import { deriveHelminthAbilities } from "./build/merge-helminth"
-import { mergeMods, type MergedMod } from "./build/merge-mods"
+import { mergeMods } from "./build/merge-mods"
 import { mergeModular } from "./build/merge-modular"
 import {
   mergeWeapon,

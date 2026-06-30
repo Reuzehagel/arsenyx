@@ -46,7 +46,11 @@ const DE_POLARITY_MAP: Record<string, string> = {
 /** DE path fragments that mark a compatName="Claws" mod as beast/companion
  *  (not a player melee Claws mod). Player claw stances live under
  *  /MeleeTrees/ and /PvPMods/ and must NOT match. */
-const BEAST_CLAW_PATHS = ["/Sentinel/Kubrow/", "/BeastWeapons/", "/Sets/Hunter/"] as const
+const BEAST_CLAW_PATHS = [
+  "/Sentinel/Kubrow/",
+  "/BeastWeapons/",
+  "/Sets/Hunter/",
+] as const
 
 /** Closed set of DE mod types — assert on drift. */
 const KNOWN_MOD_TYPES = new Set<string>([
@@ -379,12 +383,14 @@ export function mergeMods(
     // Claws and beast claws stop colliding. Player claw stances live under
     // /MeleeTrees/ and /PvPMods/ and are left untouched. Paired with
     // "BeastClaws" in class-pools.ts and KNOWN_MOD_POOLS in merge-weapons.ts.
-    if (compatName === "Claws" && BEAST_CLAW_PATHS.some((p) => raw.uniqueName?.includes(p))) {
+    if (
+      compatName === "Claws" &&
+      BEAST_CLAW_PATHS.some((p) => raw.uniqueName?.includes(p))
+    ) {
       compatName = "BeastClaws"
     }
 
-    const isPrime =
-      raw.name.includes("Primed ") || raw.name.includes("Umbral ")
+    const isPrime = raw.name.includes("Primed ") || raw.name.includes("Umbral ")
     // Augments are detected by an "Augment"-rooted suffix on the DE
     // `uniqueName` path (e.g. .../FooAugmentCard, .../BarAugmentMod): the
     // regex matches "Augment" followed by zero or more word chars at end of
@@ -457,4 +463,3 @@ export function mergeMods(
 
   return { mods, counts }
 }
-

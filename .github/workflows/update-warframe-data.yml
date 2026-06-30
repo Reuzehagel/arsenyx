@@ -44,8 +44,8 @@ jobs:
       - run: bun install --frozen-lockfile
 
       - name: Sync upstream + rebuild items
-        run: bun run data:bump
-        # data:bump runs `sync:images --skip-if-no-creds` as its last step;
+        run: bun run data:refresh
+        # data:refresh runs `sync:images --skip-if-no-creds` as its last step;
         # with these present it mirrors new images into R2 and rewrites the
         # catalog to img.arsenyx.com, so the auto-PR already passes
         # check:images. If any secret is unset, sync:images self-skips and the

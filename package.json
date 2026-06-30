@@ -13,14 +13,16 @@
     "build:items": "bun run scripts/build-items-index.ts",
     "sync:images": "bun run scripts/sync-images.ts",
     "check:images": "bun run scripts/check-image-hosts.ts",
+    "check:data-version": "bun run scripts/check-data-version.ts",
     "data:sync": "bun run scripts/sync-de.ts && bun run scripts/sync-wiki.ts",
-    "data:bump": "bun run scripts/bump-data.ts",
+    "data:refresh": "bun run scripts/refresh-data.ts",
+    "data:stamp": "bun run scripts/stamp-data.ts",
     "typecheck": "bun run --filter '*' typecheck && bun run typecheck:scripts",
     "typecheck:scripts": "bunx tsc --noEmit -p scripts/tsconfig.json",
-    "lint": "oxlint apps/web/src apps/api/src packages/shared/src",
-    "lint:fix": "oxlint --fix apps/web/src apps/api/src packages/shared/src",
-    "fmt": "oxfmt --write apps/web/src apps/api/src packages/shared/src '!**/generated/**' '!**/*.gen.ts' '!**/components/ui/**'",
-    "fmt:check": "oxfmt --check apps/web/src apps/api/src packages/shared/src '!**/generated/**' '!**/*.gen.ts' '!**/components/ui/**'"
+    "lint": "oxlint apps/web/src apps/api/src packages/shared/src scripts data/curated",
+    "lint:fix": "oxlint --fix apps/web/src apps/api/src packages/shared/src scripts data/curated",
+    "fmt": "oxfmt --write apps/web/src apps/api/src packages/shared/src scripts data/curated '!**/generated/**' '!**/*.gen.ts' '!**/components/ui/**' '!data/curated/*.json' '!data/curated/*.md'",
+    "fmt:check": "oxfmt --check apps/web/src apps/api/src packages/shared/src scripts data/curated '!**/generated/**' '!**/*.gen.ts' '!**/components/ui/**' '!data/curated/*.json' '!data/curated/*.md'"
   },
   "dependencies": {
     "@arsenyx/shared": "workspace:*",

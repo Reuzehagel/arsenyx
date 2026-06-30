@@ -36,7 +36,5 @@ export function normalizePolarity(p: unknown): string | null {
  *  (unknown values pass through verbatim with a warning). The frame / weapon /
  *  companion mergers all share this shape. */
 export function normalizePolarities(list: readonly unknown[]): string[] {
-  return list
-    .map(normalizePolarity)
-    .filter((p): p is string => p !== null)
+  return list.map(normalizePolarity).filter((p): p is string => p !== null)
 }

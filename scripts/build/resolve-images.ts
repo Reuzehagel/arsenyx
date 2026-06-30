@@ -9,6 +9,7 @@
  * disk so subsequent builds run offline. See ./images for the resolvers.
  */
 
+import { ARCANE_INTERNALNAME_FIXES } from "../../data/curated/arcane-internalname-fixes"
 import {
   buildDeImageLookup,
   iterWikiImageEntries,
@@ -111,14 +112,22 @@ export async function resolveImages(opts: {
   const wikiArcaneNames = new Set<string>()
   const arcaneSlotByUniqueName = new Map<string, string>()
   for (const { internalName, record } of iterWikiRecords(wikiArcanesBlob)) {
+    // The wiki module sometimes mislabels a row's InternalName with a
+    // neighbour's uniqueName (a shifted column), landing the art on the wrong
+    // arcane. Correct the join key by the stable `Name` field — see
+    // data/curated/arcane-internalname-fixes.ts.
+    const name = record["Name"]
+    const un =
+      (typeof name === "string" && ARCANE_INTERNALNAME_FIXES[name]) ||
+      internalName
     const image = record["Image"]
     if (typeof image === "string" && image.length > 0) {
-      arcaneWikiImageFile.set(internalName, image)
-      wikiArcaneNames.add(internalName)
+      arcaneWikiImageFile.set(un, image)
+      wikiArcaneNames.add(un)
     }
     const t = record["Type"]
     if (typeof t === "string" && t.length > 0) {
-      arcaneSlotByUniqueName.set(internalName, t)
+      arcaneSlotByUniqueName.set(un, t)
     }
   }
 
