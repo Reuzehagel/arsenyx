@@ -11,6 +11,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-07-01",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "The Ballistica, Ballistica Prime, and Rakta Ballistica mod picker now offers pistol mods instead of rifle mods. These sidearm crossbows were being routed to the primary mod pool, so the picker showed things like Serration and Metal Auger they can't actually equip.",
+      },
+    ],
+  },
+  {
     date: "2026-06-30",
     changes: [
       {
