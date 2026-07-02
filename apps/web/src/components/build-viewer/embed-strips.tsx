@@ -6,6 +6,7 @@ import { ExternalLink, Zap } from "lucide-react"
 import { type ReactNode, Suspense, useState } from "react"
 
 import { ShardSlot } from "@/components/build-editor/shard-controls"
+import { StatText } from "@/components/stat-text"
 import {
   Popover,
   PopoverContent,
@@ -311,7 +312,7 @@ function EmbedAbilityIcon({
         )}
       </p>
       <p className="text-muted-foreground mt-0.5 text-xs">
-        {ability.description}
+        <StatText text={ability.description} />
       </p>
     </>
   )

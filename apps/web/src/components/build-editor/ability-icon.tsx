@@ -2,6 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query"
 import { Undo2, Zap } from "lucide-react"
 import { Suspense, useMemo, useState } from "react"
 
+import { StatText } from "@/components/stat-text"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -64,7 +65,7 @@ export function AbilityIcon({
         <TooltipContent side="bottom" className="max-w-xs">
           <p className="font-semibold">{ability.name}</p>
           <p className="text-muted-foreground mt-0.5 whitespace-pre-line">
-            {ability.description}
+            <StatText text={ability.description} />
           </p>
         </TooltipContent>
       </Tooltip>
@@ -92,7 +93,7 @@ export function AbilityIcon({
               <p className="text-destructive text-xs">(Helminth)</p>
             )}
             <p className="text-muted-foreground text-xs whitespace-pre-line">
-              {ability.description}
+              <StatText text={ability.description} />
             </p>
           </div>
         )}

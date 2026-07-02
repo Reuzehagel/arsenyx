@@ -3,7 +3,10 @@ import { useEffect, useRef, useState } from "react"
 /**
  * Embed wrapper for /builds/$slug?embed=1. Fires postMessage so host pages
  * can auto-resize the iframe to the exact content height. The `bg` param
- * sets body background to blend the embed with the host page.
+ * paints only the outer host-blending layer; the measured inner layer stays
+ * on Arsenyx's card color so gaps between rounded embed panels don't expose a
+ * stale host background after the host site changes theme without reloading the
+ * iframe.
  *
  * `scale` applies CSS `zoom` globally (e.g. 0.9 = 90%). Because `zoom`
  * affects layout, wrap-query responsive reflow still works — mods wrap
@@ -47,14 +50,20 @@ export function EmbedShell({
 
   return (
     <div
-      ref={innerRef}
       className="bg-background w-full"
       style={{
-        ...(zoom !== 1 && { zoom }),
         ...(bgColor && { backgroundColor: bgColor }),
       }}
     >
-      {children}
+      <div
+        ref={innerRef}
+        className="bg-card w-full"
+        style={{
+          ...(zoom !== 1 && { zoom }),
+        }}
+      >
+        {children}
+      </div>
     </div>
   )
 }
