@@ -54,6 +54,7 @@ function stripResidualTags(text: string): string {
 export function parseStatText(input: string): Segment[] {
   const normalized = input
     .replace(/<LINE_SEPARATOR>/g, "\n")
+    .replace(/<br\s*\/?>/gi, "\n")
     .replace(/\\n/g, "\n")
 
   const segments: Segment[] = []

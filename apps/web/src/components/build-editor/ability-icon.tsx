@@ -21,6 +21,8 @@ import {
 import { cn } from "@/lib/util/utils"
 import { getImageUrl } from "@/lib/warframe"
 
+import { StatText } from "../stat-text"
+
 export function AbilityIcon({
   ability,
   isHelminth,
@@ -64,7 +66,7 @@ export function AbilityIcon({
         <TooltipContent side="bottom" className="max-w-xs">
           <p className="font-semibold">{ability.name}</p>
           <p className="text-muted-foreground mt-0.5 whitespace-pre-line">
-            {ability.description}
+            <StatText text={ability.description} />
           </p>
         </TooltipContent>
       </Tooltip>
@@ -92,7 +94,7 @@ export function AbilityIcon({
               <p className="text-destructive text-xs">(Helminth)</p>
             )}
             <p className="text-muted-foreground text-xs whitespace-pre-line">
-              {ability.description}
+              <StatText text={ability.description} />
             </p>
           </div>
         )}
