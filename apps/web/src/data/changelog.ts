@@ -11,6 +11,41 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-07-03",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Organizations can now be marked verified by an admin. Verified orgs render in purple across build cards, the build viewer header, org pages, and the directory, and sort first in the directory. Everyone else now renders in a muted gray instead.",
+      },
+      {
+        type: "fix",
+        description:
+          "Org members can now see their org's private and unlisted builds on the org page — they used to see only public builds, same as a logged-out visitor.",
+      },
+      {
+        type: "feat",
+        description:
+          "Ctrl+K and the footer now have a Report an Issue shortcut that jumps straight to a GitHub issue template.",
+      },
+      {
+        type: "fix",
+        description:
+          "Ability tooltips now render damage-type icons and line breaks correctly instead of showing raw tags like <br> and DT_SENTIENT_COLOR.",
+      },
+      {
+        type: "fix",
+        description:
+          "Elements now combine in slot order instead of equip order, so modding elements out of sequence no longer shows the wrong combined element until you reload the build.",
+      },
+      {
+        type: "fix",
+        description:
+          "Directory cards line up their member and build counts at the bottom of the card, even when one card has a longer description than its neighbors.",
+      },
+    ],
+  },
+  {
     date: "2026-07-01",
     changes: [
       {
