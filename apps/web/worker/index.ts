@@ -25,6 +25,18 @@ import {
 
 interface Env {
   ASSETS: { fetch: (request: Request) => Promise<Response> }
+  // Per-deploy version metadata (wrangler [version_metadata] binding). Its `id`
+  // changes on every deploy; we mix it into the build-page cache key so a deploy
+  // starts a fresh cache namespace (see handleBuildPage). Optional so local /
+  // dry-run runs without the binding still type-check.
+  CF_VERSION_METADATA?: { id: string }
+}
+
+// Minimal shape of the Workers ExecutionContext — we only use waitUntil, to let
+// a cache write finish after the response has been returned. (The full
+// @cloudflare types aren't a dep of apps/web; this file is bundled by wrangler.)
+interface ExecutionCtx {
+  waitUntil(promise: Promise<unknown>): void
 }
 
 const API_BASE = "https://api.arsenyx.com"
@@ -38,6 +50,22 @@ const RESERVED_BUILD_SUBPATHS = new Set(["mine", "bookmarks", "new"])
 // upper bound that still cheaply rejects amplification attempts that try to
 // pin Postgres findUnique with megabyte-sized strings.
 const MAX_SLUG_LENGTH = 64
+
+// Per-colo Cache API TTL for fully-rewritten PUBLIC build-page HTML. One hot
+// slug dominates traffic, so caching the rendered shell lets repeat hits in a
+// colo skip the asset fetch, the API round-trip, and the HTMLRewriter pass.
+// Tradeoff: the build name/description/like/view counts baked into the <head>
+// meta — and a just-flipped visibility — can lag by up to this window. Only the
+// crawler-facing meta is affected; the page BODY is always live (the SPA
+// refetches client-side). Lower this if meta freshness matters more than hit rate.
+const BUILD_HTML_TTL = 300
+
+// TTL for the anonymous API meta subrequest — the cold-miss shield behind the
+// HTML cache above. Kept short and decoupled from BUILD_HTML_TTL so the two
+// caches don't compound: a freshly-written HTML entry carries meta at most this
+// stale, bounding worst-case staleness to ~BUILD_HTML_TTL + BUILD_META_TTL
+// rather than 2×BUILD_HTML_TTL.
+const BUILD_META_TTL = 60
 
 // Sync with the `head` options in src/routes/*.tsx.
 const STATIC_META: Record<string, { title: string; description?: string }> = {
@@ -110,7 +138,7 @@ type BuildSummary = {
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionCtx): Promise<Response> {
     const url = new URL(request.url)
 
     if (request.method !== "GET") return env.ASSETS.fetch(request)
@@ -133,7 +161,7 @@ export default {
     }
 
     const buildSlug = extractBuildSlug(url.pathname)
-    if (buildSlug) return handleBuildPage(request, env, url, buildSlug)
+    if (buildSlug) return handleBuildPage(request, env, url, buildSlug, ctx)
 
     const item = extractItemPath(url.pathname)
     if (item) return handleItemPage(request, env, url, item)
@@ -151,6 +179,7 @@ async function handleBuildPage(
   env: Env,
   url: URL,
   slug: string,
+  ctx: ExecutionCtx,
 ): Promise<Response> {
   // Embed iframes (`?embed=1`) get a dedicated lightweight shell instead of
   // the full SPA index.html, so a guide page with many embeds doesn't boot
@@ -176,6 +205,33 @@ async function handleBuildPage(
     }
     return res
   }
+
+  // Per-colo edge cache for the rendered PUBLIC build shell. The injected meta
+  // is derived from an anonymous API read, so the HTML is identical for every
+  // visitor — safe to share across users. The key drops the query string so
+  // tracking params (utm_*, fbclid, …) don't fragment the one hot slug; the
+  // ?embed=1 variant already returned above, so it never reaches this key.
+  //
+  // The key is namespaced by the deploy version: the cached shell embeds this
+  // deploy's hashed /assets/*.js tags, which rotate on the next deploy and then
+  // 404 → SPA-fallback HTML (white screen). The per-colo Cache API survives
+  // deploys, so without this a warm colo would serve the pre-deploy shell for
+  // the whole TTL; a new version id orphans old entries (never matched again)
+  // and they age out by TTL.
+  const cache = edgeCache()
+  const cacheKey = new Request(
+    buildPageCacheKeyUrl(url, env.CF_VERSION_METADATA?.id),
+  )
+  if (cache) {
+    const hit = await cache.match(cacheKey)
+    if (hit) return hit
+  }
+
+  // Kick off the OG image-map fetch up front so it overlaps the asset + API
+  // fetches below; only the PUBLIC branch awaits it. fetchImageMap never
+  // rejects (returns null on error), so the not-found / non-public early
+  // returns can leave it unawaited safely.
+  const imageMapPromise = fetchImageMap(env, url)
 
   // Workers Static Assets redirects `/index.html` → `/` by default
   // (html_handling), so we ask for the original path and let the SPA
@@ -211,12 +267,19 @@ async function handleBuildPage(
     return rewriteMeta(shellRes, { noindex: true })
   }
 
-  // Builds persist a denormalized item imageName that rots across
-  // image-scheme changes (see scripts/sync-images.ts). Re-resolve the OG
-  // image by the item's stable uniqueName against the same image-map.json the
-  // SPA uses, falling back to the stored value on a miss.
-  const imageMap = await fetchImageMap(env, url)
-  return rewriteMeta(shellRes, buildMeta(build, slug, imageMap))
+  // Re-resolve the OG image by the item's stable uniqueName (the denormalized
+  // build imageName rots across image-scheme changes — see sync-images.ts),
+  // awaiting the map kicked off above; falls back to the stored value on a miss.
+  const res = rewriteMeta(
+    shellRes,
+    buildMeta(build, slug, await imageMapPromise),
+  )
+
+  // Only the fully-enriched PUBLIC HTML is cached. 404s, API-error fallbacks,
+  // and private/unlisted shells are left uncached so a transient blip or a
+  // just-changed visibility can't pin a wrong response for the whole TTL.
+  if (!cache) return res
+  return cacheStore(res, cacheKey, cache, ctx)
 }
 
 function extractBuildSlug(pathname: string): string | null {
@@ -249,7 +312,19 @@ async function fetchBuild(
       {
         headers: { accept: "application/json" },
         signal: AbortSignal.timeout(2500),
-        cf: { cacheTtl: 60, cacheEverything: true },
+        // Per-status TTL rather than a blanket cacheTtl: never cache a 5xx (a
+        // transient API blip would otherwise pin a degraded shell for the whole
+        // window), briefly cache 404s to blunt dead-link hammering, and cache
+        // good meta only briefly — this is the cold-miss shield behind the HTML
+        // cache, kept short (BUILD_META_TTL) so the two TTLs don't compound.
+        cf: {
+          cacheEverything: true,
+          cacheTtlByStatus: {
+            "200-299": BUILD_META_TTL,
+            "404": 10,
+            "500-599": 0,
+          },
+        },
       } as RequestInit,
     )
     if (res.status === 404) return "not-found"
@@ -441,6 +516,55 @@ function stripTrailingSlash(pathname: string): string {
 // Shared helpers
 // ---------------------------------------------------------------------------
 
+// Cache key URL for a build page's rendered shell. Two invariants, both
+// load-bearing (see handleBuildPage's cache comment + tests in index.test.ts):
+//   - drops the query string, so tracking params (utm_*, fbclid, …) can't
+//     fragment the one hot slug across many cache entries;
+//   - namespaces by the deploy version, so a deploy starts a fresh namespace —
+//     the cached shell embeds this deploy's hashed /assets/*.js, which 404 after
+//     the next deploy. Falls back to "dev" when the binding is absent.
+// Exported for unit tests; the synthetic `?__v=` is only ever a cache key.
+export function buildPageCacheKeyUrl(
+  url: URL,
+  version: string | undefined,
+): string {
+  return `${url.origin}${url.pathname}?__v=${encodeURIComponent(version ?? "dev")}`
+}
+
+// Per-colo Cache API handle. `caches.default` is a workerd global; we cast it
+// the same way we cast HTMLRewriter rather than pulling in the full CF types.
+// Returns null if absent (e.g. a non-workerd test runtime) so callers fall back
+// to the uncached path.
+function edgeCache(): EdgeCache | null {
+  const c = (globalThis as { caches?: { default?: EdgeCache } }).caches
+  return c?.default ?? null
+}
+
+// Store a clone of the streamed rewrite result while the original streams to the
+// user (waitUntil keeps the put alive past the response). We re-wrap to own the
+// headers: the asset shell can carry _headers-derived Cache-Control, and a
+// shared cache must never hold a Set-Cookie — so overwrite the TTL and strip any
+// cookie explicitly. Cloning a streaming body tees it, so no manual buffering.
+function cacheStore(
+  res: Response,
+  key: Request,
+  cache: EdgeCache,
+  ctx: ExecutionCtx,
+): Response {
+  const out = new Response(res.body, res)
+  out.headers.delete("set-cookie")
+  // max-age=0 + must-revalidate keeps browsers revalidating every navigation
+  // (so a fresh Worker run picks up updated meta), while s-maxage lets the
+  // shared per-colo Cache API serve the entry for the TTL. Without max-age a
+  // browser could heuristically cache the shell and pin stale <head> meta.
+  out.headers.set(
+    "cache-control",
+    `public, max-age=0, s-maxage=${BUILD_HTML_TTL}, must-revalidate`,
+  )
+  ctx.waitUntil(cache.put(key, out.clone()))
+  return out
+}
+
 // Compact `uniqueName → current imageName` map emitted by
 // scripts/build-items-index.ts and served from Static Assets. Fetched through
 // the ASSETS binding only on the build-page path.
@@ -581,6 +705,11 @@ function escapeAttr(s: string): string {
 // wrangler at deploy time, not by Vite.
 interface HTMLRewriterCtor {
   new (): HTMLRewriterInst
+}
+// Subset of the workerd Cache API surface we touch (caches.default).
+interface EdgeCache {
+  match(request: Request): Promise<Response | undefined>
+  put(request: Request, response: Response): Promise<void>
 }
 interface HTMLRewriterInst {
   on(selector: string, handlers: ElementHandlers): HTMLRewriterInst

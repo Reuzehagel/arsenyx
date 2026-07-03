@@ -83,8 +83,30 @@ export function variantsOverCap(buildData: unknown): boolean {
 
 function hasShardsInBuildData(buildData: unknown): boolean {
   if (!buildData || typeof buildData !== "object") return false
-  const shards = (buildData as Record<string, unknown>).shards
-  return Array.isArray(shards) && shards.some((s) => s != null)
+  const data = buildData as Record<string, unknown>
+  const anyPlaced = (v: unknown): boolean =>
+    Array.isArray(v) && v.some((s) => s != null)
+  // Top-level `shards` mirrors the active variant (and is the only set for
+  // single-loadout builds).
+  if (anyPlaced(data.shards)) return true
+  // Shards are per-variant — any variant carrying its own set counts.
+  if (Array.isArray(data.variants)) {
+    if (
+      data.variants.some(
+        (v) =>
+          v &&
+          typeof v === "object" &&
+          anyPlaced((v as Record<string, unknown>).shards),
+      )
+    )
+      return true
+  }
+  // Legacy twin-frame per-form shards (pre per-variant builds).
+  const formShards = data.formShards
+  if (formShards && typeof formShards === "object") {
+    return Object.values(formShards as Record<string, unknown>).some(anyPlaced)
+  }
+  return false
 }
 
 const MAX_CATALOG_VERSION = 64
@@ -420,7 +442,7 @@ builds.post("/:slug/fork", rateLimitUser("mutate"), async (c) => {
   return c.json({ error: "slug_collision" }, 500)
 })
 
-builds.get("/", edgeCache({ maxAge: 120 }), async (c) => {
+builds.get("/", edgeCache({ maxAge: 60 }), async (c) => {
   const result = await runList({
     filters: parseListQuery(c),
     ...publicScope(),
@@ -483,6 +505,7 @@ builds.get(
     // builds regardless of visibility so they can link private/unlisted
     // ones from the editor.
     const rows = await prisma.build.findMany({
+      relationLoadStrategy: "join",
       where: {
         AND: [
           {
@@ -528,7 +551,16 @@ async function loadPartnerContext(slug: string, partnerSlug: string) {
   return { own, partner }
 }
 
-builds.get("/:slug/partners", async (c) => {
+// Edge-cached like the detail route: this fires on every full build-detail
+// page view (the "Related builds" strip), so an uncached query here doubles
+// the DB hits per anonymous view. Session-cookie requests bypass the cache
+// (edgeCache checks the Cookie header), so authenticated viewers still get
+// their viewer-specific partner visibility. Accepted staleness, same class as
+// the GET /builds list: if a partner flips PUBLIC->PRIVATE or is unlinked, it
+// can linger in an anon cache entry for up to maxAge — the partner mutations
+// don't purge this path (no tractable per-key eviction). Bounded and low-risk:
+// the strip only shows a title/thumbnail, never the loadout.
+builds.get("/:slug/partners", edgeCache({ maxAge: 60 }), async (c) => {
   const slug = c.req.param("slug")
   const session = await getSession(c)
   const viewerId = session?.user.id
@@ -551,6 +583,9 @@ builds.get("/:slug/partners", async (c) => {
 
   const build = await prisma.build.findUnique({
     where: { slug },
+    // partnerBuilds nests user + organization (via LIST_SELECT), so the default
+    // strategy fans out into several queries; join collapses them.
+    relationLoadStrategy: "join",
     select: {
       id: true,
       userId: true,
@@ -803,7 +838,7 @@ builds.delete("/:slug/bookmark", rateLimitUser("social"), async (c) => {
   return c.json({ hasBookmarked: false, bookmarkCount })
 })
 
-builds.get("/:slug", edgeCache({ maxAge: 300 }), async (c) => {
+builds.get("/:slug", edgeCache({ maxAge: 60 }), async (c) => {
   const slug = c.req.param("slug")
 
   // Fast path for the link-unfurl Worker (apps/web/worker/index.ts): skip the
@@ -814,6 +849,7 @@ builds.get("/:slug", edgeCache({ maxAge: 300 }), async (c) => {
   if (c.req.query("embed") === "1") {
     const slim = await prisma.build.findUnique({
       where: { slug },
+      relationLoadStrategy: "join",
       select: {
         slug: true,
         name: true,
@@ -827,7 +863,7 @@ builds.get("/:slug", edgeCache({ maxAge: 300 }), async (c) => {
         itemUniqueName: true,
         itemImageName: true,
         user: { select: { name: true, username: true, displayUsername: true } },
-        organization: { select: { name: true } },
+        organization: { select: { name: true, verified: true } },
         buildGuide: { select: { summary: true } },
       },
     })
@@ -859,6 +895,11 @@ builds.get("/:slug", edgeCache({ maxAge: 300 }), async (c) => {
     getSession(c),
     prisma.build.findUnique({
       where: { slug },
+      // Fold user + organization + buildGuide into one LATERAL-join SELECT
+      // rather than a query-per-relation. The detail page was the single
+      // largest source of DB query volume (one view = build + guide + author +
+      // org as four separate SELECTs); see _build-list.ts for the rationale.
+      relationLoadStrategy: "join",
       include: DETAIL_INCLUDE,
     }),
   ])

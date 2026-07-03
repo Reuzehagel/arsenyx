@@ -11,6 +11,81 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-07-01",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "The Ballistica, Ballistica Prime, and Rakta Ballistica mod picker now offers pistol mods instead of rifle mods. These sidearm crossbows were being routed to the primary mod pool, so the picker showed things like Serration and Metal Auger they can't actually equip.",
+      },
+    ],
+  },
+  {
+    date: "2026-06-30",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Arcanes Crepuscular, Sculptor, and Steadfast now show their correct art. Crepuscular used to come up as a blank blue glyph, and Sculptor and Steadfast were showing the wrong icons.",
+      },
+    ],
+  },
+  {
+    date: "2026-06-28",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Five more incarnons have their evolution trees in the planner: Vectis, Ballistica, Stug, Destreza, and Obex. Turn on Incarnon and you get the same tier-by-tier perk picker as the rest.",
+      },
+      {
+        type: "fix",
+        description:
+          "The Incarnon Genesis adapter icon now shows when you enable Incarnon on a Steel Path weapon. Every genesis weapon used to fall back to a blank placeholder there.",
+      },
+      {
+        type: "fix",
+        description:
+          "The mod picker no longer offers mods a weapon can't actually equip: beam-only mods like Ruinous Extension stay off non-beam pistols such as the Furis, and the semi-auto-only Cannonade mods stay off full-auto weapons.",
+      },
+      {
+        type: "fix",
+        description:
+          "You can no longer stack two augments for the same ability — for example two of Loki's Decoy augments. Once you slot one, the others grey out, and existing builds that doubled up now flag the conflict.",
+      },
+    ],
+  },
+  {
+    date: "2026-06-20",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Sirius & Orion: you can now subsume a Helminth ability on Orion, not just Sirius. Each brother keeps his own subsume, so it lands on whoever's in front.",
+      },
+    ],
+  },
+  {
+    date: "2026-06-19",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Archon Shards are now per variant: every build variant keeps its own shard set, so changing one variant's shards no longer affects the others. They're saved in the share link too, so a build opens with each variant's shards intact.",
+      },
+      {
+        type: "chore",
+        description:
+          "Build pages open faster for logged-out visitors — they're now served from a cache instead of being rebuilt on every view.",
+      },
+      {
+        type: "chore",
+        description:
+          "Likes, edits, and new builds now show up across build lists (and for logged-out visitors) within about a minute, instead of taking several minutes to appear.",
+      },
+    ],
+  },
+  {
     date: "2026-06-18",
     changes: [
       {

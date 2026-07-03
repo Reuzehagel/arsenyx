@@ -84,6 +84,17 @@ export function orgPublicScope(organizationId: string): ListScope {
   }
 }
 
+/** Every Build published under an Organization, at any Visibility — the org
+ *  page as seen by the org's own members (`GET /orgs/:slug/builds` when the
+ *  viewer is a member). Mirrors the per-Build rule in builds.ts, where org
+ *  membership grants view access to the org's PRIVATE Builds (#274). */
+export function orgMemberScope(organizationId: string): ListScope {
+  return {
+    baseWhere: { organizationId },
+    baseFilter: Prisma.sql`"organizationId" = ${organizationId}`,
+  }
+}
+
 /** No Visibility filter at all — the admin moderation list sees every Build
  *  regardless of Visibility (`GET /admin/builds`). Guarded by requireAdmin at
  *  the route; the scope itself is deliberately unfiltered. */

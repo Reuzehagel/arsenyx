@@ -30,6 +30,7 @@ import { readdirSync } from "node:fs"
 import { mkdir, rm, writeFile } from "node:fs/promises"
 import { resolve } from "node:path"
 
+import { INCARNON_GENESIS_IMAGES } from "@arsenyx/shared/warframe/incarnon-data"
 import { INCARNON_EVOLUTIONS } from "@arsenyx/shared/warframe/incarnon-evolutions"
 import {
   isKitgunChamber,
@@ -42,12 +43,13 @@ import {
   ZAW_STRIKES,
 } from "@arsenyx/shared/warframe/zaw-data"
 
+import { ARCANE_KEEP } from "../data/curated/arcane-keep"
 import { PVE_USABLE_CONCLAVE_MODS } from "../data/curated/pve-usable-conclave-mods"
 import { buildBrowseIndex } from "./build/browse-index"
 import { buildFamilyIndex, makeExpandCompat } from "./build/expand-compat"
 import { iterWikiRecords } from "./build/images"
-import { mergeArcanes, type MergedArcane } from "./build/merge-arcanes"
-import { mergeCompanions, type MergedCompanion } from "./build/merge-companions"
+import { mergeArcanes } from "./build/merge-arcanes"
+import { mergeCompanions } from "./build/merge-companions"
 import {
   collapseTwinFrames,
   mergeFrame,
@@ -55,7 +57,7 @@ import {
   type MergedFrame,
 } from "./build/merge-frames"
 import { deriveHelminthAbilities } from "./build/merge-helminth"
-import { mergeMods, type MergedMod } from "./build/merge-mods"
+import { mergeMods } from "./build/merge-mods"
 import { mergeModular } from "./build/merge-modular"
 import {
   mergeWeapon,
@@ -225,7 +227,11 @@ async function main() {
   const rawFrames: MergedFrame[] = []
   for (const de of deFramesBlob.ExportWarframes) {
     rawFrames.push(
-      mergeFrame(de, { wiki: wikiFramesBlob, unmatched: frameUnmatched }),
+      mergeFrame(de, {
+        wiki: wikiFramesBlob,
+        unmatched: frameUnmatched,
+        polarityOverrides: curated.framePolarities,
+      }),
     )
   }
   // Collapse twin-frames (e.g. Sirius & Orion ships as two DE rows) into one
@@ -386,9 +392,11 @@ async function main() {
   // 5 records — one per ability + on-cast) and a handful of cut entries
   // (e.g. "Arcane Liquid") that aren't in-game. `wikiArcaneNames` (built in
   // the single arcane-module walk above) is the canonical in-game list;
-  // intersect against it to drop both.
-  const mergedArcanes = allMergedArcanes.filter((a) =>
-    wikiArcaneNames.has(a.uniqueName),
+  // intersect against it to drop both. `ARCANE_KEEP` rescues verified real
+  // arcanes the wiki module has momentarily dropped (see arcane-keep.ts), so a
+  // wiki hiccup can't silently delete obtainable content.
+  const mergedArcanes = allMergedArcanes.filter(
+    (a) => wikiArcaneNames.has(a.uniqueName) || ARCANE_KEEP.has(a.uniqueName),
   )
   const arcanesWithImages = mergedArcanes.map((a) => ({
     ...a,
@@ -670,6 +678,39 @@ async function main() {
     )
   } else {
     console.log(`  OK  kitgun-images.json (${kitgunTotal} components)`)
+  }
+
+  // Incarnon Genesis adapter icons. The adapters aren't catalog items, so
+  // resolve their DE CDN URLs from the manifest by matching each weapon's
+  // adapter texture filename (the values in INCARNON_GENESIS_IMAGES), like the
+  // zaw thumbnails. Keyed by base weapon name for the editor's incarnon view.
+  // Flows through sync:images → R2 like every other catalog image. Innate
+  // incarnons have no adapter, so they're absent from INCARNON_GENESIS_IMAGES
+  // and from this map.
+  const adapterByFile = new Map<string, string>()
+  for (const url of imageByUniqueName.values()) {
+    if (!url.includes("/IncarnonWeapons/")) continue
+    const file = url.split("/").pop()?.split("!")[0]
+    if (file && !adapterByFile.has(file)) adapterByFile.set(file, url)
+  }
+  const incarnonAdapterImages: Record<string, string> = {}
+  for (const [name, file] of Object.entries(INCARNON_GENESIS_IMAGES)) {
+    const url = adapterByFile.get(file)
+    if (url) incarnonAdapterImages[name] = url
+  }
+  await writeFile(
+    resolve(OUT_DIR, "incarnon-adapter-images.json"),
+    JSON.stringify(incarnonAdapterImages),
+    "utf8",
+  )
+  const adapterTotal = Object.keys(INCARNON_GENESIS_IMAGES).length
+  const adapterResolved = Object.keys(incarnonAdapterImages).length
+  if (adapterResolved < adapterTotal) {
+    console.warn(
+      `  WARN incarnon-adapter-images.json resolved ${adapterResolved}/${adapterTotal} — some adapter textures missing from the manifest`,
+    )
+  } else {
+    console.log(`  OK  incarnon-adapter-images.json (${adapterTotal} adapters)`)
   }
 
   // Per-item detail files (items/<cat>/<slug>.json).

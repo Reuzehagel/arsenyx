@@ -10,8 +10,8 @@
  * Helminth picker doesn't need changes.
  */
 
-import type { DeFrame } from "./read-de"
 import type { MergedFrame } from "./merge-frames"
+import type { DeFrame } from "./read-de"
 
 /** Warframe → subsumed ability name. Mirrors the legacy table in
  *  scripts/build-items-index.ts (preserved verbatim to avoid drift). */

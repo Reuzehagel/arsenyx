@@ -16,11 +16,6 @@ export interface IncarnonTier {
 
 export interface IncarnonEvolution {
   source: string
-  /**
-   * Genesis adapter icon (Steel Path Circuit weapons only). Innate incarnons
-   * come incarnon by default — no separate adapter image — so this is omitted.
-   */
-  genesisImage?: string
   tiers: IncarnonTier[]
 }
 
@@ -665,7 +660,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Boar: {
     source: "Steel Path Circuit",
-    genesisImage: "BoarIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -731,7 +725,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Boltor: {
     source: "Steel Path Circuit",
-    genesisImage: "BoltorIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -791,7 +784,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Braton: {
     source: "Steel Path Circuit",
-    genesisImage: "BratonIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -860,7 +852,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Burston: {
     source: "Steel Path Circuit",
-    genesisImage: "BurstonIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -922,7 +913,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Dera: {
     source: "Steel Path Circuit",
-    genesisImage: "DeraIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -987,7 +977,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Dread: {
     source: "Steel Path Circuit",
-    genesisImage: "DreadIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1044,7 +1033,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Gorgon: {
     source: "Steel Path Circuit",
-    genesisImage: "GorgonIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1102,7 +1090,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Latron: {
     source: "Steel Path Circuit",
-    genesisImage: "LatronIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1161,7 +1148,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Miter: {
     source: "Steel Path Circuit",
-    genesisImage: "MiterIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1225,7 +1211,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Paris: {
     source: "Steel Path Circuit",
-    genesisImage: "ParisIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1286,7 +1271,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Soma: {
     source: "Steel Path Circuit",
-    genesisImage: "SomaIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1345,7 +1329,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Strun: {
     source: "Steel Path Circuit",
-    genesisImage: "StrunIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1407,7 +1390,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Sybaris: {
     source: "Steel Path Circuit",
-    genesisImage: "SybarisIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1472,7 +1454,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Torid: {
     source: "Steel Path Circuit",
-    genesisImage: "ToridIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1534,11 +1515,69 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
     ],
   },
 
+  Vectis: {
+    source: "Steel Path Circuit",
+    tiers: [
+      {
+        tier: 1,
+        perks: [
+          {
+            name: "Incarnon Form",
+            description:
+              "Weakpoint hits charge Incarnon Transmutation; Alt Fire transmutes into projectiles that embed for 2.5s dealing Cold Damage with forced Cold Status; headshots explode in a 6.7m radius after 0.4s.",
+          },
+        ],
+      },
+      {
+        tier: 2,
+        perks: [
+          {
+            name: "Inciting Incident",
+            description:
+              "+100 Base Damage. With Channeled Ability active: +2 Punch Through.",
+          },
+          {
+            name: "Lone Enforcer",
+            description:
+              "+75 Base Damage. +25% Multishot if no enemies are within 5m.",
+          },
+        ],
+      },
+      {
+        tier: 3,
+        perks: [
+          { name: "Rapid Reinforcement", description: "+60% Reload Speed." },
+          { name: "Marksman's Hand", description: "-60% Weapon Recoil." },
+          {
+            name: "Silent Running",
+            description:
+              "Reduce the chance an enemy will hear gunfire by 100%.",
+          },
+        ],
+      },
+      {
+        tier: 4,
+        perks: [
+          { name: "Deadhead", description: "+25% Headshot Damage." },
+          {
+            name: "Critical Parallel",
+            description:
+              "+10% Base Critical Chance, +0.5x Critical Damage Multiplier.",
+          },
+          {
+            name: "Survivor's Edge",
+            description:
+              "+30% Base Status Chance based on current Critical Chance, up to +40%.",
+          },
+        ],
+      },
+    ],
+  },
+
   // ─── INCARNON GENESIS — SECONDARIES ────────────────────────────────────────
 
   Angstrum: {
     source: "Steel Path Circuit",
-    genesisImage: "AngstrumIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1597,7 +1636,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Atomos: {
     source: "Steel Path Circuit",
-    genesisImage: "AtomosIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1658,9 +1696,70 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
     ],
   },
 
+  Ballistica: {
+    source: "Steel Path Circuit",
+    tiers: [
+      {
+        tier: 1,
+        perks: [
+          {
+            name: "Incarnon Form",
+            description:
+              "Weakpoint hits charge Incarnon Transmutation; Alt Fire transmutes into cross-shaped projectiles that punch through enemies.",
+          },
+        ],
+      },
+      {
+        tier: 2,
+        perks: [
+          {
+            name: "Headcracker",
+            description:
+              "+30 Base Damage. On Headshot: +7.5% Fire Rate for 4s, stacking up to 10x.",
+          },
+          {
+            name: "Prolific Perforation",
+            description:
+              "+30 Base Damage. On Punch Through Hit: +10% Critical Chance for 3s, stacking up to 8x.",
+          },
+        ],
+      },
+      {
+        tier: 3,
+        perks: [
+          { name: "Rapid Reinforcement", description: "+50% Reload Speed." },
+          { name: "Swift Deliverance", description: "+50% Projectile Speed." },
+          {
+            name: "Void's Guidance",
+            description: "+40% Accuracy, -40% Weapon Recoil.",
+          },
+        ],
+      },
+      {
+        tier: 4,
+        perks: [
+          {
+            name: "Elemental Balance",
+            description:
+              "+20% Base Status Chance per projectile; +20% for Incarnon Form.",
+          },
+          {
+            name: "Survivor's Edge",
+            description:
+              "+10% Base Critical Chance; +10% Base Status Chance per projectile / +10% for Incarnon Form.",
+          },
+          {
+            name: "Critical Parallel",
+            description:
+              "+15% Base Critical Chance, +1.0x Critical Damage Multiplier.",
+          },
+        ],
+      },
+    ],
+  },
+
   Bronco: {
     source: "Steel Path Circuit",
-    genesisImage: "BroncoIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1718,7 +1817,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Cestra: {
     source: "Steel Path Circuit",
-    genesisImage: "CestraIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1780,7 +1878,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Despair: {
     source: "Steel Path Circuit",
-    genesisImage: "DespairIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1838,7 +1935,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Dual Toxocyst": {
     source: "Steel Path Circuit",
-    genesisImage: "DualToxocystIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1902,7 +1998,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Furis: {
     source: "Steel Path Circuit",
-    genesisImage: "FurisIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -1968,7 +2063,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Gammacor: {
     source: "Steel Path Circuit",
-    genesisImage: "GammacorIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -2032,7 +2126,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Kunai: {
     source: "Steel Path Circuit",
-    genesisImage: "KunaiIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -2093,7 +2186,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Lato: {
     source: "Steel Path Circuit",
-    genesisImage: "LatoIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -2163,7 +2255,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Lex: {
     source: "Steel Path Circuit",
-    genesisImage: "LexIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -2231,7 +2322,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Sicarus: {
     source: "Steel Path Circuit",
-    genesisImage: "SicarusIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -2293,9 +2383,70 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
     ],
   },
 
+  Stug: {
+    source: "Steel Path Circuit",
+    tiers: [
+      {
+        tier: 1,
+        perks: [
+          {
+            name: "Incarnon Form",
+            description:
+              "Direct hits charge Incarnon Transmutation; Alt Fire transmutes into a chaotic maelstrom of bouncing Corrosive blobs.",
+          },
+        ],
+      },
+      {
+        tier: 2,
+        perks: [
+          {
+            name: "Blazing Barrel",
+            description:
+              "+175 Base Damage. On Firing: +5% Multishot, stacking up to 10x.",
+          },
+          {
+            name: "Overcharge Blast",
+            description:
+              "+300 Base Damage. With Energy Max above 700: +50% Blast Radius.",
+          },
+        ],
+      },
+      {
+        tier: 3,
+        perks: [
+          { name: "Rapid Reinforcement", description: "+50% Reload Speed." },
+          { name: "Swift Deliverance", description: "+50% Projectile Speed." },
+          {
+            name: "Resonant Restore",
+            description:
+              "On Reload From Empty: +10 Base Magazine Capacity, stacking up to 3x.",
+          },
+        ],
+      },
+      {
+        tier: 4,
+        perks: [
+          {
+            name: "Survivor's Edge",
+            description: "+15% Base Critical Chance, +15% Base Status Chance.",
+          },
+          {
+            name: "Deathtrap Trigger",
+            description:
+              "+25% Base Critical Chance, +1.5x Critical Damage Multiplier.",
+          },
+          {
+            name: "Elemental Dominance",
+            description:
+              "+20% Base Status Chance; effect doubles in Incarnon Form.",
+          },
+        ],
+      },
+    ],
+  },
+
   Vasto: {
     source: "Steel Path Circuit",
-    genesisImage: "VastoIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -2358,7 +2509,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Zylok: {
     source: "Steel Path Circuit",
-    genesisImage: "ZylokPrimeIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -2425,7 +2575,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Ack & Brunt": {
     source: "Steel Path Circuit",
-    genesisImage: "AckBruntIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -2486,7 +2635,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Anku: {
     source: "Steel Path Circuit",
-    genesisImage: "AnkuIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -2549,7 +2697,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Bo: {
     source: "Steel Path Circuit",
-    genesisImage: "BoIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -2613,7 +2760,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Ceramic Dagger": {
     source: "Steel Path Circuit",
-    genesisImage: "CeramicDaggerIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -2670,9 +2816,68 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
     ],
   },
 
+  Destreza: {
+    source: "Steel Path Circuit",
+    tiers: [
+      {
+        tier: 1,
+        perks: [
+          {
+            name: "Incarnon Form",
+            description:
+              "Reach 6x Combo and Heavy Attack to activate. Heavy Attacks spawn ghostly rapiers. +100% Melee Damage, +20% Sprint Speed, +20% Parkour Velocity; +10% Puncture Damage per Heavy Attack kill, up to +300% while transformed.",
+          },
+        ],
+      },
+      {
+        tier: 2,
+        perks: [
+          {
+            name: "Weighted Impetus",
+            description:
+              "+50 Base Damage. On Heavy Attack Kill: +100% Heavy Attack Wind Up Speed for 8s.",
+          },
+          {
+            name: "Piercing Stature",
+            description:
+              "+50 Base Damage. On Puncture Status Effect: +20% Status Chance for 6s, stacking up to 5x.",
+          },
+        ],
+      },
+      {
+        tier: 3,
+        perks: [
+          { name: "Orokin Reach", description: "+1 Range." },
+          {
+            name: "Overhand",
+            description: "Base Heavy Attack Efficiency set to 30%.",
+          },
+          { name: "Adept Reflexes", description: "+20 Initial Combo." },
+        ],
+      },
+      {
+        tier: 4,
+        perks: [
+          {
+            name: "Absolute Dominion",
+            description: "+20% Base Status Chance.",
+          },
+          {
+            name: "Critical Forte",
+            description: "+1.2x Base Critical Damage Multiplier.",
+          },
+          {
+            name: "Decisive Stature",
+            description:
+              "+25% Base Critical Chance based on current Status Chance, up to +35%.",
+          },
+        ],
+      },
+    ],
+  },
+
   "Dual Ichor": {
     source: "Steel Path Circuit",
-    genesisImage: "DualIchorIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -2730,7 +2935,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Furax: {
     source: "Steel Path Circuit",
-    genesisImage: "FuraxIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -2794,7 +2998,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Hate: {
     source: "Steel Path Circuit",
-    genesisImage: "HateIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -2851,7 +3054,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Magistar: {
     source: "Steel Path Circuit",
-    genesisImage: "MagistarIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -2912,7 +3114,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   "Nami Solo": {
     source: "Steel Path Circuit",
-    genesisImage: "NamiIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -2970,9 +3171,72 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
     ],
   },
 
+  Obex: {
+    source: "Steel Path Circuit",
+    tiers: [
+      {
+        tier: 1,
+        perks: [
+          {
+            name: "Incarnon Form",
+            description:
+              "Reach 6x Combo and Heavy Attack to activate. Finishers deal damage in a 12m radius with no falloff. +100% Melee Damage, +20% Sprint Speed, +20% Parkour Velocity.",
+          },
+        ],
+      },
+      {
+        tier: 2,
+        perks: [
+          {
+            name: "Balanced Stagger",
+            description:
+              "+50 Base Damage. 20% chance to stun enemies hit by a Neutral Combo, opening them to Finishers.",
+          },
+          {
+            name: "Armored Finisher",
+            description:
+              "+50 Base Damage. With Armor over 450: +80% Finisher Damage.",
+          },
+        ],
+      },
+      {
+        tier: 3,
+        perks: [
+          {
+            name: "Rapid Conclusion",
+            description:
+              "On Finisher Kill: +2.5% Parkour Velocity, stacking up to 16x.",
+          },
+          { name: "Orokin Reach", description: "+1.2 Range." },
+          {
+            name: "Standoff",
+            description: "Combo Timer pauses when weapon is holstered.",
+          },
+        ],
+      },
+      {
+        tier: 4,
+        perks: [
+          {
+            name: "Subtle Force",
+            description: "+10% Base Critical Chance, +18% Base Status Chance.",
+          },
+          {
+            name: "Absolute Dominion",
+            description: "+28% Base Status Chance.",
+          },
+          {
+            name: "Critical Coefficient",
+            description:
+              "+0.6x Base Critical Damage Multiplier; doubles in Incarnon Form.",
+          },
+        ],
+      },
+    ],
+  },
+
   Okina: {
     source: "Steel Path Circuit",
-    genesisImage: "OkinaIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -3037,7 +3301,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Sibear: {
     source: "Steel Path Circuit",
-    genesisImage: "SibearIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,
@@ -3096,7 +3359,6 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
 
   Skana: {
     source: "Steel Path Circuit",
-    genesisImage: "SkanaIncarnonAdapter.png",
     tiers: [
       {
         tier: 1,

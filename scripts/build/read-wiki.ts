@@ -52,7 +52,10 @@ export function readWikiModule(path: string): Record<string, unknown> {
     for (let i = 0; i < (stmt.variables?.length ?? 0); i++) {
       const v = stmt.variables[i]
       const init = stmt.init?.[i]
-      if (v?.type === "Identifier" && init?.type === "TableConstructorExpression") {
+      if (
+        v?.type === "Identifier" &&
+        init?.type === "TableConstructorExpression"
+      ) {
         locals.set(v.name as string, init)
       }
     }
@@ -108,7 +111,8 @@ function luaUnescape(raw: string): string {
   if (raw.startsWith("[")) {
     // Long-bracket string. Match `[=*[` ... `]=*]` with matching count.
     const open = raw.match(/^\[(=*)\[/)
-    if (!open) throw new Error(`Malformed long-bracket string: ${raw.slice(0, 32)}`)
+    if (!open)
+      throw new Error(`Malformed long-bracket string: ${raw.slice(0, 32)}`)
     const eq = open[1] ?? ""
     const inner = raw.slice(open[0].length, raw.length - (eq.length + 2))
     // Lua strips a leading \n if present.
@@ -129,17 +133,39 @@ function luaUnescape(raw: string): string {
     }
     const next = inner[++i]
     switch (next) {
-      case "a": out += "\x07"; break
-      case "b": out += "\b"; break
-      case "f": out += "\f"; break
-      case "n": out += "\n"; break
-      case "r": out += "\r"; break
-      case "t": out += "\t"; break
-      case "v": out += "\v"; break
-      case "\\": out += "\\"; break
-      case '"': out += '"'; break
-      case "'": out += "'"; break
-      case "\n": out += "\n"; break
+      case "a":
+        out += "\x07"
+        break
+      case "b":
+        out += "\b"
+        break
+      case "f":
+        out += "\f"
+        break
+      case "n":
+        out += "\n"
+        break
+      case "r":
+        out += "\r"
+        break
+      case "t":
+        out += "\t"
+        break
+      case "v":
+        out += "\v"
+        break
+      case "\\":
+        out += "\\"
+        break
+      case '"':
+        out += '"'
+        break
+      case "'":
+        out += "'"
+        break
+      case "\n":
+        out += "\n"
+        break
       case "x": {
         // Two hex digits.
         const hex = inner.slice(i + 1, i + 3)
@@ -153,10 +179,13 @@ function luaUnescape(raw: string): string {
       case "u": {
         // \u{HHHH} unicode escape.
         if (inner[i + 1] !== "{") {
-          throw new Error(`Bad \\u escape (expected '{') in ${raw.slice(0, 64)}`)
+          throw new Error(
+            `Bad \\u escape (expected '{') in ${raw.slice(0, 64)}`,
+          )
         }
         const close = inner.indexOf("}", i + 2)
-        if (close < 0) throw new Error(`Unterminated \\u{} in ${raw.slice(0, 64)}`)
+        if (close < 0)
+          throw new Error(`Unterminated \\u{} in ${raw.slice(0, 64)}`)
         const hex = inner.slice(i + 2, close)
         out += String.fromCodePoint(parseInt(hex, 16))
         i = close
@@ -177,7 +206,9 @@ function luaUnescape(raw: string): string {
           out += String.fromCharCode(parseInt(digits, 10))
           break
         }
-        throw new Error(`Unknown Lua escape \\${next ?? "<EOF>"} in ${raw.slice(0, 64)}`)
+        throw new Error(
+          `Unknown Lua escape \\${next ?? "<EOF>"} in ${raw.slice(0, 64)}`,
+        )
       }
     }
   }
@@ -241,7 +272,9 @@ function luaToJs(node: Node, path: string): unknown {
         }
         return -arg
       }
-      throw new Error(`Unsupported unary operator ${node.operator as string} in ${path}`)
+      throw new Error(
+        `Unsupported unary operator ${node.operator as string} in ${path}`,
+      )
     case "BinaryExpression": {
       // Wiki data uses arithmetic for derived stats — e.g. `HeavyAttack = 510 * 2`.
       // We constant-fold the supported operators; everything else fails loud.
@@ -258,12 +291,18 @@ function luaToJs(node: Node, path: string): unknown {
         )
       }
       switch (op) {
-        case "+": return left + right
-        case "-": return left - right
-        case "*": return left * right
-        case "/": return left / right
-        case "%": return left % right
-        case "^": return Math.pow(left, right)
+        case "+":
+          return left + right
+        case "-":
+          return left - right
+        case "*":
+          return left * right
+        case "/":
+          return left / right
+        case "%":
+          return left % right
+        case "^":
+          return Math.pow(left, right)
         default:
           throw new Error(`Unsupported binary operator "${op}" in ${path}`)
       }

@@ -20,6 +20,10 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
+        with:
+          # Full history so check:data-version can diff the catalog against
+          # origin/main (the default base ref).
+          fetch-depth: 0
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -42,6 +46,17 @@ jobs:
         # Fails if apps/web/public/data still points at content/wiki.warframe.com
         # — i.e. a catalog was committed without running `bun run sync:images`.
         run: bun run check:images
+
+      - name: Check catalog cache-version bumped
+        # Fails if apps/web/public/data changed without a fresh meta.json
+        # generatedAt — a hand-edit that would be masked by the immutable
+        # ?v=<generatedAt> cache. Fix with `bun run data:stamp`.
+        env:
+          # Diff against the PR's target branch (or main on push). fetch-depth:0
+          # above makes this remote-tracking ref available; pinning it here keeps
+          # the guard from silently no-op'ing on the default if it's absent.
+          DATA_VERSION_BASE: origin/${{ github.base_ref || 'main' }}
+        run: bun run check:data-version
 
       - name: Lint
         run: bun run lint

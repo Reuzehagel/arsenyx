@@ -121,7 +121,14 @@ function OrgHeader({ org }: { org: OrgProfile }) {
           <h1 className="truncate text-2xl font-bold tracking-tight">
             {org.name}
           </h1>
-          <span className="shrink-0 rounded bg-[#7c3aed] px-[5px] py-[1px] text-[10px] font-semibold text-white">
+          <span
+            className={`shrink-0 rounded px-[5px] py-[1px] text-[10px] font-semibold ${
+              org.verified
+                ? "bg-[#7c3aed] text-white"
+                : "bg-muted text-muted-foreground"
+            }`}
+            title={org.verified ? "Verified organization" : undefined}
+          >
             ORG
           </span>
           <span className="text-muted-foreground text-sm">@{org.slug}</span>

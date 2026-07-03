@@ -12,7 +12,7 @@ import {
 } from "../lib/validate"
 import { rateLimitUser } from "../middleware/rate-limit"
 import { parseListQuery, runList } from "./_build-list"
-import { orgPublicScope } from "./_build-visibility"
+import { orgMemberScope, orgPublicScope } from "./_build-visibility"
 import { parsePage, trimQ } from "./_query"
 
 export const orgs = new Hono()
@@ -75,6 +75,7 @@ orgs.get("/", async (c) => {
           slug: true,
           image: true,
           description: true,
+          verified: true,
         },
       },
     },
@@ -162,7 +163,9 @@ orgs.get("/public", async (c) => {
   const [rows, total] = await Promise.all([
     prisma.organization.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      // Verified (trusted) orgs lead the directory; within each group, newest
+      // first.
+      orderBy: [{ verified: "desc" }, { createdAt: "desc" }],
       skip,
       take: DIRECTORY_PAGE,
       select: {
@@ -171,6 +174,7 @@ orgs.get("/public", async (c) => {
         slug: true,
         image: true,
         description: true,
+        verified: true,
         createdAt: true,
         _count: {
           select: {
@@ -190,6 +194,7 @@ orgs.get("/public", async (c) => {
       slug: o.slug,
       image: o.image,
       description: o.description,
+      verified: o.verified,
       createdAt: o.createdAt.toISOString(),
       memberCount: o._count.members,
       buildCount: o._count.builds,
@@ -213,6 +218,7 @@ orgs.get("/:slug", async (c) => {
         slug: true,
         image: true,
         description: true,
+        verified: true,
         createdAt: true,
         members: {
           orderBy: [{ role: "asc" }, { joinedAt: "asc" }],
@@ -253,6 +259,7 @@ orgs.get("/:slug", async (c) => {
     slug: org.slug,
     image: org.image,
     description: org.description,
+    verified: org.verified,
     createdAt: org.createdAt.toISOString(),
     members: org.members.map((m) => ({
       role: m.role,
@@ -269,15 +276,31 @@ orgs.get("/:slug", async (c) => {
 
 orgs.get("/:slug/builds", async (c) => {
   const slug = c.req.param("slug").toLowerCase()
-  const org = await prisma.organization.findUnique({
-    where: { slug },
-    select: { id: true },
-  })
+  const [session, org] = await Promise.all([
+    getSession(c),
+    prisma.organization.findUnique({
+      where: { slug },
+      select: { id: true },
+    }),
+  ])
   if (!org) return c.json({ error: "not_found" }, 404)
+
+  // Org members see every Build published under the org (PRIVATE and UNLISTED
+  // included), matching the per-Build rule in builds.ts; everyone else sees
+  // only PUBLIC (#274).
+  const viewerId = session?.user.id
+  const membership = viewerId
+    ? await prisma.organizationMember.findUnique({
+        where: {
+          organizationId_userId: { organizationId: org.id, userId: viewerId },
+        },
+        select: { userId: true },
+      })
+    : null
 
   const result = await runList({
     filters: parseListQuery(c),
-    ...orgPublicScope(org.id),
+    ...(membership ? orgMemberScope(org.id) : orgPublicScope(org.id)),
     defaultSort: "newest",
   })
   return c.json(result)

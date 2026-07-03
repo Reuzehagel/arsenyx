@@ -4,7 +4,7 @@ import {
   encodeBuildDoc,
 } from "@arsenyx/shared/warframe/build-codec"
 import {
-  getIncarnonGenesisImage,
+  getIncarnonBaseName,
   isInnateIncarnon,
 } from "@arsenyx/shared/warframe/incarnon-data"
 import {
@@ -59,7 +59,7 @@ import {
   saveEditorDraft,
   type EditorDraftPayload,
 } from "@/lib/editor-draft"
-import { deriveFormAxis } from "@/lib/form-axis"
+import { applyFormPolarities, deriveFormAxis } from "@/lib/form-axis"
 import { collectGuideRefs } from "@/lib/guide-refs"
 import { useHotkey } from "@/lib/hooks/hotkeys"
 import { consumeDraft } from "@/lib/import-draft"
@@ -73,6 +73,7 @@ import {
   helminthQuery,
   type HelminthAbility,
 } from "@/lib/queries/helminth-query"
+import { incarnonAdapterImagesQuery } from "@/lib/queries/incarnon-query"
 import { itemQuery } from "@/lib/queries/item-query"
 import { modConflictsQuery } from "@/lib/queries/mod-conflicts-query"
 import { modsQuery } from "@/lib/queries/mods-query"
@@ -129,7 +130,6 @@ import { useVariantActions } from "./use-variant-actions"
 
 type SharedEditorOverrides = {
   hasReactor?: boolean
-  shards?: (PlacedShard | null)[]
   zawComponents?: { grip: string; link: string } | undefined
   kitgunComponents?: KitgunComponents | undefined
   lichBonusElement?: LichBonusElement | null
@@ -238,6 +238,9 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   const { data: allMods } = useSuspenseQuery(modsQuery)
   const { data: allArcanes } = useSuspenseQuery(arcanesQuery)
   const { data: helminthAbilities } = useSuspenseQuery(helminthQuery)
+  const { data: incarnonAdapterImages } = useSuspenseQuery(
+    incarnonAdapterImagesQuery,
+  )
   const { data: conflictMap } = useSuspenseQuery(modConflictsQuery)
   const [draft] = useState(() => consumeDraft(draftId))
   const [shareHydrated] = useState(() => {
@@ -373,15 +376,30 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   // strip and tabs immediately. Shared with the viewer via `deriveFormAxis`;
   // no-op for normal frames (activeFormIndex 0, formVariants = all variants).
   const {
+    isTwin,
     activeFormIndex,
     formAbilities,
-    helminthAllowed,
     formNames,
     formVariants,
     formActiveLocalIndex,
+    formPolarities,
+    formAuraPolarity,
+    formExilusPolarity,
   } = useMemo(
     () => deriveFormAxis(item, variants, clampedActiveIndex),
     [item, variants, clampedActiveIndex],
+  )
+  // Polarity-overridden view of the item (active form's innate polarities) for
+  // the layout, slot grid, and forma/capacity maths — see `applyFormPolarities`.
+  const effectiveItem = useMemo(
+    () =>
+      applyFormPolarities(item, {
+        isTwin,
+        formPolarities,
+        formAuraPolarity,
+        formExilusPolarity,
+      }),
+    [isTwin, item, formPolarities, formAuraPolarity, formExilusPolarity],
   )
 
   // Slice projected for this variant — feeds the existing slot/arcane
@@ -406,6 +424,9 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       ...savedDataAll,
       slots: active.slots,
       arcanes: active.arcanes,
+      // The variant's own shards (getVariants already resolved copy-on-load for
+      // legacy builds when seeding the variants array, so this is always set).
+      shards: active.shards ?? [],
       // Route per-variant fields through the single choke point (same as
       // getVariants/selectVariant) so a future field can't be silently dropped
       // here — it copies from `active` with no fallback to savedDataAll's mirror.
@@ -438,7 +459,10 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
 
   const categoryLabel = getCategoryLabel(category)
 
-  const layout = useMemo(() => getBuildLayout(item, category), [item, category])
+  const layout = useMemo(
+    () => getBuildLayout(effectiveItem, category),
+    [effectiveItem, category],
+  )
   const {
     isCompanion,
     normalSlotCount,
@@ -580,8 +604,13 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   const [hasReactor, setHasReactor] = useState(
     () => cachedShared?.hasReactor ?? savedData.hasReactor ?? true,
   )
-  const [shards, setShards] = useState<(PlacedShard | null)[]>(
-    () => cachedShared?.shards ?? padShards(savedData.shards),
+
+  // Shards are per-variant. Like slots/arcanes, the live `shards` state seeds
+  // from the active variant (mount-frozen `savedData`, copy-on-load resolved)
+  // and is captured back into the variants array on switch/save — so the
+  // remount a variant/form switch triggers re-hydrates the right set.
+  const [shards, setShards] = useState<(PlacedShard | null)[]>(() =>
+    padShards(savedData.shards),
   )
   const setShard = (i: number, s: PlacedShard | null) => {
     setShards((prev) => {
@@ -700,7 +729,6 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   useEffect(() => {
     writeShared({
       hasReactor,
-      shards,
       zawComponents,
       kitgunComponents,
       lichBonusElement,
@@ -714,7 +742,6 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     hasReactor,
-    shards,
     zawComponents,
     kitgunComponents,
     lichBonusElement,
@@ -732,9 +759,12 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     })
   }
 
-  const displayImageName = incarnonEnabled
-    ? (getIncarnonGenesisImage(item.name) ?? item.imageName ?? undefined)
-    : (item.imageName ?? undefined)
+  const incarnonBaseName = getIncarnonBaseName(item.name)
+  const incarnonAdapterImage =
+    incarnonEnabled && incarnonBaseName
+      ? incarnonAdapterImages[incarnonBaseName]
+      : undefined
+  const displayImageName = incarnonAdapterImage ?? item.imageName ?? undefined
 
   const [helminth, setHelminth] = useState<Record<number, HelminthAbility>>(
     () => savedData.helminth ?? {},
@@ -840,7 +870,14 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     formaCount,
     capacity,
     capacitySharedInputs,
-  } = useBuildDerived({ item, category, layout, slots, allArcanes, hasReactor })
+  } = useBuildDerived({
+    item: effectiveItem,
+    category,
+    layout,
+    slots,
+    allArcanes,
+    hasReactor,
+  })
 
   // Auto-forma planning (cheap reactive plan + heavy preview cascade). Forma is
   // build-wide in Warframe, so the planner considers every variant's slots
@@ -998,28 +1035,30 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       if (!isUpdate && !hasShownDonationNudge()) {
         markDonationNudgeShown()
         toast(
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             <div>
               <p className="font-medium">Thanks for building with Arsenyx</p>
               <p className="text-muted-foreground text-sm">
-                It&apos;s free and runs on ~$5/mo of server costs. If it&apos;s
-                useful to you, a small tip keeps it online.
+                It&apos;s free and ad-free, and costs me about $10 a month to
+                run. If it&apos;s useful to you, a small tip keeps it going.
               </p>
             </div>
-            <div className="flex gap-4 text-sm">
+            <div className="flex text-sm">
               <a
                 href={EXTERNAL_LINKS.koFi}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-medium underline underline-offset-2"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center rounded-md px-3 py-1.5 font-medium transition-colors"
               >
                 Support on Ko-fi
               </a>
             </div>
           </div>,
-          // Explicit close button — dismissal shouldn't rely on the user
-          // knowing they can swipe a toast away.
-          { duration: 12000, closeButton: true },
+          // Persist until manually dismissed (duration: Infinity) so the ask
+          // isn't missed — paired with an explicit close button so dismissal
+          // doesn't rely on the user knowing they can swipe a toast away. Still
+          // fires at most once per browser (markDonationNudgeShown above).
+          { duration: Infinity, closeButton: true },
         )
       }
       navigate({ to: "/builds/$slug", params: { slug } })
@@ -1082,6 +1121,8 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       label: existing?.label ?? SYNTHETIC_VARIANT_LABEL,
       slots: slots.placed,
       arcanes: arcanes.placed,
+      // Shards are per-variant — capture the live set into this variant.
+      shards,
       ...pickPerVariantData({
         helminth,
         incarnonEnabled,
@@ -1120,6 +1161,8 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       slots: slots.placed,
       formaPolarities: slots.formaPolarities,
       arcanes: arcanes.placed,
+      // Top-level `shards` mirrors the active variant (per-variant sets live in
+      // `variants[i].shards`). Legacy `formShards` is intentionally not emitted.
       shards,
       hasReactor,
       helminth,
@@ -1282,7 +1325,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
           <KeyboardHintBanner />
           <BuildSurface
             mode="edit"
-            item={item}
+            item={effectiveItem}
             category={category}
             isCompanion={isCompanion}
             normalSlotCount={normalSlotCount}
@@ -1323,7 +1366,6 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
               placedMods: slots.placed,
               placedArcanes: arcanes.placed,
               formAbilities,
-              helminthAllowed,
             }}
             topBarLayout="row"
             topBar={

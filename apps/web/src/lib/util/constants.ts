@@ -37,6 +37,7 @@ export const API_URL =
 // External links
 export const EXTERNAL_LINKS = {
   github: "https://github.com/Reuzehagel/arsenyx",
+  reportIssue: "https://github.com/Reuzehagel/arsenyx/issues/new/choose",
   wiki: "https://wiki.warframe.com",
   apiBase: "https://api.arsenyx.com",
   // Donation destination surfaced by the footer + post-publish nudge.
@@ -61,6 +62,11 @@ export const FOOTER_LINKS = {
     { label: "Documentation", href: ROUTES.docs },
     { label: "Changelog", href: ROUTES.changelog },
     { label: "GitHub", href: EXTERNAL_LINKS.github, external: true },
+    {
+      label: "Report an Issue",
+      href: EXTERNAL_LINKS.reportIssue,
+      external: true,
+    },
   ],
   legal: [
     { label: "Privacy Policy", href: ROUTES.privacy },

@@ -67,6 +67,15 @@ describe("parseStatText", () => {
     ])
   })
 
+  it("treats <br> as a line break (ability descriptions use it)", () => {
+    const segs = parseStatText("first line<br>second line")
+    expect(segs).toEqual([
+      { kind: "text", text: "first line" },
+      { kind: "br" },
+      { kind: "text", text: "second line" },
+    ])
+  })
+
   it("strips residual non-color tags like <ENERGY>", () => {
     // <ENERGY> isn't a DT_ token, so it falls through to the residual-tag
     // cleanup and gets stripped from the surrounding plain segment.

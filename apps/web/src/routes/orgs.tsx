@@ -107,7 +107,12 @@ function OrgsDirectoryContent() {
                     shape="square"
                   />
                   <div className="flex min-w-0 flex-col gap-0.5">
-                    <CardTitle className="truncate">{org.name}</CardTitle>
+                    <CardTitle
+                      className={`truncate ${org.verified ? "text-wf-org" : ""}`}
+                      title={org.verified ? "Verified organization" : undefined}
+                    >
+                      {org.name}
+                    </CardTitle>
                     <CardDescription className="truncate text-xs">
                       @{org.slug}
                     </CardDescription>
@@ -120,7 +125,9 @@ function OrgsDirectoryContent() {
                     </p>
                   </CardContent>
                 ) : null}
-                <CardFooter className="text-muted-foreground justify-between text-xs">
+                {/* mt-auto pins the stats row to the card bottom so rows align
+                    across cards with and without a description. */}
+                <CardFooter className="text-muted-foreground mt-auto justify-between text-xs">
                   <span>
                     <span className="text-foreground font-semibold tabular-nums">
                       {org.memberCount.toLocaleString()}

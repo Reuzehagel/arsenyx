@@ -532,25 +532,61 @@ export function pickPerVariantData(
  * Returns the variants array, or a single synthetic "Main" variant
  * synthesized from the top-level fields when the build has no
  * `variants`. Always returns at least one entry.
+ *
+ * Copy-on-load: a build saved before per-variant shards has variants with no
+ * `shards`. Resolve each here, the single choke point both editor and viewer
+ * read through, so every variant becomes independent at load — editing one
+ * variant's shards can never drag a still-unmigrated sibling along via the
+ * shared top-level mirror.
  */
 export function getVariants(data: SavedBuildData): SavedVariant[] {
-  if (data.variants && data.variants.length > 0) return data.variants
+  if (data.variants && data.variants.length > 0) {
+    // The common case (every variant already carries `shards`) returns the
+    // array by reference; only legacy builds missing some `shards` allocate.
+    if (data.variants.every((v) => v.shards)) return data.variants
+    return data.variants.map((v) =>
+      v.shards
+        ? v
+        : { ...v, shards: shardsForFormSaved(data, v.formIndex ?? 0) },
+    )
+  }
   return [
     {
       id: SYNTHETIC_VARIANT_ID,
       label: SYNTHETIC_VARIANT_LABEL,
       slots: data.slots ?? {},
       arcanes: data.arcanes ?? [],
+      shards: data.shards ?? [],
       ...pickPerVariantData(data),
     },
   ]
 }
 
 /**
+ * Copy-on-load fallback for a variant that has no `shards` of its own — i.e. a
+ * build saved before per-variant shards. Resolves from the legacy top-level
+ * fields: form 0 (and every normal frame) reads `shards`; a twin-frame form ≥ 1
+ * reads its slice of the short-lived per-form `formShards`, falling back to
+ * `shards` so the build's single saved set copies onto every variant.
+ * File-private: `getVariants` is the only copy-on-load entry point.
+ */
+function shardsForFormSaved(
+  data: Pick<SavedBuildData, "shards" | "formShards">,
+  formIndex: number,
+): (PlacedShard | null)[] {
+  if (formIndex !== 0) {
+    const forForm = data.formShards?.[formIndex]
+    if (forForm) return forForm
+  }
+  return data.shards ?? []
+}
+
+/**
  * Project a single variant back into a `SavedBuildData` shape that the
- * existing viewer/editor pipelines consume unchanged. Shared fields
- * (shards, forma, reactor, helminth, lich, zaw, name) come from the
- * top-level doc; per-variant fields override.
+ * existing viewer/editor pipelines consume unchanged. Build-wide fields
+ * (forma, reactor, helminth, lich, zaw, name) come from the top-level doc;
+ * per-variant fields override. `.shards` is the variant's own set; copy-on-load
+ * for legacy builds is handled upstream in `getVariants`.
  */
 export function selectVariant(
   data: SavedBuildData,
@@ -574,8 +610,10 @@ export function selectVariant(
     slots: v.slots,
     arcanes: v.arcanes,
     ...pickPerVariantData(v),
-    // formaPolarities, shards, hasReactor, zaw, kitgun, lich, buildName are
-    // shared across variants and stay as-is.
+    // `v` came through getVariants, which already resolved copy-on-load for
+    // legacy builds, so `v.shards` is set. formaPolarities, hasReactor, zaw,
+    // kitgun, lich, buildName are shared across variants and stay as-is.
+    shards: v.shards ?? [],
   }
 }
 
@@ -605,7 +643,6 @@ export function buildDocFromVariants(
     itemCategory: shared.itemCategory,
     itemImageName: shared.itemImageName,
     hasReactor: shared.hasReactor,
-    shardSlots: shared.shardSlots,
     helminthAbility: shared.helminthAbility,
     zawComponents: shared.zawComponents,
     kitgunComponents: shared.kitgunComponents,
@@ -620,6 +657,9 @@ export function buildDocFromVariants(
         ...base,
         slots: sv.slots,
         arcanes: sv.arcanes,
+        // Per-variant shards: the captured active variant carries the live
+        // set; others carry their own (copy-on-load resolved at load).
+        shards: sv.shards ?? [],
         incarnonEnabled: sv.incarnonEnabled ?? base.incarnonEnabled,
         incarnonPerks: sv.incarnonPerks ?? base.incarnonPerks,
         deploymentContext: sv.deploymentContext ?? base.deploymentContext,
@@ -632,6 +672,7 @@ export function buildDocFromVariants(
         stanceSlot: vs.stanceSlot,
         normalSlots: vs.normalSlots,
         arcaneSlots: vs.arcaneSlots,
+        shardSlots: vs.shardSlots,
         incarnonEnabled: vs.incarnonEnabled,
         incarnonPerks: vs.incarnonPerks,
         deploymentContext: vs.deploymentContext,
@@ -674,6 +715,9 @@ export function savedDataFromBuildDoc(
       label: v.label,
       slots: data.slots ?? {},
       arcanes: data.arcanes ?? [],
+      // Shards are per-variant (projectVariant reads each variant's own
+      // shardSlots), so carry each projection's set onto its variant.
+      shards: data.shards ?? [],
       ...pickPerVariantData(data),
       formIndex: v.formIndex,
       guideSummary: v.guideSummary,

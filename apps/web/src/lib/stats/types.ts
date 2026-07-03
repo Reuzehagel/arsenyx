@@ -165,6 +165,7 @@ export const DAMAGE_TYPE_COLORS: Record<string, DamageType> = {
   DT_CORROSIVE_COLOR: "corrosive",
   DT_VOID_COLOR: "void",
   DT_SENTIENT: "tau",
+  DT_SENTIENT_COLOR: "tau",
   DT_TAU_COLOR: "tau",
 }
 

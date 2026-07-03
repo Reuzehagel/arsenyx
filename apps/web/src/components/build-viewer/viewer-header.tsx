@@ -16,7 +16,6 @@ import { formatVisibility } from "@/lib/util/user-display"
 import { getImageUrl, type BrowseCategory } from "@/lib/warframe"
 
 import { BuildActionsMenu } from "./build-actions-menu"
-import { ShareMenu } from "./share-menu"
 import { SocialActions } from "./social-actions"
 
 /**
@@ -86,7 +85,11 @@ export function ViewerHeader({
                   <RouterLink
                     to="/org/$slug"
                     params={{ slug: build.organization.slug }}
-                    className="text-[#a78bfa] hover:underline"
+                    className={
+                      build.organization.verified
+                        ? "text-wf-org hover:underline"
+                        : "hover:text-foreground hover:underline"
+                    }
                   >
                     {build.organization.name}
                   </RouterLink>
@@ -109,20 +112,24 @@ export function ViewerHeader({
                   <>by {author}</>
                 ))}
             </span>
-            <div className="flex flex-wrap items-center gap-2">
+            {/* Endo/forma stay as subtle stat pills (the build's headline
+                numbers); likes/views and the updated time recede to quiet muted
+                text rather than competing as bordered badges — the header read
+                as four stacked pills before. */}
+            <div className="text-muted-foreground flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs">
               <EndoFormaBadges
                 totalEndoCost={totalEndoCost}
                 formaCount={formaCount}
               />
-              <Badge variant="outline" className="text-xs">
-                {build.likeCount} likes · {build.viewCount} views
-              </Badge>
+              {/* Like count lives on the ♥ button below — don't repeat it
+                  here. Views aren't shown anywhere else, so they stay. */}
+              <span>{build.viewCount.toLocaleString("en-US")} views</span>
               <Tooltip>
                 <TooltipTrigger
                   render={
-                    <Badge variant="outline" className="text-xs">
+                    <span className="cursor-default">
                       Updated {relativeTime(build.updatedAt)}
-                    </Badge>
+                    </span>
                   }
                 />
                 <TooltipContent>
@@ -140,7 +147,6 @@ export function ViewerHeader({
         <div className="flex items-center gap-2">
           <ButtonGroup>
             <SocialActions build={build} />
-            <ShareMenu slug={build.slug} />
           </ButtonGroup>
           {build.isOwner ? (
             <Button

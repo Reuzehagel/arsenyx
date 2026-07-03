@@ -12,12 +12,13 @@ export type {
 /** Stable identifier for the incarnon-form alt-fire attack mode in the item data. */
 export const INCARNON_FORM_ATTACK_NAME = "Incarnon Form"
 
-/** All 48 incarnon-eligible base weapon names (8 innate + 40 Steel Path). */
+/** All 53 incarnon-eligible base weapon names (8 innate + 45 Steel Path). */
 export const INCARNON_NAMES: ReadonlySet<string> = new Set([
   "Ack & Brunt",
   "Angstrum",
   "Anku",
   "Atomos",
+  "Ballistica",
   "Bo",
   "Boar",
   "Boltor",
@@ -28,6 +29,7 @@ export const INCARNON_NAMES: ReadonlySet<string> = new Set([
   "Cestra",
   "Dera",
   "Despair",
+  "Destreza",
   "Dread",
   "Dual Ichor",
   "Dual Toxocyst",
@@ -46,6 +48,7 @@ export const INCARNON_NAMES: ReadonlySet<string> = new Set([
   "Magistar",
   "Miter",
   "Nami Solo",
+  "Obex",
   "Okina",
   "Onos",
   "Paris",
@@ -57,22 +60,28 @@ export const INCARNON_NAMES: ReadonlySet<string> = new Set([
   "Skana",
   "Soma",
   "Strun",
+  "Stug",
   "Sybaris",
   "Thalys",
   "Torid",
   "Vasto",
+  "Vectis",
   "Zylok",
 ])
 
 /**
- * Genesis adapter icons keyed by base weapon name (Steel Path Circuit weapons
- * only — innate incarnons aren't included).
+ * Genesis adapter icon filenames keyed by base weapon name (Steel Path Circuit
+ * weapons only — innate incarnons aren't included). The build matches each
+ * filename against the DE manifest to emit `incarnon-adapter-images.json`
+ * (base name → resolved CDN URL), which the editor fetches; see
+ * scripts/build-items-index.ts.
  */
 export const INCARNON_GENESIS_IMAGES: Readonly<Record<string, string>> = {
   "Ack & Brunt": "AckBruntIncarnonAdapter.png",
   Angstrum: "AngstrumIncarnonAdapter.png",
   Anku: "AnkuIncarnonAdapter.png",
   Atomos: "AtomosIncarnonAdapter.png",
+  Ballistica: "BallisticaIncarnonAdapter.png",
   Bo: "BoIncarnonAdapter.png",
   Boar: "BoarIncarnonAdapter.png",
   Boltor: "BoltorIncarnonAdapter.png",
@@ -83,6 +92,7 @@ export const INCARNON_GENESIS_IMAGES: Readonly<Record<string, string>> = {
   Cestra: "CestraIncarnonAdapter.png",
   Dera: "DeraIncarnonAdapter.png",
   Despair: "DespairIncarnonAdapter.png",
+  Destreza: "DestrezaIncarnonAdapter.png",
   Dread: "DreadIncarnonAdapter.png",
   "Dual Ichor": "DualIchorIncarnonAdapter.png",
   "Dual Toxocyst": "DualToxocystIncarnonAdapter.png",
@@ -98,6 +108,7 @@ export const INCARNON_GENESIS_IMAGES: Readonly<Record<string, string>> = {
   Magistar: "MagistarIncarnonAdapter.png",
   Miter: "MiterIncarnonAdapter.png",
   "Nami Solo": "NamiIncarnonAdapter.png",
+  Obex: "ObexIncarnonAdapter.png",
   Okina: "OkinaIncarnonAdapter.png",
   Paris: "ParisIncarnonAdapter.png",
   Sibear: "SibearIncarnonAdapter.png",
@@ -105,9 +116,11 @@ export const INCARNON_GENESIS_IMAGES: Readonly<Record<string, string>> = {
   Skana: "SkanaIncarnonAdapter.png",
   Soma: "SomaIncarnonAdapter.png",
   Strun: "StrunIncarnonAdapter.png",
+  Stug: "StugIncarnonAdapter.png",
   Sybaris: "SybarisIncarnonAdapter.png",
   Torid: "ToridIncarnonAdapter.png",
   Vasto: "VastoIncarnonAdapter.png",
+  Vectis: "VectisIncarnonAdapter.png",
   Zylok: "ZylokPrimeIncarnonAdapter.png",
 }
 
@@ -158,12 +171,6 @@ export function getIncarnonBaseName(weaponName: string): string | null {
 
 export function hasIncarnon(weaponName: string): boolean {
   return getIncarnonBaseName(weaponName) !== null
-}
-
-export function getIncarnonGenesisImage(weaponName: string): string | null {
-  const base = getIncarnonBaseName(weaponName)
-  if (!base) return null
-  return INCARNON_GENESIS_IMAGES[base] ?? null
 }
 
 /** True for innate incarnons (Felarx, Phenmor, Laetum, …) — no separate adapter. */

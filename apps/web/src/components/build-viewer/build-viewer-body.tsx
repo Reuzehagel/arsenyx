@@ -3,7 +3,7 @@ import {
   DEFAULT_DEPLOYMENT_CONTEXT,
   type Mod,
 } from "@arsenyx/shared/warframe/types"
-import { useSuspenseQuery } from "@tanstack/react-query"
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
 import { lazy, Suspense, useMemo } from "react"
 
 import {
@@ -25,7 +25,7 @@ import {
   refreshImagesFromMap,
   selectVariant,
 } from "@/lib/codec/build-codec-adapter"
-import { deriveFormAxis } from "@/lib/form-axis"
+import { applyFormPolarities, deriveFormAxis } from "@/lib/form-axis"
 import { makeRefResolver } from "@/lib/guide-refs"
 import { arcanesQuery } from "@/lib/queries/arcanes-query"
 import { type BuildDetail, hasGuideContent } from "@/lib/queries/build-query"
@@ -37,6 +37,10 @@ import { imageMapQuery } from "@/lib/queries/image-map-query"
 import { itemQuery } from "@/lib/queries/item-query"
 import { modConflictsQuery } from "@/lib/queries/mod-conflicts-query"
 import { modsQuery } from "@/lib/queries/mods-query"
+import {
+  partnerBuildsQuery,
+  type PartnerBuild,
+} from "@/lib/queries/partner-builds-query"
 import { padShards } from "@/lib/shards"
 import { authorName } from "@/lib/util/user-display"
 import { getCategoryLabel, type BrowseCategory } from "@/lib/warframe"
@@ -176,21 +180,35 @@ function BuildViewerBodyInner({
   const hasGuide = hasGuideContent(build, activeVariant)
 
   // Twin-frames (Sirius & Orion): the active variant's form picks the ability
-  // set (Helminth shows only on the primary form), and the variant tabs show
-  // only that form's variants. Shared with the editor via `deriveFormAxis`;
+  // set (each form carries its own per-variant Helminth), and the variant tabs
+  // show only that form's variants. Shared with the editor via `deriveFormAxis`;
   // no-op for normal frames. The form toggle jumps to the target form's first
   // variant.
   const {
     isTwin,
     activeFormIndex,
     formAbilities,
-    helminthAllowed,
     formNames,
     formVariants,
     formActiveLocalIndex,
+    formPolarities,
+    formAuraPolarity,
+    formExilusPolarity,
   } = useMemo(
     () => deriveFormAxis(item, variants, activeIndex),
     [item, variants, activeIndex],
+  )
+  // Polarity-overridden view of the item (active form's innate polarities) for
+  // the layout, slot grid, and forma/capacity maths — see `applyFormPolarities`.
+  const effectiveItem = useMemo(
+    () =>
+      applyFormPolarities(item, {
+        isTwin,
+        formPolarities,
+        formAuraPolarity,
+        formExilusPolarity,
+      }),
+    [isTwin, item, formPolarities, formAuraPolarity, formExilusPolarity],
   )
   const selectForm = (formIndex: number) => {
     const target = variants.findIndex((v) => (v.formIndex ?? 0) === formIndex)
@@ -198,7 +216,10 @@ function BuildViewerBodyInner({
   }
 
   const categoryLabel = getCategoryLabel(category)
-  const layout = useMemo(() => getBuildLayout(item, category), [item, category])
+  const layout = useMemo(
+    () => getBuildLayout(effectiveItem, category),
+    [effectiveItem, category],
+  )
   const { isCompanion, normalSlotCount, auraSlotCount, arcaneCount } = layout
 
   const slots = useBuildSlots(normalSlotCount, {
@@ -226,7 +247,7 @@ function BuildViewerBodyInner({
     saved.deploymentContext ?? DEFAULT_DEPLOYMENT_CONTEXT
 
   const { arcaneConfig, totalEndoCost, formaCount, capacity } = useBuildDerived(
-    { item, category, layout, slots, allArcanes, hasReactor },
+    { item: effectiveItem, category, layout, slots, allArcanes, hasReactor },
   )
 
   const sidebarProps = {
@@ -249,7 +270,6 @@ function BuildViewerBodyInner({
     placedMods: slots.placed,
     placedArcanes: arcanes.placed,
     formAbilities,
-    helminthAllowed,
     readOnly: true as const,
   }
 
@@ -284,7 +304,7 @@ function BuildViewerBodyInner({
             itemName={item.name}
             itemImageName={item.imageName ?? undefined}
             abilities={formAbilities ?? item.abilities ?? []}
-            helminth={helminthAllowed ? helminth : {}}
+            helminth={helminth}
             shards={shards}
             zawComponents={zawComponents}
             kitgunComponents={kitgunComponents}
@@ -297,7 +317,7 @@ function BuildViewerBodyInner({
         <BuildSurface
           mode="view"
           embed={embed}
-          item={item}
+          item={effectiveItem}
           category={category}
           isCompanion={isCompanion}
           normalSlotCount={normalSlotCount}
@@ -330,7 +350,7 @@ function BuildViewerBodyInner({
         />
 
         {!embed ? (
-          <Suspense fallback={null}>
+          <Suspense fallback={<RelatedBuildsStripFallback slug={build.slug} />}>
             <RelatedBuildsStrip slug={build.slug} />
           </Suspense>
         ) : null}
@@ -346,6 +366,38 @@ function BuildViewerBodyInner({
         )}
       </div>
     </>
+  )
+}
+
+/**
+ * Height-matched placeholder for the lazy {@link RelatedBuildsStrip}. The strip
+ * fetches its partners with a plain useQuery and renders nothing until they
+ * arrive, so without a reservation it pops in after the route commits and shoves
+ * the guide + footer down (the build pages' dominant CLS). The loader warms the
+ * partners query, so by first paint we already know whether the strip will
+ * render — reserve its one-row height only when it's non-empty, so builds
+ * without partners don't get a phantom gap. Mirrors related-builds.tsx's outer
+ * structure (heading + a single chip row) so the reserved height matches the
+ * real strip at every breakpoint — keep the two in sync.
+ */
+function RelatedBuildsStripFallback({ slug }: { slug: string }) {
+  const partners = useQueryClient().getQueryData<PartnerBuild[]>(
+    partnerBuildsQuery(slug).queryKey,
+  )
+  if (!partners || partners.length === 0) return null
+  return (
+    <div className="flex flex-col gap-2" aria-hidden>
+      <Skeleton className="h-4 w-24" />
+      <div className="-mx-1 flex gap-2 px-1 pb-1">
+        <div className="bg-card flex w-80 shrink-0 items-center gap-3 rounded-md border py-2 pr-4 pl-2">
+          <Skeleton className="size-12 shrink-0 rounded" />
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <Skeleton className="h-3.5 w-2/3" />
+            <Skeleton className="h-3 w-1/2" />
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 

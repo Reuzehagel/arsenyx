@@ -1,6 +1,13 @@
 import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
-import { Compass, Hammer, LayoutGrid, ScrollText, User } from "lucide-react"
+import {
+  Bug,
+  Compass,
+  Hammer,
+  LayoutGrid,
+  ScrollText,
+  User,
+} from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import {
@@ -22,6 +29,7 @@ import {
 import { authClient } from "@/lib/auth-client"
 import { fuzzyRank } from "@/lib/fuzzy"
 import { itemsIndexQuery } from "@/lib/queries/items-index-query"
+import { EXTERNAL_LINKS } from "@/lib/util/constants"
 import { CATEGORIES, getImageUrl, type BrowseItem } from "@/lib/warframe"
 
 const SEARCH_DEBOUNCE_MS = 200
@@ -166,6 +174,21 @@ export function CommandPalette({
                   <ScrollText />
                   <span>Changelog</span>
                   <CommandShortcut>what's new</CommandShortcut>
+                </CommandItem>
+                <CommandItem
+                  onSelect={() =>
+                    go(() =>
+                      window.open(
+                        EXTERNAL_LINKS.reportIssue,
+                        "_blank",
+                        "noopener,noreferrer",
+                      ),
+                    )
+                  }
+                >
+                  <Bug />
+                  <span>Report an issue</span>
+                  <CommandShortcut>GitHub</CommandShortcut>
                 </CommandItem>
               </CommandGroup>
             )}

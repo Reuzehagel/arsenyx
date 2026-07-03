@@ -12,7 +12,7 @@ export const MAX_VARIANTS = 5
 
 /**
  * Per-variant slice of a build. Mods/arcanes/incarnon perks/deployment
- * context vary between variants; everything else (item, shards, forma,
+ * context/Archon Shards vary between variants; everything else (item, forma,
  * reactor, helminth, lich element, guide, name) is shared across all
  * variants of one build.
  *
@@ -28,6 +28,10 @@ export interface BuildVariant {
   stanceSlot?: ModSlot
   normalSlots: ModSlot[]
   arcaneSlots: (PlacedArcane | null)[]
+  /** This variant's Archon Shards. Per-variant: each loadout installs its own
+   *  set (a twin-frame's two halves are just variants with different
+   *  `formIndex`, so they get independent shards for free). */
+  shardSlots: (PlacedShard | null)[]
   incarnonEnabled?: boolean
   incarnonPerks?: (string | null)[]
   deploymentContext?: DeploymentContext
@@ -52,7 +56,6 @@ export interface BuildDoc {
   itemCategory: BrowseCategory
   itemImageName?: string
   hasReactor: boolean
-  shardSlots: (PlacedShard | null)[]
   helminthAbility?: BuildState["helminthAbility"]
   zawComponents?: BuildState["zawComponents"]
   kitgunComponents?: BuildState["kitgunComponents"]
@@ -80,7 +83,8 @@ export function projectVariant(doc: BuildDoc, index: number): BuildState {
     itemCategory: doc.itemCategory,
     itemImageName: doc.itemImageName,
     hasReactor: doc.hasReactor,
-    shardSlots: doc.shardSlots,
+    // Shards are per-variant — each loadout carries its own set.
+    shardSlots: v?.shardSlots ?? [],
     helminthAbility: doc.helminthAbility,
     zawComponents: doc.zawComponents,
     kitgunComponents: doc.kitgunComponents,

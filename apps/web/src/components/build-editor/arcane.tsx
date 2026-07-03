@@ -78,9 +78,14 @@ export function ArcaneCard({
   const formattedStats = stats.join("\n")
 
   const card = (
+    // Fills the slot (which is responsively sized: 80px on phones up to 100px
+    // on md+). The image flexes to absorb that height difference so the name +
+    // rank always keep their natural line-height — a fixed-height card got
+    // flex-compressed inside the shorter mobile slot, squeezing the name line
+    // until line-clamp's overflow clipped its descenders ("Fury" → "Fur").
     <div
       className={cn(
-        "bg-card/80 relative flex h-[100px] w-[140px] flex-col items-center overflow-hidden rounded-md select-none",
+        "bg-card/80 relative flex h-full w-full flex-col items-center overflow-hidden rounded-md select-none",
         onClick && "cursor-pointer",
         isSelected &&
           "ring-primary ring-offset-background ring-2 ring-offset-1",
@@ -98,7 +103,7 @@ export function ArcaneCard({
       }
       onClick={onClick}
     >
-      <div className="relative mt-1.5 h-[65px] w-[80px] overflow-hidden rounded">
+      <div className="relative mt-1.5 aspect-[80/65] min-h-0 flex-1 overflow-hidden rounded">
         <img
           src={getArcaneImageUrl(arcane.imageName)}
           alt={arcane.name}
@@ -108,7 +113,7 @@ export function ArcaneCard({
       <span className="text-foreground mt-1 line-clamp-1 px-1 text-center text-[10px] leading-tight font-medium">
         {arcane.name}
       </span>
-      <span className="text-muted-foreground mt-0.5 text-[9px] font-medium">
+      <span className="text-muted-foreground mt-0.5 text-[9px] leading-tight font-medium">
         RANK {currentRank}
       </span>
     </div>

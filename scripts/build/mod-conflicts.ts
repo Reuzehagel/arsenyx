@@ -9,12 +9,22 @@
  * flag illegal loadouts. Names that don't resolve to an emitted mod (Conclave
  * variants, unreleased mods, Flawed mods we filter) are simply dropped — a
  * dead edge can't matter at runtime since the mod can never be placed.
+ *
+ * On top of the wiki edges we derive two structural families the wiki omits:
+ * base↔variant (Primed/Umbral/…) and same-ability warframe augments (the game
+ * forbids two augments for one ability — see `deriveAbilityAugmentConflicts`).
  */
 
-/** Minimal shape this module reads off an emitted mod. */
+import { deriveAbilityAugmentConflicts } from "@arsenyx/shared/warframe/mods"
+
+/** Minimal shape this module reads off an emitted mod. The augment fields feed
+ *  the same-ability exclusivity derivation below. */
 interface NamedMod {
   uniqueName: string
   name: string
+  compatName?: string
+  isAugment?: boolean
+  levelStats?: Array<{ stats: string[] }>
 }
 
 export function buildModConflicts(
@@ -81,6 +91,18 @@ export function buildModConflicts(
       derivedVariantEdges++
     }
   }
+  // Same-ability warframe augment edges. The game forbids equipping two
+  // augments for one ability (Loki's Decoy has three); the wiki `Incompatible`
+  // field doesn't track these, so derive them from the catalog's augment
+  // descriptions. Self-heals as new augments ship — no curated list.
+  const augmentConflicts = deriveAbilityAugmentConflicts(mergedMods)
+  for (const [a, list] of Object.entries(augmentConflicts)) {
+    for (const b of list) addConflictEdge(a, b)
+  }
+  // The map is symmetric, so total list length counts each pair twice.
+  const derivedAugmentEdges =
+    Object.values(augmentConflicts).reduce((n, l) => n + l.length, 0) / 2
+
   const modConflicts: Record<string, string[]> = {}
   let conflictEdgeCount = 0
   for (const [uniqueName, set] of conflictGraph) {
@@ -89,7 +111,8 @@ export function buildModConflicts(
   }
   console.log(
     `  conflicts: ${conflictGraph.size} mods, ${conflictEdgeCount / 2} pairs ` +
-      `(${derivedVariantEdges} base↔variant derived structurally)`,
+      `(${derivedVariantEdges} base↔variant, ${derivedAugmentEdges} same-ability ` +
+      `augment derived structurally)`,
   )
   return modConflicts
 }

@@ -92,9 +92,7 @@ describe("validateArcanes", () => {
   })
 
   it("flags missing names", () => {
-    const issues = run((i) =>
-      validateArcanes([{ ...goodArcane, name: "" }], i),
-    )
+    const issues = run((i) => validateArcanes([{ ...goodArcane, name: "" }], i))
     expect(issues.map((x) => x.msg)).toEqual(["missing/empty name"])
   })
 

@@ -27,7 +27,9 @@ for (const f of findJsonFiles(DATA_DIR)) {
   if (hits.size > 0) {
     offenders++
     totalUrls += hits.size
-    console.error(`✗ ${relative(REPO_ROOT, f)} — ${hits.size} upstream URL(s), e.g. ${[...hits][0]}`)
+    console.error(
+      `✗ ${relative(REPO_ROOT, f)} — ${hits.size} upstream URL(s), e.g. ${[...hits][0]}`,
+    )
   }
 }
 

@@ -28,6 +28,14 @@ export const MOD_POOL_OVERRIDES: Record<string, readonly string[]> = {
   // Cyte-09's exalted weapon is the Neutralizer (an exalted sniper rifle),
   // not an arm-cannon — leave to default for now.
 
+  // Ballistica family — sidearm crossbows. Wiki Class is "Crossbow", which
+  // the class default routes to the Rifle pool (correct for the primary
+  // crossbows Attica/Zhuge). These are Secondary-slot and take Pistol mods.
+  // Verified 2026-07-01 against wiki.warframe.com/w/Ballistica.
+  Ballistica: ["Pistol"],
+  "Ballistica Prime": ["Pistol"],
+  "Rakta Ballistica": ["Pistol"],
+
   // Exalted weapons — wiki Class is "Exalted Weapon" with no per-frame
   // routing data, so we override with the actual mod pools each draws
   // from. The build adds the weapon's own name on top for augment hooks.
@@ -48,7 +56,7 @@ export const MOD_POOL_OVERRIDES: Record<string, readonly string[]> = {
   "Diwata Prime": ["Melee", "Swords"],
   "Desert Wind": ["Melee", "Sparring"],
   "Desert Wind Prime": ["Melee", "Sparring"],
-  "Whipclaw": ["Melee"],
+  Whipclaw: ["Melee"],
   "Whipclaw Prime": ["Melee"],
   // Pseudo-exalted abilities — independently moddable with melee mods. They
   // carry a *locked* exalted stance (its own +10-capacity Zenurik mod that the

@@ -1,10 +1,10 @@
 {
   "stats": {
     "weapons": {
-      "de": 836,
-      "merged": 856,
-      "emitted": 697,
-      "unmatched": 4
+      "de": 837,
+      "merged": 884,
+      "emitted": 698,
+      "unmatched": 0
     },
     "frames": {
       "de": 125,
@@ -26,22 +26,16 @@
       "necramechs": 2,
       "secondary": 153,
       "melee": 238,
-      "primary": 200,
+      "primary": 201,
       "companion-weapons": 41,
       "exalted-weapons": 37,
       "companions": 41,
       "railjack": 1
     }
   },
-  "weaponsUnmatched": [
-    "Afentis Prime",
-    "Pride",
-    "War Prime",
-    "Wrath"
-  ],
+  "weaponsUnmatched": [],
   "framesUnmatched": [
-    "Orion & Sirius",
-    "Sirius & Orion"
+    "Orion & Sirius"
   ],
   "companionsUnmatched": [],
   "skippedModularComponents": [

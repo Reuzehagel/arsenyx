@@ -113,7 +113,12 @@ export function BuildSurface({
         }
       >
         {topBarLayout === "centered" ? (
-          <div className="relative flex min-h-8 items-center justify-center">
+          // The Stats popover is absolutely pinned left so the variant tabs can
+          // center across the full card width. Symmetric padding the width of
+          // that button (visible sm–lg only) keeps narrow tab sets truly
+          // centered while reserving a no-go zone on the left — without it,
+          // builds with many variants slide a tab under the button.
+          <div className="relative flex min-h-8 items-center justify-center sm:px-24 xl:px-0">
             <ItemSidebarPopover
               {...sidebarProps}
               className={cn(

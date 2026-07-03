@@ -20,6 +20,7 @@ import { imageMapQuery } from "@/lib/queries/image-map-query"
 import { itemQuery } from "@/lib/queries/item-query"
 import { modConflictsQuery } from "@/lib/queries/mod-conflicts-query"
 import { modsQuery } from "@/lib/queries/mods-query"
+import { partnerBuildsQuery } from "@/lib/queries/partner-builds-query"
 import { seo } from "@/lib/seo"
 import {
   type BrowseCategory,
@@ -63,7 +64,11 @@ export const Route = createFileRoute("/builds/$slug")({
       ...(v !== undefined && { v }),
     }
   },
-  loader: async ({ context, params }) => {
+  // The loader warms the related-builds strip (below), but the strip never
+  // renders in embeds — surface `embed` so the loader can skip that request
+  // rather than multiplying it across a guide page's many iframes.
+  loaderDeps: ({ search }) => ({ embed: search.embed === true }),
+  loader: async ({ context, params, deps }) => {
     const qc = context.queryClient
     const build = await qc.ensureQueryData(buildQuery(params.slug))
     // The build's stored item.imageName is denormalized and rots across
@@ -79,11 +84,20 @@ export const Route = createFileRoute("/builds/$slug")({
     if (isValidCategory(build.item.category)) {
       const category = build.item.category as BrowseCategory
       const itemSlug = slugify(build.item.name)
-      // Gate the transition only on the small static files the loadout needs.
+      // Gate the transition only on the small static files the loadout needs,
+      // plus the related-builds strip (full page only). The strip uses a plain
+      // useQuery with no height reservation, so warming it here lets it paint at
+      // its final height on first render instead of fetching after the route
+      // commits and shoving the guide + footer down — the build pages' dominant
+      // remaining CLS. Cheap and edge-cached (api builds.ts `/partners`), and it
+      // resolves within the static-file window so it adds ~no navigation latency.
       await Promise.all([
         qc.prefetchQuery(itemQuery(category, itemSlug)),
         qc.prefetchQuery(imageMapQuery),
         qc.prefetchQuery(modConflictsQuery),
+        ...(deps.embed
+          ? []
+          : [qc.prefetchQuery(partnerBuildsQuery(params.slug))]),
       ])
       // Prefer the freshly-warmed catalog item's image over the build's stale
       // copy (same source the SPA header uses — see viewer-header.tsx).

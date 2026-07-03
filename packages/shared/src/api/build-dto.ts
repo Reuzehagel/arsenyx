@@ -25,6 +25,8 @@ export type BuildOrganizationSummary = {
   name: string
   slug: string
   image: string | null
+  /** Admin-granted trust flag — verified orgs render purple, others muted. */
+  verified: boolean
 }
 
 export type BuildItemSummary = {

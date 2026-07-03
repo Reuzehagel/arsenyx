@@ -127,6 +127,32 @@ export function getVisibleSlots(layout: SlotLayout): SlotId[] {
   return out
 }
 
+/** Reading-order rank for a slot id, matching getVisibleSlots. */
+function slotOrderIndex(id: SlotId): number {
+  if (id === "stance") return 1
+  if (id === "exilus") return 2
+  if (id.startsWith("aura-")) {
+    const n = Number(id.slice("aura-".length))
+    return n === 0 ? 0 : 2 + n
+  }
+  return 1000 + Number(id.slice("normal-".length))
+}
+
+/**
+ * Placed mods in slot reading order, regardless of the order they were
+ * equipped. `placed` is a string-keyed object, so `Object.values` yields
+ * insertion order — but elemental combination is slot-order-sensitive, so
+ * stat math must never see equip order (#272).
+ */
+export function placedModsInSlotOrder(
+  placed: Partial<Record<SlotId, PlacedMod>>,
+): PlacedMod[] {
+  return (Object.entries(placed) as [SlotId, PlacedMod | undefined][])
+    .filter((e): e is [SlotId, PlacedMod] => e[1] !== undefined)
+    .sort(([a], [b]) => slotOrderIndex(a) - slotOrderIndex(b))
+    .map(([, p]) => p)
+}
+
 /**
  * Drop seeded slot entries whose slot doesn't exist in this layout. A
  * legacy or imported build can carry a mod (or forma) in a slot the current

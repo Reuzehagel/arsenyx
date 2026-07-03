@@ -81,7 +81,9 @@ function toPct(v: number | undefined): number | undefined {
   return Math.round(v * 1000) / 10
 }
 
-export function lowerDamageKeys(d: Record<string, unknown> | undefined): Record<string, number> | undefined {
+export function lowerDamageKeys(
+  d: Record<string, unknown> | undefined,
+): Record<string, number> | undefined {
   if (!d) return undefined
   const out: Record<string, number> = {}
   for (const [k, v] of Object.entries(d)) {
@@ -101,7 +103,8 @@ function buildAttack(a: WikiAttack): AttackOut {
   if (sc !== undefined) out.status_chance = sc
   if (a.ShotType) out.shot_type = a.ShotType
   if (a.Trigger) out.trigger = a.Trigger
-  if (a.Multishot !== undefined && a.Multishot !== 1) out.multishot = a.Multishot
+  if (a.Multishot !== undefined && a.Multishot !== 1)
+    out.multishot = a.Multishot
   if (a.Range !== undefined) out.range = a.Range
   if (a.PunchThrough !== undefined && a.PunchThrough > 0) {
     out.punch_through = a.PunchThrough
@@ -111,7 +114,11 @@ function buildAttack(a: WikiAttack): AttackOut {
   if (dmg) out.damage = dmg
   if (a.Falloff) {
     const f = a.Falloff
-    if (f.StartRange !== undefined || f.EndRange !== undefined || f.Reduction !== undefined) {
+    if (
+      f.StartRange !== undefined ||
+      f.EndRange !== undefined ||
+      f.Reduction !== undefined
+    ) {
       out.falloff = {
         start: f.StartRange ?? 0,
         end: f.EndRange ?? 0,
@@ -134,8 +141,7 @@ export function buildDamageBlock(
   const attacks = wikiAttacks.map(buildAttack)
   const out: DamageOut = { attacks }
   // Normal Attack damage seeds weapon.damage + totalDamage.
-  const normal =
-    attacks.find((a) => a.name === "Normal Attack") ?? attacks[0]
+  const normal = attacks.find((a) => a.name === "Normal Attack") ?? attacks[0]
   if (normal?.damage) {
     out.damage = normal.damage
     out.totalDamage = Object.values(normal.damage).reduce((a, b) => a + b, 0)

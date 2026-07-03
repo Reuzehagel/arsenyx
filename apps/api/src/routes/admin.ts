@@ -266,6 +266,7 @@ admin.get("/orgs", adminSearchLimit, async (c) => {
         slug: true,
         image: true,
         description: true,
+        verified: true,
         createdAt: true,
         _count: { select: { members: true, builds: true } },
       },
@@ -280,6 +281,7 @@ admin.get("/orgs", adminSearchLimit, async (c) => {
       slug: o.slug,
       image: o.image,
       description: o.description,
+      verified: o.verified,
       createdAt: o.createdAt.toISOString(),
       memberCount: o._count.members,
       buildCount: o._count.builds,
@@ -288,6 +290,31 @@ admin.get("/orgs", adminSearchLimit, async (c) => {
     page,
     limit: LIST_PAGE,
   })
+})
+
+admin.patch("/orgs/:slug", adminMutateLimit, async (c) => {
+  const actor = await requireAdmin(c)
+  if (actor instanceof Response) return actor
+
+  const parsed = await parseJsonBody(c, { maxBytes: 1024 })
+  if (!parsed.ok) return parsed.response
+  const verified = parsed.value.verified
+  if (typeof verified !== "boolean") {
+    return c.json({ error: "invalid_verified" }, 400)
+  }
+
+  const slug = c.req.param("slug").toLowerCase()
+  try {
+    const updated = await prisma.organization.update({
+      where: { slug },
+      data: { verified },
+      select: { id: true, slug: true, verified: true },
+    })
+    return c.json(updated)
+  } catch (err) {
+    if (isPrismaNotFound(err)) return c.json({ error: "not_found" }, 404)
+    throw err
+  }
 })
 
 admin.delete("/orgs/:slug", adminMutateLimit, async (c) => {

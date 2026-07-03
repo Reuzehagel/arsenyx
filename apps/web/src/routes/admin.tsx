@@ -40,6 +40,7 @@ import {
   type AdminUserFlag,
   useAdminDeleteBuild,
   useAdminDeleteOrg,
+  useAdminSetOrgVerified,
   useAdminDeleteUser,
   useAdminPatchUser,
 } from "@/lib/queries/admin-actions"
@@ -479,6 +480,8 @@ function OrgsTab({ page, q }: { page: number; q: string }) {
 
 function OrgRow({ org }: { org: AdminOrg }) {
   const del = useAdminDeleteOrg()
+  const setVerified = useAdminSetOrgVerified()
+  const error = setVerified.error instanceof Error ? setVerified.error : null
   return (
     <div className="flex items-center gap-3 rounded-lg border p-3">
       <UserAvatar
@@ -490,14 +493,24 @@ function OrgRow({ org }: { org: AdminOrg }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <Link
           href={`/org/${org.slug}`}
-          className="truncate text-sm font-medium hover:underline"
+          className={`truncate text-sm font-medium hover:underline ${
+            org.verified ? "text-wf-org" : ""
+          }`}
         >
           {org.name}
         </Link>
         <span className="text-muted-foreground truncate text-xs">
           /{org.slug} · {org.memberCount} members · {org.buildCount} builds
         </span>
+        {error ? <FieldError>{error.message}</FieldError> : null}
       </div>
+      <FlagButton
+        label="Verified"
+        active={org.verified}
+        onClick={() =>
+          setVerified.mutate({ slug: org.slug, verified: !org.verified })
+        }
+      />
       <ConfirmDeleteDialog
         title="Delete organization"
         description={

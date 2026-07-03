@@ -16,6 +16,8 @@ import { DAMAGE_TYPE_ICON, type DamageType } from "@/lib/stats/types"
 import { cn } from "@/lib/util/utils"
 import { getImageUrl } from "@/lib/warframe"
 
+import { StatText } from "../stat-text"
+
 /**
  * Picks which embed strip(s) to render above the loadout for the given
  * category and build state in `?embed=1` mode.
@@ -301,7 +303,7 @@ function EmbedAbilityIcon({
         )}
       </p>
       <p className="text-muted-foreground mt-0.5 text-xs">
-        {ability.description}
+        <StatText text={ability.description} />
       </p>
     </>
   )

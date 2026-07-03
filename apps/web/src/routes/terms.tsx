@@ -11,7 +11,7 @@ export const Route = createFileRoute("/terms")({
   component: TermsPage,
 })
 
-const LAST_UPDATED = "2026-05-26"
+const LAST_UPDATED = "2026-06-28"
 
 function TermsPage() {
   return (
@@ -38,7 +38,10 @@ function TermsPage() {
               harassing/hateful/sexually explicit, or to abuse the API beyond
               the rate limits documented at{" "}
               <Link href="/docs/api#rate-limits">/docs/api#rate-limits</Link>.
-              We may remove content or suspend accounts that break those rules.
+              We may remove content or suspend accounts that break those rules,
+              and we may also remove builds or other content at our discretion —
+              for example spam, test, duplicate, or broken builds — to keep the
+              site useful.
             </p>
 
             <h2>Your content</h2>

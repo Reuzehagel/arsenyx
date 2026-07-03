@@ -117,9 +117,14 @@ export function getModsForItem(
     modPools?: readonly string[]
     /** Weapon intrinsic tags (GRNBOW, SEMI_AUTO, PROJECTILE, …) used to
      *  refine `compatName`-level routing against a mod's tag requirements.
-     *  Absent on frames/companions/untagged weapons → tag refinement is
-     *  skipped (permissive). */
+     *  Absent on frames/companions/untagged weapons → full tag refinement is
+     *  skipped, but see `trigger` for a partial fallback on untagged weapons. */
     compatTags?: readonly string[]
+    /** DE firing mode (SEMI, AUTO, BURST, HELD, …). PE+ leaves ~66 weapons
+     *  (Furis, Vasto, Kohm, …) without `compatTags`; for those we fall back to
+     *  the two restriction tags decidable from `trigger` alone — SEMI_AUTO and
+     *  BEAM — so firing-mode-gated mods don't leak. See the partial path below. */
+    trigger?: string
   },
   mods: Mod[],
 ): Mod[] {
@@ -133,6 +138,7 @@ export function getModsForItem(
     item.compatTags && item.compatTags.length > 0
       ? new Set(item.compatTags)
       : null
+  const trigger = item.trigger?.toUpperCase()
 
   return mods.filter((mod) => {
     // OpenWF augment gate: `compatItems` is a build-time-resolved
@@ -174,6 +180,33 @@ export function getModsForItem(
       ) {
         return false
       }
+    } else if (
+      trigger &&
+      !isStanceMod(mod) &&
+      mod.compatTags &&
+      mod.compatTags.length > 0
+    ) {
+      // Partial fallback for weapons PE+ left untagged (no `compatTags`). The
+      // full ANY-of check above can't run, so firing-mode-gated mods would all
+      // leak — Semi-Pistol Cannonade onto auto pistols, Ruinous Extension (a
+      // beam-only mod) onto the Furis. We can still rule out the two tags that
+      // are decidable from the authoritative `trigger` field alone:
+      //   • SEMI_AUTO — the weapon has it iff its trigger is SEMI
+      //   • BEAM      — an untagged weapon is never a beam weapon (PE+ tags
+      //                 every beam weapon), so the weapon never has it
+      // Only decide when EVERY tag the mod requires is one of these two; for
+      // anything else (PROJECTILE, ammo tags) we can't derive the weapon's
+      // status from `trigger`, so we stay permissive — wrongly hiding a usable
+      // mod is worse than the occasional leak.
+      const decidableOnly = mod.compatTags.every(
+        (t) => t === "SEMI_AUTO" || t === "BEAM",
+      )
+      // The only decidable tag an untagged weapon can carry is SEMI_AUTO, and
+      // only when its trigger is SEMI (BEAM is never present). So a
+      // decidable-only mod passes iff it requires SEMI_AUTO on a SEMI weapon.
+      const weaponHasRequired =
+        trigger === "SEMI" && mod.compatTags.includes("SEMI_AUTO")
+      if (decidableOnly && !weaponHasRequired) return false
     }
 
     // Stance mods are class-specific. The item's modPools already
@@ -203,6 +236,66 @@ export function getModsForItem(
 /** uniqueName → mod uniqueNames it's mutually exclusive with. Symmetric and
  *  restricted to the emitted catalog. A mod with no conflicts is absent. */
 export type ModConflictMap = Record<string, readonly string[]>
+
+/** Ability a warframe augment modifies, parsed from DE's "<Ability> Augment:"
+ *  description prefix (e.g. "Decoy Augment: …" → "Decoy"). Returns null for
+ *  non-augments and for weapon augments, which describe a flat stat
+ *  ("+75% Damage") with no such prefix. Same convention the helminth
+ *  augment-routing in search-panel keys off. */
+export function getAugmentAbility(
+  mod: Pick<Mod, "isAugment" | "levelStats">,
+): string | null {
+  if (!mod.isAugment) return null
+  const desc = mod.levelStats?.[0]?.stats?.[0] ?? ""
+  // Most read "Decoy Augment:", but a few carry a stray space before the colon
+  // ("Sol Gate Augment :", "Blaze Artillery Augment :"), so tolerate it.
+  const match = desc.match(/^(.+?) Augment\s*:/)
+  return match ? match[1]! : null
+}
+
+/**
+ * Mutual-exclusion edges for warframe ability augments. The game forbids
+ * equipping two augments for the same ability ("Different Augments affecting
+ * the same ability or passive cannot be equipped together" —
+ * wiki.warframe.com/w/Augment_Mods), e.g. Loki's Decoy has three augments
+ * (Decoy / Deceptive Bond / Savior Decoy / Damage Decoy) and only one may be
+ * slotted. The per-mod `Incompatible` field that backs the rest of
+ * mod-conflicts.json doesn't record these, so derive them from the catalog:
+ * group augments by owning frame (`compatName`) + ability, then make every
+ * augment in a group mutually exclusive with the others.
+ *
+ * Returns the same symmetric `uniqueName → uniqueName[]` shape as
+ * mod-conflicts.json, covering only groups with ≥2 augments. The build merges
+ * this into the wiki/variant edges (see scripts/build/mod-conflicts.ts).
+ */
+export function deriveAbilityAugmentConflicts(
+  mods: readonly Pick<
+    Mod,
+    "uniqueName" | "compatName" | "isAugment" | "levelStats"
+  >[],
+): ModConflictMap {
+  // (frame + ability) → augment uniqueNames sharing that ability. The NUL
+  // separator can't appear in either part, so the key is unambiguous.
+  const byAbility = new Map<string, string[]>()
+  for (const mod of mods) {
+    const ability = getAugmentAbility(mod)
+    if (!ability || !mod.compatName) continue
+    const key = `${mod.compatName}\0${ability}`
+    const group = byAbility.get(key)
+    if (group) group.push(mod.uniqueName)
+    else byAbility.set(key, [mod.uniqueName])
+  }
+  // Each mod lands in exactly one (frame + ability) group, so the groups are
+  // disjoint — no cross-group dedup is needed, and within a group everyone
+  // conflicts with everyone else. Sorted output is the contract callers rely on.
+  const out: Record<string, string[]> = {}
+  for (const group of byAbility.values()) {
+    if (group.length < 2) continue
+    const sorted = [...group].sort()
+    for (const a of sorted) out[a] = sorted.filter((b) => b !== a)
+  }
+  return out
+}
 
 /** True when two mods are mutually exclusive. Order-independent (the map is
  *  symmetric, but we check both directions to tolerate a one-sided map). */

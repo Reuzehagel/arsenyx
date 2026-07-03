@@ -48,7 +48,10 @@ function deepEqual(a: unknown, b: unknown): boolean {
     if (ka.length !== kb.length) return false
     if (!ka.every((k, i) => k === kb[i])) return false
     return ka.every((k) =>
-      deepEqual((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]),
+      deepEqual(
+        (a as Record<string, unknown>)[k],
+        (b as Record<string, unknown>)[k],
+      ),
     )
   }
   return false
@@ -96,7 +99,11 @@ function diffItem(
   return out
 }
 
-function compareIndex(goldenDir: string, newDir: string, summaryMode: boolean): {
+function compareIndex(
+  goldenDir: string,
+  newDir: string,
+  summaryMode: boolean,
+): {
   diffs: number
   summary: Map<string, Map<string, FieldDelta>>
 } {
@@ -137,8 +144,14 @@ function compareIndex(goldenDir: string, newDir: string, summaryMode: boolean): 
           (onlyB.length ? ` | added: ${onlyB.length}` : "") +
           (changed.length ? ` | changed: ${changed.length}` : ""),
       )
-      if (onlyA.length) console.log(`    removed: ${onlyA.slice(0, 10).join(", ")}${onlyA.length > 10 ? ", ..." : ""}`)
-      if (onlyB.length) console.log(`    added:   ${onlyB.slice(0, 10).join(", ")}${onlyB.length > 10 ? ", ..." : ""}`)
+      if (onlyA.length)
+        console.log(
+          `    removed: ${onlyA.slice(0, 10).join(", ")}${onlyA.length > 10 ? ", ..." : ""}`,
+        )
+      if (onlyB.length)
+        console.log(
+          `    added:   ${onlyB.slice(0, 10).join(", ")}${onlyB.length > 10 ? ", ..." : ""}`,
+        )
       differences += onlyA.length + onlyB.length
     }
   }
@@ -167,7 +180,9 @@ function printSummary(summary: Map<string, Map<string, FieldDelta>>): void {
     let kind = ""
     if (d.removed === d.changed) kind = " [field gone from new]"
     else if (d.added === d.changed) kind = " [field added in new]"
-    console.log(`  ${field.padEnd(14)} ${String(d.changed).padStart(4)} items${kind}${sample}`)
+    console.log(
+      `  ${field.padEnd(14)} ${String(d.changed).padStart(4)} items${kind}${sample}`,
+    )
   }
 }
 
@@ -175,12 +190,18 @@ function compareDetail(goldenDir: string, newDir: string): number {
   const gDetails = resolve(goldenDir, "items")
   const nDetails = resolve(newDir, "items")
   let gExists = false
-  try { gExists = statSync(gDetails).isDirectory() } catch {}
+  try {
+    gExists = statSync(gDetails).isDirectory()
+  } catch {}
   let nExists = false
-  try { nExists = statSync(nDetails).isDirectory() } catch {}
+  try {
+    nExists = statSync(nDetails).isDirectory()
+  } catch {}
   if (!gExists || !nExists) {
     if (gExists !== nExists) {
-      console.log(`  items/ dir presence differs (golden: ${gExists}, new: ${nExists})`)
+      console.log(
+        `  items/ dir presence differs (golden: ${gExists}, new: ${nExists})`,
+      )
       return 1
     }
     return 0
@@ -191,7 +212,9 @@ function compareDetail(goldenDir: string, newDir: string): number {
     const gCat = resolve(gDetails, cat)
     const nCat = resolve(nDetails, cat)
     let nCatExists = false
-    try { nCatExists = statSync(nCat).isDirectory() } catch {}
+    try {
+      nCatExists = statSync(nCat).isDirectory()
+    } catch {}
     if (!nCatExists) {
       console.log(`  items/${cat}/ exists in golden, missing in new`)
       differences++
@@ -236,12 +259,20 @@ function main() {
   const goldenDir = positional[0]
   const newDir = positional[1]
   if (!goldenDir || !newDir) {
-    console.error("Usage: bun run scripts/diff-index.ts [--summary] <golden-dir> <new-dir>")
+    console.error(
+      "Usage: bun run scripts/diff-index.ts [--summary] <golden-dir> <new-dir>",
+    )
     process.exit(1)
   }
-  console.log(`Comparing ${goldenDir} vs ${newDir}${summaryMode ? " (summary)" : ""}`)
+  console.log(
+    `Comparing ${goldenDir} vs ${newDir}${summaryMode ? " (summary)" : ""}`,
+  )
   console.log()
-  const { diffs: indexDiffs, summary } = compareIndex(goldenDir, newDir, summaryMode)
+  const { diffs: indexDiffs, summary } = compareIndex(
+    goldenDir,
+    newDir,
+    summaryMode,
+  )
   // Detail comparison is skipped in summary mode — per-item details are too
   // verbose to summarize meaningfully without per-category schema knowledge.
   const detailDiffs = summaryMode ? 0 : compareDetail(goldenDir, newDir)
