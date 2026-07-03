@@ -473,6 +473,7 @@ function OrgsTab({ page, q }: { page: number; q: string }) {
 function OrgRow({ org }: { org: AdminOrg }) {
   const del = useAdminDeleteOrg()
   const setVerified = useAdminSetOrgVerified()
+  const error = setVerified.error instanceof Error ? setVerified.error : null
   return (
     <div className="flex items-center gap-3 rounded-lg border p-3">
       <UserAvatar
@@ -493,11 +494,11 @@ function OrgRow({ org }: { org: AdminOrg }) {
         <span className="text-muted-foreground truncate text-xs">
           /{org.slug} · {org.memberCount} members · {org.buildCount} builds
         </span>
+        {error ? <FieldError>{error.message}</FieldError> : null}
       </div>
       <FlagButton
         label="Verified"
         active={org.verified}
-        disabled={setVerified.isPending}
         onClick={() =>
           setVerified.mutate({ slug: org.slug, verified: !org.verified })
         }

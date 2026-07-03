@@ -225,7 +225,36 @@ export function useAdminSetOrgVerified() {
         method: "PATCH",
         json: { verified: input.verified },
       }),
-    onSuccess: (_data, input) => {
+    // Flip the admin list optimistically: the PATCH + list refetch round trip
+    // takes seconds on a cold Worker, and with no immediate feedback the
+    // toggle reads as broken (and invites mis-clicks on other rows).
+    onMutate: async (input) => {
+      await qc.cancelQueries({ queryKey: ["admin", "orgs"] })
+      const snapshots = qc.getQueriesData<AdminOrgsResponse>({
+        queryKey: ["admin", "orgs"],
+      })
+      qc.setQueriesData<AdminOrgsResponse>(
+        { queryKey: ["admin", "orgs"] },
+        (old) =>
+          old
+            ? {
+                ...old,
+                orgs: old.orgs.map((o) =>
+                  o.slug === input.slug
+                    ? { ...o, verified: input.verified }
+                    : o,
+                ),
+              }
+            : old,
+      )
+      return { snapshots }
+    },
+    onError: (_err, _input, ctx) => {
+      for (const [key, data] of ctx?.snapshots ?? []) {
+        qc.setQueryData(key, data)
+      }
+    },
+    onSettled: (_data, _err, input) => {
       qc.invalidateQueries({ queryKey: ["admin", "orgs"] })
       // Verified drives the purple-vs-muted org rendering on the org page,
       // the directory, and build cards — refresh them all.
