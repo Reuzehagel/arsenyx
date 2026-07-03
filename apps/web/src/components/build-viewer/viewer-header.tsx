@@ -85,7 +85,11 @@ export function ViewerHeader({
                   <RouterLink
                     to="/org/$slug"
                     params={{ slug: build.organization.slug }}
-                    className="text-[#a78bfa] hover:underline"
+                    className={
+                      build.organization.verified
+                        ? "text-wf-org hover:underline"
+                        : "hover:text-foreground hover:underline"
+                    }
                   >
                     {build.organization.name}
                   </RouterLink>

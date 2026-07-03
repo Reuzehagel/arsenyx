@@ -38,7 +38,7 @@ export const LIST_SELECT = {
     },
   },
   organization: {
-    select: { id: true, name: true, slug: true, image: true },
+    select: { id: true, name: true, slug: true, image: true, verified: true },
   },
 } as const
 
@@ -55,7 +55,7 @@ export const DETAIL_INCLUDE = {
     },
   },
   organization: {
-    select: { id: true, name: true, slug: true, image: true },
+    select: { id: true, name: true, slug: true, image: true, verified: true },
   },
   buildGuide: {
     select: { summary: true, description: true, updatedAt: true },

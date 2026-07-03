@@ -43,7 +43,9 @@ function BuildByline({
       <>
         <p className="text-muted-foreground line-clamp-1 text-xs">
           {build.organization ? (
-            <span className="text-wf-org">{build.organization.name}</span>
+            <span className={build.organization.verified ? "text-wf-org" : ""}>
+              {build.organization.name}
+            </span>
           ) : (
             <>by {author}</>
           )}
@@ -64,7 +66,9 @@ function BuildByline({
 
   return build.organization ? (
     <>
-      <span className="text-wf-org line-clamp-1">
+      <span
+        className={`line-clamp-1 ${build.organization.verified ? "text-wf-org" : ""}`}
+      >
         {build.organization.name}
       </span>
       {!build.hideAuthor && (

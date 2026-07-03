@@ -28,6 +28,7 @@ export type OrgProfile = {
   slug: string
   image: string | null
   description: string | null
+  verified: boolean
   createdAt: string
   members: OrgMember[]
   buildCount: number
@@ -43,6 +44,7 @@ export type OrgSummary = {
   slug: string
   image: string | null
   description: string | null
+  verified: boolean
 }
 
 export type MyOrgsResponse = {
@@ -58,6 +60,7 @@ export type OrgDirectoryItem = {
   slug: string
   image: string | null
   description: string | null
+  verified: boolean
   createdAt: string
   memberCount: number
   buildCount: number

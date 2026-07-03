@@ -197,6 +197,7 @@ export type AdminOrg = {
   slug: string
   image: string | null
   description: string | null
+  verified: boolean
   createdAt: string
   memberCount: number
   buildCount: number
@@ -215,6 +216,25 @@ export const adminOrgsQuery = (params: { page: number; q: string }) =>
     queryFn: () =>
       adminCall<AdminOrgsResponse>(`/admin/orgs${listQuery(params)}`),
   })
+
+export function useAdminSetOrgVerified() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { slug: string; verified: boolean }) =>
+      adminCall(`/admin/orgs/${encodeURIComponent(input.slug)}`, {
+        method: "PATCH",
+        json: { verified: input.verified },
+      }),
+    onSuccess: (_data, input) => {
+      qc.invalidateQueries({ queryKey: ["admin", "orgs"] })
+      // Verified drives the purple-vs-muted org rendering on the org page,
+      // the directory, and build cards — refresh them all.
+      qc.invalidateQueries({ queryKey: ["org", input.slug.toLowerCase()] })
+      qc.invalidateQueries({ queryKey: ["orgs"] })
+      qc.invalidateQueries({ queryKey: ["builds"] })
+    },
+  })
+}
 
 export function useAdminDeleteOrg() {
   const qc = useQueryClient()

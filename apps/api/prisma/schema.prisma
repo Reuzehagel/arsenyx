@@ -110,6 +110,9 @@ model Organization {
   slug        String  @unique
   image       String?
   description String?
+  // Manually granted via the admin panel to real communities (WFCD, Endo
+  // Flood, …). Verified orgs render purple (--color-wf-org); the rest muted.
+  verified    Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

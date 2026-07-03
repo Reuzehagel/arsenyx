@@ -863,7 +863,7 @@ builds.get("/:slug", edgeCache({ maxAge: 60 }), async (c) => {
         itemUniqueName: true,
         itemImageName: true,
         user: { select: { name: true, username: true, displayUsername: true } },
-        organization: { select: { name: true } },
+        organization: { select: { name: true, verified: true } },
         buildGuide: { select: { summary: true } },
       },
     })

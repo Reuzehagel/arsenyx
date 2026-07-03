@@ -107,7 +107,12 @@ function OrgsDirectoryContent() {
                     shape="square"
                   />
                   <div className="flex min-w-0 flex-col gap-0.5">
-                    <CardTitle className="truncate">{org.name}</CardTitle>
+                    <CardTitle
+                      className={`truncate ${org.verified ? "text-wf-org" : ""}`}
+                      title={org.verified ? "Verified organization" : undefined}
+                    >
+                      {org.name}
+                    </CardTitle>
                     <CardDescription className="truncate text-xs">
                       @{org.slug}
                     </CardDescription>
