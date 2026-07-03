@@ -68,7 +68,11 @@ import {
   WeaponStatsPanel,
 } from "./stats-panels"
 import type { PlacedArcane } from "./use-arcane-slots"
-import type { PlacedMod, SlotId } from "./use-build-slots"
+import {
+  placedModsInSlotOrder,
+  type PlacedMod,
+  type SlotId,
+} from "./use-build-slots"
 import { ZawComponentSelector } from "./zaw-component-selector"
 
 const SHARD_SLOTS = 5
@@ -209,11 +213,8 @@ export function ItemSidebar({
     ? (deploymentContext ?? DEFAULT_DEPLOYMENT_CONTEXT)
     : "archwing"
 
-  const modList = useMemo(
-    () =>
-      Object.values(placedMods).filter((p): p is PlacedMod => p !== undefined),
-    [placedMods],
-  )
+  // Slot reading order, not equip order — elemental combination depends on it.
+  const modList = useMemo(() => placedModsInSlotOrder(placedMods), [placedMods])
   const arcaneList = useMemo(
     () => placedArcanes.filter((a): a is PlacedArcane => !!a),
     [placedArcanes],

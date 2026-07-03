@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   dropOrphanSlots,
+  placedModsInSlotOrder,
   type PlacedMod,
   type SlotId,
   type SlotLayout,
@@ -32,6 +33,41 @@ const COMPANION_WEAPON: SlotLayout = {
   showExilus: false,
   showStance: false,
 }
+
+describe("placedModsInSlotOrder", () => {
+  it("orders by slot position, not equip order (#272)", () => {
+    // Repro from the issue: Toxin in slot 1, Heat in slot 3, THEN Cold in
+    // slot 2. Insertion order (Toxin, Heat, Cold) would combine Toxin+Heat
+    // into Gas; slot order (Toxin, Cold, Heat) gives Viral + Heat.
+    const placed: Partial<Record<SlotId, PlacedMod>> = {}
+    placed["normal-0"] = mod("Infected Clip")
+    placed["normal-2"] = mod("Hellfire")
+    placed["normal-1"] = mod("Deep Freeze")
+    expect(placedModsInSlotOrder(placed).map((p) => p.mod.name)).toEqual([
+      "Infected Clip",
+      "Deep Freeze",
+      "Hellfire",
+    ])
+  })
+
+  it("puts aura/stance/exilus before normal slots in reading order", () => {
+    const placed: Partial<Record<SlotId, PlacedMod>> = {}
+    placed["normal-7"] = mod("D")
+    placed["exilus"] = mod("C")
+    placed["aura-1"] = mod("B2")
+    placed["stance"] = mod("B1")
+    placed["normal-0"] = mod("E")
+    placed["aura-0"] = mod("A")
+    expect(placedModsInSlotOrder(placed).map((p) => p.mod.name)).toEqual([
+      "A",
+      "B1",
+      "C",
+      "B2",
+      "E",
+      "D",
+    ])
+  })
+})
 
 describe("dropOrphanSlots", () => {
   it("drops a mod sitting in a slot the layout doesn't have", () => {
