@@ -86,11 +86,12 @@ function SignInPage() {
 
 // Dev-only email+password form. Tree-shaken out of prod builds via
 // `import.meta.env.DEV`. Paired with `just setup`, which seeds
-// admin@admin.com / admin.
+// admin@local.dev with a random password printed to the terminal
+// (re-run `just setup` to rotate it if lost).
 function DevSignInForm({ redirect }: { redirect: string | undefined }) {
   const navigate = useNavigate()
-  const [email, setEmail] = useState("admin@admin.com")
-  const [password, setPassword] = useState("admin")
+  const [email, setEmail] = useState("admin@local.dev")
+  const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -122,14 +123,14 @@ function DevSignInForm({ redirect }: { redirect: string | undefined }) {
           autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="admin@admin.com"
+          placeholder="admin@local.dev"
         />
         <Input
           type="password"
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="admin"
+          placeholder="password from `just setup`"
         />
         {error ? <p className="text-destructive text-sm">{error}</p> : null}
         <Button type="submit" variant="secondary" disabled={busy}>
