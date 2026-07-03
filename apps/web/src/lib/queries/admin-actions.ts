@@ -221,10 +221,13 @@ export function useAdminSetOrgVerified() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: { slug: string; verified: boolean }) =>
-      adminCall(`/admin/orgs/${encodeURIComponent(input.slug)}`, {
-        method: "PATCH",
-        json: { verified: input.verified },
-      }),
+      adminCall<{ id: string; slug: string; verified: boolean }>(
+        `/admin/orgs/${encodeURIComponent(input.slug)}`,
+        {
+          method: "PATCH",
+          json: { verified: input.verified },
+        },
+      ),
     // Flip the admin list optimistically: the PATCH + list refetch round trip
     // takes seconds on a cold Worker, and with no immediate feedback the
     // toggle reads as broken (and invites mis-clicks on other rows).
@@ -254,13 +257,36 @@ export function useAdminSetOrgVerified() {
         qc.setQueryData(key, data)
       }
     },
-    onSettled: (_data, _err, input) => {
-      qc.invalidateQueries({ queryKey: ["admin", "orgs"] })
+    // Deliberately NO immediate refetch of the admin list: API reads go
+    // through Hyperdrive, whose query cache can serve a pre-write SELECT for
+    // ~a minute — an eager refetch stomps the optimistic flip with stale data
+    // and the toggle visibly reverts. The PATCH response is authoritative, so
+    // confirm the cache from it instead.
+    onSuccess: (data, input) => {
+      qc.setQueriesData<AdminOrgsResponse>(
+        { queryKey: ["admin", "orgs"] },
+        (old) =>
+          old
+            ? {
+                ...old,
+                orgs: old.orgs.map((o) =>
+                  o.slug === input.slug ? { ...o, verified: data.verified } : o,
+                ),
+              }
+            : old,
+      )
       // Verified drives the purple-vs-muted org rendering on the org page,
-      // the directory, and build cards — refresh them all.
-      qc.invalidateQueries({ queryKey: ["org", input.slug.toLowerCase()] })
-      qc.invalidateQueries({ queryKey: ["orgs"] })
-      qc.invalidateQueries({ queryKey: ["builds"] })
+      // the directory, and build cards — mark them stale so they refetch on
+      // next visit (by which point the Hyperdrive cache has usually turned
+      // over). refetchType "none" avoids an instant stale-read refetch for
+      // anything currently mounted.
+      const opts = { refetchType: "none" as const }
+      qc.invalidateQueries({
+        queryKey: ["org", input.slug.toLowerCase()],
+        ...opts,
+      })
+      qc.invalidateQueries({ queryKey: ["orgs"], ...opts })
+      qc.invalidateQueries({ queryKey: ["builds"], ...opts })
     },
   })
 }
