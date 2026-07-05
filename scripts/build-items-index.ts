@@ -43,7 +43,7 @@ import {
   ZAW_STRIKES,
 } from "@arsenyx/shared/warframe/zaw-data"
 
-import { ARCANE_KEEP } from "../data/curated/arcane-keep"
+import { ARCANE_KEEP, ARCANE_SLOT_FALLBACKS } from "../data/curated/arcane-keep"
 import { PVE_USABLE_CONCLAVE_MODS } from "../data/curated/pve-usable-conclave-mods"
 import { buildBrowseIndex } from "./build/browse-index"
 import { buildFamilyIndex, makeExpandCompat } from "./build/expand-compat"
@@ -405,7 +405,12 @@ async function main() {
     imageName:
       arcaneArtUrlByUniqueName.get(a.uniqueName) ??
       imageByUniqueName.get(a.uniqueName),
-    slotType: arcaneSlotByUniqueName.get(a.uniqueName),
+    // Wiki `Type` is authoritative; the curated fallback covers rows that
+    // are present but missing `Type` (see ARCANE_SLOT_FALLBACKS — an
+    // un-routable arcane vanishes from every slot picker, #284).
+    slotType:
+      arcaneSlotByUniqueName.get(a.uniqueName) ??
+      ARCANE_SLOT_FALLBACKS[a.uniqueName],
   }))
 
   // ---------- 7. Build items-index.json ----------
