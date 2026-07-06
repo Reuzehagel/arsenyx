@@ -22,3 +22,27 @@ export const ARCANE_KEEP: ReadonlySet<string> = new Set<string>([
   // Lua module dropped its Image after the 2026-06-21 refresh.
   "/Lotus/Upgrades/CosmeticEnhancers/Utility/AbilityStrengthAndCritDamageWhenInvisible",
 ])
+
+/**
+ * Curated equip-slot fallbacks — uniqueName → wiki-style slot `Type`.
+ *
+ * `slotType` routes every arcane into its slot pickers
+ * (shared/warframe/arcanes routes fail-closed: no slotType → no slot → the
+ * arcane is invisible everywhere). It normally comes from the wiki row's
+ * `Type` field at emit time, so a wiki row that is present but missing `Type`
+ * ships an un-routable arcane — exactly what happened to Crepuscular in the
+ * 2026-07-01 refresh (#284): the row's Image/InternalName were repaired
+ * upstream but its `Type` was gone, so the arcane vanished from the warframe
+ * arcane picker while remaining in the catalog.
+ *
+ * Entries here are used ONLY when the wiki row has no `Type` (the wiki stays
+ * authoritative when it has the data). Same maintenance contract as
+ * ARCANE_KEEP: small, verified, remove once the wiki row is whole again.
+ */
+export const ARCANE_SLOT_FALLBACKS: Readonly<Record<string, string>> = {
+  // Warframe arcane (equips on the frame): effect keys off the *warframe*
+  // being invisible and buffs Ability Strength. Carried slotType "Warframe"
+  // in every catalog build up to #256; verified in-game on warframe builds.
+  "/Lotus/Upgrades/CosmeticEnhancers/Utility/AbilityStrengthAndCritDamageWhenInvisible":
+    "Warframe",
+}
