@@ -18,12 +18,13 @@ import type {
   WarframeStats,
 } from "./types"
 
-const UMBRAL_MODS = new Set([
-  "Umbral Vitality",
-  "Umbral Intensify",
-  "Umbral Fiber",
-])
-const UMBRAL_SET_BONUSES: Record<number, number> = { 1: 1.0, 2: 1.25, 3: 1.75 }
+// wiki.warframe.com/w/Umbral_Set: Vitality/Fiber scale +30%/+80%, Intensify +25%/+75%
+const UMBRAL_SET_BONUSES: Record<string, Record<number, number>> = {
+  "Umbral Vitality": { 1: 1.0, 2: 1.3, 3: 1.8 },
+  "Umbral Fiber": { 1: 1.0, 2: 1.3, 3: 1.8 },
+  "Umbral Intensify": { 1: 1.0, 2: 1.25, 3: 1.75 },
+}
+const UMBRAL_MODS = new Set(Object.keys(UMBRAL_SET_BONUSES))
 
 type RankUp = { health: number; shield: number; armor: number; energy: number }
 
@@ -130,7 +131,7 @@ export function calculateWarframeStats(
 
   const umbralCount = mods.filter((m) => UMBRAL_MODS.has(m.mod.name)).length
   const setMultiplierFor = (name: string): number =>
-    UMBRAL_MODS.has(name) ? (UMBRAL_SET_BONUSES[umbralCount] ?? 1) : 1
+    UMBRAL_SET_BONUSES[name]?.[umbralCount] ?? 1
 
   const stats = collectSourcedStats(mods, arcanes, {
     setMultiplierFor,
