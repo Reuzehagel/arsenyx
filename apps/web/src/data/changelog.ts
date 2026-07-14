@@ -11,6 +11,30 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-07-14",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Umbral Vitality, Fiber, and Intensify now scale correctly within the Umbral set bonus. They used to share one multiplier, which shorted health and armor and would have overpaid ability strength — each mod now applies its own rate, matching the in-game numbers.",
+      },
+      {
+        type: "chore",
+        description: "Game data refreshed to the latest Warframe build.",
+      },
+    ],
+  },
+  {
+    date: "2026-07-06",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Arcane Crepuscular is back in the warframe arcane picker. A game-data refresh on July 1 fixed its icon but dropped its equip-slot data along the way, so it disappeared from every picker even though it was still in the catalog.",
+      },
+    ],
+  },
+  {
     date: "2026-07-03",
     changes: [
       {
