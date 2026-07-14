@@ -157,7 +157,7 @@ function FilterSelect<T extends string>({
   }))
   return (
     <Select items={items} value={value} onValueChange={(v) => onChange(v as T)}>
-      <SelectTrigger className="w-36">
+      <SelectTrigger className="w-full sm:w-36">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -495,13 +495,18 @@ export function ModSearchGrid({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+      {/* The four selects total ~600px, so a single row only fits at lg+;
+          below that the input gets its own line and the selects wrap. */}
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
         <InputGroup className="flex-1">
           <InputGroupAddon>
             <Search />
           </InputGroupAddon>
           <InputGroupInput
             ref={searchRef}
+            // The Input default h-8 + the group's border makes the group 34px,
+            // 2px taller than the h-8 selects beside it — fill the group instead.
+            className="h-full"
             placeholder="Search mods…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -552,7 +557,7 @@ export function ModSearchGrid({
           )}
         </InputGroup>
 
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex">
           <FilterSelect
             value={sort}
             onChange={setSort}

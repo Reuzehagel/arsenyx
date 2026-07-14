@@ -26,6 +26,11 @@ export const PVE_USABLE_CONCLAVE_MODS: ReadonlySet<string> = new Set([
   // Weapon zoom mods — standard Exilus zoom, usable in PvE.
   "/Lotus/Upgrades/Mods/Rifle/WeaponZoomFovMod", // Eagle Eye
   "/Lotus/Upgrades/Mods/Pistol/WeaponPistolZoomFovMod", // Hawk Eye
+  // Holster-reload Exilus mods — "usable in both PvE and Conclave" per each
+  // wiki page, despite living under /PvPMods/. Verified 2026-07-14 (#289).
+  "/Lotus/Upgrades/Mods/PvPMods/Rifle/PassiveReloadMod", // Tactical Reload
+  "/Lotus/Upgrades/Mods/PvPMods/Shotgun/PassiveReloadMod", // Lock and Load
+  "/Lotus/Upgrades/Mods/PvPMods/Pistol/PassiveReloadMod", // Eject Magazine
   // Warframe ability augments usable in both PvE and Conclave.
   "/Lotus/Powersuits/Volt/ShieldPvPAugmentCard", // Recharge Barrier (Volt)
   "/Lotus/Powersuits/Rhino/IronSkinAugmentCard", // Iron Shrapnel (Rhino)
