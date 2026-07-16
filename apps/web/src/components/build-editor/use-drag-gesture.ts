@@ -29,6 +29,41 @@ import {
 
 const ACTIVATION_DISTANCE = 4
 
+/**
+ * Move the item at `from` to `to`, returning a new array. Shared by the
+ * list-reorder consumers of this gesture engine (ability-stat rows, partner
+ * chips) so the splice-move logic lives in one place.
+ */
+export function reorder<T>(arr: readonly T[], from: number, to: number): T[] {
+  if (from === to) return arr.slice()
+  const next = arr.slice()
+  const [item] = next.splice(from, 1)
+  next.splice(to, 0, item)
+  return next
+}
+
+/**
+ * Resolve the row index under a point for list-reorder consumers: hit-test with
+ * `elementFromPoint`, walk up to the nearest `[rowAttr]` element, and read its
+ * `[indexAttr]`. Returns null when there's no row there or the index isn't a
+ * finite number. Shared by the reorder hooks so the DOM-targeting lives in one
+ * place; each caller passes its own attribute names.
+ */
+export function closestIndexAt(
+  x: number,
+  y: number,
+  rowAttr: string,
+  indexAttr: string,
+): number | null {
+  const el = document.elementFromPoint(x, y)
+  if (!el) return null
+  const row = el.closest(`[${rowAttr}]`)
+  if (!row) return null
+  const raw = row.getAttribute(indexAttr)
+  const i = raw ? Number.parseInt(raw, 10) : Number.NaN
+  return Number.isFinite(i) ? i : null
+}
+
 interface PendingDrag<TSource> {
   source: TSource
   sourceEl: HTMLElement

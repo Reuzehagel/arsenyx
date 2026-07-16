@@ -215,6 +215,11 @@ model Build {
   // `partneredBy` is intentionally unused at the query layer.
   partnerBuilds Build[]         @relation("PartnerBuilds")
   partneredBy   Build[]         @relation("PartnerBuilds")
+  // Per-owner display order for this build's partner strip, as an ordered
+  // list of partner Build ids. One-sided (unlike the symmetric relation
+  // above): each build orders its own strip. Ids not present here sort last
+  // (newly linked partners append); stale ids (unlinked) are ignored on read.
+  partnerOrder  String[]        @default([])
 
   buildGuide BuildGuide?
 

@@ -81,6 +81,40 @@ export function useLinkPartner(ownerSlug: string) {
   })
 }
 
+export function useReorderPartners(ownerSlug: string) {
+  const qc = useQueryClient()
+  const key = ["build", ownerSlug, "partners"] as const
+  return useMutation({
+    // `next` is the fully-reordered partner list; we send just the ids.
+    mutationFn: async (next: PartnerBuild[]): Promise<void> => {
+      try {
+        await apiFetch<void>(
+          `/builds/${encodeURIComponent(ownerSlug)}/partners/order`,
+          { method: "PUT", json: { order: next.map((p) => p.id) } },
+        )
+      } catch (err) {
+        throw remapApiError(err, {
+          401: "unauthorized",
+          403: "forbidden",
+          default: "failed_reorder",
+        })
+      }
+    },
+    onMutate: async (next) => {
+      await qc.cancelQueries({ queryKey: key })
+      const prev = qc.getQueryData<PartnerBuild[]>(key)
+      qc.setQueryData<PartnerBuild[]>(key, next)
+      return { prev }
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(key, ctx.prev)
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: key })
+    },
+  })
+}
+
 export function useUnlinkPartner(ownerSlug: string) {
   const qc = useQueryClient()
   return useMutation({
