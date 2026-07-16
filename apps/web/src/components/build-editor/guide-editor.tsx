@@ -12,6 +12,13 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Field, FieldLabel, FieldDescription } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -22,11 +29,13 @@ import {
 } from "@/components/ui/popover"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
+import { buildQuery, type SavedBuildData } from "@/lib/queries/build-query"
 import {
   partnerBuildsQuery,
   useBuildSearch,
   useLinkPartner,
   useReorderPartners,
+  useSetPartnerVariant,
   useUnlinkPartner,
   type PartnerBuild,
 } from "@/lib/queries/partner-builds-query"
@@ -334,6 +343,7 @@ function PartnerBuildsField({ buildSlug }: { buildSlug: string }) {
   const link = useLinkPartner(buildSlug)
   const unlink = useUnlinkPartner(buildSlug)
   const reorder = useReorderPartners(buildSlug)
+  const setVariant = useSetPartnerVariant(buildSlug)
   const { ghost, rowProps } = usePartnerReorder(partners, reorder.mutate)
   const canReorder = partners.length > 1
   const [open, setOpen] = useState(false)
@@ -415,7 +425,13 @@ function PartnerBuildsField({ buildSlug }: { buildSlug: string }) {
           <ul className="flex flex-wrap gap-2">
             {partners.map((p, i) => (
               <li key={p.id} {...(canReorder ? rowProps(i) : {})}>
-                <PartnerChip build={p} onRemove={() => unlink.mutate(p.slug)} />
+                <PartnerChip
+                  build={p}
+                  onRemove={() => unlink.mutate(p.slug)}
+                  onSetVariant={(variant) =>
+                    setVariant.mutate({ partnerSlug: p.slug, variant })
+                  }
+                />
               </li>
             ))}
           </ul>
@@ -442,14 +458,17 @@ function PartnerThumb({ build }: { build: PartnerBuild }) {
 function PartnerChip({
   build,
   onRemove,
+  onSetVariant,
 }: {
   build: PartnerBuild
   onRemove: () => void
+  onSetVariant: (variant: number) => void
 }) {
   return (
     <span className="bg-muted/40 inline-flex items-center gap-2 rounded-full border py-1 pr-1 pl-2 text-xs">
       <PartnerThumb build={build} />
       <span className="max-w-[14ch] truncate">{build.name}</span>
+      <PartnerVariantPicker build={build} onSetVariant={onSetVariant} />
       <button
         type="button"
         aria-label={`Unlink ${build.name}`}
@@ -459,6 +478,66 @@ function PartnerChip({
         <X className="size-3" />
       </button>
     </span>
+  )
+}
+
+/**
+ * Which variant of the partner build the related-builds chip should open
+ * (issue #302). Renders nothing for single-variant partners — most builds —
+ * so the chip stays clean. The variant list comes from the partner's own
+ * detail payload (`?view=0`: browser-cacheable, no view-count bump); the
+ * search endpoint deliberately doesn't carry variants.
+ */
+function PartnerVariantPicker({
+  build,
+  onSetVariant,
+}: {
+  build: PartnerBuild
+  onSetVariant: (variant: number) => void
+}) {
+  const { data } = useQuery({
+    ...buildQuery(build.slug, { countView: false }),
+    staleTime: 60_000,
+  })
+  const variants = (data?.buildData as SavedBuildData | undefined)?.variants
+  if (!variants || variants.length < 2) return null
+
+  // Clamp a stale stored target (the partner may have deleted variants since
+  // this was saved) so the trigger never shows an empty label — mirrors the
+  // viewer's own `?v=` clamping.
+  const active = Math.min(build.variant ?? 0, variants.length - 1)
+  const label = (i: number) => variants[i]?.label || `Variant ${i + 1}`
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <button
+            type="button"
+            title="Which variant the link opens"
+            className="bg-muted text-muted-foreground hover:text-foreground inline-flex max-w-[12ch] items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[11px] transition-colors"
+          />
+        }
+      >
+        <span className="truncate">{label(active)}</span>
+        <ChevronDown className="size-3 shrink-0" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        <DropdownMenuRadioGroup
+          value={String(active)}
+          onValueChange={(v) => {
+            const next = Number(v)
+            if (next !== active) onSetVariant(next)
+          }}
+        >
+          {variants.map((v, i) => (
+            <DropdownMenuRadioItem key={v.id || i} value={String(i)}>
+              {label(i)}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 
