@@ -173,8 +173,13 @@ function stripVariant(name: string): string {
   return n
 }
 
+/** Variants whose base weapon is incarnon-eligible but which cannot take the
+ *  adapter themselves (per each weapon's Incarnon Genesis wiki page). */
+const INCARNON_INELIGIBLE_VARIANTS: ReadonlySet<string> = new Set(["Dex Furis"])
+
 /** Resolves a weapon name (incl. variants) to its base incarnon key, or null. */
 export function getIncarnonBaseName(weaponName: string): string | null {
+  if (INCARNON_INELIGIBLE_VARIANTS.has(weaponName)) return null
   if (INCARNON_NAMES.has(weaponName)) return weaponName
   const stripped = stripVariant(weaponName)
   return INCARNON_NAMES.has(stripped) ? stripped : null
