@@ -7,7 +7,7 @@ import { createPortal } from "react-dom"
 import { cn } from "@/lib/util/utils"
 
 import type { AbilityStatKey } from "./use-ability-stat-order"
-import { useDragGesture } from "./use-drag-gesture"
+import { closestIndexAt, reorder, useDragGesture } from "./use-drag-gesture"
 
 // Self-contained pointer-drag for reordering the four ability stat rows.
 // The gesture mechanics (4px activation, rAF-coalesced ghost,
@@ -26,24 +26,6 @@ type Source = {
   ghostValue: string
 }
 
-function reorder<T>(arr: readonly T[], from: number, to: number): T[] {
-  if (from === to) return arr.slice()
-  const next = arr.slice()
-  const [item] = next.splice(from, 1)
-  next.splice(to, 0, item)
-  return next
-}
-
-function findRowIndex(x: number, y: number): number | null {
-  const el = document.elementFromPoint(x, y)
-  if (!el) return null
-  const row = (el as Element).closest(`[${ROW_ATTR}]`)
-  if (!row) return null
-  const raw = row.getAttribute(ROW_INDEX_ATTR)
-  const i = raw ? Number.parseInt(raw, 10) : Number.NaN
-  return Number.isFinite(i) ? i : null
-}
-
 export function useAbilityStatReorder(
   order: readonly AbilityStatKey[],
   onCommit: (next: AbilityStatKey[]) => void,
@@ -55,7 +37,7 @@ export function useAbilityStatReorder(
     ghostRef,
   } = useDragGesture<Source, number>({
     sourceClass: SOURCE_CLASS,
-    findTargetAt: findRowIndex,
+    findTargetAt: (x, y) => closestIndexAt(x, y, ROW_ATTR, ROW_INDEX_ATTR),
     onCommit: (source, to) => {
       if (to === source.sourceIndex) return
       onCommit(reorder(order, source.sourceIndex, to))

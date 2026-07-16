@@ -591,6 +591,7 @@ builds.get("/:slug/partners", edgeCache({ maxAge: 60 }), async (c) => {
       userId: true,
       visibility: true,
       organizationId: true,
+      partnerOrder: true,
       partnerBuilds: {
         where: partnerVisibility,
         take: 50,
@@ -603,7 +604,81 @@ builds.get("/:slug/partners", edgeCache({ maxAge: 60 }), async (c) => {
     return c.json({ error: "not_found" }, 404)
   }
 
-  return c.json({ builds: build.partnerBuilds.map(serializeListRow) })
+  return c.json({
+    builds: orderPartners(build.partnerBuilds, build.partnerOrder).map(
+      serializeListRow,
+    ),
+  })
+})
+
+// Sort partner rows by the owner's saved order. Ids listed in `order` come
+// first in that order; anything not listed (newly linked, or never reordered)
+// keeps its original relative position at the end. Stale ids in `order` that
+// no longer resolve to a visible partner are simply skipped.
+function orderPartners<T extends { id: string }>(
+  rows: T[],
+  order: string[],
+): T[] {
+  if (order.length === 0) return rows
+  const rank = new Map(order.map((id, i) => [id, i]))
+  const fallback = order.length
+  // Array.sort is stable, so rows that tie on rank (all the unlisted ones share
+  // `fallback`) keep their original relative order for free.
+  return rows
+    .slice()
+    .sort((a, b) => (rank.get(a.id) ?? fallback) - (rank.get(b.id) ?? fallback))
+}
+
+// Persist the owner's display order for its partner strip. One-sided: only
+// the owning build's `partnerOrder` is written (the partner side keeps its
+// own order), so this needs mutate rights on `own` alone — unlike link/unlink,
+// which mutate both builds and require mutual ownership. The body is a list of
+// partner build ids; we store it verbatim after intersecting with the current
+// links so a stale/foreign id can't be smuggled in.
+//
+// MUST stay registered before "/:slug/partners/:partnerSlug": Hono matches
+// routes in registration order, so the param route would otherwise capture
+// `order` as a partnerSlug and this handler would be unreachable.
+builds.put("/:slug/partners/order", rateLimitUser("mutate"), async (c) => {
+  const session = await getSession(c)
+  if (!session?.user) return c.json({ error: "unauthorized" }, 401)
+  const viewerId = session.user.id
+
+  const slug = c.req.param("slug")
+  const body = await c.req.json().catch(() => null)
+  const order = (body as { order?: unknown } | null)?.order
+  if (!Array.isArray(order) || order.some((id) => typeof id !== "string")) {
+    return c.json({ error: "invalid_order" }, 400)
+  }
+
+  const own = await prisma.build.findUnique({
+    where: { slug },
+    select: {
+      id: true,
+      userId: true,
+      organizationId: true,
+      partnerBuilds: { select: { id: true } },
+    },
+  })
+  if (!own) return c.json({ error: "not_found" }, 404)
+  if (!(await canMutateBuild(own, viewerId))) {
+    return c.json({ error: "forbidden" }, 403)
+  }
+
+  // Keep only ids that are actually linked, in the requested order; drop
+  // unknowns, then dedup (Set preserves insertion order). Partners omitted from
+  // the request keep appending after these (the read-side `orderPartners`
+  // fallback handles that).
+  const linked = new Set(own.partnerBuilds.map((p) => p.id))
+  const nextOrder = [
+    ...new Set((order as string[]).filter((id) => linked.has(id))),
+  ]
+
+  await prisma.build.update({
+    where: { id: own.id },
+    data: { partnerOrder: nextOrder },
+  })
+  return c.body(null, 204)
 })
 
 builds.put(

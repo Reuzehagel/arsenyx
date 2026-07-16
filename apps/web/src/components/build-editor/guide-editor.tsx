@@ -26,6 +26,7 @@ import {
   partnerBuildsQuery,
   useBuildSearch,
   useLinkPartner,
+  useReorderPartners,
   useUnlinkPartner,
   type PartnerBuild,
 } from "@/lib/queries/partner-builds-query"
@@ -33,6 +34,7 @@ import { cn } from "@/lib/util/utils"
 import { getImageUrl } from "@/lib/warframe"
 
 import { VariantTab } from "../build-viewer/variant-tab"
+import { usePartnerReorder } from "./use-partner-reorder"
 
 // CodeMirror lives behind this lazy boundary so it code-splits out of the main
 // route chunk (and never reaches the read-only embed bundle).
@@ -331,6 +333,9 @@ function PartnerBuildsField({ buildSlug }: { buildSlug: string }) {
   const { data: partners = [] } = useQuery(partnerBuildsQuery(buildSlug))
   const link = useLinkPartner(buildSlug)
   const unlink = useUnlinkPartner(buildSlug)
+  const reorder = useReorderPartners(buildSlug)
+  const { ghost, rowProps } = usePartnerReorder(partners, reorder.mutate)
+  const canReorder = partners.length > 1
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState("")
   const search = useBuildSearch(q)
@@ -401,13 +406,21 @@ function PartnerBuildsField({ buildSlug }: { buildSlug: string }) {
       </Popover>
 
       {partners.length > 0 && (
-        <ul className="flex flex-wrap gap-2">
-          {partners.map((p) => (
-            <li key={p.id}>
-              <PartnerChip build={p} onRemove={() => unlink.mutate(p.slug)} />
-            </li>
-          ))}
-        </ul>
+        <>
+          {canReorder && (
+            <p className="text-muted-foreground text-xs">
+              Drag to reorder how they appear on the build.
+            </p>
+          )}
+          <ul className="flex flex-wrap gap-2">
+            {partners.map((p, i) => (
+              <li key={p.id} {...(canReorder ? rowProps(i) : {})}>
+                <PartnerChip build={p} onRemove={() => unlink.mutate(p.slug)} />
+              </li>
+            ))}
+          </ul>
+          {ghost}
+        </>
       )}
     </div>
   )
