@@ -1,4 +1,8 @@
-import { getIncarnonBaseName } from "@arsenyx/shared/warframe/incarnon-data"
+import {
+  getIncarnonBaseName,
+  getIncarnonPerkDescription,
+  type IncarnonPerk,
+} from "@arsenyx/shared/warframe/incarnon-data"
 import type { LichBonusElement } from "@arsenyx/shared/warframe/types"
 import { isZawStrike } from "@arsenyx/shared/warframe/zaw-data"
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
@@ -480,6 +484,7 @@ function EmbedIncarnonStrip({
             <EmbedIncarnonTier
               key={tier.tier}
               tier={tier.tier}
+              weaponName={weaponName}
               picked={picked}
             />
           )
@@ -491,10 +496,12 @@ function EmbedIncarnonStrip({
 
 function EmbedIncarnonTier({
   tier,
+  weaponName,
   picked,
 }: {
   tier: number
-  picked: { name: string; description: string } | null
+  weaponName: string
+  picked: IncarnonPerk | null
 }) {
   const triggerEl = (
     <button
@@ -513,7 +520,7 @@ function EmbedIncarnonTier({
     <>
       <p className="font-semibold">{picked.name}</p>
       <p className="text-muted-foreground mt-0.5 text-xs">
-        {picked.description}
+        {getIncarnonPerkDescription(picked, weaponName)}
       </p>
     </>
   ) : (

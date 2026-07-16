@@ -6,7 +6,13 @@
 
 export interface IncarnonPerk {
   name: string
+  /** Description for the base variant — also the fallback for variants
+   *  without an entry in `variants`. */
   description: string
+  /** Variant-specific descriptions keyed by full weapon name (e.g.
+   *  "Sicarus Prime"), for perks whose values differ per variant. Resolve
+   *  via getIncarnonPerkDescription in incarnon-data.ts. */
+  variants?: Record<string, string>
 }
 
 export interface IncarnonTier {
@@ -743,11 +749,23 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Hunter's Mantra",
             description:
               "+18 Base Damage (Boltor). With Channeled Ability active: +4 Punch Through and +40% Accuracy.",
+            variants: {
+              "Telos Boltor":
+                "+4 Base Damage (Telos Boltor). With Channeled Ability active: +4 Punch Through and +40% Accuracy.",
+              "Boltor Prime":
+                "+4 Base Damage (Boltor Prime). With Channeled Ability active: +4 Punch Through and +40% Accuracy.",
+            },
           },
           {
             name: "Crimson Overture",
             description:
               "+12 Base Damage (Boltor). On Kill: +2 Damage and +20% Ammo Efficiency for 5s, stacking up to 4x.",
+            variants: {
+              "Telos Boltor":
+                "+0 Base Damage (Telos Boltor). On Kill: +2 Damage and +20% Ammo Efficiency for 5s, stacking up to 3x.",
+              "Boltor Prime":
+                "+0 Base Damage (Boltor Prime). On Kill: +2 Damage and +20% Ammo Efficiency for 5s, stacking up to 3x.",
+            },
           },
         ],
       },
@@ -768,14 +786,25 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
           {
             name: "Elemental Balance",
             description: "+20% Base Status Chance.",
+            variants: { "Boltor Prime": "+18% Base Status Chance." },
           },
           {
             name: "Survivor's Edge",
             description: "+8% Base Critical Chance, +8% Base Status Chance.",
+            variants: {
+              "Telos Boltor":
+                "+4% Base Critical Chance, +4% Base Status Chance.",
+              "Boltor Prime":
+                "+10% Base Critical Chance, +10% Base Status Chance.",
+            },
           },
           {
             name: "Commodore's Fortune",
             description: "+12% Base Critical Chance.",
+            variants: {
+              "Telos Boltor": "+6% Base Critical Chance.",
+              "Boltor Prime": "+14% Base Critical Chance.",
+            },
           },
         ],
       },
@@ -802,11 +831,27 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Daring Reverie",
             description:
               "+24 Base Damage (Braton). With Channeled Ability active: +30 additional Damage and +50% Ammo Efficiency.",
+            variants: {
+              "MK1-Braton":
+                "+28 Base Damage (MK1-Braton). With Channeled Ability active: +22 additional Damage and +50% Ammo Efficiency.",
+              "Braton Vandal":
+                "+12 Base Damage (Braton Vandal). With Channeled Ability active: +34 additional Damage and +50% Ammo Efficiency.",
+              "Braton Prime":
+                "+4 Base Damage (Braton Prime). With Channeled Ability active: +38 additional Damage and +50% Ammo Efficiency.",
+            },
           },
           {
             name: "Munitions Grit",
             description:
-              "+24 Base Damage (Braton). Multishot consumes ammo from Capacity and increases Damage by +60% with +20% Multishot bonus.",
+              "+14 Base Damage (Braton). Multishot consumes ammo from Capacity and increases Damage by +60% with +20% Multishot bonus.",
+            variants: {
+              "MK1-Braton":
+                "+20 Base Damage (MK1-Braton). Multishot consumes ammo from Capacity and increases Damage by +48% with +20% Multishot bonus.",
+              "Braton Vandal":
+                "+8 Base Damage (Braton Vandal). Multishot consumes ammo from Capacity and increases Damage by +58% with +20% Multishot bonus.",
+              "Braton Prime":
+                "+2 Base Damage (Braton Prime). Multishot consumes ammo from Capacity and increases Damage by +54% with +20% Multishot bonus.",
+            },
           },
         ],
       },
@@ -815,7 +860,14 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
         perks: [
           {
             name: "Mercenary Chamber",
-            description: "Increases Base Ammo Capacity (variant-dependent).",
+            description: "Increase Base Ammo Capacity to 675 (Braton).",
+            variants: {
+              "MK1-Braton": "Increase Base Ammo Capacity to 600 (MK1-Braton).",
+              "Braton Vandal":
+                "Increase Base Ammo Capacity to 750 (Braton Vandal).",
+              "Braton Prime":
+                "Increase Base Ammo Capacity to 1125 (Braton Prime).",
+            },
           },
           {
             name: "Void's Guidance",
@@ -835,15 +887,37 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Critical Parallel",
             description:
               "+16% Base Critical Chance (Braton), +0.4x Base Critical Damage Multiplier.",
+            variants: {
+              "MK1-Braton":
+                "+18% Base Critical Chance (MK1-Braton), +0.5x Base Critical Damage Multiplier.",
+              "Braton Vandal":
+                "+16% Base Critical Chance (Braton Vandal), +0.4x Base Critical Damage Multiplier.",
+              "Braton Prime":
+                "+18% Base Critical Chance (Braton Prime), +0.2x Base Critical Damage Multiplier.",
+            },
           },
           {
             name: "Prelude of Might",
             description:
-              "With Critical Chance below 50%: significantly increases Base Critical Damage Multiplier.",
+              "With Critical Chance below 50%: +3.4x Base Critical Damage Multiplier (Braton).",
+            variants: {
+              "MK1-Braton":
+                "With Critical Chance below 50%: +3.3x Base Critical Damage Multiplier (MK1-Braton).",
+              "Braton Vandal":
+                "With Critical Chance below 50%: +3.0x Base Critical Damage Multiplier (Braton Vandal).",
+              "Braton Prime":
+                "With Critical Chance below 50%: +3.0x Base Critical Damage Multiplier (Braton Prime).",
+            },
           },
           {
             name: "Survivor's Edge",
-            description: "+8% Base Critical Chance, +8% Base Status Chance.",
+            description: "+10% Base Critical Chance, +12% Base Status Chance.",
+            variants: {
+              "MK1-Braton":
+                "+12% Base Critical Chance, +12% Base Status Chance.",
+              "Braton Prime":
+                "+10% Base Critical Chance, +14% Base Status Chance.",
+            },
           },
         ],
       },
@@ -931,11 +1005,19 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Crimson Overture",
             description:
               "+8 Base Damage (Dera). On Kill: +20% Ammo Efficiency for 5s, stacking up to 4x.",
+            variants: {
+              "Dera Vandal":
+                "+6 Base Damage (Dera Vandal). On Kill: +20% Ammo Efficiency for 5s, stacking up to 4x.",
+            },
           },
           {
             name: "Paragon Essence",
             description:
               "+6 Base Damage (Dera). On inflicting Status Effect: +5% Fire Rate for 5s, stacking up to 6x.",
+            variants: {
+              "Dera Vandal":
+                "+4 Base Damage (Dera Vandal). On inflicting Status Effect: +5% Fire Rate for 5s, stacking up to 6x.",
+            },
           },
         ],
       },
@@ -946,6 +1028,9 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
           {
             name: "Extended Volley",
             description: "+22 Base Magazine Capacity (Dera).",
+            variants: {
+              "Dera Vandal": "+30 Base Magazine Capacity (Dera Vandal).",
+            },
           },
           {
             name: "Evolved Autoloader",
@@ -960,6 +1045,10 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Deathtrap Trigger",
             description:
               "+14% Base Critical Chance (Dera), +0.6x Critical Damage Multiplier.",
+            variants: {
+              "Dera Vandal":
+                "+14% Base Critical Chance (Dera Vandal), +0.4x Critical Damage Multiplier.",
+            },
           },
           {
             name: "High Ground",
@@ -969,6 +1058,9 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
           {
             name: "Elemental Balance",
             description: "+18% Base Status Chance (Dera).",
+            variants: {
+              "Dera Vandal": "+14% Base Status Chance (Dera Vandal).",
+            },
           },
         ],
       },
@@ -1051,11 +1143,23 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Hunter's Mantra",
             description:
               "+10 Base Damage (Gorgon). With Channeled Ability active: +3 Punch Through and +40% Accuracy.",
+            variants: {
+              "Gorgon Wraith":
+                "+5 Base Damage (Gorgon Wraith). With Channeled Ability active: +3 Punch Through and +40% Accuracy.",
+              "Prisma Gorgon":
+                "+5 Base Damage (Prisma Gorgon). With Channeled Ability active: +3 Punch Through and +40% Accuracy.",
+            },
           },
           {
             name: "Hoplite's Virtue",
             description:
               "+10 Base Damage (Gorgon). On Shield Break: +13 Damage for 8s.",
+            variants: {
+              "Gorgon Wraith":
+                "+5 Base Damage (Gorgon Wraith). On Shield Break: +8 Damage for 8s.",
+              "Prisma Gorgon":
+                "+5 Base Damage (Prisma Gorgon). On Shield Break: +8 Damage for 8s.",
+            },
           },
         ],
       },
@@ -1077,12 +1181,26 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
           {
             name: "Survivor's Edge",
             description: "+8% Base Critical Chance, +9% Base Status Chance.",
+            variants: {
+              "Gorgon Wraith":
+                "+8% Base Critical Chance, +6% Base Status Chance.",
+              "Prisma Gorgon":
+                "+2% Base Critical Chance, +6% Base Status Chance.",
+            },
           },
           {
             name: "Elemental Balance",
             description: "+16% Base Status Chance.",
+            variants: {
+              "Gorgon Wraith": "+14% Base Status Chance.",
+              "Prisma Gorgon": "+12% Base Status Chance.",
+            },
           },
-          { name: "Absolute Valor", description: "+14% Base Critical Chance." },
+          {
+            name: "Absolute Valor",
+            description: "+14% Base Critical Chance.",
+            variants: { "Prisma Gorgon": "+6% Base Critical Chance." },
+          },
         ],
       },
     ],
@@ -1108,11 +1226,23 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Riddled Target",
             description:
               "+48 Base Damage (Latron). +25% Multishot for 8s on Puncture Status Effect, stacking up to 4x.",
+            variants: {
+              "Latron Wraith":
+                "+12 Base Damage (Latron Wraith). +25% Multishot for 8s on Puncture Status Effect, stacking up to 4x.",
+              "Latron Prime":
+                "+6 Base Damage (Latron Prime). +25% Multishot for 8s on Puncture Status Effect, stacking up to 4x.",
+            },
           },
           {
             name: "Evasive Shot",
             description:
               "+48 Base Damage (Latron). +30% Direct Damage per Status Type affecting the target with Sprint Speed 1.2 or higher.",
+            variants: {
+              "Latron Wraith":
+                "+12 Base Damage (Latron Wraith). +30% Direct Damage per Status Type affecting the target with Sprint Speed 1.2 or higher.",
+              "Latron Prime":
+                "+6 Base Damage (Latron Prime). +30% Direct Damage per Status Type affecting the target with Sprint Speed 1.2 or higher.",
+            },
           },
         ],
       },
@@ -1140,6 +1270,12 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Critical Parallel",
             description:
               "+30% Base Critical Chance (Latron), +0.6x Critical Damage Multiplier.",
+            variants: {
+              "Latron Wraith":
+                "+24% Base Critical Chance (Latron Wraith), +0.2x Critical Damage Multiplier.",
+              "Latron Prime":
+                "+24% Base Critical Chance (Latron Prime), +0.2x Critical Damage Multiplier.",
+            },
           },
         ],
       },
@@ -1229,11 +1365,23 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Deadly Pace",
             description:
               "+40 Base Damage (Paris). +80% Fire Rate with Sprint Speed 1.2 or higher.",
+            variants: {
+              "MK1-Paris":
+                "+50 Base Damage (MK1-Paris). +80% Fire Rate with Sprint Speed 1.2 or higher.",
+              "Paris Prime":
+                "+20 Base Damage (Paris Prime). +80% Fire Rate with Sprint Speed 1.2 or higher.",
+            },
           },
           {
             name: "Guardian's Might",
             description:
               "+40 Base Damage (Paris). With Overshields: +52 additional Base Damage.",
+            variants: {
+              "MK1-Paris":
+                "+50 Base Damage (MK1-Paris). With Overshields: +40 additional Base Damage.",
+              "Paris Prime":
+                "+20 Base Damage (Paris Prime). With Overshields: +74 additional Base Damage.",
+            },
           },
         ],
       },
@@ -1347,11 +1495,27 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Tenno Targeting",
             description:
               "+54 Base Damage (Strun). With Channeled Ability active: +4 Punch Through.",
+            variants: {
+              "MK1-Strun":
+                "+68 Base Damage (MK1-Strun). With Channeled Ability active: +4 Punch Through.",
+              "Strun Wraith":
+                "+24 Base Damage (Strun Wraith). With Channeled Ability active: +4 Punch Through.",
+              "Strun Prime":
+                "+2 Base Damage (Strun Prime). With Channeled Ability active: +4 Punch Through.",
+            },
           },
           {
             name: "Blazing Barrel",
             description:
               "+54 Base Damage (Strun). On Firing: +0.05 Base Multishot, stacking up to 5x.",
+            variants: {
+              "MK1-Strun":
+                "+68 Base Damage (MK1-Strun). On Firing: +0.05 Base Multishot, stacking up to 5x.",
+              "Strun Wraith":
+                "+24 Base Damage (Strun Wraith). On Firing: +0.05 Base Multishot, stacking up to 5x.",
+              "Strun Prime":
+                "+2 Base Damage (Strun Prime). On Firing: +0.05 Base Multishot, stacking up to 5x.",
+            },
           },
         ],
       },
@@ -1373,15 +1537,35 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
           {
             name: "Elemental Balance",
             description: "+11% Base Status Chance; +132% in Incarnon Form.",
+            variants: {
+              "MK1-Strun": "+11% Base Status Chance; +110% in Incarnon Form.",
+              "Strun Wraith":
+                "+10% Base Status Chance; +100% in Incarnon Form.",
+              "Strun Prime":
+                "+11.3% Base Status Chance; +136% in Incarnon Form.",
+            },
           },
           {
             name: "Commodore's Fortune",
             description: "+16% Base Critical Chance.",
+            variants: {
+              "MK1-Strun": "+10% Base Critical Chance.",
+              "Strun Wraith": "+12% Base Critical Chance.",
+              "Strun Prime": "+12% Base Critical Chance.",
+            },
           },
           {
             name: "Brutal Edge",
             description:
               "+4% Base Critical Chance; +4% Base Status Chance; +48% Base Status Chance in Incarnon Form.",
+            variants: {
+              "MK1-Strun":
+                "+2% Base Critical Chance; +2% Base Status Chance; +20% Base Status Chance in Incarnon Form.",
+              "Strun Wraith":
+                "+4% Base Critical Chance; +4.8% Base Status Chance; +48% Base Status Chance in Incarnon Form.",
+              "Strun Prime":
+                "+4% Base Critical Chance; +4% Base Status Chance; +48% Base Status Chance in Incarnon Form.",
+            },
           },
         ],
       },
@@ -1408,11 +1592,23 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Well Rehearsed",
             description:
               "+20 Base Damage (Sybaris). On Consecutive Weakpoint Hits: +5 Base Damage, stacking up to 3x.",
+            variants: {
+              "Dex Sybaris":
+                "+15 Base Damage (Dex Sybaris). On Consecutive Weakpoint Hits: +5 Base Damage, stacking up to 3x.",
+              "Sybaris Prime":
+                "+15 Base Damage (Sybaris Prime). On Consecutive Weakpoint Hits: +5 Base Damage, stacking up to 3x.",
+            },
           },
           {
             name: "Blazing Barrel",
             description:
               "+20 Base Damage (Sybaris). On Firing: +5% Multishot, stacking up to 10x.",
+            variants: {
+              "Dex Sybaris":
+                "+15 Base Damage (Dex Sybaris). On Firing: +5% Multishot, stacking up to 10x.",
+              "Sybaris Prime":
+                "+15 Base Damage (Sybaris Prime). On Firing: +5% Multishot, stacking up to 10x.",
+            },
           },
         ],
       },
@@ -1422,6 +1618,10 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
           {
             name: "Extended Volley",
             description: "+8 Base Magazine Capacity (Sybaris).",
+            variants: {
+              "Dex Sybaris": "+10 Base Magazine Capacity (Dex Sybaris).",
+              "Sybaris Prime": "+12 Base Magazine Capacity (Sybaris Prime).",
+            },
           },
           {
             name: "Ready Retaliation",
@@ -1437,6 +1637,12 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Elemental Dominance",
             description:
               "+15% Base Status Chance (Sybaris); effect doubles in Incarnon Form.",
+            variants: {
+              "Dex Sybaris":
+                "+15% Base Status Chance (Dex Sybaris); effect doubles in Incarnon Form.",
+              "Sybaris Prime":
+                "+8% Base Status Chance (Sybaris Prime); effect doubles in Incarnon Form.",
+            },
           },
           {
             name: "Reaver's Rapture",
@@ -1535,11 +1741,19 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Inciting Incident",
             description:
               "+100 Base Damage. With Channeled Ability active: +2 Punch Through.",
+            variants: {
+              "Vectis Prime":
+                "+200 Base Damage. With Channeled Ability active: +2 Punch Through.",
+            },
           },
           {
             name: "Lone Enforcer",
             description:
               "+75 Base Damage. +25% Multishot if no enemies are within 5m.",
+            variants: {
+              "Vectis Prime":
+                "+150 Base Damage. +25% Multishot if no enemies are within 5m.",
+            },
           },
         ],
       },
@@ -1563,6 +1777,10 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Critical Parallel",
             description:
               "+10% Base Critical Chance, +0.5x Critical Damage Multiplier.",
+            variants: {
+              "Vectis Prime":
+                "+8% Base Critical Chance, +0.5x Critical Damage Multiplier.",
+            },
           },
           {
             name: "Survivor's Edge",
@@ -1619,10 +1837,18 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Critical Parallel",
             description:
               "+14% Base Critical Chance (Angstrum), +0.2x Critical Damage Multiplier.",
+            variants: {
+              "Prisma Angstrum":
+                "+10% Base Critical Chance (Prisma Angstrum), +0.2x Critical Damage Multiplier.",
+            },
           },
           {
             name: "Survivor's Edge",
             description: "+9% Base Critical Chance, +9% Base Status Chance.",
+            variants: {
+              "Prisma Angstrum":
+                "+6% Base Critical Chance, +6% Base Status Chance.",
+            },
           },
           {
             name: "Fatal Affliction",
@@ -1716,11 +1942,23 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Headcracker",
             description:
               "+30 Base Damage. On Headshot: +7.5% Fire Rate for 4s, stacking up to 10x.",
+            variants: {
+              "Rakta Ballistica":
+                "+10 Base Damage. On Headshot: +7.5% Fire Rate for 4s, stacking up to 10x.",
+              "Ballistica Prime":
+                "+3 Base Damage. On Headshot: +7.5% Fire Rate for 4s, stacking up to 10x.",
+            },
           },
           {
             name: "Prolific Perforation",
             description:
               "+30 Base Damage. On Punch Through Hit: +10% Critical Chance for 3s, stacking up to 8x.",
+            variants: {
+              "Rakta Ballistica":
+                "+10 Base Damage. On Punch Through Hit: +10% Critical Chance for 3s, stacking up to 8x.",
+              "Ballistica Prime":
+                "+3 Base Damage. On Punch Through Hit: +10% Critical Chance for 3s, stacking up to 8x.",
+            },
           },
         ],
       },
@@ -1742,16 +1980,32 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Elemental Balance",
             description:
               "+20% Base Status Chance per projectile; +20% for Incarnon Form.",
+            variants: {
+              "Ballistica Prime":
+                "+18% Base Status Chance per projectile; +72% for Incarnon Form.",
+            },
           },
           {
             name: "Survivor's Edge",
             description:
               "+10% Base Critical Chance; +10% Base Status Chance per projectile / +10% for Incarnon Form.",
+            variants: {
+              "Rakta Ballistica":
+                "+8% Base Critical Chance; +8% Base Status Chance per projectile / +8% for Incarnon Form.",
+              "Ballistica Prime":
+                "+7% Base Critical Chance; +7% Base Status Chance per projectile / +28% for Incarnon Form.",
+            },
           },
           {
             name: "Critical Parallel",
             description:
               "+15% Base Critical Chance, +1.0x Critical Damage Multiplier.",
+            variants: {
+              "Rakta Ballistica":
+                "+14% Base Critical Chance, +1.0x Critical Damage Multiplier.",
+              "Ballistica Prime":
+                "+12% Base Critical Chance, +1.0x Critical Damage Multiplier.",
+            },
           },
         ],
       },
@@ -1778,11 +2032,19 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Speeding Bullet",
             description:
               "+36 Base Damage (Bronco). With Sprint Speed 1.2 or higher: +60% Projectile Speed.",
+            variants: {
+              "Bronco Prime":
+                "+30 Base Damage (Bronco Prime). With Sprint Speed 1.2 or higher: +60% Projectile Speed.",
+            },
           },
           {
             name: "Infused Shots",
             description:
               "+20 Base Damage (Bronco). On spending 50 Energy: +10 Damage for 10s, stacking up to 4x.",
+            variants: {
+              "Bronco Prime":
+                "+16 Base Damage (Bronco Prime). On spending 50 Energy: +9 Damage for 10s, stacking up to 4x.",
+            },
           },
         ],
       },
@@ -2016,11 +2278,19 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Haven Foray",
             description:
               "+28 Base Damage (Furis). With Overshields: +30 additional Base Damage.",
+            variants: {
+              "MK1-Furis":
+                "+34 Base Damage (MK1-Furis). With Overshields: +30 additional Base Damage.",
+            },
           },
           {
             name: "Stormburst",
             description:
-              "+34 Base Damage (Mk1-Furis only). On hitting an enemy with Electricity status: +0.4 Multishot for 2s, stacking up to 3x.",
+              "+28 Base Damage (Furis). On hitting an enemy with Electricity status: +0.4 Multishot for 2s, stacking up to 3x.",
+            variants: {
+              "MK1-Furis":
+                "+34 Base Damage (MK1-Furis). On hitting an enemy with Electricity status: +0.4 Multishot for 2s, stacking up to 3x.",
+            },
           },
         ],
       },
@@ -2055,6 +2325,7 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
           {
             name: "Elemental Balance",
             description: "+28% Base Status Chance (Furis).",
+            variants: { "MK1-Furis": "+39% Base Status Chance (MK1-Furis)." },
           },
         ],
       },
@@ -2110,14 +2381,23 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Critical Parallel",
             description:
               "+20% Base Critical Chance, +0.2x Critical Damage Multiplier.",
+            variants: {
+              "Synoid Gammacor":
+                "+10% Base Critical Chance, +0.2x Critical Damage Multiplier.",
+            },
           },
           {
             name: "Survivor's Edge",
             description: "+12% Base Critical Chance, +10% Base Status Chance.",
+            variants: {
+              "Synoid Gammacor":
+                "+6% Base Critical Chance, +6% Base Status Chance.",
+            },
           },
           {
             name: "Elemental Balance",
             description: "+20% Base Status Chance.",
+            variants: { "Synoid Gammacor": "+10% Base Status Chance." },
           },
         ],
       },
@@ -2144,11 +2424,19 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Swift Conclusion",
             description:
               "+70 Base Damage (Kunai). +200% Damage if enemy has less than half Health.",
+            variants: {
+              "MK1-Kunai":
+                "+80 Base Damage (MK1-Kunai). +200% Damage if enemy has less than half Health.",
+            },
           },
           {
             name: "Sage's Resolve",
             description:
               "+70 Base Damage (Kunai). With Channeled Ability active: +100% Multishot.",
+            variants: {
+              "MK1-Kunai":
+                "+80 Base Damage (MK1-Kunai). With Channeled Ability active: +100% Multishot.",
+            },
           },
         ],
       },
@@ -2170,6 +2458,10 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Deathtrap Trigger",
             description:
               "On Equip: +40% Critical Chance for 4s and +1.4x Critical Damage Multiplier for 4s.",
+            variants: {
+              "MK1-Kunai":
+                "On Equip: +42% Critical Chance for 4s and +1x Critical Damage Multiplier for 4s.",
+            },
           },
           {
             name: "Accelerating Volley",
@@ -2204,11 +2496,23 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Haven Foray",
             description:
               "+40 Base Damage (Lato). With Overshields: +40 additional Base Damage.",
+            variants: {
+              "Lato Vandal":
+                "+22 Base Damage (Lato Vandal). With Overshields: +40 additional Base Damage.",
+              "Lato Prime":
+                "+2 Base Damage (Lato Prime). With Overshields: +34 additional Base Damage.",
+            },
           },
           {
             name: "Reified Bane",
             description:
               "+30 Base Damage (Lato). On Reload From Empty: +30 additional Base Damage.",
+            variants: {
+              "Lato Vandal":
+                "+12 Base Damage (Lato Vandal). On Reload From Empty: +30 additional Base Damage.",
+              "Lato Prime":
+                "+2 Base Damage (Lato Prime). On Reload From Empty: +24 additional Base Damage.",
+            },
           },
         ],
       },
@@ -2236,12 +2540,24 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
           {
             name: "Survivor's Edge",
             description:
-              "+10% Base Critical Chance, +10% Base Status Chance (Lato).",
+              "+20% Base Critical Chance, +12% Base Status Chance (Lato).",
+            variants: {
+              "Lato Vandal":
+                "+6% Base Critical Chance, +12% Base Status Chance (Lato Vandal).",
+              "Lato Prime":
+                "+4% Base Critical Chance, +10% Base Status Chance (Lato Prime).",
+            },
           },
           {
             name: "Deathtrap Trigger",
             description:
-              "On Equip from Primary: temporary Critical Chance and Critical Damage Multiplier boost for 4s.",
+              "On Equip from Primary: +50% Critical Chance for 4s and +3.2x Critical Damage Multiplier for 4s.",
+            variants: {
+              "Lato Vandal":
+                "On Equip from Primary: +38% Critical Chance for 4s and +2.6x Critical Damage Multiplier for 4s.",
+              "Lato Prime":
+                "On Equip from Primary: +30% Critical Chance for 4s and +2.3x Critical Damage Multiplier for 4s.",
+            },
           },
           {
             name: "Carnage Reign",
@@ -2273,11 +2589,19 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Hoplite Virtue",
             description:
               "+80 Base Damage (Lex). On Shield Break: +80 Base Damage for 8s.",
+            variants: {
+              "Lex Prime":
+                "+20 Base Damage (Lex Prime). On Shield Break: +80 Base Damage for 8s.",
+            },
           },
           {
             name: "Trusty Sidearm",
             description:
               "+80 Base Damage (Lex). With Channeled Ability active: +60% Ammo Efficiency.",
+            variants: {
+              "Lex Prime":
+                "+20 Base Damage (Lex Prime). With Channeled Ability active: +60% Ammo Efficiency.",
+            },
           },
         ],
       },
@@ -2309,11 +2633,16 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
           {
             name: "Elemental Balance",
             description: "+40% Base Status Chance (Lex).",
+            variants: { "Lex Prime": "+30% Base Status Chance (Lex Prime)." },
           },
           {
             name: "Critical Parallel",
             description:
               "+20% Base Critical Chance (Lex), +0.4x Critical Damage Multiplier.",
+            variants: {
+              "Lex Prime":
+                "+19% Base Critical Chance (Lex Prime), +0.4x Critical Damage Multiplier.",
+            },
           },
         ],
       },
@@ -2340,11 +2669,19 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Feigned Retreat",
             description:
               "+50 Base Damage (Sicarus). +40% Damage to enemies below half Health.",
+            variants: {
+              "Sicarus Prime":
+                "+40 Base Damage (Sicarus Prime). +40% Damage to enemies below half Health.",
+            },
           },
           {
             name: "King's Gambit",
             description:
               "+50 Base Damage (Sicarus). 0x Critical Chance on Bodyshots; +150% Critical Chance on Weakpoint Hits.",
+            variants: {
+              "Sicarus Prime":
+                "+40 Base Damage (Sicarus Prime). 0x Critical Chance on Bodyshots; +150% Critical Chance on Weakpoint Hits.",
+            },
           },
         ],
       },
@@ -2359,6 +2696,9 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
           {
             name: "Extended Volley",
             description: "+9 Base Magazine Capacity (Sicarus).",
+            variants: {
+              "Sicarus Prime": "+12 Base Magazine Capacity (Sicarus Prime).",
+            },
           },
         ],
       },
@@ -2368,10 +2708,17 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
           {
             name: "Commodore's Fortune",
             description: "+18% Base Critical Chance (Sicarus).",
+            variants: {
+              "Sicarus Prime": "+14% Base Critical Chance (Sicarus Prime).",
+            },
           },
           {
             name: "Survivor's Edge",
             description: "+12% Base Critical Chance, +12% Base Status Chance.",
+            variants: {
+              "Sicarus Prime":
+                "+9% Base Critical Chance (Sicarus Prime), +9% Base Status Chance.",
+            },
           },
           {
             name: "Wiseman's Regard",
@@ -2465,11 +2812,19 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Lone Gun",
             description:
               "+66 Base Damage (Vasto). With no Primary equipped: +40 Damage and +14 Magazine Capacity.",
+            variants: {
+              "Vasto Prime":
+                "+24 Base Damage (Vasto Prime). With no Primary equipped: +40 Damage and +14 Magazine Capacity.",
+            },
           },
           {
             name: "Deathtrap Trigger",
             description:
               "+66 Base Damage (Vasto). On Equip from Primary: +30% Critical Chance for 3s and +2.2x Critical Multiplier for 3s.",
+            variants: {
+              "Vasto Prime":
+                "+24 Base Damage (Vasto Prime). On Equip from Primary: +30% Critical Chance for 3s and +0.8x Critical Multiplier for 3s.",
+            },
           },
         ],
       },
@@ -2493,6 +2848,9 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
           {
             name: "Commodore's Fortune",
             description: "+16% Base Critical Chance (Vasto).",
+            variants: {
+              "Vasto Prime": "+18% Base Critical Chance (Vasto Prime).",
+            },
           },
           {
             name: "Survivor's Edge",
@@ -2527,11 +2885,19 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Precision's Payoff",
             description:
               "+76 Base Damage (Zylok). Burst Headshots grant +20 Base Damage, stacking up to 3x.",
+            variants: {
+              "Zylok Prime":
+                "+30 Base Damage (Zylok Prime). Burst Headshots grant +20 Base Damage, stacking up to 3x.",
+            },
           },
           {
             name: "Mauler's Magazine",
             description:
               "+76 Base Damage (Zylok). Reload From Empty grants +1x Critical Damage Multiplier, stacking up to 2x.",
+            variants: {
+              "Zylok Prime":
+                "+30 Base Damage (Zylok Prime). Reload From Empty grants +1x Critical Damage Multiplier, stacking up to 2x.",
+            },
           },
         ],
       },
@@ -2541,6 +2907,9 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
           {
             name: "Extended Volley",
             description: "+12 Base Magazine Capacity (Zylok).",
+            variants: {
+              "Zylok Prime": "+18 Base Magazine Capacity (Zylok Prime).",
+            },
           },
           { name: "Rapid Reinforcement", description: "+50% Reload Speed." },
           {
@@ -2556,10 +2925,17 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Survivor's Edge",
             description:
               "+20% Base Critical Chance, +20% Base Status Chance (Zylok).",
+            variants: {
+              "Zylok Prime":
+                "+22% Base Critical Chance, +16% Base Status Chance (Zylok Prime).",
+            },
           },
           {
             name: "Commodore's Fortune",
             description: "+32% Base Critical Chance (Zylok).",
+            variants: {
+              "Zylok Prime": "+30% Base Critical Chance (Zylok Prime).",
+            },
           },
           {
             name: "Fatal Affliction",
@@ -2715,11 +3091,23 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Stalwart Oak",
             description:
               "+110 Base Damage (Bo). With Armor over 450: +30 Parry Angle and +300% Combo Count Chance while Blocking.",
+            variants: {
+              "MK1-Bo":
+                "+90 Base Damage (MK1-Bo). With Armor over 450: +30 Parry Angle and +300% Combo Count Chance while Blocking.",
+              "Bo Prime":
+                "+34 Base Damage (Bo Prime). With Armor over 450: +30 Parry Angle and +300% Combo Count Chance while Blocking.",
+            },
           },
           {
             name: "Swordsman's Flourish",
             description:
               "+100 Base Damage (Bo). With Melee Weapon Equipped: +100% Combo Count Chance.",
+            variants: {
+              "MK1-Bo":
+                "+85 Base Damage (MK1-Bo). With Melee Weapon Equipped: +100% Combo Count Chance.",
+              "Bo Prime":
+                "+30 Base Damage (Bo Prime). With Melee Weapon Equipped: +100% Combo Count Chance.",
+            },
           },
         ],
       },
@@ -2748,10 +3136,20 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Subtle Force",
             description:
               "+12% Base Critical Chance (Bo), +12% Base Status Chance.",
+            variants: {
+              "MK1-Bo":
+                "+15% Base Critical Chance (MK1-Bo), +15% Base Status Chance.",
+              "Bo Prime":
+                "+6% Base Critical Chance (Bo Prime), +6% Base Status Chance.",
+            },
           },
           {
             name: "Absolute Dominion",
             description: "+34% Base Status Chance (Bo).",
+            variants: {
+              "MK1-Bo": "+38% Base Status Chance (MK1-Bo).",
+              "Bo Prime": "+30% Base Status Chance (Bo Prime).",
+            },
           },
         ],
       },
@@ -2836,11 +3234,19 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Weighted Impetus",
             description:
               "+50 Base Damage. On Heavy Attack Kill: +100% Heavy Attack Wind Up Speed for 8s.",
+            variants: {
+              "Destreza Prime":
+                "+40 Base Damage (Destreza Prime). On Heavy Attack Kill: +100% Heavy Attack Wind Up Speed for 8s.",
+            },
           },
           {
             name: "Piercing Stature",
             description:
               "+50 Base Damage. On Puncture Status Effect: +20% Status Chance for 6s, stacking up to 5x.",
+            variants: {
+              "Destreza Prime":
+                "+40 Base Damage (Destreza Prime). On Puncture Status Effect: +20% Status Chance for 6s, stacking up to 5x.",
+            },
           },
         ],
       },
@@ -2861,10 +3267,17 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
           {
             name: "Absolute Dominion",
             description: "+20% Base Status Chance.",
+            variants: {
+              "Destreza Prime": "+16% Base Status Chance (Destreza Prime).",
+            },
           },
           {
             name: "Critical Forte",
             description: "+1.2x Base Critical Damage Multiplier.",
+            variants: {
+              "Destreza Prime":
+                "+0.6x Base Critical Damage Multiplier (Destreza Prime).",
+            },
           },
           {
             name: "Decisive Stature",
@@ -2953,11 +3366,23 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Swordsman's Flourish",
             description:
               "+110 Base Damage (Furax). With Melee Weapon Equipped: +100% Combo Count Chance.",
+            variants: {
+              "MK1-Furax":
+                "+100 Base Damage (MK1-Furax). With Melee Weapon Equipped: +100% Combo Count Chance.",
+              "Furax Wraith":
+                "+65 Base Damage (Furax Wraith). With Melee Weapon Equipped: +100% Combo Count Chance.",
+            },
           },
           {
             name: "Kill Joy",
             description:
               "+90 Base Damage (Furax). +10% Attack Speed per enemy within 6m, stacking up to 5x.",
+            variants: {
+              "MK1-Furax":
+                "+80 Base Damage (MK1-Furax). +10% Attack Speed per enemy within 6m, stacking up to 5x.",
+              "Furax Wraith":
+                "+55 Base Damage (Furax Wraith). +10% Attack Speed per enemy within 6m, stacking up to 5x.",
+            },
           },
         ],
       },
@@ -2990,6 +3415,10 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
           {
             name: "Absolute Dominion",
             description: "+24% Base Status Chance (Furax).",
+            variants: {
+              "MK1-Furax": "+22% Base Status Chance (MK1-Furax).",
+              "Furax Wraith": "+14% Base Status Chance (Furax Wraith).",
+            },
           },
         ],
       },
@@ -3072,11 +3501,19 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Crushing Verdict",
             description:
               "+100 Base Damage (Magistar). With Channeled Ability active: +40% Follow Through.",
+            variants: {
+              "Sancti Magistar":
+                "+20 Base Damage (Sancti Magistar). With Channeled Ability active: +40% Follow Through.",
+            },
           },
           {
             name: "Edge of Justice",
             description:
               "+100 Base Damage (Magistar). With Melee Weapon Equipped: +40% Attack Speed.",
+            variants: {
+              "Sancti Magistar":
+                "+20 Base Damage (Sancti Magistar). With Melee Weapon Equipped: +40% Attack Speed.",
+            },
           },
         ],
       },
@@ -3106,6 +3543,10 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Critical Parallel",
             description:
               "+16% Base Critical Chance (Magistar), +1x Critical Damage Multiplier.",
+            variants: {
+              "Sancti Magistar":
+                "+12% Base Critical Chance (Sancti Magistar), +0.2x Critical Damage Multiplier.",
+            },
           },
         ],
       },
@@ -3191,11 +3632,19 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Balanced Stagger",
             description:
               "+50 Base Damage. 20% chance to stun enemies hit by a Neutral Combo, opening them to Finishers.",
+            variants: {
+              "Prisma Obex":
+                "+10 Base Damage (Prisma Obex). 20% chance to stun enemies hit by a Neutral Combo, opening them to Finishers.",
+            },
           },
           {
             name: "Armored Finisher",
             description:
               "+50 Base Damage. With Armor over 450: +80% Finisher Damage.",
+            variants: {
+              "Prisma Obex":
+                "+10 Base Damage (Prisma Obex). With Armor over 450: +80% Finisher Damage.",
+            },
           },
         ],
       },
@@ -3220,10 +3669,17 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
           {
             name: "Subtle Force",
             description: "+10% Base Critical Chance, +18% Base Status Chance.",
+            variants: {
+              "Prisma Obex":
+                "+10% Base Critical Chance, +12% Base Status Chance (Prisma Obex).",
+            },
           },
           {
             name: "Absolute Dominion",
             description: "+28% Base Status Chance.",
+            variants: {
+              "Prisma Obex": "+20% Base Status Chance (Prisma Obex).",
+            },
           },
           {
             name: "Critical Coefficient",
@@ -3255,11 +3711,19 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Seeing Red",
             description:
               "+60 Base Damage (Okina). +5 additional Combos on targets affected by Slash Status.",
+            variants: {
+              "Okina Prime":
+                "+20 Base Damage (Okina Prime). +5 additional Combos on targets affected by Slash Status.",
+            },
           },
           {
             name: "Synergist Surety",
             description:
               "+60 Base Damage (Okina). On Critical Hit: +8% Status Damage for 10s, stacking up to 5x.",
+            variants: {
+              "Okina Prime":
+                "+20 Base Damage (Okina Prime). On Critical Hit: +6% Status Damage for 10s, stacking up to 5x.",
+            },
           },
         ],
       },
@@ -3283,16 +3747,27 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
           {
             name: "Commodore's Fortune",
             description: "+12% Base Critical Chance (Okina).",
+            variants: {
+              "Okina Prime": "+6% Base Critical Chance (Okina Prime).",
+            },
           },
           {
             name: "Alchemy of War",
             description:
               "+16% Base Status Chance (Okina), +25% Status Duration.",
+            variants: {
+              "Okina Prime":
+                "+12% Base Status Chance (Okina Prime), +25% Status Duration.",
+            },
           },
           {
             name: "Survivor's Edge",
             description:
               "+6% Base Critical Chance (Okina), +10% Base Status Chance.",
+            variants: {
+              "Okina Prime":
+                "+2% Base Critical Chance (Okina Prime), +8% Base Status Chance.",
+            },
           },
         ],
       },
@@ -3377,11 +3852,23 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Guardian's Promise",
             description:
               "+100 Base Damage (Skana). With Overshields: +80% Heavy Attack Efficiency.",
+            variants: {
+              "Prisma Skana":
+                "+100 Base Damage (Prisma Skana). With Overshields: +80% Heavy Attack Efficiency.",
+              "Skana Prime":
+                "+10 Base Damage (Skana Prime). With Overshields: +80% Heavy Attack Efficiency.",
+            },
           },
           {
             name: "Wartime Nerve",
             description:
               "+90 Base Damage (Skana). +9 Combo Count on undamaged enemies.",
+            variants: {
+              "Prisma Skana":
+                "+90 Base Damage (Prisma Skana). +9 Combo Count on undamaged enemies.",
+              "Skana Prime":
+                "+10 Base Damage (Skana Prime). +9 Combo Count on undamaged enemies.",
+            },
           },
         ],
       },
@@ -3403,14 +3890,28 @@ export const INCARNON_EVOLUTIONS: Record<string, IncarnonEvolution> = {
             name: "Survivor's Edge",
             description:
               "+12% Base Critical Chance (Skana), +10% Base Status Chance.",
+            variants: {
+              "Prisma Skana":
+                "+12% Base Critical Chance (Prisma Skana), +10% Base Status Chance.",
+              "Skana Prime":
+                "+2% Base Critical Chance (Skana Prime), +4% Base Status Chance.",
+            },
           },
           {
             name: "Elemental Excess",
             description: "+20% Base Status Chance (Skana).",
+            variants: {
+              "Prisma Skana": "+20% Base Status Chance (Prisma Skana).",
+              "Skana Prime": "+10% Base Status Chance (Skana Prime).",
+            },
           },
           {
             name: "Absolute Valor",
             description: "+25% Base Critical Chance (Skana).",
+            variants: {
+              "Prisma Skana": "+25% Base Critical Chance (Prisma Skana).",
+              "Skana Prime": "+4% Base Critical Chance (Skana Prime).",
+            },
           },
         ],
       },

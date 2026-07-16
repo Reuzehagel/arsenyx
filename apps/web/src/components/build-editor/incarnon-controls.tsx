@@ -1,6 +1,8 @@
 import {
   getIncarnonBaseName,
+  getIncarnonPerkDescription,
   type IncarnonEvolution,
+  type IncarnonPerk,
 } from "@arsenyx/shared/warframe/incarnon-data"
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { X } from "lucide-react"
@@ -63,6 +65,7 @@ export function IncarnonTierGrid({
           <IncarnonTierSlot
             key={tier.tier}
             tier={tier.tier}
+            weaponName={weaponName}
             perks={tier.perks}
             picked={pickedPerk}
             onPick={(perk) => onPick(tierIndex, perk?.name ?? null)}
@@ -76,15 +79,17 @@ export function IncarnonTierGrid({
 
 function IncarnonTierSlot({
   tier,
+  weaponName,
   perks,
   picked,
   onPick,
   readOnly,
 }: {
   tier: number
-  perks: { name: string; description: string }[]
-  picked: { name: string; description: string } | null
-  onPick: (perk: { name: string; description: string } | null) => void
+  weaponName: string
+  perks: IncarnonPerk[]
+  picked: IncarnonPerk | null
+  onPick: (perk: IncarnonPerk | null) => void
   readOnly: boolean
 }) {
   const [open, setOpen] = useState(false)
@@ -115,7 +120,7 @@ function IncarnonTierSlot({
             <>
               <p className="font-semibold">{picked.name}</p>
               <p className="text-muted-foreground mt-0.5">
-                {picked.description}
+                {getIncarnonPerkDescription(picked, weaponName)}
               </p>
             </>
           ) : (
@@ -163,7 +168,7 @@ function IncarnonTierSlot({
                   >
                     <span className="font-medium">{perk.name}</span>
                     <span className="text-muted-foreground text-[10px] leading-snug">
-                      {perk.description}
+                      {getIncarnonPerkDescription(perk, weaponName)}
                     </span>
                   </button>
                 )

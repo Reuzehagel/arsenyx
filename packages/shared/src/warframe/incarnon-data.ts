@@ -3,11 +3,22 @@
 // imported by the build script) and are fetched on demand from
 // /data/incarnon-evolutions.json — see apps/web/src/lib/incarnon-query.ts.
 
+import type { IncarnonPerk } from "./incarnon-evolutions"
+
 export type {
   IncarnonEvolution,
   IncarnonPerk,
   IncarnonTier,
 } from "./incarnon-evolutions"
+
+/** Perk description for the equipped weapon variant, falling back to the
+ *  base description when the perk has no variant-specific values. */
+export function getIncarnonPerkDescription(
+  perk: IncarnonPerk,
+  weaponName: string,
+): string {
+  return perk.variants?.[weaponName] ?? perk.description
+}
 
 /** Stable identifier for the incarnon-form alt-fire attack mode in the item data. */
 export const INCARNON_FORM_ATTACK_NAME = "Incarnon Form"
@@ -162,8 +173,13 @@ function stripVariant(name: string): string {
   return n
 }
 
+/** Variants whose base weapon is incarnon-eligible but which cannot take the
+ *  adapter themselves (per each weapon's Incarnon Genesis wiki page). */
+const INCARNON_INELIGIBLE_VARIANTS: ReadonlySet<string> = new Set(["Dex Furis"])
+
 /** Resolves a weapon name (incl. variants) to its base incarnon key, or null. */
 export function getIncarnonBaseName(weaponName: string): string | null {
+  if (INCARNON_INELIGIBLE_VARIANTS.has(weaponName)) return null
   if (INCARNON_NAMES.has(weaponName)) return weaponName
   const stripped = stripVariant(weaponName)
   return INCARNON_NAMES.has(stripped) ? stripped : null
