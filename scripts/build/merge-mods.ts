@@ -461,5 +461,24 @@ export function mergeMods(
     counts.kept++
   }
 
+  // Primed/Umbral variants inherit their base mod's exilus eligibility. DE
+  // ships no exilus flag and the wiki's `IsExilus` is keyed per-uniqueName, so
+  // a Primed variant of an exilus mod is silently missed whenever the wiki row
+  // for that variant lacks the flag (e.g. Primed Steady Hands, Primed Rifle/
+  // Shotgun Ammo Mutation). The base mod is authoritative; only inherit upward
+  // — never clear a flag the variant already carries. Base name is the variant
+  // name minus the "Primed "/"Umbral " prefix; a variant whose base can't be
+  // resolved by name (e.g. Umbral Fiber → "Fiber", no such mod) is left as-is.
+  const exilusBaseNames = new Set<string>()
+  for (const m of mods) {
+    if (m.isExilus && !m.isPrime) exilusBaseNames.add(m.name)
+  }
+  for (const m of mods) {
+    if (m.isExilus || !m.isPrime) continue
+    if (exilusBaseNames.has(m.name.replace(/^(?:Primed|Umbral) /, ""))) {
+      m.isExilus = true
+    }
+  }
+
   return { mods, counts }
 }
