@@ -220,6 +220,13 @@ model Build {
   // above): each build orders its own strip. Ids not present here sort last
   // (newly linked partners append); stale ids (unlinked) are ignored on read.
   partnerOrder  String[]        @default([])
+  // Per-owner variant targets for this build's partner strip: a map of
+  // partner Build id -> variant index to open on THAT partner build
+  // (`?v=` on the viewer). One-sided like `partnerOrder` — the symmetric
+  // implicit M:N above can't carry per-link data, and the target variant is
+  // directional anyway. Absent or 0 = default variant; stale ids (unlinked
+  // partners) are ignored on read and swept on unlink.
+  partnerVariants Json          @default("{}")
 
   buildGuide BuildGuide?
 

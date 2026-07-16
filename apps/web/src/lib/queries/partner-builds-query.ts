@@ -9,7 +9,10 @@ import { apiFetch, remapApiError } from "@/lib/util/api-client"
 
 import type { BuildListItem } from "./builds-list-query"
 
-export type PartnerBuild = BuildListItem
+/** A partner row is a plain list item plus the owner's saved variant target
+ *  (`?v=` index on the partner build). Omitted / 0 = default variant. Only
+ *  the partners endpoint populates it — search rows never carry one. */
+export type PartnerBuild = BuildListItem & { variant?: number }
 
 type PartnersResponse = { builds: PartnerBuild[] }
 
@@ -110,6 +113,46 @@ export function useReorderPartners(ownerSlug: string) {
     onError: (_e, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(key, ctx.prev)
     },
+  })
+}
+
+export function useSetPartnerVariant(ownerSlug: string) {
+  const qc = useQueryClient()
+  const key = ["build", ownerSlug, "partners"] as const
+  return useMutation({
+    mutationFn: async (input: {
+      partnerSlug: string
+      variant: number
+    }): Promise<void> => {
+      try {
+        await apiFetch<void>(
+          `/builds/${encodeURIComponent(ownerSlug)}/partners/${encodeURIComponent(input.partnerSlug)}/variant`,
+          // 0 (default variant) clears the stored target server-side.
+          { method: "PUT", json: { variant: input.variant || null } },
+        )
+      } catch (err) {
+        throw remapApiError(err, {
+          401: "unauthorized",
+          403: "forbidden",
+          default: "failed_set_variant",
+        })
+      }
+    },
+    onMutate: async ({ partnerSlug, variant }) => {
+      await qc.cancelQueries({ queryKey: key })
+      const prev = qc.getQueryData<PartnerBuild[]>(key)
+      qc.setQueryData<PartnerBuild[]>(key, (rows) =>
+        rows?.map((p) =>
+          p.slug === partnerSlug ? { ...p, variant: variant || undefined } : p,
+        ),
+      )
+      return { prev }
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(key, ctx.prev)
+    },
+    // No onSettled invalidate — same Hyperdrive-staleness reasoning as
+    // useLinkPartner above: the optimistic cache is the confirmed state.
   })
 }
 

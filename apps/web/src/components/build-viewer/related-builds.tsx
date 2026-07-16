@@ -125,6 +125,9 @@ function RelatedBuildChip({ build }: { build: PartnerBuild }) {
     <RouterLink
       to="/builds/$slug"
       params={{ slug: build.slug }}
+      // Owner-chosen variant target (issue #302) — the viewer clamps an
+      // index that no longer exists, so a stale target degrades to variant 0.
+      search={build.variant ? { v: build.variant } : {}}
       title={build.name}
       className="bg-card hover:bg-card/70 flex w-full items-center gap-3 rounded-md border py-2 pr-4 pl-2 transition-colors"
     >

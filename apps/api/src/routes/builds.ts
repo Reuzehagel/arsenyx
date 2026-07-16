@@ -536,7 +536,12 @@ async function loadPartnerContext(slug: string, partnerSlug: string) {
   const [own, partner] = await Promise.all([
     prisma.build.findUnique({
       where: { slug },
-      select: { id: true, userId: true, organizationId: true },
+      select: {
+        id: true,
+        userId: true,
+        organizationId: true,
+        partnerVariants: true,
+      },
     }),
     prisma.build.findUnique({
       where: { slug: partnerSlug },
@@ -545,10 +550,32 @@ async function loadPartnerContext(slug: string, partnerSlug: string) {
         userId: true,
         visibility: true,
         organizationId: true,
+        partnerVariants: true,
       },
     }),
   ])
   return { own, partner }
+}
+
+// Coerce the `partnerVariants` JSON column into a clean id -> variant-index
+// map. Defensive by design: anything that isn't a positive integer below
+// MAX_VARIANTS is treated as unset (0 / absent both mean "default variant",
+// so 0 is never stored). Also the single point where stale garbage in the
+// column gets dropped on rewrite.
+function asVariantMap(value: Prisma.JsonValue): Record<string, number> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {}
+  const out: Record<string, number> = {}
+  for (const [id, v] of Object.entries(value)) {
+    if (
+      typeof v === "number" &&
+      Number.isInteger(v) &&
+      v > 0 &&
+      v < MAX_VARIANTS
+    ) {
+      out[id] = v
+    }
+  }
+  return out
 }
 
 // Edge-cached like the detail route: this fires on every full build-detail
@@ -592,6 +619,7 @@ builds.get("/:slug/partners", edgeCache({ maxAge: 60 }), async (c) => {
       visibility: true,
       organizationId: true,
       partnerOrder: true,
+      partnerVariants: true,
       partnerBuilds: {
         where: partnerVisibility,
         take: 50,
@@ -604,10 +632,16 @@ builds.get("/:slug/partners", edgeCache({ maxAge: 60 }), async (c) => {
     return c.json({ error: "not_found" }, 404)
   }
 
+  // The owner's saved variant target rides along on each row (`variant`
+  // omitted = default). The web chip turns it into `?v=` on the link; an
+  // index that outgrew the partner's variant list is clamped by the viewer.
+  const variantMap = asVariantMap(build.partnerVariants)
   return c.json({
-    builds: orderPartners(build.partnerBuilds, build.partnerOrder).map(
-      serializeListRow,
-    ),
+    builds: orderPartners(build.partnerBuilds, build.partnerOrder).map((p) => {
+      const row = serializeListRow(p)
+      const variant = variantMap[p.id]
+      return variant ? { ...row, variant } : row
+    }),
   })
 })
 
@@ -681,6 +715,64 @@ builds.put("/:slug/partners/order", rateLimitUser("mutate"), async (c) => {
   return c.body(null, 204)
 })
 
+// Persist which variant of a partner build this build's strip should link to
+// (issue #302). One-sided like `partnerOrder` — only the owning build's
+// `partnerVariants` map is written, so mutate rights on `own` alone suffice.
+// `variant` is a 0-based index into the partner's variants; 0 or null clears
+// the entry (default variant). No registration-order hazard with the
+// two-segment partner routes: this path has an extra segment.
+builds.put(
+  "/:slug/partners/:partnerSlug/variant",
+  rateLimitUser("mutate"),
+  async (c) => {
+    const session = await getSession(c)
+    if (!session?.user) return c.json({ error: "unauthorized" }, 401)
+    const viewerId = session.user.id
+
+    const body = await c.req.json().catch(() => null)
+    const raw = (body as { variant?: unknown } | null)?.variant
+    const valid =
+      raw === null ||
+      (typeof raw === "number" &&
+        Number.isInteger(raw) &&
+        raw >= 0 &&
+        raw < MAX_VARIANTS)
+    if (!valid) return c.json({ error: "invalid_variant" }, 400)
+    const variant = raw ?? 0
+
+    const slug = c.req.param("slug")
+    const partnerSlug = c.req.param("partnerSlug")
+    const own = await prisma.build.findUnique({
+      where: { slug },
+      select: {
+        id: true,
+        userId: true,
+        organizationId: true,
+        partnerVariants: true,
+        // Narrowed to the one partner we're targeting — doubles as the
+        // "is it actually linked" check.
+        partnerBuilds: { where: { slug: partnerSlug }, select: { id: true } },
+      },
+    })
+    if (!own) return c.json({ error: "not_found" }, 404)
+    if (!(await canMutateBuild(own, viewerId))) {
+      return c.json({ error: "forbidden" }, 403)
+    }
+    const partner = own.partnerBuilds[0]
+    if (!partner) return c.json({ error: "not_found" }, 404)
+
+    const map = asVariantMap(own.partnerVariants)
+    if (variant > 0) map[partner.id] = variant
+    else delete map[partner.id]
+
+    await prisma.build.update({
+      where: { id: own.id },
+      data: { partnerVariants: map as InputJsonValue },
+    })
+    return c.body(null, 204)
+  },
+)
+
 builds.put(
   "/:slug/partners/:partnerSlug",
   rateLimitUser("mutate"),
@@ -747,14 +839,28 @@ builds.delete(
       return c.json({ error: "forbidden" }, 403)
     }
 
+    // Sweep the severed link's variant targets on both sides while we're
+    // already writing both rows — stale entries are harmless on read, but
+    // they'd silently re-apply if the same pair ever re-linked.
+    const ownVariants = asVariantMap(own.partnerVariants)
+    delete ownVariants[partner.id]
+    const partnerVariants = asVariantMap(partner.partnerVariants)
+    delete partnerVariants[own.id]
+
     await prisma.$transaction([
       prisma.build.update({
         where: { id: own.id },
-        data: { partnerBuilds: { disconnect: { id: partner.id } } },
+        data: {
+          partnerBuilds: { disconnect: { id: partner.id } },
+          partnerVariants: ownVariants as InputJsonValue,
+        },
       }),
       prisma.build.update({
         where: { id: partner.id },
-        data: { partnerBuilds: { disconnect: { id: own.id } } },
+        data: {
+          partnerBuilds: { disconnect: { id: own.id } },
+          partnerVariants: partnerVariants as InputJsonValue,
+        },
       }),
     ])
     return c.body(null, 204)
