@@ -75,9 +75,10 @@ export function useLinkPartner(ownerSlug: string) {
     onError: (_e, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(["build", ownerSlug, "partners"], ctx.prev)
     },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: ["build", ownerSlug, "partners"] })
-    },
+    // No onSettled invalidate: Hyperdrive serves ~60s-stale reads after a
+    // write, so an immediate refetch returns the pre-write list and wipes the
+    // optimistic entry. The optimistic cache IS the confirmed state (rolled
+    // back in onError). Same applies to reorder/unlink below.
   })
 }
 
@@ -109,9 +110,6 @@ export function useReorderPartners(ownerSlug: string) {
     onError: (_e, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(key, ctx.prev)
     },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: key })
-    },
   })
 }
 
@@ -140,9 +138,6 @@ export function useUnlinkPartner(ownerSlug: string) {
     },
     onError: (_e, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(["build", ownerSlug, "partners"], ctx.prev)
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: ["build", ownerSlug, "partners"] })
     },
   })
 }
