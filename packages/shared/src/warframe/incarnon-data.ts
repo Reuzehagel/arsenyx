@@ -3,11 +3,22 @@
 // imported by the build script) and are fetched on demand from
 // /data/incarnon-evolutions.json — see apps/web/src/lib/incarnon-query.ts.
 
+import type { IncarnonPerk } from "./incarnon-evolutions"
+
 export type {
   IncarnonEvolution,
   IncarnonPerk,
   IncarnonTier,
 } from "./incarnon-evolutions"
+
+/** Perk description for the equipped weapon variant, falling back to the
+ *  base description when the perk has no variant-specific values. */
+export function getIncarnonPerkDescription(
+  perk: IncarnonPerk,
+  weaponName: string,
+): string {
+  return perk.variants?.[weaponName] ?? perk.description
+}
 
 /** Stable identifier for the incarnon-form alt-fire attack mode in the item data. */
 export const INCARNON_FORM_ATTACK_NAME = "Incarnon Form"
