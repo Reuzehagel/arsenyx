@@ -46,18 +46,23 @@ export const GUN_RIVEN_STATS = [
   "Damage to Infested",
 ] as const
 
-/** Stats available on melee rivens. */
+/** Stats available on melee rivens (per https://wiki.warframe.com/w/Riven_Mods).
+ * Channeling was removed in the Melee 3.0 rework and replaced by the
+ * heavy-attack/combo stats below — do not re-add "Channeling Damage" or
+ * "Channeling Efficiency" (old saved builds keep parsing via back-compat
+ * aliases in the stat parser). */
 export const MELEE_RIVEN_STATS = [
   "Critical Chance",
   "Critical Damage",
+  "Critical Chance for Slide Attack",
   "Damage",
   "Attack Speed",
   "Range",
   "Combo Duration",
+  "Initial Combo",
+  "Heavy Attack Efficiency",
+  "Chance to Gain Combo Count",
   "Finisher Damage",
-  "Slide Attack",
-  "Channeling Damage",
-  "Channeling Efficiency",
   "Status Chance",
   "Status Duration",
   "Impact",

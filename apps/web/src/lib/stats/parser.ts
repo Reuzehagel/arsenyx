@@ -90,6 +90,8 @@ const STAT_NAME_MAP: Record<string, StatType> = {
   recoil: "recoil",
   "weapon recoil": "recoil",
   "finisher damage": "finisher_damage",
+  "critical chance for slide attack": "slide_attack",
+  // Legacy aliases: older saved builds stored these stat names verbatim.
   "slide attack": "slide_attack",
   "slide attack crit chance": "slide_attack",
   "channeling damage": "channeling",
