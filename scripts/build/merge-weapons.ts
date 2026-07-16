@@ -473,8 +473,16 @@ export function mergeWikiOnlyWeapon(
     // Vulpaphyla are infested catbrows and Predasites infested kubrows, so
     // their claws share the Kavat/Kubrow claw pools (e.g. Swipe — "Kavat
     // Claws" — equips on Sly/Crescent/Panzer Claws in-game; the wiki groups
-    // the category as "Kavat Claws (Vulpaphyla Claws)").
-    if (user.endsWith(" Kavat") || user.endsWith(" Vulpaphyla")) {
+    // the category as "Kavat Claws (Vulpaphyla Claws)"). Venari (Khora's
+    // built-in Kavat) and its Prime are Kavat Claws too, but the wiki lists
+    // them under `Users` as bare "Venari" / "Venari Prime" (no " Kavat"
+    // suffix), so match them explicitly.
+    if (
+      user.endsWith(" Kavat") ||
+      user.endsWith(" Vulpaphyla") ||
+      user === "Venari" ||
+      user === "Venari Prime"
+    ) {
       modPoolsSet.add("Kavat Claws")
     }
     if (user.endsWith(" Kubrow") || user.endsWith(" Predasite")) {
