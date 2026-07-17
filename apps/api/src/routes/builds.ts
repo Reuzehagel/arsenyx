@@ -500,10 +500,42 @@ builds.get(
         ? Math.min(limitRaw, SEARCH_MAX_LIMIT)
         : SEARCH_DEFAULT_LIMIT
 
-    // PUBLIC only — UNLISTED is "accessible by URL, not enumerable", and a
-    // typeahead is enumeration. Viewers can additionally find their own
-    // builds regardless of visibility so they can link private/unlisted
-    // ones from the editor.
+    // `mine=1` narrows to builds the requester holds mutate rights on (own +
+    // org). The partner picker uses this: linking requires mutual ownership
+    // (see PUT /:slug/partners/:partnerSlug), so surfacing other people's
+    // builds there only sets up a guaranteed 403.
+    let scope: Prisma.BuildWhereInput
+    if (c.req.query("mine") === "1") {
+      if (!viewerId) return c.json({ error: "unauthorized" }, 401)
+      const memberships = await prisma.organizationMember.findMany({
+        where: { userId: viewerId },
+        select: { organizationId: true },
+      })
+      scope = {
+        OR: [
+          { userId: viewerId },
+          ...(memberships.length > 0
+            ? [
+                {
+                  organizationId: {
+                    in: memberships.map((m) => m.organizationId),
+                  },
+                },
+              ]
+            : []),
+        ],
+      }
+    } else {
+      // PUBLIC only — UNLISTED is "accessible by URL, not enumerable", and a
+      // typeahead is enumeration. Viewers can additionally find their own
+      // builds regardless of visibility.
+      scope = viewerId
+        ? {
+            OR: [{ visibility: BuildVisibility.PUBLIC }, { userId: viewerId }],
+          }
+        : { visibility: BuildVisibility.PUBLIC }
+    }
+
     const rows = await prisma.build.findMany({
       relationLoadStrategy: "join",
       where: {
@@ -514,14 +546,7 @@ builds.get(
               { itemName: { contains: q, mode: "insensitive" } },
             ],
           },
-          viewerId
-            ? {
-                OR: [
-                  { visibility: BuildVisibility.PUBLIC },
-                  { userId: viewerId },
-                ],
-              }
-            : { visibility: BuildVisibility.PUBLIC },
+          scope,
         ],
       },
       orderBy: [{ likeCount: "desc" }, { createdAt: "desc" }],
