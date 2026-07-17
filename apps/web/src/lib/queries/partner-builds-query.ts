@@ -31,13 +31,16 @@ export const partnerBuildsQuery = (slug: string) =>
     },
   })
 
+/** Typeahead for the partner picker. `mine=1` scopes results to builds the
+ *  requester can mutate (own + org) — linking requires mutual ownership, so
+ *  anything else in the list would be un-linkable anyway. */
 export function useBuildSearch(q: string) {
   return useQuery({
-    queryKey: ["builds", "search", q] as const,
+    queryKey: ["builds", "search", "mine", q] as const,
     queryFn: async (): Promise<PartnerBuild[]> => {
       try {
         const data = await apiFetch<PartnersResponse>(
-          `/builds/search?q=${encodeURIComponent(q)}`,
+          `/builds/search?q=${encodeURIComponent(q)}&mine=1`,
         )
         return data.builds
       } catch (err) {
