@@ -11,6 +11,61 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-07-17",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "The related-builds picker now only suggests builds you can actually link — your own and your org's. It used to search all public builds site-wide, so picking someone else's build always failed with a permission error.",
+      },
+    ],
+  },
+  {
+    date: "2026-07-16",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Related builds got a big upgrade: as the owner you can drag the chips to reorder them, and each link can point at a specific variant of the partner build — handy when a companion build only makes sense with one config. For viewers, long strips now collapse behind a \"Show all\" toggle with a name filter.",
+      },
+      {
+        type: "fix",
+        description:
+          "Linking, unlinking, or reordering a related build no longer visually reverts a split second after the action. The change always saved — a stale refetch was just clobbering it in the UI until you reloaded.",
+      },
+      {
+        type: "fix",
+        description:
+          "Incarnon evolution perks now show the values for the variant you're actually building. Perks grant different numbers per variant (Sicarus Feigned Retreat is +50 on Sicarus but +40 on Sicarus Prime), and the planner used to show the base weapon's numbers everywhere. Several wrong base values on Furis, Lato, and Braton perks got fixed along the way, and Dex Furis no longer offers an Incarnon toggle it can't actually use.",
+      },
+      {
+        type: "fix",
+        description:
+          "The melee riven stat list matches the current game: added Critical Chance for Slide Attack, Initial Combo, Heavy Attack Efficiency, and Chance to Gain Combo Count; dropped the retired pre-Melee-3.0 Channeling stats. Builds saved with the old stat names still parse.",
+      },
+      {
+        type: "fix",
+        description:
+          "Venari and Venari Prime now offer Kavat Claws mods like Swipe in their mod picker. Their claws are Kavat Claws variants, but a data quirk left the pool empty.",
+      },
+      {
+        type: "fix",
+        description:
+          "Primed Steady Hands, Primed Rifle Ammo Mutation, and Primed Shotgun Ammo Mutation are exilus-eligible again, matching their base mods. The Primed variants were missing the exilus flag in the source data, so they'd only fit a normal slot.",
+      },
+      {
+        type: "fix",
+        description:
+          "Eject Magazine, Tactical Reload, and Lock and Load show up in the mod picker's default PvE view. They're internally filed as Conclave mods but are usable in both modes, so the picker was hiding them.",
+      },
+      {
+        type: "fix",
+        description:
+          "The mod picker's filter bar no longer crushes the search box on smaller screens — the filters now wrap onto their own rows below large-desktop widths.",
+      },
+    ],
+  },
+  {
     date: "2026-07-14",
     changes: [
       {
