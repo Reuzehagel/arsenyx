@@ -14,6 +14,16 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-07-17",
     changes: [
       {
+        type: "feat",
+        description:
+          "Profiles now show the organizations a user belongs to as clickable chips under their name — verified orgs get the purple treatment. No more digging through the directory to find someone's org.",
+      },
+      {
+        type: "feat",
+        description:
+          "Your organizations are now one click away: the account menu in the header lists every org you're a member of.",
+      },
+      {
         type: "fix",
         description:
           "The related-builds picker now only suggests builds you can actually link — your own and your org's. It used to search all public builds site-wide, so picking someone else's build always failed with a permission error.",
