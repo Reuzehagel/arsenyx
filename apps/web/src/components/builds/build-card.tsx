@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router"
 import { Eye, Heart } from "lucide-react"
 
+import formaIcon from "@/assets/Forma.png"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Tooltip,
@@ -85,7 +86,10 @@ function BuildByline({
 
 /** Forma count on a build card. Hidden at 0 (a no-forma build), matching the
  *  viewer's EndoFormaBadges behaviour. Uses the Forma currency icon rather than
- *  a lucide glyph so it reads as the in-game resource at a glance. `withDivider`
+ *  a lucide glyph so it reads as the in-game resource at a glance. The icon is
+ *  imported (Vite inlines it as a data URI) rather than served from public/ —
+ *  the path-served version failed to load for some mobile clients, leaving a
+ *  broken-image box next to the count. `withDivider`
  *  prepends a hairline rule (card layout sets forma apart from the social stats;
  *  the dense row omits it) — kept here so the show-at-all rule lives in one place. */
 function FormaStat({
@@ -104,7 +108,7 @@ function FormaStat({
       {withDivider && <span aria-hidden className="bg-border h-3 w-px" />}
       <span className="flex items-center gap-1" title={`${count} forma`}>
         <img
-          src="/icons/currency/Forma.png"
+          src={formaIcon}
           alt=""
           aria-hidden
           className="size-3 object-contain"

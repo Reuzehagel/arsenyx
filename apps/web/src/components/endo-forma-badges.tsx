@@ -1,3 +1,5 @@
+import endoIcon from "@/assets/Endo.png"
+import formaIcon from "@/assets/Forma.png"
 import { Badge } from "@/components/ui/badge"
 
 /**
@@ -18,12 +20,7 @@ export function EndoFormaBadges({
         variant="secondary"
         className="bg-muted/50 hover:bg-muted gap-1.5 px-2 py-0.5 text-xs font-semibold"
       >
-        <img
-          src="/icons/currency/Endo.png"
-          alt=""
-          aria-hidden
-          className="size-4"
-        />
+        <img src={endoIcon} alt="" aria-hidden className="size-4" />
         {totalEndoCost.toLocaleString("en-US")}
       </Badge>
       {formaCount > 0 && (
@@ -32,7 +29,7 @@ export function EndoFormaBadges({
           className="bg-muted/50 hover:bg-muted gap-1.5 px-2 py-0.5 text-xs font-semibold"
         >
           <img
-            src="/icons/currency/Forma.png"
+            src={formaIcon}
             alt=""
             aria-hidden
             className="size-[18px] object-contain"
