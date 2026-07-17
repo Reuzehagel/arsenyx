@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import { LogIn } from "lucide-react"
 import { useState } from "react"
@@ -8,12 +9,16 @@ import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Skeleton } from "@/components/ui/skeleton"
+import { UserAvatar } from "@/components/user-avatar"
 import { authClient } from "@/lib/auth-client"
+import { myOrgsQuery } from "@/lib/queries/org-query"
 import { ROUTES } from "@/lib/util/constants"
 import { proxyImage } from "@/lib/util/image-proxy"
 
@@ -98,6 +103,7 @@ export function UserMenu() {
           <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
             Settings
           </DropdownMenuItem>
+          <UserMenuOrgs />
           {isAdmin ? (
             <>
               <DropdownMenuSeparator />
@@ -111,6 +117,33 @@ export function UserMenu() {
         </DropdownMenuContent>
       </DropdownMenu>
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+    </>
+  )
+}
+
+function UserMenuOrgs() {
+  const { data } = useQuery(myOrgsQuery())
+  if (!data || data.memberships.length === 0) return null
+  return (
+    <>
+      <DropdownMenuSeparator />
+      <DropdownMenuGroup>
+        <DropdownMenuLabel>My Organizations</DropdownMenuLabel>
+        {data.memberships.map((m) => (
+          <DropdownMenuItem
+            key={m.organization.id}
+            render={<Link href={`/org/${m.organization.slug}`} />}
+          >
+            <UserAvatar
+              src={m.organization.image}
+              fallback={m.organization.name}
+              size={5}
+              shape="rounded"
+            />
+            <span className="truncate">{m.organization.name}</span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuGroup>
     </>
   )
 }

@@ -4,6 +4,8 @@ import { cn } from "@/lib/util/utils"
 type AvatarShape = "circle" | "square" | "rounded"
 
 const SIZE_CLASSES: Record<number, string> = {
+  4: "size-4 text-[10px]",
+  5: "size-5 text-xs",
   6: "size-6 text-xs",
   7: "size-7 text-xs",
   8: "size-8 text-sm",

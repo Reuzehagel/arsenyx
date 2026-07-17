@@ -6,6 +6,7 @@ import {
   type BuildListResponse,
   buildQueryString,
 } from "@/lib/queries/builds-list-query"
+import type { OrgRole, OrgSummary } from "@/lib/queries/org-query"
 import { apiFetch, ApiError, loaderError } from "@/lib/util/api-client"
 
 export type ProfileBadges = {
@@ -22,6 +23,8 @@ export type ProfileStats = {
   totalViews: number
 }
 
+export type ProfileOrg = Omit<OrgSummary, "description"> & { role: OrgRole }
+
 export type Profile = {
   id: string
   name: string | null
@@ -32,6 +35,7 @@ export type Profile = {
   joinedAt: string
   badges: ProfileBadges
   stats: ProfileStats
+  orgs: ProfileOrg[]
 }
 
 export const profileQuery = (username: string) =>

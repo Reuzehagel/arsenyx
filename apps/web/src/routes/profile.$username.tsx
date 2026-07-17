@@ -11,6 +11,7 @@ import {
 import { DelayedSuspense } from "@/components/delayed-fallback"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
+import { Link } from "@/components/link"
 import { Stat } from "@/components/profile-stat"
 import { RouteNotFound } from "@/components/route-not-found"
 import { Badge } from "@/components/ui/badge"
@@ -120,6 +121,7 @@ function ProfileHeader({ profile }: { profile: Profile }) {
           <ProfileBadges badges={profile.badges} />
         </div>
         {profile.bio ? <p className="text-sm">{profile.bio}</p> : null}
+        <ProfileOrgs orgs={profile.orgs} />
         <span className="text-muted-foreground text-xs">Joined {joined}</span>
         <div className="text-muted-foreground mt-1 flex flex-wrap gap-4 text-sm">
           <Stat label="Builds" value={profile.stats.buildCount} />
@@ -128,6 +130,37 @@ function ProfileHeader({ profile }: { profile: Profile }) {
           <Stat label="Views" value={profile.stats.totalViews} />
         </div>
       </div>
+    </div>
+  )
+}
+
+function ProfileOrgs({ orgs }: { orgs: Profile["orgs"] }) {
+  // ?? [] guards the deploy-skew window where the web Worker ships before
+  // the API Worker and cached responses lack the orgs field.
+  const items = orgs ?? []
+  if (items.length === 0) return null
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {items.map((org) => (
+        <Link
+          key={org.id}
+          href={`/org/${org.slug}`}
+          className="bg-muted/50 hover:bg-muted flex items-center gap-1.5 rounded-full border py-0.5 pr-2.5 pl-1 text-xs transition-colors"
+          title={org.verified ? "Verified organization" : undefined}
+        >
+          <UserAvatar
+            src={org.image}
+            fallback={org.name}
+            size={4}
+            shape="rounded"
+          />
+          <span
+            className={`max-w-40 truncate font-medium ${org.verified ? "text-wf-org" : ""}`}
+          >
+            {org.name}
+          </span>
+        </Link>
+      ))}
     </div>
   )
 }
