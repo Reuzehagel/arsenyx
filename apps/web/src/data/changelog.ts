@@ -26,7 +26,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "feat",
         description:
-          "Related builds got a big upgrade: as the owner you can drag the chips to reorder them, and each link can point at a specific variant of the partner build — handy when a companion build only makes sense with one config. For viewers, long strips now collapse behind a \"Show all\" toggle with a name filter.",
+          'Related builds got a big upgrade: as the owner you can drag the chips to reorder them, and each link can point at a specific variant of the partner build — handy when a companion build only makes sense with one config. For viewers, long strips now collapse behind a "Show all" toggle with a name filter.',
       },
       {
         type: "fix",
