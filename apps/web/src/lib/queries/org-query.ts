@@ -125,4 +125,7 @@ export const myOrgsQuery = () =>
       }
     },
     retry: false,
+    // Memberships rarely change and org mutations invalidate ["orgs","mine"],
+    // so reopening the user menu shouldn't refetch every 30s.
+    staleTime: 5 * 60_000,
   })

@@ -33,11 +33,30 @@ users.get("/:username", async (c) => {
   })
   if (!user || user.isBanned) return c.json({ error: "not_found" }, 404)
 
-  const agg = await prisma.build.aggregate({
-    where: userPublicScope(user.id).baseWhere,
-    _count: true,
-    _sum: { likeCount: true, bookmarkCount: true, viewCount: true },
-  })
+  const [agg, memberships] = await Promise.all([
+    prisma.build.aggregate({
+      where: userPublicScope(user.id).baseWhere,
+      _count: true,
+      _sum: { likeCount: true, bookmarkCount: true, viewCount: true },
+    }),
+    prisma.organizationMember.findMany({
+      relationLoadStrategy: "join",
+      where: { userId: user.id },
+      orderBy: { joinedAt: "asc" },
+      select: {
+        role: true,
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            image: true,
+            verified: true,
+          },
+        },
+      },
+    }),
+  ])
 
   return c.json({
     id: user.id,
@@ -59,6 +78,7 @@ users.get("/:username", async (c) => {
       totalBookmarks: agg._sum.bookmarkCount ?? 0,
       totalViews: agg._sum.viewCount ?? 0,
     },
+    orgs: memberships.map((m) => ({ ...m.organization, role: m.role })),
   })
 })
 
