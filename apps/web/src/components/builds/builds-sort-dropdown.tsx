@@ -10,6 +10,8 @@ const SORT_ITEMS = [
   { value: "viewed", label: "Most Viewed" },
   { value: "forma-asc", label: "Fewest Forma" },
   { value: "forma-desc", label: "Most Forma" },
+  { value: "name-asc", label: "Name A-Z" },
+  { value: "name-desc", label: "Name Z-A" },
 ] as const
 
 export const SORT_VALUES: BuildListSort[] = SORT_ITEMS.map((i) => i.value)
