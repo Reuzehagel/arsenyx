@@ -194,6 +194,10 @@ function orderByForSort(sort: ListSort) {
       return [{ formaCount: "asc" as const }, { createdAt: "desc" as const }]
     case "forma-desc":
       return [{ formaCount: "desc" as const }, { createdAt: "desc" as const }]
+    case "name-asc":
+      return [{ name: "asc" as const }, { createdAt: "desc" as const }]
+    case "name-desc":
+      return [{ name: "desc" as const }, { createdAt: "desc" as const }]
     case "newest":
     default:
       return [{ createdAt: "desc" as const }]
@@ -220,6 +224,10 @@ function tiebreakerSql(sort: ListSort) {
       return Prisma.sql`"formaCount" ASC, "createdAt" DESC`
     case "forma-desc":
       return Prisma.sql`"formaCount" DESC, "createdAt" DESC`
+    case "name-asc":
+      return Prisma.sql`"name" ASC, "createdAt" DESC`
+    case "name-desc":
+      return Prisma.sql`"name" DESC, "createdAt" DESC`
     case "newest":
     default:
       return Prisma.sql`"createdAt" DESC`

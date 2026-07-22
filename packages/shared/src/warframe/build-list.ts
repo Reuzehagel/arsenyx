@@ -13,6 +13,8 @@ export const LIST_SORTS = [
   "viewed",
   "forma-asc",
   "forma-desc",
+  "name-asc",
+  "name-desc",
 ] as const
 
 export type ListSort = (typeof LIST_SORTS)[number]
