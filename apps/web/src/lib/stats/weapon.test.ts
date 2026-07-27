@@ -136,6 +136,101 @@ describe("damage breakdown — innate + mod combination", () => {
   })
 })
 
+// Regression (#313): a weapon whose only base damage is a COMBINED element
+// (Nukor's 100% Radiation, Lizzie's Viral/Magnetic/Cold/Corrosive waves) used
+// to compute a zero modded base, so every elemental mod added literally
+// nothing. Innate combined elements are part of the base damage a mod's
+// percentage is a share of, exactly like innate base elements.
+describe("damage breakdown — innate combined-element base", () => {
+  it("scales an elemental mod off innate combined-element damage", () => {
+    const weapon = makeWeapon({ damage: { viral: 100 }, totalDamage: 100 })
+    const stats = calculateWeaponStats({
+      weapon,
+      mods: [
+        {
+          mod: elementMod("Cryo Rounds", 90, "DT_FREEZE_COLOR", "Cold"),
+          rank: 0,
+        },
+      ],
+      arcanes: [],
+    })
+    const map = elemMap(stats)
+    // Innate Viral survives untouched; Cold is 90% of the 100 base.
+    expect(map.get("viral")).toBe(100)
+    expect(map.get("cold")).toBe(90)
+    expect(stats.attackModes[0]!.totalDamage.modified).toBe(190)
+  })
+
+  it("compounds base-damage mods into the innate combined base", () => {
+    // Serration (+165%) lifts the base to 265, so a 90% Cold mod adds 238.5.
+    const weapon = makeWeapon({ damage: { viral: 100 }, totalDamage: 100 })
+    const stats = calculateWeaponStats({
+      weapon,
+      mods: [
+        {
+          mod: {
+            name: "Serration",
+            levelStats: [{ stats: ["+165% Damage"] }],
+          } as unknown as Mod,
+          rank: 0,
+        },
+        {
+          mod: elementMod("Cryo Rounds", 90, "DT_FREEZE_COLOR", "Cold"),
+          rank: 0,
+        },
+      ],
+      arcanes: [],
+    })
+    const map = elemMap(stats)
+    expect(map.get("viral")).toBe(265)
+    expect(map.get("cold")).toBeCloseTo(238.5, 1)
+  })
+
+  it("folds innate Viral into the Viral the mods make (one row, not two)", () => {
+    // Lizzie's Viral Wave with Cryo Rounds + Infected Clip: the mods pair into
+    // Viral and the weapon is innately Viral. A damage type is one number
+    // in-game, so the two must merge rather than render as separate rows.
+    const weapon = makeWeapon({ damage: { viral: 100 }, totalDamage: 100 })
+    const stats = calculateWeaponStats({
+      weapon,
+      mods: [
+        {
+          mod: elementMod("Cryo Rounds", 90, "DT_FREEZE_COLOR", "Cold"),
+          rank: 0,
+        },
+        {
+          mod: elementMod("Infected Clip", 90, "DT_POISON_COLOR", "Toxin"),
+          rank: 0,
+        },
+      ],
+      arcanes: [],
+    })
+    const elemental = stats.attackModes[0]!.damageBreakdown.elemental
+    expect(elemental.map((e) => e.type)).toEqual(["viral"])
+    // 90% + 90% of the 100 base = 180, plus the innate 100.
+    expect(elemental[0]!.value).toBe(280)
+    expect(stats.attackModes[0]!.totalDamage.modified).toBe(280)
+  })
+
+  it("leaves a mixed physical + innate combined weapon unchanged", () => {
+    // 10 impact + 10 blast = 20 base; a 90% Heat mod adds 18.
+    const weapon = makeWeapon({
+      damage: { impact: 10, blast: 10 },
+      totalDamage: 20,
+    })
+    const stats = calculateWeaponStats({
+      weapon,
+      mods: [
+        { mod: elementMod("Hellfire", 90, "DT_FIRE_COLOR", "Heat"), rank: 0 },
+      ],
+      arcanes: [],
+    })
+    const map = elemMap(stats)
+    expect(map.get("blast")).toBe(10)
+    expect(map.get("heat")).toBe(18)
+  })
+})
+
 describe("crit / status percent scaling", () => {
   // Regression: Pox/Sporothrix have a 1% base crit. The wiki per-attack
   // crit_chance is stored as a percentage (1 = 1%), so it must be used as-is.

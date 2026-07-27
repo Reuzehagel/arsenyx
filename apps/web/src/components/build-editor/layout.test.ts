@@ -26,6 +26,8 @@ const ARCANES: Arcane[] = [
   arc("Shotgun Vendetta", "Shotgun", "Offensive"),
   arc("Melee Influence", "Melee", "Offensive"),
   arc("Exodia Force", "Zaw", "Offensive"),
+  arc("Primary Merciless", "Primary", "Offensive"),
+  arc("Longbow Sharpshot", "Bow", "Offensive"),
 ]
 
 const ZAW_STRIKE: Pick<DetailItem, "name" | "displayClass" | "uniqueName"> = {
@@ -87,7 +89,7 @@ const EXALTED_BLADE: Pick<
 > = {
   displayClass: "Exalted Weapon",
   uniqueName: "/Lotus/Powersuits/Excalibur/DoomSword",
-  modPools: ["Melee", "Swords", "Exalted Blade"],
+  modPools: ["Melee", "Swords", "Exalted Blade", "MELEE"],
 }
 const MAUSOLON: Pick<DetailItem, "displayClass" | "uniqueName" | "modPools"> = {
   displayClass: "Archgun",
@@ -285,11 +287,83 @@ describe("getArcaneSlotConfig — melee Exodia gating", () => {
   })
 
   it("keeps Exodia off an exalted melee weapon (Exalted Blade)", () => {
-    const cfg = getArcaneSlotConfig(ARCANES, "exalted-weapons", 1, {
-      ...EXALTED_BLADE,
-      name: "Exalted Blade",
-    })
+    const cfg = getArcaneSlotConfig(
+      ARCANES,
+      "exalted-weapons",
+      1,
+      EXALTED_BLADE,
+    )
     expect(cfg.options[0]!.map((a) => a.name)).toEqual(["Melee Influence"])
+  })
+})
+
+// Regression (#313): the exalted arcane pool used to be guessed from the
+// weapon's name ("bow" → primary) and `trigger` (present → secondary), which
+// put Lizzie (a primary, no trigger) on melee arcanes and Neutralizer (a
+// primary, SEMI trigger) on secondary ones. Route on the slot-wide mod pool
+// the build pipeline stamps on every weapon instead. Fixtures mirror
+// public/data/items/exalted-weapons/*.json.
+describe("getArcaneSlotConfig — exalted weapon slot routing", () => {
+  type ExaltedFixture = Pick<
+    DetailItem,
+    "displayClass" | "uniqueName" | "modPools"
+  >
+  const exalted = (name: string, modPools: string[]): ExaltedFixture => ({
+    displayClass: "Exalted Weapon",
+    uniqueName: `/Lotus/Powersuits/Test/${name}`,
+    modPools,
+  })
+
+  const LIZZIE = exalted("Lizzie", ["Rifle", "Rifle (No Aoe)", "PRIMARY"])
+  const NEUTRALIZER = exalted("Neutralizer", [
+    "Rifle",
+    "Sniper",
+    "Rifle (No Aoe)",
+    "PRIMARY",
+  ])
+  const ARTEMIS_BOW = exalted("Artemis Bow", [
+    "Rifle",
+    "Bow",
+    "Rifle (No Aoe)",
+    "PRIMARY",
+  ])
+  const REGULATORS = exalted("Regulators", [
+    "Pistol",
+    "Pistol (No Aoe)",
+    "SECONDARY",
+  ])
+
+  const names = (item: ExaltedFixture) =>
+    getArcaneSlotConfig(ARCANES, "exalted-weapons", 1, item).options[0]!.map(
+      (a) => a.name,
+    )
+
+  it("gives Lizzie (Temple's exalted primary) primary arcanes", () => {
+    expect(names(LIZZIE)).toEqual(["Primary Merciless"])
+  })
+
+  it("gives Neutralizer (an exalted sniper, not a bow) primary arcanes", () => {
+    expect(names(NEUTRALIZER)).toEqual(["Primary Merciless"])
+  })
+
+  it("adds Bow arcanes for the exalted bow only", () => {
+    expect(names(ARTEMIS_BOW)).toEqual([
+      "Primary Merciless",
+      "Longbow Sharpshot",
+    ])
+    expect(names(LIZZIE)).not.toContain("Longbow Sharpshot")
+  })
+
+  it("keeps shotgun and kitgun arcanes off every exalted gun", () => {
+    for (const item of [LIZZIE, NEUTRALIZER, ARTEMIS_BOW, REGULATORS]) {
+      expect(names(item)).not.toContain("Shotgun Vendetta")
+      expect(names(item)).not.toContain("Pax Bolt")
+      expect(names(item)).not.toContain("Residual Boils")
+    }
+  })
+
+  it("still routes trigger-bearing exalted pistols to secondary arcanes", () => {
+    expect(names(REGULATORS)).toEqual(["Cascadia Flare"])
   })
 })
 

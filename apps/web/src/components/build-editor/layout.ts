@@ -5,7 +5,6 @@ import {
   isKitgunWeapon,
   isSecondSlotArcane,
   isZawArcane,
-  type ArcaneSlotType,
 } from "@arsenyx/shared/warframe/arcanes"
 // Category-only slot facts live in shared (the api Overframe importer needs
 // them too). `getNormalSlotCount` is re-exported as-is; `hasExilusSlot` gets
@@ -56,16 +55,28 @@ function isZawComponent(displayClass: DetailItem["displayClass"]): boolean {
   return displayClass?.startsWith("Zaw ") ?? false
 }
 
-/** Resolve which arcane pool an exalted weapon draws from. Mirrors the
- * mod-pool logic in `getModsForItem`: bows take primary arcanes,
- * trigger-bearing weapons (Balefire/Regulators) take secondary, everything
- * else (Exalted Blade etc.) takes melee. */
+/** Resolve which arcane pool an exalted weapon draws from. Routes on the
+ * slot-wide mod pool the build pipeline stamps on every weapon (`PRIMARY` /
+ * `SECONDARY` / `MELEE` — see `addSlotWidePools` in scripts/build/merge-weapons.ts),
+ * so it always agrees with the mod pool the weapon actually mods from. An
+ * earlier name/trigger heuristic mis-routed the two exalted primaries that
+ * aren't bows: Lizzie (no trigger → melee) and Neutralizer (SEMI → secondary).
+ * Necramech exalted weapons (Archgun/Archmelee pools) have no arcane slot at
+ * all, so they never reach here. */
 function getExaltedArcaneSlot(
-  item: Pick<DetailItem, "name" | "trigger">,
-): ArcaneSlotType {
-  if (item.name?.toLowerCase().includes("bow")) return "primary"
-  if (item.trigger) return "secondary"
+  item: Pick<DetailItem, "modPools">,
+): "primary" | "secondary" | "melee" {
+  const pools = item.modPools ?? []
+  if (pools.includes("PRIMARY")) return "primary"
+  if (pools.includes("SECONDARY")) return "secondary"
   return "melee"
+}
+
+/** Melee arcanes minus Exodia. Only actual Zaw components can equip Exodia,
+ *  but the shared melee pool lumps them in, so ordinary melees and exalted
+ *  melees (never Zaws) have to filter them back out. */
+function meleeArcanesNoExodia(allArcanes: Arcane[]): Arcane[] {
+  return getArcanesForSlot(allArcanes, "melee").filter((a) => !isZawArcane(a))
 }
 
 /** Arcane slot count per category. Within `archwing`, only arch-guns
@@ -112,7 +123,7 @@ export function getArcaneSlotConfig(
   allArcanes: Arcane[],
   category: BrowseCategory,
   count: number,
-  item?: Pick<DetailItem, "name" | "trigger" | "displayClass" | "uniqueName">,
+  item?: Pick<DetailItem, "displayClass" | "uniqueName" | "modPools">,
 ): ArcaneSlotConfig {
   if (count === 0) return { options: [] }
   if (category === "archwing") {
@@ -126,26 +137,33 @@ export function getArcaneSlotConfig(
   }
   if (category === "exalted-weapons" && item) {
     const slot = getExaltedArcaneSlot(item)
-    const pool = getArcanesForSlot(allArcanes, slot)
-    // Exalted weapons are never Zaws, so Exodia (Zaw-only) arcanes never apply
-    // to an exalted-melee weapon's pool — strip them out.
+    if (slot === "melee") return { options: [meleeArcanesNoExodia(allArcanes)] }
+    // Gun exalteds go through the weapon-aware pool so the sub-type arcanes are
+    // gated the same way they are for ordinary guns: Artemis Bow (Bow mod pool)
+    // sees Longbow Sharpshot, Lizzie/Neutralizer (rifle/sniper) don't, and no
+    // exalted is a kitgun so Pax/Residual never show up. `displayClass` on an
+    // exalted is the literal "Exalted Weapon", so the Bow sub-type comes from
+    // the mod pools instead; no exalted is a shotgun.
+    const displayClass = item.modPools?.includes("Bow") ? "Bow" : undefined
     return {
-      options: [slot === "melee" ? pool.filter((a) => !isZawArcane(a)) : pool],
+      options: [
+        getArcanesForWeapon(allArcanes, slot, {
+          displayClass,
+          uniqueName: item.uniqueName,
+        }),
+      ],
     }
   }
   if (category === "melee" && item) {
-    const pool = getArcanesForSlot(allArcanes, "melee")
     if (isZawComponent(item.displayClass)) {
       const regular: Arcane[] = []
       const exodia: Arcane[] = []
-      for (const a of pool) {
+      for (const a of getArcanesForSlot(allArcanes, "melee")) {
         ;(isSecondSlotArcane(a, true) ? exodia : regular).push(a)
       }
       return { options: [regular, exodia], labels: ["Melee Arcane", "Exodia"] }
     }
-    // Ordinary melee (glaives, swords, etc.) can't equip Exodia (Zaw-only)
-    // arcanes — the shared melee pool lumps them in, so filter them back out.
-    return { options: [pool.filter((a) => !isZawArcane(a))] }
+    return { options: [meleeArcanesNoExodia(allArcanes)] }
   }
   // Kitguns get two arcane slots: the regular weapon-arcane slot plus a
   // dedicated Pax/Residual slot. Split the weapon-eligible pool so the
