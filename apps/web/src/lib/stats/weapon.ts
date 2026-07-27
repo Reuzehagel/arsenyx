@@ -293,16 +293,30 @@ function calcDamageBreakdown(
   if (baseDamage.puncture) makePhysical("puncture", baseDamage.puncture)
   if (baseDamage.slash) makePhysical("slash", baseDamage.slash)
 
-  // Innate base-element damage scales with base-damage mods (Serration etc.)
-  // and acts as the base for modded elementals on weapons with no physical
-  // damage (e.g. Balefire Charger's pure-electricity shots). Include it in
-  // totalModdedBase so elemental mod percentages have something to multiply.
-  let innateElementalBase = 0
+  // Split the weapon's innate elementals once — the three stages below (base
+  // sum, base-element combination, combined-element emission) each need a
+  // different slice and used to re-derive the classification themselves.
+  const innateBase: [DamageType, number][] = []
+  const innateCombined: [DamageType, number][] = []
   for (const [type, value] of Object.entries(baseDamage)) {
-    if (BASE_ELEMENTS.includes(type as DamageType) && value && value > 0) {
-      innateElementalBase += value
-    }
+    if (!value) continue
+    const t = type as DamageType
+    if (BASE_ELEMENTS.includes(t)) innateBase.push([t, value])
+    else if (COMBINED_ELEMENTS.includes(t)) innateCombined.push([t, value])
   }
+
+  // Innate elemental damage scales with base-damage mods (Serration etc.) and
+  // acts as the base for modded elementals on weapons with no physical damage
+  // (e.g. Balefire Charger's pure-electricity shots). Include it in
+  // totalModdedBase so elemental mod percentages have something to multiply.
+  // COMBINED elements count too: a mod's % is a share of the weapon's whole
+  // base damage, regardless of which types make it up — otherwise a
+  // pure-combined weapon (Nukor's 100% Radiation, Lizzie's Viral/Magnetic/
+  // Cold/Corrosive waves) has a zero base and every elemental mod adds nothing.
+  const innateElementalBase = [...innateBase, ...innateCombined].reduce(
+    (s, [, v]) => s + v,
+    0,
+  )
   const totalModdedBase =
     physical.reduce((s, e) => s + e.value, 0) + innateElementalBase * baseMult
 
@@ -336,17 +350,15 @@ function calcDamageBreakdown(
   // with whatever's left over. Encode as a percentage of totalModdedBase so
   // combineElements' shared `totalModdedBase * pct / 100` formula recovers
   // `value * baseMult`.
-  for (const [type, value] of Object.entries(baseDamage)) {
-    if (BASE_ELEMENTS.includes(type as DamageType) && value && value > 0) {
-      const pctEquivalent =
-        totalModdedBase > 0 ? ((value * baseMult) / totalModdedBase) * 100 : 0
-      elementalMods.push({
-        type: type as DamageType,
-        value: pctEquivalent,
-        sources: [{ name: "Innate", value: pctEquivalent }],
-        isInnate: true,
-      })
-    }
+  for (const [type, value] of innateBase) {
+    const pctEquivalent =
+      totalModdedBase > 0 ? ((value * baseMult) / totalModdedBase) * 100 : 0
+    elementalMods.push({
+      type,
+      value: pctEquivalent,
+      sources: [{ name: "Innate", value: pctEquivalent }],
+      isInnate: true,
+    })
   }
 
   const elemental = combineElements(
@@ -369,31 +381,59 @@ function calcDamageBreakdown(
     combinedByType.get(t)!.push({ name: s.sourceName, value: s.value })
   }
   for (const [type, sources] of combinedByType) {
-    elemental.push(
+    mergeElemental(
+      elemental,
       makeUncombinedEntry(type, sources, totalModdedBase, baseDamageContribs),
     )
   }
 
   // Innate combined elementals (e.g. innate Blast on some weapons).
-  for (const [type, value] of Object.entries(baseDamage)) {
-    if (COMBINED_ELEMENTS.includes(type as DamageType) && value && value > 0) {
-      const contribs: StatContribution[] = [...baseDamageContribs]
-      contribs.unshift({
-        name: "Innate",
-        amount: value,
-        operation: "flat_add",
-        group: DAMAGE_TYPE_LABELS[type as DamageType],
-      })
-      elemental.push({
-        type: type as DamageType,
-        value: round1(value * baseMult),
-        base: value,
-        contributions: contribs,
-      })
-    }
+  for (const [type, value] of innateCombined) {
+    const contribs: StatContribution[] = [...baseDamageContribs]
+    contribs.unshift({
+      name: "Innate",
+      amount: value,
+      operation: "flat_add",
+      group: DAMAGE_TYPE_LABELS[type],
+    })
+    mergeElemental(elemental, {
+      type,
+      value: round1(value * baseMult),
+      base: value,
+      contributions: contribs,
+    })
   }
 
   return { physical, elemental }
+}
+
+/** Append a combined-element entry, folding it into an existing entry of the
+ *  same type instead of emitting a second row for it. A damage type is a
+ *  single number in-game, but three independent sources can produce the same
+ *  combined element: mod elements pairing up (Cold + Toxin → Viral), a Riven
+ *  rolling the combined type directly, and the weapon's innate damage. Without
+ *  this, Lizzie's Viral Wave modded with Cryo Rounds + Infected Clip renders
+ *  "Viral 180" and "Viral 100" as two separate rows. */
+function mergeElemental(elemental: DamageEntry[], entry: DamageEntry): void {
+  const existing = elemental.find((e) => e.type === entry.type)
+  if (!existing) {
+    elemental.push(entry)
+    return
+  }
+  existing.value = round1(existing.value + entry.value)
+  existing.base = round1(existing.base + entry.base)
+  // Both entries start from a copy of the base-damage contributors, so a naive
+  // concat lists Serration twice in the row's tooltip. Same dedupe key as
+  // `totalDamageFromBreakdown`.
+  const seen = new Set(
+    existing.contributions.map(
+      (c) => `${c.group ?? ""}|${c.name}|${c.operation}`,
+    ),
+  )
+  for (const c of entry.contributions) {
+    if (seen.has(`${c.group ?? ""}|${c.name}|${c.operation}`)) continue
+    existing.contributions.push(c)
+  }
 }
 
 function physicalMult(

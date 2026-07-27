@@ -11,6 +11,21 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-07-27",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Lizzie (Temple's exalted primary) offers Primary arcanes instead of melee ones, and Neutralizer stops offering Secondary arcanes. The arcane pool for exalted weapons used to be guessed from the weapon's name and trigger; it now follows the same slot the weapon mods from. Artemis Bow still gets Longbow Sharpshot, and no exalted gun sees shotgun or kitgun arcanes any more.",
+      },
+      {
+        type: "fix",
+        description:
+          "Elemental mods now do something on weapons whose only base damage is a combined element — Lizzie's Viral/Magnetic/Cold/Corrosive waves, the Nukor's pure Radiation. Their base counted as zero, so every elemental mod added exactly nothing to the total.",
+      },
+    ],
+  },
+  {
     date: "2026-07-17",
     changes: [
       {
