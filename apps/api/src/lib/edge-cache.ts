@@ -2,9 +2,15 @@ import type { Context, MiddlewareHandler } from "hono"
 
 // Best-effort edge caching for anonymous public reads, using the Cloudflare
 // Cache API (`caches.default`). Every cache HIT is a request that never touches
-// Postgres (nor Hyperdrive), so this directly cuts query volume against the
-// Hyperdrive Free-plan daily query cap — the dominant lever now that anonymous
-// reads (site browsing + Discord/embed traffic) make up most of the load.
+// Postgres (nor Hyperdrive).
+//
+// This originally existed to stay under the Hyperdrive Free-plan daily query
+// cap. That cap no longer applies (Workers Paid bills no Hyperdrive queries),
+// so the reasons to keep it are now: (a) PlanetScale compute — Hyperdrive is
+// just the pool, every miss is still a real Postgres query; (b) latency — a
+// colo hit skips the DB round-trip for anonymous browsing and Discord/embed
+// traffic, which is most of the load. Both are quality/cost wins rather than a
+// hard ceiling, so TTLs here can be tuned down freely if freshness matters more.
 //
 // Correctness invariant — we ONLY cache responses for requests with no session
 // cookie. Authenticated detail/list responses are personalized (isOwner /
