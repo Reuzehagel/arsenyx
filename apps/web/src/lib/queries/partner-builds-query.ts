@@ -81,17 +81,18 @@ export function useLinkPartner(ownerSlug: string) {
     onError: (_e, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(["build", ownerSlug, "partners"], ctx.prev)
     },
-    // No onSettled invalidate: Hyperdrive serves ~60s-stale reads after a
-    // write, so an immediate refetch returns the pre-write list and wipes the
-    // optimistic entry. The optimistic cache IS the confirmed state (rolled
-    // back in onError). Same applies to reorder/unlink below.
+    // Reconcile against the server once the write settles, so the optimistic
+    // entry is corrected if the server normalized anything (ordering, computed
+    // fields) rather than being trusted as final. Same for the three partner
+    // mutations below.
     //
-    // That staleness is a *setting* — Hyperdrive query caching defaults to on
-    // (max_age 60s, swr 15s) and is disabled per-config via `wrangler hyperdrive
-    // update <id> --caching-disabled` (see apps/api/wrangler.toml). Once it's
-    // off, restoring the onSettled invalidate here is worth doing: it makes
-    // these mutations self-correcting if the server ever normalizes the list
-    // (ordering, computed fields), which optimistic-cache-as-truth can't.
+    // These invalidates were previously omitted: Hyperdrive served pre-write
+    // reads for ~60s, so an eager refetch returned the stale list and wiped the
+    // optimistic entry. Query caching is now disabled on the Hyperdrive config
+    // (see apps/api/wrangler.toml), so the refetch reads through.
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["build", ownerSlug, "partners"] })
+    },
   })
 }
 
@@ -122,6 +123,9 @@ export function useReorderPartners(ownerSlug: string) {
     },
     onError: (_e, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(key, ctx.prev)
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: key })
     },
   })
 }
@@ -161,9 +165,9 @@ export function useSetPartnerVariant(ownerSlug: string) {
     onError: (_e, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(key, ctx.prev)
     },
-    // No onSettled invalidate — same Hyperdrive-staleness reasoning as
-    // useLinkPartner above (including the note that it's a config setting, not
-    // a fixed property): the optimistic cache is the confirmed state.
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: key })
+    },
   })
 }
 
@@ -192,6 +196,9 @@ export function useUnlinkPartner(ownerSlug: string) {
     },
     onError: (_e, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(["build", ownerSlug, "partners"], ctx.prev)
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["build", ownerSlug, "partners"] })
     },
   })
 }

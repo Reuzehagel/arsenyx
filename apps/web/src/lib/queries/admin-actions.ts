@@ -257,18 +257,14 @@ export function useAdminSetOrgVerified() {
         qc.setQueryData(key, data)
       }
     },
-    // Deliberately NO immediate refetch of the admin list: API reads go
-    // through Hyperdrive, whose query cache can serve a pre-write SELECT for
-    // ~a minute — an eager refetch stomps the optimistic flip with stale data
-    // and the toggle visibly reverts. The PATCH response is authoritative, so
-    // confirm the cache from it instead.
+    // Confirm the admin list from the PATCH response rather than refetching:
+    // the mutation response is authoritative, so a refetch would just spend a
+    // round trip (and a flicker) to learn what we were already told.
     //
-    // NOTE: that staleness is a *setting*, not a fact of Hyperdrive — query
-    // caching defaults to on (max_age 60s, swr 15s) and is disabled per-config
-    // via `wrangler hyperdrive update <id> --caching-disabled` (see
-    // apps/api/wrangler.toml). Confirming from the mutation response is the
-    // better pattern either way, so this part stays; the `refetchType: "none"`
-    // below is what's purely load-bearing on the setting.
+    // This originally also worked around Hyperdrive serving pre-write reads for
+    // ~60s. That's now disabled on the Hyperdrive config (see
+    // apps/api/wrangler.toml), but confirming from the response is the better
+    // pattern regardless, so it stays.
     onSuccess: (data, input) => {
       qc.setQueriesData<AdminOrgsResponse>(
         { queryKey: ["admin", "orgs"] },
@@ -282,24 +278,15 @@ export function useAdminSetOrgVerified() {
               }
             : old,
       )
-      // Verified drives the purple-vs-muted org rendering on the org page,
-      // the directory, and build cards — mark them stale so they refetch on
-      // next visit (by which point the Hyperdrive cache has usually turned
-      // over). refetchType "none" avoids an instant stale-read refetch for
-      // anything currently mounted.
-      //
-      // REMOVABLE once Hyperdrive query caching is disabled (see the note on
-      // onSuccess above): with no stale window there's nothing to avoid, and a
-      // plain invalidate would also refresh any of these that happen to be
-      // mounted. Low urgency — admin lives on its own route, so these three are
-      // rarely mounted when the toggle fires — but it's dead weight after that.
-      const opts = { refetchType: "none" as const }
-      qc.invalidateQueries({
-        queryKey: ["org", input.slug.toLowerCase()],
-        ...opts,
-      })
-      qc.invalidateQueries({ queryKey: ["orgs"], ...opts })
-      qc.invalidateQueries({ queryKey: ["builds"], ...opts })
+      // Verified drives the purple-vs-muted org rendering on the org page, the
+      // directory, and build cards — refresh them all. These carried
+      // refetchType "none" while Hyperdrive's query cache could serve a
+      // pre-write row into an eager refetch; with caching disabled there's no
+      // stale window to dodge, so a plain invalidate is correct and also
+      // updates any of these that happen to be mounted.
+      qc.invalidateQueries({ queryKey: ["org", input.slug.toLowerCase()] })
+      qc.invalidateQueries({ queryKey: ["orgs"] })
+      qc.invalidateQueries({ queryKey: ["builds"] })
     },
   })
 }
