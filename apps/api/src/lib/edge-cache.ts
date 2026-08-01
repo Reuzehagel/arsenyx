@@ -2,9 +2,15 @@ import type { Context, MiddlewareHandler } from "hono"
 
 // Best-effort edge caching for anonymous public reads, using the Cloudflare
 // Cache API (`caches.default`). Every cache HIT is a request that never touches
-// Postgres (nor Hyperdrive), so this directly cuts query volume against the
-// Hyperdrive Free-plan daily query cap — the dominant lever now that anonymous
-// reads (site browsing + Discord/embed traffic) make up most of the load.
+// Postgres (nor Hyperdrive).
+//
+// This originally existed to stay under the Hyperdrive Free-plan daily query
+// cap. That cap no longer applies (Workers Paid bills no Hyperdrive queries),
+// so the reasons to keep it are now: (a) PlanetScale compute — Hyperdrive is
+// just the pool, every miss is still a real Postgres query; (b) latency — a
+// colo hit skips the DB round-trip for anonymous browsing and Discord/embed
+// traffic, which is most of the load. Both are quality/cost wins rather than a
+// hard ceiling, so TTLs here can be tuned down freely if freshness matters more.
 //
 // Correctness invariant — we ONLY cache responses for requests with no session
 // cookie. Authenticated detail/list responses are personalized (isOwner /
@@ -104,11 +110,11 @@ export function edgeCache(opts: { maxAge: number }): MiddlewareHandler {
 // always see their own writes immediately regardless of this.
 //
 // Scope note: callers purge the build DETAIL path only. The `GET /builds` LIST
-// (and the `/:slug/partners` strip) are also edge-cached (maxAge 60s) but are
+// (and the `/:slug/partners` strip) are also edge-cached (maxAge 10s) but are
 // NOT purged here — their entries are keyed by every filter/sort/page param
 // combination, and the Cache API has no wildcard delete, so there's no
 // tractable key to evict. Consequence: when a build flips PUBLIC->PRIVATE or is
-// deleted, its title/summary can linger in cached listings for up to that 60s
+// deleted, its title/summary can linger in cached listings for up to that 10s
 // TTL. Accepted as a bounded, best-effort window (the detail payload — the
 // sensitive surface — is purged precisely).
 export function purgeEdge(c: Context, path: string): void {

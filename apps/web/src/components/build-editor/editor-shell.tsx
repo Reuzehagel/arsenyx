@@ -1022,6 +1022,14 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
         json: body,
       })
       await queryClient.invalidateQueries({ queryKey: ["build", slug] })
+      // Every list that can surface this build — browse (`["builds","public"]`),
+      // my builds, bookmarks, profile — is keyed under the `["builds"]` prefix
+      // and inherits the default 30s staleTime. Without this, saving a rename
+      // (or a new thumbnail / visibility flip) then navigating back to a list
+      // shows the OLD row until that staleTime lapses, which reads to users as
+      // "my edit didn't save". Matches the delete/visibility paths in
+      // lib/queries/build-actions.ts, which already invalidate the prefix.
+      await queryClient.invalidateQueries({ queryKey: ["builds"] })
       // Drop the in-memory variants cache so a follow-up edit re-hydrates
       // from the persisted server state rather than stale local edits, and
       // clear the autosaved draft — the saved state is now the source of truth.

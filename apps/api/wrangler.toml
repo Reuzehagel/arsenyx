@@ -49,6 +49,22 @@ simple = { limit = 120, period = 60 }
 # rotation) with:
 #   bunx wrangler hyperdrive update c99d68f482634c9b944449a03bc6b13d \
 #     --connection-string="postgresql://USER:PASS@HOST:5432/postgres?sslmode=verify-full"
+#
+# QUERY CACHING IS DISABLED on this config, and must stay that way (applied
+# 2026-08-01; `"caching": { "disabled": true }`). To reapply after a recreate:
+#   bunx wrangler hyperdrive update c99d68f482634c9b944449a03bc6b13d --caching-disabled
+# Hyperdrive caches read queries by DEFAULT (max_age 60s, swr 15s) and — per
+# Cloudflare's docs — "does not invalidate cached read query results when your
+# application writes to your database". That layer sits below all app logic, so
+# it ignored the session-cookie bypass in src/lib/edge-cache.ts: a logged-in
+# owner who saved a build then reloaded got served the pre-write row for up to
+# 60s. That was a live bug for ~2 months; it presents as "my edit didn't save",
+# and it was worked around three times in the client before being fixed here.
+# We cache at the app layer instead (edge-cache.ts) — session-aware and purged
+# on write, which Hyperdrive's cache is not. This setting lives in Cloudflare's
+# control plane, NOT in this file, so no deploy carries it and it is invisible
+# in code review — verify with `bunx wrangler hyperdrive get <id>` after any
+# recreate, since a fresh config re-enables caching by default.
 [[hyperdrive]]
 binding = "HYPERDRIVE"
 id = "c99d68f482634c9b944449a03bc6b13d"
