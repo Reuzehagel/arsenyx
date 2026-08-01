@@ -85,6 +85,13 @@ export function useLinkPartner(ownerSlug: string) {
     // write, so an immediate refetch returns the pre-write list and wipes the
     // optimistic entry. The optimistic cache IS the confirmed state (rolled
     // back in onError). Same applies to reorder/unlink below.
+    //
+    // That staleness is a *setting* — Hyperdrive query caching defaults to on
+    // (max_age 60s, swr 15s) and is disabled per-config via `wrangler hyperdrive
+    // update <id> --caching-disabled` (see apps/api/wrangler.toml). Once it's
+    // off, restoring the onSettled invalidate here is worth doing: it makes
+    // these mutations self-correcting if the server ever normalizes the list
+    // (ordering, computed fields), which optimistic-cache-as-truth can't.
   })
 }
 
@@ -155,7 +162,8 @@ export function useSetPartnerVariant(ownerSlug: string) {
       if (ctx?.prev) qc.setQueryData(key, ctx.prev)
     },
     // No onSettled invalidate — same Hyperdrive-staleness reasoning as
-    // useLinkPartner above: the optimistic cache is the confirmed state.
+    // useLinkPartner above (including the note that it's a config setting, not
+    // a fixed property): the optimistic cache is the confirmed state.
   })
 }
 

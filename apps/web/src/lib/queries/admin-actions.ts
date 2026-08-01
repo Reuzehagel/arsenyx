@@ -262,6 +262,13 @@ export function useAdminSetOrgVerified() {
     // ~a minute — an eager refetch stomps the optimistic flip with stale data
     // and the toggle visibly reverts. The PATCH response is authoritative, so
     // confirm the cache from it instead.
+    //
+    // NOTE: that staleness is a *setting*, not a fact of Hyperdrive — query
+    // caching defaults to on (max_age 60s, swr 15s) and is disabled per-config
+    // via `wrangler hyperdrive update <id> --caching-disabled` (see
+    // apps/api/wrangler.toml). Confirming from the mutation response is the
+    // better pattern either way, so this part stays; the `refetchType: "none"`
+    // below is what's purely load-bearing on the setting.
     onSuccess: (data, input) => {
       qc.setQueriesData<AdminOrgsResponse>(
         { queryKey: ["admin", "orgs"] },
@@ -280,6 +287,12 @@ export function useAdminSetOrgVerified() {
       // next visit (by which point the Hyperdrive cache has usually turned
       // over). refetchType "none" avoids an instant stale-read refetch for
       // anything currently mounted.
+      //
+      // REMOVABLE once Hyperdrive query caching is disabled (see the note on
+      // onSuccess above): with no stale window there's nothing to avoid, and a
+      // plain invalidate would also refresh any of these that happen to be
+      // mounted. Low urgency — admin lives on its own route, so these three are
+      // rarely mounted when the toggle fires — but it's dead weight after that.
       const opts = { refetchType: "none" as const }
       qc.invalidateQueries({
         queryKey: ["org", input.slug.toLowerCase()],
