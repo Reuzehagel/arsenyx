@@ -138,7 +138,11 @@ type BuildSummary = {
 }
 
 export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionCtx): Promise<Response> {
+  async fetch(
+    request: Request,
+    env: Env,
+    ctx: ExecutionCtx,
+  ): Promise<Response> {
     const url = new URL(request.url)
 
     if (request.method !== "GET") return env.ASSETS.fetch(request)
@@ -428,7 +432,9 @@ async function fetchItem(
   category: string,
   slug: string,
 ): Promise<
-  { name: string; description?: string; imageName?: string } | "not-found" | null
+  | { name: string; description?: string; imageName?: string }
+  | "not-found"
+  | null
 > {
   try {
     const req = new Request(
@@ -652,7 +658,9 @@ type Meta = {
 // they must agree (see the og:type note in seo.ts) since duplicate-but-
 // conflicting tags are resolved unpredictably.
 function rewriteMeta(res: Response, meta: Meta): Response {
-  const title = escapeAttr(meta.title ?? `${SITE_NAME} — Warframe Build Planner`)
+  const title = escapeAttr(
+    meta.title ?? `${SITE_NAME} — Warframe Build Planner`,
+  )
   const desc = escapeAttr(meta.description ?? DEFAULT_DESCRIPTION)
   const parts: string[] = [
     `<title>${title}</title>`,
