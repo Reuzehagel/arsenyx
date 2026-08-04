@@ -19,10 +19,10 @@
     "data:stamp": "bun run scripts/stamp-data.ts",
     "typecheck": "bun run --filter '*' typecheck && bun run typecheck:scripts",
     "typecheck:scripts": "bunx tsc --noEmit -p scripts/tsconfig.json",
-    "lint": "oxlint apps/web/src apps/api/src packages/shared/src scripts data/curated",
-    "lint:fix": "oxlint --fix apps/web/src apps/api/src packages/shared/src scripts data/curated",
-    "fmt": "oxfmt --write apps/web/src apps/api/src packages/shared/src scripts data/curated '!**/generated/**' '!**/*.gen.ts' '!**/components/ui/**' '!data/curated/*.json' '!data/curated/*.md'",
-    "fmt:check": "oxfmt --check apps/web/src apps/api/src packages/shared/src scripts data/curated '!**/generated/**' '!**/*.gen.ts' '!**/components/ui/**' '!data/curated/*.json' '!data/curated/*.md'"
+    "lint": "oxlint apps/web/src apps/web/worker apps/api/src packages/shared/src scripts data/curated",
+    "lint:fix": "oxlint --fix apps/web/src apps/web/worker apps/api/src packages/shared/src scripts data/curated",
+    "fmt": "oxfmt --write apps/web/src apps/web/worker apps/api/src packages/shared/src scripts data/curated '!**/generated/**' '!**/*.gen.ts' '!**/components/ui/**' '!data/curated/*.json' '!data/curated/*.md'",
+    "fmt:check": "oxfmt --check apps/web/src apps/web/worker apps/api/src packages/shared/src scripts data/curated '!**/generated/**' '!**/*.gen.ts' '!**/components/ui/**' '!data/curated/*.json' '!data/curated/*.md'"
   },
   "dependencies": {
     "@arsenyx/shared": "workspace:*",
