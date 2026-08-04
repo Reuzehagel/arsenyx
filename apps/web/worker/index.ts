@@ -574,7 +574,35 @@ function cacheStore(
 // Compact `uniqueName → current imageName` map emitted by
 // scripts/build-items-index.ts and served from Static Assets. Fetched through
 // the ASSETS binding only on the build-page path.
-async function fetchImageMap(
+// Memoized for the isolate's lifetime. The map is ~290 KB and `buildMeta` reads
+// exactly ONE key out of it, so parsing it per cache-miss was the largest pure-
+// CPU cost on the build-page path (JSON.parse has no I/O wait to hide behind).
+// An isolate serves many requests, so this turns N parses into 1.
+//
+// Staleness is a non-issue: the map is emitted at build time by
+// scripts/build-items-index.ts and a deploy starts fresh isolates, so a
+// regenerated map can never be older than the deploy that shipped it.
+//
+// We memoize the PROMISE, not the value, so concurrent cache-miss requests in
+// the same isolate share one fetch+parse instead of racing several. A failed
+// load clears the slot so the next request retries — caching the null would pin
+// missing OG images for the isolate's whole life over one transient blip.
+let imageMapCache: Promise<Record<string, string> | null> | null = null
+
+function fetchImageMap(
+  env: Env,
+  base: URL,
+): Promise<Record<string, string> | null> {
+  imageMapCache ??= loadImageMap(env, base).then((map) => {
+    if (!map) imageMapCache = null
+    return map
+  })
+  return imageMapCache
+}
+
+// Never rejects — resolves to null on any failure, which is why fetchImageMap
+// can chain with a bare .then and callers can leave it unawaited.
+async function loadImageMap(
   env: Env,
   base: URL,
 ): Promise<Record<string, string> | null> {

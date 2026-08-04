@@ -35,6 +35,32 @@ bun --cwd apps/api run db:studio   # Prisma Studio GUI
 bun --cwd apps/api run db:generate # regenerate Prisma client
 ```
 
+Destructive/manual migrations live in `apps/api/scripts/migrations/` as dated
+`.sql` files, applied with `prisma db execute --file`.
+
+[apps/api/scripts/dump-search-schema.sql](../apps/api/scripts/dump-search-schema.sql)
+dumps the full-text-search objects (the `searchVector` column, its GIN index, and
+whichever mechanism populates it) that exist **only in the live database** — see
+the full-text-search note in [apps/api/CLAUDE.md](../apps/api/CLAUDE.md).
+Read-only; run it in PlanetScale's SQL console (needs no local `psql` or
+`DATABASE_URL`). Use it to capture those definitions as a migration, and
+afterwards to verify the migration still matches production.
+
+## Cloudflare Workers usage
+
+Per-Worker CPU and request breakdown, to tell a per-request regression (rising
+`CpuP50ms`) from plain traffic growth (flat `CpuP50ms`, rising `Requests`):
+
+```powershell
+$env:CF_ANALYTICS_TOKEN = "<token with Account -> Account Analytics -> Read>"
+./scripts/cf-worker-stats.ps1 -AccountId <account-id> -Days 30 -Daily
+```
+
+Notes: the env var is deliberately **not** `CF_API_TOKEN`/`CLOUDFLARE_API_TOKEN`
+— wrangler reads both, and an analytics-only token parked there breaks every
+`wrangler` command. `EstCpuMs` is `requests × P50`, so with a high `TailRatio` it
+is a floor, not a mean — the dashboard remains authoritative for billing.
+
 ## Data pipeline
 
 Sources (no npm dep): DE PublicExport JSON blobs (`data/raw/de/`) +

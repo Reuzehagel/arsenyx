@@ -46,6 +46,36 @@ const MAX_DESCRIPTION = 2000
 const MAX_GUIDE_SUMMARY = 400
 const MAX_GUIDE_DESCRIPTION = 50_000
 
+// Edge-cache TTLs for the anonymous public reads (see lib/edge-cache.ts).
+//
+// These were 10s, which at current traffic meant a near-zero hit rate: ~0.4
+// req/s spread across colos is roughly one request per colo per 50s, so a 10s
+// window almost never caught a second hit. Every miss reaches a handler that
+// touches `prisma.*`, and that constructs a fresh PrismaClient — instantiating
+// the 3.6 MB WASM query compiler — per request (see db.ts). Cache hits return
+// before any of that, so TTL is the main lever on API CPU.
+//
+// DETAIL is the safe one to raise: purgeEdge() evicts all three of its variants
+// on write, and authenticated editors bypass the cache entirely, so owners
+// always see their own writes. The residual staleness is that purges are
+// colo-local — other colos serve stale for up to the TTL.
+//
+// Second, less obvious cost: a cache HIT never runs the handler, so it never
+// runs maybeIncrementView. Raising this therefore undercounts views by roughly
+// the hit rate. Judged acceptable because views are already deduped per browser
+// via the `vw_<slug>` cookie, so the metric was never a raw impression count —
+// but if viewCount fidelity ever matters more than CPU, this is the dial.
+const DETAIL_TTL = 120
+
+// For the list-shaped responses — GET /builds and GET /:slug/partners, both
+// projected through LIST_SELECT. The binding constraint is that NEITHER is
+// purged on write: their keys include every filter/sort/page combination and the
+// Cache API has no wildcard delete, so a PUBLIC->PRIVATE flip or a delete can
+// linger for the whole TTL with no way to evict it early. That is why this stays
+// well under DETAIL_TTL — for these routes the TTL is the *only* bound on
+// staleness, whereas detail also has purgeEdge.
+const LIST_TTL = 30
+
 // Exported so the admin visibility PATCH (admin.ts) validates against the same
 // guard rather than keeping a divergent copy — visibility logic stays centralised
 // here per apps/api/CLAUDE.md.
@@ -442,7 +472,7 @@ builds.post("/:slug/fork", rateLimitUser("mutate"), async (c) => {
   return c.json({ error: "slug_collision" }, 500)
 })
 
-builds.get("/", edgeCache({ maxAge: 10 }), async (c) => {
+builds.get("/", edgeCache({ maxAge: LIST_TTL }), async (c) => {
   const result = await runList({
     filters: parseListQuery(c),
     ...publicScope(),
@@ -612,7 +642,7 @@ function asVariantMap(value: Prisma.JsonValue): Record<string, number> {
 // can linger in an anon cache entry for up to maxAge — the partner mutations
 // don't purge this path (no tractable per-key eviction). Bounded and low-risk:
 // the strip only shows a title/thumbnail, never the loadout.
-builds.get("/:slug/partners", edgeCache({ maxAge: 10 }), async (c) => {
+builds.get("/:slug/partners", edgeCache({ maxAge: LIST_TTL }), async (c) => {
   const slug = c.req.param("slug")
   const session = await getSession(c)
   const viewerId = session?.user.id
@@ -1044,7 +1074,7 @@ builds.delete("/:slug/bookmark", rateLimitUser("social"), async (c) => {
   return c.json({ hasBookmarked: false, bookmarkCount })
 })
 
-builds.get("/:slug", edgeCache({ maxAge: 10 }), async (c) => {
+builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
   const slug = c.req.param("slug")
 
   // Fast path for the link-unfurl Worker (apps/web/worker/index.ts): skip the
