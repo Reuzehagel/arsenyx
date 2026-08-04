@@ -26,7 +26,7 @@ Game data is static, user data is dynamic. If something is read-heavy and rarely
 **Always**
 
 - `bun run typecheck` (web + api + shared) before claiming done — `vite build` and dev servers don't typecheck, so web/shared type errors hide otherwise
-- `just check` (typecheck + oxlint + oxfmt) touched files before committing; `just fix` auto-applies lint + format
+- `just check` (typecheck + oxlint + oxfmt) before committing; `just fix` auto-applies lint + format. Both are repo-wide and take no file arguments — the globs in [package.json](package.json) cover `apps/web/src`, `apps/web/worker`, `apps/api/src`, `packages/shared/src`, `scripts`, and `data/curated`.
 - Use `uv run python` instead of `python`/`python3`
 
 **Ask first**
