@@ -8,7 +8,7 @@ import { isValidCategory } from "@arsenyx/shared/warframe/categories"
 
 import { prisma } from "../db"
 import { Prisma } from "../generated/prisma/client"
-import { parsePage, trimQ } from "./_query"
+import { parseBool, parsePage, trimQ } from "./_query"
 
 export const LIST_SELECT = {
   id: true,
@@ -144,8 +144,10 @@ export type ListFilters = {
   q: string | undefined
   category: string | undefined
   item: string | undefined
-  hasGuide: boolean
-  hasShards: boolean
+  // Tri-state: true = only builds with it, false = only builds without it,
+  // undefined = no filter. See parseBool in _query.ts.
+  hasGuide: boolean | undefined
+  hasShards: boolean | undefined
 }
 
 export function parseListQuery(c: {
@@ -167,8 +169,8 @@ export function parseListQuery(c: {
     Number.isFinite(limitRaw) && limitRaw > 0
       ? Math.min(limitRaw, LIST_LIMIT)
       : LIST_LIMIT
-  const hasGuide = c.req.query("hasGuide") === "1"
-  const hasShards = c.req.query("hasShards") === "1"
+  const hasGuide = parseBool(c.req.query("hasGuide"))
+  const hasShards = parseBool(c.req.query("hasShards"))
   return { page, limit, sort, q, category, item, hasGuide, hasShards }
 }
 
@@ -250,14 +252,16 @@ const TRENDING_JOIN = Prisma.sql`
 function listFiltersSql(f: {
   category: string | undefined
   item: string | undefined
-  hasGuide: boolean
-  hasShards: boolean
+  hasGuide: boolean | undefined
+  hasShards: boolean | undefined
 }) {
+  // The boolean clauses branch on `!== undefined`, not truthiness — `false` is
+  // a real filter ("only builds WITHOUT a guide"), not an absent one.
   return Prisma.sql`
     ${f.category ? Prisma.sql`AND "itemCategory" = ${f.category}` : Prisma.empty}
     ${f.item ? Prisma.sql`AND "itemUniqueName" = ${f.item}` : Prisma.empty}
-    ${f.hasGuide ? Prisma.sql`AND "hasGuide" = true` : Prisma.empty}
-    ${f.hasShards ? Prisma.sql`AND "hasShards" = true` : Prisma.empty}
+    ${f.hasGuide !== undefined ? Prisma.sql`AND "hasGuide" = ${f.hasGuide}` : Prisma.empty}
+    ${f.hasShards !== undefined ? Prisma.sql`AND "hasShards" = ${f.hasShards}` : Prisma.empty}
   `
 }
 
@@ -265,8 +269,8 @@ async function searchBuildIds(params: {
   q: string
   category: string | undefined
   item: string | undefined
-  hasGuide: boolean
-  hasShards: boolean
+  hasGuide: boolean | undefined
+  hasShards: boolean | undefined
   baseFilter: Prisma.Sql
   sort: ListSort
   skip: number
@@ -338,8 +342,8 @@ async function trendingBuildIds(params: {
   baseFilter: Prisma.Sql
   category: string | undefined
   item: string | undefined
-  hasGuide: boolean
-  hasShards: boolean
+  hasGuide: boolean | undefined
+  hasShards: boolean | undefined
   skip: number
   take: number
 }): Promise<string[]> {
@@ -401,8 +405,10 @@ export async function runList({
   const where: Record<string, unknown> = { ...baseWhere }
   if (category) where.itemCategory = category
   if (item) where.itemUniqueName = item
-  if (hasGuide) where.hasGuide = true
-  if (hasShards) where.hasShards = true
+  // `!== undefined`, not truthiness — `false` filters to builds WITHOUT the
+  // flag rather than meaning "no filter". Keep in sync with listFiltersSql.
+  if (hasGuide !== undefined) where.hasGuide = hasGuide
+  if (hasShards !== undefined) where.hasShards = hasShards
 
   if (q) {
     const { ids, total } = await searchBuildIds({

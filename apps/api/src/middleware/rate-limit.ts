@@ -99,7 +99,7 @@ export function rateLimitUser(
 // session lookup) that's pointless when the limiter is absent.
 export async function enforceAnonEdgeLimit(
   c: Context,
-  bindingName: "ANON_SEARCH_LIMITER" | "ANON_READ_LIMITER",
+  bindingName: "ANON_SEARCH_LIMITER" | "ANON_READ_LIMITER" | "AUTH_LIMITER",
   missingMessage: string,
   keyFn: () => string | Promise<string>,
 ): Promise<Response | null> {
@@ -144,6 +144,31 @@ export function rateLimitAnonRead(): MiddlewareHandler {
           ? `u:${session.user.id}`
           : `ip:${c.req.header("cf-connecting-ip") ?? "unknown"}`
       },
+    )
+    if (blocked) return blocked
+
+    await next()
+  }
+}
+
+// Edge-side throttle for the Better Auth surface (/auth/*). Better Auth ships
+// its own limiter and it's active in production — advanced.ipAddress points it
+// at `cf-connecting-ip` so it can actually identify callers (see auth.ts) — but
+// its default storage is in-memory. On Workers that's one counter per isolate,
+// so the real ceiling scales with however many isolates Cloudflare spins up.
+// This binding is enforced centrally and is what actually holds under load.
+//
+// Unlike rateLimitAnonRead this covers ALL methods: the sensitive endpoints
+// here are POSTs (sign-in, sign-out, update-user) and the OAuth callback, which
+// writes to Postgres. Keyed by IP only — resolving a session first would be
+// circular on the very endpoints that establish one, and pointless on the rest.
+export function rateLimitAuth(): MiddlewareHandler {
+  return async (c, next) => {
+    const blocked = await enforceAnonEdgeLimit(
+      c,
+      "AUTH_LIMITER",
+      "rate-limit: AUTH_LIMITER binding missing in production",
+      () => `ip:${c.req.header("cf-connecting-ip") ?? "unknown"}`,
     )
     if (blocked) return blocked
 

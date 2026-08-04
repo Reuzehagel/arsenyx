@@ -1,8 +1,14 @@
 import { Hono } from "hono"
 import { setCookie } from "hono/cookie"
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { edgeCache, purgeEdge } from "./edge-cache"
+
+// edgeCache decides anon-vs-authenticated by RESOLVING the session, not by
+// sniffing the Cookie header — so these tests drive that resolution directly.
+// Stubbing it also keeps the suite off the real Better Auth/Prisma path.
+const getSessionMock = vi.hoisted(() => vi.fn())
+vi.mock("./session", () => ({ getSession: getSessionMock }))
 
 // Map-backed stand-in for `caches.default`. The real Cloudflare Cache API isn't
 // present under vitest's node environment, so without this the middleware's
@@ -31,6 +37,9 @@ let fake: FakeCache
 beforeEach(() => {
   fake = new FakeCache()
   ;(globalThis as unknown as { caches: unknown }).caches = { default: fake }
+  // Default: no valid session (anonymous), whatever cookies are present.
+  getSessionMock.mockReset()
+  getSessionMock.mockResolvedValue(null)
 })
 
 afterEach(() => {
@@ -60,6 +69,11 @@ async function run(
 const AUTHED = { headers: { Cookie: "better-auth.session_token=abc" } }
 const BASE = "http://api.test/builds/x/partners"
 
+// Mark the cookie in AUTHED as belonging to a real, signed-in user.
+function withValidSession() {
+  getSessionMock.mockResolvedValue({ user: { id: "u1" } })
+}
+
 describe("edgeCache", () => {
   it("serves a second anonymous request from cache without re-running the handler", async () => {
     let calls = 0
@@ -78,7 +92,8 @@ describe("edgeCache", () => {
     expect(await second.json()).toEqual({ n: 1 })
   })
 
-  it("bypasses the cache entirely for requests carrying a session cookie", async () => {
+  it("bypasses the cache entirely for requests with a valid session", async () => {
+    withValidSession()
     let calls = 0
     const app = new Hono()
     app.get("*", edgeCache({ maxAge: 300 }), (c) => {
@@ -101,11 +116,50 @@ describe("edgeCache", () => {
       return c.json({ who: calls === 1 ? "anon" : "authed" })
     })
 
-    await run(app, BASE) // anon populates the cache
+    await run(app, BASE) // anon (no Cookie header) populates the cache
+    withValidSession()
     const authed = await run(app, BASE, AUTHED)
     // The authed request runs the handler instead of replaying the anon body.
     expect(calls).toBe(2)
     expect(await authed.json()).toEqual({ who: "authed" })
+  })
+
+  it("treats a forged session cookie as anonymous and still serves from cache", async () => {
+    // Regression guard. The old implementation decided this by substring-
+    // matching the raw Cookie header, so ANY caller could send
+    // `Cookie: session_token=x` to force a cache miss on every public read and
+    // drive full DB load through the edge — defeating the cache as a shield on
+    // Postgres. A forged token resolves to no session, so it must be cached.
+    let calls = 0
+    const app = new Hono()
+    app.get("*", edgeCache({ maxAge: 300 }), (c) => {
+      calls++
+      return c.json({ n: calls })
+    })
+
+    await run(app, BASE, AUTHED) // forged cookie: getSession -> null
+    const second = await run(app, BASE, AUTHED)
+    expect(calls).toBe(1)
+    expect(await second.json()).toEqual({ n: 1 })
+    expect(fake.store.size).toBe(1)
+  })
+
+  it("fails closed and skips the cache when session resolution throws", async () => {
+    getSessionMock.mockRejectedValue(new Error("db down"))
+    let calls = 0
+    const app = new Hono()
+    app.get("*", edgeCache({ maxAge: 300 }), (c) => {
+      calls++
+      return c.json({ n: calls })
+    })
+
+    // An unresolvable session must not 500, and must not risk sharing a
+    // personalized body through the anonymous entry.
+    const res = await run(app, BASE, AUTHED)
+    expect(res.status).toBe(200)
+    await run(app, BASE, AUTHED)
+    expect(calls).toBe(2)
+    expect(fake.store.size).toBe(0)
   })
 
   it("strips Set-Cookie and stamps Cache-Control + Vary on the stored entry", async () => {

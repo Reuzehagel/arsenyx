@@ -1,5 +1,7 @@
 import type { Context, MiddlewareHandler } from "hono"
 
+import { getSession } from "./session"
+
 // Best-effort edge caching for anonymous public reads, using the Cloudflare
 // Cache API (`caches.default`). Every cache HIT is a request that never touches
 // Postgres (nor Hyperdrive).
@@ -12,25 +14,36 @@ import type { Context, MiddlewareHandler } from "hono"
 // traffic, which is most of the load. Both are quality/cost wins rather than a
 // hard ceiling, so TTLs here can be tuned down freely if freshness matters more.
 //
-// Correctness invariant — we ONLY cache responses for requests with no session
-// cookie. Authenticated detail/list responses are personalized (isOwner /
+// Correctness invariant — we ONLY cache responses for requests with no VALID
+// session. Authenticated detail/list responses are personalized (isOwner /
 // hasLiked / hasBookmarked), so they must never enter the shared edge cache,
 // and an authenticated viewer must never be served an anonymous cache entry.
-// We detect the cookie by header rather than calling getSession() so this layer
-// stays DB-free and fail-safe: a forged/garbage token just bypasses the cache.
-
-// Substring matched against the Cookie header to detect an authenticated
-// request. This pins on Better Auth's default cookie name containing
-// `session_token` (e.g. `better-auth.session_token`). If the Better Auth
-// `cookiePrefix`/cookie name is ever customised to something without this
-// substring, anonymous-only caching silently breaks the WRONG way — it would
-// start caching authenticated responses — so keep this marker in sync with the
-// auth config (auth.ts).
-const SESSION_COOKIE_MARKER = "session_token"
-
-function hasSessionCookie(c: Context): boolean {
-  const cookie = c.req.header("Cookie")
-  return cookie != null && cookie.includes(SESSION_COOKIE_MARKER)
+//
+// This deliberately resolves the real session rather than sniffing the Cookie
+// header for a marker substring. A header check is trivially spoofable: any
+// request carrying `Cookie: session_token=x` would skip the cache and fall
+// through to Postgres, so an attacker could force a 100% miss rate on every
+// public read and turn the edge cache — our main shield on PlanetScale compute
+// — into a no-op. Verifying instead means a forged/garbage token resolves to no
+// user and is served from cache like any other anonymous request.
+//
+// Cost is nil in practice: getSession() is memoized per request (lib/session.ts)
+// and rateLimitAnonRead already resolved it upstream for every edge-cached
+// route, so this is a map read. Requests with no Cookie header at all skip it
+// entirely.
+async function isAuthenticated(c: Context): Promise<boolean> {
+  if (c.req.header("Cookie") == null) return false
+  try {
+    const session = await getSession(c)
+    return session?.user != null
+  } catch {
+    // Fail CLOSED. The old header check couldn't throw; this one can (session
+    // lookup may hit the DB on a cookie-cache miss). If we can't determine who
+    // the caller is, assume authenticated and skip the cache — worst case is a
+    // missed cache hit, whereas failing open could serve a personalized page
+    // from the shared anonymous entry, or store one into it.
+    return true
+  }
 }
 
 // `caches` is a Workers global and may be absent in some test/runtime contexts.
@@ -66,7 +79,7 @@ function runInBackground(c: Context, p: Promise<unknown>): void {
 export function edgeCache(opts: { maxAge: number }): MiddlewareHandler {
   return async (c, next) => {
     const cache = defaultCache()
-    if (c.req.method !== "GET" || hasSessionCookie(c) || !cache) {
+    if (c.req.method !== "GET" || !cache || (await isAuthenticated(c))) {
       return next()
     }
 

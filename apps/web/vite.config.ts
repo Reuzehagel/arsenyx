@@ -99,7 +99,17 @@ function sitemap(): Plugin {
  * (excluded from `run_worker_first` in wrangler.toml, short-TTL in
  * public/_headers), so each poll is a cheap CDN 304 with ZERO Worker
  * invocations — unlike polling `/index.html`, which ran the edge Worker and
- * 307-redirected (two hits per poll). */
+ * 307-redirected (two hits per poll).
+ *
+ * It also carries `dataVersion`, which is the documented discovery document for
+ * third-party consumers of the static catalog (see /docs/api). Everything under
+ * /data/ is served `immutable, max-age=1y`, so a caller who fetches it without
+ * the `?v=` stamp pins a stale catalog for a year — and meta.json (which holds
+ * the stamp) is under /data/ too, so it can't bootstrap itself. This file is the
+ * way out: it's the only always-revalidated document we serve. Note the
+ * `_headers` override route is NOT viable — Cloudflare JOINS duplicate header
+ * values with a comma rather than letting a more specific rule win, so adding a
+ * short-TTL rule for /data/meta.json would emit a malformed Cache-Control. */
 function versionFile(): Plugin {
   return {
     name: "arsenyx:version-file",
@@ -122,7 +132,10 @@ function versionFile(): Plugin {
       this.emitFile({
         type: "asset",
         fileName: "version.json",
-        source: `${JSON.stringify({ entry: `/${main.fileName}` })}\n`,
+        source: `${JSON.stringify({
+          entry: `/${main.fileName}`,
+          dataVersion: dataVersion(),
+        })}\n`,
       })
     },
   }
