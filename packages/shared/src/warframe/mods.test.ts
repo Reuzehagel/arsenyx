@@ -343,3 +343,66 @@ describe("getModsForItem — tag refinement", () => {
     )
   })
 })
+
+describe("getModsForItem — per-item mod allowances", () => {
+  // Real catalog records. Shadow Clones draws only from the generic Melee
+  // pool, so pool routing alone can't reach a Daggers-exclusive mod.
+  const COVERT_LETHALITY =
+    "/Lotus/Upgrades/Mods/Melee/WeaponMeleeStealthLethalMod"
+  const covertLethality = {
+    uniqueName: COVERT_LETHALITY,
+    name: "Covert Lethality",
+    compatName: "Daggers",
+    incompatTags: ["NO_FINISHER"],
+  } as Mod
+  const heartseeker = {
+    uniqueName: "/Lotus/Upgrades/Mods/Melee/DaggerCritChanceMod",
+    name: "Heartseeker",
+    compatName: "Daggers",
+  } as Mod
+  const pointedWind = {
+    uniqueName: "/Lotus/Upgrades/Mods/Melee/Stance/DaggerPointedWind",
+    name: "Pointed Wind",
+    compatName: "Daggers",
+    type: "Stance",
+  } as Mod
+  const daggerMods = [covertLethality, heartseeker, pointedWind]
+
+  const shadowClones = {
+    uniqueName: "/Lotus/Powersuits/Ninja/NinjaStormWeapon",
+    modPools: ["Melee", "Shadow Clones", "MELEE"],
+    compatTags: ["POWER_WEAPON", "POWER_WEAPON_LITE", "NO_SLIDE"],
+  }
+  const shadowClonesPrime = {
+    ...shadowClones,
+    uniqueName: "/Lotus/Powersuits/Ninja/NinjaStormWeaponPrime",
+    modPools: ["Melee", "Shadow Clones Prime", "MELEE"],
+  }
+
+  it("allows Covert Lethality on Shadow Clones and its Prime", () => {
+    for (const item of [shadowClones, shadowClonesPrime]) {
+      const names = getModsForItem(item, daggerMods).map((m) => m.name)
+      expect(names).toContain("Covert Lethality")
+      // The allowance is per-mod, not per-pool: the rest of the Daggers pool
+      // (and its stances, which Shadow Clones can't equip) stays out.
+      expect(names).not.toContain("Heartseeker")
+      expect(names).not.toContain("Pointed Wind")
+    }
+  })
+
+  it("leaves other Melee-pool weapons untouched", () => {
+    const skana = {
+      uniqueName: "/Lotus/Weapons/Tenno/Melee/Swords/Skana",
+      modPools: ["Melee", "Swords", "Skana"],
+      compatTags: ["SWORDS_STANCE"],
+    }
+    expect(getModsForItem(skana, daggerMods)).toEqual([])
+  })
+
+  it("still applies tag refinement to an allowed mod", () => {
+    // The allowance only bypasses pool routing — a mod the item's tags forbid
+    // (Covert Lethality is incompatible with NO_FINISHER) stays excluded.
+    const noFinisher = { ...shadowClones, compatTags: ["NO_FINISHER"] }
+    expect(getModsForItem(noFinisher, daggerMods)).toEqual([])
+  })
+})
