@@ -5,7 +5,7 @@ import { auth } from "./auth"
 import type { Bindings } from "./bindings"
 import { withPrisma } from "./db"
 import { webOrigins } from "./env"
-import { rateLimitAnonRead } from "./middleware/rate-limit"
+import { rateLimitAnonRead, rateLimitAuth } from "./middleware/rate-limit"
 import { banGuard, originGuard } from "./middleware/security"
 import { isPrismaNotFound } from "./routes/_admin"
 import { admin } from "./routes/admin"
@@ -48,6 +48,10 @@ app.onError((err, c) => {
   })
   return c.json({ error: "internal_error" }, 500)
 })
+
+// Must be registered BEFORE the /auth/* handler below — Hono only runs
+// middleware declared ahead of the route it matches.
+app.use("/auth/*", rateLimitAuth())
 
 app.all("/auth/*", (c) => auth.handler(c.req.raw))
 

@@ -32,9 +32,24 @@ const PUBLIC_ENDPOINTS: Endpoint[] = [
     method: "GET",
     path: "/builds",
     summary:
-      "List public builds. Supports ?page, ?sort, ?q, ?category, ?hasGuide, ?hasShards.",
+      "List public builds. See the parameter table below for the full filter set.",
     example: `{
-  "builds": [ { "slug": "...", "title": "...", "category": "warframe", ... } ],
+  "builds": [
+    {
+      "slug": "...",
+      "name": "...",
+      "item": {
+        "uniqueName": "/Lotus/Powersuits/Ninja/Ninja",
+        "name": "Ash",
+        "category": "warframes",
+        "imageName": "..."
+      },
+      "hasGuide": true,
+      "hasShards": false,
+      "user": { ... },
+      "organization": null
+    }
+  ],
   "total": 1234,
   "page": 1,
   "limit": 24
@@ -89,6 +104,62 @@ const PUBLIC_ENDPOINTS: Endpoint[] = [
   "page": 1,
   "limit": 24
 }`,
+  },
+]
+
+type QueryParam = {
+  name: string
+  values: string
+  notes: string
+}
+
+// Keep in sync with parseListQuery in apps/api/src/routes/_build-list.ts.
+const BUILD_LIST_PARAMS: QueryParam[] = [
+  {
+    name: "page",
+    values: "1–500",
+    notes:
+      "Defaults to 1. Clamped at 500 — paging is offset-based, so deeper pages are refused rather than scanned.",
+  },
+  {
+    name: "limit",
+    values: "1–24",
+    notes: "Defaults to 24, which is also the maximum.",
+  },
+  {
+    name: "sort",
+    values:
+      "newest | updated | top | trending | bookmarked | viewed | forma-asc | forma-desc | name-asc | name-desc",
+    notes: "Defaults to newest.",
+  },
+  {
+    name: "q",
+    values: "free text",
+    notes:
+      "Full-text search over build name, item name and description. Truncated at 200 characters.",
+  },
+  {
+    name: "category",
+    values:
+      "warframes | primary | secondary | melee | necramechs | companions | companion-weapons | exalted-weapons | archwing | railjack",
+    notes: "Matches the build's item category.",
+  },
+  {
+    name: "item",
+    values: "an item uniqueName",
+    notes:
+      "Exact match on the build's item. Takes the full uniqueName path, not a display name — see below.",
+  },
+  {
+    name: "hasGuide",
+    values: "true | false",
+    notes:
+      "Filters to builds that do (or explicitly do not) have a written guide. Omit for no filter. Also accepts 1/0, yes/no, on/off.",
+  },
+  {
+    name: "hasShards",
+    values: "true | false",
+    notes: "Same three-state behaviour as hasGuide, for archon shards.",
   },
 ]
 
@@ -148,6 +219,50 @@ function DocsApiPage() {
             in beta — pin to the commit you tested against.
           </p>
 
+          <h2 id="build-list-parameters">Build list parameters</h2>
+          <p>
+            These apply to <code>/builds</code>, <code>/orgs/:slug/builds</code>{" "}
+            and <code>/users/:username/builds</code>. Unrecognized values are
+            ignored rather than rejected — a filter you misspell comes back as
+            an unfiltered list, not a <code>400</code>.
+          </p>
+          <div className="not-prose overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-border border-b text-left">
+                  <th className="py-2 pr-4 font-semibold">Parameter</th>
+                  <th className="py-2 pr-4 font-semibold">Values</th>
+                  <th className="py-2 font-semibold">Notes</th>
+                </tr>
+              </thead>
+              <tbody className="text-muted-foreground">
+                {BUILD_LIST_PARAMS.map((p) => (
+                  <tr key={p.name} className="border-border/50 border-b">
+                    <td className="py-2 pr-4 align-top">
+                      <code className="text-foreground">{p.name}</code>
+                    </td>
+                    <td className="py-2 pr-4 align-top font-mono text-xs">
+                      {p.values}
+                    </td>
+                    <td className="py-2 align-top">{p.notes}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p>
+            To list every build for one item, pass its <code>uniqueName</code> —
+            the same value that comes back in each row&apos;s{" "}
+            <code>item.uniqueName</code>. The full set of them is in{" "}
+            <code>items-index.json</code>, described under{" "}
+            <Link href="#game-data">Game data</Link> below.
+          </p>
+          <pre className="bg-muted/50 overflow-x-auto rounded p-3 text-xs leading-relaxed">
+            <code>
+              {`${EXTERNAL_LINKS.apiBase}/builds?item=/Lotus/Powersuits/Ninja/Ninja&sort=top`}
+            </code>
+          </pre>
+
           <h2 id="rate-limits">Rate limits</h2>
           <p>
             Requests are rate-limited per minute. Exceeding the limit returns{" "}
@@ -156,8 +271,26 @@ function DocsApiPage() {
             <code>Retry-After</code> header.
           </p>
           <p>
-            Traffic from the web app is bucketed by operation type, each bucket
-            with its own per-user per-minute cap:
+            <strong>If you are calling this API without credentials</strong> —
+            which is the only way to use the public read endpoints — the limit
+            that applies to you is{" "}
+            <strong>120 requests per minute, per IP</strong>, across{" "}
+            <code>/builds</code>, <code>/orgs</code>, <code>/users</code> and{" "}
+            <code>/img</code>. Typeahead search is tighter at 30/min. Both are
+            enforced at the Cloudflare edge, so a <code>429</code> costs you
+            nothing but also tells you nothing about the backend.
+          </p>
+          <p>
+            Staying well under that is easy: the static{" "}
+            <Link href="#game-data">game data files</Link> are not rate-limited
+            at all, so anything you can answer from{" "}
+            <code>items-index.json</code> costs you no budget. Cache list
+            responses on your side — they change slowly, and we already cache
+            them at the edge for 10 seconds.
+          </p>
+          <p>
+            Signed-in traffic from the web app is separately bucketed by
+            operation type, each bucket with its own per-user per-minute cap:
           </p>
           <ul>
             <li>
@@ -186,9 +319,12 @@ function DocsApiPage() {
 
           <h2 id="game-data">Game data</h2>
           <p>
-            Items, mods, and arcanes live as static JSON under{" "}
-            <code>apps/web/public/data/</code>. The index is built from Digital
-            Extremes&apos; PublicExport manifests and the{" "}
+            Items, mods, and arcanes are static JSON served straight from the
+            CDN at <code>https://www.arsenyx.com/data/</code> — no API
+            round-trip, no rate limit, and nothing that touches our database.
+            Prefer these over the API wherever they answer your question. The
+            index is built from Digital Extremes&apos; PublicExport manifests
+            and the{" "}
             <Link
               href={EXTERNAL_LINKS.wiki}
               target="_blank"
@@ -196,8 +332,55 @@ function DocsApiPage() {
             >
               Warframe wiki
             </Link>
-            , then committed to the repo, so loading game data is a single
-            static fetch against the CDN — no API round-trip.
+            , then committed to the repo.
+          </p>
+          <p>
+            <code>items-index.json</code> is the item manifest. It&apos;s an
+            object keyed by category, each holding an array of items — and each
+            item&apos;s <code>uniqueName</code> is exactly what{" "}
+            <code>/builds?item=</code> expects.
+          </p>
+          <pre className="bg-muted/50 overflow-x-auto rounded p-3 text-xs leading-relaxed">
+            <code>{`{
+  "warframes": [
+    {
+      "uniqueName": "/Lotus/Powersuits/Ninja/Ninja",
+      "name": "Ash",
+      "slug": "ash",
+      "category": "warframes",
+      "imageName": "https://img.arsenyx.com/Ash-<hash>.png",
+      "masteryReq": 0,
+      "isPrime": false,
+      "displayClass": "Warframe",
+      "releaseDate": "2012-10-25"
+    }
+  ],
+  "primary": [ ... ]
+}`}</code>
+          </pre>
+          <h3 id="data-versioning">Versioning these files</h3>
+          <p>
+            Everything under <code>/data/</code> is served{" "}
+            <code>Cache-Control: immutable, max-age=1 year</code>, so a plain
+            fetch will pin whatever you first downloaded for a very long time.
+            Regenerated catalogs ship under a new <code>?v=</code> stamp rather
+            than at the same URL. Read the current stamp from{" "}
+            <code>/version.json</code> (always revalidated) and append it:
+          </p>
+          <pre className="bg-muted/50 overflow-x-auto rounded p-3 text-xs leading-relaxed">
+            <code>{`const { dataVersion } = await fetch(
+  "https://www.arsenyx.com/version.json",
+).then((r) => r.json())
+
+const items = await fetch(
+  \`https://www.arsenyx.com/data/items-index.json?v=\${dataVersion}\`,
+).then((r) => r.json())`}</code>
+          </pre>
+          <p className="text-sm opacity-75">
+            <code>dataVersion</code> only changes when the catalog is
+            regenerated (roughly once per game update), so it&apos;s cheap to
+            cache your own copy and re-check occasionally. Don&apos;t use a
+            random cache-buster — that forces a full origin fetch every time.
           </p>
 
           <h2>Source</h2>

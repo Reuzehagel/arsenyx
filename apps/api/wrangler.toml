@@ -43,6 +43,20 @@ type = "ratelimit"
 namespace_id = "1002"
 simple = { limit = 120, period = 60 }
 
+# Per-IP throttle on the whole /auth/* surface (all methods, not just GETs).
+# Better Auth has its own limiter and it IS enabled in prod — but its default
+# storage is in-memory, which on Workers means a counter per isolate, so the
+# effective cap is (isolates x 100)/min rather than 100/min. This binding is
+# the cross-isolate backstop. Matched to Better Auth's own 100/min default:
+# the point is that it actually holds, not that it's tighter. Prod is
+# GitHub-OAuth-only (no email/password), so the surface here is volumetric —
+# /get-session polling and the OAuth callback, which writes to Postgres.
+[[unsafe.bindings]]
+name = "AUTH_LIMITER"
+type = "ratelimit"
+namespace_id = "1003"
+simple = { limit = 100, period = 60 }
+
 # Cloudflare Hyperdrive → PlanetScale Postgres. The Worker runtime connects via
 # env.HYPERDRIVE.connectionString (see src/db.ts); Hyperdrive owns the upstream
 # pool, pointed at PlanetScale's direct endpoint. Recreate (e.g. after a role
