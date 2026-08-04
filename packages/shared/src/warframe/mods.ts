@@ -90,6 +90,32 @@ export function isPlexusAuraMod(mod: Mod): boolean {
 }
 
 /**
+ * Per-item mod allowances that `compatName` routing can't express: a single
+ * mod the game lets an item equip even though the item doesn't draw from that
+ * mod's pool. Keyed by item uniqueName → the mod uniqueNames it may also take.
+ *
+ * Deliberately a *mod-level* list, not a pool-level one — widening the item's
+ * `modPools` would pull in the whole class (for Daggers that means Heartseeker,
+ * Piercing Fury, and the three dagger stances, none of which these items can
+ * use). Pool routing stays the general rule; this is the exception layer.
+ *
+ * The allowance only bypasses the pool check — `compatTags`/`incompatTags`
+ * refinement still applies, so a listed mod the item's tags forbid stays out.
+ */
+const EXTRA_MODS_BY_ITEM: Record<string, readonly string[]> = {
+  // Ash's Blade Storm clones perform finishers, so they can equip the
+  // dagger-exclusive Covert Lethality despite drawing from the generic Melee
+  // pool. "Can use the dagger-exclusive Covert Lethality mod."
+  // — wiki.warframe.com/w/Shadow_Clones (verified 2026-08-04)
+  "/Lotus/Powersuits/Ninja/NinjaStormWeapon": [
+    "/Lotus/Upgrades/Mods/Melee/WeaponMeleeStealthLethalMod",
+  ],
+  "/Lotus/Powersuits/Ninja/NinjaStormWeaponPrime": [
+    "/Lotus/Upgrades/Mods/Melee/WeaponMeleeStealthLethalMod",
+  ],
+}
+
+/**
  * Return the mods compatible with the given item.
  *
  * Routing is a single set-membership check against the item's `modPools` —
@@ -139,6 +165,9 @@ export function getModsForItem(
       ? new Set(item.compatTags)
       : null
   const trigger = item.trigger?.toUpperCase()
+  const extraMods = itemUniqueName
+    ? EXTRA_MODS_BY_ITEM[itemUniqueName]
+    : undefined
 
   return mods.filter((mod) => {
     // OpenWF augment gate: `compatItems` is a build-time-resolved
@@ -156,7 +185,11 @@ export function getModsForItem(
     }
 
     const compatName = mod.compatName ?? ""
-    if (!poolSet.has(compatName)) return false
+    // Pool routing, or a curated per-item allowance for the handful of mods
+    // pool membership can't express (see EXTRA_MODS_BY_ITEM).
+    if (!poolSet.has(compatName) && !extraMods?.includes(mod.uniqueName)) {
+      return false
+    }
 
     // Tag refinement (OpenWF): `compatName` routes by broad class, but some
     // mods only fit a subset the class can't express — e.g. Semi-Rifle
