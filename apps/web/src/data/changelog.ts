@@ -11,6 +11,46 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-08-04",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Universal (Aura Forma) polarity slots show their glyph again and count as polarized — Dante's, Protea's, and Protea Prime's aura slots, plus Vinquibus's normal and stance slots. The wiki spells that polarity \"Aura\" wherever it sits, and the importer passed the token through unrecognized, so those slots rendered empty.",
+      },
+      {
+        type: "fix",
+        description:
+          "Ash's Shadow Clones and Shadow Clones (Prime) can equip Covert Lethality, which the game allows. Their mods come from the generic Melee pool, so the Daggers-exclusive mod never reached the picker — the other dagger-only mods and stances they can't use stay hidden.",
+      },
+      {
+        type: "fix",
+        description:
+          'The public API\'s hasGuide and hasShards filters work. Only the literal value "1" ever parsed, and a false value was treated the same as omitting the filter, so there was no way to ask for builds without a guide or without shards. Both now accept 1/0, true/false, yes/no, on/off and filter in either direction.',
+      },
+      {
+        type: "chore",
+        description:
+          "The API reference documents the ?item and ?limit parameters on /builds (previously undocumented), explains how to look up an item's uniqueName from the static catalog, and lists the anonymous rate limit alongside the per-user ones.",
+      },
+      {
+        type: "chore",
+        description:
+          "Build and build-list pages open faster: they're cached longer at the edge, and build-page previews no longer re-parse the whole image catalog on every miss. The public read routes also got abuse hardening — a cap on how deep pagination can go, an IP rate limit on auth endpoints, and a cache-eligibility check that can no longer be bypassed with a forged cookie.",
+      },
+    ],
+  },
+  {
+    date: "2026-08-01",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Saving a build updates it everywhere right away. Edits, likes, and admin toggles could keep showing their old values for up to a minute — on build lists, on your profile, and sometimes on the build page itself — because a database-layer cache served the pre-write row back regardless of who was asking.",
+      },
+    ],
+  },
+  {
     date: "2026-07-27",
     changes: [
       {
@@ -22,6 +62,16 @@ export const CHANGELOG: ChangelogEntry[] = [
         type: "fix",
         description:
           "Elemental mods now do something on weapons whose only base damage is a combined element — Lizzie's Viral/Magnetic/Cold/Corrosive waves, the Nukor's pure Radiation. Their base counted as zero, so every elemental mod added exactly nothing to the total.",
+      },
+    ],
+  },
+  {
+    date: "2026-07-22",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Build lists can be sorted by name, A-Z or Z-A — on /builds, org pages, profiles, and your bookmarks.",
       },
     ],
   },

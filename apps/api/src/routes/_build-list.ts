@@ -298,8 +298,14 @@ async function searchBuildIds(params: {
   const tsqueryStr = tokens.map((t) => `${t}:*`).join(" & ")
   const query = Prisma.sql`to_tsquery('english', ${tsqueryStr})`
   // ILIKE fallback only fires when searchVector is NULL (fresh dev DBs whose
-  // trigger hasn't run). In production every row has a vector, so the planner
-  // can use the GIN index on `searchVector` without an unindexed OR branch.
+  // trigger hasn't run). In production every row has a vector — verified
+  // 2026-08-04, 1078/1078 — so this OR branch is dead weight there.
+  //
+  // Do NOT read that as "so this is index-backed". The GIN index on searchVector
+  // did not exist in production until scripts/migrations/2026-08-04_build_search_vector.sql;
+  // every search here was a sequential scan evaluating `@@` per row. Fine at this
+  // table size, but the plan is only index-backed on a database that migration has
+  // actually been applied to — confirm with EXPLAIN before assuming otherwise.
   const ilikeMatch = Prisma.sql`(${Prisma.join(
     tokens.map(
       (t) =>

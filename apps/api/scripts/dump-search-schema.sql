@@ -71,14 +71,29 @@ ORDER BY t.tgname;
 --    to_tsquery('english', ...) call the app issues, or matching silently
 --    degrades). Filtered on tsvector rather than a known name so the function
 --    is found regardless of what it is called.
+--
+--    Two things here are load-bearing, both learned the hard way:
+--
+--    `p.prokind = 'f'` restricts this to plain functions. pg_get_functiondef()
+--    RAISES on an aggregate ("array_agg" is an aggregate function) rather than
+--    returning NULL, so without this the query aborts instead of returning rows.
+--
+--    The tsvector filter uses `p.prosrc` -- a plain catalog column -- and NOT
+--    pg_get_functiondef(). Postgres does not evaluate WHERE conditions in
+--    written order, so calling pg_get_functiondef() in the WHERE clause lets it
+--    reach pg_catalog rows before the nspname filter excludes them, and it dies
+--    on the first aggregate it touches. Keeping the throwing function out of the
+--    WHERE clause entirely -- it stays in the SELECT list, which is evaluated
+--    only for rows that already survived -- is what makes this safe.
 SELECT
   n.nspname AS schema,
   p.proname AS function_name,
   pg_get_functiondef(p.oid) AS source
 FROM pg_proc p
 JOIN pg_namespace n ON n.oid = p.pronamespace
-WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
-  AND pg_get_functiondef(p.oid) ILIKE '%tsvector%'
+WHERE p.prokind = 'f'
+  AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+  AND p.prosrc ILIKE '%tsvector%'
 ORDER BY p.proname;
 
 -- 5. Sanity check: how many rows actually have a populated vector. A non-zero
