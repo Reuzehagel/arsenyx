@@ -1,6 +1,10 @@
 import { describe, expect, it } from "bun:test"
 
-import { normalizePolarity, POLARITY_SET } from "./polarity"
+import {
+  normalizePolarities,
+  normalizePolarity,
+  POLARITY_SET,
+} from "./polarity"
 
 describe("normalizePolarity", () => {
   it("lowercases recognized polarities", () => {
@@ -15,6 +19,13 @@ describe("normalizePolarity", () => {
     expect(normalizePolarity("")).toBeNull()
     expect(normalizePolarity(undefined)).toBeNull()
     expect(normalizePolarity(42)).toBeNull()
+  })
+
+  it("maps the wiki's 'Aura' spelling to the canonical Universal polarity", () => {
+    // Dante / Protea aura slots and Vinquibus's normal + stance slots.
+    expect(normalizePolarity("Aura")).toBe("any")
+    expect(normalizePolarity("aura")).toBe("any")
+    expect(normalizePolarities(["Madurai", "Aura"])).toEqual(["madurai", "any"])
   })
 
   it("passes an unrecognized polarity through verbatim (never drops/throws)", () => {
