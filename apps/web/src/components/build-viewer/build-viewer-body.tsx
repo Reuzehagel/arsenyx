@@ -45,6 +45,7 @@ import { padShards } from "@/lib/shards"
 import { authorName } from "@/lib/util/user-display"
 import { getCategoryLabel, type BrowseCategory } from "@/lib/warframe"
 
+import { buildTrailEntry, hasBuildFrom } from "./build-trail"
 import { EmbedStrips } from "./embed-strips"
 import { VariantTabs } from "./variant-tabs"
 
@@ -215,6 +216,13 @@ function BuildViewerBodyInner({
     if (target >= 0) onSelectVariant(target)
   }
 
+  // Stable identity so the related-builds strip can memoize off it (this
+  // component re-renders on every loadout interaction).
+  const trailEntry = useMemo(
+    () => buildTrailEntry(build, item.imageName, activeIndex),
+    [build, item.imageName, activeIndex],
+  )
+
   const categoryLabel = getCategoryLabel(category)
   const layout = useMemo(
     () => getBuildLayout(effectiveItem, category),
@@ -351,7 +359,7 @@ function BuildViewerBodyInner({
 
         {!embed ? (
           <Suspense fallback={<RelatedBuildsStripFallback slug={build.slug} />}>
-            <RelatedBuildsStrip slug={build.slug} />
+            <RelatedBuildsStrip slug={build.slug} current={trailEntry} />
           </Suspense>
         ) : null}
 
@@ -384,7 +392,10 @@ function RelatedBuildsStripFallback({ slug }: { slug: string }) {
   const partners = useQueryClient().getQueryData<PartnerBuild[]>(
     partnerBuildsQuery(slug).queryKey,
   )
-  if (!partners || partners.length === 0) return null
+  // A hop from another build (see ./build-trail) pins that build into the
+  // strip, so it renders a row even for a build with no partners of its own.
+  // Read raw history state — this fallback deliberately stays off the router.
+  if (!hasBuildFrom(window.history.state) && !partners?.length) return null
   return (
     <div className="flex flex-col gap-2" aria-hidden>
       <Skeleton className="h-4 w-24" />
