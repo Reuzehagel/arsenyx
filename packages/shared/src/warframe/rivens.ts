@@ -17,6 +17,8 @@ export const RIVEN_POLARITIES: readonly Polarity[] = [
 /** Maximum base drain a riven mod can have (un-installed cost). */
 export const RIVEN_MAX_DRAIN = 18
 export const RIVEN_MIN_DRAIN = 0
+/** What a max-rank riven costs in-game. */
+export const RIVEN_DEFAULT_DRAIN = 18
 
 /** Stats available on gun (primary / secondary / archgun / companion) rivens. */
 export const GUN_RIVEN_STATS = [
@@ -114,7 +116,7 @@ export function createSyntheticRiven(): Mod {
     imageName: RIVEN_IMAGE_NAME,
     polarity: "madurai",
     rarity: "Riven",
-    baseDrain: 0,
+    baseDrain: RIVEN_DEFAULT_DRAIN,
     fusionLimit: 8,
     type: "Riven",
     tradable: false,
