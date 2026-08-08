@@ -4,7 +4,7 @@ Non-obvious pitfalls. Add to this file when you hit one.
 
 ## Build / tooling
 
-- **Dev servers hide type errors.** Vite and `bun --hot` skip strict TS checks — always `bun run build` (web) and `bunx tsc --noEmit` (api) before claiming done.
+- **Dev servers hide type errors.** Vite and `bun --hot` skip strict TS checks, and so does `vite build` — a green build proves nothing about types. `just check` is the gate.
 - **PowerShell doesn't support `<` redirection** — wrap in `bash -c '...'` for Docker stdin (e.g. piping SQL into `psql`).
 - **cssstudio is OFF by default in dev.** Toggle via URL: append `?cssstudio=1` to enable, `?cssstudio=0` to disable. The flag persists in `localStorage.arsenyx.cssstudio` and the param strips itself after apply. See [apps/web/src/main.tsx](../apps/web/src/main.tsx).
 

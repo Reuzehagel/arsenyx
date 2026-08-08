@@ -1,7 +1,5 @@
 # Commands
 
-Bun only — never `npm` / `npx`.
-
 ## Dev
 
 ```bash
@@ -15,12 +13,11 @@ just setup              # first-run wizard — see CONTRIBUTING.md
 ## Build / verify
 
 ```bash
-bun --cwd apps/web run build      # Vite production build — run before claiming done
-bunx --cwd apps/api tsc --noEmit  # type-check the API (no dev-server smoke)
-just check                        # typecheck + oxlint + oxfmt --check (also generates routeTree.gen.ts if missing)
-just gen                          # generate apps/web/src/routeTree.gen.ts only (no-op if present)
+just check                        # THE gate before claiming done — gen + typecheck + oxlint + oxfmt --check
 just fix                          # oxlint --fix + oxfmt --write
-just test                         # vitest across apps/web, apps/api, packages/shared
+just test                         # vitest across apps/web, apps/api, packages/shared + bun test scripts/build/
+just gen                          # generate apps/web/src/routeTree.gen.ts only (no-op if present)
+bun --cwd apps/web run build      # Vite production build (does NOT typecheck — `just check` is the gate)
 ```
 
 Oxlint / oxfmt config lives at the repo root (`.oxlintrc.json`, `.oxfmtrc.json`).
@@ -41,7 +38,7 @@ Destructive/manual migrations live in `apps/api/scripts/migrations/` as dated
 [apps/api/scripts/dump-search-schema.sql](../apps/api/scripts/dump-search-schema.sql)
 dumps the full-text-search objects (the `searchVector` column, its GIN index, and
 whichever mechanism populates it) that exist **only in the live database** — see
-the full-text-search note in [apps/api/CLAUDE.md](../apps/api/CLAUDE.md).
+[docs/search.md](search.md).
 Read-only; run it in PlanetScale's SQL console (needs no local `psql` or
 `DATABASE_URL`). Use it to capture those definitions as a migration, and
 afterwards to verify the migration still matches production.

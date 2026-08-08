@@ -1,12 +1,12 @@
 # Hotkeys
 
-Single source of truth: [`apps/web/src/lib/hotkeys.ts`](../apps/web/src/lib/hotkeys.ts).
+Single source of truth: [`apps/web/src/lib/hooks/hotkeys.ts`](../apps/web/src/lib/hooks/hotkeys.ts).
 
 The `HOTKEYS` array drives the cheat-sheet dialog (opened by `?` or the keyboard button in the header). Adding an entry there is the only step needed to make a shortcut discoverable site-wide.
 
 ## Rules
 
-- **Every site-wide hotkey is registered through `useHotkey`** ([apps/web/src/lib/hotkeys.ts](../apps/web/src/lib/hotkeys.ts)). It absorbs the editable-target guard and modifier parsing — don't hand-roll `addEventListener("keydown", …)` blocks. Element-scoped handlers (a textarea's own `onKeyDown`, a result-grid card) stay element-local.
+- **Every site-wide hotkey is registered through `useHotkey`** ([apps/web/src/lib/hooks/hotkeys.ts](../apps/web/src/lib/hooks/hotkeys.ts)). It absorbs the editable-target guard and modifier parsing — don't hand-roll `addEventListener("keydown", …)` blocks. Element-scoped handlers (a textarea's own `onKeyDown`, a result-grid card) stay element-local.
 - **Every site-wide hotkey appears in `HOTKEYS`.** If the cheat-sheet doesn't list it, users can't discover it.
 - **If a hotkey affects a specific control, render a `<Kbd>` chip on that control** in addition to the cheat-sheet entry. Examples: the header's search button shows `Ctrl K`; the browse and mod-search inputs show `/`.
 - **Bare letters are reserved for editor-local handlers** (e.g. the guide-editor textarea uses `Ctrl+B` / `Ctrl+I`). Don't bind bare letters at the window level — they collide with text input and editor surfaces.
