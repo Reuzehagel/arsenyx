@@ -11,6 +11,26 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-08-08",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Following a related build now leaves a way back. Open a build from another build's related strip and the one you came from is pinned to the front of that strip, with a back arrow — on the same variant tab you left. It's tied to that step in your history, so it survives a reload and back/forward, and a build opened from a pasted link or a search result shows no back link at all.",
+      },
+      {
+        type: "fix",
+        description:
+          "The search box on build lists stops eating characters. Typing quickly could delete what you'd just written: the input was being re-seeded from the URL, which lagged a few hundred milliseconds behind, so the stale value overwrote everything typed since. This affects /builds, your builds, bookmarks, profiles, and org pages.",
+      },
+      {
+        type: "feat",
+        description:
+          "Rivens start at 18 drain instead of 0, matching a max-rank riven in-game, so a build's capacity readout is right without correcting the field by hand. It's still editable, and existing builds keep the drain they were saved with.",
+      },
+    ],
+  },
+  {
     date: "2026-08-04",
     changes: [
       {
