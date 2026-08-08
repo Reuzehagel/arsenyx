@@ -1,5 +1,6 @@
 import { clamp } from "@arsenyx/shared"
 import {
+  RIVEN_DEFAULT_DRAIN,
   RIVEN_MAX_DRAIN,
   RIVEN_MIN_DRAIN,
   RIVEN_POLARITIES,
@@ -68,7 +69,7 @@ function emptyNegative(init?: RivenStats): StatRowState {
 
 function clampDrain(raw: string): number {
   const n = parseInt(raw, 10)
-  if (Number.isNaN(n)) return RIVEN_MIN_DRAIN
+  if (Number.isNaN(n)) return RIVEN_DEFAULT_DRAIN
   return clamp(n, RIVEN_MIN_DRAIN, RIVEN_MAX_DRAIN)
 }
 
@@ -83,7 +84,7 @@ export function RivenDialog({
     initialValues?.polarity ?? "madurai",
   )
   const [drain, setDrain] = useState(
-    String(initialValues?.drain ?? RIVEN_MIN_DRAIN),
+    String(initialValues?.drain ?? RIVEN_DEFAULT_DRAIN),
   )
   const [positives, setPositives] = useState<StatRowState[]>(() =>
     emptyPositives(initialValues?.rivenStats),
