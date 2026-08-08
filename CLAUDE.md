@@ -5,8 +5,7 @@ Game data (items, mods, arcanes) is static JSON precomputed at build time and se
 ## Deployment
 
 - Web (Vite SPA) → Cloudflare Workers (Static Assets), `www.arsenyx.com` (canonical; the Worker 301s `arsenyx.com` → www). SPA fallback + cache headers via [apps/web/wrangler.toml](apps/web/wrangler.toml) and [apps/web/public/\_headers](apps/web/public/_headers). The edge Worker also injects per-page SEO meta — see [apps/web/CLAUDE.md](apps/web/CLAUDE.md).
-- API (Hono on Workers) → `api.arsenyx.com`, Prisma 7 + `@prisma/adapter-pg` (workerd runtime)
-- DB → PlanetScale Postgres, reached through Cloudflare Hyperdrive (see [apps/api/CLAUDE.md](apps/api/CLAUDE.md))
+- API (Hono on Workers) → `api.arsenyx.com`; DB → PlanetScale Postgres via Cloudflare Hyperdrive. Stack and connection details in [apps/api/CLAUDE.md](apps/api/CLAUDE.md).
 - CI deploys both Workers on push to `main` via Workers Builds (configured in the CF dashboard). Secrets live in the CF dashboard, not in `.env`.
 
 ## Monorepo
@@ -25,8 +24,7 @@ Game data is static, user data is dynamic. If something is read-heavy and rarely
 
 **Always**
 
-- `bun run typecheck` (web + api + shared) before claiming done — `vite build` and dev servers don't typecheck, so web/shared type errors hide otherwise
-- `just check` (typecheck + oxlint + oxfmt) before committing; `just fix` auto-applies lint + format. Both are repo-wide and take no file arguments — the globs in [package.json](package.json) cover `apps/web/src`, `apps/web/worker`, `apps/api/src`, `packages/shared/src`, `scripts`, and `data/curated`.
+- `just check` before claiming done — the single gate for web + api + shared (`gen` → typecheck → oxlint → oxfmt --check). `vite build` and the dev servers don't typecheck, so type errors hide behind a green build; a bare `bun run typecheck` fails on a fresh checkout without `routeTree.gen.ts`, which `check` generates first. `just fix` auto-applies lint + format. Both are repo-wide and take no file arguments.
 - Use `uv run python` instead of `python`/`python3`
 
 **Ask first**
@@ -43,6 +41,8 @@ Game data is static, user data is dynamic. If something is read-heavy and rarely
 
 - [docs/commands.md](docs/commands.md) — full command reference (build, db, data sync)
 - [docs/gotchas.md](docs/gotchas.md) — non-obvious pitfalls (PowerShell, Base UI, shadcn in monorepo)
+- [docs/hotkeys.md](docs/hotkeys.md) — adding or rebinding a keyboard shortcut
+- [docs/search.md](docs/search.md) — full-text build search (the tsvector column, trigger, and GIN index live outside Prisma)
 
 ## Keeping docs fresh
 
