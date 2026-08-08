@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { SearchX } from "lucide-react"
-import { useCallback, useEffect, useState, type ReactNode } from "react"
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 
 import {
   BuildCard,
@@ -149,7 +149,17 @@ export function BuildsListView({
   const { page, sort, q, category, hasGuide, hasShards } = params
 
   const [qLocal, setQLocal] = useState(q)
-  useEffect(() => setQLocal(q), [q])
+  // The last value we pushed to the URL. The push is debounced *and* the
+  // navigation blocks on the route loader, so `q` echoes back what the user
+  // typed several hundred ms ago — re-seeding the input from that echo would
+  // delete anything typed since. Only adopt `q` when it changed from somewhere
+  // else (back/forward, a cleared filter, the length cap in parseBuildsListSearch).
+  const pushedRef = useRef(q)
+  useEffect(() => {
+    if (q === pushedRef.current) return
+    pushedRef.current = q
+    setQLocal(q)
+  }, [q])
 
   // Merge `next` over current search state, then normalize the optional fields
   // the URL wants stripped: q/hasGuide/hasShards collapse falsy → undefined and
@@ -177,13 +187,21 @@ export function BuildsListView({
     [sort, q, category, hasGuide, hasShards, onUpdateSearch],
   )
 
+  // Read `patch` through a ref: it depends on `onUpdateSearch`, which every
+  // route passes as an inline arrow, so it changes identity on every render.
+  // In the deps it would clear and reschedule the debounce on every unrelated
+  // re-render, walking the push further and further out.
+  const patchRef = useRef(patch)
+  patchRef.current = patch
+
   useEffect(() => {
     if (qLocal === q) return
     const t = setTimeout(() => {
-      patch({ q: qLocal })
+      pushedRef.current = qLocal
+      patchRef.current({ q: qLocal })
     }, SEARCH_DEBOUNCE_MS)
     return () => clearTimeout(t)
-  }, [qLocal, q, patch])
+  }, [qLocal, q])
 
   const activeFilterCount = (hasGuide ? 1 : 0) + (hasShards ? 1 : 0)
   // A search, category tab, or toggle is narrowing the list. Zero results then
