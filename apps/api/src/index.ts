@@ -6,7 +6,7 @@ import type { Bindings } from "./bindings"
 import { withPrisma } from "./db"
 import { webOrigins } from "./env"
 import { rateLimitAnonRead, rateLimitAuth } from "./middleware/rate-limit"
-import { banGuard, originGuard } from "./middleware/security"
+import { banGuard, originGuard, securityHeaders } from "./middleware/security"
 import { isPrismaNotFound } from "./routes/_admin"
 import { admin } from "./routes/admin"
 import { builds } from "./routes/builds"
@@ -17,6 +17,9 @@ import { orgs } from "./routes/orgs"
 import { users } from "./routes/users"
 
 const app = new Hono()
+
+// Outermost so it also covers CORS preflights, /auth/*, and error responses.
+app.use("*", securityHeaders)
 
 app.use(
   "*",

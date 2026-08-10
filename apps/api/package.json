@@ -16,7 +16,7 @@
     "@arsenyx/shared": "workspace:*",
     "@prisma/adapter-pg": "7.8.0",
     "@prisma/client": "7.8.0",
-    "better-auth": "^1.5.5",
+    "better-auth": "^1.6.26",
     "hono": "^4.6.14",
     "nanoid": "^5.1.9",
     "pg": "^8.21.0"

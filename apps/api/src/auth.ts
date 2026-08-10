@@ -10,6 +10,10 @@ import { validateExternalUrl } from "./lib/validate"
 // avoid pulling generated Prisma types into the auth bootstrap path.
 const VALID_BUILD_VISIBILITIES = new Set(["PUBLIC", "PRIVATE", "UNLISTED"])
 
+// Cap on the free-text display `name`. Comfortably above any real GitHub
+// profile name; see the clamp in sanitizeUserData for why it exists.
+const MAX_DISPLAY_NAME = 120
+
 // Usernames we won't let a regular user claim — `admin/support/security/...`
 // in `/profile/<name>` reads as official Arsenyx staff, which is a phishing
 // surface even though none of these flags actually grant privileges
@@ -56,6 +60,16 @@ function sanitizeUserData(
   data: Record<string, unknown>,
 ): Record<string, unknown> {
   let out = data
+
+  // /auth/update-user takes `name` with no length validation of its own and
+  // the column is unbounded text, so a signed-in user could write megabytes
+  // per request into something that renders on every profile and build card.
+  // Only rewrite when the trim leaves something: `name` is required, and
+  // blanking it would be worse than the whitespace value we're fixing.
+  if ("name" in out && typeof out.name === "string") {
+    const trimmed = out.name.trim().slice(0, MAX_DISPLAY_NAME)
+    if (trimmed.length > 0) out = { ...out, name: trimmed }
+  }
 
   if ("image" in out) {
     const v = out.image
