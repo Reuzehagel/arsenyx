@@ -775,8 +775,9 @@ builds.put("/:slug/partners/order", rateLimitUser("mutate"), async (c) => {
   const viewerId = session.user.id
 
   const slug = c.req.param("slug")
-  const body = await c.req.json().catch(() => null)
-  const order = (body as { order?: unknown } | null)?.order
+  const parsed = await parseJsonBody(c, { maxBytes: 8 * 1024 })
+  if (!parsed.ok) return parsed.response
+  const order = parsed.value.order
   if (!Array.isArray(order) || order.some((id) => typeof id !== "string")) {
     return c.json({ error: "invalid_order" }, 400)
   }
@@ -825,8 +826,9 @@ builds.put(
     if (!session?.user) return c.json({ error: "unauthorized" }, 401)
     const viewerId = session.user.id
 
-    const body = await c.req.json().catch(() => null)
-    const raw = (body as { variant?: unknown } | null)?.variant
+    const parsed = await parseJsonBody(c, { maxBytes: 1024 })
+    if (!parsed.ok) return parsed.response
+    const raw = parsed.value.variant
     const valid =
       raw === null ||
       (typeof raw === "number" &&

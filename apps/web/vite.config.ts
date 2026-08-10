@@ -157,7 +157,10 @@ export default defineConfig({
       "@": path.resolve(import.meta.dirname, "src"),
     },
   },
-  server: { port: 5173 },
+  // 5173 stays the default so `just web` is unchanged; honouring PORT lets a
+  // harness (or a second checkout) run the dev server on an assigned port
+  // instead of silently drifting to 5174/5175 when 5173 is taken.
+  server: { port: Number(process.env.PORT) || 5173 },
   build: {
     // Main app-shell chunk is ~650KB; per-route code is already split out
     // via autoCodeSplitting. Vendor manualChunks were tried and reverted —

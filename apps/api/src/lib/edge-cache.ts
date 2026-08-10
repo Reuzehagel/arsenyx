@@ -85,7 +85,10 @@ export function edgeCache(opts: { maxAge: number }): MiddlewareHandler {
 
     const key = cacheKey(new URL(c.req.url))
     const hit = await cache.match(key)
-    if (hit) return hit
+    // Re-wrapped, not returned directly: a Cache API response has an immutable
+    // header guard, so securityHeaders would throw writing to it. Passing the
+    // body by reference means no buffering.
+    if (hit) return new Response(hit.body, hit)
 
     await next()
 

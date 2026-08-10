@@ -1,8 +1,13 @@
+# frame-ancestors stays 'self' here. The partner allowlist would apply
+# site-wide from this block — including /create and /admin — so it lives in
+# EMBED_FRAME_ANCESTORS in worker/index.ts and is set on the ?embed=1 response
+# alone. A path rule can't express that: matching is on path only, and the
+# embed shares /builds/<slug> with the full build page.
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
-  Content-Security-Policy: frame-ancestors 'self' https://profit-taker.com https://*.profit-taker.com https://pt-guide.pages.dev https://*.pt-guide.pages.dev
+  Content-Security-Policy: frame-ancestors 'self'
   Strict-Transport-Security: max-age=31536000; includeSubDomains
 
 /index.html

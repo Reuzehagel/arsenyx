@@ -207,7 +207,7 @@ async function handleBuildPage(
         )
       }
     }
-    return res
+    return allowPartnerFraming(res)
   }
 
   // Per-colo edge cache for the rendered PUBLIC build shell. The injected meta
@@ -284,6 +284,30 @@ async function handleBuildPage(
   // just-changed visibility can't pin a wrong response for the whole TTL.
   if (!cache) return res
   return cacheStore(res, cacheKey, cache, ctx)
+}
+
+// Hosts allowed to iframe the embed viewer. `public/_headers` sends
+// `frame-ancestors 'self'` for the whole site — deliberately, so a compromise
+// of a partner host can't clickjack /create or /admin — and this widens it for
+// the one response that is meant to be framed: the `?embed=1` shell. Keep the
+// two in sync; adding a partner means editing this list, not `_headers`.
+const EMBED_FRAME_ANCESTORS = [
+  "'self'",
+  "https://profit-taker.com",
+  "https://*.profit-taker.com",
+  "https://pt-guide.pages.dev",
+  "https://*.pt-guide.pages.dev",
+].join(" ")
+
+// Re-wrap: a Response from the ASSETS binding has an immutable header guard,
+// so the CSP has to be set on a fresh Response around the same body.
+function allowPartnerFraming(res: Response): Response {
+  const out = new Response(res.body, res)
+  out.headers.set(
+    "content-security-policy",
+    `frame-ancestors ${EMBED_FRAME_ANCESTORS}`,
+  )
+  return out
 }
 
 function extractBuildSlug(pathname: string): string | null {
