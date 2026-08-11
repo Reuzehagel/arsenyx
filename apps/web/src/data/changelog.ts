@@ -11,6 +11,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-08-11",
+    changes: [
+      {
+        type: "fix",
+        description:
+          'Signing in with GitHub works again. Since 10 August anyone who already had an account was turned away with "username is already taken" — and the account it collided with was their own. An auth library update started re-checking the username on every sign-in, but on the GitHub callback it can\'t yet tell who is signing in, so it read every returning user as a stranger claiming a taken name. Your username is now set once, when you first sign up, and left alone after that: renaming on GitHub no longer moves your profile URL out from under existing links, and it no longer overwrites the display name you chose in settings. Your avatar and name still refresh from GitHub each time you sign in.',
+      },
+    ],
+  },
+  {
     date: "2026-08-08",
     changes: [
       {
