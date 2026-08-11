@@ -59,16 +59,27 @@ export function bookmarkedScope(userId: string): ListScope {
   }
 }
 
-/** A User's *personal* PUBLIC Builds — their public profile list and aggregate
- *  stats (`GET /users/:username[/builds]`). Excludes org-published Builds. */
+/** A User's authored PUBLIC Builds — their public profile list and aggregate
+ *  stats (`GET /users/:username[/builds]`). Org-published Builds count as the
+ *  author's work and appear here too (#317; cards carry the org byline, so
+ *  attribution stays unambiguous) — except when the Build sets `hideAuthor`,
+ *  which exists to keep the author off an org Build. Listing those on the
+ *  author's own profile would undo the flag.
+ *
+ *  The `organizationId IS NULL` half of the OR is not redundant with
+ *  `hideAuthor = false`: deleting an Organization nulls `organizationId`
+ *  through the schema's `onDelete: SetNull` without any app code running, so a
+ *  detached Build can carry a stale `hideAuthor = true` pointing at an org
+ *  that no longer exists. A Build with no org has no org to hide behind — it
+ *  belongs on its author's profile regardless of the flag. */
 export function userPublicScope(userId: string): ListScope {
   return {
     baseWhere: {
       userId,
       visibility: BuildVisibility.PUBLIC,
-      organizationId: null,
+      OR: [{ organizationId: null }, { hideAuthor: false }],
     },
-    baseFilter: Prisma.sql`"userId" = ${userId} AND visibility = 'PUBLIC' AND "organizationId" IS NULL`,
+    baseFilter: Prisma.sql`"userId" = ${userId} AND visibility = 'PUBLIC' AND ("organizationId" IS NULL OR "hideAuthor" = false)`,
   }
 }
 
