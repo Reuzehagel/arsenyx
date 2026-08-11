@@ -6,6 +6,10 @@ import {
   type BuildListResponse,
   buildQueryString,
 } from "@/lib/queries/builds-list-query"
+import {
+  directoryQueryString,
+  type DirectoryEnvelope,
+} from "@/lib/queries/directory-query"
 import { apiFetch, ApiError, loaderError } from "@/lib/util/api-client"
 
 export type OrgRole = "ADMIN" | "MEMBER"
@@ -66,18 +70,15 @@ export type OrgDirectoryItem = {
   buildCount: number
 }
 
-export type OrgDirectoryResponse = {
+export type OrgDirectoryResponse = DirectoryEnvelope & {
   orgs: OrgDirectoryItem[]
-  total: number
-  page: number
-  limit: number
 }
 
-export const orgsDirectoryQuery = (page: number) =>
+export const orgsDirectoryQuery = (page: number, q?: string) =>
   queryOptions({
-    queryKey: ["orgs", "directory", page],
+    queryKey: ["orgs", "directory", page, q ?? ""],
     queryFn: async (): Promise<OrgDirectoryResponse> => {
-      const qs = page > 1 ? `?page=${page}` : ""
+      const qs = directoryQueryString(page, q)
       try {
         return await apiFetch<OrgDirectoryResponse>(`/orgs/public${qs}`)
       } catch (err) {

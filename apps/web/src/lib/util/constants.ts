@@ -15,6 +15,7 @@ export const ROUTES = {
   create: "/create",
   import: "/import",
   orgs: "/orgs",
+  users: "/users",
   docs: "/docs",
   changelog: "/changelog",
   privacy: "/privacy",
@@ -48,6 +49,8 @@ export const EXTERNAL_LINKS = {
 export const NAV_ITEMS = [
   { label: "Browse", href: ROUTES.browse },
   { label: "Builds", href: ROUTES.builds },
+  { label: "Orgs", href: ROUTES.orgs },
+  { label: "Profiles", href: ROUTES.users },
 ] as const
 
 // Footer link sections
@@ -59,6 +62,7 @@ export const FOOTER_LINKS = {
   ],
   community: [
     { label: "Organizations", href: ROUTES.orgs },
+    { label: "Profiles", href: ROUTES.users },
     { label: "Documentation", href: ROUTES.docs },
     { label: "Changelog", href: ROUTES.changelog },
     { label: "GitHub", href: EXTERNAL_LINKS.github, external: true },

@@ -12,9 +12,9 @@ import { DelayedSuspense } from "@/components/delayed-fallback"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { Link } from "@/components/link"
+import { ProfileBadges } from "@/components/profile-badges"
 import { Stat } from "@/components/profile-stat"
 import { RouteNotFound } from "@/components/route-not-found"
-import { Badge } from "@/components/ui/badge"
 import { UserAvatar } from "@/components/user-avatar"
 import {
   profileBuildsQuery,
@@ -162,45 +162,6 @@ function ProfileOrgs({ orgs }: { orgs: Profile["orgs"] }) {
         </Link>
       ))}
     </div>
-  )
-}
-
-function ProfileBadges({ badges }: { badges: Profile["badges"] }) {
-  const items: { label: string; className: string }[] = []
-  if (badges.admin) {
-    items.push({ label: "Admin", className: "bg-red-500/15 text-red-500" })
-  }
-  if (badges.moderator) {
-    items.push({
-      label: "Moderator",
-      className: "bg-blue-500/15 text-blue-500",
-    })
-  }
-  if (badges.communityLeader) {
-    items.push({
-      label: "Community Leader",
-      className: "bg-amber-500/15 text-amber-500",
-    })
-  }
-  if (badges.verified) {
-    items.push({
-      label: "Verified",
-      className: "bg-emerald-500/15 text-emerald-500",
-    })
-  }
-  if (items.length === 0) return null
-  return (
-    <span className="flex flex-wrap gap-1">
-      {items.map((b) => (
-        <Badge
-          key={b.label}
-          variant="secondary"
-          className={`${b.className} px-2 py-0.5 text-xs`}
-        >
-          {b.label}
-        </Badge>
-      ))}
-    </span>
   )
 }
 

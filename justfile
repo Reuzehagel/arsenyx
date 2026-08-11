@@ -6,7 +6,7 @@ set windows-shell := ["pwsh", "-NoLogo", "-NoProfile", "-Command"]
 dev:
     bunx concurrently -k -n api,web -c blue,green "just api" "just web"
 
-# Run only the Hono API. Expects DATABASE_URL in apps/api/.env to point at a Neon branch.
+# Run only the Hono API. Expects DATABASE_URL in apps/api/.env to point at a PlanetScale branch.
 [working-directory('apps/api')]
 api:
     bun run dev

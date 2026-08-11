@@ -2,6 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { Suspense } from "react"
 
+import { DirectorySearch } from "@/components/directory-search"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { Link } from "@/components/link"
@@ -17,8 +18,10 @@ import {
 import { UserAvatar } from "@/components/user-avatar"
 import { orgsDirectoryQuery } from "@/lib/queries/org-query"
 import { seo } from "@/lib/seo"
-
-type OrgsSearch = { page?: number }
+import {
+  parseDirectorySearch,
+  type DirectorySearchParams,
+} from "@/lib/util/directory-search"
 
 export const Route = createFileRoute("/orgs")({
   head: () =>
@@ -28,18 +31,22 @@ export const Route = createFileRoute("/orgs")({
         "Warframe clans and communities publishing builds together on Arsenyx.",
       canonicalPath: "/orgs",
     }),
-  validateSearch: (search): OrgsSearch => {
-    const raw = (search as { page?: unknown }).page
-    const n = typeof raw === "number" ? raw : parseInt(String(raw ?? ""), 10)
-    return Number.isFinite(n) && n > 1 ? { page: n } : {}
-  },
-  loaderDeps: ({ search }) => ({ page: search.page ?? 1 }),
+  validateSearch: parseDirectorySearch,
+  loaderDeps: ({ search }): DirectorySearchParams => ({
+    page: search.page ?? 1,
+    q: search.q,
+  }),
   loader: ({ context, deps }) =>
-    context.queryClient.ensureQueryData(orgsDirectoryQuery(deps.page)),
+    context.queryClient.ensureQueryData(
+      orgsDirectoryQuery(deps.page ?? 1, deps.q),
+    ),
   component: OrgsDirectoryPage,
 })
 
 function OrgsDirectoryPage() {
+  const search = Route.useSearch()
+  const navigate = useNavigate({ from: Route.fullPath })
+
   return (
     <div className="relative flex min-h-screen flex-col">
       <Header />
@@ -52,7 +59,18 @@ function OrgsDirectoryPage() {
               invite-only.
             </p>
           </div>
+          <DirectorySearch
+            value={search.q ?? ""}
+            // A new query invalidates the current page — result 21 of the old
+            // query has nothing to do with the new one.
+            onSearch={(q) => navigate({ search: q ? { q } : {} })}
+            placeholder="Search organizations…"
+            label="Search organizations"
+          />
+          {/* Keyed on the query so a new search shows the fallback instead of
+              holding the previous page's rows while the loader resolves. */}
           <Suspense
+            key={`${search.q ?? ""}:${search.page ?? 1}`}
             fallback={
               <p className="text-muted-foreground text-sm">
                 Loading organizations…
@@ -72,19 +90,22 @@ function OrgsDirectoryContent() {
   const search = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
   const page = search.page ?? 1
-  const { data } = useSuspenseQuery(orgsDirectoryQuery(page))
+  const q = search.q
+  const { data } = useSuspenseQuery(orgsDirectoryQuery(page, q))
   const { orgs, total, limit } = data
 
   const goto = (next: number) =>
     navigate({
-      search: next > 1 ? { page: next } : {},
+      search: { ...(q ? { q } : {}), ...(next > 1 ? { page: next } : {}) },
       replace: false,
     })
 
   if (orgs.length === 0) {
     return (
       <p className="text-muted-foreground text-sm">
-        No organizations yet. Be the first to create one.
+        {q
+          ? `No organizations match "${q}".`
+          : "No organizations yet. Be the first to create one."}
       </p>
     )
   }
@@ -151,7 +172,13 @@ function OrgsDirectoryContent() {
         total={total}
         limit={limit}
         onPage={goto}
-        href={(p) => (p > 1 ? `/orgs?page=${p}` : "/orgs")}
+        href={(p) => {
+          const params = new URLSearchParams()
+          if (q) params.set("q", q)
+          if (p > 1) params.set("page", String(p))
+          const qs = params.toString()
+          return qs ? `/orgs?${qs}` : "/orgs"
+        }}
       />
     </>
   )
