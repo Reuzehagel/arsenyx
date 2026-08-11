@@ -15,10 +15,15 @@ import { cn } from "@/lib/util/utils"
 
 import { VariantTab } from "../build-viewer/variant-tab"
 
+/** Shared styling for the collapsed single-variant affordances, so restyling
+ *  one can't leave the other behind. */
+const COLLAPSED_AFFORDANCE =
+  "text-muted-foreground hover:text-foreground hover:bg-muted/40 rounded-md border border-dashed px-2 py-1 text-xs"
+
 /**
  * Editor's per-variant tab bar with add / rename / duplicate / delete
- * affordances. Single-variant builds collapse to a single "+ Variant"
- * affordance so the bar stays visually quiet for the common case.
+ * affordances. Single-variant builds collapse to a bare "+ Copy" / "+ Variant"
+ * pair so the bar stays visually quiet for the common case.
  */
 export function EditorVariantBar({
   variants,
@@ -46,18 +51,28 @@ export function EditorVariantBar({
   activeFormIndex?: number
   onSwitchForm?: (formIndex: number) => void
 }) {
-  // Hide the bar for single-variant builds until the user opts in via
-  // "+ Variant". Keeps the editor visually identical to before for
-  // anyone not using variants. Twin-frames (formNames present) always show
-  // the bar so the form picker stays reachable even with one variant.
+  // Hide the tab bar for single-variant builds until the user opts in.
+  // Keeps the editor visually quiet for anyone not using variants, but both
+  // ways in — blank and copy — are offered here so seeding a second variant
+  // from the current one doesn't cost a round trip through the tab bar's
+  // gear popover. Twin-frames (formNames present) always show the full bar
+  // so the form picker stays reachable even with one variant.
   if (variants.length === 1 && !formNames) {
     return (
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-end gap-1.5">
+        <button
+          type="button"
+          onClick={onDuplicate}
+          className={COLLAPSED_AFFORDANCE}
+          title="Add a variant that starts as a copy of this build"
+        >
+          + Copy
+        </button>
         <button
           type="button"
           onClick={onAdd}
-          className="text-muted-foreground hover:text-foreground hover:bg-muted/40 rounded-md border border-dashed px-2 py-1 text-xs"
-          title="Add a build variant"
+          className={COLLAPSED_AFFORDANCE}
+          title="Add an empty build variant"
         >
           + Variant
         </button>
