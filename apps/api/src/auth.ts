@@ -46,6 +46,48 @@ function isReservedUsername(value: string): boolean {
   return RESERVED_USERNAMES.has(value.toLowerCase())
 }
 
+// Does this GitHub profile already have an Arsenyx account, and does it
+// already hold a username?
+//
+// The two lookups are ordered, not OR'd, to match better-auth's own
+// `findOAuthUser`: the linked account wins, and email is only a fallback for
+// the implicit-account-linking case where no account row exists yet. They can
+// resolve to *different* users — someone changes their GitHub primary email to
+// one that already belongs to another Arsenyx row — and an unordered
+// `OR` + `findFirst` would pick between them arbitrarily (no `orderBy` means
+// no guaranteed row order), answering this question from a stranger's row.
+//
+// Both lookups are indexed: `@@unique([providerId, accountId])` on Account,
+// `@unique` on User.email.
+//
+// Returning the username rather than just existence is deliberate: a row that
+// predates the username plugin still has NULL there and should be backfilled
+// on the next sign-in. See `mapProfileToUser` for why this matters.
+async function existingUsernameFor(profile: {
+  id: number | string
+  email?: string | null
+}): Promise<string | null | undefined> {
+  const linked = await prisma.account.findUnique({
+    where: {
+      providerId_accountId: {
+        providerId: "github",
+        accountId: String(profile.id),
+      },
+    },
+    select: { user: { select: { username: true } } },
+  })
+  if (linked) return linked.user.username
+
+  const email = profile.email?.toLowerCase()
+  if (!email) return undefined
+
+  const byEmail = await prisma.user.findUnique({
+    where: { email },
+    select: { username: true },
+  })
+  return byEmail?.username
+}
+
 // Sanitiser for user create/update payloads. Fires for OAuth sign-in
 // (`create`), provider-driven refreshes and admin-tool round-trips
 // (`update`), AND the user-facing /update-user endpoint — Better Auth's
@@ -163,14 +205,32 @@ export const auth = betterAuth({
             // — keeps the stale stored value forever, since Better Auth
             // otherwise only writes profile fields on first sign-in.
             overrideUserInfoOnSignIn: true,
-            mapProfileToUser: (profile) => {
+            // Assign a username on FIRST sign-in only, then leave it alone.
+            //
+            // Whatever this returns is replayed into an UPDATE on every later
+            // sign-in (that's what overrideUserInfoOnSignIn does), and
+            // better-auth >= 1.6.x validates username uniqueness inside its
+            // user.update database hook for every path except /sign-up/email
+            // and /update-user. On the OAuth callback it cannot resolve the
+            // current user id — there's no session yet, and link-account
+            // strips `id` out of the update payload — so a returning user
+            // collides with their OWN row and sign-in dies with
+            // USERNAME_IS_ALREADY_TAKEN (issue #339). Re-syncing was never
+            // wanted regardless: it would move /profile/<name> out from under
+            // existing links on a GitHub rename, and it overwrites the
+            // displayUsername the user chose in settings. `name` and `image`
+            // still refresh on every sign-in, which is the point of the
+            // override.
+            mapProfileToUser: async (profile) => {
+              if (await existingUsernameFor(profile)) return {}
+
               const login = profile.login
               // GitHub usernames are unique globally, so the only way a
               // reserved Arsenyx handle lands here is genuine coincidence.
-              // Suffix with the (stable) GitHub numeric id so re-sync on
-              // every sign-in produces the same value — overrideUserInfo
-              // would otherwise churn the username if we generated a
-              // fresh suffix each time.
+              // Suffix with the (stable) GitHub numeric id rather than
+              // anything random — a NULL-username row from before the
+              // username plugin gets backfilled here on its next sign-in,
+              // and that backfill must be idempotent.
               const reserved = isReservedUsername(login)
               const username = reserved
                 ? `${login}-gh${profile.id}`.toLowerCase().slice(0, 30)
