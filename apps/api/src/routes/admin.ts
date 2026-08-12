@@ -331,7 +331,10 @@ admin.delete("/orgs/:slug", adminMutateLimit, async (c) => {
   await prisma.$transaction([
     prisma.build.updateMany({
       where: { organizationId: org.id },
-      data: { organizationId: null },
+      // hideAuthor goes with the org — a detached build has no org to hide
+      // behind, and a stale flag would keep it off its author's profile.
+      // Same reset the PATCH path applies when a build's org is cleared.
+      data: { organizationId: null, hideAuthor: false },
     }),
     prisma.organization.delete({ where: { id: org.id } }),
   ])
