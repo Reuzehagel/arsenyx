@@ -2,10 +2,9 @@ import { Hono } from "hono"
 
 import { prisma } from "../db"
 import { Prisma } from "../generated/prisma/client"
-import { BuildVisibility } from "../generated/prisma/enums"
 import { enforceAnonSearchLimit } from "../middleware/rate-limit"
 import { parseListQuery, runList } from "./_build-list"
-import { userPublicScope } from "./_build-visibility"
+import { AUTHORED_PUBLIC_BUILD, userPublicScope } from "./_build-visibility"
 import { parsePage, trimQ } from "./_query"
 
 export const users = new Hono()
@@ -47,9 +46,22 @@ users.get("/", async (c) => {
   // Banned users 404 on the profile route, so they must not appear here
   // either. A null username means the account never finished handle setup and
   // has no profile URL to link to.
+  //
+  // The directory lists build *authors*, not every account — that's what the
+  // page says it is, and an account with nothing published is a card that
+  // leads to an empty profile. `AUTHORED_PUBLIC_BUILD` rather than a plain
+  // visibility check so this agrees with what the profile page lists: a user
+  // whose only builds are `hideAuthor` org builds has nothing on their profile
+  // and doesn't belong here either.
+  //
+  // This applies to search too, not just paging. A directory whose results
+  // change population depending on whether you typed would need its empty
+  // state to explain itself; `/profile/<username>` remains the direct route to
+  // anyone, published or not.
   const where: Prisma.UserWhereInput = {
     isBanned: false,
     username: { not: null },
+    builds: { some: AUTHORED_PUBLIC_BUILD },
     ...(q
       ? {
           OR: [
@@ -85,9 +97,10 @@ users.get("/", async (c) => {
         isCommunityLeader: true,
         isModerator: true,
         isAdmin: true,
-        _count: {
-          select: { builds: { where: { visibility: BuildVisibility.PUBLIC } } },
-        },
+        // Same predicate as the `some` filter above and as the profile
+        // page's own aggregate, so a card's count matches the profile it
+        // links to. Every listed user therefore has a count of at least 1.
+        _count: { select: { builds: { where: AUTHORED_PUBLIC_BUILD } } },
       },
     }),
     prisma.user.count({ where }),
