@@ -59,6 +59,19 @@ export function bookmarkedScope(userId: string): ListScope {
   }
 }
 
+/** The Build-side half of `userPublicScope`, with no `userId` bound — the
+ *  predicate for "a Build that counts as its author's public work".
+ *
+ *  Exported so the profile directory (`GET /users`) can ask *whether* a User
+ *  has any such Build and *how many* using the same test the profile page
+ *  itself lists and counts by. Filtering the directory on a looser predicate
+ *  would list authors whose profile then renders empty. Compose it, don't
+ *  restate it. See `userPublicScope` for why the OR is shaped this way. */
+export const AUTHORED_PUBLIC_BUILD = {
+  visibility: BuildVisibility.PUBLIC,
+  OR: [{ organizationId: null }, { hideAuthor: false }],
+} as const satisfies Prisma.BuildWhereInput
+
 /** A User's authored PUBLIC Builds — their public profile list and aggregate
  *  stats (`GET /users/:username[/builds]`). Org-published Builds count as the
  *  author's work and appear here too (#317; cards carry the org byline, so
@@ -74,11 +87,7 @@ export function bookmarkedScope(userId: string): ListScope {
  *  belongs on its author's profile regardless of the flag. */
 export function userPublicScope(userId: string): ListScope {
   return {
-    baseWhere: {
-      userId,
-      visibility: BuildVisibility.PUBLIC,
-      OR: [{ organizationId: null }, { hideAuthor: false }],
-    },
+    baseWhere: { userId, ...AUTHORED_PUBLIC_BUILD },
     baseFilter: Prisma.sql`"userId" = ${userId} AND visibility = 'PUBLIC' AND ("organizationId" IS NULL OR "hideAuthor" = false)`,
   }
 }
