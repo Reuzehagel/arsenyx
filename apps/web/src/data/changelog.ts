@@ -11,12 +11,37 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-08-12",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "You can now find other people on Arsenyx. A new Profiles directory lists build authors, searchable by display name or username, and the organizations directory gained the same search box. Both sit in the header nav and in Ctrl+K, which can open either directory or run what you've typed as a search against it. Press / to focus the search box on either page.",
+      },
+      {
+        type: "feat",
+        description:
+          'Starting a second variant as a copy of your current build takes one click. Builds with a single variant now show "+ Copy" beside "+ Variant": Copy duplicates what you have, Variant starts empty. Duplicating used to live only in the gear menu, which doesn\'t appear until a second variant already exists.',
+      },
+      {
+        type: "fix",
+        description:
+          "Builds you published under an organization now appear on your own profile and count toward your build, like, and view totals. If you published only through an org, your profile showed 0 builds, 0 likes, and 0 views to everyone except you. Builds where you opted out of author attribution at publish time stay off your profile, since that's what the option is for.",
+      },
+      {
+        type: "chore",
+        description:
+          "Game data refreshed to the latest Warframe build. The Shedu and Bubonico now read as Rifle and Shotgun rather than Arm-Cannon, matching the wiki, and the Balefire Charger, Glory, and Noctua no longer offer pistol mods restricted to non-AoE weapons after an upstream change to how those three are tagged.",
+      },
+    ],
+  },
+  {
     date: "2026-08-11",
     changes: [
       {
         type: "fix",
         description:
-          'Signing in with GitHub works again. Since 10 August anyone who already had an account was turned away with "username is already taken" — and the account it collided with was their own. An auth library update started re-checking the username on every sign-in, but on the GitHub callback it can\'t yet tell who is signing in, so it read every returning user as a stranger claiming a taken name. Your username is now set once, when you first sign up, and left alone after that: renaming on GitHub no longer moves your profile URL out from under existing links, and it no longer overwrites the display name you chose in settings. Your avatar and name still refresh from GitHub each time you sign in.',
+          'Signing in with GitHub works again. Since 10 August anyone who already had an account was turned away with "username is already taken" — and the name it collided with was their own. An auth library update started re-checking the username on every sign-in, and on the GitHub callback it can\'t yet tell who is signing in, so every returning user looked like a stranger claiming a taken name. Your username is now set once, at sign-up, and left alone after that. Renaming on GitHub no longer moves your profile URL out from under existing links, and no longer overwrites the display name you chose in settings. Your avatar and name still refresh from GitHub each sign-in.',
       },
     ],
   },
@@ -26,7 +51,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "feat",
         description:
-          "Following a related build now leaves a way back. Open a build from another build's related strip and the one you came from is pinned to the front of that strip, with a back arrow — on the same variant tab you left. It's tied to that step in your history, so it survives a reload and back/forward, and a build opened from a pasted link or a search result shows no back link at all.",
+          "Following a related build now leaves a way back. Open a build from another build's related strip and the one you came from is pinned to the front of that strip, with a back arrow, on the same variant tab you left. It's tied to that step in your history, so it survives a reload and back/forward, and a build opened from a pasted link or a search result shows no back link at all.",
       },
       {
         type: "fix",
@@ -46,12 +71,12 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "fix",
         description:
-          "Universal (Aura Forma) polarity slots show their glyph again and count as polarized — Dante's, Protea's, and Protea Prime's aura slots, plus Vinquibus's normal and stance slots. The wiki spells that polarity \"Aura\" wherever it sits, and the importer passed the token through unrecognized, so those slots rendered empty.",
+          "Universal (Aura Forma) polarity slots show their glyph again and count as polarized: Dante's, Protea's, and Protea Prime's aura slots, plus Vinquibus's normal and stance slots. The wiki spells that polarity \"Aura\" wherever it sits, and the importer passed the token through unrecognized, so those slots rendered empty.",
       },
       {
         type: "fix",
         description:
-          "Ash's Shadow Clones and Shadow Clones (Prime) can equip Covert Lethality, which the game allows. Their mods come from the generic Melee pool, so the Daggers-exclusive mod never reached the picker — the other dagger-only mods and stances they can't use stay hidden.",
+          "Ash's Shadow Clones and Shadow Clones (Prime) can equip Covert Lethality, which the game allows. Their mods come from the generic Melee pool, so the Daggers-exclusive mod never reached the picker. The other dagger-only mods and stances they can't use stay hidden.",
       },
       {
         type: "fix",
@@ -66,7 +91,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "chore",
         description:
-          "Build and build-list pages open faster: they're cached longer at the edge, and build-page previews no longer re-parse the whole image catalog on every miss. The public read routes also got abuse hardening — a cap on how deep pagination can go, an IP rate limit on auth endpoints, and a cache-eligibility check that can no longer be bypassed with a forged cookie.",
+          "Build and build-list pages open faster: they're cached longer at the edge, and build-page previews no longer re-parse the whole image catalog on every miss. The public read routes also got abuse hardening: a cap on how deep pagination can go, an IP rate limit on auth endpoints, and a cache-eligibility check that can no longer be bypassed with a forged cookie.",
       },
     ],
   },
@@ -76,7 +101,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "fix",
         description:
-          "Saving a build updates it everywhere right away. Edits, likes, and admin toggles could keep showing their old values for up to a minute — on build lists, on your profile, and sometimes on the build page itself — because a database-layer cache served the pre-write row back regardless of who was asking.",
+          "Saving a build updates it everywhere right away. Edits, likes, and admin toggles could keep showing their old values for up to a minute: on build lists, on your profile, and sometimes on the build page itself, because a database-layer cache served the pre-write row back regardless of who was asking.",
       },
     ],
   },
@@ -91,7 +116,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "fix",
         description:
-          "Elemental mods now do something on weapons whose only base damage is a combined element — Lizzie's Viral/Magnetic/Cold/Corrosive waves, the Nukor's pure Radiation. Their base counted as zero, so every elemental mod added exactly nothing to the total.",
+          "Elemental mods now do something on weapons whose only base damage is a combined element: Lizzie's Viral/Magnetic/Cold/Corrosive waves, the Nukor's pure Radiation. Their base counted as zero, so every elemental mod added exactly nothing to the total.",
       },
     ],
   },
@@ -101,7 +126,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "feat",
         description:
-          "Build lists can be sorted by name, A-Z or Z-A — on /builds, org pages, profiles, and your bookmarks.",
+          "Build lists can be sorted by name, A-Z or Z-A, on /builds, org pages, profiles, and your bookmarks.",
       },
     ],
   },
@@ -111,7 +136,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "feat",
         description:
-          "Profiles now show the organizations a user belongs to as clickable chips under their name — verified orgs get the purple treatment. No more digging through the directory to find someone's org.",
+          "Profiles now show the organizations a user belongs to as clickable chips under their name. Verified orgs get the purple treatment. No more digging through the directory to find someone's org.",
       },
       {
         type: "feat",
@@ -121,7 +146,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "fix",
         description:
-          "The related-builds picker now only suggests builds you can actually link — your own and your org's. It used to search all public builds site-wide, so picking someone else's build always failed with a permission error.",
+          "The related-builds picker now only suggests builds you can actually link: your own and your org's. It used to search all public builds site-wide, so picking someone else's build always failed with a permission error.",
       },
     ],
   },
@@ -131,12 +156,12 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "feat",
         description:
-          'Related builds got a big upgrade: as the owner you can drag the chips to reorder them, and each link can point at a specific variant of the partner build — handy when a companion build only makes sense with one config. For viewers, long strips now collapse behind a "Show all" toggle with a name filter.',
+          'As the owner you can now drag the related-build chips to reorder them, and each link can point at a specific variant of the partner build, which helps when a companion build only makes sense with one config. For viewers, long strips now collapse behind a "Show all" toggle with a name filter.',
       },
       {
         type: "fix",
         description:
-          "Linking, unlinking, or reordering a related build no longer visually reverts a split second after the action. The change always saved — a stale refetch was just clobbering it in the UI until you reloaded.",
+          "Linking, unlinking, or reordering a related build no longer visually reverts a split second after the action. The change always saved; a stale refetch was just clobbering it in the UI until you reloaded.",
       },
       {
         type: "fix",
@@ -166,7 +191,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "fix",
         description:
-          "The mod picker's filter bar no longer crushes the search box on smaller screens — the filters now wrap onto their own rows below large-desktop widths.",
+          "The mod picker's filter bar no longer crushes the search box on smaller screens. The filters now wrap onto their own rows below large-desktop widths.",
       },
     ],
   },
@@ -176,7 +201,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "fix",
         description:
-          "Umbral Vitality, Fiber, and Intensify now scale correctly within the Umbral set bonus. They used to share one multiplier, which shorted health and armor and would have overpaid ability strength — each mod now applies its own rate, matching the in-game numbers.",
+          "Umbral Vitality, Fiber, and Intensify now scale correctly within the Umbral set bonus. They used to share one multiplier, which shorted health and armor and would have overpaid ability strength. Each mod now applies its own rate, matching the in-game numbers.",
       },
       {
         type: "chore",
@@ -205,7 +230,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "fix",
         description:
-          "Org members can now see their org's private and unlisted builds on the org page — they used to see only public builds, same as a logged-out visitor.",
+          "Org members can now see their org's private and unlisted builds on the org page. They used to see only public builds, same as a logged-out visitor.",
       },
       {
         type: "feat",
@@ -270,7 +295,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "fix",
         description:
-          "You can no longer stack two augments for the same ability — for example two of Loki's Decoy augments. Once you slot one, the others grey out, and existing builds that doubled up now flag the conflict.",
+          "You can no longer stack two augments for the same ability, for example two of Loki's Decoy augments. Once you slot one, the others grey out, and existing builds that doubled up now flag the conflict.",
       },
     ],
   },
@@ -295,7 +320,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "chore",
         description:
-          "Build pages open faster for logged-out visitors — they're now served from a cache instead of being rebuilt on every view.",
+          "Build pages open faster for logged-out visitors. They're now served from a cache instead of being rebuilt on every view.",
       },
       {
         type: "chore",
@@ -310,12 +335,12 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "feat",
         description:
-          "Sirius & Orion — the new twin Warframe — is in the planner as a single frame with a form toggle above the variant tabs. Each form (Sirius and Orion) keeps its own abilities, Helminth, and set of build variants, so you can plan both loadouts side by side under one build and flip between them. Helminth stays on the primary form, matching how the frame works in game.",
+          "Sirius & Orion (the new twin Warframe) is in the planner as a single frame with a form toggle above the variant tabs. Each form (Sirius and Orion) keeps its own abilities, Helminth, and set of build variants, so you can plan both loadouts side by side under one build and flip between them. Helminth stays on the primary form, matching how the frame works in game.",
       },
       {
         type: "feat",
         description:
-          "The latest gear is in the catalog — Sirius & Orion, Styanax Prime, Afentis Prime, and the Pride and Wrath melees, among others. Brand-new weapons the Wiki hasn't documented yet still show up and can be modded; their detailed stats fill in automatically once the Wiki catches up.",
+          "The latest gear is in the catalog: Sirius & Orion, Styanax Prime, Afentis Prime, and the Pride and Wrath melees, among others. Brand-new weapons the Wiki hasn't documented yet still show up and can be modded; their detailed stats fill in automatically once the Wiki catches up.",
       },
       {
         type: "feat",
@@ -330,7 +355,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "feat",
         description:
-          "Arsenyx pages are now properly visible to search engines: every item page, build page, and category gets its own title, description, and preview card (instead of one generic title for the whole site), there's a sitemap so Google can find all ~850 item pages, and arsenyx.com now redirects to www.arsenyx.com so links all count toward the same site. Sharing a build or item link anywhere — not just Discord — now shows a proper preview.",
+          "Arsenyx pages are now properly visible to search engines: every item page, build page, and category gets its own title, description, and preview card (instead of one generic title for the whole site), there's a sitemap so Google can find all ~850 item pages, and arsenyx.com now redirects to www.arsenyx.com so links all count toward the same site. Sharing a build or item link anywhere, not just Discord, now shows a proper preview.",
       },
     ],
   },
@@ -340,7 +365,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "feat",
         description:
-          'Build guides can now reference mods and arcanes by name: type [[ in the guide editor and pick from the suggestions. Readers who hover the reference (or tap it on a phone) see the full mod card with Wiki and Market links — the same card build slots show — so a guide can say "swap in Adaptation here" without sending anyone off to look it up.',
+          'Build guides can now reference mods and arcanes by name: type [[ in the guide editor and pick from the suggestions. Readers who hover the reference (or tap it on a phone) see the full mod card with Wiki and Market links (the same card build slots show), so a guide can say "swap in Adaptation here" without sending anyone off to look it up.',
       },
     ],
   },
@@ -360,12 +385,12 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "feat",
         description:
-          "Click any mod or arcane on a build to get quick links to the Warframe Wiki and (for tradable items) Warframe Market — so you can check what something does or where to get it without leaving the build. It only shows when viewing a build, never while you're editing.",
+          "Click any mod or arcane on a build to get quick links to the Warframe Wiki and (for tradable items) Warframe Market, so you can check what something does or where to get it without leaving the build. It only shows when viewing a build, never while you're editing.",
       },
       {
         type: "feat",
         description:
-          "Community builds can now be sorted by Trending, which ranks them by the views they've picked up over the last 30 days — so builds gaining traction show up, not just the all-time leaders.",
+          "Community builds can now be sorted by Trending, which ranks them by the views they've picked up over the last 30 days, so builds gaining traction show up, not just the all-time leaders.",
       },
       {
         type: "chore",
@@ -375,12 +400,12 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "chore",
         description:
-          "The Ctrl+K quick search no longer shows a list of items before you type — it stays on the page shortcuts until you start searching.",
+          "The Ctrl+K quick search no longer shows a list of items before you type. It stays on the page shortcuts until you start searching.",
       },
       {
         type: "feat",
         description:
-          "The build-guide editor is rebuilt around a real Markdown editor: a formatting toolbar (headings, bold/italic, lists, quotes, links, images, video embeds, code), a live side-by-side preview that renders exactly like the published guide, and templates — built-in starters plus ones you save yourself in this browser.",
+          "The build-guide editor is rebuilt around a real Markdown editor: a formatting toolbar (headings, bold/italic, lists, quotes, links, images, video embeds, code), a live side-by-side preview that renders exactly like the published guide, and templates, both built-in starters and ones you save yourself in this browser.",
       },
       {
         type: "feat",
@@ -532,7 +557,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "refactor",
         description:
-          "UI consistency pass: link-button cursors, icon sizing, and accessibility labels, plus Sonner toasts replacing the old hand-rolled feedback.",
+          "UI consistency pass: link-button cursors, icon sizing, and accessibility labels, plus toast notifications replacing the old hand-rolled feedback.",
       },
       {
         type: "fix",
@@ -591,7 +616,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "fix",
         description:
-          "Augment and modular arcane compatibility is now exact — augments only show on weapons and frames that can equip them, and Kitgun/Pax arcanes no longer appear on every primary and secondary.",
+          "Augment and modular arcane compatibility is now exact: augments only show on weapons and frames that can equip them, and Kitgun/Pax arcanes no longer appear on every primary and secondary.",
       },
       {
         type: "fix",
@@ -685,7 +710,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "feat",
         description:
-          "Build variants — pack up to 4 loadouts into a single build for steel-path / starchart / eidolon splits.",
+          "Build variants: pack up to 4 loadouts into a single build for steel-path / starchart / eidolon splits.",
       },
       {
         type: "fix",
@@ -830,7 +855,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "feat",
         description:
-          "Item detail pages have been redesigned, and browse lists and loading skeletons got an overhaul to feel snappier.",
+          "Item detail pages have been redesigned, along with browse lists and their loading skeletons.",
       },
       {
         type: "feat",
@@ -845,7 +870,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "fix",
         description:
-          "Builds list no longer flashes empty on navigation — the prefetched data is reused correctly now.",
+          "Builds list no longer flashes empty on navigation. The prefetched data is reused correctly.",
       },
     ],
   },
@@ -869,7 +894,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "fix",
         description:
-          "Zaw images load again — refreshed to the latest canonical names.",
+          "Zaw images load again, refreshed to the latest canonical names.",
       },
       {
         type: "fix",
@@ -982,7 +1007,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "feat",
         description:
-          "Arsenyx rewrite — new stack, same build planner. More to come.",
+          "Arsenyx rewrite: new stack, same build planner. More to come.",
       },
     ],
   },
