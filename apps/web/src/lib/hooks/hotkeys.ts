@@ -15,6 +15,7 @@ export type HotkeyScope =
   | "Global"
   | "Browse"
   | "Directories"
+  | "Build lists"
   | "Build editor"
   | "Mod search"
   | "Guide editor"
@@ -50,6 +51,11 @@ export const HOTKEYS: readonly Hotkey[] = [
     scope: "Directories",
     keys: ["/"],
     description: "Focus the organization / profile search",
+  },
+  {
+    scope: "Build lists",
+    keys: ["/"],
+    description: "Focus the build search input",
   },
   {
     scope: "Build editor",

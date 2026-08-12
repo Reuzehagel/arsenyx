@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { SearchX } from "lucide-react"
-import { useCallback, type ReactNode } from "react"
+import { useCallback, useRef, type ReactNode } from "react"
 
 import {
   BuildCard,
@@ -26,6 +26,7 @@ import { Kbd } from "@/components/ui/kbd"
 import { Popover, PopoverContent } from "@/components/ui/popover"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
+import { useHotkey } from "@/lib/hooks/hotkeys"
 import { useBuildLayout } from "@/lib/hooks/use-build-layout"
 import { useUrlSearchInput } from "@/lib/hooks/use-url-search-input"
 import {
@@ -175,6 +176,19 @@ export function BuildsListView({
 
   const [qLocal, setQLocal] = useUrlSearchInput(q, (next) => patch({ q: next }))
 
+  // Backs the `/` hotkey and the Kbd chip on the search input. Only bound when
+  // the input is actually rendered — routes that hide the filter bar
+  // (showFilters=false) have nothing to focus.
+  const searchRef = useRef<HTMLInputElement>(null)
+  useHotkey(
+    "/",
+    () => {
+      searchRef.current?.focus()
+      searchRef.current?.select()
+    },
+    { enabled: showFilters },
+  )
+
   const activeFilterCount = (hasGuide ? 1 : 0) + (hasShards ? 1 : 0)
   // A search, category tab, or toggle is narrowing the list. Zero results then
   // means "nothing matched", not "this list is empty" — so the route's own
@@ -198,6 +212,7 @@ export function BuildsListView({
         {showFilters ? (
           <InputGroup className="flex-1">
             <InputGroupInput
+              ref={searchRef}
               placeholder="Search builds…"
               value={qLocal}
               onChange={(e) => setQLocal(e.target.value)}
