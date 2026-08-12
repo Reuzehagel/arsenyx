@@ -115,6 +115,41 @@ export async function enforceAnonEdgeLimit(
   return null
 }
 
+// Edge-side throttle for the anonymous half of a search/typeahead endpoint.
+// Signed-in callers short-circuit (they're bound by rateLimitUser on mutations
+// and by ANON_READ_LIMITER's user-keyed bucket on reads); anon callers are
+// keyed by IP on the tighter ANON_SEARCH_LIMITER bucket.
+//
+// Call this from the handler rather than as middleware: these routes only want
+// the search bucket when a query is actually present, so a plain paginated read
+// of the same path isn't charged against it.
+//
+// `routeLabel` names the route in the production "binding missing" log — that
+// message is an operational alarm (the binding is anon's only defence in prod),
+// so it has to say which surface went unthrottled.
+export async function enforceAnonSearchLimit(
+  c: Context,
+  routeLabel: string,
+): Promise<Response | null> {
+  const session = await getSession(c)
+  if (session?.user) return null
+
+  return enforceAnonEdgeLimit(
+    c,
+    "ANON_SEARCH_LIMITER",
+    `rate-limit: ANON_SEARCH_LIMITER binding missing in production — anon ${routeLabel} is unthrottled`,
+    () => {
+      // Without cf-connecting-ip every caller shares the literal key
+      // "unknown", which collapses the global anon population into one
+      // bucket. That's a fail-closed outcome (the bucket trips fast) so it's
+      // preferable to fail-open, but log once so it's diagnosable.
+      const ip = c.req.header("cf-connecting-ip")
+      if (!ip) console.warn("rate-limit: missing cf-connecting-ip header")
+      return ip ?? "unknown"
+    },
+  )
+}
+
 // Edge-side read limiter for public GET endpoints. Throttles unauthenticated
 // browsing/scraping; authenticated traffic is keyed by user.id instead, so
 // shared NAT / household IPs don't collide on the same bucket.

@@ -6,6 +6,10 @@ import {
   type BuildListResponse,
   buildQueryString,
 } from "@/lib/queries/builds-list-query"
+import {
+  directoryQueryString,
+  type DirectoryEnvelope,
+} from "@/lib/queries/directory-query"
 import type { OrgRole, OrgSummary } from "@/lib/queries/org-query"
 import { apiFetch, ApiError, loaderError } from "@/lib/util/api-client"
 
@@ -37,6 +41,36 @@ export type Profile = {
   stats: ProfileStats
   orgs: ProfileOrg[]
 }
+
+export type ProfileDirectoryItem = {
+  id: string
+  name: string | null
+  username: string | null
+  displayUsername: string | null
+  image: string | null
+  bio: string | null
+  joinedAt: string
+  badges: ProfileBadges
+  buildCount: number
+}
+
+export type ProfileDirectoryResponse = DirectoryEnvelope & {
+  users: ProfileDirectoryItem[]
+}
+
+export const profilesDirectoryQuery = (page: number, q?: string) =>
+  queryOptions({
+    queryKey: ["profiles", "directory", page, q ?? ""],
+    queryFn: async (): Promise<ProfileDirectoryResponse> => {
+      try {
+        return await apiFetch<ProfileDirectoryResponse>(
+          `/users${directoryQueryString(page, q)}`,
+        )
+      } catch (err) {
+        throw loaderError(err, "failed to load profiles")
+      }
+    },
+  })
 
 export const profileQuery = (username: string) =>
   queryOptions({

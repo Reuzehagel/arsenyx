@@ -2,11 +2,13 @@ import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import {
   Bug,
+  Building2,
   Compass,
   Hammer,
   LayoutGrid,
   ScrollText,
   User,
+  Users,
 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
@@ -108,8 +110,15 @@ export function CommandPalette({
   )
 
   useEffect(() => {
-    setSelected(filteredItems[0] ? `item:${filteredItems[0].slug}` : "")
-  }, [filteredItems])
+    if (filteredItems[0]) {
+      setSelected(`item:${filteredItems[0].slug}`)
+      return
+    }
+    // No item matched, but the Actions group still renders whenever there's a
+    // query — anchor on its first row so Enter and the arrow keys have
+    // something to act on instead of dead-ending on an empty selection.
+    setSelected(debouncedQuery ? "action:builds" : "")
+  }, [filteredItems, debouncedQuery])
 
   const go = (fn: () => void) => {
     onOpenChange(false)
@@ -169,6 +178,18 @@ export function CommandPalette({
                   </CommandItem>
                 ) : null}
                 <CommandItem
+                  onSelect={() => go(() => navigate({ to: "/orgs" }))}
+                >
+                  <Building2 />
+                  <span>Organizations</span>
+                </CommandItem>
+                <CommandItem
+                  onSelect={() => go(() => navigate({ to: "/users" }))}
+                >
+                  <Users />
+                  <span>Profiles</span>
+                </CommandItem>
+                <CommandItem
                   onSelect={() => go(() => navigate({ to: "/changelog" }))}
                 >
                   <ScrollText />
@@ -217,6 +238,7 @@ export function CommandPalette({
                 <CommandSeparator />
                 <CommandGroup heading="Actions">
                   <CommandItem
+                    value="action:builds"
                     onSelect={() =>
                       go(() =>
                         navigate({
@@ -228,6 +250,34 @@ export function CommandPalette({
                   >
                     <Hammer />
                     <span>Search all builds for "{debouncedQuery}"</span>
+                  </CommandItem>
+                  <CommandItem
+                    value="action:orgs"
+                    onSelect={() =>
+                      go(() =>
+                        navigate({
+                          to: "/orgs",
+                          search: { q: debouncedQuery },
+                        }),
+                      )
+                    }
+                  >
+                    <Building2 />
+                    <span>Search organizations for "{debouncedQuery}"</span>
+                  </CommandItem>
+                  <CommandItem
+                    value="action:users"
+                    onSelect={() =>
+                      go(() =>
+                        navigate({
+                          to: "/users",
+                          search: { q: debouncedQuery },
+                        }),
+                      )
+                    }
+                  >
+                    <Users />
+                    <span>Search profiles for "{debouncedQuery}"</span>
                   </CommandItem>
                 </CommandGroup>
               </>

@@ -51,4 +51,20 @@ describe("app security wiring", () => {
     expect(res.status).toBe(403)
     expect(await res.json()).toEqual({ error: "forbidden_origin" })
   })
+
+  // The user directory is mounted on the router *root* (`GET /users`), so it
+  // is the one public route whose path has no segment after the mount point.
+  // `app.use("/users/*", …)` still covers it in Hono — this pins that, because
+  // if it ever stopped matching, the directory would silently escape
+  // originGuard, banGuard, and the anon read limiter with no other symptom.
+  it("applies the /users/* guards to the bare /users path", async () => {
+    const res = await fetchApp(
+      new Request("http://api.test/users", {
+        method: "POST",
+        headers: { origin: "https://evil.example" },
+      }),
+    )
+    expect(res.status).toBe(403)
+    expect(await res.json()).toEqual({ error: "forbidden_origin" })
+  })
 })

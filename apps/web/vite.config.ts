@@ -39,6 +39,7 @@ function sitemap(): Plugin {
     "/",
     "/builds",
     "/orgs",
+    "/users",
     "/about",
     "/docs",
     "/docs/api",

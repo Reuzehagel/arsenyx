@@ -17,7 +17,7 @@ import { edgeCache, purgeEdge } from "../lib/edge-cache"
 import { marker, profile } from "../lib/phase-timing"
 import { getSession } from "../lib/session"
 import { hasPrismaCode, parseJsonBody, trimToMax } from "../lib/validate"
-import { enforceAnonEdgeLimit, rateLimitUser } from "../middleware/rate-limit"
+import { enforceAnonSearchLimit, rateLimitUser } from "../middleware/rate-limit"
 import {
   DETAIL_INCLUDE,
   LIST_SELECT,
@@ -501,29 +501,8 @@ builds.get(
     // Anon traffic isn't keyed by the DB-backed `rateLimitUser` middleware
     // (it short-circuits with no session). Throttle per-IP via the Workers
     // Rate Limiting API binding — runs at the edge before we touch the DB.
-    //
-    // In production the binding is the only anon defence, so a missing
-    // binding (typo in wrangler.toml, removed [[unsafe.bindings]] block) is
-    // an operational bug we want to scream about rather than silently
-    // open-fail. Outside production we tolerate absence so dev/test don't
-    // need the binding wired up.
-    if (!viewerId) {
-      const blocked = await enforceAnonEdgeLimit(
-        c,
-        "ANON_SEARCH_LIMITER",
-        "rate-limit: ANON_SEARCH_LIMITER binding missing in production — anon /builds/search is unthrottled",
-        () => {
-          // Without cf-connecting-ip every caller shares the literal key
-          // "unknown", which collapses the global anon population into one
-          // bucket. That's a fail-closed outcome (the bucket trips fast) so
-          // it's preferable to fail-open, but log once so it's diagnosable.
-          const ip = c.req.header("cf-connecting-ip")
-          if (!ip) console.warn("rate-limit: missing cf-connecting-ip header")
-          return ip ?? "unknown"
-        },
-      )
-      if (blocked) return blocked
-    }
+    const blocked = await enforceAnonSearchLimit(c, "/builds/search")
+    if (blocked) return blocked
 
     const limitRaw = parseInt(c.req.query("limit") ?? "", 10)
     const limit =

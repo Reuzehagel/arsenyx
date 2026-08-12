@@ -80,6 +80,11 @@ const STATIC_META: Record<string, { title: string; description?: string }> = {
     description:
       "Warframe clans and communities publishing builds together on Arsenyx.",
   },
+  "/users": {
+    title: `Profiles — ${SITE_NAME}`,
+    description:
+      "Find Warframe build authors on Arsenyx — search profiles by name or username.",
+  },
   "/about": {
     title: `About — ${SITE_NAME}`,
     description:

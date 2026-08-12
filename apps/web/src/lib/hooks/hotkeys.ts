@@ -14,6 +14,7 @@ import { isEditableTarget } from "@/lib/util/utils"
 export type HotkeyScope =
   | "Global"
   | "Browse"
+  | "Directories"
   | "Build editor"
   | "Mod search"
   | "Guide editor"
@@ -44,6 +45,11 @@ export const HOTKEYS: readonly Hotkey[] = [
     scope: "Browse",
     keys: ["/"],
     description: "Focus the search filter",
+  },
+  {
+    scope: "Directories",
+    keys: ["/"],
+    description: "Focus the organization / profile search",
   },
   {
     scope: "Build editor",

@@ -10,7 +10,7 @@ import {
   trimToMax,
   validateExternalUrl,
 } from "../lib/validate"
-import { rateLimitUser } from "../middleware/rate-limit"
+import { enforceAnonSearchLimit, rateLimitUser } from "../middleware/rate-limit"
 import { parseListQuery, runList } from "./_build-list"
 import { orgMemberScope, orgPublicScope } from "./_build-visibility"
 import { parsePage, trimQ } from "./_query"
@@ -150,6 +150,13 @@ orgs.get("/public", async (c) => {
   const page = parsePage(c.req.query("page"))
   const q = trimQ(c.req.query("q"))
   const skip = (page - 1) * DIRECTORY_PAGE
+
+  // Only charge the tighter search bucket when a query is actually present —
+  // plain directory paging stays on the ANON_READ_LIMITER the router applies.
+  if (q) {
+    const blocked = await enforceAnonSearchLimit(c, "/orgs/public?q=")
+    if (blocked) return blocked
+  }
 
   const where: Prisma.OrganizationWhereInput = q
     ? {
