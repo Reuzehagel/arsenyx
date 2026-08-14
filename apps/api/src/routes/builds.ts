@@ -1,3 +1,12 @@
+import type {
+  BuildChangeResponse,
+  BuildRevisionResponse,
+} from "@arsenyx/shared/api/build-dto"
+import {
+  diffBuildData,
+  mergeChanges,
+  type BuildChange,
+} from "@arsenyx/shared/warframe/build-diff"
 import { MAX_VARIANTS } from "@arsenyx/shared/warframe/build-doc"
 import { isValidCategory } from "@arsenyx/shared/warframe/categories"
 import {
@@ -44,6 +53,8 @@ const SLUG_COLLISION_RETRIES = 5
 
 const MAX_NAME = 120
 const MAX_DESCRIPTION = 2000
+// Matches BuildRevision.note's @db.VarChar(300).
+const MAX_REVISION_NOTE = 300
 const MAX_GUIDE_SUMMARY = 400
 const MAX_GUIDE_DESCRIPTION = 50_000
 
@@ -267,6 +278,17 @@ builds.post("/", rateLimitUser("mutate"), async (c) => {
                 },
               }
             : undefined,
+          // Anchor entry for the edit log. Written here rather than backfilled
+          // so every build created from now on has a real "created by" row —
+          // Build.createdAt says when, but only this says who, which for an org
+          // build is not the same question.
+          revisions: {
+            create: {
+              editorId: session.user.id,
+              kind: "CREATED",
+              note: trimToMax(b.revisionNote, MAX_REVISION_NOTE),
+            },
+          },
         },
         select: { id: true, slug: true },
       })
@@ -289,7 +311,21 @@ builds.patch("/:slug", rateLimitUser("mutate"), async (c) => {
 
   const existing = await prisma.build.findUnique({
     where: { slug },
-    select: { id: true, userId: true, organizationId: true },
+    // buildData is pulled (5-80 KB) so the revision written below can diff
+    // against it. PATCH is rare next to reads, and there is no other way to
+    // know what changed — the client sends the whole document, not a patch.
+    select: {
+      id: true,
+      userId: true,
+      organizationId: true,
+      buildData: true,
+      name: true,
+      visibility: true,
+      // For the revision below: the editor sends `guide` on every save whether
+      // or not it changed, so "was the guide edited" has to be answered by
+      // comparing content, not by the field's presence.
+      buildGuide: { select: { summary: true, description: true } },
+    },
   })
   if (!existing) return c.json({ error: "not_found" }, 404)
   if (!(await canMutateBuild(existing, session.user.id))) {
@@ -381,14 +417,222 @@ builds.patch("/:slug", rateLimitUser("mutate"), async (c) => {
     }
   }
 
+  // Every accepted PATCH writes one revision, in the same statement as the
+  // update so a save can never land without its log entry. Bursts of saves from
+  // one editing session are folded at READ time (see the revisions route) —
+  // folding on write would need the pre-burst document, which isn't stored.
+  const changes = describeEdit(existing, data, guide)
+  data.revisions = {
+    create: {
+      editorId: session.user.id,
+      kind: "EDITED",
+      note: trimToMax(b.revisionNote, MAX_REVISION_NOTE),
+      changes: changes as unknown as InputJsonValue,
+    },
+  }
+
   const updated = await prisma.build.update({
     where: { id: existing.id },
     data,
     select: { id: true, slug: true },
   })
+  pruneRevisions(existing.id)
   purgeEdge(c, `/builds/${slug}`)
   return c.json(updated)
 })
+
+/**
+ * What this PATCH changed, as a stored change list. The loadout diff comes from
+ * the shared differ; the fields that live in columns rather than in buildData
+ * (name, visibility, the guide row) have no representation there, so they are
+ * appended here — otherwise a rename would log as "No loadout changes", which
+ * is worse than saying nothing.
+ */
+export function describeEdit(
+  existing: {
+    buildData: unknown
+    name: string
+    visibility: BuildVisibility
+    buildGuide: { summary: string | null; description: string | null } | null
+  },
+  data: Record<string, unknown>,
+  guide: { summary: string | null; description: string | null } | null,
+): BuildChange[] {
+  const out: BuildChange[] =
+    data.buildData !== undefined
+      ? diffBuildData(existing.buildData, data.buildData)
+      : []
+
+  if (typeof data.name === "string" && data.name !== existing.name) {
+    out.push({
+      op: "modify",
+      label: "Renamed",
+      detail: `${existing.name} → ${data.name}`,
+    })
+  }
+  if (data.visibility != null && data.visibility !== existing.visibility) {
+    out.push({
+      op: "modify",
+      label: "Visibility",
+      detail: `${existing.visibility} → ${String(data.visibility)}`,
+    })
+  }
+  // Compare content, not presence — see the buildGuide select above.
+  if (
+    guide &&
+    (guide.summary !== (existing.buildGuide?.summary ?? null) ||
+      guide.description !== (existing.buildGuide?.description ?? null))
+  ) {
+    out.push({ op: "info", label: "Guide updated" })
+  }
+  if (data.organizationId !== undefined) {
+    out.push({ op: "info", label: "Organization changed" })
+  }
+
+  // Drop the placeholder once something real landed alongside it — a rename
+  // that touched no slots shouldn't read "No loadout changes · Renamed".
+  const real = out.filter((ch) => ch.label !== "No loadout changes")
+  if (real.length > 0) return real
+  return out.length > 0 ? out : [{ op: "info", label: "Updated" }]
+}
+
+/**
+ * Trim a build's log to the newest {@link MAX_STORED_REVISIONS}. Sampled rather
+ * than run on every save, matching the view-day prune above: saves are already
+ * rate-limited, so an occasional trim is enough to keep the table bounded, and
+ * it costs nothing on the other 98% of writes.
+ */
+const MAX_STORED_REVISIONS = 200
+function pruneRevisions(buildId: string) {
+  if (Math.random() >= 0.02) return
+  registerBackgroundWork(
+    prisma.$executeRaw`
+      DELETE FROM build_revisions
+      WHERE "buildId" = ${buildId}
+        AND id NOT IN (
+          SELECT id FROM build_revisions
+          WHERE "buildId" = ${buildId}
+          ORDER BY "createdAt" DESC
+          LIMIT ${MAX_STORED_REVISIONS}
+        )
+    `.catch((err) => console.error("revision prune failed", err)),
+  )
+}
+
+// Consecutive saves by one editor inside this window collapse into a single
+// entry. A normal editing session fires several saves a minute apart; without
+// folding the log fills with near-empty rows within a week and stops being
+// worth opening.
+const REVISION_FOLD_MS = 30 * 60 * 1000
+// Raw rows read before folding. Folding shrinks the list, so the response
+// usually holds far fewer entries than this.
+const REVISION_READ_LIMIT = 120
+
+builds.get("/:slug/revisions", async (c) => {
+  const slug = c.req.param("slug")
+
+  const session = await getSession(c)
+  if (!session?.user) return c.json({ error: "unauthorized" }, 401)
+
+  const build = await prisma.build.findUnique({
+    where: { slug },
+    select: { id: true, userId: true, organizationId: true },
+  })
+  if (!build) return c.json({ error: "not_found" }, 404)
+  // Same gate as editing: if you can change the build you can see who else
+  // has. This deliberately reuses canMutateBuild rather than checking org
+  // membership directly, so it covers solo builds (author sees their own log)
+  // without inventing a second permission rule.
+  if (!(await canMutateBuild(build, session.user.id))) {
+    return c.json({ error: "forbidden" }, 403)
+  }
+
+  const rows = await prisma.buildRevision.findMany({
+    where: { buildId: build.id },
+    orderBy: { createdAt: "desc" },
+    take: REVISION_READ_LIMIT + 1,
+    relationLoadStrategy: "join",
+    select: {
+      id: true,
+      createdAt: true,
+      kind: true,
+      note: true,
+      changes: true,
+      editor: {
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          displayUsername: true,
+          image: true,
+        },
+      },
+    },
+  })
+
+  const truncated = rows.length > REVISION_READ_LIMIT
+  return c.json({
+    revisions: foldRevisions(rows.slice(0, REVISION_READ_LIMIT)),
+    truncated,
+  })
+})
+
+export type RevisionRow = {
+  id: string
+  createdAt: Date
+  kind: "CREATED" | "EDITED"
+  note: string | null
+  changes: unknown
+  editor: BuildRevisionResponse["editor"]
+}
+
+function toChanges(raw: unknown): BuildChange[] {
+  return Array.isArray(raw) ? (raw as BuildChange[]) : []
+}
+
+/**
+ * Fold a newest-first row list into display entries, collapsing runs of
+ * same-editor saves inside {@link REVISION_FOLD_MS}. A CREATED row never folds
+ * into anything — "who made this" is a different fact from "who edited it".
+ */
+export function foldRevisions(rows: RevisionRow[]): BuildRevisionResponse[] {
+  const out: BuildRevisionResponse[] = []
+  let group: RevisionRow[] = []
+
+  const flush = () => {
+    if (group.length === 0) return
+    const newest = group[0]
+    out.push({
+      id: newest.id,
+      at: newest.createdAt.toISOString(),
+      kind: newest.kind,
+      editor: newest.editor,
+      notes: [...new Set(group.map((r) => r.note).filter((n) => n !== null))],
+      // mergeChanges wants oldest-first so later edits win; the group is
+      // newest-first because the query is.
+      changes: mergeChanges(
+        [...group].reverse().map((r) => toChanges(r.changes)),
+      ) as BuildChangeResponse[],
+      saves: group.length,
+    })
+    group = []
+  }
+
+  for (const row of rows) {
+    const head = group[0]
+    const foldable =
+      head != null &&
+      row.kind === "EDITED" &&
+      head.kind === "EDITED" &&
+      (head.editor?.id ?? null) === (row.editor?.id ?? null) &&
+      head.createdAt.getTime() - row.createdAt.getTime() < REVISION_FOLD_MS
+    if (!foldable) flush()
+    group.push(row)
+  }
+  flush()
+
+  return out
+}
 
 builds.delete("/:slug", rateLimitUser("mutate"), async (c) => {
   const slug = c.req.param("slug")

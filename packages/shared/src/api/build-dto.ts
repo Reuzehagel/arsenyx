@@ -71,6 +71,37 @@ export type BuildDetailResponse = {
   viewerHasBookmarked: boolean
 }
 
+/** One entry in a build's edit log (`GET /builds/:slug/revisions`). Consecutive
+ *  saves by the same editor are folded into one entry server-side, so `at` is
+ *  the newest save in the group and `changes` is their merged result. */
+export type BuildRevisionResponse = {
+  id: string
+  at: string
+  kind: "CREATED" | "EDITED"
+  /** Null when the account has since been deleted — the entry survives the
+   *  user (BuildRevision.editorId is SetNull), un-attributed. */
+  editor: BuildUserSummary | null
+  /** Author-typed notes from the folded saves, newest first. */
+  notes: string[]
+  changes: BuildChangeResponse[]
+  /** How many raw saves this entry represents. >1 means it was folded. */
+  saves: number
+}
+
+/** Mirrors `BuildChange` from @arsenyx/shared/warframe/build-diff. */
+export type BuildChangeResponse = {
+  op: "add" | "remove" | "modify" | "info"
+  scope?: string
+  label: string
+  detail?: string
+}
+
+export type BuildRevisionsResponse = {
+  revisions: BuildRevisionResponse[]
+  /** True when older entries exist beyond the returned window. */
+  truncated: boolean
+}
+
 /** A single row in a paginated build list response. */
 export type BuildListItemResponse = {
   id: string
