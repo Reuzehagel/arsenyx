@@ -47,6 +47,8 @@ import { getCategoryLabel, type BrowseCategory } from "@/lib/warframe"
 
 import { buildTrailEntry, hasBuildFrom } from "./build-trail"
 import { EmbedStrips } from "./embed-strips"
+// PROTOTYPE (issue #331) — delete this import with the proto-revisions folder.
+import { ProtoRevisionsBelowHeader, type ProtoVariant } from "./proto-revisions"
 import { VariantTabs } from "./variant-tabs"
 
 // Full-page-only chrome. Lazy-loaded so the embed entry (and the embed branch
@@ -76,6 +78,9 @@ interface BuildViewerBodyProps {
    *  keeps it in local state (no router). The index is already a valid
    *  0-based tab index from VariantTabs. */
   onSelectVariant: (index: number) => void
+  /** PROTOTYPE (issue #331) — edit-history UI variant. Dev-only; delete with
+   *  ./proto-revisions. */
+  protoVariant?: ProtoVariant
 }
 
 /**
@@ -127,6 +132,7 @@ function BuildViewerBodyInner({
   embed,
   activeIndex: rawActiveIndex,
   onSelectVariant,
+  protoVariant,
 }: BuildViewerBodyProps & {
   allMods: Mod[]
   allArcanes: Arcane[]
@@ -301,9 +307,13 @@ function BuildViewerBodyInner({
             category={category}
             itemSlug={itemSlug}
             itemImageName={item.imageName ?? undefined}
+            protoVariant={protoVariant}
           />
         </Suspense>
       )}
+
+      {/* PROTOTYPE (#331) — variant A only; renders null otherwise. */}
+      {!embed && <ProtoRevisionsBelowHeader variant={protoVariant} />}
 
       <div className="flex flex-col gap-4">
         {embed && (

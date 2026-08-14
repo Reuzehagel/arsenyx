@@ -9,6 +9,12 @@ import {
   BuildViewerBody,
   EmbedShell,
 } from "@/components/build-viewer"
+// PROTOTYPE (issue #331) — delete this import with the proto-revisions folder.
+import {
+  isProtoVariant,
+  PrototypeSwitcher,
+  type ProtoVariant,
+} from "@/components/build-viewer/proto-revisions"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { isLegacyBuildData } from "@/lib/codec/build-codec-adapter"
@@ -41,6 +47,9 @@ interface BuildSearch {
   /** Active variant index for multi-variant builds. Clamped to a valid
    *  index by the viewer; omitted (default 0) for single-variant builds. */
   v?: number
+  /** PROTOTYPE (issue #331) — edit-history UI variant. Dev-only, stripped in
+   *  production builds. Delete with src/components/build-viewer/proto-revisions. */
+  variant?: ProtoVariant
 }
 
 export const Route = createFileRoute("/builds/$slug")({
@@ -62,6 +71,10 @@ export const Route = createFileRoute("/builds/$slug")({
       ...(scale !== undefined && { scale }),
       ...(bg !== undefined && { bg }),
       ...(v !== undefined && { v }),
+      // PROTOTYPE (#331) — dev-only, never parsed in a production build.
+      ...(import.meta.env.DEV && isProtoVariant(s.variant)
+        ? { variant: s.variant }
+        : {}),
     }
   },
   // The loader warms the related-builds strip (below), but the strip never
@@ -154,7 +167,7 @@ function buildDescription(b: BuildDetail): string {
 }
 
 function BuildPage() {
-  const { embed, scale, bg } = Route.useSearch()
+  const { embed, scale, bg, variant } = Route.useSearch()
 
   if (embed) {
     return (
@@ -179,6 +192,10 @@ function BuildPage() {
         </div>
       </main>
       <Footer />
+      {/* PROTOTYPE (#331) — dev-only variant switcher; never in the embed. */}
+      {import.meta.env.DEV ? (
+        <PrototypeSwitcher current={variant ?? "0"} />
+      ) : null}
     </div>
   )
 }
@@ -199,7 +216,7 @@ function BuildViewerFallback() {
 
 function BuildViewer({ embed = false }: { embed?: boolean }) {
   const { slug } = Route.useParams()
-  const { v } = Route.useSearch()
+  const { v, variant } = Route.useSearch()
   const { data: build } = useSuspenseQuery(buildQuery(slug))
   const navigate = useNavigate()
 
@@ -234,6 +251,8 @@ function BuildViewer({ embed = false }: { embed?: boolean }) {
         embed={embed}
         activeIndex={v}
         onSelectVariant={onSelectVariant}
+        // PROTOTYPE (#331)
+        protoVariant={embed ? undefined : variant}
       />
     </Suspense>
   )

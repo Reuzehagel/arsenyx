@@ -16,6 +16,12 @@ import { formatVisibility } from "@/lib/util/user-display"
 import { getImageUrl, type BrowseCategory } from "@/lib/warframe"
 
 import { BuildActionsMenu } from "./build-actions-menu"
+// PROTOTYPE (issue #331) — delete this import with the proto-revisions folder.
+import {
+  ProtoRevisionsHeaderAction,
+  ProtoRevisionsTimestamp,
+  type ProtoVariant,
+} from "./proto-revisions"
 import { SocialActions } from "./social-actions"
 
 /**
@@ -32,6 +38,7 @@ export function ViewerHeader({
   category,
   itemSlug,
   itemImageName,
+  protoVariant,
 }: {
   build: BuildDetail
   categoryLabel: string
@@ -44,6 +51,8 @@ export function ViewerHeader({
    *  Preferred over the build's stored `item.imageName`, which rots across
    *  image-scheme changes. */
   itemImageName?: string
+  /** PROTOTYPE (issue #331) — edit-history UI variant. Dev-only. */
+  protoVariant?: ProtoVariant
 }) {
   const headerImage = itemImageName ?? build.item.imageName ?? undefined
   return (
@@ -124,18 +133,27 @@ export function ViewerHeader({
               {/* Like count lives on the ♥ button below — don't repeat it
                   here. Views aren't shown anywhere else, so they stay. */}
               <span>{build.viewCount.toLocaleString("en-US")} views</span>
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <span className="cursor-default">
-                      Updated {relativeTime(build.updatedAt)}
-                    </span>
-                  }
+              {/* PROTOTYPE (#331) — variant B swaps this timestamp for a
+                  popover trigger; every other variant keeps the real markup. */}
+              {protoVariant === "b" ? (
+                <ProtoRevisionsTimestamp
+                  variant={protoVariant}
+                  updatedAt={build.updatedAt}
                 />
-                <TooltipContent>
-                  Updated {formatAbsoluteTime(build.updatedAt)}
-                </TooltipContent>
-              </Tooltip>
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <span className="cursor-default">
+                        Updated {relativeTime(build.updatedAt)}
+                      </span>
+                    }
+                  />
+                  <TooltipContent>
+                    Updated {formatAbsoluteTime(build.updatedAt)}
+                  </TooltipContent>
+                </Tooltip>
+              )}
               {build.visibility !== "PUBLIC" ? (
                 <Badge variant="secondary" className="text-xs">
                   {formatVisibility(build.visibility)}
@@ -148,6 +166,8 @@ export function ViewerHeader({
           <ButtonGroup>
             <SocialActions build={build} />
           </ButtonGroup>
+          {/* PROTOTYPE (#331) — variant C only; renders null otherwise. */}
+          <ProtoRevisionsHeaderAction variant={protoVariant} />
           {build.isOwner ? (
             <Button
               size="sm"
