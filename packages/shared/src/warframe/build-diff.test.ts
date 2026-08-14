@@ -78,6 +78,65 @@ describe("diffBuildData", () => {
     ])
   })
 
+  // The editor's Duplicate inserts the copy at activeIndex + 1, so the new
+  // variant lands ahead of existing ones. Matching by position here would diff
+  // the copy against whatever it displaced.
+  it("collapses a variant inserted ahead of an existing one", () => {
+    const before = {
+      variants: [
+        { id: "v1", label: "A", slots: { n0: mod("Reach") } },
+        { id: "v2", label: "B", slots: { n0: mod("Fury") } },
+      ],
+    }
+    const after = {
+      variants: [
+        { id: "v1", label: "A", slots: { n0: mod("Reach") } },
+        { id: "v3", label: "A (copy)", slots: { n0: mod("Reach") } },
+        { id: "v2", label: "B", slots: { n0: mod("Fury") } },
+      ],
+    }
+    expect(diffBuildData(before, after)).toEqual([
+      {
+        op: "add",
+        scope: "A (copy)",
+        label: "Variant added",
+        detail: "1 mods",
+      },
+    ])
+  })
+
+  it("reports a variant swapped out in one save as one removal and one add", () => {
+    const before = {
+      variants: [
+        { id: "v1", label: "A", slots: {} },
+        { id: "v2", label: "B", slots: { n0: mod("Fury") } },
+      ],
+    }
+    const after = {
+      variants: [
+        { id: "v1", label: "A", slots: {} },
+        { id: "v3", label: "C", slots: { n0: mod("Serration") } },
+      ],
+    }
+    expect(labels(diffBuildData(before, after))).toEqual([
+      "add Variant added",
+      "remove Variant removed",
+    ])
+  })
+
+  it("keeps matching by position for documents whose variants have no ids", () => {
+    const before = { slots: { n0: mod("Reach") } }
+    const after = { variants: [{ label: "Steel Path", slots: {} }] }
+    expect(labels(diffBuildData(before, after))).toEqual(["remove Reach"])
+  })
+
+  it("cancels duplicate placements of one name against each other", () => {
+    const dupes = { n0: mod("Reach"), n1: mod("Reach") }
+    expect(diffBuildData(doc({ slots: dupes }), doc({ slots: dupes }))).toEqual(
+      [{ op: "info", label: "No loadout changes" }],
+    )
+  })
+
   it("reports a removed variant", () => {
     const before = {
       variants: [

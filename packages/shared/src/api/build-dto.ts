@@ -8,6 +8,8 @@
 // stringifies `Date` to ISO), so they are typed as `string` here even
 // though the in-memory serializer rows hold `Date` objects.
 
+import type { BuildChange } from "../warframe/build-diff"
+
 export type BuildVisibility = "PUBLIC" | "PRIVATE" | "UNLISTED"
 
 /** Author summary embedded in build detail/list rows. */
@@ -88,13 +90,9 @@ export type BuildRevisionResponse = {
   saves: number
 }
 
-/** Mirrors `BuildChange` from @arsenyx/shared/warframe/build-diff. */
-export type BuildChangeResponse = {
-  op: "add" | "remove" | "modify" | "info"
-  scope?: string
-  label: string
-  detail?: string
-}
+/** The change list goes over the wire exactly as the differ produces it —
+ *  aliased rather than restated so the two can't drift. */
+export type BuildChangeResponse = BuildChange
 
 export type BuildRevisionsResponse = {
   revisions: BuildRevisionResponse[]

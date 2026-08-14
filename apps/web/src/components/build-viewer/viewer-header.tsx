@@ -151,22 +151,24 @@ export function ViewerHeader({
           </ButtonGroup>
           {/* `isOwner` is really "can mutate" (see the api's canMutateBuild),
               which is the same gate the revisions route enforces. */}
-          {build.isOwner ? <BuildHistorySheet slug={build.slug} /> : null}
           {build.isOwner ? (
-            <Button
-              size="sm"
-              nativeButton={false}
-              className="cursor-default"
-              render={
-                <RouterLink
-                  to="/create"
-                  search={{ category, item: itemSlug, build: build.slug }}
-                />
-              }
-            >
-              <Pencil data-icon="inline-start" />
-              Edit
-            </Button>
+            <>
+              <BuildHistorySheet slug={build.slug} />
+              <Button
+                size="sm"
+                nativeButton={false}
+                className="cursor-default"
+                render={
+                  <RouterLink
+                    to="/create"
+                    search={{ category, item: itemSlug, build: build.slug }}
+                  />
+                }
+              >
+                <Pencil data-icon="inline-start" />
+                Edit
+              </Button>
+            </>
           ) : null}
           <BuildActionsMenu
             slug={build.slug}

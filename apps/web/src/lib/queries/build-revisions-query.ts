@@ -4,7 +4,7 @@ import type {
 } from "@arsenyx/shared/api/build-dto"
 import { queryOptions } from "@tanstack/react-query"
 
-import { apiFetch } from "@/lib/util/api-client"
+import { apiFetch, loaderError } from "@/lib/util/api-client"
 
 export type BuildRevision = BuildRevisionResponse
 
@@ -20,15 +20,12 @@ export type BuildRevision = BuildRevisionResponse
 export const buildRevisionsQuery = (slug: string, enabled: boolean) =>
   queryOptions({
     queryKey: ["build", slug, "revisions"] as const,
-    queryFn: async (): Promise<BuildRevisionsResponse> => {
-      try {
-        return await apiFetch<BuildRevisionsResponse>(
-          `/builds/${encodeURIComponent(slug)}/revisions`,
-        )
-      } catch (err) {
-        throw new Error("failed_load_revisions", { cause: err })
-      }
-    },
+    queryFn: async (): Promise<BuildRevisionsResponse> =>
+      apiFetch<BuildRevisionsResponse>(
+        `/builds/${encodeURIComponent(slug)}/revisions`,
+      ).catch((err) => {
+        throw loaderError(err, "failed_load_revisions")
+      }),
     enabled,
     // The log only changes when someone saves the build, which is rare next to
     // opening the sheet. Re-opening inside the window reuses the cached list.

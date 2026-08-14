@@ -1,7 +1,7 @@
 import type { BuildChangeResponse } from "@arsenyx/shared/api/build-dto"
 import { useQuery } from "@tanstack/react-query"
 import { History } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -12,6 +12,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
+import { UserAvatar } from "@/components/user-avatar"
 import {
   buildRevisionsQuery,
   type BuildRevision,
@@ -41,7 +42,6 @@ const TONE: Record<BuildChangeResponse["op"], string> = {
 function ChangeLines({ changes }: { changes: BuildChangeResponse[] }) {
   const [expanded, setExpanded] = useState(false)
   const shown = expanded ? changes : changes.slice(0, MAX_LINES)
-  const hidden = changes.length - shown.length
 
   // Scope (the variant label) repeats across consecutive lines from the same
   // variant — print it once as a heading rather than on every row.
@@ -75,47 +75,55 @@ function ChangeLines({ changes }: { changes: BuildChangeResponse[] }) {
           </div>
         )
       })}
-      {hidden > 0 || expanded ? (
+      {changes.length > MAX_LINES ? (
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
           className="text-muted-foreground hover:text-foreground mt-1 cursor-pointer self-start font-mono text-[10px] underline underline-offset-2"
         >
-          {expanded ? "show less" : `+${hidden} more`}
+          {expanded ? "show less" : `+${changes.length - MAX_LINES} more`}
         </button>
       ) : null}
     </div>
   )
 }
 
-function dayLabel(iso: string): string {
+// Module-level so a long log doesn't build one formatter per entry — Intl
+// construction dwarfs the formatting itself. Mirrors relative-time.ts.
+const dayFormat = new Intl.DateTimeFormat(undefined, {
+  month: "short",
+  day: "numeric",
+})
+const dayWithYearFormat = new Intl.DateTimeFormat(undefined, {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+})
+
+const startOfDay = (d: Date) =>
+  new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+
+function dayLabel(iso: string, now: Date, todayStart: number): string {
   const d = new Date(iso)
-  const now = new Date()
-  const startOf = (x: Date) =>
-    new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime()
-  const days = Math.round((startOf(now) - startOf(d)) / 86_400_000)
+  const days = Math.round((todayStart - startOfDay(d)) / 86_400_000)
   if (days <= 0) return "Today"
   if (days === 1) return "Yesterday"
-  return d.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    ...(d.getFullYear() !== now.getFullYear() && { year: "numeric" }),
-  })
+  const fmt =
+    d.getFullYear() === now.getFullYear() ? dayFormat : dayWithYearFormat
+  return fmt.format(d)
 }
 
 function groupByDay(revisions: BuildRevision[]) {
+  const now = new Date()
+  const todayStart = startOfDay(now)
   const out: { label: string; items: BuildRevision[] }[] = []
   for (const r of revisions) {
-    const label = dayLabel(r.at)
+    const label = dayLabel(r.at, now, todayStart)
     const last = out.at(-1)
     if (last && last.label === label) last.items.push(r)
     else out.push({ label, items: [r] })
   }
   return out
-}
-
-function initials(name: string): string {
-  return name.slice(0, 2).toUpperCase()
 }
 
 function Entry({ revision }: { revision: BuildRevision }) {
@@ -126,9 +134,12 @@ function Entry({ revision }: { revision: BuildRevision }) {
     : "A removed account"
   return (
     <li className="border-border/50 flex gap-3 border-t py-3 first:border-t-0">
-      <span className="bg-muted text-muted-foreground mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-medium">
-        {initials(who)}
-      </span>
+      <UserAvatar
+        src={revision.editor?.image}
+        fallback={who}
+        size={7}
+        className="mt-0.5"
+      />
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-2">
           <span className="truncate text-sm font-medium">{who}</span>
@@ -176,7 +187,7 @@ function Entry({ revision }: { revision: BuildRevision }) {
 export function BuildHistorySheet({ slug }: { slug: string }) {
   const [open, setOpen] = useState(false)
   const { data, isPending, isError } = useQuery(buildRevisionsQuery(slug, open))
-  const groups = groupByDay(data?.revisions ?? [])
+  const groups = useMemo(() => groupByDay(data?.revisions ?? []), [data])
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>

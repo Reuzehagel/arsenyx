@@ -32,7 +32,7 @@ export interface BuildChange {
 /** Hard cap on stored changes. A mass edit (paste-over-import, a rebuilt
  *  loadout) can touch everything at once; past this the list stops being read
  *  and starts being a JSON column that grows without bound. */
-export const MAX_CHANGES = 40
+const MAX_CHANGES = 40
 
 // ---------------------------------------------------------------------------
 // Defensive readers over the persisted shape (apps/web SavedBuildData). That
@@ -87,8 +87,10 @@ interface Variant {
   arcanes: Placed[]
   shards: string[]
   helminth: string[]
-  guide: string
-  incarnon: string
+  guideSummary: string | null
+  guideDescription: string | null
+  incarnonEnabled: boolean
+  incarnonPerks: string[]
 }
 
 /** Stable identity for a shard/perk slot so counting differences doesn't
@@ -127,17 +129,14 @@ function readVariant(v: unknown, index: number, fallback: Json): Variant {
       .filter((a): a is Placed => a !== null),
     shards: arr(src.shards).map(stamp),
     helminth: helminthNames(src.helminth ?? fallback.helminth),
-    // JSON rather than concatenation: guide prose and perk names can contain
-    // any separator character, and two different pairs must never stringify to
-    // the same value or a real edit would read as a no-op.
-    guide: JSON.stringify([
-      str(src.guideSummary) ?? "",
-      str(src.guideDescription) ?? "",
-    ]),
-    incarnon: JSON.stringify([
-      src.incarnonEnabled === true,
-      arr(src.incarnonPerks).map((p) => str(p) ?? ""),
-    ]),
+    // Kept as separate fields and compared field-by-field. Folding them into
+    // one string would mean allocating a copy of the guide prose (up to 50 KB
+    // a variant) on both sides of every diff, and would need escaping so two
+    // different pairs couldn't collide into the same value.
+    guideSummary: str(src.guideSummary),
+    guideDescription: str(src.guideDescription),
+    incarnonEnabled: src.incarnonEnabled === true,
+    incarnonPerks: arr(src.incarnonPerks).map((p) => str(p) ?? ""),
   }
 }
 
@@ -156,17 +155,29 @@ function readVariants(doc: Json): Variant[] {
  *  mod's rank while also moving it still reads as a single `~` line. */
 function cancelMoves(added: Placed[], removed: Placed[]): BuildChange[] {
   const out: BuildChange[] = []
-  const removedBy = new Map<string, Placed>()
-  for (const r of removed) removedBy.set(r.name, r)
+  // A multiset, not one entry per name: nothing stops a persisted document
+  // from carrying the same name twice, and collapsing the duplicates would
+  // leave one side of the pair unmatched — an unchanged save would log a
+  // stray `+`.
+  const removedBy = new Map<string, Placed[]>()
+  for (const r of removed) {
+    const bucket = removedBy.get(r.name)
+    if (bucket) bucket.push(r)
+    else removedBy.set(r.name, [r])
+  }
 
   const survivingAdds: Placed[] = []
   for (const a of added) {
-    const match = removedBy.get(a.name)
-    if (!match) {
+    const bucket = removedBy.get(a.name)
+    if (!bucket || bucket.length === 0) {
       survivingAdds.push(a)
       continue
     }
-    removedBy.delete(a.name)
+    // Prefer the copy at the same rank, so two placements at different ranks
+    // don't read as two rank changes when neither actually moved.
+    const exact = bucket.findIndex((r) => r.rank === a.rank)
+    const match = bucket.splice(exact >= 0 ? exact : 0, 1)[0]
+    if (bucket.length === 0) removedBy.delete(a.name)
     if (match.rank !== a.rank) {
       out.push({
         op: "modify",
@@ -176,12 +187,14 @@ function cancelMoves(added: Placed[], removed: Placed[]): BuildChange[] {
     }
   }
 
-  for (const r of removedBy.values()) {
-    out.push({
-      op: "remove",
-      label: r.name,
-      ...(r.rank !== null && { detail: `rank ${r.rank}` }),
-    })
+  for (const bucket of removedBy.values()) {
+    for (const r of bucket) {
+      out.push({
+        op: "remove",
+        label: r.name,
+        ...(r.rank !== null && { detail: `rank ${r.rank}` }),
+      })
+    }
   }
   for (const a of survivingAdds) {
     out.push({
@@ -227,12 +240,18 @@ function diffVariant(before: Variant, after: Variant): BuildChange[] {
     })
   }
 
-  if (before.incarnon !== after.incarnon) {
+  if (
+    before.incarnonEnabled !== after.incarnonEnabled ||
+    countChanged(before.incarnonPerks, after.incarnonPerks) > 0
+  ) {
     out.push({ op: "modify", label: "Incarnon", detail: "perks changed" })
   }
 
   // A guide edit is a real change that no +/- line can describe.
-  if (before.guide !== after.guide) {
+  if (
+    before.guideSummary !== after.guideSummary ||
+    before.guideDescription !== after.guideDescription
+  ) {
     out.push({ op: "info", label: "Guide updated" })
   }
 
@@ -284,11 +303,21 @@ export function diffBuildData(before: unknown, after: unknown): BuildChange[] {
   const out: BuildChange[] = []
 
   afterVariants.forEach((av, i) => {
-    // Match on the variant's stable id, falling back to position for documents
-    // written before variants carried ids.
-    const prev = byKey.get(av.key) ?? beforeVariants[i]
-    if (prev && byKey.has(av.key)) byKey.delete(av.key)
-    else if (prev && prev.key.startsWith("#")) byKey.delete(prev.key)
+    // Match on the variant's stable id. Position is only a fallback for
+    // documents written before variants carried ids — with ids on both sides a
+    // miss means the variant is genuinely new, and pairing it with whatever sat
+    // at its index would turn "variant added" into a mod-by-mod diff against an
+    // unrelated loadout (the editor's Duplicate inserts mid-array, so this is
+    // the common case, not a corner one).
+    const positional = beforeVariants[i]
+    const positionalMatch =
+      positional &&
+      byKey.has(positional.key) &&
+      (av.key.startsWith("#") || positional.key.startsWith("#"))
+        ? positional
+        : undefined
+    const prev = byKey.get(av.key) ?? positionalMatch
+    if (prev) byKey.delete(prev.key)
 
     if (!prev) {
       // A fresh variant reads as "every slot added" — ~10 green lines that say
@@ -336,6 +365,12 @@ export function diffBuildData(before: unknown, after: unknown): BuildChange[] {
   return out
 }
 
+/** The op that undoes each op. */
+const CANCELS: Partial<Record<BuildChangeOp, BuildChangeOp>> = {
+  add: "remove",
+  remove: "add",
+}
+
 /**
  * Fold consecutive same-editor entries into one change list. A single editing
  * session produces a burst of saves — without this the log fills with
@@ -358,11 +393,8 @@ export function mergeChanges(lists: BuildChange[][]): BuildChange[] {
       }
       const key = `${c.scope ?? ""}|${c.label}`
       const prior = merged.get(key)
-      if (prior && prior.op === "add" && c.op === "remove") {
-        merged.delete(key)
-        continue
-      }
-      if (prior && prior.op === "remove" && c.op === "add") {
+      // In then out (or out then in) across the burst = nothing happened.
+      if (prior && CANCELS[prior.op] === c.op) {
         merged.delete(key)
         continue
       }

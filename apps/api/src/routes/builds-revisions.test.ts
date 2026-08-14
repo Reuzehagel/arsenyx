@@ -1,7 +1,11 @@
 import type { BuildChange } from "@arsenyx/shared/warframe/build-diff"
 import { describe, expect, it } from "vitest"
 
-import { describeEdit, foldRevisions, type RevisionRow } from "./builds"
+import {
+  describeEdit,
+  foldRevisions,
+  type RevisionRow,
+} from "./_build-revisions"
 
 const editor = (id: string) => ({
   id,
@@ -109,6 +113,7 @@ describe("describeEdit", () => {
     buildData: { variants: [{ id: "v1", label: "A", slots: {} }] },
     name: "Old name",
     visibility: "PUBLIC" as const,
+    organizationId: null,
     buildGuide: { summary: "s", description: "d" },
   }
 
@@ -166,6 +171,27 @@ describe("describeEdit", () => {
         { summary: "s", description: "rewritten" },
       ),
     ).toEqual([{ op: "info", label: "Guide updated" }])
+  })
+
+  // Same trap as the guide: the editor sends organizationId on every save.
+  it("ignores an organizationId resent unchanged", () => {
+    expect(
+      describeEdit(
+        existing,
+        { buildData: existing.buildData, organizationId: null },
+        null,
+      ),
+    ).toEqual([{ op: "info", label: "No loadout changes" }])
+  })
+
+  it("records an organization that actually moved", () => {
+    expect(
+      describeEdit(
+        existing,
+        { buildData: existing.buildData, organizationId: "org_1" },
+        null,
+      ),
+    ).toEqual([{ op: "info", label: "Organization changed" }])
   })
 
   it("reports the loadout diff when buildData moved", () => {
