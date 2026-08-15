@@ -285,3 +285,37 @@ describe("crit / status percent scaling", () => {
     expect(mode.statusChance.base).toBeCloseTo(10)
   })
 })
+
+// Regression: the riven dialog accepts a hand-typed negative, and share /
+// import codes carry arbitrary values, so a −100% Reload Speed sum can reach
+// the calculator. `base / (1 + percent/100)` divides by zero there.
+describe("reload time — degenerate reload speed sums", () => {
+  function reloadMod(pct: number): Mod {
+    return {
+      name: `Reload ${pct}`,
+      levelStats: [{ stats: [`${pct > 0 ? "+" : ""}${pct}% Reload Speed`] }],
+    } as unknown as Mod
+  }
+
+  it("stays finite at exactly −100% reload speed", () => {
+    const stats = calculateWeaponStats({
+      weapon: makeWeapon({ reloadTime: 2, damage: { impact: 10 } }),
+      mods: [{ mod: reloadMod(-100), rank: 0 }],
+      arcanes: [],
+    })
+    const reload = stats.attackModes[0]!.reloadTime!
+    // 2 / 0.01 — the floored divisor. Unguarded this is Infinity, so the
+    // exact value is what proves the guard is on the path.
+    expect(reload.modified).toBe(200)
+    expect(reload.modified).toBeGreaterThan(0)
+  })
+
+  it("never reports a negative reload time below −100%", () => {
+    const stats = calculateWeaponStats({
+      weapon: makeWeapon({ reloadTime: 2, damage: { impact: 10 } }),
+      mods: [{ mod: reloadMod(-250), rank: 0 }],
+      arcanes: [],
+    })
+    expect(stats.attackModes[0]!.reloadTime!.modified).toBeGreaterThan(0)
+  })
+})

@@ -67,6 +67,17 @@ function emptyNegative(init?: RivenStats): StatRowState {
   return { stat: n?.stat ?? null, value: n ? String(n.value) : "" }
 }
 
+/** Magnitude of a single riven stat roll, as a percentage. The dialog's number
+ *  inputs accept anything, so this keeps NaN/Infinity and absurd values out of
+ *  the stat engine — the real roll ranges are far narrower than the cap. */
+function clampStatMagnitude(raw: string): number {
+  const n = Math.abs(parseFloat(raw))
+  if (!Number.isFinite(n)) return 0
+  return clamp(n, 0, RIVEN_MAX_STAT_MAGNITUDE)
+}
+
+const RIVEN_MAX_STAT_MAGNITUDE = 999
+
 function clampDrain(raw: string): number {
   const n = parseInt(raw, 10)
   if (Number.isNaN(n)) return RIVEN_DEFAULT_DRAIN
@@ -120,14 +131,14 @@ export function RivenDialog({
         .filter((r) => r.stat && r.value)
         .map((r) => ({
           stat: r.stat!,
-          value: Math.abs(parseFloat(r.value) || 0),
+          value: clampStatMagnitude(r.value),
         })),
       negatives:
         negative.stat && negative.value
           ? [
               {
                 stat: negative.stat,
-                value: -Math.abs(parseFloat(negative.value) || 0),
+                value: -clampStatMagnitude(negative.value),
               },
             ]
           : [],

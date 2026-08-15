@@ -143,6 +143,9 @@ interface FilterSelectProps<T extends string> {
   onChange: (v: T) => void
   options: readonly T[]
   labelFor?: (v: T) => string
+  /** Required — these selects have no visible label, so without it a screen
+   *  reader announces four unnamed dropdowns in a row. */
+  label: string
 }
 
 function FilterSelect<T extends string>({
@@ -150,6 +153,7 @@ function FilterSelect<T extends string>({
   onChange,
   options,
   labelFor,
+  label,
 }: FilterSelectProps<T>) {
   const items = options.map((o) => ({
     label: labelFor ? labelFor(o) : o,
@@ -157,7 +161,7 @@ function FilterSelect<T extends string>({
   }))
   return (
     <Select items={items} value={value} onValueChange={(v) => onChange(v as T)}>
-      <SelectTrigger className="w-full sm:w-36">
+      <SelectTrigger className="w-full sm:w-36" aria-label={label}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -507,6 +511,7 @@ export function ModSearchGrid({
             // The Input default h-8 + the group's border makes the group 34px,
             // 2px taller than the h-8 selects beside it — fill the group instead.
             className="h-full"
+            aria-label="Search mods"
             placeholder="Search mods…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -525,7 +530,11 @@ export function ModSearchGrid({
                 // Tab from the input jumps into the grid so users can pick a
                 // specific match (e.g. Primed Continuity vs Continuity) with
                 // arrow keys + Enter. Shift+Tab keeps browser default.
-                const firstName = focusableOrder[0] ?? displayed[0]?.uniqueName
+                // No fallback to `displayed[0]`: a dimmed / used card gets no
+                // keyboard handler, so focusing it strands the user on a card
+                // that ignores Enter, arrows and Escape. With nothing
+                // focusable, let the browser move focus normally.
+                const firstName = focusableOrder[0]
                 if (!firstName) return
                 const el = cardRefs.current.get(firstName)
                 if (!el) return
@@ -559,22 +568,26 @@ export function ModSearchGrid({
 
         <div className="grid grid-cols-2 gap-2 sm:flex">
           <FilterSelect
+            label="Sort mods"
             value={sort}
             onChange={setSort}
             options={SORT_OPTIONS}
           />
           <FilterSelect
+            label="Filter by rarity"
             value={rarity}
             onChange={setRarity}
             options={RARITY_OPTIONS}
           />
           <FilterSelect
+            label="Filter by polarity"
             value={polarity}
             onChange={setPolarity}
             options={POLARITY_OPTIONS}
             labelFor={(v) => (v === "All" ? "All" : capitalize(v))}
           />
           <FilterSelect
+            label="Game mode"
             value={gameMode}
             onChange={setGameMode}
             options={GAME_MODE_OPTIONS}

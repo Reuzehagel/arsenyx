@@ -241,7 +241,11 @@ function calcReloadTime(base: number, stats: SourcedStat[]): StatValue {
       operation: "percent_add",
     })
   }
-  const modified = base / (1 + percent / 100)
+  // A −100% (or worse) sum would divide by zero / flip the sign. No real mod
+  // set reaches it, but a hand-entered riven or a malformed imported build
+  // can — floor the divisor so the panel shows a finite number instead of
+  // Infinity or a negative reload time.
+  const modified = base / Math.max(1 + percent / 100, 0.01)
   return { base: round(base, 2), modified: round(modified, 2), contributions }
 }
 

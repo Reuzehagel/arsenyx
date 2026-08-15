@@ -87,10 +87,11 @@ export const Route = createFileRoute("/create")({
       context.queryClient.ensureQueryData(modsQuery),
       context.queryClient.ensureQueryData(arcanesQuery),
       context.queryClient.ensureQueryData(incarnonAdapterImagesQuery),
+      // Preloaded for every category, not just warframes: EditorShell reads it
+      // through useSuspenseQuery unconditionally, so skipping it here only
+      // moved the same 25 KB fetch into a render-time suspense waterfall.
+      context.queryClient.ensureQueryData(helminthQuery),
     ]
-    if (deps.category === "warframes") {
-      tasks.push(context.queryClient.ensureQueryData(helminthQuery))
-    }
     if (deps.build) {
       tasks.push(context.queryClient.ensureQueryData(buildQuery(deps.build)))
     }
