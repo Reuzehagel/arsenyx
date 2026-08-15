@@ -13,9 +13,11 @@ export function useRankHotkey({
   onDelta: (delta: -1 | 1) => void
 }) {
   // Function matcher rather than array form: `+` only fires with shift held,
-  // and the string-spec parser enforces shift state strictly.
+  // and the string-spec parser enforces shift state strictly. Ctrl/Cmd/Alt
+  // must be absent — `useHotkey` preventDefaults on a match, so without this
+  // the rank keys swallow the browser's Ctrl/Cmd +/− zoom shortcuts.
   useHotkey(
-    (e) => RANK_KEYS.has(e.key),
+    (e) => !e.ctrlKey && !e.metaKey && !e.altKey && RANK_KEYS.has(e.key),
     (e) => onDelta(e.key === "-" || e.key === "_" ? -1 : 1),
     { enabled },
   )
