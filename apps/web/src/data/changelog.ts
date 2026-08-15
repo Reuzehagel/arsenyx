@@ -36,6 +36,11 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "fix",
         description:
+          "Pressing / on a build list focuses the search box, which is what the / hint sitting next to it has been promising all along. The hint showed on community builds, your own builds, bookmarks, profiles, and org pages, but no page there ever listened for the key. The ? shortcut list knows about it now too.",
+      },
+      {
+        type: "fix",
+        description:
           "The mod search box and the Sort, Rarity, Polarity, and game-mode dropdowns beside it now announce what they do to a screen reader. Until now they were one unlabelled text field and four unlabelled dropdowns in a row.",
       },
       {
