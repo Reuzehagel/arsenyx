@@ -10,6 +10,17 @@ import { prisma } from "../db"
 import { Prisma } from "../generated/prisma/client"
 import { parseBool, parsePage, trimQ } from "./_query"
 
+/** The user columns behind `BuildUserSummary` on the wire. Anywhere a build
+ *  row carries a person — author, org member, revision editor — selects this,
+ *  so a field added to the shared type has one place to be added here. */
+export const BUILD_USER_SELECT = {
+  id: true,
+  name: true,
+  username: true,
+  displayUsername: true,
+  image: true,
+} as const
+
 export const LIST_SELECT = {
   id: true,
   slug: true,
@@ -28,15 +39,7 @@ export const LIST_SELECT = {
   itemName: true,
   itemImageName: true,
   itemCategory: true,
-  user: {
-    select: {
-      id: true,
-      name: true,
-      username: true,
-      displayUsername: true,
-      image: true,
-    },
-  },
+  user: { select: BUILD_USER_SELECT },
   organization: {
     select: { id: true, name: true, slug: true, image: true, verified: true },
   },
@@ -45,15 +48,7 @@ export const LIST_SELECT = {
 export type ListRow = Prisma.BuildGetPayload<{ select: typeof LIST_SELECT }>
 
 export const DETAIL_INCLUDE = {
-  user: {
-    select: {
-      id: true,
-      name: true,
-      username: true,
-      displayUsername: true,
-      image: true,
-    },
-  },
+  user: { select: BUILD_USER_SELECT },
   organization: {
     select: { id: true, name: true, slug: true, image: true, verified: true },
   },

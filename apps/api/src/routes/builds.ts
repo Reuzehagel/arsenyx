@@ -26,6 +26,12 @@ import {
   serializeBuildDetail,
   serializeListRow,
 } from "./_build-list"
+import {
+  describeEdit,
+  MAX_REVISION_NOTE,
+  pruneRevisions,
+  readRevisions,
+} from "./_build-revisions"
 import { toggleSocial } from "./_build-social"
 import { bookmarkedScope, ownerScope, publicScope } from "./_build-visibility"
 
@@ -267,6 +273,17 @@ builds.post("/", rateLimitUser("mutate"), async (c) => {
                 },
               }
             : undefined,
+          // Anchor entry for the edit log. Written here rather than backfilled
+          // so every build created from now on has a real "created by" row —
+          // Build.createdAt says when, but only this says who, which for an org
+          // build is not the same question.
+          revisions: {
+            create: {
+              editorId: session.user.id,
+              kind: "CREATED",
+              note: trimToMax(b.revisionNote, MAX_REVISION_NOTE),
+            },
+          },
         },
         select: { id: true, slug: true },
       })
@@ -289,7 +306,21 @@ builds.patch("/:slug", rateLimitUser("mutate"), async (c) => {
 
   const existing = await prisma.build.findUnique({
     where: { slug },
-    select: { id: true, userId: true, organizationId: true },
+    // buildData is pulled (5-80 KB) so the revision written below can diff
+    // against it. PATCH is rare next to reads, and there is no other way to
+    // know what changed — the client sends the whole document, not a patch.
+    select: {
+      id: true,
+      userId: true,
+      organizationId: true,
+      buildData: true,
+      name: true,
+      visibility: true,
+      // For the revision below: the editor sends `guide` on every save whether
+      // or not it changed, so "was the guide edited" has to be answered by
+      // comparing content, not by the field's presence.
+      buildGuide: { select: { summary: true, description: true } },
+    },
   })
   if (!existing) return c.json({ error: "not_found" }, 404)
   if (!(await canMutateBuild(existing, session.user.id))) {
@@ -381,13 +412,50 @@ builds.patch("/:slug", rateLimitUser("mutate"), async (c) => {
     }
   }
 
+  // Every accepted PATCH writes one revision, in the same statement as the
+  // update so a save can never land without its log entry. Bursts of saves from
+  // one editing session are folded at READ time (see the revisions route) —
+  // folding on write would need the pre-burst document, which isn't stored.
+  const changes = describeEdit(existing, data, guide)
+  data.revisions = {
+    create: {
+      editorId: session.user.id,
+      kind: "EDITED",
+      note: trimToMax(b.revisionNote, MAX_REVISION_NOTE),
+      changes: changes as unknown as InputJsonValue,
+    },
+  }
+
   const updated = await prisma.build.update({
     where: { id: existing.id },
     data,
     select: { id: true, slug: true },
   })
+  pruneRevisions(existing.id)
   purgeEdge(c, `/builds/${slug}`)
   return c.json(updated)
+})
+
+builds.get("/:slug/revisions", async (c) => {
+  const slug = c.req.param("slug")
+
+  const session = await getSession(c)
+  if (!session?.user) return c.json({ error: "unauthorized" }, 401)
+
+  const build = await prisma.build.findUnique({
+    where: { slug },
+    select: { id: true, userId: true, organizationId: true },
+  })
+  if (!build) return c.json({ error: "not_found" }, 404)
+  // Same gate as editing: if you can change the build you can see who else
+  // has. This deliberately reuses canMutateBuild rather than checking org
+  // membership directly, so it covers solo builds (author sees their own log)
+  // without inventing a second permission rule.
+  if (!(await canMutateBuild(build, session.user.id))) {
+    return c.json({ error: "forbidden" }, 403)
+  }
+
+  return c.json(await readRevisions(build.id))
 })
 
 builds.delete("/:slug", rateLimitUser("mutate"), async (c) => {

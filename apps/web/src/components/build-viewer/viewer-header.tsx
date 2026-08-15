@@ -16,6 +16,7 @@ import { formatVisibility } from "@/lib/util/user-display"
 import { getImageUrl, type BrowseCategory } from "@/lib/warframe"
 
 import { BuildActionsMenu } from "./build-actions-menu"
+import { BuildHistorySheet } from "./build-history-sheet"
 import { SocialActions } from "./social-actions"
 
 /**
@@ -148,21 +149,26 @@ export function ViewerHeader({
           <ButtonGroup>
             <SocialActions build={build} />
           </ButtonGroup>
+          {/* `isOwner` is really "can mutate" (see the api's canMutateBuild),
+              which is the same gate the revisions route enforces. */}
           {build.isOwner ? (
-            <Button
-              size="sm"
-              nativeButton={false}
-              className="cursor-default"
-              render={
-                <RouterLink
-                  to="/create"
-                  search={{ category, item: itemSlug, build: build.slug }}
-                />
-              }
-            >
-              <Pencil data-icon="inline-start" />
-              Edit
-            </Button>
+            <>
+              <BuildHistorySheet slug={build.slug} />
+              <Button
+                size="sm"
+                nativeButton={false}
+                className="cursor-default"
+                render={
+                  <RouterLink
+                    to="/create"
+                    search={{ category, item: itemSlug, build: build.slug }}
+                  />
+                }
+              >
+                <Pencil data-icon="inline-start" />
+                Edit
+              </Button>
+            </>
           ) : null}
           <BuildActionsMenu
             slug={build.slug}

@@ -42,6 +42,7 @@ model User {
   bookmarks               BuildBookmark[]
   organizationMemberships OrganizationMember[]
   rateLimitWindows        UserRateLimitWindow[]
+  buildRevisions          BuildRevision[]
 
   @@map("users")
 }
@@ -229,6 +230,7 @@ model Build {
   partnerVariants Json          @default("{}")
 
   buildGuide BuildGuide?
+  revisions  BuildRevision[]
 
   @@index([userId])
   @@index([itemUniqueName])
@@ -265,6 +267,45 @@ model BuildViewDay {
   @@id([buildId, day])
   @@index([day])
   @@map("build_view_days")
+}
+
+// Append-only edit log for a build. One row per save, carrying who saved it,
+// when, and a small server-computed change list — deliberately NOT a snapshot
+// of buildData, which runs 5-80 KB per build and would dwarf the table.
+//
+// This is also the only place edit attribution exists: `canMutateBuild`
+// (routes/builds.ts) lets any member of the owning org edit an org build, and
+// Build itself records only its author, so before this table an org build's
+// `updatedAt` could move with no record of who moved it.
+model BuildRevision {
+  id      String @id @default(cuid())
+  buildId String
+  build   Build  @relation(fields: [buildId], references: [id], onDelete: Cascade)
+
+  // Nullable + SetNull: deleting an account must not delete the history of
+  // builds that account edited. The entry survives, un-attributed.
+  editorId String?
+  editor   User?   @relation(fields: [editorId], references: [id], onDelete: SetNull)
+
+  kind BuildRevisionKind @default(EDITED)
+
+  // Author-typed "what changed" note. Optional, and usually absent — the
+  // change list below is what most entries are described by.
+  note String? @db.VarChar(300)
+
+  // BuildChange[] from @arsenyx/shared/warframe/build-diff, JSON-encoded.
+  // Null on CREATED rows (nothing to diff against).
+  changes Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([buildId, createdAt])
+  @@map("build_revisions")
+}
+
+enum BuildRevisionKind {
+  CREATED
+  EDITED
 }
 
 model BuildGuide {
