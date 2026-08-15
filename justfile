@@ -49,18 +49,35 @@ stop:
 setup:
     bun run scripts/setup.ts
 
-# Ensure apps/web/src/routeTree.gen.ts exists. Vite's router-plugin
-# generates it during build, but `bun run typecheck` (and editors) need
-# it on a fresh checkout. No-op once present — first run takes ~8s.
+# Refresh the two generated artifacts `typecheck` reads: apps/web's route tree
+# and the Prisma client. Both are gitignored, so a fresh checkout has neither —
+# and, more often, a `git pull` that adds a route or edits schema.prisma leaves
+# a stale one behind. Stale artifacts surface as type errors in files you never
+# touched, which is a bad way to learn you needed to regenerate something.
+gen: gen-routes gen-prisma
+
+# ~1.5s, so it always runs rather than trying to outsmart the schema mtime.
+[working-directory('apps/api')]
+gen-prisma:
+    @bunx prisma generate
+
+# A full vite build (~8s), so this one is gated on the route tree being older
+# than anything under src/routes. The tree is stamped afterwards because the
+# plugin skips the write when the content is unchanged, which would otherwise
+# leave it permanently older than its inputs and rebuild on every run.
 [unix]
 [working-directory('apps/web')]
-gen:
-    test -f src/routeTree.gen.ts || bun run build >/dev/null
+gen-routes:
+    #!/usr/bin/env sh
+    tree=src/routeTree.gen.ts
+    if [ ! -f "$tree" ] || [ -n "$(find src/routes -newer "$tree" -print -quit)" ]; then
+        bun run build >/dev/null && touch "$tree"
+    fi
 
 [windows]
 [working-directory('apps/web')]
-gen:
-    if (-not (Test-Path src/routeTree.gen.ts)) { bun run build | Out-Null }
+gen-routes:
+    @$tree = 'src/routeTree.gen.ts'; $stale = -not (Test-Path $tree); if (-not $stale) { $stamp = (Get-Item $tree).LastWriteTimeUtc; $stale = [bool](@(Get-Item src/routes) + @(Get-ChildItem src/routes -Recurse -Force) | Where-Object { $_.LastWriteTimeUtc -gt $stamp } | Select-Object -First 1) }; if ($stale) { bun run build | Out-Null; (Get-Item $tree).LastWriteTimeUtc = (Get-Date).ToUniversalTime() }
 
 # Typecheck + lint + format-check across apps/web, apps/api, packages/shared.
 check: gen

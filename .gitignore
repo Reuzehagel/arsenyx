@@ -19,6 +19,7 @@ node_modules
 
 # tanstack router generated
 /apps/web/src/routeTree.gen.ts
+/apps/web/.tanstack
 
 # misc
 .DS_Store
