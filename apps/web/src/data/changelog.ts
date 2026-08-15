@@ -11,6 +11,41 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-08-15",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Every save on a build now records who saved it and what changed, and a History button in the viewer header opens the log. Each entry lists the mods added, removed, and re-ranked, per variant. Anyone who can edit the build can read it, which on an org build means everyone in the org, so it's clear who touched what. Saves from the same person inside half an hour fold into a single entry, otherwise one editing session would fill the log on its own. The log describes changes rather than storing copies of the build, so it can't roll one back.",
+      },
+      {
+        type: "fix",
+        description:
+          "Ctrl and Cmd with + or − zoom the browser again while you're in the build editor. With a slot selected, the editor read those as rank up and rank down and swallowed the shortcut before the browser saw it. The bare − and = keys still change the rank of the selected mod.",
+      },
+      {
+        type: "fix",
+        description:
+          "A riven with a −100% Reload Speed no longer breaks the stats panel. Reload time divides the base time by the reload speed multiplier, which at −100% is a division by zero, so the panel reported an infinite reload — and worse than −100% turned it negative. The riven dialog also keeps the values you type inside a sane range now.",
+      },
+      {
+        type: "fix",
+        description:
+          "Tab from the mod search box no longer strands you on a mod you can't pick. When nothing in the results was selectable, Tab moved focus onto the first dimmed card, which by design ignores Enter, the arrow keys, and Escape. Tab now passes through and moves focus on as usual.",
+      },
+      {
+        type: "fix",
+        description:
+          "The mod search box and the Sort, Rarity, Polarity, and game-mode dropdowns beside it now announce what they do to a screen reader. Until now they were one unlabelled text field and four unlabelled dropdowns in a row.",
+      },
+      {
+        type: "fix",
+        description:
+          "A build editor link with a malformed item name shows Not Found instead of loading an unrelated data file and rendering a broken editor around it.",
+      },
+    ],
+  },
+  {
     date: "2026-08-12",
     changes: [
       {
