@@ -114,4 +114,70 @@ describe("parseStatText", () => {
     const segs = parseStatText("<DT_SLASH>Slash damage")
     expect(segs).toEqual([{ kind: "text", text: "Slash damage" }])
   })
+
+  // DE's pipe placeholders (|DURATION|, |DAMAGE|, …) are filled in by the
+  // live game; our static data keeps them literal, so they're stripped
+  // along with whatever glue character they're fused to.
+
+  it("strips a bare |TOKEN| placeholder", () => {
+    // Sirius & Orion's 4th ability. Stripping is lossy here — the
+    // placeholder stands in for a real damage type.
+    const segs = parseStatText(
+      "inflict colossal collateral |DAMAGE_TYPE| damage",
+    )
+    expect(segs).toEqual([
+      { kind: "text", text: "inflict colossal collateral damage" },
+    ])
+  })
+
+  it("swallows the '%' and 's' units glued to placeholders", () => {
+    // A naive strip would leave "by % for s". The trailing space survives
+    // on purpose — it still separates this segment from the next one.
+    const segs = parseStatText(
+      "slows their movement by |SLOW|% for |DURATION|s",
+    )
+    expect(segs).toEqual([
+      { kind: "text", text: "slows their movement by for " },
+    ])
+  })
+
+  it("swallows a leading 'x' multiplier", () => {
+    const segs = parseStatText("Deal x|DAMAGE| Damage to incapacitated enemies")
+    expect(segs).toEqual([
+      { kind: "text", text: "Deal Damage to incapacitated enemies" },
+    ])
+  })
+
+  it("swallows a leading '+'", () => {
+    const segs = parseStatText(
+      "Attacks have an additional +|PUNCH_THROUGH| Punch Through.",
+    )
+    expect(segs).toEqual([
+      { kind: "text", text: "Attacks have an additional Punch Through." },
+    ])
+  })
+
+  it("swallows a trailing 'x' stack multiplier", () => {
+    // Health Conversion (Tau) — three placeholders, three glue forms.
+    const segs = parseStatText(
+      "Health Orbs grant |ARMOUR| Armor, stacking up to |STACKS|x. Taking damage will consume a stack after |DURATION|s.",
+    )
+    expect(segs).toEqual([
+      {
+        kind: "text",
+        text: "Health Orbs grant Armor, stacking up to. Taking damage will consume a stack after.",
+      },
+    ])
+  })
+
+  it("trims the space left by a line-initial placeholder", () => {
+    const segs = parseStatText("|CHANCE|% Damage Reduction on AOE")
+    expect(segs).toEqual([{ kind: "text", text: "Damage Reduction on AOE" }])
+  })
+
+  it("doesn't eat the tail of a word fused to a placeholder", () => {
+    // The leading-'x' rule must not fire on the 'x' of "Max".
+    const segs = parseStatText("up to Max|PERCENT|% strength")
+    expect(segs).toEqual([{ kind: "text", text: "up to Max strength" }])
+  })
 })

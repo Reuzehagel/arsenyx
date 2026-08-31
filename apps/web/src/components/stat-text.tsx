@@ -12,6 +12,7 @@ import { cn } from "@/lib/util/utils"
 //   <DT_FIRE_COLOR>Heat …    — colors the element name + icon
 //   <LINE_SEPARATOR>         — explicit line break (alongside literal "\n")
 //   <ENERGY>, <DT_SLASH>, …  — other tags we don't render specially; stripped
+//   |DURATION|, |DAMAGE|, …  — value placeholders the game fills in; stripped
 //
 // The DT_*_COLOR tags are *unclosed* in the source data — they nominally
 // color everything that follows until the next break. Rendering the entire
@@ -42,8 +43,35 @@ type Segment =
 // `stripInlineTags`, but limited to the residue left after DT extraction.
 const RESIDUAL_TAG_PATTERN = /<[A-Z_][A-Z0-9_]*>/g
 
+// The same strings also embed DE's pipe-delimited placeholders (|PERCENT|,
+// |DAMAGE|, |DURATION|, |DAMAGE_TYPE|, …) that the live game substitutes
+// from the item's own stats. Our static data keeps them verbatim, so like
+// the residual angle-bracket tags they're stripped at render time.
+//
+// Glue characters travel with the placeholder — the corpus has
+// `x|DAMAGE| Damage`, `+|PUNCH_THROUGH| Punch Through`, `|CHANCE|% Damage
+// Reduction`, `by |SLOW|% for |DURATION|s`, `stacking up to |STACKS|x` —
+// so a bare strip would leave "x Damage", "+ Punch Through" and "by % for
+// s". A leading `+`/`x` (only where it isn't the tail of a real word) and
+// a trailing `%`/`s`/`x` unit are swallowed along with the token, and the
+// whitespace they leave behind is collapsed.
+const PLACEHOLDER_PATTERN =
+  /(?:(?<![A-Za-z0-9])[+x])?\|[A-Z_]+\|(?:%|[sx](?![A-Za-z]))?/g
+
 function stripResidualTags(text: string): string {
-  return text.replace(RESIDUAL_TAG_PATTERN, "")
+  const stripped = text.replace(RESIDUAL_TAG_PATTERN, "")
+  const withoutPlaceholders = stripped.replace(PLACEHOLDER_PATTERN, "")
+  // Only reflow when a placeholder actually went away — plain segments
+  // keep their (meaningful) surrounding spaces, e.g. "Heat and ".
+  if (withoutPlaceholders === stripped) return stripped
+  return (
+    withoutPlaceholders
+      .replace(/ {2,}/g, " ")
+      .replace(/ +([,.;:!?])/g, "$1")
+      // Leading only: a trailing space still separates this segment from
+      // the next one ("… affected by " + <DT_FIRE_COLOR>"Heat").
+      .replace(/^ +/, "")
+  )
 }
 
 /**
