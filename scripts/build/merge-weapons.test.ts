@@ -1,6 +1,16 @@
 import { describe, expect, it } from "bun:test"
 
+import { CLASS_DEFAULT_POOLS } from "../../data/curated/class-pools"
 import { addNoAoePools, addSlotWidePools } from "./merge-weapons"
+
+describe("CLASS_DEFAULT_POOLS", () => {
+  it("keeps BEAST precepts out of the beast-claws pool", () => {
+    // #363: "BEAST" mods (Fetch, Scavenge, …) are companion precepts, so the
+    // claws must route through "BeastClaws" alone or the editor offers them
+    // in the weapon slot.
+    expect(CLASS_DEFAULT_POOLS["Claws (Beast)"]).not.toContain("BEAST")
+  })
+})
 
 describe("addNoAoePools", () => {
   const run = (pools: string[], tags?: string[]) => {
@@ -52,7 +62,7 @@ describe("addSlotWidePools", () => {
 
   it("leaves companion/archwing pools untouched", () => {
     // Beast claws and arch weapons have their own routing — no slot-wide pool.
-    expect(run(["BeastClaws", "BEAST"])).toEqual(["BeastClaws", "BEAST"])
+    expect(run(["BeastClaws"])).toEqual(["BeastClaws"])
     expect(run(["Archgun"])).toEqual(["Archgun"])
     expect(run(["Archmelee"])).toEqual(["Archmelee"])
   })

@@ -92,7 +92,10 @@ export const CLASS_DEFAULT_POOLS: Record<string, readonly string[]> = {
   // from player Claws weapons. The pool name "BeastClaws" is synthesized
   // in merge-mods.ts (DE ships beast mods with compatName "Claws", which
   // would otherwise leak them onto Venka/Garuda Talons/etc.).
-  "Claws (Beast)": ["BeastClaws", "BEAST"],
+  // Deliberately NOT "BEAST": those are precepts equipped on the companion
+  // itself, not on its claws — including the pool here offered Fetch and
+  // friends in the claws slot (#363).
+  "Claws (Beast)": ["BeastClaws"],
   Melee: ["Melee"], // companion weapon variant
 
   // ──────── Modular Zaw classes ────────
