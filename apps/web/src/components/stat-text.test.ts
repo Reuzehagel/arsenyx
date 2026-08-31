@@ -115,13 +115,12 @@ describe("parseStatText", () => {
     expect(segs).toEqual([{ kind: "text", text: "Slash damage" }])
   })
 
-  // DE's pipe placeholders (|DURATION|, |DAMAGE|, …) are filled in by the
-  // live game; our static data keeps them literal, so they're stripped
-  // along with whatever glue character they're fused to.
+  // DE's pipe placeholders are filled in by the live game. We strip the
+  // non-numeric ones and deliberately keep the numeric ones literal — see
+  // the comment above PLACEHOLDER_PATTERN in stat-text.tsx.
 
-  it("strips a bare |TOKEN| placeholder", () => {
-    // Sirius & Orion's 4th ability. Stripping is lossy here — the
-    // placeholder stands in for a real damage type.
+  it("strips a non-numeric |DAMAGE_TYPE| placeholder", () => {
+    // Sirius & Orion's 4th ability.
     const segs = parseStatText(
       "inflict colossal collateral |DAMAGE_TYPE| damage",
     )
@@ -130,54 +129,46 @@ describe("parseStatText", () => {
     ])
   })
 
-  it("swallows the '%' and 's' units glued to placeholders", () => {
-    // A naive strip would leave "by % for s". The trailing space survives
-    // on purpose — it still separates this segment from the next one.
-    const segs = parseStatText(
-      "slows their movement by |SLOW|% for |DURATION|s",
-    )
-    expect(segs).toEqual([
-      { kind: "text", text: "slows their movement by for " },
-    ])
+  it("strips the gamepad-glyph placeholders", () => {
+    const segs = parseStatText("|LEFT_ATTACK| Sirius attacks")
+    expect(segs).toEqual([{ kind: "text", text: "Sirius attacks" }])
   })
 
-  it("swallows a leading 'x' multiplier", () => {
-    const segs = parseStatText("Deal x|DAMAGE| Damage to incapacitated enemies")
-    expect(segs).toEqual([
-      { kind: "text", text: "Deal Damage to incapacitated enemies" },
-    ])
-  })
-
-  it("swallows a leading '+'", () => {
+  it("keeps numeric placeholders literal", () => {
+    // Health Conversion. The values aren't in our data, so stripping would
+    // yield "grant Armor, stacking up to." — complete-looking but wrong.
     const segs = parseStatText(
-      "Attacks have an additional +|PUNCH_THROUGH| Punch Through.",
-    )
-    expect(segs).toEqual([
-      { kind: "text", text: "Attacks have an additional Punch Through." },
-    ])
-  })
-
-  it("swallows a trailing 'x' stack multiplier", () => {
-    // Health Conversion (Tau) — three placeholders, three glue forms.
-    const segs = parseStatText(
-      "Health Orbs grant |ARMOUR| Armor, stacking up to |STACKS|x. Taking damage will consume a stack after |DURATION|s.",
+      "Health Orbs grant |ARMOUR| Armor, stacking up to |STACKS|x.",
     )
     expect(segs).toEqual([
       {
         kind: "text",
-        text: "Health Orbs grant Armor, stacking up to. Taking damage will consume a stack after.",
+        text: "Health Orbs grant |ARMOUR| Armor, stacking up to |STACKS|x.",
       },
     ])
   })
 
-  it("trims the space left by a line-initial placeholder", () => {
-    const segs = parseStatText("|CHANCE|% Damage Reduction on AOE")
-    expect(segs).toEqual([{ kind: "text", text: "Damage Reduction on AOE" }])
+  it("leaves a numeric placeholder's glue characters intact", () => {
+    const segs = parseStatText(
+      "slows their movement by |SLOW|% for |DURATION|s",
+    )
+    expect(segs).toEqual([
+      { kind: "text", text: "slows their movement by |SLOW|% for |DURATION|s" },
+    ])
   })
 
-  it("doesn't eat the tail of a word fused to a placeholder", () => {
-    // The leading-'x' rule must not fire on the 'x' of "Max".
-    const segs = parseStatText("up to Max|PERCENT|% strength")
-    expect(segs).toEqual([{ kind: "text", text: "up to Max strength" }])
+  it("strips a non-numeric placeholder without disturbing a numeric one", () => {
+    const segs = parseStatText("|DAMAGE_TYPE| damage for |DURATION|s")
+    expect(segs).toEqual([{ kind: "text", text: "damage for |DURATION|s" }])
+  })
+
+  it("leaves segments without a strippable placeholder byte-identical", () => {
+    // Trailing space is meaningful — it separates this segment from the
+    // colored one that follows.
+    const segs = parseStatText("affected by <DT_FIRE_COLOR>Heat")
+    expect(segs).toEqual([
+      { kind: "text", text: "affected by " },
+      { kind: "dt", token: "DT_FIRE_COLOR", text: "Heat" },
+    ])
   })
 })

@@ -12,7 +12,7 @@ import { cn } from "@/lib/util/utils"
 //   <DT_FIRE_COLOR>Heat …    — colors the element name + icon
 //   <LINE_SEPARATOR>         — explicit line break (alongside literal "\n")
 //   <ENERGY>, <DT_SLASH>, …  — other tags we don't render specially; stripped
-//   |DURATION|, |DAMAGE|, …  — value placeholders the game fills in; stripped
+//   |DAMAGE_TYPE|, …        — non-numeric value placeholders; stripped
 //
 // The DT_*_COLOR tags are *unclosed* in the source data — they nominally
 // color everything that follows until the next break. Rendering the entire
@@ -43,35 +43,31 @@ type Segment =
 // `stripInlineTags`, but limited to the residue left after DT extraction.
 const RESIDUAL_TAG_PATTERN = /<[A-Z_][A-Z0-9_]*>/g
 
-// The same strings also embed DE's pipe-delimited placeholders (|PERCENT|,
-// |DAMAGE|, |DURATION|, |DAMAGE_TYPE|, …) that the live game substitutes
-// from the item's own stats. Our static data keeps them verbatim, so like
-// the residual angle-bracket tags they're stripped at render time.
+// The same strings also embed DE's pipe-delimited placeholders, which the
+// live game substitutes at runtime. They split into two groups and we strip
+// only one of them.
 //
-// Glue characters travel with the placeholder — the corpus has
-// `x|DAMAGE| Damage`, `+|PUNCH_THROUGH| Punch Through`, `|CHANCE|% Damage
-// Reduction`, `by |SLOW|% for |DURATION|s`, `stacking up to |STACKS|x` —
-// so a bare strip would leave "x Damage", "+ Punch Through" and "by % for
-// s". A leading `+`/`x` (only where it isn't the tail of a real word) and
-// a trailing `%`/`s`/`x` unit are swallowed along with the token, and the
-// whitespace they leave behind is collapsed.
-const PLACEHOLDER_PATTERN =
-  /(?:(?<![A-Za-z0-9])[+x])?\|[A-Z_]+\|(?:%|[sx](?![A-Za-z]))?/g
+// The *numeric* ones (|DURATION|, |DAMAGE|, |STACKS|, … — 171 occurrences
+// across the catalog) stand in for values our static data doesn't carry:
+// DE ships the placeholder and the game fills it from the item's own stats.
+// Stripping those turns "stacking up to |STACKS|x" into "stacking up to.",
+// a sentence that reads as complete but has silently lost its number. The
+// literal token is the more honest failure — it signals that a value belongs
+// there — so they're left alone until the pipeline can supply real values.
+//
+// The *non-numeric* ones lose nothing when removed: the sentence reads
+// correctly without them. Those are stripped, along with the single space
+// they leave behind. All current occurrences are bare tokens followed by a
+// space (`collateral |DAMAGE_TYPE| damage`, `|LEFT_ATTACK| Sirius attacks`),
+// so no glue-character handling is needed.
+const STRIPPABLE_PLACEHOLDERS = ["DAMAGE_TYPE", "LEFT_ATTACK", "RIGHT_ATTACK"]
+const PLACEHOLDER_PATTERN = new RegExp(
+  `\\|(?:${STRIPPABLE_PLACEHOLDERS.join("|")})\\| ?`,
+  "g",
+)
 
 function stripResidualTags(text: string): string {
-  const stripped = text.replace(RESIDUAL_TAG_PATTERN, "")
-  const withoutPlaceholders = stripped.replace(PLACEHOLDER_PATTERN, "")
-  // Only reflow when a placeholder actually went away — plain segments
-  // keep their (meaningful) surrounding spaces, e.g. "Heat and ".
-  if (withoutPlaceholders === stripped) return stripped
-  return (
-    withoutPlaceholders
-      .replace(/ {2,}/g, " ")
-      .replace(/ +([,.;:!?])/g, "$1")
-      // Leading only: a trailing space still separates this segment from
-      // the next one ("… affected by " + <DT_FIRE_COLOR>"Heat").
-      .replace(/^ +/, "")
-  )
+  return text.replace(RESIDUAL_TAG_PATTERN, "").replace(PLACEHOLDER_PATTERN, "")
 }
 
 /**
