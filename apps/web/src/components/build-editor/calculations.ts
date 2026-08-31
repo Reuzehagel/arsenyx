@@ -268,26 +268,45 @@ export function calculateFormaCount(input: FormaCountInput): number {
     formaPolarities,
   } = input
 
-  // Forma dedups WITHIN a slot type, never across types: an innate polarity
-  // only offsets a mod of its own slot type. A frame's innate Aura polarity
-  // can't make a normal-slot mod cheaper because a normal mod can't sit in the
-  // Aura slot — so a forma'd aura must not cancel a same-polarity normal forma.
-  // Normal slots are interchangeable, so they share one dedup pool; Aura (its
-  // own pool, for 2-aura frames like Jade), Exilus, and Stance are scored
-  // separately. This matches Overframe's forma count.
-  const normalPool: NormalSlotEntry[] = normalInnates.map((innate, i) => ({
-    innate,
-    forma: formaPolarities[`normal-${i}` as SlotId],
-  }))
-  const auraPool: NormalSlotEntry[] = auraInnates.map((innate, i) => ({
-    innate,
-    forma: formaPolarities[`aura-${i}` as SlotId],
-  }))
+  // Forma is spent per *polarity*, not per *slot*. Once an item has been
+  // polarized at least once, the game's "Swap Polarity" action rearranges
+  // existing polarities among its slots freely and unlimitedly — including
+  // the Aura and Exilus slots (wiki: Arsenal, "an item can freely have its
+  // Polarities switched between any Mod Slots as many times as the player
+  // desires, including between Aura and Exilus Slots"). Aura swapping landed
+  // in Update 38.5; before that, per-slot-type pools were correct, which is
+  // why v2 of this calc scored them separately (issue #366).
+  //
+  // Because a swap is an *exchange*, the multiset of polarities on the item is
+  // conserved. So cost depends only on which polarities are needed, not on
+  // which slot each one occupies: Aura, Exilus and the normal slots share one
+  // pool. The Stance slot is excluded — its polarity comes from Stance Forma
+  // alone and can never be swapped in or out — so it is still scored on its
+  // own.
+  const pool: NormalSlotEntry[] = [
+    ...normalInnates.map((innate, i) => ({
+      innate,
+      forma: formaPolarities[`normal-${i}` as SlotId],
+    })),
+    ...auraInnates.map((innate, i) => ({
+      innate,
+      forma: formaPolarities[`aura-${i}` as SlotId],
+    })),
+    { innate: exilusInnate, forma: formaPolarities.exilus },
+  ]
+
+  // A pure rearrangement (same multiset, different slots) nets zero additions
+  // and zero removals, but still isn't free: swapping is only unlocked *after*
+  // the item has been polarized once, so reaching that layout costs one Forma.
+  const pooled = groupForma(pool)
+  const rearranged =
+    pooled === 0 &&
+    pool.some(
+      ({ innate, forma }) => innate !== effectivePolarity(innate, forma),
+    )
 
   return (
-    groupForma(normalPool) +
-    groupForma(auraPool) +
-    singleSlotForma(exilusInnate, formaPolarities.exilus) +
+    (rearranged ? 1 : pooled) +
     singleSlotForma(stanceInnate, formaPolarities.stance)
   )
 }

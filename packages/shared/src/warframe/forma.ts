@@ -6,7 +6,10 @@
 // whole table. See scripts/recompute-forma.ts.
 // v2: forma is deduped within a slot type, not across them — a forma'd Aura no
 // longer cancels a same-polarity normal-slot forma (see calculateFormaCount).
-export const FORMA_CALC_VERSION = 2
+// v3: reverts the v2 split. Update 38.5 made "Swap Polarity" work across Aura
+// and Exilus too, so those slots share one dedup pool with the normal slots
+// again; only Stance stays separate (issue #366).
+export const FORMA_CALC_VERSION = 3
 
 // `formaCalcVersion` value for a row whose count was never computed by the
 // current calc — a pre-backfill row, or a write that didn't carry a valid
