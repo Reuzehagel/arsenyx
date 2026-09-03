@@ -155,7 +155,7 @@ function GeneralCard({ org }: { org: OrgProfile }) {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Organization name"
-                maxLength={50}
+                maxLength={32}
                 required
               />
             </Field>

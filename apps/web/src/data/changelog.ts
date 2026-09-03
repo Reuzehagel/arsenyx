@@ -11,6 +11,21 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-09-03",
+    changes: [
+      {
+        type: "chore",
+        description:
+          "Each account can now own at most three organizations, and organization names are capped at 32 characters. Someone had been creating organizations in bulk with the name field used as an advert, and the directory turned into their billboard. The create form disappears from settings once you're an admin of three; being invited to other people's orgs is unaffected.",
+      },
+      {
+        type: "chore",
+        description:
+          "The terms now spell out a rule that was always implied: build titles, org names, descriptions, and profile fields are for naming things, not for self-promotion. Linking your own video or article from inside a guide is still fine.",
+      },
+    ],
+  },
+  {
     date: "2026-08-15",
     changes: [
       {
