@@ -28,7 +28,7 @@ process.env.GITHUB_CLIENT_ID = "test-client-id"
 process.env.GITHUB_CLIENT_SECRET = "test-client-secret"
 process.env.BETTER_AUTH_SECRET = "test-secret-not-used-for-anything-real"
 
-const { auth } = await import("./auth")
+const { auth, USERNAME_PLUGIN_OPTIONS } = await import("./auth")
 
 type GithubProfile = { id: number; login: string; email: string | null }
 
@@ -131,6 +131,80 @@ describe("github mapProfileToUser", () => {
       displayUsername: "support-gh7",
     })
     expect(second).toEqual({})
+  })
+
+  // Issue #374: GitHub logins may contain hyphens, and the username plugin's
+  // user.create hook runs our validator on the OAuth callback, so a login like
+  // `Len-Github` was rejected with USERNAME_IS_INVALID before any row existed.
+  it("keeps a hyphenated login as-is", async () => {
+    const hyphen = { id: 99, login: "Len-Github", email: null }
+    expect(await mapProfileToUser(hyphen)).toEqual({
+      username: "len-github",
+      displayUsername: "Len-Github",
+    })
+  })
+
+  it("pads a login shorter than the minimum with the GitHub id", async () => {
+    const short = { id: 12, login: "ab", email: null }
+    expect(await mapProfileToUser(short)).toEqual({
+      username: "ab-gh12",
+      displayUsername: "ab-gh12",
+    })
+  })
+
+  it("truncates a login longer than the maximum, keeping it unique", async () => {
+    // 39 chars — GitHub's own ceiling.
+    const long = { id: 5, login: "a".repeat(39), email: null }
+    const out = await mapProfileToUser(long)
+    expect(out.username).toBe(`${"a".repeat(26)}-gh5`)
+    expect(out.displayUsername).toBe(out.username)
+  })
+})
+
+describe("derived usernames survive the plugin's user.create hook", () => {
+  // Every login GitHub can hand us must pass better-auth's create hook with
+  // OUR options installed — that's the exact spot #374 died.
+  async function createBefore(username: string) {
+    const { username: plugin } = await import("better-auth/plugins")
+    const hook = (
+      plugin(USERNAME_PLUGIN_OPTIONS).init({
+        adapter: { findOne: async () => null },
+      } as never) as unknown as {
+        options: {
+          databaseHooks: {
+            user: {
+              create: {
+                before: (
+                  data: Record<string, unknown>,
+                  ctx: unknown,
+                ) => Promise<unknown>
+              }
+            }
+          }
+        }
+      }
+    ).options.databaseHooks.user.create.before
+    return hook({ username }, { path: "/callback/:id", context: {} })
+  }
+
+  it.each(["Len-Github", "ab", "a".repeat(39), "support", "Shinkokuna"])(
+    "accepts the username derived from %s",
+    async (login) => {
+      const { username } = (await mapProfileToUser({
+        id: 1,
+        login,
+        email: null,
+      })) as { username: string }
+      await expect(createBefore(username)).resolves.toMatchObject({
+        data: { username },
+      })
+    },
+  )
+
+  it("still rejects characters GitHub can't produce", async () => {
+    await expect(createBefore("bad name")).rejects.toMatchObject({
+      body: { code: "INVALID_USERNAME" },
+    })
   })
 })
 
