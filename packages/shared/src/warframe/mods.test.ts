@@ -406,3 +406,36 @@ describe("getModsForItem — per-item mod allowances", () => {
     expect(getModsForItem(noFinisher, daggerMods)).toEqual([])
   })
 })
+
+describe("getModsForItem — beast claws exclude BEAST precepts", () => {
+  // Regression for #363. Every mod the wiki lists under Type "Beast" (Fetch,
+  // Hunter Recovery, Scavenge, …) is a precept equipped on the companion
+  // itself, never on its claws. The claws' modPools used to carry a stray
+  // "BEAST" entry, which let the editor offer Fetch on e.g. Chesa Claws.
+  const fetch = {
+    uniqueName: "/Lotus/Types/Sentinels/SentinelPrecepts/BeastUniversalVacuum",
+    name: "Fetch",
+    compatName: "BEAST",
+  } as Mod
+  const maul = {
+    uniqueName: "/Lotus/Upgrades/Mods/Sentinel/Kubrow/KubrowMeleeDamageMod",
+    name: "Maul",
+    compatName: "BeastClaws",
+  } as Mod
+  const beastMods = [fetch, maul]
+
+  it("omits a BEAST-compat precept from the claws mod list", () => {
+    const chesaClaws = { modPools: ["BeastClaws", "Chesa Claws"] }
+    const names = getModsForItem(chesaClaws, beastMods).map((m) => m.name)
+    expect(names).not.toContain("Fetch")
+    // …while the claws' own pool still routes normally.
+    expect(names).toContain("Maul")
+  })
+
+  it("still offers BEAST precepts to the companion itself", () => {
+    const chesaKubrow = { modPools: ["BEAST", "COMPANION", "Kubrow"] }
+    expect(getModsForItem(chesaKubrow, beastMods).map((m) => m.name)).toContain(
+      "Fetch",
+    )
+  })
+})
