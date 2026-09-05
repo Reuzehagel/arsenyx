@@ -189,15 +189,18 @@ describe('"any"-polarity mods match every polarized slot', () => {
   })
 })
 
-// Regression: forma must dedup within a slot type, never across types. A
-// forma'd Aura previously shared the normal pool and could cancel a
-// same-polarity normal forma, undercounting vs Overframe (matches OF here).
+// Since Update 38.5, "Swap Polarity" moves polarities freely between Aura,
+// Exilus and normal slots, so all three share one dedup pool and cost depends
+// only on the multiset of polarities needed. Stance is excluded — Stance Forma
+// only. See calculateFormaCount and issue #366.
 describe("calculateFormaCount", () => {
   const NO_NORMALS = Array<undefined>(8).fill(undefined)
 
-  it("does not let a forma'd aura offset a same-polarity normal forma", () => {
+  it("lets a forma'd aura offset a same-polarity normal forma", () => {
     // Valkyr Prime (aura madurai + 3 madurai normals). Aura forma'd madurai→any,
-    // two blank normals forma'd to madurai, plus umbra/zenurik/vazarin. OF = 5.
+    // two blank normals forma'd to madurai, plus umbra/zenurik/vazarin.
+    // Pooled: innate {madurai×4}, effective {any, madurai×4, umbra, zenurik,
+    // vazarin} → 4 additions, 0 removals. Under v2 this scored 5.
     const count = calculateFormaCount({
       auraInnates: ["madurai"],
       normalInnates: [
@@ -215,7 +218,28 @@ describe("calculateFormaCount", () => {
         "normal-6": "madurai",
       },
     })
-    expect(count).toBe(5)
+    expect(count).toBe(4)
+  })
+
+  it("charges one forma for a pure rearrangement", () => {
+    // Same multiset, different slots: nets zero additions and zero removals,
+    // but swapping is only unlocked after the item has been polarized once.
+    const count = calculateFormaCount({
+      auraInnates: [],
+      normalInnates: ["madurai", undefined, ...Array(6).fill(undefined)],
+      formaPolarities: { "normal-0": "universal", "normal-1": "madurai" },
+    })
+    expect(count).toBe(1)
+  })
+
+  it("charges nothing for an untouched build", () => {
+    const count = calculateFormaCount({
+      auraInnates: ["madurai"],
+      exilusInnate: "naramon",
+      normalInnates: ["madurai", ...Array(7).fill(undefined)],
+      formaPolarities: {},
+    })
+    expect(count).toBe(0)
   })
 
   it("dedups a polarity move within the interchangeable normal pool", () => {
@@ -237,12 +261,27 @@ describe("calculateFormaCount", () => {
     expect(count).toBe(5)
   })
 
-  it("scores a forma'd exilus separately from the normal pool", () => {
+  it("pools a forma'd exilus with the normal slots", () => {
+    // The innate madurai moves off exilus and onto a normal slot; exilus takes
+    // vazarin. Pooled that is one addition (vazarin), not two formas.
+    // Under v2 this scored 2.
     const count = calculateFormaCount({
       auraInnates: [],
       exilusInnate: "madurai",
       normalInnates: NO_NORMALS,
       formaPolarities: { exilus: "vazarin", "normal-0": "madurai" },
+    })
+    expect(count).toBe(1)
+  })
+
+  it("keeps stance out of the pool", () => {
+    // Stance polarity comes from Stance Forma and can never be swapped, so a
+    // stance change is charged on top of the pooled cost.
+    const count = calculateFormaCount({
+      auraInnates: [],
+      stanceInnate: "madurai",
+      normalInnates: NO_NORMALS,
+      formaPolarities: { stance: "naramon", "normal-0": "madurai" },
     })
     expect(count).toBe(2)
   })
