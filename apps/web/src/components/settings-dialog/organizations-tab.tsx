@@ -16,6 +16,9 @@ import { authClient } from "@/lib/auth-client"
 import { useCreateOrg } from "@/lib/queries/org-actions"
 import { myOrgsQuery } from "@/lib/queries/org-query"
 
+// Mirrors MAX_ORGS_PER_USER in apps/api/src/routes/orgs.ts.
+const MAX_ORGS_PER_USER = 3
+
 export function OrganizationsPanel({ onClose }: { onClose: () => void }) {
   const { data: session } = authClient.useSession()
   const signedIn = !!session?.user
@@ -37,6 +40,10 @@ export function OrganizationsPanel({ onClose }: { onClose: () => void }) {
       </FieldGroup>
     )
   }
+
+  const ownedCount =
+    orgsQuery.data?.memberships.filter((m) => m.role === "ADMIN").length ?? 0
+  const atLimit = ownedCount >= MAX_ORGS_PER_USER
 
   return (
     <FieldGroup>
@@ -85,9 +92,26 @@ export function OrganizationsPanel({ onClose }: { onClose: () => void }) {
           </p>
         )}
       </Field>
-      <CreateOrgForm onClose={onClose} />
+      {atLimit ? (
+        <Field>
+          <FieldLabel>Create organization</FieldLabel>
+          <FieldDescription>
+            You already run {MAX_ORGS_PER_USER} organizations, which is the most
+            one account can own.
+          </FieldDescription>
+        </Field>
+      ) : (
+        <CreateOrgForm onClose={onClose} />
+      )}
     </FieldGroup>
   )
+}
+
+const CREATE_ERRORS: Record<string, string> = {
+  org_limit: `You already run ${MAX_ORGS_PER_USER} organizations, which is the most one account can own.`,
+  slug_taken: "That slug is already taken.",
+  invalid_slug: "Slugs can only contain lowercase letters, digits, and dashes.",
+  invalid_name: "Enter a name for the organization.",
 }
 
 function CreateOrgForm({ onClose }: { onClose: () => void }) {
@@ -97,7 +121,10 @@ function CreateOrgForm({ onClose }: { onClose: () => void }) {
   const [slug, setSlug] = React.useState("")
   const [description, setDescription] = React.useState("")
 
-  const error = create.error instanceof Error ? create.error.message : null
+  const error =
+    create.error instanceof Error
+      ? (CREATE_ERRORS[create.error.message] ?? create.error.message)
+      : null
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -134,7 +161,7 @@ function CreateOrgForm({ onClose }: { onClose: () => void }) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Organization name"
-          maxLength={50}
+          maxLength={32}
         />
       </Field>
       <Field>

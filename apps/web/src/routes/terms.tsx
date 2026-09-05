@@ -11,7 +11,7 @@ export const Route = createFileRoute("/terms")({
   component: TermsPage,
 })
 
-const LAST_UPDATED = "2026-06-28"
+const LAST_UPDATED = "2026-09-03"
 
 function TermsPage() {
   return (
@@ -42,6 +42,24 @@ function TermsPage() {
               and we may also remove builds or other content at our discretion —
               for example spam, test, duplicate, or broken builds — to keep the
               site useful.
+            </p>
+
+            <h2>Content rules</h2>
+            <p>
+              Names and titles are for naming things, not for advertising.
+              Don&apos;t put channel plugs, Discord invites, &ldquo;subscribe
+              to&rdquo; lines, or other self-promotion in build titles,
+              organization names, slugs, descriptions, or profile fields.
+              Linking a video or article that walks through the build from
+              inside its guide is fine &mdash; that&apos;s what guides are for.
+              The test is whether the text is there to describe the build or to
+              drive traffic somewhere else.
+            </p>
+            <p>
+              Each account can own up to three organizations. They are meant for
+              clans, content creators, and communities with a shared set of
+              builds; spinning up throwaway orgs to fill the directory is not a
+              use we support, and we&apos;ll remove them.
             </p>
 
             <h2>Your content</h2>

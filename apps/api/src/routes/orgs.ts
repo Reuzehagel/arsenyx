@@ -18,13 +18,20 @@ import { parsePage, trimQ } from "./_query"
 export const orgs = new Hono()
 
 const SLUG_RE = /^[a-z0-9-]+$/
-const MAX_NAME = 50
+// Tightened from 50 after someone used the name field as a billboard.
+const MAX_NAME = 32
 const MAX_SLUG = 30
 const MAX_DESCRIPTION = 200
 const MEMBERS_LIMIT = 200
 const DIRECTORY_PAGE = 20
 // Reserved because they collide with sibling paths on the /orgs router.
 const RESERVED_SLUGS = new Set(["public"])
+// How many orgs one user may own (be ADMIN of). Raised per-user by hand if a
+// real community ever needs more — the limit exists because someone spun up
+// a pile of orgs to spam the directory.
+const MAX_ORGS_PER_USER = 3
+
+class OrgLimitError extends Error {}
 
 function isOrgRole(v: unknown): v is OrgRole {
   return v === "ADMIN" || v === "MEMBER"
@@ -123,6 +130,14 @@ orgs.post("/", rateLimitUser("mutate"), async (c) => {
 
   try {
     const created = await prisma.$transaction(async (tx) => {
+      // Cap orgs per user: creating makes you ADMIN, so "already ADMIN
+      // somewhere" is the cheapest proxy for "already owns an org" without
+      // a creator column. Checked inside the transaction so two concurrent
+      // POSTs can't both slip through.
+      const owned = await tx.organizationMember.count({
+        where: { userId: user.id, role: "ADMIN" },
+      })
+      if (owned >= MAX_ORGS_PER_USER) throw new OrgLimitError()
       const org = await tx.organization.create({
         data: { name, slug: slugRaw, description, image },
         select: { id: true, slug: true },
@@ -138,6 +153,9 @@ orgs.post("/", rateLimitUser("mutate"), async (c) => {
     })
     return c.json(created, 201)
   } catch (err) {
+    if (err instanceof OrgLimitError) {
+      return c.json({ error: "org_limit" }, 409)
+    }
     if (hasPrismaCode(err, "P2002")) {
       return c.json({ error: "slug_taken" }, 409)
     }

@@ -105,7 +105,8 @@ function DocsPage() {
             <code>/org/&lt;slug&gt;</code>, listing members and the public
             builds attributed to it. Useful for clans, content creators, and
             communities that want a shared home for their builds without giving
-            up individual authorship.
+            up individual authorship. Each account can own up to three
+            organizations; you can be a member of as many as invite you.
           </p>
           <h3>Roles</h3>
           <ul>
