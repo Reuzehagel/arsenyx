@@ -114,4 +114,61 @@ describe("parseStatText", () => {
     const segs = parseStatText("<DT_SLASH>Slash damage")
     expect(segs).toEqual([{ kind: "text", text: "Slash damage" }])
   })
+
+  // DE's pipe placeholders are filled in by the live game. We strip the
+  // non-numeric ones and deliberately keep the numeric ones literal — see
+  // the comment above PLACEHOLDER_PATTERN in stat-text.tsx.
+
+  it("strips a non-numeric |DAMAGE_TYPE| placeholder", () => {
+    // Sirius & Orion's 4th ability.
+    const segs = parseStatText(
+      "inflict colossal collateral |DAMAGE_TYPE| damage",
+    )
+    expect(segs).toEqual([
+      { kind: "text", text: "inflict colossal collateral damage" },
+    ])
+  })
+
+  it("strips the gamepad-glyph placeholders", () => {
+    const segs = parseStatText("|LEFT_ATTACK| Sirius attacks")
+    expect(segs).toEqual([{ kind: "text", text: "Sirius attacks" }])
+  })
+
+  it("keeps numeric placeholders literal", () => {
+    // Health Conversion. The values aren't in our data, so stripping would
+    // yield "grant Armor, stacking up to." — complete-looking but wrong.
+    const segs = parseStatText(
+      "Health Orbs grant |ARMOUR| Armor, stacking up to |STACKS|x.",
+    )
+    expect(segs).toEqual([
+      {
+        kind: "text",
+        text: "Health Orbs grant |ARMOUR| Armor, stacking up to |STACKS|x.",
+      },
+    ])
+  })
+
+  it("leaves a numeric placeholder's glue characters intact", () => {
+    const segs = parseStatText(
+      "slows their movement by |SLOW|% for |DURATION|s",
+    )
+    expect(segs).toEqual([
+      { kind: "text", text: "slows their movement by |SLOW|% for |DURATION|s" },
+    ])
+  })
+
+  it("strips a non-numeric placeholder without disturbing a numeric one", () => {
+    const segs = parseStatText("|DAMAGE_TYPE| damage for |DURATION|s")
+    expect(segs).toEqual([{ kind: "text", text: "damage for |DURATION|s" }])
+  })
+
+  it("leaves segments without a strippable placeholder byte-identical", () => {
+    // Trailing space is meaningful — it separates this segment from the
+    // colored one that follows.
+    const segs = parseStatText("affected by <DT_FIRE_COLOR>Heat")
+    expect(segs).toEqual([
+      { kind: "text", text: "affected by " },
+      { kind: "dt", token: "DT_FIRE_COLOR", text: "Heat" },
+    ])
+  })
 })
