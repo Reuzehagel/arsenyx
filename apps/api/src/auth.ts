@@ -46,6 +46,51 @@ function isReservedUsername(value: string): boolean {
   return RESERVED_USERNAMES.has(value.toLowerCase())
 }
 
+// Username shape. better-auth's default is /^[a-zA-Z0-9_.]+$/; we add `-`
+// because GitHub logins may contain hyphens (`Len-Github`) and the username
+// plugin runs this validator inside its user.create hook on the OAuth
+// callback too — a hyphenated login used to die there with
+// USERNAME_IS_INVALID before the row was ever created (issue #374). Length
+// bounds are the plugin's defaults; mapProfileToUser keeps GitHub logins
+// (1–39 chars) inside them.
+const USERNAME_PATTERN = /^[a-zA-Z0-9_.-]+$/
+const USERNAME_MIN = 3
+const USERNAME_MAX = 30
+
+// Fires for /sign-up/email, /update-user, /is-username-available,
+// /sign-in/username, AND inside the plugin's user.create database hook on the
+// OAuth callback (see USERNAME_PATTERN). Reserved names are layered on top of
+// the shape check. Exported so the tests can drive the real hook.
+export const USERNAME_PLUGIN_OPTIONS = {
+  minUsernameLength: USERNAME_MIN,
+  maxUsernameLength: USERNAME_MAX,
+  usernameValidator: (candidate: string) =>
+    USERNAME_PATTERN.test(candidate) && !isReservedUsername(candidate),
+}
+
+// Derive the first-sign-in username from a GitHub login. GitHub logins are
+// [A-Za-z0-9-], 1–39 chars, so the only ways one fails our rules are being
+// reserved, too short, or too long. In every such case append the (stable)
+// numeric GitHub id — never anything random, because a NULL-username row from
+// before the username plugin gets backfilled here on its next sign-in and
+// that backfill must be idempotent. For long logins the suffix also keeps
+// two logins that share a 30-char prefix from colliding after truncation.
+export function usernameFromGithubLogin(
+  login: string,
+  id: number | string,
+): string {
+  const base = login.toLowerCase()
+  if (
+    base.length >= USERNAME_MIN &&
+    base.length <= USERNAME_MAX &&
+    !isReservedUsername(base)
+  ) {
+    return base
+  }
+  const suffix = `-gh${id}`
+  return `${base.slice(0, USERNAME_MAX - suffix.length)}${suffix}`
+}
+
 // Does this GitHub profile already have an Arsenyx account, and does it
 // already hold a username?
 //
@@ -225,32 +270,18 @@ export const auth = betterAuth({
               if (await existingUsernameFor(profile)) return {}
 
               const login = profile.login
-              // GitHub usernames are unique globally, so the only way a
-              // reserved Arsenyx handle lands here is genuine coincidence.
-              // Suffix with the (stable) GitHub numeric id rather than
-              // anything random — a NULL-username row from before the
-              // username plugin gets backfilled here on its next sign-in,
-              // and that backfill must be idempotent.
-              const reserved = isReservedUsername(login)
-              const username = reserved
-                ? `${login}-gh${profile.id}`.toLowerCase().slice(0, 30)
-                : login.toLowerCase()
-              const displayUsername = reserved ? username : login
+              const username = usernameFromGithubLogin(login, profile.id)
+              // Keep the login's original casing as the display name when
+              // it was usable as-is; a suffixed/truncated one shows the
+              // handle the user actually got.
+              const displayUsername =
+                username === login.toLowerCase() ? login : username
               return { username, displayUsername }
             },
           },
         }
       : {},
-  plugins: [
-    username({
-      // Default validator is /^[a-zA-Z0-9_.]+$/ (see better-auth source).
-      // Layer our reserved-name denylist on top — fires for /sign-up/email,
-      // /update-user, /is-username-available, /sign-in/username. OAuth
-      // path is covered by mapProfileToUser + sanitizeUserData.
-      usernameValidator: (candidate) =>
-        /^[a-zA-Z0-9_.]+$/.test(candidate) && !isReservedUsername(candidate),
-    }),
-  ],
+  plugins: [username(USERNAME_PLUGIN_OPTIONS)],
   databaseHooks: {
     user: {
       create: { before: async (data) => ({ data: sanitizeUserData(data) }) },
