@@ -20,17 +20,19 @@ import type { Polarity } from "@arsenyx/shared/warframe/types"
  * calc — which only resolves under the web tsconfig's `@/` alias + DOM lib —
  * and a DB client. The api can't import apps/web (boundary), so this is the one
  * place the two meet. DB access mirrors apps/api/scripts/seed-admin.ts: the
- * Prisma client is workerd-only and won't load here, so we talk to Neon
- * directly via @neondatabase/serverless.
+ * Prisma client is workerd-only and won't load here, so we talk to Postgres
+ * directly via `pg`, which reaches both the Neon dev copy and PlanetScale prod.
  *
  *   bun run recompute:forma              # dry run — reports diffs, writes nothing
  *   bun run recompute:forma --apply      # write the recomputed counts
  *   bun run recompute:forma --apply --all  # restamp every row, not just stale ones
  *
  * The `recompute:forma` package script wires `--env-file=../api/.env` so
- * DATABASE_URL resolves. Point that at a dev branch before --apply.
+ * DATABASE_URL resolves to the Neon dev copy. To run against prod, override
+ * it on the command line — `DATABASE_URL=<planetscale url> bun run …` — and
+ * dry-run first.
  */
-import { neon } from "@neondatabase/serverless"
+import { Client } from "pg"
 
 import { computeFormaCount } from "@/components/build-editor/forma-count"
 import type { SlotId } from "@/components/build-editor/use-build-slots"
@@ -131,7 +133,33 @@ type Row = {
   formaCalcVersion: number
 }
 
-const sql = neon(DATABASE_URL)
+// Strip libpq-only params node's `pg` can't honour (see seed-admin.ts):
+// `sslrootcert=system` would readFileSync("system"). TLS is verified against
+// Node's built-in CA bundle, which covers both Neon and PlanetScale.
+const dbUrl = new URL(DATABASE_URL)
+const sslmode = dbUrl.searchParams.get("sslmode") ?? "require"
+dbUrl.searchParams.delete("sslrootcert")
+dbUrl.searchParams.delete("sslnegotiation")
+const client = new Client({
+  connectionString: dbUrl.toString(),
+  ssl: sslmode === "disable" ? false : { rejectUnauthorized: true },
+})
+await client.connect()
+console.log(`Connected to ${dbUrl.hostname}`)
+
+// Tagged-template helper: sql`… ${a} …` → parameterised query ($1, …), rows.
+const sql = async (
+  strings: TemplateStringsArray,
+  ...values: unknown[]
+): Promise<unknown[]> => {
+  const text = strings.reduce(
+    (acc, s, i) => acc + s + (i < values.length ? `$${i + 1}` : ""),
+    "",
+  )
+  const { rows } = await client.query(text, values)
+  return rows
+}
+
 const rows = (await sql`
   SELECT id, "itemUniqueName", "itemCategory", "buildData", "formaCount", "formaCalcVersion"
   FROM builds
@@ -207,3 +235,5 @@ if (sample.length) {
 console.log(`\n${verb} ${valueChanged + restamped} rows.`)
 if (!APPLY)
   console.log("Dry run — nothing written. Re-run with --apply to write.")
+
+await client.end()
