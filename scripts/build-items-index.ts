@@ -44,8 +44,10 @@ import {
 } from "@arsenyx/shared/warframe/zaw-data"
 
 import { ARCANE_KEEP, ARCANE_SLOT_FALLBACKS } from "../data/curated/arcane-keep"
+import { DE_MISSING_MODS } from "../data/curated/de-missing-mods"
 import { PVE_USABLE_CONCLAVE_MODS } from "../data/curated/pve-usable-conclave-mods"
 import { buildBrowseIndex } from "./build/browse-index"
+import { injectMissingDeMods } from "./build/de-missing-mods"
 import { buildFamilyIndex, makeExpandCompat } from "./build/expand-compat"
 import { iterWikiRecords } from "./build/images"
 import { mergeArcanes } from "./build/merge-arcanes"
@@ -368,8 +370,24 @@ async function main() {
     )
   }
 
-  const { mods: rawMergedMods, counts: modCounts } = mergeMods(
+  // Backfill mods DE's export dropped but that are still in-game (#377).
+  const missing = injectMissingDeMods(
     deUpgrades.ExportUpgrades ?? [],
+    DE_MISSING_MODS,
+  )
+  if (missing.injected.length > 0) {
+    console.log(
+      `  de-missing-mods.ts: injected ${missing.injected.length} mod(s) DE no longer exports: ${missing.injected.join(", ")}`,
+    )
+  }
+  if (missing.resurfaced.length > 0) {
+    console.warn(
+      `  WARN de-missing-mods.ts: DE ships these again — delete the curated entries: ${missing.resurfaced.join(", ")}`,
+    )
+  }
+
+  const { mods: rawMergedMods, counts: modCounts } = mergeMods(
+    missing.upgrades,
     deUpgrades.ExportModSet ?? [],
     pePlusUpgrades,
     wikiExilus,

@@ -2,7 +2,7 @@
   "stats": {
     "weapons": {
       "de": 837,
-      "merged": 884,
+      "merged": 888,
       "emitted": 698,
       "unmatched": 0
     },
@@ -17,8 +17,8 @@
       "deOnly": 0
     },
     "mods": {
-      "de": 1649,
-      "kept": 1402
+      "de": 1652,
+      "kept": 1405
     },
     "perCategory": {
       "archwing": 33,
