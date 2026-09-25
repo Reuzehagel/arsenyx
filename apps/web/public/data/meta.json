@@ -1,22 +1,22 @@
 {
-  "generatedAt": "2026-09-09T17:43:47.326Z",
+  "generatedAt": "2026-09-25T17:24:34.895Z",
   "source": "DE PublicExport + wiki Lua (v2 pipeline)",
   "pipelineVersion": 2,
-  "itemCount": 864,
-  "modCount": 1405,
+  "itemCount": 870,
+  "modCount": 1408,
   "arcaneCount": 161,
   "perCategory": {
     "archwing": 33,
-    "warframes": 117,
+    "warframes": 119,
     "necramechs": 2,
-    "secondary": 153,
-    "melee": 238,
-    "primary": 201,
+    "secondary": 154,
+    "melee": 239,
+    "primary": 203,
     "companion-weapons": 41,
     "exalted-weapons": 37,
     "companions": 41,
     "railjack": 1
   },
-  "unmatchedWeapons": 0,
+  "unmatchedWeapons": 2,
   "unmatchedFrames": 1
 }
