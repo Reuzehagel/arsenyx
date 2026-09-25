@@ -107,29 +107,43 @@ function IncarnonTierSlot({
     </button>
   )
 
+  // Viewing a build: a picked tier opens a tap popover with the perk (tooltips
+  // don't fire on touch); an empty tier stays tooltip-only. Mirrors shard-controls.
+  const interactive = !readOnly || picked !== null
+  const pickedInfo = picked && (
+    <>
+      <p className="font-semibold">{picked.name}</p>
+      <p className="text-muted-foreground mt-0.5">
+        {getIncarnonPerkDescription(picked, weaponName)}
+      </p>
+    </>
+  )
+
   return (
-    <Popover open={open} onOpenChange={readOnly ? undefined : setOpen}>
+    <Popover open={open} onOpenChange={interactive ? setOpen : undefined}>
       <Tooltip>
         <TooltipTrigger
           render={
-            readOnly ? triggerButton : <PopoverTrigger render={triggerButton} />
+            interactive ? (
+              <PopoverTrigger render={triggerButton} />
+            ) : (
+              triggerButton
+            )
           }
         />
         <TooltipContent side="bottom" className="max-w-xs">
-          {picked ? (
-            <>
-              <p className="font-semibold">{picked.name}</p>
-              <p className="text-muted-foreground mt-0.5">
-                {getIncarnonPerkDescription(picked, weaponName)}
-              </p>
-            </>
-          ) : (
+          {pickedInfo ?? (
             <span className="text-muted-foreground">
               Tier {tier} — select a perk
             </span>
           )}
         </TooltipContent>
       </Tooltip>
+      {readOnly && pickedInfo && (
+        <PopoverContent side="bottom" align="center" className="w-64 text-xs">
+          {pickedInfo}
+        </PopoverContent>
+      )}
       {!readOnly && (
         <PopoverContent side="right" align="start" className="w-72">
           <div className="flex flex-col gap-2">
