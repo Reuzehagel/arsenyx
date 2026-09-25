@@ -27,8 +27,15 @@ export const Route = createFileRoute("/")({
 function Home() {
   const recent = useRecentItems(10)
   // Showcase the newest frame; fall back to the newest item of any kind when
-  // no frame is among the recent releases.
-  const hero = recent.find((it) => it.category === "warframes") ?? recent[0]
+  // no frame is among the recent releases. On a same-day tie, a brand-new
+  // frame beats the Prime Access frame shipped alongside it.
+  const frames = recent.filter((it) => it.category === "warframes")
+  const hero =
+    frames.find(
+      (it) => !it.isPrime && it.releaseDate === frames[0].releaseDate,
+    ) ??
+    frames[0] ??
+    recent[0]
 
   return (
     <div className="relative flex min-h-screen flex-col">
