@@ -92,6 +92,11 @@ them (`data:refresh --skip-sync` does) — `check:images` blocks a hotlinked
 catalog from merging. `sync:images` needs R2 creds in the root `.env` (see
 `.env.example`); run via the build chain it self-skips when they're absent.
 
+New items from a game update get no `releaseDate` from either source — append
+them to [data/curated/release-history.json](../data/curated/release-history.json)
+(date from the wiki's "Introduced" line) and rebuild, or they never reach the
+landing page hero / "Recently added" ticker.
+
 Hand-editing the catalog directly (a quick data fix without a full rebuild)?
 Run `data:stamp` afterward — it's served `immutable` and cache-busted by
 `?v=<generatedAt>`, so without a fresh `generatedAt` clients keep the stale
