@@ -1,15 +1,15 @@
 {
   "stats": {
     "weapons": {
-      "de": 837,
-      "merged": 888,
-      "emitted": 698,
-      "unmatched": 0
+      "de": 841,
+      "merged": 892,
+      "emitted": 702,
+      "unmatched": 2
     },
     "frames": {
-      "de": 125,
-      "merged": 124,
-      "emitted": 124,
+      "de": 127,
+      "merged": 126,
+      "emitted": 126,
       "operators": 2
     },
     "companions": {
@@ -17,23 +17,26 @@
       "deOnly": 0
     },
     "mods": {
-      "de": 1652,
-      "kept": 1405
+      "de": 1655,
+      "kept": 1408
     },
     "perCategory": {
       "archwing": 33,
-      "warframes": 117,
+      "warframes": 119,
       "necramechs": 2,
-      "secondary": 153,
-      "melee": 238,
-      "primary": 201,
+      "secondary": 154,
+      "melee": 239,
+      "primary": 203,
       "companion-weapons": 41,
       "exalted-weapons": 37,
       "companions": 41,
       "railjack": 1
     }
   },
-  "weaponsUnmatched": [],
+  "weaponsUnmatched": [
+    "Corufell Prime",
+    "Steflos Prime"
+  ],
   "framesUnmatched": [
     "Orion & Sirius"
   ],
