@@ -7,6 +7,7 @@ import {
   isPlexusMod as sharedIsPlexusMod,
   isStanceMod,
 } from "@arsenyx/shared/warframe/mods"
+import { isRivenMod } from "@arsenyx/shared/warframe/rivens"
 import type { Mod, Polarity } from "@arsenyx/shared/warframe/types"
 import { useCallback, useMemo, useState } from "react"
 
@@ -16,9 +17,18 @@ import { modMaxRank } from "./slot-ranks"
 
 export type SlotId = `aura-${number}` | "exilus" | "stance" | `normal-${number}`
 
+/** A suggested one-for-one swap for a Slot's mod (see CONTEXT.md →
+ *  Alternate mod). Display-only: capacity, drain, stats and forma never read
+ *  it. */
+export interface AlternateMod {
+  mod: Mod
+  rank: number
+}
+
 export interface PlacedMod {
   mod: Mod
   rank: number
+  alternate?: AlternateMod
 }
 
 export function isAuraMod(mod: Mod): boolean {
@@ -76,6 +86,54 @@ export function canPlaceIn(mod: Mod, id: SlotId): boolean {
     case "normal":
       return !isAuraMod(mod) && !isStanceMod(mod)
   }
+}
+
+/** Whether `mod` may sit as the Alternate in slot `id`: it must pass the
+ *  slot-kind check and can never be a Riven (synthetic or configured). */
+export function canBeAlternate(mod: Mod, id: SlotId): boolean {
+  // `isRivenMod` only matches the picker's synthetic card; a configured riven
+  // carries `rivenStats` and a catalog riven only its rarity.
+  if (isRivenMod(mod) || mod.rivenStats || mod.rarity === "Riven") return false
+  return canPlaceIn(mod, id)
+}
+
+type PlacedMap = Partial<Record<SlotId, PlacedMod>>
+
+/** Set slot `id`'s Alternate. No-op (same map) on an empty slot or an illegal
+ *  Alternate. Rank defaults to the mod's max and is clamped to it. */
+export function withAlternate(
+  placed: PlacedMap,
+  id: SlotId,
+  mod: Mod,
+  rank?: number,
+): PlacedMap {
+  const cur = placed[id]
+  if (!cur || !canBeAlternate(mod, id)) return placed
+  const max = modMaxRank(mod)
+  return {
+    ...placed,
+    [id]: { ...cur, alternate: { mod, rank: clamp(rank ?? max, 0, max) } },
+  }
+}
+
+export function withoutAlternate(placed: PlacedMap, id: SlotId): PlacedMap {
+  const cur = placed[id]
+  if (!cur?.alternate) return placed
+  const { alternate: _drop, ...rest } = cur
+  return { ...placed, [id]: rest }
+}
+
+export function withAlternateRank(
+  placed: PlacedMap,
+  id: SlotId,
+  rank: number,
+): PlacedMap {
+  const cur = placed[id]
+  const alt = cur?.alternate
+  if (!cur || !alt) return placed
+  const clamped = clamp(rank, 0, modMaxRank(alt.mod))
+  if (clamped === alt.rank) return placed
+  return { ...placed, [id]: { ...cur, alternate: { ...alt, rank: clamped } } }
 }
 
 function candidateSlots(
@@ -242,6 +300,11 @@ export interface BuildSlotsState {
    * need N calls plus a way to clear stale keys.
    */
   setFormaPolarities: (next: Partial<Record<SlotId, Polarity>>) => void
+  /** Set slot `id`'s Alternate mod. Ignored for an empty slot or an illegal
+   *  Alternate (see `canBeAlternate`). Never touches the slot's own mod. */
+  setAlternate: (id: SlotId, mod: Mod, rank?: number) => void
+  removeAlternate: (id: SlotId) => void
+  setAlternateRank: (id: SlotId, rank: number) => void
 }
 
 export function useBuildSlots(
@@ -341,10 +404,23 @@ export function useBuildSlots(
   )
 
   const placeAt = useCallback((id: SlotId, mod: Mod, rank?: number) => {
-    setPlaced((prev) => ({
-      ...prev,
-      [id]: { mod, rank: rank ?? modMaxRank(mod) },
-    }))
+    setPlaced((prev) => {
+      // Keep the slot's Alternate when it's still legal beside the new mod —
+      // re-editing a riven's stats re-stamps the slot through here.
+      const alt = prev[id]?.alternate
+      const keepAlt =
+        alt &&
+        alt.mod.uniqueName !== mod.uniqueName &&
+        canBeAlternate(alt.mod, id)
+      return {
+        ...prev,
+        [id]: {
+          mod,
+          rank: rank ?? modMaxRank(mod),
+          ...(keepAlt && { alternate: alt }),
+        },
+      }
+    })
   }, [])
 
   const selectNextEmpty = useCallback(
@@ -413,6 +489,18 @@ export function useBuildSlots(
     })
   }, [])
 
+  const setAlternate = useCallback((id: SlotId, mod: Mod, rank?: number) => {
+    setPlaced((prev) => withAlternate(prev, id, mod, rank))
+  }, [])
+
+  const removeAlternate = useCallback((id: SlotId) => {
+    setPlaced((prev) => withoutAlternate(prev, id))
+  }, [])
+
+  const setAlternateRank = useCallback((id: SlotId, rank: number) => {
+    setPlaced((prev) => withAlternateRank(prev, id, rank))
+  }, [])
+
   const usedNames = useMemo(
     () => new Set(Object.values(placed).map((p) => p!.mod.name)),
     [placed],
@@ -433,5 +521,8 @@ export function useBuildSlots(
     swap,
     setPlaced,
     setFormaPolarities,
+    setAlternate,
+    removeAlternate,
+    setAlternateRank,
   }
 }

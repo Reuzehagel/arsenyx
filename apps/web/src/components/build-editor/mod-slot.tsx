@@ -36,7 +36,7 @@ import { DetailLinks } from "./item-detail"
 import { ModCard } from "./mod-card"
 import { PolarityIcon, PolarityPicker } from "./polarity"
 import { useRankHover } from "./rank-hover"
-import type { SlotId } from "./use-build-slots"
+import type { AlternateMod, SlotId } from "./use-build-slots"
 
 export type ModSlotKind = "normal" | "aura" | "exilus" | "stance"
 
@@ -77,6 +77,13 @@ interface ModSlotProps {
   /** Forward to ModCard — suppress the drain badge entirely. Used by
    * Plexus Battle/Tactical slots whose mods don't draw capacity. */
   hideDrain?: boolean
+  /** The Slot's Alternate mod, drawn as a "shoulder" peeking out behind the
+   *  Slot's mod. Display-only. */
+  alternate?: AlternateMod
+  /** "+ alt" toolbar button: open the picker in alternate mode. */
+  onAddAlternate?: () => void
+  /** ✕ on the shoulder card. */
+  onRemoveAlternate?: () => void
 }
 
 const KIND_LABEL: Record<ModSlotKind, string> = {
@@ -102,6 +109,9 @@ export function ModSlot({
   onEditRiven,
   readOnly = false,
   hideDrain = false,
+  alternate,
+  onAddAlternate,
+  onRemoveAlternate,
 }: ModSlotProps) {
   const effective = effectivePolarity(slotPolarity, formaPolarity)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -323,11 +333,32 @@ export function ModSlot({
         >
           {mod && !isDragging ? (
             <>
+              {alternate && (
+                <AlternateShoulder
+                  alternate={alternate}
+                  onRemove={readOnly ? undefined : onRemoveAlternate}
+                  onHoverChange={
+                    canRank && rankHover && !isAnyDragging
+                      ? (over) =>
+                          rankHover.set(
+                            over
+                              ? { kind: "alternate", id: slotId! }
+                              : { kind: "mod", id: slotId! },
+                          )
+                      : undefined
+                  }
+                />
+              )}
               {/* No `key` here on purpose — see the `settling` comment above.
                   The scale class is added while `settling` is true; ModCard
                   underneath is never remounted. The flash overlay below owns
                   clearing the flag (it's the longer of the two animations). */}
-              <div className={settling ? "animate-drop-settle" : undefined}>
+              <div
+                className={cn(
+                  "relative z-10",
+                  settling && "animate-drop-settle",
+                )}
+              >
                 <ModCard
                   mod={mod}
                   rank={rank}
@@ -347,27 +378,41 @@ export function ModSlot({
                   onAnimationEnd={() => setSettling(false)}
                 />
               )}
-              {!readOnly && (onRemove || (isRivenMod(mod) && onEditRiven)) && (
-                // Mobile: always visible (no hover). Desktop: appear on slot
-                // hover via CSS group-hover (parent has `group`) so we don't
-                // re-render the slot for a purely visual transition.
-                <div className="absolute -top-2 -right-2 z-30 flex flex-col gap-1 md:opacity-0 md:transition-opacity md:group-hover:opacity-100">
-                  {onRemove && (
-                    <SlotIconButton
-                      icon={X}
-                      label="Remove mod"
-                      onClick={onRemove}
-                    />
-                  )}
-                  {isRivenMod(mod) && onEditRiven && (
-                    <SlotIconButton
-                      icon={Pencil}
-                      label="Edit riven stats"
-                      onClick={onEditRiven}
-                    />
-                  )}
-                </div>
-              )}
+              {!readOnly &&
+                (onRemove ||
+                  onAddAlternate ||
+                  (isRivenMod(mod) && onEditRiven)) && (
+                  // Mobile: always visible (no hover). Desktop: appear on slot
+                  // hover via CSS group-hover (parent has `group`) so we don't
+                  // re-render the slot for a purely visual transition.
+                  <div className="absolute -top-2 -right-2 z-30 flex flex-col items-end gap-1 md:opacity-0 md:transition-opacity md:group-hover:opacity-100">
+                    {onRemove && (
+                      <SlotIconButton
+                        icon={X}
+                        label="Remove mod"
+                        onClick={onRemove}
+                      />
+                    )}
+                    {isRivenMod(mod) && onEditRiven && (
+                      <SlotIconButton
+                        icon={Pencil}
+                        label="Edit riven stats"
+                        onClick={onEditRiven}
+                      />
+                    )}
+                    {onAddAlternate && (
+                      <SlotIconButton
+                        label={
+                          alternate
+                            ? "Change alternate mod"
+                            : "Add alternate mod"
+                        }
+                        text={alternate ? "alt" : "+ alt"}
+                        onClick={onAddAlternate}
+                      />
+                    )}
+                  </div>
+                )}
             </>
           ) : (
             <>
@@ -443,12 +488,60 @@ export function ModSlot({
   )
 }
 
+/** How far the Alternate's card is offset behind the Slot's mod — the visible
+ *  "shoulder" edge. */
+const SHOULDER_OFFSET = { x: 14, y: -8 }
+
+/**
+ * The resting "shoulder": the Alternate's card sits behind the Slot's mod,
+ * offset so a thin edge peeks out. Hover preview is disabled here: the edge is
+ * too thin to aim at.
+ */
+function AlternateShoulder({
+  alternate,
+  onRemove,
+  onHoverChange,
+}: {
+  alternate: AlternateMod
+  onRemove?: () => void
+  onHoverChange?: (over: boolean) => void
+}) {
+  return (
+    <div
+      data-alternate-shoulder
+      aria-label={`Alternate: ${alternate.mod.name}`}
+      className="absolute top-1/2 left-1/2 z-0"
+      style={{
+        transform: `translate(calc(-50% + ${SHOULDER_OFFSET.x}px), calc(-50% + ${SHOULDER_OFFSET.y}px))`,
+      }}
+      onMouseEnter={onHoverChange && (() => onHoverChange(true))}
+      onMouseLeave={onHoverChange && (() => onHoverChange(false))}
+    >
+      <div className="brightness-75">
+        <ModCard mod={alternate.mod} rank={alternate.rank} disableHover />
+      </div>
+      {onRemove && (
+        <div className="absolute -top-3 right-10 md:opacity-0 md:transition-opacity md:group-hover:opacity-100">
+          <SlotIconButton
+            icon={X}
+            label="Remove alternate mod"
+            onClick={onRemove}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Round slot-toolbar button: an `icon`, or a short `text` pill. */
 function SlotIconButton({
   icon: Icon,
+  text,
   label,
   onClick,
 }: {
-  icon: LucideIcon
+  icon?: LucideIcon
+  text?: string
   label: string
   onClick: () => void
 }) {
@@ -456,18 +549,22 @@ function SlotIconButton({
     <button
       type="button"
       aria-label={label}
+      title={text ? label : undefined}
       onPointerDown={(e) => {
         // Stop the slot wrapper's pointerdown from arming a drag when
-        // the user is pressing the remove / edit-riven button.
+        // the user is pressing a toolbar button.
         e.stopPropagation()
       }}
       onClick={(e) => {
         e.stopPropagation()
         onClick()
       }}
-      className="bg-background/80 text-muted-foreground hover:bg-accent hover:text-accent-foreground flex size-5 items-center justify-center rounded-full border"
+      className={cn(
+        "bg-background/80 text-muted-foreground hover:bg-accent hover:text-accent-foreground flex h-5 items-center justify-center rounded-full border",
+        text ? "px-1.5 font-mono text-[10px] leading-none" : "w-5",
+      )}
     >
-      <Icon className="size-3" />
+      {Icon ? <Icon className="size-3" /> : text}
     </button>
   )
 }
