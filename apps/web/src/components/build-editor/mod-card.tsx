@@ -1,4 +1,5 @@
 import { getModSetCode, isStanceMod } from "@arsenyx/shared/warframe/mods"
+import { RIVEN_FLAT_STAT_UNITS } from "@arsenyx/shared/warframe/rivens"
 import type { Mod } from "@arsenyx/shared/warframe/types"
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
@@ -111,7 +112,8 @@ const INVERTED_RIVEN_STATS = new Set(["Zoom"])
 function formatRivenValue(stat: string, v: number): string {
   const display = INVERTED_RIVEN_STATS.has(stat) ? -v : v
   const sign = display > 0 ? "+" : ""
-  return `${sign}${formatStat(display, 1)}%`
+  const unit = RIVEN_FLAT_STAT_UNITS[stat] ?? "%"
+  return `${sign}${formatStat(display, 1)}${unit}`
 }
 
 type StatLine =
