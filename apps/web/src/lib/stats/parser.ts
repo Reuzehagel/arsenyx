@@ -1,4 +1,5 @@
 import { clamp } from "@arsenyx/shared"
+import { isFlatRivenStat } from "@arsenyx/shared/warframe/rivens"
 import type { Arcane, Mod, RivenStats } from "@arsenyx/shared/warframe/types"
 
 import type { ConditionLabel, ParsedStat, StatType } from "./types"
@@ -206,18 +207,24 @@ export function parseArcaneStats(input: PlacedArcaneInput): ParsedStat[] {
   return out
 }
 
+/** Range, Punch Through, Combo Duration and Initial Combo roll as flat
+ *  additions (+1.2 Range = +1.2 m), not percentages of base. */
+function rivenOp(stat: string): ParsedStat["operation"] {
+  return isFlatRivenStat(stat) ? "flat_add" : "percent_add"
+}
+
 /** Convert a RivenStats object into ParsedStats. Negatives already carry sign. */
 function parseRivenStats(rivenStats: RivenStats): ParsedStat[] {
   const out: ParsedStat[] = []
   for (const p of rivenStats.positives) {
     const mapped = STAT_NAME_MAP[p.stat.toLowerCase()]
     if (!mapped) continue
-    out.push({ type: mapped, value: p.value, operation: "percent_add" })
+    out.push({ type: mapped, value: p.value, operation: rivenOp(p.stat) })
   }
   for (const n of rivenStats.negatives) {
     const mapped = STAT_NAME_MAP[n.stat.toLowerCase()]
     if (!mapped) continue
-    out.push({ type: mapped, value: n.value, operation: "percent_add" })
+    out.push({ type: mapped, value: n.value, operation: rivenOp(n.stat) })
   }
   return out
 }

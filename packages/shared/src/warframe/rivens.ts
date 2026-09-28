@@ -79,6 +79,23 @@ export const MELEE_RIVEN_STATS = [
   "Damage to Infested",
 ] as const
 
+/** Riven stats that roll as flat additions rather than percentages, keyed to
+ *  the unit suffix the in-game card prints (per
+ *  https://wiki.warframe.com/w/Riven_Mods: Range/Punch Through in metres,
+ *  Combo Duration in seconds, Initial Combo as a raw count). Matches how
+ *  the equivalent regular mods read ("+0.7 Punch Through", "+7.5s Combo
+ *  Duration"). Every other riven stat is a percentage. */
+export const RIVEN_FLAT_STAT_UNITS: Readonly<Record<string, string>> = {
+  Range: "",
+  "Punch Through": "",
+  "Combo Duration": "s",
+  "Initial Combo": "",
+}
+
+export function isFlatRivenStat(stat: string): boolean {
+  return Object.hasOwn(RIVEN_FLAT_STAT_UNITS, stat)
+}
+
 export const RIVEN_ELIGIBLE_CATEGORIES = new Set<BrowseCategory>([
   "primary",
   "secondary",

@@ -319,3 +319,22 @@ describe("reload time — degenerate reload speed sums", () => {
     expect(stats.attackModes[0]!.reloadTime!.modified).toBeGreaterThan(0)
   })
 })
+
+// Riven Range rolls flat metres (+1.5 Range), not a percentage of base range.
+describe("riven range", () => {
+  it("adds riven Range as flat metres", () => {
+    const riven = {
+      name: "Riven Mod",
+      rivenStats: {
+        positives: [{ stat: "Range", value: 1.5 }],
+        negatives: [],
+      },
+    } as unknown as Mod
+    const stats = calculateWeaponStats({
+      weapon: makeWeapon({ range: 2, damage: { impact: 10 } } as Partial<Gun>),
+      mods: [{ mod: riven, rank: 0 }],
+      arcanes: [],
+    })
+    expect(stats.attackModes[0]!.range!.modified).toBe(3.5)
+  })
+})
