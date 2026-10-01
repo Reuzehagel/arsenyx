@@ -10,8 +10,10 @@ type ConditionInfo =
   | { isConditional: true; maxStacks?: number; condition?: ConditionLabel }
 
 const COLOR_TAG_PATTERN = /([+-]?\d+(?:\.\d+)?)\s*%\s*<([A-Z_]+)>([A-Za-z]+)/g
+// A parenthetical note ends the stat name: "+220% Critical Chance (x2 for
+// Heavy Attacks)" is Critical Chance, not an unparseable string.
 const PERCENT_PATTERN =
-  /([+-]?\d+(?:\.\d+)?)\s*%\s+([A-Za-z][A-Za-z\s]*?)(?:\.|$|\n|,|<)/g
+  /([+-]?\d+(?:\.\d+)?)\s*%\s+([A-Za-z][A-Za-z\s]*?)\s*(?:\.|$|\n|,|<|\()/g
 const FLAT_PATTERN =
   /([+-]\d+(?:\.\d+)?)\s+(?!%|s\b|m\b|x\b)([A-Za-z][A-Za-z\s]*?)(?:\.|$|\n|,)/g
 
