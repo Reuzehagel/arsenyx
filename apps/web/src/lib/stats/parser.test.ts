@@ -34,3 +34,23 @@ describe("parseStatString trade-off auras", () => {
     ])
   })
 })
+
+// Regression: Sacrificial Steel's "(x2 for Heavy Attacks)" note made the whole
+// line unparseable, so its +220% Critical Chance never reached the stats panel.
+describe("parseStatString parenthetical notes", () => {
+  it("Sacrificial Steel parses +220% Critical Chance", () => {
+    const stats = parseStatString(
+      "+220% Critical Chance (x2 for Heavy Attacks)",
+    )
+    expect(stats).toEqual([
+      { type: "critical_chance", value: 220, operation: "percent_add" },
+    ])
+  })
+
+  it("Vigilante Fervor parses +45% Fire Rate", () => {
+    const stats = parseStatString("+45% Fire Rate (x2 for Bows)")
+    expect(stats).toEqual([
+      { type: "fire_rate", value: 45, operation: "percent_add" },
+    ])
+  })
+})
