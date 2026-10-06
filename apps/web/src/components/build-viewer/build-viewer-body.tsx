@@ -253,6 +253,7 @@ function BuildViewerBodyInner({
   const incarnonPerks = saved.incarnonPerks ?? []
   const deploymentContext =
     saved.deploymentContext ?? DEFAULT_DEPLOYMENT_CONTEXT
+  const operatorAmp = saved.operatorAmp ?? "mote-amp"
 
   const { arcaneConfig, totalEndoCost, formaCount, capacity } = useBuildDerived(
     { item: effectiveItem, category, layout, slots, allArcanes, hasReactor },
@@ -277,6 +278,7 @@ function BuildViewerBodyInner({
     deploymentContext,
     placedMods: slots.placed,
     placedArcanes: arcanes.placed,
+    operatorAmp,
     formAbilities,
     readOnly: true as const,
   }

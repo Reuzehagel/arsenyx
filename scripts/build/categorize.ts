@@ -28,6 +28,7 @@ export function buildExaltedSet(frames: readonly MergedFrame[]): Set<string> {
 
 export type BrowseCategory =
   | "warframes"
+  | "operators"
   | "primary"
   | "secondary"
   | "melee"
@@ -40,8 +41,6 @@ export type BrowseCategory =
 
 /** Map MergedFrame.category → BrowseCategory. */
 export function categorizeFrame(f: MergedFrame): BrowseCategory | null {
-  // Operators aren't currently surfaced in the planner UI.
-  if (f.category === "operators") return null
   if (f.name === "Helminth") return null
   return f.category
 }

@@ -34,6 +34,7 @@ export interface BuildVariant {
   shardSlots: (PlacedShard | null)[]
   incarnonEnabled?: boolean
   incarnonPerks?: (string | null)[]
+  operatorAmp?: string
   deploymentContext?: DeploymentContext
   guideSummary?: string
   guideDescription?: string
@@ -98,6 +99,7 @@ export function projectVariant(doc: BuildDoc, index: number): BuildState {
     incarnonEnabled: v.incarnonEnabled,
     incarnonPerks: v.incarnonPerks,
     deploymentContext: v.deploymentContext,
+    operatorAmp: v.operatorAmp,
     baseCapacity: 0,
     currentCapacity: 0,
     formaCount: 0,

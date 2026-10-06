@@ -10,6 +10,7 @@ import type { BrowseCategory } from "./types"
  *  has 14 (3 Battle + 3 Tactical + 8 Integrated; its 1 Aura is counted
  *  separately), everything else 8. */
 export function getNormalSlotCount(category: BrowseCategory): number {
+  if (category === "operators") return 0
   if (category === "companions") return 10
   if (category === "necramechs") return 12
   if (category === "railjack") return 14
@@ -25,6 +26,7 @@ export function getNormalSlotCount(category: BrowseCategory): number {
  *  slot and cannot equip Arcane Enhancements.") */
 export function hasExilusSlot(category: BrowseCategory): boolean {
   return (
+    category !== "operators" &&
     category !== "necramechs" &&
     category !== "companions" &&
     category !== "companion-weapons" &&

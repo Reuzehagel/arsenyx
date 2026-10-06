@@ -118,10 +118,12 @@ export function ViewerHeader({
                 text rather than competing as bordered badges — the header read
                 as four stacked pills before. */}
             <div className="text-muted-foreground flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs">
-              <EndoFormaBadges
-                totalEndoCost={totalEndoCost}
-                formaCount={formaCount}
-              />
+              {category !== "operators" && (
+                <EndoFormaBadges
+                  totalEndoCost={totalEndoCost}
+                  formaCount={formaCount}
+                />
+              )}
               {/* Like count lives on the ♥ button below — don't repeat it
                   here. Views aren't shown anywhere else, so they stay. */}
               <span>{build.viewCount.toLocaleString("en-US")} views</span>

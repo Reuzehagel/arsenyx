@@ -32,6 +32,16 @@ function parseLichBonusElement(raw: unknown): LichBonusElement | undefined {
     : undefined
 }
 
+function parseOperatorAmp(raw: unknown): string | undefined {
+  if (raw === "mote-amp" || raw === "sirocco") return raw
+
+  if (typeof raw === "string" && /^[1-7]-[1-7]-[1-7]$/.test(raw)) {
+    return raw
+  }
+
+  return undefined
+}
+
 declare const Buffer: {
   from(data: string, encoding: string): { toString(encoding: string): string }
 }
@@ -120,6 +130,7 @@ interface EncodedBuild extends EncodedSlotGroup, EncodedSharedMeta {
   i: string
   c: string
   r: boolean
+  oa?: string
   ic?: EncodedIncarnon
   dc?: DeploymentContext
 }
@@ -138,6 +149,7 @@ interface EncodedBuildV2 extends EncodedSharedMeta {
 
 interface EncodedVariant extends EncodedSlotGroup {
   l: string
+  oa?: string
   id?: string
   ic?: EncodedIncarnon
   dc?: DeploymentContext
@@ -409,6 +421,7 @@ export function encodeBuild(state: BuildState): string {
     state.deploymentContext !== DEFAULT_DEPLOYMENT_CONTEXT
   )
     encoded.dc = state.deploymentContext
+  if (state.operatorAmp) encoded.oa = state.operatorAmp
   return toBase64(encoded)
 }
 
@@ -425,6 +438,7 @@ export function decodeBuild(base64String: string): Partial<BuildState> | null {
     }
     applyIncarnon(state, encoded.ic)
     if (encoded.dc) state.deploymentContext = encoded.dc
+    state.operatorAmp = parseOperatorAmp(encoded.oa)
     return state
   } catch {
     return null
@@ -439,6 +453,7 @@ function encodeVariant(v: BuildVariant): EncodedVariant {
   const ev: EncodedVariant = { l: v.label, id: v.id, s: [] }
   encodeSlotGroup(ev, v)
   const ic = encodeIncarnon(v.incarnonEnabled, v.incarnonPerks)
+  if (v.operatorAmp) ev.oa = v.operatorAmp
   if (ic) ev.ic = ic
   if (v.deploymentContext && v.deploymentContext !== DEFAULT_DEPLOYMENT_CONTEXT)
     ev.dc = v.deploymentContext
@@ -488,6 +503,7 @@ function decodeVariant(
   variant.shardSlots = ev.sh
     ? decodeShards(ev.sh)
     : seedLegacyShards(legacy, variant.formIndex ?? 0)
+  variant.operatorAmp = parseOperatorAmp(ev.oa)
   return variant
 }
 
@@ -581,6 +597,7 @@ function buildStateToBuildDoc(state: Partial<BuildState>): BuildDoc {
         incarnonEnabled: state.incarnonEnabled,
         incarnonPerks: state.incarnonPerks,
         deploymentContext: state.deploymentContext,
+        operatorAmp: state.operatorAmp,
       },
     ],
   }

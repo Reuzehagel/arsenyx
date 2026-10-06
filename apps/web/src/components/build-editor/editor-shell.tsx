@@ -604,6 +604,9 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   const [hasReactor, setHasReactor] = useState(
     () => cachedShared?.hasReactor ?? savedData.hasReactor ?? true,
   )
+  const [operatorAmp, setOperatorAmp] = useState(
+    () => savedData.operatorAmp ?? "mote-amp",
+  )
 
   // Shards are per-variant. Like slots/arcanes, the live `shards` state seeds
   // from the active variant (mount-frozen `savedData`, copy-on-load resolved)
@@ -918,6 +921,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       incarnonEnabled,
       incarnonPerks,
       deploymentContext,
+      operatorAmp,
       normalSlotCount,
       auraSlotCount,
       showStance,
@@ -1136,6 +1140,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
         incarnonEnabled,
         incarnonPerks,
         deploymentContext,
+        operatorAmp,
         // formIndex is a variant property (set via the form selector), not
         // live editor state — preserve it from the existing variant.
         formIndex: existing?.formIndex,
@@ -1180,6 +1185,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       incarnonEnabled,
       incarnonPerks,
       deploymentContext,
+      operatorAmp,
       guideRefs,
       // Emit `variants` whenever there's more than one OR the single
       // remaining variant has a user-assigned label/id — otherwise the
@@ -1238,6 +1244,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     incarnonEnabled,
     incarnonPerks,
     deploymentContext,
+    operatorAmp,
     variants,
     clampedActiveIndex,
   ])
@@ -1330,7 +1337,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
           via `select-text` so the markdown textarea behaves normally.
         */}
         <div className="flex flex-col gap-4 select-none">
-          <KeyboardHintBanner />
+          {category !== "operators" && <KeyboardHintBanner />}
           <BuildSurface
             mode="edit"
             item={effectiveItem}
@@ -1373,6 +1380,8 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
               onSetDeploymentContext: setDeploymentContext,
               placedMods: slots.placed,
               placedArcanes: arcanes.placed,
+              operatorAmp,
+              onSetOperatorAmp: setOperatorAmp,
               formAbilities,
             }}
             topBarLayout="row"
@@ -1395,41 +1404,44 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
             onEditRiven={riven.openForEdit}
             conflicts={conflictMap}
           />
-
-          <div className="bg-card rounded-lg border p-4">
-            <SearchPanel
-              item={item}
-              category={category}
-              usedModNames={slots.usedNames}
-              conflictUniqueNames={conflictUniqueNames}
-              onSelect={handleModSelect}
-              helminth={helminth}
-              selectedSlotKind={
-                // Plexus slot pools are governed by `selectedPlexusGroup`,
-                // not by the generic aura/exilus/stance predicates — those
-                // would dim every Plexus mod (none carry compatName=AURA).
-                category === "railjack"
-                  ? undefined
-                  : slots.selected
-                    ? slotKind(slots.selected)
-                    : undefined
-              }
-              selectedSlot={slots.selected}
-              selectedPlexusGroup={(() => {
-                if (category !== "railjack" || !slots.selected) return undefined
-                // Aura slot lives inside the Integrated tab.
-                if (slots.selected.startsWith("aura-")) return "integrated"
-                const m = /^normal-(\d+)$/.exec(slots.selected)
-                if (!m) return undefined
-                const idx = Number(m[1])
-                return getPlexusGroupForIndex(category, idx) ?? undefined
-              })()}
-              plexusFillCounts={plexusFillCounts}
-              selectedIsPlexusAura={
-                category === "railjack" && !!slots.selected?.startsWith("aura-")
-              }
-            />
-          </div>
+          {category !== "operators" && (
+            <div className="bg-card rounded-lg border p-4">
+              <SearchPanel
+                item={item}
+                category={category}
+                usedModNames={slots.usedNames}
+                conflictUniqueNames={conflictUniqueNames}
+                onSelect={handleModSelect}
+                helminth={helminth}
+                selectedSlotKind={
+                  // Plexus slot pools are governed by `selectedPlexusGroup`,
+                  // not by the generic aura/exilus/stance predicates — those
+                  // would dim every Plexus mod (none carry compatName=AURA).
+                  category === "railjack"
+                    ? undefined
+                    : slots.selected
+                      ? slotKind(slots.selected)
+                      : undefined
+                }
+                selectedSlot={slots.selected}
+                selectedPlexusGroup={(() => {
+                  if (category !== "railjack" || !slots.selected)
+                    return undefined
+                  // Aura slot lives inside the Integrated tab.
+                  if (slots.selected.startsWith("aura-")) return "integrated"
+                  const m = /^normal-(\d+)$/.exec(slots.selected)
+                  if (!m) return undefined
+                  const idx = Number(m[1])
+                  return getPlexusGroupForIndex(category, idx) ?? undefined
+                })()}
+                plexusFillCounts={plexusFillCounts}
+                selectedIsPlexusAura={
+                  category === "railjack" &&
+                  !!slots.selected?.startsWith("aura-")
+                }
+              />
+            </div>
+          )}
 
           <div className="bg-card rounded-lg border p-4 select-text">
             <GuideEditor
