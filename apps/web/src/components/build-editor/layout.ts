@@ -91,6 +91,8 @@ export function getArcaneSlotCount(
   switch (category) {
     case "warframes":
       return 2
+    case "operators":
+      return 4
     case "melee":
       // Zaws have a dedicated Exodia slot in addition to the regular Melee
       // Arcane slot — both can be active simultaneously in-game.
@@ -126,6 +128,22 @@ export function getArcaneSlotConfig(
   item?: Pick<DetailItem, "displayClass" | "uniqueName" | "modPools">,
 ): ArcaneSlotConfig {
   if (count === 0) return { options: [] }
+  if (category === "operators") {
+    const operatorArcanes = allArcanes.filter(
+      (arcane) => arcane.slotType === "Operator",
+    )
+    const ampArcanes = allArcanes.filter((arcane) => arcane.slotType === "Amp")
+
+    return {
+      options: [operatorArcanes, operatorArcanes, ampArcanes, ampArcanes],
+      labels: [
+        "Operator Arcane 1",
+        "Operator Arcane 2",
+        "Amp Arcane 1",
+        "Amp Arcane 2",
+      ],
+    }
+  }
   if (category === "archwing") {
     return {
       options: [

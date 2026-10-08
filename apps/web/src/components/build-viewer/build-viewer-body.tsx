@@ -1,4 +1,9 @@
 import {
+  DEFAULT_OPERATOR_AMP,
+  parseFocusSchool,
+  parseOperatorAmp,
+} from "@arsenyx/shared/warframe/operator-loadout"
+import {
   type Arcane,
   DEFAULT_DEPLOYMENT_CONTEXT,
   type Mod,
@@ -253,6 +258,12 @@ function BuildViewerBodyInner({
   const incarnonPerks = saved.incarnonPerks ?? []
   const deploymentContext =
     saved.deploymentContext ?? DEFAULT_DEPLOYMENT_CONTEXT
+  const operatorAmp =
+    category === "operators"
+      ? (parseOperatorAmp(saved.operatorAmp) ?? DEFAULT_OPERATOR_AMP)
+      : undefined
+  const focusSchool =
+    category === "operators" ? parseFocusSchool(saved.focusSchool) : undefined
 
   const { arcaneConfig, totalEndoCost, formaCount, capacity } = useBuildDerived(
     { item: effectiveItem, category, layout, slots, allArcanes, hasReactor },
@@ -277,6 +288,8 @@ function BuildViewerBodyInner({
     deploymentContext,
     placedMods: slots.placed,
     placedArcanes: arcanes.placed,
+    operatorAmp,
+    focusSchool,
     formAbilities,
     readOnly: true as const,
   }

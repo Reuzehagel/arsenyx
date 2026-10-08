@@ -67,6 +67,8 @@ type EditorState = {
   incarnonEnabled?: boolean
   incarnonPerks?: (string | null)[]
   deploymentContext?: DeploymentContext
+  operatorAmp?: string
+  focusSchool?: string
   normalSlotCount: number
   auraSlotCount: number
   showStance: boolean
@@ -221,6 +223,8 @@ export function savedDataToBuildState(state: EditorState): BuildState {
     incarnonEnabled: state.incarnonEnabled,
     incarnonPerks: state.incarnonPerks,
     deploymentContext: state.deploymentContext,
+    operatorAmp: state.operatorAmp,
+    focusSchool: state.focusSchool,
   }
 }
 
@@ -286,6 +290,8 @@ export function buildStateToSavedData(
       incarnonEnabled: state.incarnonEnabled,
       incarnonPerks: state.incarnonPerks,
       deploymentContext: state.deploymentContext,
+      operatorAmp: state.operatorAmp,
+      focusSchool: state.focusSchool,
     },
     buildName: state.buildName,
   }
@@ -524,6 +530,8 @@ export function pickPerVariantData(
     incarnonEnabled: src.incarnonEnabled,
     incarnonPerks: src.incarnonPerks,
     deploymentContext: src.deploymentContext,
+    operatorAmp: src.operatorAmp,
+    focusSchool: src.focusSchool,
     formIndex: src.formIndex,
   }
 }
@@ -663,6 +671,8 @@ export function buildDocFromVariants(
         incarnonEnabled: sv.incarnonEnabled ?? base.incarnonEnabled,
         incarnonPerks: sv.incarnonPerks ?? base.incarnonPerks,
         deploymentContext: sv.deploymentContext ?? base.deploymentContext,
+        operatorAmp: sv.operatorAmp ?? base.operatorAmp,
+        focusSchool: sv.focusSchool ?? base.focusSchool,
       })
       return {
         id: sv.id,
@@ -676,6 +686,8 @@ export function buildDocFromVariants(
         incarnonEnabled: vs.incarnonEnabled,
         incarnonPerks: vs.incarnonPerks,
         deploymentContext: vs.deploymentContext,
+        operatorAmp: vs.operatorAmp,
+        focusSchool: vs.focusSchool,
         // formIndex lives only on the saved variant (not threaded through
         // BuildState), so carry it straight across — twin-frame share links
         // depend on it to pick the right form.

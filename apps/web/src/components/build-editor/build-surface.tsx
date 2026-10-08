@@ -1,4 +1,5 @@
 import type { ModConflictMap } from "@arsenyx/shared/warframe/mods"
+import { hasModSlots } from "@arsenyx/shared/warframe/slot-layout"
 import type { ReactNode } from "react"
 
 import { cn } from "@/lib/util/utils"
@@ -86,10 +87,23 @@ export function BuildSurface({
 
   return (
     <div
-      className={cn("flex flex-col gap-4", !embed && "xl:relative xl:block")}
+      className={cn(
+        "flex flex-col gap-4",
+        !embed &&
+          (!hasModSlots(category)
+            ? "xl:grid xl:grid-cols-[260px_minmax(0,1fr)] xl:items-stretch xl:gap-4"
+            : "xl:relative xl:block"),
+      )}
     >
       {!embed && (
-        <div className="flex w-full flex-col sm:hidden xl:absolute xl:top-0 xl:bottom-0 xl:left-0 xl:flex xl:w-[260px]">
+        <div
+          className={cn(
+            "flex w-full flex-col sm:hidden xl:flex xl:w-[260px]",
+            !hasModSlots(category)
+              ? "xl:static"
+              : "xl:absolute xl:top-0 xl:bottom-0 xl:left-0",
+          )}
+        >
           <ItemSidebar {...sidebarProps} />
         </div>
       )}
@@ -98,7 +112,7 @@ export function BuildSurface({
         className={cn(
           "bg-card @container/loadout flex min-w-0 flex-1 flex-col gap-3 overflow-hidden rounded-lg border",
           readOnly ? "p-[clamp(0.5rem,1.5vw,1rem)]" : "p-2 sm:p-4",
-          !embed && "xl:ml-[calc(260px+1rem)]",
+          !embed && hasModSlots(category) && "xl:ml-[calc(260px+1rem)]",
         )}
         onClick={
           readOnly
@@ -172,7 +186,7 @@ export function BuildSurface({
           }
         />
 
-        {!readOnly && <KeyboardHintsStrip />}
+        {!readOnly && hasModSlots(category) && <KeyboardHintsStrip />}
       </div>
     </div>
   )

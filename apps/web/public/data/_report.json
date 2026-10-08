@@ -9,7 +9,7 @@
     "frames": {
       "de": 127,
       "merged": 126,
-      "emitted": 126,
+      "emitted": 128,
       "operators": 2
     },
     "companions": {
@@ -30,7 +30,8 @@
       "companion-weapons": 41,
       "exalted-weapons": 37,
       "companions": 41,
-      "railjack": 1
+      "railjack": 1,
+      "operators": 2
     }
   },
   "weaponsUnmatched": [

@@ -35,6 +35,8 @@ export type SavedVariant = {
   incarnonEnabled?: boolean
   incarnonPerks?: (string | null)[]
   deploymentContext?: DeploymentContext
+  operatorAmp?: string
+  focusSchool?: string
   /** Twin-frame (Sirius & Orion) form this variant builds — indexes the
    *  catalog item's `forms` array (0 = primary). Absent for normal frames. */
   formIndex?: number
@@ -69,6 +71,8 @@ export type SavedBuildData = {
   incarnonEnabled?: boolean
   incarnonPerks?: (string | null)[]
   deploymentContext?: DeploymentContext
+  operatorAmp?: string
+  focusSchool?: string
   /** Top-level mirror of the active variant's `formIndex` (per-variant data;
    *  see `PerVariantDataField`). */
   formIndex?: number
