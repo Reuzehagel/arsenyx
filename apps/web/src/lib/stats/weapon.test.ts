@@ -338,3 +338,52 @@ describe("riven range", () => {
     expect(stats.attackModes[0]!.range!.modified).toBe(3.5)
   })
 })
+
+// Riven elemental stats are applied bottom-to-top
+describe("riven elemental ordering", () => {
+  it("combines Riven elemental stats bottom-to-top", () => {
+    const weapon = makeWeapon({
+      damage: { impact: 100 },
+      totalDamage: 100,
+    })
+
+    const riven = {
+      name: "Riven Mod",
+      rivenStats: {
+        positives: [
+          { stat: "Heat", value: 90 },
+          { stat: "Toxin", value: 90 },
+        ],
+        negatives: [],
+      },
+    } as unknown as Mod
+
+    const stats = calculateWeaponStats({
+      weapon,
+      mods: [
+        {
+          mod: elementMod(
+            "Stormbringer",
+            90,
+            "DT_ELECTRICITY_COLOR",
+            "Electricity",
+          ),
+          rank: 0,
+        },
+        {
+          mod: riven,
+          rank: 0,
+        },
+      ],
+      arcanes: [],
+    })
+
+    const map = elemMap(stats)
+
+    expect(map.get("corrosive")).toBe(180)
+    expect(map.get("heat")).toBe(90)
+
+    expect(map.has("radiation")).toBe(false)
+    expect(map.has("toxin")).toBe(false)
+  })
+})

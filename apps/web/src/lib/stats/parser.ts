@@ -218,7 +218,10 @@ function rivenOp(stat: string): ParsedStat["operation"] {
 /** Convert a RivenStats object into ParsedStats. Negatives already carry sign. */
 function parseRivenStats(rivenStats: RivenStats): ParsedStat[] {
   const out: ParsedStat[] = []
-  for (const p of rivenStats.positives) {
+  // Riven elemental stats are applied bottom-to-top in-game, so parse the
+  // positive rows in reverse display order to preserve their element priority.
+  for (let i = rivenStats.positives.length - 1; i >= 0; i--) {
+    const p = rivenStats.positives[i]!
     const mapped = STAT_NAME_MAP[p.stat.toLowerCase()]
     if (!mapped) continue
     out.push({ type: mapped, value: p.value, operation: rivenOp(p.stat) })
