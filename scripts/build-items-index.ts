@@ -45,6 +45,7 @@ import {
 
 import { ARCANE_KEEP, ARCANE_SLOT_FALLBACKS } from "../data/curated/arcane-keep"
 import { DE_MISSING_MODS } from "../data/curated/de-missing-mods"
+import { OPERATOR_IMAGE_FIXES } from "../data/curated/operator-images"
 import { PVE_USABLE_CONCLAVE_MODS } from "../data/curated/pve-usable-conclave-mods"
 import { buildBrowseIndex } from "./build/browse-index"
 import { injectMissingDeMods } from "./build/de-missing-mods"
@@ -275,6 +276,16 @@ async function main() {
     wikiModsBlob,
     wikiArcanesBlob,
     exaltedStances: curated.exaltedStances,
+    operatorWikiImages: new Map(
+      operators.flatMap((o) => {
+        const image =
+          OPERATOR_IMAGE_FIXES[o.name] ??
+          wikiFramesBlob.Operators?.[o.name]?.["Image"]
+        return typeof image === "string" && image.length > 0
+          ? [[o.uniqueName, image] as const]
+          : []
+      }),
+    ),
     cachePath: WIKI_IMAGE_CACHE,
   })
 

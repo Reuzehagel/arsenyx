@@ -3,6 +3,38 @@ export interface AmpOption {
   label: string
 }
 
+export const DEFAULT_OPERATOR_AMP = "mote-amp"
+
+/** Modular Amps use the community `prism-scaffold-brace` shorthand (e.g. `5-4-7`). */
+const MODULAR_AMP_RE = /^[1-7]-[1-7]-[1-7]$/
+
+export function isModularAmp(value: string | undefined): value is string {
+  return value !== undefined && MODULAR_AMP_RE.test(value)
+}
+
+/** Validate an untrusted Amp value (share link, saved JSON). */
+export function parseOperatorAmp(raw: unknown): string | undefined {
+  if (raw === "mote-amp" || raw === "sirocco") return raw
+  if (typeof raw === "string" && isModularAmp(raw)) return raw
+  return undefined
+}
+
+/** The five Focus schools (wiki Module:Focus/data `Schools`). */
+export const FOCUS_SCHOOLS: AmpOption[] = [
+  { value: "madurai", label: "Madurai" },
+  { value: "naramon", label: "Naramon" },
+  { value: "unairu", label: "Unairu" },
+  { value: "vazarin", label: "Vazarin" },
+  { value: "zenurik", label: "Zenurik" },
+]
+
+/** Validate an untrusted Focus school value (share link, saved JSON). */
+export function parseFocusSchool(raw: unknown): string | undefined {
+  return FOCUS_SCHOOLS.some((s) => s.value === raw)
+    ? (raw as string)
+    : undefined
+}
+
 export const OPERATOR_AMP_TYPES: AmpOption[] = [
   { value: "mote-amp", label: "Mote Amp" },
   { value: "sirocco", label: "Sirocco" },

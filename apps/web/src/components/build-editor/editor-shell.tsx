@@ -14,7 +14,13 @@ import {
   kitgunGripsFor,
 } from "@arsenyx/shared/warframe/kitgun-data"
 import { getBlockedByConflict } from "@arsenyx/shared/warframe/mods"
+import {
+  DEFAULT_OPERATOR_AMP,
+  parseFocusSchool,
+  parseOperatorAmp,
+} from "@arsenyx/shared/warframe/operator-loadout"
 import { isRivenMod } from "@arsenyx/shared/warframe/rivens"
+import { hasModSlots } from "@arsenyx/shared/warframe/slot-layout"
 import {
   DEFAULT_DEPLOYMENT_CONTEXT,
   type DeploymentContext,
@@ -162,6 +168,8 @@ type EditorHistorySnapshot = {
   incarnonEnabled: boolean
   incarnonPerks: (string | null)[]
   deploymentContext: DeploymentContext
+  operatorAmp: string | undefined
+  focusSchool: string | undefined
 }
 
 // Field-wise reference equality. Sound because every snapshot field is a value
@@ -604,8 +612,18 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   const [hasReactor, setHasReactor] = useState(
     () => cachedShared?.hasReactor ?? savedData.hasReactor ?? true,
   )
-  const [operatorAmp, setOperatorAmp] = useState(
-    () => savedData.operatorAmp ?? "mote-amp",
+  // Operator-only; left undefined elsewhere so non-Operator builds and share
+  // links never carry an Amp.
+  const [operatorAmp, setOperatorAmp] = useState<string | undefined>(() =>
+    category === "operators"
+      ? (parseOperatorAmp(savedData.operatorAmp) ?? DEFAULT_OPERATOR_AMP)
+      : undefined,
+  )
+  // Unset until picked — there's no sensible default school.
+  const [focusSchool, setFocusSchool] = useState<string | undefined>(() =>
+    category === "operators"
+      ? parseFocusSchool(savedData.focusSchool)
+      : undefined,
   )
 
   // Shards are per-variant. Like slots/arcanes, the live `shards` state seeds
@@ -800,6 +818,8 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     incarnonEnabled,
     incarnonPerks,
     deploymentContext,
+    operatorAmp,
+    focusSchool,
   })
 
   const applyHistorySnapshot = (s: EditorHistorySnapshot) => {
@@ -815,6 +835,8 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     setIncarnonEnabled(s.incarnonEnabled)
     setIncarnonPerks(s.incarnonPerks)
     setDeploymentContext(s.deploymentContext)
+    setOperatorAmp(s.operatorAmp)
+    setFocusSchool(s.focusSchool)
   }
 
   // Seed the baseline from the mount snapshot (lazy init runs once). Every
@@ -856,6 +878,8 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     incarnonEnabled,
     incarnonPerks,
     deploymentContext,
+    operatorAmp,
+    focusSchool,
   ])
 
   // Ctrl/Cmd+Z undoes, Ctrl/Cmd+Shift+Z (or Ctrl+Y on Windows) redoes. Left to
@@ -922,6 +946,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       incarnonPerks,
       deploymentContext,
       operatorAmp,
+      focusSchool,
       normalSlotCount,
       auraSlotCount,
       showStance,
@@ -1141,6 +1166,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
         incarnonPerks,
         deploymentContext,
         operatorAmp,
+        focusSchool,
         // formIndex is a variant property (set via the form selector), not
         // live editor state — preserve it from the existing variant.
         formIndex: existing?.formIndex,
@@ -1186,6 +1212,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       incarnonPerks,
       deploymentContext,
       operatorAmp,
+      focusSchool,
       guideRefs,
       // Emit `variants` whenever there's more than one OR the single
       // remaining variant has a user-assigned label/id — otherwise the
@@ -1245,6 +1272,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     incarnonPerks,
     deploymentContext,
     operatorAmp,
+    focusSchool,
     variants,
     clampedActiveIndex,
   ])
@@ -1337,7 +1365,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
           via `select-text` so the markdown textarea behaves normally.
         */}
         <div className="flex flex-col gap-4 select-none">
-          {category !== "operators" && <KeyboardHintBanner />}
+          {hasModSlots(category) && <KeyboardHintBanner />}
           <BuildSurface
             mode="edit"
             item={effectiveItem}
@@ -1381,7 +1409,9 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
               placedMods: slots.placed,
               placedArcanes: arcanes.placed,
               operatorAmp,
+              focusSchool,
               onSetOperatorAmp: setOperatorAmp,
+              onSetFocusSchool: setFocusSchool,
               formAbilities,
             }}
             topBarLayout="row"
@@ -1404,7 +1434,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
             onEditRiven={riven.openForEdit}
             conflicts={conflictMap}
           />
-          {category !== "operators" && (
+          {hasModSlots(category) && (
             <div className="bg-card rounded-lg border p-4">
               <SearchPanel
                 item={item}

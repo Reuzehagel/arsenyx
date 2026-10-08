@@ -1,3 +1,4 @@
+import { hasModSlots } from "@arsenyx/shared/warframe/slot-layout"
 import { Link as RouterLink } from "@tanstack/react-router"
 import {
   Pencil,
@@ -139,7 +140,7 @@ export function EditorHeader({
               {item.name} · {categoryLabel}
             </span>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-              {category !== "operators" && (
+              {hasModSlots(category) && (
                 <EndoFormaBadges
                   totalEndoCost={totalEndoCost}
                   formaCount={formaCount}

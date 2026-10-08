@@ -41,6 +41,12 @@ export function hasExilusSlot(category: BrowseCategory): boolean {
  *  no aura/exilus/arcane, so `decodeOverframeSlotId` special-cases them. This
  *  predicate keeps both OUT of the uniform all-normal path used by
  *  companions/archwing/railjack. */
+/** Whether the category is modded at all. Mod-less categories (Operators) skip
+ *  the mod grid, capacity/reactor/Forma, mod search and mod hotkey hints. */
+export function hasModSlots(category: BrowseCategory): boolean {
+  return getNormalSlotCount(category) > 0
+}
+
 export function isWarframeLike(category: BrowseCategory): boolean {
   return category === "warframes" || category === "necramechs"
 }

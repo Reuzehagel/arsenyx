@@ -515,6 +515,7 @@ export interface BuildState {
   // divergent atmospheric damage profile.
   deploymentContext?: DeploymentContext
   operatorAmp?: string
+  focusSchool?: string
 }
 
 export type DeploymentContext = "archwing" | "atmospheric"

@@ -7,11 +7,14 @@ import {
   encodeBuildDoc,
 } from "./build-codec"
 import type { BuildDoc, BuildVariant } from "./build-doc"
+import { parseFocusSchool, parseOperatorAmp } from "./operator-loadout"
+import { hasModSlots } from "./slot-layout"
 import type { BuildState } from "./types"
 
 function operatorBuild(operatorAmp: string): BuildState {
   return {
-    itemUniqueName: "/Lotus/Powersuits/Operator/Operator",
+    itemUniqueName:
+      "/Lotus/Types/Game/CharacterCustomization/Operator/Operator",
     itemName: "Operator",
     itemCategory: "operators",
     hasReactor: false,
@@ -59,7 +62,8 @@ describe("Operator Amp build codec", () => {
 
   it("preserves a different Amp on each v2 build variant", () => {
     const doc: BuildDoc = {
-      itemUniqueName: "/Lotus/Powersuits/Operator/Operator",
+      itemUniqueName:
+        "/Lotus/Types/Game/CharacterCustomization/Operator/Operator",
       itemName: "Operator",
       itemCategory: "operators",
       hasReactor: false,
@@ -75,5 +79,57 @@ describe("Operator Amp build codec", () => {
     expect(decoded?.activeIndex).toBe(1)
     expect(decoded?.variants[0]?.operatorAmp).toBe("1-7-7")
     expect(decoded?.variants[1]?.operatorAmp).toBe("5-4-7")
+  })
+})
+
+describe("parseOperatorAmp", () => {
+  it.each(["mote-amp", "sirocco", "1-1-1", "7-7-7"])("accepts %s", (v) => {
+    expect(parseOperatorAmp(v)).toBe(v)
+  })
+
+  it.each(["0-1-1", "8-1-1", "1-1", "custom", "", 3, null])(
+    "rejects %s",
+    (v) => {
+      expect(parseOperatorAmp(v)).toBeUndefined()
+    },
+  )
+})
+
+describe("Focus school codec", () => {
+  it("round-trips a school through a v1 share link", () => {
+    const state = { ...operatorBuild("sirocco"), focusSchool: "zenurik" }
+    expect(decodeBuild(encodeBuild(state))?.focusSchool).toBe("zenurik")
+  })
+
+  it("keeps a different school on each v2 variant", () => {
+    const doc: BuildDoc = {
+      itemUniqueName:
+        "/Lotus/Types/Game/CharacterCustomization/Operator/Operator",
+      itemName: "Operator",
+      itemCategory: "operators",
+      hasReactor: false,
+      variants: [
+        { ...variant("a", "A", "1-7-7"), focusSchool: "madurai" },
+        { ...variant("b", "B", "5-4-7"), focusSchool: "unairu" },
+      ],
+    }
+    const decoded = decodeBuildDoc(encodeBuildDoc(doc, 0))
+    expect(decoded?.variants.map((v) => v.focusSchool)).toEqual([
+      "madurai",
+      "unairu",
+    ])
+  })
+
+  it("drops an unknown school", () => {
+    expect(parseFocusSchool("Madurai")).toBeUndefined()
+    expect(parseFocusSchool("void")).toBeUndefined()
+  })
+})
+
+describe("hasModSlots", () => {
+  it("is false only for mod-less Operators", () => {
+    expect(hasModSlots("operators")).toBe(false)
+    expect(hasModSlots("warframes")).toBe(true)
+    expect(hasModSlots("railjack")).toBe(true)
   })
 })

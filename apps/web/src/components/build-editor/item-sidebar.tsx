@@ -1,10 +1,4 @@
 import {
-  AMP_BRACES,
-  AMP_PRISMS,
-  AMP_SCAFFOLDS,
-  OPERATOR_AMP_TYPES,
-} from "@arsenyx/shared/warframe/amp-data"
-import {
   hasIncarnon,
   INCARNON_FORM_ATTACK_NAME,
 } from "@arsenyx/shared/warframe/incarnon-data"
@@ -12,6 +6,16 @@ import {
   isKitgunChamber,
   type KitgunComponents,
 } from "@arsenyx/shared/warframe/kitgun-data"
+import {
+  AMP_BRACES,
+  AMP_PRISMS,
+  AMP_SCAFFOLDS,
+  DEFAULT_OPERATOR_AMP,
+  FOCUS_SCHOOLS,
+  isModularAmp,
+  OPERATOR_AMP_TYPES,
+} from "@arsenyx/shared/warframe/operator-loadout"
+import { hasModSlots } from "@arsenyx/shared/warframe/slot-layout"
 import {
   DEFAULT_DEPLOYMENT_CONTEXT,
   type DeploymentContext,
@@ -94,6 +98,13 @@ function itemHasWeaponData(item: DetailItem): boolean {
   return Array.isArray(attacks) && attacks.length > 0
 }
 
+/** Modular Amp parts in shorthand order (`prism-scaffold-brace`). */
+const AMP_PARTS = [
+  { label: "Prism", options: AMP_PRISMS },
+  { label: "Scaffold", options: AMP_SCAFFOLDS },
+  { label: "Brace", options: AMP_BRACES },
+]
+
 export interface ItemSidebarProps {
   item: DetailItem
   category: BrowseCategory
@@ -131,6 +142,8 @@ export interface ItemSidebarProps {
   placedArcanes: (PlacedArcane | null)[]
   operatorAmp?: string
   onSetOperatorAmp?: (value: string) => void
+  focusSchool?: string
+  onSetFocusSchool?: (value: string) => void
   /** Twin-frames (Sirius & Orion): the active form's ability set, overriding
    *  `item.abilities`. Absent for normal frames. */
   formAbilities?: ItemAbility[]
@@ -174,6 +187,8 @@ export function ItemSidebar({
   placedArcanes,
   operatorAmp,
   onSetOperatorAmp,
+  focusSchool,
+  onSetFocusSchool,
   formAbilities,
   readOnly = false,
   bare = false,
@@ -223,24 +238,19 @@ export function ItemSidebar({
     ? (deploymentContext ?? DEFAULT_DEPLOYMENT_CONTEXT)
     : "archwing"
 
-  const isCustomAmp = /^\d-\d-\d$/.test(operatorAmp ?? "")
-
-  const ampParts = isCustomAmp
-    ? (operatorAmp ?? "1-1-1").split("-")
-    : ["1", "1", "1"]
-
-  const ampPrism = ampParts[0] ?? "1"
-  const ampScaffold = ampParts[1] ?? "1"
-  const ampBrace = ampParts[2] ?? "1"
-
-  const operatorAmpType = isCustomAmp ? "custom" : (operatorAmp ?? "mote-amp")
+  const isCustomAmp = isModularAmp(operatorAmp)
+  const ampParts = isCustomAmp ? operatorAmp.split("-") : ["1", "1", "1"]
+  const operatorAmpType = isCustomAmp
+    ? "custom"
+    : (operatorAmp ?? DEFAULT_OPERATOR_AMP)
 
   const updateAmpPart = (index: number, value: string) => {
-    const next = [ampPrism, ampScaffold, ampBrace]
+    const next = [...ampParts]
     next[index] = value
     onSetOperatorAmp?.(next.join("-"))
   }
-  // Slot reading order, not equip order â€” elemental combination depends on it.
+
+  // Slot reading order, not equip order — elemental combination depends on it.
   const modList = useMemo(() => placedModsInSlotOrder(placedMods), [placedMods])
   const arcaneList = useMemo(
     () => placedArcanes.filter((a): a is PlacedArcane => !!a),
@@ -256,7 +266,7 @@ export function ItemSidebar({
 
   const [showMaxStacks, setShowMaxStacks] = useState(false)
 
-  // Stats panels fold on phones only. On sm+ (â‰¥640px) the `sm:flex` rule
+  // Stats panels fold on phones only. On sm+ (≥640px) the `sm:flex` rule
   // below forces the panel visible regardless of this state, so we default
   // to collapsed: the toggle button is sm:hidden and only flips this on
   // actual phones.
@@ -472,6 +482,33 @@ export function ItemSidebar({
         )}
         {category === "operators" && (
           <>
+            <div className="flex flex-col gap-1.5 p-3">
+              <span className="text-xs font-medium">Focus School</span>
+              <Select
+                items={FOCUS_SCHOOLS}
+                value={focusSchool ?? null}
+                onValueChange={(value) => {
+                  if (value) onSetFocusSchool?.(value)
+                }}
+                disabled={readOnly}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {FOCUS_SCHOOLS.map((school) => (
+                      <SelectItem key={school.value} value={school.value}>
+                        {school.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Separator />
+
             <div className="flex flex-col gap-3 p-3">
               <span className="text-xs font-medium">Amp</span>
 
@@ -507,95 +544,44 @@ export function ItemSidebar({
 
               {isCustomAmp && (
                 <div className="flex flex-col gap-3">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-muted-foreground text-xs">Prism</span>
-
-                    <Select
-                      items={AMP_PRISMS}
-                      value={ampPrism}
-                      onValueChange={(value) => {
-                        if (value) updateAmpPart(0, value)
-                      }}
-                      disabled={readOnly}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-
-                      <SelectContent>
-                        <SelectGroup>
-                          {AMP_PRISMS.map((part) => (
-                            <SelectItem key={part.value} value={part.value}>
-                              {part.label}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    <span className="text-muted-foreground text-xs">
-                      Scaffold
-                    </span>
-
-                    <Select
-                      items={AMP_SCAFFOLDS}
-                      value={ampScaffold}
-                      onValueChange={(value) => {
-                        if (value) updateAmpPart(1, value)
-                      }}
-                      disabled={readOnly}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-
-                      <SelectContent>
-                        <SelectGroup>
-                          {AMP_SCAFFOLDS.map((part) => (
-                            <SelectItem key={part.value} value={part.value}>
-                              {part.label}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    <span className="text-muted-foreground text-xs">Brace</span>
-
-                    <Select
-                      items={AMP_BRACES}
-                      value={ampBrace}
-                      onValueChange={(value) => {
-                        if (value) updateAmpPart(2, value)
-                      }}
-                      disabled={readOnly}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-
-                      <SelectContent>
-                        <SelectGroup>
-                          {AMP_BRACES.map((part) => (
-                            <SelectItem key={part.value} value={part.value}>
-                              {part.label}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {AMP_PARTS.map((part, index) => (
+                    <div key={part.label} className="flex flex-col gap-1">
+                      <span className="text-muted-foreground text-xs">
+                        {part.label}
+                      </span>
+                      <Select
+                        items={part.options}
+                        value={ampParts[index]}
+                        onValueChange={(value) => {
+                          if (value) updateAmpPart(index, value)
+                        }}
+                        disabled={readOnly}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            {part.options.map((option) => (
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                              >
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
 
                   <div className="bg-muted/30 rounded-md border px-3 py-2">
                     <div className="text-muted-foreground text-[11px] uppercase">
                       Amp Configuration
                     </div>
                     <div className="mt-0.5 font-mono text-lg font-semibold">
-                      {ampPrism}-{ampScaffold}-{ampBrace}
+                      {ampParts.join("-")}
                     </div>
                   </div>
                 </div>
@@ -605,7 +591,7 @@ export function ItemSidebar({
             <Separator />
           </>
         )}
-        {category !== "operators" && (
+        {hasModSlots(category) && (
           <div className="flex flex-col gap-2 p-3">
             <div className="flex items-center justify-between text-xs">
               <span className="font-medium">{boosterLabel}</span>
@@ -628,7 +614,7 @@ export function ItemSidebar({
         )}
 
         {/* `sm:flex` is unconditional so desktop visibility never depends on
-            `statsExpanded` â€” the toggle that flips it is `sm:hidden`. */}
+            `statsExpanded` — the toggle that flips it is `sm:hidden`. */}
         <div
           className={cn("flex-col sm:flex", statsExpanded ? "flex" : "hidden")}
         >

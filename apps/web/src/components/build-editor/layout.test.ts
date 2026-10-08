@@ -148,7 +148,7 @@ describe("hasExilusSlot", () => {
   })
 })
 
-describe("resolveInitialArcanes Ã¢â‚¬â€ kitgun re-bucketing", () => {
+describe("resolveInitialArcanes — kitgun re-bucketing", () => {
   const placed = (a: Arcane): PlacedArcane => ({ arcane: a, rank: 0 })
 
   it("routes a saved Pax/Residual arcane to slot 1, even from index 0", () => {
@@ -202,7 +202,7 @@ describe("getAuraSlotCount", () => {
   })
 })
 
-// Desert Wind (Baruuk): a locked exalted melee Ã¢â‚¬â€ Zenurik stance polarity plus
+// Desert Wind (Baruuk): a locked exalted melee — Zenurik stance polarity plus
 // a permanently installed Serene Storm stance emitted as `innateStance`.
 const DESERT_WIND: Pick<
   DetailItem,
@@ -213,7 +213,7 @@ const DESERT_WIND: Pick<
   stancePolarity: "zenurik",
   innateStance: { name: "Serene Storm", imageName: "https://img/serene.png" },
 }
-// Garuda Talons: the exception Ã¢â‚¬â€ a *free* Claw stance slot (Madurai), so it
+// Garuda Talons: the exception — a *free* Claw stance slot (Madurai), so it
 // carries a stancePolarity but NO innateStance (not locked).
 const GARUDA_TALONS: Pick<
   DetailItem,
@@ -238,7 +238,7 @@ describe("hasStanceSlot", () => {
 
   it("denies a stance slot to exalted guns / Necramech exalted (no stancePolarity)", () => {
     // Arquebex (arch-gun) and Ironbride (Necramech arch-melee) carry no
-    // stancePolarity. (Exalted Blade is NOT here Ã¢â‚¬â€ it's a melee exalted with a
+    // stancePolarity. (Exalted Blade is NOT here — it's a melee exalted with a
     // locked stance, asserted true above.)
     expect(hasStanceSlot(ARQUEBEX, "exalted-weapons")).toBe(false)
     expect(hasStanceSlot(IRONBRIDE, "exalted-weapons")).toBe(false)
@@ -276,7 +276,7 @@ describe("hasLockedStance / getLockedStance", () => {
   })
 })
 
-describe("getArcaneSlotConfig Ã¢â‚¬â€ melee Exodia gating", () => {
+describe("getArcaneSlotConfig — melee Exodia gating", () => {
   it("gives a Zaw a dedicated Exodia slot alongside the melee slot", () => {
     const cfg = getArcaneSlotConfig(ARCANES, "melee", 2, ZAW_STRIKE)
     expect(cfg.labels).toEqual(["Melee Arcane", "Exodia"])
@@ -302,12 +302,12 @@ describe("getArcaneSlotConfig Ã¢â‚¬â€ melee Exodia gating", () => {
 })
 
 // Regression (#313): the exalted arcane pool used to be guessed from the
-// weapon's name ("bow" Ã¢â€ â€™ primary) and `trigger` (present Ã¢â€ â€™ secondary), which
+// weapon's name ("bow" → primary) and `trigger` (present → secondary), which
 // put Lizzie (a primary, no trigger) on melee arcanes and Neutralizer (a
 // primary, SEMI trigger) on secondary ones. Route on the slot-wide mod pool
 // the build pipeline stamps on every weapon instead. Fixtures mirror
 // public/data/items/exalted-weapons/*.json.
-describe("getArcaneSlotConfig Ã¢â‚¬â€ exalted weapon slot routing", () => {
+describe("getArcaneSlotConfig — exalted weapon slot routing", () => {
   type ExaltedFixture = Pick<
     DetailItem,
     "displayClass" | "uniqueName" | "modPools"
@@ -371,7 +371,7 @@ describe("getArcaneSlotConfig Ã¢â‚¬â€ exalted weapon slot routing", (
   })
 })
 
-describe("getArcaneSlotConfig Ã¢â‚¬â€ kitgun split", () => {
+describe("getArcaneSlotConfig — kitgun split", () => {
   it("puts weapon arcanes in slot 0 and Pax/Residual in slot 1", () => {
     const cfg = getArcaneSlotConfig(ARCANES, "secondary", 2, KITGUN_SECONDARY)
     expect(cfg.labels).toEqual(["Secondary Arcane", "Pax / Residual"])
@@ -388,7 +388,8 @@ describe("Operator arcane routing", () => {
     expect(
       getArcaneSlotCount("operators", {
         displayClass: "Operator",
-        uniqueName: "/Lotus/Powersuits/Operator/Operator",
+        uniqueName:
+          "/Lotus/Types/Game/CharacterCustomization/Operator/Operator",
       }),
     ).toBe(4)
   })
