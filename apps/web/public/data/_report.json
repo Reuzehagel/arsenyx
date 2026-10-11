@@ -4,7 +4,7 @@
       "de": 841,
       "merged": 892,
       "emitted": 702,
-      "unmatched": 2
+      "unmatched": 0
     },
     "frames": {
       "de": 127,
@@ -33,10 +33,7 @@
       "railjack": 1
     }
   },
-  "weaponsUnmatched": [
-    "Corufell Prime",
-    "Steflos Prime"
-  ],
+  "weaponsUnmatched": [],
   "framesUnmatched": [
     "Orion & Sirius"
   ],
