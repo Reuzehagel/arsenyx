@@ -20,6 +20,37 @@ export const RIVEN_MIN_DRAIN = 0
 /** What a max-rank riven costs in-game. */
 export const RIVEN_DEFAULT_DRAIN = 18
 
+/** Traits created through Riven Splicing on ranged Rivens. */
+const RANGED_SPLICED_RIVEN_STATS = [
+  "Weakpoint Damage",
+  "Weakpoint Critical Chance",
+  "Ammo Efficiency",
+  "Magazine Reload While Holstered",
+  "Status Damage",
+] as const
+
+/** Traits created through Riven Splicing on melee Rivens. */
+const MELEE_SPLICED_RIVEN_STATS = [
+  "Heavy Attack Damage",
+  "Heavy Attack Windup Speed",
+  "Parry Angle",
+  "Slam Damage",
+  "Status Damage",
+] as const
+
+/** Traits created through Riven Splicing on all Riven classes. */
+const UNIVERSAL_SPLICED_RIVEN_STATS = [
+  "Gas Damage",
+  "Corrosive Damage",
+  "Viral Damage",
+  "Radiation Damage",
+  "Blast Damage",
+  "Magnetic Damage",
+  "Damage vs Orokin",
+  "Damage vs Techrot",
+  "Damage vs Scaldra",
+] as const
+
 /** Stats available on gun (primary / secondary / archgun / companion) rivens. */
 export const GUN_RIVEN_STATS = [
   "Critical Chance",
@@ -46,6 +77,8 @@ export const GUN_RIVEN_STATS = [
   "Damage to Corpus",
   "Damage to Grineer",
   "Damage to Infested",
+  ...RANGED_SPLICED_RIVEN_STATS,
+  ...UNIVERSAL_SPLICED_RIVEN_STATS,
 ] as const
 
 /** Stats available on melee rivens (per https://wiki.warframe.com/w/Riven_Mods).
@@ -77,6 +110,8 @@ export const MELEE_RIVEN_STATS = [
   "Damage to Corpus",
   "Damage to Grineer",
   "Damage to Infested",
+  ...MELEE_SPLICED_RIVEN_STATS,
+  ...UNIVERSAL_SPLICED_RIVEN_STATS,
 ] as const
 
 /** Riven stats that roll as flat additions rather than percentages, keyed to

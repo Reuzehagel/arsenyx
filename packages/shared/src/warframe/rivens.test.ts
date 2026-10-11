@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { isRivenEligible } from "./rivens"
+import { getRivenStatsFor, isRivenEligible } from "./rivens"
 
 // Wiki: Rivens exist for Primary, Secondary, Melee, Arch-Guns, and Robotic
 // (Sentinel/MOA/Hound) weapons — but NOT beast companion weapons or Arch-Melee.
@@ -40,5 +40,51 @@ describe("isRivenEligible", () => {
       false,
     )
     expect(isRivenEligible("companions", {})).toBe(false)
+  })
+})
+
+describe("Riven Splicing stats", () => {
+  it("adds ranged-only traits to gun Rivens", () => {
+    const stats = getRivenStatsFor("primary")
+
+    expect(stats).toContain("Weakpoint Damage")
+    expect(stats).toContain("Weakpoint Critical Chance")
+    expect(stats).toContain("Ammo Efficiency")
+    expect(stats).toContain("Magazine Reload While Holstered")
+    expect(stats).toContain("Status Damage")
+  })
+
+  it("adds melee-only traits to melee Rivens", () => {
+    const stats = getRivenStatsFor("melee")
+
+    expect(stats).toContain("Heavy Attack Damage")
+    expect(stats).toContain("Heavy Attack Windup Speed")
+    expect(stats).toContain("Parry Angle")
+    expect(stats).toContain("Slam Damage")
+    expect(stats).toContain("Status Damage")
+  })
+
+  it("adds universal traits to both gun and melee Rivens", () => {
+    const traits = [
+      "Gas Damage",
+      "Corrosive Damage",
+      "Viral Damage",
+      "Radiation Damage",
+      "Blast Damage",
+      "Magnetic Damage",
+      "Damage vs Orokin",
+      "Damage vs Techrot",
+      "Damage vs Scaldra",
+    ]
+
+    for (const trait of traits) {
+      expect(getRivenStatsFor("primary")).toContain(trait)
+      expect(getRivenStatsFor("melee")).toContain(trait)
+    }
+  })
+
+  it("keeps ranged and melee traits separated", () => {
+    expect(getRivenStatsFor("melee")).not.toContain("Weakpoint Damage")
+    expect(getRivenStatsFor("primary")).not.toContain("Heavy Attack Damage")
   })
 })
