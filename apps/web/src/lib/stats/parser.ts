@@ -66,6 +66,12 @@ const STAT_NAME_MAP: Record<string, StatType> = {
   magnetic: "magnetic",
   viral: "viral",
   corrosive: "corrosive",
+  "gas damage": "gas",
+  "corrosive damage": "corrosive",
+  "viral damage": "viral",
+  "radiation damage": "radiation",
+  "blast damage": "blast",
+  "magnetic damage": "magnetic",
   // Weapon-type-specific base-damage stats (Pressure Point, Sniper Rifle
   // damage rivens, etc.) act as the generic base-damage multiplier for
   // their weapon class. The mod search pool already gates compatibility,
