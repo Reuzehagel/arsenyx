@@ -84,15 +84,7 @@ bun run sync:images                # mirror emitted images into R2, rewrite cata
 bun run check:images               # fail if catalog still hotlinks content/wiki.warframe.com
 bun run check:data-version         # fail if catalog changed but meta.json generatedAt didn't
 bun run data:stamp                 # bump meta.json generatedAt — run after any HAND-edit to apps/web/public/data/
-bun run data:patch <file> --field <name>  # keep only <name> from a local rebuild of <file>; HEAD for everything else
 ```
-
-Shipping a pipeline fix without a full refresh? A local `build:items` rebuilds
-from your `data/raw` mirror, which lags the committed catalog, so committing
-its output regresses unrelated data. Rebuild, then `data:patch` the one file
-and field you fixed (e.g. `mods-all.json --field compatItems`); it prints the
-commands to discard the rest and stamp. Git worktrees get `data/raw/` copied
-in via [.worktreeinclude](../.worktreeinclude).
 
 `build:items` alone leaves upstream CDN URLs in the catalog; `sync:images`
 mirrors the bytes into R2 and rewrites them to `img.arsenyx.com`. Always pair
