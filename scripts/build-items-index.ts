@@ -564,6 +564,20 @@ async function main() {
   )
   console.log(`  OK  mods-all.json (${mergedMods.length} mods)`)
 
+  // Emitted mods with no wiki record by InternalName or by Name. Their
+  // wiki-sourced flags (IsExilus, Tradable, Conclave) silently default, so
+  // surface them in _report.json where the weekly refresh diff shows new
+  // drift (#297, #399). Avionics come from a separate wiki module — skip them.
+  const modsUnmatched = mergedMods
+    .filter(
+      (m) =>
+        m.type !== "Plexus Mod" &&
+        !wikiInternalNames.has(m.uniqueName) &&
+        !wikiModUniqueNameByName.has(m.name),
+    )
+    .map((m) => `${m.name} (${m.uniqueName})`)
+    .sort()
+
   // Compact non-tradable list (uniqueNames only). The build viewer skips the
   // ~1.35 MB mods-all.json download for new-format builds, so it loads this to
   // gate the "Warframe Market" link on the mod detail popover (absent = tradable;
@@ -808,6 +822,7 @@ async function main() {
         weaponsUnmatched: [...weaponUnmatched].sort(),
         framesUnmatched: [...frameUnmatched].sort(),
         companionsUnmatched: unmatchedDeNames.sort(),
+        modsUnmatched,
         skippedModularComponents: skippedModular.sort(),
         releaseHistoryUnmatched: Object.keys(curated.releaseHistory)
           .filter((n) => !releaseHistoryResolved.has(n))
@@ -829,6 +844,7 @@ async function main() {
   console.log(`Weapons unmatched (no wiki record): ${stats.weapons.unmatched}`)
   console.log(`Frames unmatched (no wiki record):  ${frameUnmatched.size}`)
   console.log(`DE companions only (no wiki match): ${stats.companions.deOnly}`)
+  console.log(`Mods unmatched (no wiki record):    ${modsUnmatched.length}`)
 }
 
 main().catch((err) => {

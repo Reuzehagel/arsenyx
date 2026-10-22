@@ -84,6 +84,7 @@ bun run sync:images                # mirror emitted images into R2, rewrite cata
 bun run check:images               # fail if catalog still hotlinks content/wiki.warframe.com
 bun run check:data-version         # fail if catalog changed but meta.json generatedAt didn't
 bun run data:stamp                 # bump meta.json generatedAt — run after any HAND-edit to apps/web/public/data/
+bun run data:patch <base> <fixed>  # apply only a fix's catalog delta (see "Shipping a pipeline fix" below)
 ```
 
 `build:items` alone leaves upstream CDN URLs in the catalog; `sync:images`
@@ -102,6 +103,36 @@ Run `data:stamp` afterward — it's served `immutable` and cache-busted by
 `?v=<generatedAt>`, so without a fresh `generatedAt` clients keep the stale
 bytes. `data:refresh` and `build:items` stamp it for free; `check:data-version`
 enforces it in CI.
+
+`_report.json` lists every DE record the wiki join missed (`weaponsUnmatched`,
+`framesUnmatched`, `companionsUnmatched`, `modsUnmatched`). An unmatched mod's
+wiki flags (`isExilus`, `tradable`, Conclave) silently default to `false`, so a
+new `modsUnmatched` entry in a refresh diff is a bug report waiting to happen.
+
+### Shipping a pipeline fix without upstream drift
+
+A full `build:items` from a fresh mirror also pulls in every unrelated upstream
+change since the last refresh. To ship only what a pipeline fix changes, build
+twice from the same mirror and patch the delta onto the committed catalog.
+`data:patch` matches records by `uniqueName`, so it also catches derived files
+you didn't know depended on the field (e.g. `mod-tradable.json` ← `tradable`):
+
+```bash
+# fix committed on HEAD; `bun run data:sync` first if data/raw/ is missing or stale
+rm -rf data/ab && mkdir -p data/ab
+git switch --detach HEAD~1 && bun run build:items && cp -r apps/web/public/data data/ab/base
+git checkout -- apps/web/public/data data/curated && git switch -
+bun run build:items && cp -r apps/web/public/data data/ab/fixed
+git checkout -- apps/web/public/data data/curated && git clean -fdq apps/web/public/data
+bun run data:patch data/ab/base data/ab/fixed   # prints every changed field
+bun run data:stamp
+```
+
+Both sync and build rewrite tracked files as a side effect: `data:sync` →
+`data/PINS.json`, `build:items` → `data/curated/wiki-image-urls.json` (the
+image-URL cache). Revert them unless the change is a full refresh. Patched
+records keep the committed `img.arsenyx.com` URLs; a record the fix *adds*
+carries an upstream URL, which `check:images` flags — run `sync:images` then.
 
 Occasional dev tools (run by path, not aliased):
 

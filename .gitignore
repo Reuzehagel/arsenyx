@@ -51,6 +51,8 @@ yarn-error.log*
 # output). See scripts/diff-index.ts. golden-v2 is the current snapshot dir.
 /data/golden/
 /data/golden-v2/
+# A/B catalog snapshots for `data:patch` — see docs/commands.md.
+/data/ab/
 
 # wrangler
 .wrangler/

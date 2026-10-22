@@ -17,6 +17,7 @@
     "data:sync": "bun run scripts/sync-de.ts && bun run scripts/sync-wiki.ts",
     "data:refresh": "bun run scripts/refresh-data.ts",
     "data:stamp": "bun run scripts/stamp-data.ts",
+    "data:patch": "bun run scripts/patch-catalog.ts",
     "typecheck": "bun run --filter '*' typecheck && bun run typecheck:scripts",
     "typecheck:scripts": "bunx tsc --noEmit -p scripts/tsconfig.json",
     "lint": "oxlint apps/web/src apps/web/worker apps/api/src packages/shared/src scripts data/curated",
