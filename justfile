@@ -103,6 +103,6 @@ fix:
 # Run vitest across all workspaces with tests, plus the build-pipeline tests
 # under scripts/ (run via `bun test`). Keep in sync with the Test steps in
 # .github/workflows/ci.yml when adding a workspace.
-test:
+test: deps
     bun --filter=arsenyx-web --filter=arsenyx-api --filter=@arsenyx/shared run test
     bun test scripts/build/

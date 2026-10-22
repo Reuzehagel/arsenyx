@@ -20,6 +20,24 @@ export const RIVEN_MIN_DRAIN = 0
 /** What a max-rank riven costs in-game. */
 export const RIVEN_DEFAULT_DRAIN = 18
 
+/** Spliced combined-element stats, available on every riven type. */
+const SPLICED_ELEMENT_STATS = [
+  "Blast Damage",
+  "Corrosive Damage",
+  "Gas Damage",
+  "Magnetic Damage",
+  "Radiation Damage",
+  "Viral Damage",
+] as const
+
+/** Other spliced stats available on every riven type. */
+const SPLICED_SHARED_STATS = [
+  "Status Damage",
+  "Damage vs. Orokin",
+  "Damage vs. Scaldra",
+  "Damage vs. Techrot",
+] as const
+
 /** Stats available on gun (primary / secondary / archgun / companion) rivens. */
 export const GUN_RIVEN_STATS = [
   "Critical Chance",
@@ -46,6 +64,12 @@ export const GUN_RIVEN_STATS = [
   "Damage to Corpus",
   "Damage to Grineer",
   "Damage to Infested",
+  ...SPLICED_ELEMENT_STATS,
+  ...SPLICED_SHARED_STATS,
+  "Ammo Efficiency",
+  "Reload While Holstered",
+  "Weakpoint Damage",
+  "Weakpoint Critical Chance",
 ] as const
 
 /** Stats available on melee rivens (per https://wiki.warframe.com/w/Riven_Mods).
@@ -77,7 +101,34 @@ export const MELEE_RIVEN_STATS = [
   "Damage to Corpus",
   "Damage to Grineer",
   "Damage to Infested",
+  ...SPLICED_ELEMENT_STATS,
+  ...SPLICED_SHARED_STATS,
+  "Heavy Attack Wind Up Speed",
+  "Melee Damage On Heavy Attack",
+  "Slam Attack Damage",
+  "Parry Angle",
 ] as const
+
+/** Spliced stats (Update 44.1, per the "Spliced Values" table on
+ *  https://wiki.warframe.com/w/Riven_Mods): a Riven Splicer merges two rolled
+ *  stats into one of these. Spliced stats are always positive, so they never
+ *  appear in the negative row. */
+export const SPLICED_RIVEN_STATS: ReadonlySet<string> = new Set([
+  ...SPLICED_ELEMENT_STATS,
+  ...SPLICED_SHARED_STATS,
+  "Ammo Efficiency",
+  "Reload While Holstered",
+  "Weakpoint Damage",
+  "Weakpoint Critical Chance",
+  "Heavy Attack Wind Up Speed",
+  "Melee Damage On Heavy Attack",
+  "Slam Attack Damage",
+  "Parry Angle",
+])
+
+export function isSplicedRivenStat(stat: string): boolean {
+  return SPLICED_RIVEN_STATS.has(stat)
+}
 
 /** Riven stats that roll as flat additions rather than percentages, keyed to
  *  the unit suffix the in-game card prints (per
@@ -121,9 +172,18 @@ export function isRivenEligible(
   return false
 }
 
+const ARCHGUN_RIVEN_STATS = GUN_RIVEN_STATS.filter(
+  // The wiki's Spliced Values table lists Reload While Holstered as N/A on
+  // Archguns (Rifle/Shotgun/Pistol only).
+  (s) => s !== "Reload While Holstered",
+)
+
 /** Returns the stat list appropriate to the item's category. */
 export function getRivenStatsFor(category: BrowseCategory): readonly string[] {
-  return category === "melee" ? MELEE_RIVEN_STATS : GUN_RIVEN_STATS
+  if (category === "melee") return MELEE_RIVEN_STATS
+  // Only Archguns are riven-eligible in the `archwing` bucket.
+  if (category === "archwing") return ARCHGUN_RIVEN_STATS
+  return GUN_RIVEN_STATS
 }
 
 export function createSyntheticRiven(): Mod {

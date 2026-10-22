@@ -215,6 +215,26 @@ function rivenOp(stat: string): ParsedStat["operation"] {
   return isFlatRivenStat(stat) ? "flat_add" : "percent_add"
 }
 
+/** Spliced riven stats (Update 44.1) the engine models. Kept riven-only rather
+ *  than in STAT_NAME_MAP: some mod text says "+60% Corrosive Damage" in plain
+ *  prose alongside its colour-tagged form, and a global alias would change
+ *  how those mods parse. Other spliced stats (Status Damage, Weakpoint, faction
+ *  damage vs. Orokin/Scaldra/Techrot, heavy-attack stats…) have no engine
+ *  support yet, so they show on the card but don't move any numbers. */
+const RIVEN_STAT_ALIASES: Record<string, StatType> = {
+  "blast damage": "blast",
+  "corrosive damage": "corrosive",
+  "gas damage": "gas",
+  "magnetic damage": "magnetic",
+  "radiation damage": "radiation",
+  "viral damage": "viral",
+}
+
+function mapRivenStat(stat: string): StatType | undefined {
+  const lower = stat.toLowerCase()
+  return RIVEN_STAT_ALIASES[lower] ?? STAT_NAME_MAP[lower]
+}
+
 /** Convert a RivenStats object into ParsedStats. Negatives already carry sign. */
 function parseRivenStats(rivenStats: RivenStats): ParsedStat[] {
   const out: ParsedStat[] = []
@@ -222,12 +242,12 @@ function parseRivenStats(rivenStats: RivenStats): ParsedStat[] {
   // positive rows in reverse display order to preserve their element priority.
   for (let i = rivenStats.positives.length - 1; i >= 0; i--) {
     const p = rivenStats.positives[i]!
-    const mapped = STAT_NAME_MAP[p.stat.toLowerCase()]
+    const mapped = mapRivenStat(p.stat)
     if (!mapped) continue
     out.push({ type: mapped, value: p.value, operation: rivenOp(p.stat) })
   }
   for (const n of rivenStats.negatives) {
-    const mapped = STAT_NAME_MAP[n.stat.toLowerCase()]
+    const mapped = mapRivenStat(n.stat)
     if (!mapped) continue
     out.push({ type: mapped, value: n.value, operation: rivenOp(n.stat) })
   }
