@@ -56,6 +56,7 @@ import {
   collapseTwinFrames,
   mergeFrame,
   operatorsFromWiki,
+  rankUpDrift,
   type MergedFrame,
 } from "./build/merge-frames"
 import { deriveHelminthAbilities } from "./build/merge-helminth"
@@ -240,6 +241,13 @@ async function main() {
   // entity carrying both forms, before any downstream consumer sees the list.
   const mergedFrames = collapseTwinFrames(rawFrames)
   const operators = operatorsFromWiki(wikiFramesBlob)
+  // Recorded in _report.json too, so it shows up in the weekly refresh PR's diff.
+  const frameRankUpDrift = rankUpDrift(mergedFrames, wikiFramesBlob)
+  for (const line of frameRankUpDrift) {
+    console.warn(
+      `  WARN ${line} — add or fix the frame in packages/shared/src/warframe/rankup.ts (or list it in RANKUP_WIKI_DISPUTED if the wiki is wrong)`,
+    )
+  }
   stats.frames.de = deFramesBlob.ExportWarframes.length
   stats.frames.merged = mergedFrames.length
   stats.frames.operators = operators.length
@@ -777,6 +785,7 @@ async function main() {
         stats,
         weaponsUnmatched: [...weaponUnmatched].sort(),
         framesUnmatched: [...frameUnmatched].sort(),
+        frameRankUpDrift,
         companionsUnmatched: unmatchedDeNames.sort(),
         skippedModularComponents: skippedModular.sort(),
         releaseHistoryUnmatched: Object.keys(curated.releaseHistory)
