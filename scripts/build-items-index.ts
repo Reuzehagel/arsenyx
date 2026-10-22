@@ -386,6 +386,36 @@ async function main() {
     )
   }
 
+  // The wiki's InternalName drifts from DE's uniqueName for some mods (Cold
+  // Front: wiki `IceShieldAugment2Card` vs DE `IceShieldAugmentTwoCard`, #399),
+  // silently defaulting their IsExilus/Tradable to false. When a DE mod has no
+  // wiki record by uniqueName, fall back to its display Name — only when that
+  // Name is unique among DE upgrades, so per-ability/variant copies sharing a
+  // Name can't inherit each other's flags.
+  const wikiInternalNames = new Set(wikiModUniqueNameByName.values())
+  const deNameCounts = new Map<string, number>()
+  for (const u of missing.upgrades) {
+    if (u.name) deNameCounts.set(u.name, (deNameCounts.get(u.name) ?? 0) + 1)
+  }
+  const nameFallbacks: string[] = []
+  for (const u of missing.upgrades) {
+    if (!u.name || !u.uniqueName || wikiInternalNames.has(u.uniqueName))
+      continue
+    if (deNameCounts.get(u.name) !== 1) continue
+    const wikiKey = wikiModUniqueNameByName.get(u.name)
+    if (!wikiKey) continue
+    const exilus = wikiExilus.get(wikiKey)
+    if (exilus !== undefined) wikiExilus.set(u.uniqueName, exilus)
+    const tradable = wikiTradable.get(wikiKey)
+    if (tradable !== undefined) wikiTradable.set(u.uniqueName, tradable)
+    nameFallbacks.push(u.name)
+  }
+  if (nameFallbacks.length > 0) {
+    console.log(
+      `  wiki mods: matched ${nameFallbacks.length} mod(s) by Name (InternalName drift): ${nameFallbacks.join(", ")}`,
+    )
+  }
+
   const { mods: rawMergedMods, counts: modCounts } = mergeMods(
     missing.upgrades,
     deUpgrades.ExportModSet ?? [],
