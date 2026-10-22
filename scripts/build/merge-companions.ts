@@ -9,6 +9,7 @@
  * weapon-style "iterate DE, look up wiki".
  */
 
+import { primeFamily } from "./names"
 import { normalizePolarities } from "./polarity"
 import type { DeSentinel } from "./read-de"
 
@@ -28,6 +29,9 @@ export interface MergedCompanion {
   masteryReq: number
   polarities: readonly string[]
   isPrime: boolean
+  /** Variant family ("Shade" for Shade + Shade Prime) — groups variants so
+   *  `expandCompat` fans precepts out to the Prime. */
+  family: string
   /** DE compatNames a mod can carry to be installable on this companion.
    *  Same shape as MergedWeapon.modPools / MergedFrame.modPools so the
    *  consumer-side mod predicate is uniform across all item types. */
@@ -173,6 +177,7 @@ export function mergeCompanions(opts: MergeCompanionsOpts): {
       masteryReq: (wiki.Mastery as number | undefined) ?? de?.masteryReq ?? 0,
       polarities: normalizePolarities(wiki.Polarities ?? []),
       isPrime: name.includes(" Prime"),
+      family: primeFamily(name),
       modPools: modPoolsForCompanion(name, subType, wiki.Type),
     })
   }

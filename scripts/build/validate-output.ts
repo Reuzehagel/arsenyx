@@ -118,6 +118,42 @@ export function validateMods(
   }
 }
 
+/** A mod locked to an item by `compatItems` must also reach that item's
+ *  Prime in the same category — expandCompat fans out by variant family, and
+ *  an item with no family silently locks its augments/precepts to the base
+ *  (#398: Ghost missing on Shade Prime). */
+export function validatePrimeCompat(
+  mods: Array<Record<string, unknown>>,
+  byCategory: Record<string, Array<Record<string, unknown>>>,
+  issues: ValidationIssue[],
+): void {
+  const byUniqueName = new Map<string, { cat: string; name: string }>()
+  const primeByKey = new Map<string, string>()
+  for (const [cat, items] of Object.entries(byCategory)) {
+    for (const it of items) {
+      const { uniqueName, name } = it
+      if (!isNonEmptyString(uniqueName) || !isNonEmptyString(name)) continue
+      byUniqueName.set(uniqueName, { cat, name })
+      primeByKey.set(`${cat} ${name}`, uniqueName)
+    }
+  }
+  for (const m of mods) {
+    const compatItems = m["compatItems"]
+    if (!Array.isArray(compatItems)) continue
+    for (const un of compatItems) {
+      const base = byUniqueName.get(un as string)
+      if (!base) continue
+      const prime = primeByKey.get(`${base.cat} ${base.name} Prime`)
+      if (prime && !compatItems.includes(prime)) {
+        issues.push({
+          where: `mods-all.json ${String(m["name"] ?? m["uniqueName"])}`,
+          msg: `compatItems has ${base.name} but not ${base.name} Prime`,
+        })
+      }
+    }
+  }
+}
+
 export function validateArcanes(
   arcanes: Array<Record<string, unknown>>,
   issues: ValidationIssue[],
@@ -185,6 +221,7 @@ export function validateOutputs(opts: {
   const issues: ValidationIssue[] = []
   validateBrowseItems(opts.byCategory, issues)
   validateMods(opts.mods, issues)
+  validatePrimeCompat(opts.mods, opts.byCategory, issues)
   validateArcanes(opts.arcanes, issues)
   if (process.env["ARSENYX_ALLOW_SHRINK"] !== "1") {
     validateCounts(opts.prevMeta, opts.nextCounts, issues)
