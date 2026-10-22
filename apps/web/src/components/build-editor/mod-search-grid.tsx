@@ -1,4 +1,3 @@
-import { isStanceMod } from "@arsenyx/shared/warframe/mods"
 import { isRivenMod } from "@arsenyx/shared/warframe/rivens"
 import type { Mod, Polarity } from "@arsenyx/shared/warframe/types"
 import { Search, X } from "lucide-react"
@@ -33,7 +32,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { fuzzyRank } from "@/lib/fuzzy"
 import { useHotkey } from "@/lib/hooks/hotkeys"
 import {
   BASE_ELEMENTS,
@@ -45,8 +43,8 @@ import { capitalize, cn } from "@/lib/util/utils"
 
 import { useStartDrag } from "./drag-controller"
 import { ModCard } from "./mod-card"
+import { isActionable, searchMods, slotKindPredicate } from "./mod-search"
 import type { ModSlotKind } from "./mod-slot"
-import { isAuraMod, isExilusCompatible } from "./use-build-slots"
 import { DIR_BY_KEY, type Dir } from "./use-keyboard-nav"
 
 const SORT_OPTIONS = ["Drain", "Name", "Rarity"] as const
@@ -193,13 +191,6 @@ interface ModSearchGridProps {
   selectedSlotKind?: ModSlotKind
 }
 
-function slotKindPredicate(kind: ModSlotKind | undefined) {
-  if (!kind || kind === "normal") return null
-  if (kind === "aura") return (m: Mod) => isAuraMod(m)
-  if (kind === "stance") return (m: Mod) => isStanceMod(m)
-  return (m: Mod) => !isAuraMod(m) && !isStanceMod(m) && isExilusCompatible(m)
-}
-
 const SLOT_KIND_REASON: Record<"aura" | "stance" | "exilus", string> = {
   aura: "Only aura mods fit the aura slot",
   stance: "Only stance mods fit the stance slot",
@@ -224,81 +215,6 @@ function incompatibilityReason(
   if (!kind || kind === "normal") return null
   const pred = slotKindPredicate(kind)
   return pred && !pred(mod) ? SLOT_KIND_REASON[kind] : null
-}
-
-// Soft-filter pass: which of `hardFiltered` match the query + slot kind, and
-// the display order with matches floated to the front.
-function searchMods(
-  hardFiltered: Mod[],
-  query: string,
-  searchIndex: Map<string, string>,
-  selectedSlotKind: ModSlotKind | undefined,
-): { displayed: Mod[]; matches: Set<string> } {
-  const q = query.trim()
-  const qLower = q.toLowerCase()
-  const hasQuery = q.length > 0
-  const kindPred = slotKindPredicate(selectedSlotKind)
-
-  // Fuzzy-rank mod *names* (typo-tolerant: "seration" → Serration). Names are
-  // short discrete labels, the case uFuzzy is good at. The wider searchable
-  // text (stats, aliases, target — see getSearchable / #160) stays a substring
-  // check so a fuzzy match over that big blob can't over-match.
-  const nameRank = new Map<string, number>()
-  if (hasQuery) {
-    const ranked = fuzzyRank(
-      hardFiltered.map((m) => m.name),
-      q,
-    )
-    ranked.forEach((idx, rank) =>
-      nameRank.set(hardFiltered[idx].uniqueName, rank),
-    )
-  }
-
-  const set = new Set<string>()
-  const hits: Mod[] = []
-  const rest: Mod[] = []
-  for (const m of hardFiltered) {
-    const queryHit =
-      !hasQuery ||
-      nameRank.has(m.uniqueName) ||
-      (searchIndex.get(m.uniqueName) ?? "").includes(qLower)
-    const matchesFilters = queryHit && (!kindPred || kindPred(m))
-    if (matchesFilters) {
-      set.add(m.uniqueName)
-      hits.push(m)
-    } else {
-      rest.push(m)
-    }
-  }
-  // Float name matches to the front by relevance; everything else keeps the
-  // user's chosen sort order (stable sort preserves it for equal ranks).
-  if (hasQuery) {
-    hits.sort(
-      (a, b) =>
-        (nameRank.get(a.uniqueName) ?? Infinity) -
-        (nameRank.get(b.uniqueName) ?? Infinity),
-    )
-  }
-  const shouldFloat = hasQuery || !!kindPred
-  return {
-    matches: set,
-    displayed: shouldFloat ? [...hits, ...rest] : hardFiltered,
-  }
-}
-
-// A card the user can place: matches the filters, not already equipped, and
-// not mutually exclusive with an equipped mod.
-function isActionable(
-  m: Mod,
-  matches: Set<string>,
-  usedModNames: Set<string> | undefined,
-  conflictUniqueNames: Set<string> | undefined,
-): boolean {
-  return (
-    matches.has(m.uniqueName) &&
-    !(usedModNames?.has(m.name) ?? false) &&
-    !(conflictUniqueNames?.has(m.uniqueName) ?? false)
-  )
 }
 
 export function ModSearchGrid({
