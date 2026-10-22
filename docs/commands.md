@@ -13,7 +13,7 @@ just setup              # first-run wizard — see CONTRIBUTING.md
 ## Build / verify
 
 ```bash
-just check                        # THE gate before claiming done — gen + typecheck + oxlint + oxfmt --check
+just check                        # THE gate before claiming done — gen + typecheck + oxlint + oxfmt --check + tests
 just fix                          # oxlint --fix + oxfmt --write
 just test                         # vitest across apps/web, apps/api, packages/shared + bun test scripts/build/
 just gen                          # generate apps/web/src/routeTree.gen.ts only (no-op if present)
