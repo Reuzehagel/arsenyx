@@ -90,7 +90,7 @@ gen-routes:
     @$tree = 'src/routeTree.gen.ts'; $stale = -not (Test-Path $tree); if (-not $stale) { $stamp = (Get-Item $tree).LastWriteTimeUtc; $stale = [bool](@(Get-Item src/routes) + @(Get-ChildItem src/routes -Recurse -Force) | Where-Object { $_.LastWriteTimeUtc -gt $stamp } | Select-Object -First 1) }; if ($stale) { bun run build | Out-Null; if ($LASTEXITCODE) { exit $LASTEXITCODE }; (Get-Item $tree).LastWriteTimeUtc = (Get-Date).ToUniversalTime() }
 
 # Typecheck + lint + format-check across apps/web, apps/api, packages/shared.
-check: gen
+check: gen && test
     bun run typecheck
     bun run lint
     bun run fmt:check

@@ -19,6 +19,7 @@ import {
   ModSearchGrid,
   type ModSlotKind,
 } from "@/components/build-editor"
+import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { type HelminthAbility } from "@/lib/queries/helminth-query"
 import { modsQuery } from "@/lib/queries/mods-query"
@@ -48,6 +49,7 @@ export function SearchPanel({
   selectedIsPlexusAura,
   plexusFillCounts,
   helminth,
+  alternateMode,
 }: {
   item: DetailItem
   category: BrowseCategory
@@ -70,6 +72,10 @@ export function SearchPanel({
   /** Per-group filled-vs-total counts for the tab labels. */
   plexusFillCounts?: PlexusFillCounts
   helminth: Record<number, HelminthAbility>
+  /** Set while picking a Slot's Alternate: a pick sets the Alternate instead
+   *  of placing a mod, so the panel says so loudly and hides the Riven card
+   *  (a Riven is never an Alternate). */
+  alternateMode?: { forModName: string; onCancel: () => void }
 }) {
   const { data: allMods } = useSuspenseQuery(modsQuery)
 
@@ -133,14 +139,37 @@ export function SearchPanel({
     const usable = hasLockedStance(item, category)
       ? all.filter((m) => !isStanceMod(m))
       : all
-    if (isRivenEligible(category, item)) {
+    if (isRivenEligible(category, item) && !alternateMode) {
       return [createSyntheticRiven(), ...usable]
     }
     return usable
-  }, [allMods, item, category, helminth, plexusTab, selectedIsPlexusAura])
+  }, [
+    allMods,
+    item,
+    category,
+    helminth,
+    plexusTab,
+    selectedIsPlexusAura,
+    alternateMode,
+  ])
 
   return (
     <div className="flex flex-col gap-3">
+      {alternateMode && (
+        <div
+          role="status"
+          className="border-primary/40 bg-primary/10 flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm"
+        >
+          <span>
+            Picking an <strong>alternate</strong> for{" "}
+            <strong>{alternateMode.forModName}</strong>. It won't replace the
+            slot's mod.
+          </span>
+          <Button size="sm" variant="ghost" onClick={alternateMode.onCancel}>
+            Cancel
+          </Button>
+        </div>
+      )}
       {category === "railjack" && (
         <Tabs
           value={plexusTab}

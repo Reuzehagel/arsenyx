@@ -57,6 +57,8 @@ export interface BuildSurfaceProps {
   topBarLayout: "row" | "centered" | "popover-only"
   /** Edit-only riven edit handler. */
   onEditRiven?: (slotId: SlotId) => void
+  /** Edit-only: open the picker in alternate mode for a filled slot. */
+  onAddAlternate?: (slotId: SlotId) => void
   /** Mutual-exclusion graph. When supplied, a warning banner appears above
    *  the grid whenever the loadout stacks incompatible mods. */
   conflicts?: ModConflictMap
@@ -80,6 +82,7 @@ export function BuildSurface({
   topBar,
   topBarLayout,
   onEditRiven,
+  onAddAlternate,
   conflicts,
 }: BuildSurfaceProps) {
   const readOnly = mode === "view"
@@ -159,7 +162,7 @@ export function BuildSurface({
           showExilus={showExilus}
           showStance={showStance}
           slots={slots}
-          {...(readOnly ? { readOnly: true } : { onEditRiven })}
+          {...(readOnly ? { readOnly: true } : { onEditRiven, onAddAlternate })}
           arcaneRow={
             arcaneCount > 0 ? (
               <ArcaneRow

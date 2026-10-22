@@ -71,6 +71,7 @@ export {
   useBuildSlots,
   getVisibleSlots,
   slotKind,
+  type AlternateMod,
   type BuildSlotsState,
   type PlacedMod,
   type SlotId,
