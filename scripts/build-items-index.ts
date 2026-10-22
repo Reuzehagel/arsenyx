@@ -68,6 +68,7 @@ import {
   type MergedWeapon,
 } from "./build/merge-weapons"
 import { buildModConflicts } from "./build/mod-conflicts"
+import { primeFamily } from "./build/names"
 import { readCurated } from "./build/read-curated"
 import {
   readDeArcanes,
@@ -460,8 +461,13 @@ async function main() {
   // `family` lives on the merged records — the lightweight `byCategory` browse
   // projection drops it — so build the variant-family index from
   // mergedWeapons/Companions, gated to real catalog items by category.
+  // Archwing frames join by name (Odonata ↔ Odonata Prime): their compat is a
+  // direct item hit, not a BaseSuit anchor. Warframes stay on the anchor path.
+  const archwingFrames = mergedFrames
+    .filter((f) => f.category === "archwing")
+    .map((f) => ({ uniqueName: f.uniqueName, family: primeFamily(f.name) }))
   const { familyKeyByUniqueName, familyMembers } = buildFamilyIndex(
-    [...mergedWeapons, ...mergedCompanions],
+    [...mergedWeapons, ...mergedCompanions, ...archwingFrames],
     categoryByUniqueName,
   )
   const expandCompat = makeExpandCompat({
