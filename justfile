@@ -54,7 +54,17 @@ setup:
 # and, more often, a `git pull` that adds a route or edits schema.prisma leaves
 # a stale one behind. Stale artifacts surface as type errors in files you never
 # touched, which is a bad way to learn you needed to regenerate something.
-gen: gen-routes gen-prisma
+gen: deps gen-routes gen-prisma
+
+# A fresh worktree has no node_modules; without them gen-routes fails deep in
+# the vite build with an error that reads like a missing generated file.
+[unix]
+deps:
+    @[ -d node_modules ] || bun install --frozen-lockfile
+
+[windows]
+deps:
+    @if (-not (Test-Path node_modules)) { bun install --frozen-lockfile; if ($LASTEXITCODE) { exit $LASTEXITCODE } }
 
 # ~1.5s, so it always runs rather than trying to outsmart the schema mtime.
 [working-directory('apps/api')]
@@ -77,10 +87,10 @@ gen-routes:
 [windows]
 [working-directory('apps/web')]
 gen-routes:
-    @$tree = 'src/routeTree.gen.ts'; $stale = -not (Test-Path $tree); if (-not $stale) { $stamp = (Get-Item $tree).LastWriteTimeUtc; $stale = [bool](@(Get-Item src/routes) + @(Get-ChildItem src/routes -Recurse -Force) | Where-Object { $_.LastWriteTimeUtc -gt $stamp } | Select-Object -First 1) }; if ($stale) { bun run build | Out-Null; (Get-Item $tree).LastWriteTimeUtc = (Get-Date).ToUniversalTime() }
+    @$tree = 'src/routeTree.gen.ts'; $stale = -not (Test-Path $tree); if (-not $stale) { $stamp = (Get-Item $tree).LastWriteTimeUtc; $stale = [bool](@(Get-Item src/routes) + @(Get-ChildItem src/routes -Recurse -Force) | Where-Object { $_.LastWriteTimeUtc -gt $stamp } | Select-Object -First 1) }; if ($stale) { bun run build | Out-Null; if ($LASTEXITCODE) { exit $LASTEXITCODE }; (Get-Item $tree).LastWriteTimeUtc = (Get-Date).ToUniversalTime() }
 
 # Typecheck + lint + format-check across apps/web, apps/api, packages/shared.
-check: gen
+check: gen && test
     bun run typecheck
     bun run lint
     bun run fmt:check
@@ -93,6 +103,6 @@ fix:
 # Run vitest across all workspaces with tests, plus the build-pipeline tests
 # under scripts/ (run via `bun test`). Keep in sync with the Test steps in
 # .github/workflows/ci.yml when adding a workspace.
-test:
+test: deps
     bun --filter=arsenyx-web --filter=arsenyx-api --filter=@arsenyx/shared run test
     bun test scripts/build/

@@ -86,6 +86,7 @@ import {
   hasShownDonationNudge,
   markDonationNudgeShown,
 } from "@/lib/util/donation-nudge"
+import { cn } from "@/lib/util/utils"
 import { getCategoryLabel, type BrowseCategory } from "@/lib/warframe"
 
 import { AutoFormaDialog } from "./auto-forma-dialog"
@@ -107,6 +108,7 @@ import {
 import { useArcaneSlots, type PlacedArcane } from "./use-arcane-slots"
 import { useAutoFormaPlanner } from "./use-auto-forma-planner"
 import {
+  canBeAlternate,
   useBuildSlots,
   slotKind,
   type PlacedMod,
@@ -498,6 +500,24 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     resolveInitialArcanes(item, savedData.arcanes),
   )
 
+  // Alternate mode: the picker sets this slot's Alternate instead of placing
+  // a mod. Derived to null once the slot empties (removed, swapped away), so a
+  // stale target can't swallow the next pick.
+  const [alternateForRaw, setAlternateFor] = useState<SlotId | null>(null)
+  const alternateFor =
+    alternateForRaw && slots.placed[alternateForRaw] ? alternateForRaw : null
+  // The slot the picker filters for: the Alternate's slot in alternate mode.
+  const pickerSlot = alternateFor ?? slots.selected
+  const searchPanelRef = useRef<HTMLDivElement>(null)
+  const startAlternatePick = (id: SlotId) => {
+    setAlternateFor(id)
+    // On narrow screens the picker sits below the loadout; bring it into view.
+    searchPanelRef.current?.scrollIntoView({
+      block: "nearest",
+      behavior: "smooth",
+    })
+  }
+
   // uniqueNames the picker should dim: mods mutually exclusive with one
   // already equipped (e.g. a second Serration variant).
   const conflictUniqueNames = useMemo(
@@ -519,6 +539,10 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     "Escape",
     () => {
       if (document.querySelector("[data-state='open'][role='dialog']")) return
+      if (alternateFor) {
+        setAlternateFor(null)
+        return
+      }
       slots.select(null)
       arcanes.select(null)
     },
@@ -553,6 +577,11 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     enabled: true,
     onDelta: (delta) => {
       const hovered = hoveredRankRef.current
+      if (hovered?.kind === "alternate") {
+        const alt = slots.placed[hovered.id]?.alternate
+        if (alt) slots.setAlternateRank(hovered.id, alt.rank + delta)
+        return
+      }
       if (hovered?.kind === "mod") {
         const placed = slots.placed[hovered.id]
         if (placed) slots.setRank(hovered.id, placed.rank + delta)
@@ -623,6 +652,19 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   const riven = useRivenDialog({ slots, normalSlotCount, category })
 
   const handleModSelect = (mod: Mod) => {
+    if (alternateFor) {
+      if (!canBeAlternate(mod, alternateFor)) {
+        toast.error(
+          isRivenMod(mod)
+            ? "A Riven can't be an Alternate"
+            : "That mod doesn't fit this slot",
+        )
+        return
+      }
+      slots.setAlternate(alternateFor, mod)
+      setAlternateFor(null)
+      return
+    }
     if (isRivenMod(mod)) {
       riven.openForPlacement()
       return
@@ -1393,10 +1435,17 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
               />
             }
             onEditRiven={riven.openForEdit}
+            onAddAlternate={startAlternatePick}
             conflicts={conflictMap}
           />
 
-          <div className="bg-card rounded-lg border p-4">
+          <div
+            ref={searchPanelRef}
+            className={cn(
+              "bg-card scroll-mt-4 rounded-lg border p-4",
+              alternateFor && "border-primary/60",
+            )}
+          >
             <SearchPanel
               item={item}
               category={category}
@@ -1410,23 +1459,31 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
                 // would dim every Plexus mod (none carry compatName=AURA).
                 category === "railjack"
                   ? undefined
-                  : slots.selected
-                    ? slotKind(slots.selected)
+                  : pickerSlot
+                    ? slotKind(pickerSlot)
                     : undefined
               }
-              selectedSlot={slots.selected}
+              selectedSlot={pickerSlot}
               selectedPlexusGroup={(() => {
-                if (category !== "railjack" || !slots.selected) return undefined
+                if (category !== "railjack" || !pickerSlot) return undefined
                 // Aura slot lives inside the Integrated tab.
-                if (slots.selected.startsWith("aura-")) return "integrated"
-                const m = /^normal-(\d+)$/.exec(slots.selected)
+                if (pickerSlot.startsWith("aura-")) return "integrated"
+                const m = /^normal-(\d+)$/.exec(pickerSlot)
                 if (!m) return undefined
                 const idx = Number(m[1])
                 return getPlexusGroupForIndex(category, idx) ?? undefined
               })()}
               plexusFillCounts={plexusFillCounts}
               selectedIsPlexusAura={
-                category === "railjack" && !!slots.selected?.startsWith("aura-")
+                category === "railjack" && !!pickerSlot?.startsWith("aura-")
+              }
+              alternateMode={
+                alternateFor
+                  ? {
+                      forModName: slots.placed[alternateFor]!.mod.name,
+                      onCancel: () => setAlternateFor(null),
+                    }
+                  : undefined
               }
             />
           </div>

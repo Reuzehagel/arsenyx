@@ -5,6 +5,7 @@ import {
   RIVEN_MIN_DRAIN,
   RIVEN_POLARITIES,
   getRivenStatsFor,
+  isSplicedRivenStat,
 } from "@arsenyx/shared/warframe/rivens"
 import type {
   BrowseCategory,
@@ -105,6 +106,10 @@ export function RivenDialog({
   )
 
   const statOptions = useMemo(() => getRivenStatsFor(category), [category])
+  const negativeOptions = useMemo(
+    () => statOptions.filter((s) => !isSplicedRivenStat(s)),
+    [statOptions],
+  )
 
   const allSelected = useMemo(() => {
     const s = new Set<string>()
@@ -220,7 +225,7 @@ export function RivenDialog({
             </FieldLabel>
             <StatRow
               row={negative}
-              options={statOptions}
+              options={negativeOptions}
               allSelected={allSelected}
               onChangeStat={(s) => setNegative((p) => ({ ...p, stat: s }))}
               onChangeValue={(v) => setNegative((p) => ({ ...p, value: v }))}

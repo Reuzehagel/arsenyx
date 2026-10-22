@@ -6,6 +6,7 @@ import {
   validateBrowseItems,
   validateCounts,
   validateMods,
+  validatePrimeCompat,
 } from "./validate-output"
 
 const goodMod = {
@@ -135,5 +136,32 @@ describe("validateCounts", () => {
     const issues = run((i) => validateCounts(prev, next, i))
     expect(issues).toHaveLength(1)
     expect(issues[0]?.msg).toContain("perCategory.melee dropped 250 → 0")
+  })
+})
+
+describe("validatePrimeCompat", () => {
+  const byCategory = {
+    companions: [
+      { uniqueName: "/Shade", name: "Shade" },
+      { uniqueName: "/PrimeShade", name: "Shade Prime" },
+      { uniqueName: "/Diriga", name: "Diriga" },
+    ],
+  }
+
+  it("flags a mod locked to the base when a Prime exists (#398)", () => {
+    const ghost = { name: "Ghost", compatItems: ["/Shade"] }
+    const issues = run((i) => validatePrimeCompat([ghost], byCategory, i))
+    expect(issues.map((x) => x.msg)).toEqual([
+      "compatItems has Shade but not Shade Prime",
+    ])
+  })
+
+  it("passes when the Prime is covered or none exists", () => {
+    const mods = [
+      { name: "Ghost", compatItems: ["/Shade", "/PrimeShade"] },
+      { name: "Electro Pulse", compatItems: ["/Diriga"] },
+      goodMod,
+    ]
+    expect(run((i) => validatePrimeCompat(mods, byCategory, i))).toEqual([])
   })
 })

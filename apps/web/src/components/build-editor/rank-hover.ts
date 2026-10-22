@@ -11,6 +11,7 @@ import type { SlotId } from "./use-build-slots"
  */
 export type RankHoverTarget =
   | { kind: "mod"; id: SlotId }
+  | { kind: "alternate"; id: SlotId }
   | { kind: "arcane"; index: number }
 
 export interface RankHoverApi {
@@ -29,6 +30,7 @@ export function rankTargetsEqual(
   b: RankHoverTarget,
 ): boolean {
   if (a.kind === "mod" && b.kind === "mod") return a.id === b.id
+  if (a.kind === "alternate" && b.kind === "alternate") return a.id === b.id
   if (a.kind === "arcane" && b.kind === "arcane") return a.index === b.index
   return false
 }
