@@ -14,6 +14,11 @@
  * on each frame entry.
  */
 
+import {
+  RANKUP_WIKI_DISPUTED,
+  rankUpFor,
+} from "@arsenyx/shared/warframe/rankup"
+
 import type { FramePolarityOverride } from "../../data/curated/frame-polarities"
 import { cleanDeName } from "./names"
 import { normalizePolarity, normalizePolarities } from "./polarity"
@@ -83,6 +88,16 @@ interface WikiFrame {
   ExilusPolarity?: string
   /** Subsumable ability on warframes — useful for Helminth derivation. */
   Subsumed?: string
+  /** Rank-0 stats, plus rank-30 values the wiki lists only for some frames
+   *  (a 0 is a placeholder on not-yet-filled entries). */
+  Health?: number
+  Shield?: number
+  Armor?: number
+  Energy?: number
+  HealthRank30?: number
+  ShieldRank30?: number
+  ArmorRank30?: number
+  EnergyRank30?: number
 }
 
 /** Wiki AuraPolarity is a string for single-aura frames and an array for
@@ -278,6 +293,41 @@ export function collapseTwinFrames(frames: MergedFrame[]): MergedFrame[] {
     out = out
       .filter((f) => f === primary || !otherSet.has(f))
       .map((f) => (f === primary ? merged : f))
+  }
+  return out
+}
+
+const RANK30_FIELDS = [
+  ["health", "Health", "HealthRank30"],
+  ["shield", "Shield", "ShieldRank30"],
+  ["armor", "Armor", "ArmorRank30"],
+  ["energy", "Energy", "EnergyRank30"],
+] as const
+
+/** Every warframe whose wiki rank-30 gain disagrees with the rank-up table
+ *  the build calculator applies (`@arsenyx/shared/warframe/rankup`). A new
+ *  frame with unusual gains otherwise falls back to the default silently
+ *  (#387). Frames in `RANKUP_WIKI_DISPUTED` are skipped. */
+export function rankUpDrift(
+  frames: readonly MergedFrame[],
+  wiki: FrameWikiTable,
+): string[] {
+  const out: string[] = []
+  for (const f of frames) {
+    if (f.category !== "warframes" || f.name in RANKUP_WIKI_DISPUTED) continue
+    const w = wiki.Warframes?.[f.name]
+    if (!w) continue
+    const ours = rankUpFor(f.name)
+    for (const [stat, baseKey, rank30Key] of RANK30_FIELDS) {
+      const rank30 = w[rank30Key]
+      if (!rank30) continue
+      const wikiGain = rank30 - (w[baseKey] ?? 0)
+      if (wikiGain !== ours[stat]) {
+        out.push(
+          `${f.name} ${stat}: wiki implies +${wikiGain} at rank 30, rank-up table applies +${ours[stat]}`,
+        )
+      }
+    }
   }
   return out
 }

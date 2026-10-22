@@ -24,7 +24,7 @@ Game data is static, user data is dynamic. If something is read-heavy and rarely
 
 **Always**
 
-- `just check` and `just test` before claiming done — together they mirror CI for web + api + shared. `check` is `gen` → typecheck → oxlint → oxfmt --check; `test` runs vitest plus the `scripts/build/` tests. `vite build` and the dev servers don't typecheck, so type errors hide behind a green build. `gen` first refreshes the two gitignored generated artifacts a bare `bun run typecheck` would choke on: `apps/web/src/routeTree.gen.ts` (rebuilt when anything under `src/routes` is newer) and the Prisma client (always). Stale ones report type errors in files you never touched, so if `check` fails somewhere unrelated to your diff, suspect a generated artifact before your own code. `just fix` auto-applies lint + format. Both are repo-wide and take no file arguments.
+- `just check` before claiming done — the single gate for web + api + shared (`gen` → typecheck → oxlint → oxfmt --check → `just test`, ~10s). `vite build` and the dev servers don't typecheck, so type errors hide behind a green build. `gen` first refreshes the two gitignored generated artifacts a bare `bun run typecheck` would choke on: `apps/web/src/routeTree.gen.ts` (rebuilt when anything under `src/routes` is newer) and the Prisma client (always). Stale ones report type errors in files you never touched, so if `check` fails somewhere unrelated to your diff, suspect a generated artifact before your own code. `just fix` auto-applies lint + format. Both are repo-wide and take no file arguments.
 - Use `uv run python` instead of `python`/`python3`
 
 **Ask first**
@@ -39,9 +39,10 @@ Game data is static, user data is dynamic. If something is read-heavy and rarely
 
 ## Progressive disclosure — load on demand
 
-- [docs/commands.md](docs/commands.md) — full command reference (build, db, data sync)
+- [docs/commands.md](docs/commands.md) — full command reference (build, db, data sync, shipping a data-pipeline fix)
 - [docs/gotchas.md](docs/gotchas.md) — non-obvious pitfalls (PowerShell, Base UI, shadcn in monorepo)
 - [docs/hotkeys.md](docs/hotkeys.md) — adding or rebinding a keyboard shortcut
+- [docs/verify-build-editor.md](docs/verify-build-editor.md) — driving the build editor in the browser pane (editor URL, discarding drafts, mod-search selectors)
 - [docs/search.md](docs/search.md) — full-text build search (the tsvector column, trigger, and GIN index live outside Prisma)
 
 ## Keeping docs fresh
