@@ -1,3 +1,4 @@
+import { rankUpFor } from "@arsenyx/shared/warframe/rankup"
 import type { Warframe } from "@arsenyx/shared/warframe/types"
 
 import { findShardStat, type PlacedShard } from "@/lib/shards"
@@ -25,48 +26,6 @@ const UMBRAL_SET_BONUSES: Record<string, Record<number, number>> = {
   "Umbral Intensify": { 1: 1.0, 2: 1.25, 3: 1.75 },
 }
 const UMBRAL_MODS = new Set(Object.keys(UMBRAL_SET_BONUSES))
-
-type RankUp = { health: number; shield: number; armor: number; energy: number }
-
-const DEFAULT_RANKUP: RankUp = {
-  health: 100,
-  shield: 100,
-  armor: 0,
-  energy: 50,
-}
-
-const RANKUP_BY_NAME: Record<string, RankUp> = {
-  Baruuk: { health: 100, shield: 100, armor: 0, energy: 100 },
-  "Baruuk Prime": { health: 100, shield: 100, armor: 0, energy: 100 },
-  "Chroma Prime": { health: 100, shield: 100, armor: 0, energy: 100 },
-  Dante: { health: 90, shield: 90, armor: 0, energy: 70 },
-  Garuda: { health: 100, shield: 100, armor: 0, energy: 100 },
-  "Garuda Prime": { health: 100, shield: 100, armor: 0, energy: 100 },
-  Grendel: { health: 200, shield: 0, armor: 0, energy: 50 },
-  "Grendel Prime": { health: 200, shield: 0, armor: 0, energy: 50 },
-  Hildryn: { health: 100, shield: 500, armor: 0, energy: 0 },
-  "Hildryn Prime": { health: 100, shield: 500, armor: 0, energy: 0 },
-  Inaros: { health: 200, shield: 0, armor: 0, energy: 50 },
-  "Inaros Prime": { health: 200, shield: 0, armor: 0, energy: 50 },
-  Koumei: { health: 100, shield: 100, armor: 0, energy: 100 },
-  Kullervo: { health: 200, shield: 0, armor: 100, energy: 50 },
-  Lavos: { health: 200, shield: 100, armor: 100, energy: 0 },
-  "Lavos Prime": { health: 200, shield: 100, armor: 100, energy: 0 },
-  Nezha: { health: 100, shield: 50, armor: 0, energy: 50 },
-  "Nezha Prime": { health: 100, shield: 50, armor: 0, energy: 50 },
-  Nidus: { health: 100, shield: 0, armor: 100, energy: 50 },
-  "Nidus Prime": { health: 100, shield: 0, armor: 100, energy: 50 },
-  "Saryn Prime": { health: 100, shield: 100, armor: 0, energy: 100 },
-  Valkyr: { health: 100, shield: 50, armor: 0, energy: 50 },
-  "Valkyr Prime": { health: 100, shield: 50, armor: 0, energy: 50 },
-  "Volt Prime": { health: 100, shield: 100, armor: 0, energy: 100 },
-  Wisp: { health: 100, shield: 100, armor: 0, energy: 100 },
-  "Wisp Prime": { health: 100, shield: 100, armor: 0, energy: 100 },
-  Xaku: { health: 90, shield: 90, armor: 0, energy: 70 },
-  "Xaku Prime": { health: 90, shield: 90, armor: 0, energy: 70 },
-  Yareli: { health: 100, shield: 100, armor: 0, energy: 100 },
-  "Yareli Prime": { health: 100, shield: 100, armor: 0, energy: 100 },
-}
 
 export interface WarframeCalcInput {
   warframe: Warframe
@@ -122,7 +81,7 @@ export function calculateWarframeStats(
 
   const bonus = input.skipRankUpBonus
     ? { health: 0, shield: 0, armor: 0, energy: 0 }
-    : (RANKUP_BY_NAME[warframe.name] ?? DEFAULT_RANKUP)
+    : rankUpFor(warframe.name)
 
   const baseHp = warframe.health + bonus.health
   const baseSh = warframe.shield + bonus.shield
