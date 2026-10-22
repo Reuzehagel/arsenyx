@@ -394,6 +394,36 @@ async function main() {
     )
   }
 
+  // The wiki's InternalName drifts from DE's uniqueName for some mods (Cold
+  // Front: wiki `IceShieldAugment2Card` vs DE `IceShieldAugmentTwoCard`, #399),
+  // silently defaulting their IsExilus/Tradable to false. When a DE mod has no
+  // wiki record by uniqueName, fall back to its display Name — only when that
+  // Name is unique among DE upgrades, so per-ability/variant copies sharing a
+  // Name can't inherit each other's flags.
+  const wikiInternalNames = new Set(wikiModUniqueNameByName.values())
+  const deNameCounts = new Map<string, number>()
+  for (const u of missing.upgrades) {
+    if (u.name) deNameCounts.set(u.name, (deNameCounts.get(u.name) ?? 0) + 1)
+  }
+  const nameFallbacks: string[] = []
+  for (const u of missing.upgrades) {
+    if (!u.name || !u.uniqueName || wikiInternalNames.has(u.uniqueName))
+      continue
+    if (deNameCounts.get(u.name) !== 1) continue
+    const wikiKey = wikiModUniqueNameByName.get(u.name)
+    if (!wikiKey) continue
+    const exilus = wikiExilus.get(wikiKey)
+    if (exilus !== undefined) wikiExilus.set(u.uniqueName, exilus)
+    const tradable = wikiTradable.get(wikiKey)
+    if (tradable !== undefined) wikiTradable.set(u.uniqueName, tradable)
+    nameFallbacks.push(u.name)
+  }
+  if (nameFallbacks.length > 0) {
+    console.log(
+      `  wiki mods: matched ${nameFallbacks.length} mod(s) by Name (InternalName drift): ${nameFallbacks.join(", ")}`,
+    )
+  }
+
   const { mods: rawMergedMods, counts: modCounts } = mergeMods(
     missing.upgrades,
     deUpgrades.ExportModSet ?? [],
@@ -541,6 +571,20 @@ async function main() {
     "utf8",
   )
   console.log(`  OK  mods-all.json (${mergedMods.length} mods)`)
+
+  // Emitted mods with no wiki record by InternalName or by Name. Their
+  // wiki-sourced flags (IsExilus, Tradable, Conclave) silently default, so
+  // surface them in _report.json where the weekly refresh diff shows new
+  // drift (#297, #399). Avionics come from a separate wiki module — skip them.
+  const modsUnmatched = mergedMods
+    .filter(
+      (m) =>
+        m.type !== "Plexus Mod" &&
+        !wikiInternalNames.has(m.uniqueName) &&
+        !wikiModUniqueNameByName.has(m.name),
+    )
+    .map((m) => `${m.name} (${m.uniqueName})`)
+    .sort()
 
   // Compact non-tradable list (uniqueNames only). The build viewer skips the
   // ~1.35 MB mods-all.json download for new-format builds, so it loads this to
@@ -787,6 +831,7 @@ async function main() {
         framesUnmatched: [...frameUnmatched].sort(),
         frameRankUpDrift,
         companionsUnmatched: unmatchedDeNames.sort(),
+        modsUnmatched,
         skippedModularComponents: skippedModular.sort(),
         releaseHistoryUnmatched: Object.keys(curated.releaseHistory)
           .filter((n) => !releaseHistoryResolved.has(n))
@@ -808,6 +853,7 @@ async function main() {
   console.log(`Weapons unmatched (no wiki record): ${stats.weapons.unmatched}`)
   console.log(`Frames unmatched (no wiki record):  ${frameUnmatched.size}`)
   console.log(`DE companions only (no wiki match): ${stats.companions.deOnly}`)
+  console.log(`Mods unmatched (no wiki record):    ${modsUnmatched.length}`)
 }
 
 main().catch((err) => {
