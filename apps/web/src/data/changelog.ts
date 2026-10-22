@@ -11,6 +11,126 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-10-22",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "A filled mod slot can now carry an Alternate: a second mod you'd consider in its place. Add one with the + alt button in the slot's toolbar, rank it with − and + while hovering it, and remove it with the × on its card. It peeks out from behind the main mod in both the editor and the build page, and saves per variant. Alternates stay out of capacity, stats, and forma counts, so the numbers always describe the build as equipped.",
+      },
+      {
+        type: "feat",
+        description:
+          "The riven dialog offers the spliced stats from Update 44.1: the six elements, Status Damage, damage against Orokin, Scaldra, and Techrot, plus class-specific stats such as Heavy Attack Wind Up Speed and Parry Angle on melee, and Weakpoint Critical Chance and Ammo Efficiency on guns. Spliced stats are always positive, so they only appear in the positive rows. The spliced elements feed the stats panel. The others show on the card, but the stat engine doesn't model them yet, so they don't change the numbers.",
+      },
+      {
+        type: "fix",
+        description:
+          "Placing a mod from the search box clears the search. Typing a name and pressing Enter quickly could place whichever mod was at the top of the unfiltered list, because the results hadn't caught up with what you'd typed yet. Enter now always places the first match for the text actually in the box, then empties the box so you can type the next name straight away.",
+      },
+      {
+        type: "fix",
+        description:
+          "Narin reaches 300 max energy at rank 30 instead of 250. She gains +100 energy at rank 30 rather than the usual +50, and the editor hadn't been told.",
+      },
+      {
+        type: "fix",
+        description:
+          "Shade Prime, Helios Prime, and Odonata Prime can equip the precepts and mods their base versions can: Ghost, Revenge, and Ambush on Shade Prime, Investigator, Detect Vulnerability, and Targeting Receptor on Helios Prime, and Energy Field on Odonata Prime. They were missing from search on the Primes.",
+      },
+      {
+        type: "fix",
+        description:
+          "Cold Front can go in the Exilus slot, and eleven mods that were wrongly marked untradable now show as tradable, including Butcher's Revelry, Primed Redirection, Primed Deadly Efficiency, Brood's Oversurge, and Vampiric Grasp. Their game-data IDs had drifted apart from the wiki's, so their flags never got matched up.",
+      },
+      {
+        type: "chore",
+        description:
+          "Game data refreshed. Steflos Prime and Corufell Prime now have their full stats, polarities, and weapon class, so they show up as a Shotgun and a Heavy Scythe with the right mods. Nunchasa and Aksondol have corrected polarities, and Aksondol fires 4 projectiles a second rather than 10 hitscan shots. Galvanized Scope's second bonus now reads On Weak Point Kill, and Sharpshooter lost its placeholder text.",
+      },
+    ],
+  },
+  {
+    date: "2026-10-08",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Rivens with more than one element combine them in the right order. The game applies a riven's elements from the bottom of the card up, but the stats panel read them top-down, which could produce the wrong combined element.",
+      },
+    ],
+  },
+  {
+    date: "2026-10-01",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Sacrificial Steel adds its critical chance again, and Vigilante Fervor and Vile Precision add their fire rate. A note in brackets after the stat, like (x2 for Heavy Attacks), stopped the stat from being read at all, so the mods contributed nothing.",
+      },
+    ],
+  },
+  {
+    date: "2026-09-28",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Riven Range, Punch Through, Combo Duration, and Initial Combo are flat values, as they are in-game. A +1.5 Range riven read as +1.5% and added 1.5% of the weapon's base range. It now reads +1.5 and adds 1.5 m.",
+      },
+    ],
+  },
+  {
+    date: "2026-09-25",
+    changes: [
+      {
+        type: "chore",
+        description:
+          "Update 44 is in: Narin, Citrine Prime, Nunchasa, Steflos Prime, Aksondol, and Corufell Prime, plus the new mods Brood's Oversurge, Cold Front, Gastroparesis, and Infernum. Ability text for around fifteen frames, Banshee and Frost among them, and stats on about thirty weapons follow the update. Augmented Sonar is no longer in the game, so builds that use it will show it as missing. The front page lists the new arrivals, with Narin in the hero spot.",
+      },
+      {
+        type: "fix",
+        description:
+          "Tapping an Incarnon tier on a build page shows the perk chosen for it. The perk only showed in a hover tooltip, which never opens on a phone.",
+      },
+    ],
+  },
+  {
+    date: "2026-09-09",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Quick Thinking, Maglev, and Clashing Forest are back. All three are still in the game, but dropped out of the game data export in June, and the editor lost them with it.",
+      },
+    ],
+  },
+  {
+    date: "2026-09-05",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Forma counts are lower, and correct, for builds that change their Aura or Exilus polarity. Since Update 38.5 an item that has been polarized once can swap polarities between any slot, Aura and Exilus included, so what matters is which polarities a build needs, not which slot each sits in. The count used to treat Aura, Exilus, and the normal slots separately, and overstated the cost by one or two. The Stance slot still counts on its own, since its polarity can't be swapped.",
+      },
+      {
+        type: "fix",
+        description:
+          "GitHub accounts with a hyphen in the username can sign up. Sign-in failed before the account was created, every time, so there was no way past it.",
+      },
+      {
+        type: "fix",
+        description:
+          "Beast claws no longer offer companion precepts such as Fetch and Scavenge. Those go on the companion itself, not on its claws.",
+      },
+      {
+        type: "fix",
+        description:
+          "Sirius & Orion's ability text no longer shows raw placeholders like |LEFT_ATTACK| and |DAMAGE_TYPE|.",
+      },
+    ],
+  },
+  {
     date: "2026-09-03",
     changes: [
       {
