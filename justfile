@@ -54,7 +54,17 @@ setup:
 # and, more often, a `git pull` that adds a route or edits schema.prisma leaves
 # a stale one behind. Stale artifacts surface as type errors in files you never
 # touched, which is a bad way to learn you needed to regenerate something.
-gen: gen-routes gen-prisma
+gen: deps gen-routes gen-prisma
+
+# A fresh worktree has no node_modules, so every bun/vitest call fails with
+# ERR_MODULE_NOT_FOUND until someone runs `bun install`.
+[unix]
+deps:
+    @[ -d node_modules ] || bun install
+
+[windows]
+deps:
+    @if (-not (Test-Path node_modules)) { bun install }
 
 # ~1.5s, so it always runs rather than trying to outsmart the schema mtime.
 [working-directory('apps/api')]
@@ -93,6 +103,6 @@ fix:
 # Run vitest across all workspaces with tests, plus the build-pipeline tests
 # under scripts/ (run via `bun test`). Keep in sync with the Test steps in
 # .github/workflows/ci.yml when adding a workspace.
-test:
+test: deps
     bun --filter=arsenyx-web --filter=arsenyx-api --filter=@arsenyx/shared run test
     bun test scripts/build/
