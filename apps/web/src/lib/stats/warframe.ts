@@ -52,6 +52,8 @@ const RANKUP_BY_NAME: Record<string, RankUp> = {
   Kullervo: { health: 200, shield: 0, armor: 100, energy: 50 },
   Lavos: { health: 200, shield: 100, armor: 100, energy: 0 },
   "Lavos Prime": { health: 200, shield: 100, armor: 100, energy: 0 },
+  // In-game shows 300 max energy at rank 30; the wiki's 290 is wrong (#387)
+  Narin: { health: 100, shield: 100, armor: 0, energy: 100 },
   Nezha: { health: 100, shield: 50, armor: 0, energy: 50 },
   "Nezha Prime": { health: 100, shield: 50, armor: 0, energy: 50 },
   Nidus: { health: 100, shield: 0, armor: 100, energy: 50 },
