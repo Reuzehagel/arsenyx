@@ -39,7 +39,7 @@ Game data is static, user data is dynamic. If something is read-heavy and rarely
 
 ## Progressive disclosure — load on demand
 
-- [docs/commands.md](docs/commands.md) — full command reference (build, db, data sync)
+- [docs/commands.md](docs/commands.md) — full command reference (build, db, data sync); read before rebuilding or hand-editing `apps/web/public/data/`
 - [docs/gotchas.md](docs/gotchas.md) — non-obvious pitfalls (PowerShell, Base UI, shadcn in monorepo)
 - [docs/hotkeys.md](docs/hotkeys.md) — adding or rebinding a keyboard shortcut
 - [docs/search.md](docs/search.md) — full-text build search (the tsvector column, trigger, and GIN index live outside Prisma)

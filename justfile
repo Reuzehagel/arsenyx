@@ -54,7 +54,18 @@ setup:
 # and, more often, a `git pull` that adds a route or edits schema.prisma leaves
 # a stale one behind. Stale artifacts surface as type errors in files you never
 # touched, which is a bad way to learn you needed to regenerate something.
-gen: gen-routes gen-prisma
+gen: deps gen-routes gen-prisma
+
+# A fresh git worktree has no node_modules, and every later step then fails
+# with misleading errors ("vite not found", a missing route tree). Install
+# once when absent; a no-op otherwise.
+[unix]
+deps:
+    @[ -d node_modules ] || bun install --frozen-lockfile
+
+[windows]
+deps:
+    @if (-not (Test-Path node_modules)) { bun install --frozen-lockfile }
 
 # ~1.5s, so it always runs rather than trying to outsmart the schema mtime.
 [working-directory('apps/api')]
@@ -77,7 +88,7 @@ gen-routes:
 [windows]
 [working-directory('apps/web')]
 gen-routes:
-    @$tree = 'src/routeTree.gen.ts'; $stale = -not (Test-Path $tree); if (-not $stale) { $stamp = (Get-Item $tree).LastWriteTimeUtc; $stale = [bool](@(Get-Item src/routes) + @(Get-ChildItem src/routes -Recurse -Force) | Where-Object { $_.LastWriteTimeUtc -gt $stamp } | Select-Object -First 1) }; if ($stale) { bun run build | Out-Null; (Get-Item $tree).LastWriteTimeUtc = (Get-Date).ToUniversalTime() }
+    @$tree = 'src/routeTree.gen.ts'; $stale = -not (Test-Path $tree); if (-not $stale) { $stamp = (Get-Item $tree).LastWriteTimeUtc; $stale = [bool](@(Get-Item src/routes) + @(Get-ChildItem src/routes -Recurse -Force) | Where-Object { $_.LastWriteTimeUtc -gt $stamp } | Select-Object -First 1) }; if ($stale) { bun run build | Out-Null; if ($LASTEXITCODE) { exit $LASTEXITCODE }; (Get-Item $tree).LastWriteTimeUtc = (Get-Date).ToUniversalTime() }
 
 # Typecheck + lint + format-check across apps/web, apps/api, packages/shared.
 check: gen
