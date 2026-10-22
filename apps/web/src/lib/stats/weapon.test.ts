@@ -387,3 +387,23 @@ describe("riven elemental ordering", () => {
     expect(map.has("toxin")).toBe(false)
   })
 })
+
+// Spliced riven elements (Update 44.1) are named "<Element> Damage" and apply
+// directly as that combined element, like a riven rolling the element itself.
+describe("riven spliced elements", () => {
+  it("applies a spliced Viral Damage stat as Viral", () => {
+    const riven = {
+      name: "Riven Mod",
+      rivenStats: {
+        positives: [{ stat: "Viral Damage", value: 90 }],
+        negatives: [],
+      },
+    } as unknown as Mod
+    const stats = calculateWeaponStats({
+      weapon: makeWeapon({ damage: { impact: 100 }, totalDamage: 100 }),
+      mods: [{ mod: riven, rank: 0 }],
+      arcanes: [],
+    })
+    expect(elemMap(stats).get("viral")).toBe(90)
+  })
+})
