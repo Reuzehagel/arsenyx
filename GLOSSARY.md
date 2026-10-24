@@ -93,6 +93,15 @@ A position in a Variant that holds one mod. Kinds: **normal**, **aura**, **exilu
 re-stamped by Forma).
 _Avoid_: Cell, Position.
 
+**Alternate mod**:
+An optional second mod on a filled **Slot**, suggested as a one-for-one swap for the slot's
+mod. The typical case is a common mod standing in for a Riven the viewer doesn't own. A Slot
+can have at most one Alternate. Any slot kind on any **Category** can have one. The
+Variant must stay valid with the Alternate swapped in, and a Riven is never an Alternate.
+Alternates never count toward **Capacity**, **Drain**, or stats: those always describe the
+slot's own mods. A change bigger than a single-slot swap is a **Variant**, not an Alternate.
+_Avoid_: Shoulder (that is the name of the hover visual, not of the concept), Fallback, Substitute, Backup.
+
 **Capacity** / **Drain**:
 **Drain** is the cost a placed mod charges against the Item's mod **Capacity** (the budget,
 30 base, 60 with a Reactor/Catalyst). Arsenyx computes both live as you edit.
