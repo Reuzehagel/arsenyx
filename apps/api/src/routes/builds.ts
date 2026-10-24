@@ -1132,7 +1132,7 @@ builds.post("/:slug/bookmark", rateLimitUser("social"), async (c) => {
     return c.json({ error: "not_found" }, 404)
   }
   // Unlike POST /like there's no self-bookmark guard: bookmarking your own
-  // Build to save it for later is allowed (see CONTEXT.md — Bookmark, unlike
+  // Build to save it for later is allowed (see GLOSSARY.md — Bookmark, unlike
   // Like, has no "not your own" rule).
 
   const bookmarkCount = await toggleSocial(
