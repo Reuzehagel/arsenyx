@@ -17,7 +17,7 @@ import { modMaxRank } from "./slot-ranks"
 
 export type SlotId = `aura-${number}` | "exilus" | "stance" | `normal-${number}`
 
-/** A suggested one-for-one swap for a Slot's mod (see CONTEXT.md →
+/** A suggested one-for-one swap for a Slot's mod (see GLOSSARY.md →
  *  Alternate mod). Display-only: capacity, drain, stats and forma never read
  *  it. */
 export interface AlternateMod {
