@@ -357,6 +357,11 @@ export function ModSlot({
                 className={cn(
                   "relative z-10",
                   settling && "animate-drop-settle",
+                  // The pinned detail is a twin of the hover preview, which
+                  // fades the compact card out; with hover disabled while
+                  // pinned, hide it here or it shows through the expanded
+                  // card's translucent panel.
+                  detailOpen && "opacity-0",
                 )}
               >
                 <ModCard
