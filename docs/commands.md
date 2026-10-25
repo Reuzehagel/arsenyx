@@ -126,7 +126,12 @@ bun run build:items && cp -r apps/web/public/data data/ab/fixed
 git checkout -- apps/web/public/data data/curated && git clean -fdq apps/web/public/data
 bun run data:patch data/ab/base data/ab/fixed   # prints every changed field
 bun run data:stamp
+bun --filter=arsenyx-web run test parsed-catalog --update  # then review the .snap.txt diff
 ```
+
+`apps/web/src/lib/stats/parsed-catalog.snap.txt` records how the stat engine reads every
+mod and arcane, so a mod or arcane data change (or a `lib/stats/parser.ts` change) moves
+it. Its diff is the list of items whose stats changed. Check each line before you accept it.
 
 Both sync and build rewrite tracked files as a side effect: `data:sync` →
 `data/PINS.json`, `build:items` → `data/curated/wiki-image-urls.json` (the

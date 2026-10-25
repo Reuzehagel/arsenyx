@@ -88,7 +88,7 @@ Thief's Wit | —
 Sure Footed | —
 Handspring | —
 Rolling Guard | —
-Vigorous Swap | —
+Vigorous Swap | damage +165% (conditional)
 Vitality | health +100%
 Provoked | —
 Heavy Impact | —
@@ -114,7 +114,7 @@ Streamline | ability_efficiency +30%
 Continuity | ability_duration +30%
 Archon Flow | energy +185%
 Archon Vitality | health +100%
-Archon Intensify | ability_strength +30%
+Archon Intensify | ability_strength +30% | ability_strength +30% (conditional)
 Archon Stretch | ability_range +45%
 Archon Continuity | ability_duration +55%
 Primed Vigor | shield +75% | health +75%
@@ -148,7 +148,7 @@ Disarming Purity | —
 Entropy Detonation | —
 Neutralizing Justice | —
 Toxic Blight | toxin +100%
-Spring-Loaded Blade | —
+Spring-Loaded Blade | range +1 (conditional ×2)
 Voltage Sequence | —
 Stockpiled Blight | magazine_size +200%
 Entropy Flight | projectile_speed +140%
@@ -175,14 +175,14 @@ Shotgun Ammo Mutation | —
 Tactical Pump | reload_speed +60%
 Counterbalance | recoil -60%
 Seeking Force | punch_through +2.1
-Galvanized Acceleration | —
+Galvanized Acceleration | projectile_speed +30% | projectile_speed +30% (conditional ×2, On Kill)
 Fatal Acceleration | projectile_speed +40%
 Lingering Torment | status_duration +90%
 Magnetic Welt | —
 Disruptor | impact +90%
 Chilling Grasp | cold +90%
 Shotgun Barrage | fire_rate +90%
-Galvanized Hell | multishot +110%
+Galvanized Hell | multishot +110% | multishot +30% (conditional ×4, On Kill)
 Hell's Chamber | multishot +120%
 Incendiary Coat | heat +90%
 Sweeping Serration | slash +120%
@@ -255,7 +255,7 @@ Strain Consume | —
 Strain Infection | —
 Strain Fever | —
 Strain Eruption | —
-Proton Snap | toxin +100% (conditional)
+Proton Snap | toxin +100% (conditional) | status_chance +50% (conditional)
 Proton Jet | —
 Proton Pulse | —
 Sacrificial Steel | critical_chance +220%
@@ -266,7 +266,7 @@ Motus Signal | —
 Nira's Hatred | health +35% | ability_duration +15%
 Nira's Contempt | damage +90% | status_chance +60%
 Nira's Anguish | —
-Mecha Pulse | —
+Mecha Pulse | armor +60% (conditional)
 Mecha Empowered | —
 Mecha Recharge | —
 Mecha Overdrive | status_duration +90%
@@ -309,7 +309,7 @@ Amar's Anguish | sprint_speed +15%
 Accelerated Deflection | —
 Calculated Redirection | shield +250%
 Repair Kit | —
-Fired Up | heat +5% (conditional ×100)
+Fired Up | heat +5% (conditional ×20)
 Animal Instinct | —
 Primed Animal Instinct | —
 Enhanced Vitality | health +250%
@@ -368,7 +368,7 @@ Rupture | impact +90%
 Adhesive Blast | —
 Cryo Rounds | cold +90%
 Speed Trigger | fire_rate +60%
-Galvanized Chamber | multishot +80%
+Galvanized Chamber | multishot +80% | multishot +30% (conditional ×5, On Kill)
 Split Chamber | multishot +90%
 Hellfire | heat +90%
 Bane of The Murmur | —
@@ -397,7 +397,7 @@ Rifle Elementalist | punch_through +0.6
 Semi-Rifle Cannonade | damage +240% | punch_through +1.5
 Napalm Grenades | —
 Primed Chamber | —
-Sharpshooter | energy +15
+Sharpshooter | energy +15 (conditional)
 Split Flights | multishot +100% (conditional ×4, On Hit)
 Thunderbolt | —
 Primed Sniper Ammo Mutation | —
@@ -441,7 +441,7 @@ Mending Shot | —
 Aerial Ace | —
 Bursting Mass | —
 Meticulous Aim | —
-Exposing Harpoon | —
+Exposing Harpoon | critical_chance +300% (conditional)
 Precision Strike | —
 Wild Frenzy | —
 Wildfire | magazine_size +20% | heat +60%
@@ -514,9 +514,9 @@ Double-Barrel Drift | recoil -20%
 Bounty Hunter | —
 Hydraulic Chamber | recoil -60% | magazine_size -10%
 Loaded Capacity | magazine_size +30% | reload_speed -15%
-Soft Hands | —
+Soft Hands | recoil -40% (conditional)
 Broad Eye | —
-Kill Switch | —
+Kill Switch | reload_speed +50% (conditional, On Kill)
 Loose Chamber | reload_speed +30% | recoil +50%
 Snap Shot | —
 Flak Shot | —
@@ -525,28 +525,28 @@ Crash Shot | —
 Precision Munition | projectile_speed +50%
 Measured Burst | fire_rate -60% | damage +30%
 Focused Acceleration | projectile_speed +80%
-Sudden Justice | —
+Sudden Justice | fire_rate +30% (conditional)
 Directed Convergence | —
 Ambush Optics | zoom -50%
 Vanquished Prey | —
 Recover | —
 Tactical Reload | —
 Double Tap | —
-Triple Tap | —
+Triple Tap | damage +40% (conditional)
 Grinloked | —
 Gun Glide | recoil -20%
 Apex Predator | —
 Hydraulic Gauge | recoil -60% | magazine_size -10%
 Maximum Capacity | magazine_size +30% | reload_speed -15%
-Twitch | —
-Final Tap | —
+Twitch | recoil -40% (conditional)
+Final Tap | damage +100% (conditional)
 Feathered Arrows | projectile_speed +60% | damage -20%
 Lucky Shot | projectile_speed +40%
 Overview | —
 Lie In Wait | recoil +100%
 Brain Storm | —
-Gorgon Frenzy | —
-Emergent Aftermath | —
+Gorgon Frenzy | fire_rate +30% (conditional, On Kill)
+Emergent Aftermath | reload_speed +50% (conditional, On Kill)
 Loose Hatch | reload_speed +30% | recoil +50%
 Plan B | —
 Agile Aim | —
@@ -567,10 +567,10 @@ Night Stalker | —
 Shrapnel Rounds | multishot +200% | damage -66%
 Hydraulic Barrel | recoil -40% | magazine_size -20%
 Full Capacity | magazine_size +30% | reload_speed -15%
-Reflex Draw | —
+Reflex Draw | recoil -40% (conditional)
 Blind Shot | projectile_speed +40%
 Air Recon | —
-Secondary Wind | —
+Secondary Wind | reload_speed +50% (conditional, On Kill)
 Loose Magazine | reload_speed +50% | recoil +50%
 Spry Sights | —
 Draining Gloom | magazine_size -60% | ammo_max -60%
@@ -610,7 +610,7 @@ Suppress | —
 Concussion Rounds | impact +90%
 Deep Freeze | cold +90%
 Gunslinger | fire_rate +72%
-Galvanized Diffusion | multishot +110%
+Galvanized Diffusion | multishot +110% | multishot +30% (conditional ×4, On Kill)
 Barrel Diffusion | multishot +120%
 Heated Charge | heat +90%
 Maim | slash +120%
@@ -751,7 +751,7 @@ Auger Strike | puncture +120%
 Collision Force | impact +120%
 Shocking Touch | electricity +90%
 Condition Overload | —
-Berserker Fury | —
+Berserker Fury | fire_rate +35% (conditional ×2)
 Organ Shatter | critical_multiplier +90%
 True Steel | critical_chance +120%
 Guardian Derision | —
@@ -759,7 +759,7 @@ Sundering Strike | puncture +90%
 Dispatch Overdrive | —
 Melee Elementalist | —
 Primed Fever Strike | toxin +165%
-Galvanized Elementalist | —
+Galvanized Elementalist | status_chance +30% (conditional ×4)
 Primed Reach | range +3
 Primed Smite The Murmur | —
 Primed Smite Infested | —
@@ -770,7 +770,7 @@ Primed Pressure Point | damage +165%
 Primed Heavy Trauma | impact +165%
 Galvanized Reflex | —
 Primed Fury | fire_rate +55%
-Galvanized Steel | critical_chance +110%
+Galvanized Steel | critical_chance +110% | critical_multiplier +30% (conditional ×4)
 Maiming Strike | slide_attack +150%
 Weeping Wounds | —
 Body Count | —
@@ -852,7 +852,7 @@ Immuno Shield | —
 Instant Secure | —
 Threat Blocker | —
 Turbo Protect | —
-Runtime | —
+Runtime | sprint_speed +75% (conditional)
 Master Key | —
 Untraceable | —
 Failsafe | —
@@ -871,7 +871,7 @@ Blood For Ammo | —
 Unseen Dread | —
 Swift Momentum | —
 Aerodynamic | —
-Shepherd | armor +180
+Shepherd | —
 Combat Discipline | —
 Melee Guidance | —
 EMP Aura | —
@@ -916,7 +916,7 @@ System Reroute | ability_efficiency +55%
 Efficient Transferral | ability_duration +30%
 Kinetic Diversion | —
 Primed Dual Rounds | multishot +110%
-Primed Deadly Efficiency | —
+Primed Deadly Efficiency | damage +220% (conditional)
 Venomous Clip | toxin +120%
 Polar Magazine | cold +120%
 Combustion Rounds | heat +120%
@@ -935,7 +935,7 @@ Critical Focus | —
 Magazine Extension | magazine_size +60%
 Shell Rush | —
 Ammo Chain | ammo_max +100%
-Archgun Ace | —
+Archgun Ace | reload_speed +100% (conditional)
 Contamination Casing | toxin +60% | status_chance +60%
 Containment Breach | radiation +60% | multishot +30%
 Magnetized Cycle | magnetic +60% | fire_rate +30%
@@ -945,7 +945,7 @@ Hypothermic Shell | cold +60% | status_chance +60%
 Zodiac Shred | slash +90%
 Quasar Drill | puncture +90%
 Comet Blast | impact +90%
-Deadly Efficiency | —
+Deadly Efficiency | damage +120% (conditional)
 Resolute Focus | —
 Primed Venomous Clip | toxin +187%
 Primed Rubedo-Lined Barrel | damage +187%
@@ -1045,7 +1045,7 @@ Prosperous Retriever | —
 Fatal Attraction | —
 Arc Coil | status_chance +10%
 Anti-Grav Array | —
-Astral Bond | void +30% (conditional)
+Astral Bond | void +30% (conditional) | damage +60% (conditional)
 Duplex Bond | —
 Tenacious Bond | —
 Tandem Bond | —
@@ -1088,7 +1088,7 @@ Neutralize | —
 Dig | —
 Stalk | —
 Hunt | —
-Trample | damage +10% (conditional)
+Trample | —
 Sly Devolution | —
 Endoparasitic Vector | —
 Acidic Spittle | —
@@ -1274,7 +1274,7 @@ Freeze Force | —
 Ice Wave Impedance | —
 Cold Front | —
 Chilling Globe | —
-Biting Frost | —
+Biting Frost | critical_chance +200% (conditional)
 Icy Avalanche | —
 Beguiling Lantern | —
 Razorwing Blitz | —
@@ -1386,7 +1386,7 @@ Worm's Torment | —
 Predator | —
 Section Density | —
 Hyperstrike | —
-Onslaught Matrix | shield +80%
+Onslaught Matrix | shield +80% (conditional)
 Sentient Scalpel | —
 Turret Velocity | —
 Artillery Cheap Shot | —
@@ -1409,8 +1409,8 @@ Fire Suppression | —
 Void Cloak | —
 
 # Arcanes
-Arcane Guardian | —
-Arcane Avenger | —
+Arcane Guardian | armor +900 (conditional)
+Arcane Avenger | critical_chance +45% (conditional)
 Arcane Double Back | —
 Arcane Resistance | —
 Arcane Ice | —
@@ -1430,20 +1430,20 @@ Arcane Agility | —
 Arcane Phantasm | —
 Arcane Circumvent | —
 Arcane Hot Shot | —
-Arcane Ice Storm | —
+Arcane Ice Storm | ability_strength +2% (conditional ×20) | ability_duration +2% (conditional ×20)
 Arcane Bellicose | —
-Arcane Power Ramp | ability_strength +9%
+Arcane Power Ramp | ability_strength +9% (conditional)
 Arcane Camisado | —
 Arcane Pistoleer | —
 Akimbo Slip Shot | —
 Arcane Tanker | —
-Melee Fortification | —
+Melee Fortification | armor +210 (conditional)
 Secondary Surge | —
 Exodia Brave | —
 Theorem Infection | —
 Melee Exposure | —
 Exodia Valor | —
-Melee Doughty | puncture +10%
+Melee Doughty | —
 Primary Bulwark | —
 Melee Afflictions | —
 Pax Soar | —
@@ -1467,7 +1467,7 @@ Arcane Battery | —
 Exodia Contagion | —
 Exodia Epidemic | —
 Melee Retaliation | —
-Arcane Blade Charger | —
+Arcane Blade Charger | damage +300% (conditional)
 Melee Influence | —
 Arcane Strike | —
 Secondary Outburst | —
@@ -1477,14 +1477,14 @@ Theorem Contagion | —
 Secondary Fortifier | —
 Melee Crescendo | —
 Molt Augmented | ability_strength +0.24% (conditional ×250, On Kill)
-Primary Frostbite | —
-Primary Merciless | reload_speed +30% (conditional ×12, On Kill) | reload_speed +30%
-Primary Dexterity | —
-Primary Deadhead | recoil -50% (conditional ×3) | recoil -50%
+Primary Frostbite | critical_multiplier +3% (conditional ×40) | multishot +2.25% (conditional ×40)
+Primary Merciless | damage +30% (conditional ×12, On Kill) | reload_speed +30%
+Primary Dexterity | damage +60% (conditional ×6)
+Primary Deadhead | damage +120% (conditional ×3) | recoil -50%
 Primary Plated Round | —
 Arcane Primary Charger | —
 Primary Exhilarate | —
-Primary Blight | —
+Primary Blight | critical_multiplier +3.6% (conditional ×40) | multishot +1.8% (conditional ×40)
 Primary Obstruct | —
 Melee Vortex | —
 Secondary Irradiate | —
@@ -1492,37 +1492,37 @@ Melee Duplicate | —
 Secondary Cryogenic | —
 Secondary Kinship | —
 Secondary Enervate | —
-Cascadia Flare | —
-Secondary Merciless | reload_speed +30% (conditional ×12, On Kill) | reload_speed +30%
-Secondary Dexterity | —
-Secondary Deadhead | recoil -50% (conditional ×3) | recoil -50%
+Cascadia Flare | damage +12% (conditional ×40)
+Secondary Merciless | damage +30% (conditional ×12, On Kill) | reload_speed +30%
+Secondary Dexterity | damage +60% (conditional ×6)
+Secondary Deadhead | damage +120% (conditional ×3) | recoil -50%
 Secondary Shiver | —
-Conjunction Voltage | —
+Conjunction Voltage | reload_speed +1.5% (conditional ×40) | multishot +3% (conditional ×40)
 Pax Seeker | —
-Shotgun Vendetta | —
+Shotgun Vendetta | multishot +180% (conditional) | reload_speed +75% (conditional)
 Primary Debilitate | —
-Primary Crux | —
+Primary Crux | status_chance +30% (conditional ×10)
 Exodia Triumph | —
 Exodia Force | —
 Theorem Demulcent | —
-Virtuos Tempo | —
-Virtuos Shadow | —
-Virtuos Strike | —
-Virtuos Fury | —
+Virtuos Tempo | fire_rate +60% (conditional, On Kill)
+Virtuos Shadow | critical_chance +60% (conditional)
+Virtuos Strike | critical_multiplier +80% (conditional)
+Virtuos Fury | damage +30% (conditional)
 Virtuos Null | —
-Virtuos Ghost | —
+Virtuos Ghost | status_chance +60% (conditional)
 Virtuos Surge | void +98% (conditional, On Hit)
 Virtuos Forge | void +98% (conditional, On Hit)
 Virtuos Spike | void +98% (conditional, On Hit)
 Virtuos Trojan | void +98% (conditional, On Hit)
-Magus Husk | armor +300
+Magus Husk | armor +300 (conditional)
 Magus Firewall | —
 Magus Elevate | —
 Magus Nourish | —
-Magus Replenish | health +30%
+Magus Replenish | health +30% (conditional)
 Magus Repair | —
-Magus Vigor | health +600
-Arcane Reaper | —
+Magus Vigor | health +600 (conditional)
+Arcane Reaper | armor +660 (conditional)
 Magus Melt | —
 Magus Accelerant | —
 Magus Drive | —
@@ -1532,17 +1532,17 @@ Magus Destruct | —
 Magus Anomaly | —
 Magus Revert | —
 Magus Overload | —
-Magus Cadence | —
+Magus Cadence | sprint_speed +90% (conditional)
 Magus Lockdown | —
-Arcane Concentration | —
-Arcane Sculptor | —
+Arcane Concentration | ability_duration +60% (conditional)
+Arcane Sculptor | ability_efficiency +175% (conditional)
 Arcane Universal Fallout | —
-Arcane Impetus | —
-Arcane Crepuscular | —
+Arcane Impetus | ability_strength +6% (conditional) | ability_efficiency +3% (conditional)
+Arcane Crepuscular | ability_strength +30% (conditional)
 Pax Charge | —
 Residual Boils | —
 Primary Compression | —
-Pax Bolt | —
+Pax Bolt | ability_efficiency +30% (conditional)
 Secondary Encumber | —
 Melee Careen | —
 Arcane Consequence | —
@@ -1558,14 +1558,14 @@ Arcane Awakening | —
 Arcane Pulse | —
 Arcane Eruption | —
 Residual Viremia | —
-Eternal Onslaught | —
+Eternal Onslaught | critical_chance +180% (conditional)
 Eternal Logistics | —
 Emergence Dissipate | —
 Emergence Savior | —
 Emergence Renewed | —
 Eternal Eradicate | —
-Fractalized Reset | —
-Cascadia Overcharge | critical_chance +300%
+Fractalized Reset | reload_speed +240% (conditional)
+Cascadia Overcharge | critical_chance +300% (conditional)
 Cascadia Accuracy | —
 Cascadia Empowered | —
 Molt Vigor | —
