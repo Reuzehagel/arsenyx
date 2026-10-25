@@ -1,3 +1,4 @@
+import { itemMetaDescription } from "@arsenyx/shared/seo/item-meta"
 import { useSuspenseQuery } from "@tanstack/react-query"
 import {
   createFileRoute,
@@ -36,11 +37,7 @@ export const Route = createFileRoute("/browse_/$category/$slug")({
     const label = getCategoryLabel(params.category)
     return seo({
       title: `${loaderData.name} Builds`,
-      description: clampDescription(
-        loaderData.description
-          ? `${loaderData.description} Plan and share ${loaderData.name} builds on Arsenyx.`
-          : `Plan and share ${loaderData.name} (${label}) builds with mods, arcanes, and stats on Arsenyx.`,
-      ),
+      description: itemMetaDescription(loaderData, label),
       canonicalPath: path,
       image: loaderData.imageName ?? undefined,
       jsonLd: {
@@ -72,14 +69,6 @@ export const Route = createFileRoute("/browse_/$category/$slug")({
   component: ItemDetailPage,
   notFoundComponent: ItemNotFound,
 })
-
-// Meta descriptions get truncated in SERPs around ~160 chars; clip on a word
-// boundary so codex flavor text doesn't end mid-word.
-function clampDescription(s: string): string {
-  if (s.length <= 160) return s
-  const cut = s.slice(0, 159)
-  return `${cut.slice(0, Math.max(cut.lastIndexOf(" "), 120))}…`
-}
 
 function ItemDetailPage() {
   const { category, slug } = Route.useParams()

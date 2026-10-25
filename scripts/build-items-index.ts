@@ -26,6 +26,7 @@
  * isPrime, vaulted, releaseDate.
  */
 
+import { spawnSync } from "node:child_process"
 import { readdirSync } from "node:fs"
 import { mkdir, rm, writeFile } from "node:fs/promises"
 import { resolve } from "node:path"
@@ -84,6 +85,7 @@ import { readPePlusUpgrades, readPePlusWeaponTags } from "./build/read-pe-plus"
 import { readWikiModule } from "./build/read-wiki"
 import { resolveImages } from "./build/resolve-images"
 import { validateOutputs } from "./build/validate-output"
+import { resolveWikiModKeys } from "./build/wiki-mod-keys"
 import { writeItemDetails } from "./build/write-details"
 
 const REPO_ROOT = resolve(import.meta.dirname, "..")
@@ -106,6 +108,20 @@ const stats: BuildStats = {
   companions: { wiki: 0, deOnly: 0 },
   mods: { de: 0, kept: 0 },
   perCategory: {},
+}
+
+/** Texture filename (sans DE `!00_<hash>`) → first image URL under `dir`. */
+function imageUrlByFile(
+  imageByUniqueName: Map<string, string>,
+  dir: string,
+): Map<string, string> {
+  const out = new Map<string, string>()
+  for (const url of imageByUniqueName.values()) {
+    if (!url.includes(dir)) continue
+    const file = url.split("/").pop()?.split("!")[0]
+    if (file && !out.has(file)) out.set(file, url)
+  }
+  return out
 }
 
 async function main() {
@@ -285,6 +301,7 @@ async function main() {
     wikiArcanesBlob,
     exaltedStances: curated.exaltedStances,
     cachePath: WIKI_IMAGE_CACHE,
+    refresh: process.argv.includes("--refresh-wiki-images"),
   })
 
   // ---------- 6. Merge mods + arcanes ----------
@@ -330,8 +347,10 @@ async function main() {
   // edge; resolving both endpoints by display Name against the emitted catalog
   // is robust to that drift.
   const wikiIncompatByName = new Map<string, string[]>()
+  const wikiModRecords: Array<{ internalName: string; name: unknown }> = []
   for (const { internalName, record } of iterWikiRecords(wikiModsBlob)) {
     const name = record["Name"]
+    wikiModRecords.push({ internalName, name })
     if (typeof name === "string") {
       wikiKnownModNames.add(name)
       wikiModUniqueNameByName.set(name, internalName)
@@ -395,29 +414,27 @@ async function main() {
     )
   }
 
-  // The wiki's InternalName drifts from DE's uniqueName for some mods (Cold
-  // Front: wiki `IceShieldAugment2Card` vs DE `IceShieldAugmentTwoCard`, #399),
-  // silently defaulting their IsExilus/Tradable to false. When a DE mod has no
-  // wiki record by uniqueName, fall back to its display Name — only when that
-  // Name is unique among DE upgrades, so per-ability/variant copies sharing a
-  // Name can't inherit each other's flags.
-  const wikiInternalNames = new Set(wikiModUniqueNameByName.values())
-  const deNameCounts = new Map<string, number>()
-  for (const u of missing.upgrades) {
-    if (u.name) deNameCounts.set(u.name, (deNameCounts.get(u.name) ?? 0) + 1)
-  }
+  // One uniqueName → wiki-record resolution (InternalName, else unique Name —
+  // see wiki-mod-keys.ts) feeds every wiki flag and the unmatched report.
+  const wikiKeyByUniqueName = resolveWikiModKeys(
+    missing.upgrades,
+    wikiModRecords,
+  )
   const nameFallbacks: string[] = []
   for (const u of missing.upgrades) {
-    if (!u.name || !u.uniqueName || wikiInternalNames.has(u.uniqueName))
-      continue
-    if (deNameCounts.get(u.name) !== 1) continue
-    const wikiKey = wikiModUniqueNameByName.get(u.name)
-    if (!wikiKey) continue
+    const wikiKey = u.uniqueName && wikiKeyByUniqueName.get(u.uniqueName)
+    if (!wikiKey || wikiKey === u.uniqueName) continue
     const exilus = wikiExilus.get(wikiKey)
     if (exilus !== undefined) wikiExilus.set(u.uniqueName, exilus)
     const tradable = wikiTradable.get(wikiKey)
     if (tradable !== undefined) wikiTradable.set(u.uniqueName, tradable)
-    nameFallbacks.push(u.name)
+    if (
+      wikiConclaveMods.has(wikiKey) &&
+      !PVE_USABLE_CONCLAVE_MODS.has(u.uniqueName)
+    )
+      wikiConclaveMods.add(u.uniqueName)
+    if (wikiIgnoreMods.has(wikiKey)) wikiIgnoreMods.add(u.uniqueName)
+    nameFallbacks.push(u.name!)
   }
   if (nameFallbacks.length > 0) {
     console.log(
@@ -543,9 +560,21 @@ async function main() {
   // Shape-check every emitted record and compare counts against the previous
   // build's meta.json (see validate-output.ts). Throws before the rm below,
   // so a broken merge can't replace a good catalog with a hollowed-out one.
+  // A crash mid-write (rm below) can leave meta.json missing or truncated —
+  // fall back to the committed copy rather than skip the regression check.
   const prevMeta = await Bun.file(resolve(OUT_DIR, "meta.json"))
     .json()
-    .catch(() => undefined)
+    .catch(() => {
+      const r = spawnSync(
+        "git",
+        ["show", "HEAD:apps/web/public/data/meta.json"],
+        {
+          cwd: REPO_ROOT,
+          encoding: "utf8",
+        },
+      )
+      return r.status === 0 ? JSON.parse(r.stdout) : undefined
+    })
   const nextCounts = {
     itemCount: Object.values(stats.perCategory).reduce((a, b) => a + b, 0),
     modCount: mergedMods.length,
@@ -578,16 +607,13 @@ async function main() {
   )
   console.log(`  OK  mods-all.json (${mergedMods.length} mods)`)
 
-  // Emitted mods with no wiki record by InternalName or by Name. Their
+  // Emitted mods with no resolved wiki record (wikiKeyByUniqueName). Their
   // wiki-sourced flags (IsExilus, Tradable, Conclave) silently default, so
   // surface them in _report.json where the weekly refresh diff shows new
   // drift (#297, #399). Avionics come from a separate wiki module — skip them.
   const modsUnmatched = mergedMods
     .filter(
-      (m) =>
-        m.type !== "Plexus Mod" &&
-        !wikiInternalNames.has(m.uniqueName) &&
-        !wikiModUniqueNameByName.has(m.name),
+      (m) => m.type !== "Plexus Mod" && !wikiKeyByUniqueName.has(m.uniqueName),
     )
     .map((m) => `${m.name} (${m.uniqueName})`)
     .sort()
@@ -713,12 +739,7 @@ async function main() {
   // matching each component's texture filename, keyed by component name for
   // the web picker. Their old wiki `Special:FilePath` URLs 404 on the current
   // wiki; these flow through sync:images → R2 like every other catalog image.
-  const zawByFile = new Map<string, string>()
-  for (const url of imageByUniqueName.values()) {
-    if (!url.includes("/Zaws/")) continue
-    const file = url.split("/").pop()?.split("!")[0]
-    if (file && !zawByFile.has(file)) zawByFile.set(file, url)
-  }
+  const zawByFile = imageUrlByFile(imageByUniqueName, "/Zaws/")
   const zawImages: Record<string, string> = {}
   for (const c of [...ZAW_STRIKES, ...ZAW_GRIPS, ...ZAW_LINKS]) {
     const url = zawByFile.get(c.imageName)
@@ -768,12 +789,7 @@ async function main() {
   // Flows through sync:images → R2 like every other catalog image. Innate
   // incarnons have no adapter, so they're absent from INCARNON_GENESIS_IMAGES
   // and from this map.
-  const adapterByFile = new Map<string, string>()
-  for (const url of imageByUniqueName.values()) {
-    if (!url.includes("/IncarnonWeapons/")) continue
-    const file = url.split("/").pop()?.split("!")[0]
-    if (file && !adapterByFile.has(file)) adapterByFile.set(file, url)
-  }
+  const adapterByFile = imageUrlByFile(imageByUniqueName, "/IncarnonWeapons/")
   const incarnonAdapterImages: Record<string, string> = {}
   for (const [name, file] of Object.entries(INCARNON_GENESIS_IMAGES)) {
     const url = adapterByFile.get(file)

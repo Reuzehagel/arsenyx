@@ -18,6 +18,7 @@
 // shared package the same way), so the file stays free of heavy/runtime deps.
 
 import { buildMetaTitle, buildOgType } from "@arsenyx/shared/seo/build-meta"
+import { itemMetaDescription } from "@arsenyx/shared/seo/item-meta"
 import {
   getCategoryLabel,
   isValidCategory,
@@ -437,12 +438,7 @@ async function handleItemPage(
   if (!item) return rewriteMeta(shellRes, {})
 
   const label = getCategoryLabel(category)
-  const description = item.description
-    ? clamp(
-        `${collapseWs(item.description)} Plan and share ${item.name} builds on Arsenyx.`,
-        160,
-      )
-    : `Plan and share ${item.name} (${label}) builds with mods, arcanes, and stats on Arsenyx.`
+  const description = itemMetaDescription(item, label)
 
   return rewriteMeta(shellRes, {
     title: `${item.name} Builds — ${SITE_NAME}`,

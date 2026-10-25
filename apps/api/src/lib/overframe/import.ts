@@ -5,10 +5,9 @@ import type {
   OverframeScrapeResponse,
 } from "@arsenyx/shared/warframe/overframe-wire"
 
-import { SafeFetchError, safeFetch } from "../safe-fetch"
 import { decodeOverframeBuildString } from "./decode"
 import { getOverframeItemsMap } from "./items-map"
-import { extractOverframeData, extractOverframeDataFromHtml } from "./next-data"
+import { extractOverframeData } from "./next-data"
 import { mapOverframePolarity } from "./polarity"
 
 /**
@@ -26,107 +25,6 @@ export function parseOverframeBuildUrl(value: string): { id: string } | null {
   } catch {
     return null
   }
-}
-
-export function isValidOverframeBuildUrl(value: string): boolean {
-  return parseOverframeBuildUrl(value) !== null
-}
-
-// Fetch wall-time / response-size / redirect caps. Without these a logged-in
-// user could point this scrape at a page that streams forever, redirects to a
-// private host, or returns gigabytes of HTML. `safeFetch` enforces the timeout
-// + per-hop allowlist; the byte cap is re-applied while streaming the body
-// below.
-const FETCH_TIMEOUT_MS = 8000
-const MAX_HTML_BYTES = 1024 * 1024 // 1 MB — Next.js pages are large but bounded.
-const MAX_REDIRECTS = 5
-
-function safeFetchMessage(err: SafeFetchError): string {
-  switch (err.code) {
-    case "invalid_redirect":
-      return "redirect off-host"
-    case "too_many_redirects":
-      return "too many redirects"
-    case "upstream_status":
-      return `HTTP ${err.status ?? "error"}`
-    case "too_large":
-      return "response too large"
-    case "fetch_failed":
-      return "request failed"
-    case "private_host":
-      return "host not allowed"
-  }
-}
-
-async function fetchOverframeHtml(url: string): Promise<string> {
-  let res: Response
-  try {
-    res = await safeFetch(url, {
-      // Each redirect target gets the same gate as the caller's initial URL.
-      isAllowed: (u) => isValidOverframeBuildUrl(u.href),
-      maxBytes: MAX_HTML_BYTES,
-      timeoutMs: FETCH_TIMEOUT_MS,
-      maxRedirects: MAX_REDIRECTS,
-      blockPrivateDns: true,
-      headers: {
-        "user-agent":
-          "Mozilla/5.0 (compatible; ArsenyxBot/1.0; +https://arsenyx.com)",
-        accept: "text/html,application/xhtml+xml",
-      },
-    })
-  } catch (err) {
-    if (err instanceof SafeFetchError) {
-      // Overframe sits behind a Cloudflare managed challenge (Turnstile/JS
-      // interstitial) that returns 403 to every non-browser client. No UA or
-      // header tweak passes it — only a real browser can. Surface that plainly
-      // instead of a bare "HTTP 403" so users don't think it's an Arsenyx bug.
-      if (err.code === "upstream_status" && err.status === 403) {
-        throw new Error(
-          "Overframe is currently blocking automated imports (Cloudflare bot protection). This is on Overframe's side, not Arsenyx — please try again later.",
-          { cause: err },
-        )
-      }
-      throw new Error(`Overframe fetch failed: ${safeFetchMessage(err)}`, {
-        cause: err,
-      })
-    }
-    throw err
-  }
-
-  const reader = res.body?.getReader()
-  if (!reader) {
-    throw new Error("Overframe fetch failed: empty body")
-  }
-
-  const chunks: Uint8Array[] = []
-  let total = 0
-  try {
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      if (!value) continue
-      total += value.byteLength
-      if (total > MAX_HTML_BYTES) {
-        void reader.cancel()
-        throw new Error("Overframe fetch failed: response too large")
-      }
-      chunks.push(value)
-    }
-  } finally {
-    try {
-      reader.releaseLock()
-    } catch {
-      // Already released on cancel.
-    }
-  }
-
-  const merged = new Uint8Array(total)
-  let offset = 0
-  for (const chunk of chunks) {
-    merged.set(chunk, offset)
-    offset += chunk.byteLength
-  }
-  return new TextDecoder("utf-8").decode(merged)
 }
 
 type OverframeSlotLike = {
@@ -164,58 +62,10 @@ function parseRawSlots(slots: unknown): OverframeRawSlot[] {
   return out
 }
 
-export async function scrapeOverframeBuild(
-  url: string,
-): Promise<OverframeScrapeResponse> {
-  const parsed = parseOverframeBuildUrl(url)
-  if (!parsed) {
-    return {
-      source: { url },
-      formaCount: null,
-      slots: [],
-      warnings: [
-        {
-          type: "invalid_url",
-          message: "URL must look like https://overframe.gg/build/<id>/...",
-        },
-      ],
-    }
-  }
-
-  let html: string
-  try {
-    html = await fetchOverframeHtml(url)
-  } catch (err) {
-    return {
-      source: { url },
-      formaCount: null,
-      slots: [],
-      warnings: [
-        {
-          type: "fetch_failed",
-          message:
-            err instanceof Error
-              ? err.message
-              : "Failed to fetch Overframe page",
-        },
-      ],
-    }
-  }
-
-  const buildId = parsed.id
-  return assembleScrapeResponse(
-    extractOverframeDataFromHtml(html, { url, buildId }),
-    url,
-    buildId,
-  )
-}
-
 /**
  * Fetch-less import: build the scrape response from a `__NEXT_DATA__` object
- * the user copied off their own Overframe tab (via the bookmarklet). Their
- * browser already cleared Cloudflare's challenge, so this sidesteps the 403
- * that blocks the server-side {@link scrapeOverframeBuild} path. `rawUrl` is
- * best-effort — only kept when it's a real Overframe build URL.
+ * the user copied off their own Overframe tab (via the bookmarklet), which
+ * already cleared Overframe's Cloudflare challenge. `rawUrl` is best-effort — only kept when it's a real Overframe build URL.
  */
 export function scrapeOverframeFromNextData(
   nextData: unknown,

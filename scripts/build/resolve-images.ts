@@ -5,8 +5,9 @@
  *
  * Primary source: DE PublicExport CDN (covers ~99% of items). Fallback: the
  * wiki MediaWiki API for the handful DE doesn't manifest (beast claws, railjack
- * ordnance, modular pieces, exalted-stance cards), resolved once and cached to
- * disk so subsequent builds run offline. See ./images for the resolvers.
+ * ordnance, modular pieces, exalted-stance cards), cached to disk. A full
+ * refresh re-resolves every filename (wiki re-uploads change the URL); other
+ * builds only resolve cache misses. See ./images for the resolvers.
  */
 
 import { ARCANE_INTERNALNAME_FIXES } from "../../data/curated/arcane-internalname-fixes"
@@ -56,6 +57,8 @@ export async function resolveImages(opts: {
   exaltedStances: Record<string, { wikiImage: string }>
   /** Path to data/curated/wiki-image-urls.json. */
   cachePath: string
+  /** Re-resolve every filename, not just cache misses (full data:refresh). */
+  refresh?: boolean
 }): Promise<ResolvedImages> {
   const {
     deManifest,
@@ -66,6 +69,7 @@ export async function resolveImages(opts: {
     wikiArcanesBlob,
     exaltedStances,
     cachePath,
+    refresh = false,
   } = opts
 
   // Primary source: DE PublicExport CDN (content.warframe.com), via the
@@ -133,22 +137,31 @@ export async function resolveImages(opts: {
 
   const wikiCache = readWikiImageCache(cachePath)
   const neededFilenames = new Set<string>()
-  for (const fn of wikiImageFileByUniqueName.values()) {
-    if (!wikiCache.urls[fn]) neededFilenames.add(fn)
-  }
   // Arcane wiki images override DE projections; resolve those too even when
   // DE already covers them.
-  for (const fn of arcaneWikiImageFile.values()) {
-    if (!wikiCache.urls[fn]) neededFilenames.add(fn)
+  for (const fn of [
+    ...wikiImageFileByUniqueName.values(),
+    ...arcaneWikiImageFile.values(),
+  ]) {
+    if (refresh || !wikiCache.urls[fn]) neededFilenames.add(fn)
   }
   if (neededFilenames.size > 0) {
     console.log(
       `Resolving ${neededFilenames.size} wiki image URLs via MediaWiki API...`,
     )
-    const resolved = await resolveWikiImageUrls(neededFilenames)
-    for (const [fn, url] of resolved) wikiCache.urls[fn] = url
-    writeWikiImageCache(cachePath, wikiCache)
-    console.log(`  OK  resolved ${resolved.size} / ${neededFilenames.size}`)
+    try {
+      const resolved = await resolveWikiImageUrls(neededFilenames)
+      for (const [fn, url] of resolved) wikiCache.urls[fn] = url
+      writeWikiImageCache(cachePath, wikiCache)
+      console.log(`  OK  resolved ${resolved.size} / ${neededFilenames.size}`)
+    } catch (err) {
+      // A refresh already has cached URLs to fall back on; a miss-only run
+      // has nothing, so keep failing loudly there.
+      if (!refresh) throw err
+      console.warn(
+        `  WARN wiki image refresh failed, using cached URLs: ${(err as Error).message}`,
+      )
+    }
   }
 
   const imageByUniqueName = new Map<string, string>()

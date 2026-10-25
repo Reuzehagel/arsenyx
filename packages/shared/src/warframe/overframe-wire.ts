@@ -4,8 +4,6 @@
 
 export interface OverframeImportWarning {
   type:
-    | "invalid_url"
-    | "fetch_failed"
     | "next_data_missing"
     | "build_data_missing"
     | "buildstring_missing"

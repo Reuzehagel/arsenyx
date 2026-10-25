@@ -64,6 +64,16 @@ function looksLikeRealPostgresUrl(url: string | undefined): boolean {
   return true
 }
 
+// Dev DBs are Neon or local; anything else (e.g. *.psdb.cloud = prod) must
+// never get db:push or a seeded admin. Duplicated in apps/api/scripts/seed-admin.ts.
+function isDevDbHost(url: string): boolean {
+  const host = new URL(url).hostname
+  return (
+    host.endsWith(".neon.tech") ||
+    ["localhost", "127.0.0.1", "::1", "[::1]"].includes(host)
+  )
+}
+
 async function run(
   cmd: string[],
   cwd: string,
@@ -134,6 +144,12 @@ DATABASE_URL
     }
   } else {
     console.log("✓ DATABASE_URL kept")
+  }
+  if (!isDevDbHost(dbUrl!)) {
+    throw new Error(
+      `DATABASE_URL host "${new URL(dbUrl!).hostname}" is not a dev database ` +
+        `(*.neon.tech or localhost) — refusing to db:push / seed against it.`,
+    )
   }
 
   const currentSecret = existing.get("BETTER_AUTH_SECRET") ?? ""

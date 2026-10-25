@@ -1,4 +1,7 @@
-import type { BuildListItemResponse } from "@arsenyx/shared/api/build-dto"
+import type {
+  BuildListItemResponse,
+  BuildUserSummary,
+} from "@arsenyx/shared/api/build-dto"
 import {
   LIST_LIMIT,
   LIST_SORTS,
@@ -20,6 +23,24 @@ export const BUILD_USER_SELECT = {
   displayUsername: true,
   image: true,
 } as const
+
+const HIDDEN_AUTHOR: BuildUserSummary = {
+  id: "",
+  name: null,
+  username: null,
+  displayUsername: null,
+  image: null,
+}
+
+/** The author to put on the wire. `hideAuthor` on an org build must keep the
+ *  person out of the JSON, not just out of the UI; only owners and admins
+ *  (`reveal`) get the real user back. */
+export function visibleAuthor<U>(
+  b: { hideAuthor: boolean; organization: unknown; user: U },
+  reveal = false,
+): U | BuildUserSummary {
+  return b.hideAuthor && b.organization && !reveal ? HIDDEN_AUTHOR : b.user
+}
 
 export const LIST_SELECT = {
   id: true,
@@ -70,7 +91,11 @@ export type ViewerState = {
 // Single source of truth for the build-detail JSON shape, used by the
 // `GET /builds/:slug` route. Pass `viewer` for viewer-specific fields
 // (like/bookmark state); omit for anonymous/cacheable responses.
-export function serializeBuildDetail(b: DetailRow, viewer: ViewerState | null) {
+export function serializeBuildDetail(
+  b: DetailRow,
+  viewer: ViewerState | null,
+  revealAuthor = false,
+) {
   const base = {
     id: b.id,
     slug: b.slug,
@@ -93,7 +118,7 @@ export function serializeBuildDetail(b: DetailRow, viewer: ViewerState | null) {
     formaCount: b.formaCount,
     createdAt: b.createdAt,
     updatedAt: b.updatedAt,
-    user: b.user,
+    user: visibleAuthor(b, revealAuthor),
     organization: b.organization,
     guide: b.buildGuide,
   }
@@ -106,7 +131,10 @@ export function serializeBuildDetail(b: DetailRow, viewer: ViewerState | null) {
   }
 }
 
-export function serializeListRow(b: ListRow): BuildListItemResponse {
+export function serializeListRow(
+  b: ListRow,
+  revealAuthor = false,
+): BuildListItemResponse {
   return {
     id: b.id,
     slug: b.slug,
@@ -127,7 +155,7 @@ export function serializeListRow(b: ListRow): BuildListItemResponse {
       imageName: b.itemImageName,
       category: b.itemCategory,
     },
-    user: b.user,
+    user: visibleAuthor(b, revealAuthor),
     organization: b.organization,
   }
 }
@@ -370,6 +398,7 @@ async function fetchOrdered(
   total: number,
   page: number,
   limit: number,
+  revealAuthor: boolean,
 ) {
   if (ids.length === 0) return { builds: [], total, page, limit }
   const rows = await prisma.build.findMany({
@@ -385,7 +414,12 @@ async function fetchOrdered(
   const ordered = ids
     .map((id) => byId.get(id))
     .filter((r): r is ListRow => r != null)
-  return { builds: ordered.map(serializeListRow), total, page, limit }
+  return {
+    builds: ordered.map((r) => serializeListRow(r, revealAuthor)),
+    total,
+    page,
+    limit,
+  }
 }
 
 export async function runList({
@@ -393,11 +427,14 @@ export async function runList({
   baseWhere,
   baseFilter,
   defaultSort,
+  revealAuthor = false,
 }: {
   filters: ListFilters
   baseWhere: Prisma.BuildWhereInput
   baseFilter: Prisma.Sql
   defaultSort: ListSort
+  /** Admin moderation only: show authors of hideAuthor org builds. */
+  revealAuthor?: boolean
 }) {
   const { page, limit, q, category, item, hasGuide, hasShards } = filters
   const sort: ListSort = filters.sort ?? defaultSort
@@ -423,7 +460,7 @@ export async function runList({
       skip,
       take: limit,
     })
-    return fetchOrdered(ids, total, page, limit)
+    return fetchOrdered(ids, total, page, limit, revealAuthor)
   }
 
   if (sort === "trending") {
@@ -439,7 +476,7 @@ export async function runList({
       }),
       prisma.build.count({ where }),
     ])
-    return fetchOrdered(ids, total, page, limit)
+    return fetchOrdered(ids, total, page, limit, revealAuthor)
   }
 
   const [rows, total] = await Promise.all([
@@ -455,7 +492,7 @@ export async function runList({
   ])
 
   return {
-    builds: rows.map(serializeListRow),
+    builds: rows.map((r) => serializeListRow(r, revealAuthor)),
     total,
     page,
     limit,

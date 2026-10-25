@@ -299,7 +299,8 @@ function decodeSlotGroup(g: EncodedSlotGroup): SlotGroupSource {
         ? g.ar.map((a) => ({
             uniqueName: a.u,
             name: "",
-            rank: a.r,
+            // Max arcane rank in arcanes-all.json is 5 (levelStats length 6).
+            rank: clamp(Math.floor(a.r ?? 0), 0, 5),
           }))
         : [],
   }
@@ -534,7 +535,9 @@ export function decodeBuildDoc(base64String: string): BuildDoc | null {
   }
 }
 
-function decodeV2(encoded: EncodedBuildV2): BuildDoc {
+function decodeV2(encoded: EncodedBuildV2): BuildDoc | null {
+  // A doc with no variants crashes the editor; treat it as an invalid link.
+  if (!Array.isArray(encoded.vs) || encoded.vs.length === 0) return null
   // The legacy top-level shard fields seed any variant lacking its own `sh`
   // (old links); they never live on the doc, so strip them before spreading.
   const legacy = decodeSharedMeta(encoded)

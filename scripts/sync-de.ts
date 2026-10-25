@@ -24,6 +24,7 @@ import { basename, resolve } from "node:path"
 
 import { fetchBytes, fetchText } from "./build/http"
 import { lzmaDecompressText } from "./build/lzma"
+import { writePinsSection } from "./build/pins"
 
 const INDEX_URL = "https://content.warframe.com/PublicExport/index_en.txt.lzma"
 const BLOB_URL = (entry: string) =>
@@ -31,7 +32,6 @@ const BLOB_URL = (entry: string) =>
 
 const REPO_ROOT = resolve(import.meta.dirname, "..")
 const OUT_DIR = resolve(REPO_ROOT, "data/raw/de")
-const PINS_PATH = resolve(REPO_ROOT, "data/PINS.json")
 
 interface PinEntry {
   name: string
@@ -92,27 +92,15 @@ async function main() {
     process.stdout.write(`${(pretty.length / 1024).toFixed(1)} KB\n`)
   }
 
-  // Merge with any existing wiki section so re-running this script doesn't
-  // wipe the wiki half.
-  let existing: Record<string, unknown> = {}
-  try {
-    const txt = await Bun.file(PINS_PATH).text()
-    existing = JSON.parse(txt)
-  } catch {
-    // First run, no PINS.json yet.
-  }
-  const merged = {
-    ...existing,
-    de: {
-      indexHash: createHash("sha256").update(indexText).digest("hex"),
-      fetchedAt: new Date().toISOString(),
-      entries: pinEntries,
-    },
-  }
-  await writeFile(PINS_PATH, JSON.stringify(merged, null, 2) + "\n", "utf8")
+  const indexHash = createHash("sha256").update(indexText).digest("hex")
+  await writePinsSection("de", {
+    indexHash,
+    fetchedAt: new Date().toISOString(),
+    entries: pinEntries,
+  })
   console.log(`\n  OK  ${entries.length} files -> data/raw/de/`)
   console.log(
-    `  OK  data/PINS.json (de.indexHash=${merged.de.indexHash.slice(0, 12)}...)`,
+    `  OK  data/PINS.json (de.indexHash=${indexHash.slice(0, 12)}...)`,
   )
 }
 

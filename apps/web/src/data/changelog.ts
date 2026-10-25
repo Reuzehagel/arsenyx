@@ -23,6 +23,21 @@ export const CHANGELOG: ChangelogEntry[] = [
         description:
           "Bonuses that only apply while something is happening no longer count all the time. Arcane Crepuscular's invisibility bonus, Pax Bolt, Biting Frost, Sharpshooter, Cascadia Overcharge, and the Magus arcanes now wait for Max stacks. Buffs for someone else are left out entirely: Shepherd's companion buff, Lohk Canticle's ally fire rate, and Arcane Precision's secondary-weapon damage. Merciless and Deadhead no longer count their passive twice, and Fired Up and Cascadia Flare now stop at 20 and 40 stacks, as the game does.",
       },
+      {
+        type: "fix",
+        description:
+          "The Overframe import page goes straight to the bookmarklet. Pasting an Overframe URL hasn't worked since Overframe started blocking automated requests, so that box is gone.",
+      },
+      {
+        type: "fix",
+        description:
+          "A malformed share link no longer crashes the editor, and the site no longer loads as a blank page in browsers that block site storage.",
+      },
+      {
+        type: "fix",
+        description:
+          "Unsaved editor drafts keep autosaving after you've worked on many builds. Once browser storage filled up, new drafts silently stopped saving; the oldest drafts now make room instead.",
+      },
     ],
   },
   {

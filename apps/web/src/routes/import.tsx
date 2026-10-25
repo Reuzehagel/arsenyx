@@ -4,7 +4,6 @@ import { ClipboardPaste, Copy, UploadCloud } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 
 import {
-  calculateFormaCount,
   getAuraPolarities,
   getAuraSlotCount,
   getExilusInnatePolarity,
@@ -12,12 +11,11 @@ import {
   getStanceInnatePolarity,
   toPolarity,
 } from "@/components/build-editor"
+import { computeFormaCount } from "@/components/build-editor/forma-count"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { Field, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { requireUser } from "@/lib/auth-guards"
 import { saveDraft } from "@/lib/import-draft"
@@ -59,17 +57,6 @@ function importError(err: unknown): Error {
   const fallback =
     err instanceof ApiError ? `Import failed: ${err.status}` : "Import failed"
   return new Error(apiErrorMessage(err, fallback), { cause: err })
-}
-
-async function postOverframeImport(url: string): Promise<ScrapeResponse> {
-  try {
-    return await apiFetch<ScrapeResponse>(`/imports/overframe`, {
-      method: "POST",
-      json: { url },
-    })
-  } catch (err) {
-    throw importError(err)
-  }
 }
 
 /** Sentinel tagging the clipboard payload — shared by the bookmarklet that
@@ -138,7 +125,6 @@ function buildBookmarklet(origin: string): string {
 }
 
 function ImportPage() {
-  const [url, setUrl] = useState("")
   const navigate = useNavigate()
   const { data: items } = useQuery(itemsIndexQuery)
   const { data: mods } = useQuery(modsQuery)
@@ -152,24 +138,13 @@ function ImportPage() {
     typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).get("paste") === "1"
 
-  const mutation = useMutation({ mutationFn: postOverframeImport })
   const rawMutation = useMutation({ mutationFn: importPastedOverframe })
-
-  // Only one import path is ever live at a time — each submit handler resets
-  // the other mutation (below). So whichever isn't idle is the active one, and
-  // result/error read from it as a single source instead of three coalesces
-  // that have to stay aligned.
-  const active =
-    rawMutation.isPending || rawMutation.data || rawMutation.isError
-      ? rawMutation
-      : mutation
-  const result = active.data
-  const isError = active.isError
-  const errorMessage = (active.error as Error | null)?.message
+  const result = rawMutation.data
+  const isError = rawMutation.isError
+  const errorMessage = (rawMutation.error as Error | null)?.message
 
   const submitPaste = (text: string) => {
     if (!text.trim()) return
-    mutation.reset()
     rawMutation.mutate(text)
   }
 
@@ -201,14 +176,9 @@ function ImportPage() {
   }, [])
 
   const fatalWarning = result?.warnings.find(
-    (w) =>
-      w.type === "invalid_url" ||
-      w.type === "fetch_failed" ||
-      // The paste/bookmarklet path can't fail to fetch, so a missing
-      // __NEXT_DATA__ blob (wrong page copied, or Overframe changed shape) is
-      // its terminal failure — surface it as one clear error, not a soft
-      // warning followed by a confusing "could not match item".
-      w.type === "next_data_missing",
+    // A missing __NEXT_DATA__ blob (wrong page copied, or Overframe changed
+    // shape) is terminal — one clear error beats a confusing "could not match item".
+    (w) => w.type === "next_data_missing",
   )
 
   const matchedItem = useMemo(() => {
@@ -255,14 +225,6 @@ function ImportPage() {
     helminthAbilities,
   ])
 
-  const onSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    const trimmed = url.trim()
-    if (!trimmed) return
-    rawMutation.reset()
-    mutation.mutate(trimmed)
-  }
-
   const onOpenInEditor = () => {
     if (!applied || !matchedItem) return
     const id = saveDraft({
@@ -291,47 +253,13 @@ function ImportPage() {
               Import from Overframe
             </h1>
             <p className="text-muted-foreground">
-              Paste an overframe.gg build URL. We&apos;ll pull the item, mods,
-              arcanes, and polarities so you can continue editing here.
+              Bring an overframe.gg build over with its item, mods, arcanes, and
+              polarities so you can continue editing here.
             </p>
           </div>
 
-          <form onSubmit={onSubmit} className="flex flex-col gap-3">
-            <Field>
-              <FieldLabel htmlFor="overframe-url">
-                Overframe build URL
-              </FieldLabel>
-              <div className="flex gap-2">
-                <Input
-                  id="overframe-url"
-                  type="url"
-                  placeholder="https://overframe.gg/build/123456/..."
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  disabled={mutation.isPending}
-                  className="flex-1"
-                  autoFocus
-                />
-                <Button
-                  type="submit"
-                  disabled={mutation.isPending || !url.trim()}
-                >
-                  {mutation.isPending ? "Importing…" : "Import"}
-                </Button>
-              </div>
-            </Field>
-          </form>
-
-          <details
-            className="bg-card rounded-md border p-4"
-            // Only force-open on arrival via the bookmarklet; otherwise leave
-            // it uncontrolled so the user can freely toggle it.
-            {...(isPasteMode ? { open: true } : {})}
-          >
-            <summary className="cursor-pointer text-sm font-medium">
-              Import blocked? Use the bookmarklet
-            </summary>
-            <div className="mt-4 flex flex-col gap-4 text-sm">
+          <section className="bg-card rounded-md border p-4">
+            <div className="flex flex-col gap-4 text-sm">
               <p className="text-muted-foreground">
                 Overframe sits behind Cloudflare bot protection, so we
                 can&apos;t fetch builds server-side. Instead, drag this button
@@ -381,7 +309,7 @@ function ImportPage() {
                 </Button>
               </div>
             </div>
-          </details>
+          </section>
 
           {isError && (
             <WarningBox
@@ -446,28 +374,11 @@ function ImportPage() {
                       <dt className="text-muted-foreground">Forma</dt>
                       <dd>
                         {detailItem
-                          ? calculateFormaCount({
-                              auraInnates: getAuraPolarities(
-                                detailItem,
-                                getAuraSlotCount(
-                                  matchedItem.category,
-                                  detailItem,
-                                ),
-                              ),
-                              exilusInnate: getExilusInnatePolarity(detailItem),
-                              stanceInnate: getStanceInnatePolarity(detailItem),
-                              normalInnates: Array.from(
-                                {
-                                  length: getNormalSlotCount(
-                                    matchedItem.category,
-                                  ),
-                                },
-                                (_, i) =>
-                                  toPolarity(detailItem.polarities?.[i]),
-                              ),
-                              formaPolarities:
-                                applied.data.formaPolarities ?? {},
-                            })
+                          ? computeFormaCount(
+                              detailItem,
+                              matchedItem.category,
+                              applied.data.formaPolarities ?? {},
+                            )
                           : Object.keys(applied.data.formaPolarities ?? {})
                               .length}
                         {result.formaCount != null &&
@@ -601,13 +512,11 @@ function buildImportDebug(
       : null,
     forma: {
       computed: detailItem
-        ? calculateFormaCount({
-            auraInnates,
-            exilusInnate,
-            stanceInnate,
-            normalInnates,
-            formaPolarities: applied.data.formaPolarities ?? {},
-          })
+        ? computeFormaCount(
+            detailItem,
+            category,
+            applied.data.formaPolarities ?? {},
+          )
         : null,
       ofReported: result.formaCount,
     },

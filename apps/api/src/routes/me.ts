@@ -35,6 +35,7 @@ me.get("/builds/export", async (c) => {
       updatedAt: true,
       forkedFromId: true,
       organizationId: true,
+      buildGuide: { select: { summary: true, description: true } },
     },
   })
 

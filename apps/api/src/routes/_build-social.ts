@@ -93,3 +93,23 @@ export async function toggleSocial(
   const rows = await prisma.$queryRaw<{ count: number }[]>(query)
   return rows[0]?.count ?? fallbackCount
 }
+
+/**
+ * Remove a user's Likes and Bookmarks and take them back off the counters.
+ * Run before deleting the user: the FK cascade would drop the rows but leave
+ * every counter they moved permanently inflated.
+ */
+export function releaseUserSocial(userId: string) {
+  return Object.values(SOCIAL).map((spec) => {
+    const table = Prisma.raw(spec.table)
+    const counter = Prisma.raw(`"${spec.counter}"`)
+    return prisma.$executeRaw`
+      WITH deleted AS (
+        DELETE FROM ${table} WHERE "userId" = ${userId} RETURNING "buildId"
+      )
+      UPDATE builds
+      SET ${counter} = GREATEST(0, ${counter} - 1)
+      WHERE id IN (SELECT "buildId" FROM deleted)
+    `
+  })
+}

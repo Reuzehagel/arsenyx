@@ -48,14 +48,16 @@ jobs:
         run: bun run check:images
 
       - name: Check catalog cache-version bumped
+        # A push creating a branch has an all-zeros `before` — nothing to diff.
+        if: github.event_name != 'push' || github.event.before != '0000000000000000000000000000000000000000'
         # Fails if apps/web/public/data changed without a fresh meta.json
         # generatedAt — a hand-edit that would be masked by the immutable
         # ?v=<generatedAt> cache. Fix with `bun run data:stamp`.
         env:
-          # Diff against the PR's target branch (or main on push). fetch-depth:0
-          # above makes this remote-tracking ref available; pinning it here keeps
-          # the guard from silently no-op'ing on the default if it's absent.
-          DATA_VERSION_BASE: origin/${{ github.base_ref || 'main' }}
+          # PR: the target branch (the script diffs from its merge-base). Push:
+          # the pre-push SHA — origin/main would be HEAD itself and always pass.
+          # fetch-depth:0 above makes both reachable.
+          DATA_VERSION_BASE: ${{ github.event_name == 'push' && github.event.before || format('origin/{0}', github.base_ref) }}
         run: bun run check:data-version
 
       - name: Lint
