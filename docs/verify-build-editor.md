@@ -8,7 +8,15 @@ The editor needs only the web dev server (`preview_start` name `web`, :5173). Th
 
 ## Start from a clean slate
 
-Drafts autosave to localStorage and come back on reload. A leftover mod from an earlier run looks just like a bug. Before every scenario, click **Discard draft** in the header (it's only there while a draft exists).
+Drafts autosave to localStorage and come back on reload. A leftover mod from an earlier run looks just like a bug. Before every scenario, click **Discard draft** in the header (it's only there while a draft exists), or run `localStorage.clear()` and reload.
+
+Drafts live under `arsenyx:editor-draft:<storeKey>`: the build slug for a saved build, `__new_build__:<category>:<slug>` for a new one.
+
+## Read toasts and isolate a regression
+
+- Toasts last about 4s and land up to a second after load. Poll `[data-sonner-toast]` every 100ms from `javascript_tool`; a single check after a `wait` misses them.
+- StrictMode-only? Swap `<React.StrictMode>` for `<>` in `src/main.tsx`, reload, retest, restore. Dev runs mount effects twice; production doesn't.
+- New in this branch? `git stash push -u`, reload the same tab, retest against the base, `git stash pop`.
 
 ## Drive the mod search
 

@@ -13,7 +13,7 @@ just setup              # first-run wizard — see CONTRIBUTING.md
 ## Build / verify
 
 ```bash
-just check                        # THE gate before claiming done — gen + typecheck + oxlint + oxfmt --check + tests
+just check                        # THE gate before claiming done — gen + typecheck + oxlint + oxfmt --check + check:native-button + tests
 just fix                          # oxlint --fix + oxfmt --write
 just test                         # vitest across apps/web, apps/api, packages/shared + bun test scripts/build/
 just gen                          # generate apps/web/src/routeTree.gen.ts only (no-op if present)
@@ -21,6 +21,8 @@ bun --cwd apps/web run build      # Vite production build (does NOT typecheck �
 ```
 
 Oxlint / oxfmt config lives at the repo root (`.oxlintrc.json`, `.oxfmtrc.json`).
+
+`.githooks/pre-commit` blocks commits that fail `fmt:check`. `just setup` enables it; on an existing clone run `git config core.hooksPath .githooks` once.
 
 ## Database (apps/api)
 

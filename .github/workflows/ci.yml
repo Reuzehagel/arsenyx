@@ -66,6 +66,10 @@ jobs:
       - name: Format check
         run: bun run fmt:check
 
+      - name: Check link-rendered Buttons
+        # Base UI errors when a <Button render={<Link…/>}> keeps nativeButton.
+        run: bun run check:native-button
+
       - name: Build (web)
         # Must run before typecheck — @tanstack/router-plugin generates
         # apps/web/src/routeTree.gen.ts during vite build, and tsc fails

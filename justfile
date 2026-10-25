@@ -94,6 +94,7 @@ check: gen && test
     bun run typecheck
     bun run lint
     bun run fmt:check
+    bun run check:native-button
 
 # Auto-fix lint + format.
 fix:
