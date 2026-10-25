@@ -77,7 +77,11 @@ const MAX_GUIDE_DESCRIPTION = 50_000
 // the hit rate. Judged acceptable because views are already deduped per browser
 // via the `vw_<slug>` cookie, so the metric was never a raw impression count —
 // but if viewCount fidelity ever matters more than CPU, this is the dial.
-const DETAIL_TTL = 120
+//
+// Raised 120 → 600 (2026-10): at 120s only ~5.5% of edge-cache lookups hit and
+// ~73% found an entry that had just expired, so the API Worker sat over the
+// Workers Paid 30M CPU-ms allowance. Lagging counts/views were judged fine.
+const DETAIL_TTL = 600
 
 // For the list-shaped responses — GET /builds and GET /:slug/partners, both
 // projected through LIST_SELECT. The binding constraint is that NEITHER is
@@ -85,8 +89,9 @@ const DETAIL_TTL = 120
 // Cache API has no wildcard delete, so a PUBLIC->PRIVATE flip or a delete can
 // linger for the whole TTL with no way to evict it early. That is why this stays
 // well under DETAIL_TTL — for these routes the TTL is the *only* bound on
-// staleness, whereas detail also has purgeEdge.
-const LIST_TTL = 30
+// staleness, whereas detail also has purgeEdge. Raised 30 → 120 alongside
+// DETAIL_TTL: a just-hidden build lingering in lists for 2 min was judged fine.
+const LIST_TTL = 120
 
 // Exported so the admin visibility PATCH (admin.ts) validates against the same
 // guard rather than keeping a divergent copy — visibility logic stays centralised
