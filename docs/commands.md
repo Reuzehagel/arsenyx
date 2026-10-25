@@ -22,7 +22,7 @@ bun --cwd apps/web run build      # Vite production build (does NOT typecheck â€
 
 Oxlint / oxfmt config lives at the repo root (`.oxlintrc.json`, `.oxfmtrc.json`).
 
-`.githooks/pre-commit` blocks commits that fail `fmt:check`. `just setup` enables it; on an existing clone run `git config core.hooksPath .githooks` once.
+`.githooks/pre-commit` blocks commits that fail `fmt:check`; `.githooks/commit-msg` strips Claude co-author / "Generated with Claude Code" lines. `just setup` enables both; on an existing clone run `git config core.hooksPath .githooks` once.
 
 ## Database (apps/api)
 
