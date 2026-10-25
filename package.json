@@ -14,6 +14,7 @@
     "sync:images": "bun run scripts/sync-images.ts",
     "check:images": "bun run scripts/check-image-hosts.ts",
     "check:data-version": "bun run scripts/check-data-version.ts",
+    "check:changelog": "bun run scripts/check-changelog.ts",
     "data:sync": "bun run scripts/sync-de.ts && bun run scripts/sync-wiki.ts",
     "data:refresh": "bun run scripts/refresh-data.ts",
     "data:stamp": "bun run scripts/stamp-data.ts",

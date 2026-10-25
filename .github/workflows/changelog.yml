@@ -1,0 +1,29 @@
+name: Changelog
+
+# Separate from ci.yml so adding/removing the no-changelog label re-runs only
+# this cheap check, not the whole build.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13 # keep in sync with ci.yml
+
+      - name: Check changelog entry
+        env:
+          CHANGELOG_BASE: origin/${{ github.base_ref }}
+          SKIP_CHANGELOG: ${{ contains(github.event.pull_request.labels.*.name, 'no-changelog') }}
+        run: bun run check:changelog

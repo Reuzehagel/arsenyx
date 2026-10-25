@@ -57,7 +57,14 @@ jobs:
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
           R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
 
-      # No typecheck/lint/test here — this job only refreshes data and opens a
+      # The parsed-catalog snapshot records how the stat engine reads every
+      # mod/arcane, so a data change moves it. Regenerate it here so CI passes
+      # and the PR diff shows which items' stats changed.
+      - name: Refresh parsed-catalog snapshot
+        working-directory: apps/web
+        run: bun run test parsed-catalog --update
+
+      # No other typecheck/lint/test here — this job only refreshes data and opens a
       # PR. That PR triggers ci.yml, which runs the full gauntlet (web build →
       # typecheck → tests → check:images) with the build-first ordering that
       # generates apps/web/src/routeTree.gen.ts (gitignored). Running
@@ -90,6 +97,7 @@ jobs:
           # data/curated/ holds the build's wiki-image-url cache.
           add-paths: |
             apps/web/public/data/**
+            apps/web/src/lib/stats/parsed-catalog.snap.txt
             data/curated/**
           title: "chore: refresh Warframe game data"
           body: |
@@ -98,7 +106,9 @@ jobs:
             wiki Lua sync. The raw mirror (`data/raw/`) is gitignored, so only
             the rebuilt catalog appears in this diff.
 
-            Review the catalog JSON diff before merging.
+            Review the catalog JSON diff before merging. The
+            `parsed-catalog.snap.txt` diff lists every mod/arcane whose
+            stats the editor now reads differently; check those lines.
             Any new wiki Class strings or DE compatNames not yet curated
             will fail the build — fix `data/curated/` if so.
 
