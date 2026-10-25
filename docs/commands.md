@@ -85,6 +85,7 @@ bun run check:images               # fail if catalog still hotlinks content/wiki
 bun run check:data-version         # fail if catalog changed but meta.json generatedAt didn't
 bun run data:stamp                 # bump meta.json generatedAt — run after any HAND-edit to apps/web/public/data/
 bun run data:patch <base> <fixed>  # apply only a fix's catalog delta (see "Shipping a pipeline fix" below)
+bun run data:diff [ref]            # markdown summary of catalog changes vs ref (default HEAD); the data cron's PR body
 ```
 
 `build:items` alone leaves upstream CDN URLs in the catalog; `sync:images`
