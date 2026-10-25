@@ -26,6 +26,7 @@ Game data is static, user data is dynamic. If something is read-heavy and rarely
 
 - `just check` before claiming done — the single gate for web + api + shared (`gen` → typecheck → oxlint → oxfmt --check → `just test`, ~10s). `vite build` and the dev servers don't typecheck, so type errors hide behind a green build. `gen` first refreshes the two gitignored generated artifacts a bare `bun run typecheck` would choke on: `apps/web/src/routeTree.gen.ts` (rebuilt when anything under `src/routes` is newer) and the Prisma client (always). Stale ones report type errors in files you never touched, so if `check` fails somewhere unrelated to your diff, suspect a generated artifact before your own code. `just fix` auto-applies lint + format. Both are repo-wide and take no file arguments.
 - Use `uv run python` instead of `python`/`python3`
+- Add a changelog entry in the same PR for any user-visible change: [apps/web/src/data/changelog.ts](apps/web/src/data/changelog.ts), newest date at the top, plain player-facing language (what changed and why it matters, no code names)
 
 **Ask first**
 

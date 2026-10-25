@@ -11,11 +11,18 @@ type ConditionInfo =
 
 const COLOR_TAG_PATTERN = /([+-]?\d+(?:\.\d+)?)\s*%\s*<([A-Z_]+)>([A-Za-z]+)/g
 // A parenthetical note ends the stat name: "+220% Critical Chance (x2 for
-// Heavy Attacks)" is Critical Chance, not an unparseable string.
-const PERCENT_PATTERN =
-  /([+-]?\d+(?:\.\d+)?)\s*%\s+([A-Za-z][A-Za-z\s]*?)\s*(?:\.|$|\n|,|<|\()/g
-const FLAT_PATTERN =
-  /([+-]\d+(?:\.\d+)?)\s+(?!%|s\b|m\b|x\b)([A-Za-z][A-Za-z\s]*?)(?:\.|$|\n|,)/g
+// Heavy Attacks)" is Critical Chance, not an unparseable string. So do a
+// duration ("+30% Multishot for 20s", Galvanized on-kill stacks) and a joined
+// second stat ("+3% Critical Damage and +2.25% Multishot").
+const STAT_NAME_END = String.raw`\s+for\s+\d+(?:\.\d+)?s\b|\s+and\s+(?=[+-]?\d)`
+const PERCENT_PATTERN = new RegExp(
+  String.raw`([+-]?\d+(?:\.\d+)?)\s*%\s+([A-Za-z][A-Za-z\s]*?)\s*(?:\.|$|\n|,|<|\(|${STAT_NAME_END})`,
+  "g",
+)
+const FLAT_PATTERN = new RegExp(
+  String.raw`([+-]\d+(?:\.\d+)?)\s+(?!%|s\b|m\b|x\b)([A-Za-z][A-Za-z\s]*?)(?:\.|$|\n|,|${STAT_NAME_END})`,
+  "g",
+)
 
 const STAT_NAME_MAP: Record<string, StatType> = {
   health: "health",
@@ -108,9 +115,13 @@ const CONDITIONAL_PATTERNS = [
   /stacks up to/i,
   /for \d+(?:\.\d+)?\s*s\b/i,
   /after (?:a )?(?:reload|headshot|kill)/i,
+  /^on [^:\n]+:/im, // "On Headshot Kill:", "On aim:" trigger headers
+  /\bwhile\b/i,
+  /\bagainst\b/i,
 ]
 
-const STACK_PATTERN = /stacks? up to (\d+)/i
+const STACK_PATTERN = /stacks? up to (\d+(?:\.\d+)?)(%)?/i
+const FIRST_PERCENT_PATTERN = /(\d+(?:\.\d+)?)\s*%/
 
 const CONDITION_LABELS: Record<string, ConditionLabel> = {
   "on kill": "On Kill",
@@ -128,7 +139,15 @@ const CONDITION_LABEL_PATTERN = new RegExp(
 function detectCondition(statString: string): ConditionInfo {
   if (!CONDITIONAL_PATTERNS.some((p) => p.test(statString))) return {}
   const stackMatch = statString.match(STACK_PATTERN)
-  const maxStacks = stackMatch ? parseInt(stackMatch[1], 10) : undefined
+  let maxStacks = stackMatch ? parseFloat(stackMatch[1]) : undefined
+  // "+12% Damage for 10s. Stacks up to 480%" caps the total, not the count:
+  // 480 / 12 = 40 stacks.
+  if (maxStacks !== undefined && stackMatch?.[2]) {
+    const perStack = parseFloat(
+      statString.match(FIRST_PERCENT_PATTERN)?.[1] ?? "",
+    )
+    maxStacks = perStack > 0 ? Math.round(maxStacks / perStack) : undefined
+  }
   const labelMatch = statString.match(CONDITION_LABEL_PATTERN)
   const condition = labelMatch
     ? CONDITION_LABELS[labelMatch[1].toLowerCase()]
@@ -170,11 +189,7 @@ export function parseModStats(input: PlacedModInput): ParsedStat[] {
   if (levels && levels.length > 0) {
     const rankIndex = clamp(rank, 0, levels.length - 1)
     const levelData = levels[rankIndex]
-    if (levelData?.stats) {
-      for (const s of levelData.stats) {
-        results.push(...parseStatString(s))
-      }
-    }
+    if (levelData?.stats) results.push(...parseStatList(levelData.stats))
   }
   perRank.set(rank, results)
   return results
@@ -199,11 +214,7 @@ export function parseArcaneStats(input: PlacedArcaneInput): ParsedStat[] {
   if (levels && levels.length > 0) {
     const rankIndex = clamp(rank, 0, levels.length - 1)
     const levelData = levels[rankIndex]
-    if (levelData?.stats) {
-      for (const s of levelData.stats) {
-        out.push(...parseStatString(s))
-      }
-    }
+    if (levelData?.stats) out.push(...parseStatList(levelData.stats))
   }
   perRank.set(rank, out)
   return out
@@ -254,6 +265,20 @@ function parseRivenStats(rivenStats: RivenStats): ParsedStat[] {
   return out
 }
 
+/** Parse one rank's stat strings. Arcanes like Merciless repeat their passive
+ *  lines inside the conditional string ("On Kill: … Stacks up to 12x. ⏎ +30%
+ *  Reload Speed") and again on their own; drop the embedded copy so the passive
+ *  isn't counted twice, nor scaled by the stack count. */
+function parseStatList(stats: string[]): ParsedStat[] {
+  const standalone = new Set(stats.map((s) => s.trim()))
+  return stats.flatMap((s) => {
+    const lines = s.split(/\r?\n/)
+    if (lines.length < 2) return parseStatString(s)
+    const kept = lines.filter((l) => !standalone.has(l.trim()))
+    return parseStatString(kept.join("\n"))
+  })
+}
+
 /** Parse a single stat string from the item data. */
 export function parseStatString(statString: string): ParsedStat[] {
   const results: ParsedStat[] = []
@@ -273,6 +298,14 @@ export function parseStatString(statString: string): ParsedStat[] {
   for (const clause of statString.split(/\r?\n/)) {
     const clauseLower = clause.toLowerCase()
     if (clauseLower.includes("squadmates")) continue
+    if (clauseLower.includes("squad's companions")) continue
+    // Scales with something we don't model (Primary Compression: "… for
+    // every 1m radius lost").
+    if (clauseLower.includes("for every")) continue
+    // Buffs for someone or something else: Lohk Canticle's allies, Arcane
+    // Precision / Combo Fury's "… on Secondary Weapon".
+    if (clauseLower.includes("allies")) continue
+    if (/on (?:primary|secondary) weapon\b/.test(clauseLower)) continue
     const sign = clauseLower.includes("you lose") ? -1 : 1
     parseClauseInto(clause, sign, cond, results)
   }

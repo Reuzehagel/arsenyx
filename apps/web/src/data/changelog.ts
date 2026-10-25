@@ -11,6 +11,21 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-10-25",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Galvanized mods now count their on-kill stacks. Turn on Max stacks in the stats panel and Galvanized Chamber, Diffusion, Hell, Steel, Elementalist, and Acceleration add their full stacked bonus. The toggle never appeared for them before because any bonus written as lasting a few seconds wasn't being read. The same fix brings in around 60 other timed buffs, such as Kill Switch, Berserker Fury, Merciless, Deadhead, Dexterity, Frostbite, Blight, and Cascadia Flare.",
+      },
+      {
+        type: "fix",
+        description:
+          "Bonuses that only apply while something is happening no longer count all the time. Arcane Crepuscular's invisibility bonus, Pax Bolt, Biting Frost, Sharpshooter, Cascadia Overcharge, and the Magus arcanes now wait for Max stacks. Buffs for someone else are left out entirely: Shepherd's companion buff, Lohk Canticle's ally fire rate, and Arcane Precision's secondary-weapon damage. Merciless and Deadhead no longer count their passive twice, and Fired Up and Cascadia Flare now stop at 20 and 40 stacks, as the game does.",
+      },
+    ],
+  },
+  {
     date: "2026-10-22",
     changes: [
       {
