@@ -16,6 +16,11 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "fix",
         description:
+          'Reopening the editor with an unsaved draft brings back your build name and guide text, not just your mods, and shows the "Draft restored" message with its Discard / Reset to saved button again.',
+      },
+      {
+        type: "fix",
+        description:
           "Galvanized mods now count their on-kill stacks. Turn on Max stacks in the stats panel and Galvanized Chamber, Diffusion, Hell, Steel, Elementalist, and Acceleration add their full stacked bonus. The toggle never appeared for them before because any bonus written as lasting a few seconds wasn't being read. The same fix brings in around 60 other timed buffs, such as Kill Switch, Berserker Fury, Merciless, Deadhead, Dexterity, Frostbite, Blight, and Cascadia Flare.",
       },
       {

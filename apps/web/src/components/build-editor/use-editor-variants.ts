@@ -62,7 +62,11 @@ export function useEditorVariants({
             formIndex: i,
           }))
         : initial
-    editorCache.current = { key: storeKey, data: seeded }
+    // No cache write here: a render that Suspense discards (a child loading
+    // on first mount) would leave the cache set, and the retry render would
+    // then read `localDraft` as a remount and drop the restored draft's name,
+    // guide text and toast. EditorShell's shared-sync effect seeds the cache
+    // on commit instead.
     return seeded
   })
   const setVariants: SetVariants = (next) => {
