@@ -11,6 +11,26 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-10-25",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "The Overframe import page goes straight to the bookmarklet. Pasting an Overframe URL hasn't worked since Overframe started blocking automated requests, so that box is gone.",
+      },
+      {
+        type: "fix",
+        description:
+          "A malformed share link no longer crashes the editor, and the site no longer loads as a blank page in browsers that block site storage.",
+      },
+      {
+        type: "fix",
+        description:
+          "Unsaved editor drafts keep autosaving after you've worked on many builds. Once browser storage filled up, new drafts silently stopped saving; the oldest drafts now make room instead.",
+      },
+    ],
+  },
+  {
     date: "2026-10-22",
     changes: [
       {
