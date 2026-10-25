@@ -45,18 +45,10 @@ afterwards to verify the migration still matches production.
 
 ## Cloudflare Workers usage
 
-Per-Worker CPU and request breakdown, to tell a per-request regression (rising
-`CpuP50ms`) from plain traffic growth (flat `CpuP50ms`, rising `Requests`):
-
-```powershell
-$env:CF_ANALYTICS_TOKEN = "<token with Account -> Account Analytics -> Read>"
-./scripts/cf-worker-stats.ps1 -AccountId <account-id> -Days 30 -Daily
-```
-
-Notes: the env var is deliberately **not** `CF_API_TOKEN`/`CLOUDFLARE_API_TOKEN`
-— wrangler reads both, and an analytics-only token parked there breaks every
-`wrangler` command. `EstCpuMs` is `requests × P50`, so with a high `TailRatio` it
-is a floor, not a mean — the dashboard remains authoritative for billing.
+`bun run cf:usage` (`--daily` to split by day): CPU per Worker, the API
+edge-cache hit rate, and API CPU per route. Rising `msPerReq` is a per-request
+regression; flat `msPerReq` with rising `requests` is plain traffic growth. Auth,
+gotchas and baselines are in [docs/usage-analytics.md](usage-analytics.md).
 
 ## Data pipeline
 
