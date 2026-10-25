@@ -129,7 +129,7 @@ export function AutoFormaDialog({
 
           {omniFormas.length > 0 && (
             <section className="flex flex-col gap-1.5">
-              <h4 className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-amber-600 uppercase dark:text-amber-400">
+              <h4 className="text-warning flex items-center gap-1.5 text-xs font-semibold tracking-wide uppercase">
                 <Sparkle className="size-3.5" />
                 Omni Forma ({omniFormas.length})
               </h4>
@@ -141,7 +141,7 @@ export function AutoFormaDialog({
                 {omniFormas.map((step) => (
                   <li
                     key={step.id}
-                    className="flex items-center gap-2 rounded-md border border-amber-600/30 bg-amber-50/30 px-2 py-1 dark:border-amber-400/30 dark:bg-amber-950/20"
+                    className="border-warning/30 bg-warning/10 flex items-center gap-2 rounded-md border px-2 py-1"
                   >
                     <span className="font-medium">{slotLabel(step.id)}</span>
                     <ArrowRight className="text-muted-foreground size-3.5" />

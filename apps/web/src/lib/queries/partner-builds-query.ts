@@ -55,6 +55,7 @@ export function useBuildSearch(q: string) {
 export function useLinkPartner(ownerSlug: string) {
   const qc = useQueryClient()
   return useMutation({
+    meta: { errorToast: "Couldn't link the build" },
     mutationFn: async (partner: PartnerBuild): Promise<void> => {
       try {
         await apiFetch<void>(
@@ -100,6 +101,7 @@ export function useReorderPartners(ownerSlug: string) {
   const qc = useQueryClient()
   const key = ["build", ownerSlug, "partners"] as const
   return useMutation({
+    meta: { errorToast: "Couldn't reorder linked builds" },
     // `next` is the fully-reordered partner list; we send just the ids.
     mutationFn: async (next: PartnerBuild[]): Promise<void> => {
       try {
@@ -134,6 +136,7 @@ export function useSetPartnerVariant(ownerSlug: string) {
   const qc = useQueryClient()
   const key = ["build", ownerSlug, "partners"] as const
   return useMutation({
+    meta: { errorToast: "Couldn't change the linked variant" },
     mutationFn: async (input: {
       partnerSlug: string
       variant: number
@@ -174,6 +177,7 @@ export function useSetPartnerVariant(ownerSlug: string) {
 export function useUnlinkPartner(ownerSlug: string) {
   const qc = useQueryClient()
   return useMutation({
+    meta: { errorToast: "Couldn't unlink the build" },
     mutationFn: async (partnerSlug: string): Promise<void> => {
       try {
         await apiFetch<void>(
