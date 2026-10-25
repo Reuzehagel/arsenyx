@@ -37,7 +37,18 @@
   "framesUnmatched": [
     "Orion & Sirius"
   ],
+  "frameRankUpDrift": [],
   "companionsUnmatched": [],
+  "modsUnmatched": [
+    "Air Martial (/Lotus/Upgrades/Mods/PvPMods/Melee/AirborneMeleeAutoTargetBonus)",
+    "Fizzbang Flourish (/Lotus/Upgrades/Mods/Hoverboard/HBFireWorksMod)",
+    "Harrowed Hook (/Lotus/Upgrades/Mods/PvPMods/Melee/GroundingMeleeMod)",
+    "Health Conversion (/Lotus/Upgrades/Tau/HealthPickupGivesArmourMax)",
+    "Helminth Ferocity (/Lotus/Upgrades/Mods/Sentinel/Kubrow/ChargerFinisherMod)",
+    "Necramech Stamina (/Lotus/Upgrades/Mods/Necromech/NecromechSprintEfficiencyMod)",
+    "Soaring Truth (/Lotus/Upgrades/Mods/Syndicate/BallisticaMod)",
+    "Transmute Core (/Lotus/Upgrades/Mods/TransmuteCores/BaseTransmuteCore)"
+  ],
   "skippedModularComponents": [
     "ADRA MUTAGEN",
     "ARIOLI MUTAGEN",
