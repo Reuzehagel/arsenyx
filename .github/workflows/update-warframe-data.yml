@@ -6,7 +6,9 @@ on:
   workflow_dispatch: {} # Manual trigger
 
 # The pipeline pulls game data directly from DE PublicExport and the wiki
-# Lua modules — no npm dep to bump. The raw mirror (`data/raw/`) is gitignored
+# Lua modules. Augment compat comes from the warframe-public-export-plus npm
+# dep, which stays at its lockfile pin (--frozen-lockfile) — bump it by hand
+# to pick up new augments. The raw mirror (`data/raw/`) is gitignored
 # and re-fetched here each run, so the only committed diff is the rebuilt
 # catalog under `apps/web/public/data/`.
 

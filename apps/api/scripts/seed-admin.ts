@@ -22,6 +22,21 @@ if (process.env.NODE_ENV !== "development") {
   process.exit(1)
 }
 
+// NODE_ENV alone isn't enough (setup.ts forces it): refuse non-dev DB hosts
+// (*.psdb.cloud = prod). Duplicated in scripts/setup.ts.
+const dbHost = process.env.DATABASE_URL
+  ? new URL(process.env.DATABASE_URL).hostname
+  : ""
+if (
+  !dbHost.endsWith(".neon.tech") &&
+  !["localhost", "127.0.0.1", "::1", "[::1]"].includes(dbHost)
+) {
+  console.error(
+    `seed-admin refuses to run against DATABASE_URL host "${dbHost}". Only *.neon.tech or localhost are allowed.`,
+  )
+  process.exit(1)
+}
+
 const EMAIL = process.env.SEED_ADMIN_EMAIL ?? "admin@local.dev"
 const USERNAME = process.env.SEED_ADMIN_USERNAME ?? "admin"
 // If no password is supplied via env, generate a fresh random one each run so

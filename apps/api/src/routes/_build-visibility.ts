@@ -124,3 +124,19 @@ export function allBuildsScope(): ListScope {
     baseFilter: Prisma.sql`TRUE`,
   }
 }
+
+/** Per-Build access for one viewer. `isOrgMember` is the viewer's membership
+ *  in the Build's org (false when it has none). Admins may VIEW anything to
+ *  moderate it, but never mutate or act on it (like/bookmark/fork). */
+export function buildAccess(
+  build: { userId: string; visibility: BuildVisibility },
+  viewer: { id: string | undefined; isOrgMember: boolean; isAdmin?: boolean },
+) {
+  const canMutate =
+    viewer.id != null && (build.userId === viewer.id || viewer.isOrgMember)
+  const canAct =
+    build.visibility === BuildVisibility.PUBLIC ||
+    build.visibility === BuildVisibility.UNLISTED ||
+    canMutate
+  return { canMutate, canAct, canView: canAct || viewer.isAdmin === true }
+}

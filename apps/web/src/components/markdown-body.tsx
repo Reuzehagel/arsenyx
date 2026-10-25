@@ -145,12 +145,12 @@ const components: Components = {
   img({ node: _node, src, ...rest }) {
     const { src: cleanSrc, width } = parseSizedSrc(src)
     // Drop plaintext-http images outright. The api proxy only fetches https
-    // upstreams (validateExternalUrl), so an `http://` source would render as
+    // upstreams (validateExternalUrl), so an `http:` source (with or without
+    // slashes — `http:host/x` resolves off-site too) would render as
     // a broken image anyway — and we don't want to silently upgrade it to
     // https since the host may not serve TLS. Protocol-relative `//host/x`
     // and relative/data URLs are fine: `proxyImage` handles them.
-    if (typeof cleanSrc === "string" && /^http:\/\//i.test(cleanSrc))
-      return null
+    if (typeof cleanSrc === "string" && /^http:/i.test(cleanSrc)) return null
     // Route every markdown image through CF Image Resizing so the visitor's
     // browser never fetches a third-party URL directly. Without this, a
     // malicious guide author can dox every visitor (IP + Referer = build

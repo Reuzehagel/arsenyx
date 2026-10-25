@@ -49,14 +49,18 @@ export async function fetchRetry(
     }
     if (res.ok) return res
 
-    const msg = `Fetch ${url} -> HTTP ${res.status} ${res.statusText}`
+    // `status` lets callers tell "upstream says missing" from transient failure.
+    const httpErr = Object.assign(
+      new Error(`Fetch ${url} -> HTTP ${res.status} ${res.statusText}`),
+      { status: res.status },
+    )
     // 5xx and 429 are transient; other 4xx won't fix themselves — fail now.
-    if (res.status < 500 && res.status !== 429) throw new Error(msg)
-    lastErr = new Error(msg)
+    if (res.status < 500 && res.status !== 429) throw httpErr
+    lastErr = httpErr
     if (attempt < retries) {
       const backoff = 500 * 2 ** (attempt - 1)
       console.warn(
-        `  ⚠ ${msg} (attempt ${attempt}/${retries}); retrying in ${backoff}ms`,
+        `  ⚠ ${httpErr.message} (attempt ${attempt}/${retries}); retrying in ${backoff}ms`,
       )
       await sleep(backoff)
     }

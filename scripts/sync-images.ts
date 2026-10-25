@@ -51,13 +51,12 @@ function envOrThrow(name: string): string {
   return v
 }
 
-/** Build chains (`data:bump`, the justfile rebuild target) pass
- *  `--skip-if-no-creds` so a contributor without R2 access — or the weekly
- *  data-refresh cron, which carries no R2 secrets — can still rebuild the
- *  catalog. In that case the catalog is left pointing at the upstream CDNs;
- *  CI's hotlink guard (`bun run check:images`) then blocks that from merging,
- *  so a human runs `sync:images` locally before the data PR lands. A direct
- *  `bun run sync:images` (no flag) still hard-errors via `envOrThrow`. */
+/** `data:refresh` passes `--skip-if-no-creds` so a contributor without R2
+ *  access can still rebuild the catalog (the weekly cron has R2 secrets and
+ *  mirrors normally). When skipped, the catalog is left pointing at the
+ *  upstream CDNs; CI's hotlink guard (`bun run check:images`) then blocks that
+ *  from merging, so a human runs `sync:images` before the data PR lands. A
+ *  direct `bun run sync:images` (no flag) still hard-errors via `envOrThrow`. */
 const R2_ENV_KEYS = [
   "R2_ACCOUNT_ID",
   "R2_ACCESS_KEY_ID",
@@ -222,19 +221,25 @@ async function ensureUploaded(url: string, key: string): Promise<UploadResult> {
   if (await existsInBucket(key)) {
     return { url, key, status: "skipped" }
   }
-  const res = await fetchRetry(url, {
-    headers: {
-      // Identify ourselves so an upstream operator can trace abuse back
-      // to us if anything goes wrong. (Wiki /images/ isn't rate-limited
-      // the way /Special:FilePath is, but be polite either way.)
-      "User-Agent": "arsenyx-image-sync (https://www.arsenyx.com)",
-    },
-  })
-  if (!res.ok) {
-    console.warn(`  upstream HTTP ${res.status} for ${url}`)
+  let body: ArrayBuffer
+  try {
+    const res = await fetchRetry(url, {
+      headers: {
+        // Identify ourselves so an upstream operator can trace abuse back
+        // to us if anything goes wrong. (Wiki /images/ isn't rate-limited
+        // the way /Special:FilePath is, but be polite either way.)
+        "User-Agent": "arsenyx-image-sync (https://www.arsenyx.com)",
+      },
+    })
+    body = await res.arrayBuffer()
+  } catch (err) {
+    // Only a definitive 4xx means "upstream lost it"; transient failures
+    // (5xx/429/network) must abort — the rewrite pass would drop the source URL.
+    const status = (err as { status?: number }).status
+    if (status === undefined || status >= 500 || status === 429) throw err
+    console.warn(`  upstream HTTP ${status} for ${url}`)
     return { url, key, status: "missing" }
   }
-  const body = await res.arrayBuffer()
   const put = await aws.fetch(objectUrl(key), {
     method: "PUT",
     body,

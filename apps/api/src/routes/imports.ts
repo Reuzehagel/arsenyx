@@ -1,44 +1,15 @@
 import { type Context, Hono } from "hono"
 
-import {
-  scrapeOverframeBuild,
-  scrapeOverframeFromNextData,
-} from "../lib/overframe/import"
+import { scrapeOverframeFromNextData } from "../lib/overframe/import"
 import { getSession } from "../lib/session"
 import { parseJsonBody } from "../lib/validate"
 import { rateLimitUser } from "../middleware/rate-limit"
 
 export const imports = new Hono()
 
-// __NEXT_DATA__ for a build page is large (sibling/related builds ride along),
-// so the paste endpoint needs far more headroom than the URL endpoint. 1.5MB
-// comfortably covers it while still bounding a storage-fill / DoS attempt.
+// __NEXT_DATA__ for a build page is large (sibling/related builds ride along).
+// 1.5MB covers it while still bounding a storage-fill / DoS attempt.
 const MAX_NEXT_DATA_BYTES = 1.5 * 1024 * 1024
-
-export async function handleOverframeImport(c: Context) {
-  // Import feeds the editor/save flow, which is sign-in-only — gate it like
-  // every other mutation so anon callers can't drive the server-side fetch.
-  const session = await getSession(c)
-  if (!session?.user) return c.json({ error: "unauthorized" }, 401)
-
-  // Tiny cap — this endpoint only takes a URL.
-  const parsed = await parseJsonBody(c, { maxBytes: 4 * 1024 })
-  if (!parsed.ok) return parsed.response
-  const url = parsed.value.url
-  if (typeof url !== "string" || !url) {
-    return c.json({ error: "missing_url" }, 400)
-  }
-
-  try {
-    const result = await scrapeOverframeBuild(url)
-    return c.json(result)
-  } catch (err) {
-    // Log full error server-side for debugging; the raw message can leak
-    // internal hostnames, IPs, or stack traces if echoed back to the client.
-    console.error("overframe scrape failed:", err)
-    return c.json({ error: "scrape_failed" }, 500)
-  }
-}
 
 // Paste/bookmarklet path: the caller hands us the __NEXT_DATA__ object lifted
 // from their own (already-challenge-cleared) Overframe tab, so there's no
@@ -69,7 +40,6 @@ export async function handleOverframeRawImport(c: Context) {
   }
 }
 
-imports.post("/overframe", rateLimitUser("import"), handleOverframeImport)
 imports.post(
   "/overframe/raw",
   rateLimitUser("import"),

@@ -19,9 +19,13 @@ function getSystemTheme(): "light" | "dark" {
 }
 
 function readStoredTheme(): Theme {
-  const stored = window.localStorage.getItem(STORAGE_KEY)
-  if (stored === "light" || stored === "dark" || stored === "system")
-    return stored
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY)
+    if (stored === "light" || stored === "dark" || stored === "system")
+      return stored
+  } catch {
+    // Blocked storage (privacy settings) must not white-screen the app.
+  }
   return "system"
 }
 
@@ -46,7 +50,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [resolvedTheme])
 
   const setTheme = (next: Theme) => {
-    window.localStorage.setItem(STORAGE_KEY, next)
+    try {
+      window.localStorage.setItem(STORAGE_KEY, next)
+    } catch {
+      // Blocked storage: the choice just won't persist.
+    }
     setThemeState(next)
   }
 

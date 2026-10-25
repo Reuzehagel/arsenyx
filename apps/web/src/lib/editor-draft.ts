@@ -55,13 +55,45 @@ export function saveEditorDraft(
   payload: EditorDraftPayload,
 ): void {
   if (typeof window === "undefined") return
+  const key = keyFor(storeKey)
+  const stored: StoredDraft = { v: VERSION, savedAt: Date.now(), payload }
+  const json = JSON.stringify(stored)
   try {
-    const stored: StoredDraft = { v: VERSION, savedAt: Date.now(), payload }
-    window.localStorage.setItem(keyFor(storeKey), JSON.stringify(stored))
+    window.localStorage.setItem(key, json)
   } catch {
-    // Quota or private-mode failures are non-fatal; the editor still works,
-    // it just won't survive a refresh.
+    // Quota full: drafts are never otherwise evicted, so drop other drafts
+    // oldest-first until this one fits. Private-mode failures stay non-fatal.
+    try {
+      for (const old of otherDraftKeysOldestFirst(key)) {
+        window.localStorage.removeItem(old)
+        try {
+          window.localStorage.setItem(key, json)
+          return
+        } catch {
+          /* still full, evict the next one */
+        }
+      }
+    } catch {
+      /* storage unavailable */
+    }
   }
+}
+
+function otherDraftKeysOldestFirst(keep: string): string[] {
+  const ls = window.localStorage
+  const drafts: { key: string; savedAt: number }[] = []
+  for (let i = 0; i < ls.length; i++) {
+    const key = ls.key(i)
+    if (!key?.startsWith(PREFIX) || key === keep) continue
+    let savedAt = 0
+    try {
+      savedAt = (JSON.parse(ls.getItem(key) ?? "") as StoredDraft).savedAt ?? 0
+    } catch {
+      /* corrupt draft sorts first */
+    }
+    drafts.push({ key, savedAt })
+  }
+  return drafts.sort((a, b) => a.savedAt - b.savedAt).map((d) => d.key)
 }
 
 export function clearEditorDraft(storeKey: string): void {

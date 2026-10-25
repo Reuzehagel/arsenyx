@@ -37,6 +37,37 @@ function isOrgRole(v: unknown): v is OrgRole {
   return v === "ADMIN" || v === "MEMBER"
 }
 
+class LastAdminError extends Error {}
+
+// Run `fn` with the org row locked, so concurrent role changes on one org
+// queue up and the "last admin" check below always sees committed state.
+function withOrgLock<T>(
+  organizationId: string,
+  fn: (tx: Prisma.TransactionClient) => Promise<T>,
+) {
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT 1 FROM organizations WHERE id = ${organizationId} FOR UPDATE`
+    return fn(tx)
+  })
+}
+
+// Throws LastAdminError if `userId` is the org's only ADMIN; P2025 if not a member.
+async function assertNotLastAdmin(
+  tx: Prisma.TransactionClient,
+  organizationId: string,
+  userId: string,
+) {
+  const target = await tx.organizationMember.findUniqueOrThrow({
+    where: { organizationId_userId: { organizationId, userId } },
+    select: { role: true },
+  })
+  if (target.role !== "ADMIN") return
+  const admins = await tx.organizationMember.count({
+    where: { organizationId, role: "ADMIN" },
+  })
+  if (admins <= 1) throw new LastAdminError()
+}
+
 async function requireSessionUser(
   c: Context,
 ): Promise<{ id: string } | Response> {
@@ -132,8 +163,8 @@ orgs.post("/", rateLimitUser("mutate"), async (c) => {
     const created = await prisma.$transaction(async (tx) => {
       // Cap orgs per user: creating makes you ADMIN, so "already ADMIN
       // somewhere" is the cheapest proxy for "already owns an org" without
-      // a creator column. Checked inside the transaction so two concurrent
-      // POSTs can't both slip through.
+      // a creator column. The user-row lock serializes concurrent POSTs.
+      await tx.$executeRaw`SELECT 1 FROM users WHERE id = ${user.id} FOR UPDATE`
       const owned = await tx.organizationMember.count({
         where: { userId: user.id, role: "ADMIN" },
       })
@@ -454,40 +485,25 @@ orgs.patch("/:slug/members/:userId", rateLimitUser("mutate"), async (c) => {
   const role = parsed.value.role
   if (!isOrgRole(role)) return c.json({ error: "invalid_role" }, 400)
 
-  if (role === "MEMBER") {
-    const [target, adminCount] = await Promise.all([
-      prisma.organizationMember.findUnique({
+  try {
+    const updated = await withOrgLock(ctx.id, async (tx) => {
+      if (role === "MEMBER") await assertNotLastAdmin(tx, ctx.id, targetUserId)
+      return tx.organizationMember.update({
         where: {
           organizationId_userId: {
             organizationId: ctx.id,
             userId: targetUserId,
           },
         },
+        data: { role },
         select: { role: true },
-      }),
-      prisma.organizationMember.count({
-        where: { organizationId: ctx.id, role: "ADMIN" },
-      }),
-    ])
-    if (!target) return c.json({ error: "not_member" }, 404)
-    if (target.role === "ADMIN" && adminCount <= 1) {
-      return c.json({ error: "last_admin" }, 400)
-    }
-  }
-
-  try {
-    const updated = await prisma.organizationMember.update({
-      where: {
-        organizationId_userId: {
-          organizationId: ctx.id,
-          userId: targetUserId,
-        },
-      },
-      data: { role },
-      select: { role: true },
+      })
     })
     return c.json({ userId: targetUserId, role: updated.role })
   } catch (err) {
+    if (err instanceof LastAdminError) {
+      return c.json({ error: "last_admin" }, 400)
+    }
     if (hasPrismaCode(err, "P2025")) {
       return c.json({ error: "not_member" }, 404)
     }
@@ -509,32 +525,26 @@ orgs.delete("/:slug/members/:userId", rateLimitUser("mutate"), async (c) => {
     return c.json({ error: "forbidden" }, 403)
   }
 
-  const [target, adminCount] = await Promise.all([
-    prisma.organizationMember.findUnique({
-      where: {
-        organizationId_userId: {
-          organizationId: ctx.id,
-          userId: targetUserId,
+  try {
+    await withOrgLock(ctx.id, async (tx) => {
+      await assertNotLastAdmin(tx, ctx.id, targetUserId)
+      await tx.organizationMember.delete({
+        where: {
+          organizationId_userId: {
+            organizationId: ctx.id,
+            userId: targetUserId,
+          },
         },
-      },
-      select: { role: true },
-    }),
-    prisma.organizationMember.count({
-      where: { organizationId: ctx.id, role: "ADMIN" },
-    }),
-  ])
-  if (!target) return c.json({ error: "not_member" }, 404)
-  if (target.role === "ADMIN" && adminCount <= 1) {
-    return c.json({ error: "last_admin" }, 400)
+      })
+    })
+  } catch (err) {
+    if (err instanceof LastAdminError) {
+      return c.json({ error: "last_admin" }, 400)
+    }
+    if (hasPrismaCode(err, "P2025")) {
+      return c.json({ error: "not_member" }, 404)
+    }
+    throw err
   }
-
-  await prisma.organizationMember.delete({
-    where: {
-      organizationId_userId: {
-        organizationId: ctx.id,
-        userId: targetUserId,
-      },
-    },
-  })
   return c.body(null, 204)
 })

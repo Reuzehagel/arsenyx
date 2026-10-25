@@ -14,7 +14,6 @@ import { Prisma } from "../generated/prisma/client"
 import { BuildVisibility } from "../generated/prisma/enums"
 import type { InputJsonValue } from "../generated/prisma/internal/prismaNamespace"
 import { edgeCache, purgeEdge } from "../lib/edge-cache"
-import { marker, profile } from "../lib/phase-timing"
 import { getSession } from "../lib/session"
 import { hasPrismaCode, parseJsonBody, trimToMax } from "../lib/validate"
 import { enforceAnonSearchLimit, rateLimitUser } from "../middleware/rate-limit"
@@ -25,6 +24,7 @@ import {
   runList,
   serializeBuildDetail,
   serializeListRow,
+  visibleAuthor,
 } from "./_build-list"
 import {
   describeEdit,
@@ -33,7 +33,12 @@ import {
   readRevisions,
 } from "./_build-revisions"
 import { toggleSocial } from "./_build-social"
-import { bookmarkedScope, ownerScope, publicScope } from "./_build-visibility"
+import {
+  bookmarkedScope,
+  buildAccess,
+  ownerScope,
+  publicScope,
+} from "./_build-visibility"
 
 export const builds = new Hono()
 
@@ -344,7 +349,15 @@ builds.patch("/:slug", rateLimitUser("mutate"), async (c) => {
   if (isVisibility(b.visibility)) {
     data.visibility = b.visibility
   }
-  if (b.organizationId === null || typeof b.organizationId === "string") {
+  if (
+    (b.organizationId === null || typeof b.organizationId === "string") &&
+    b.organizationId !== existing.organizationId
+  ) {
+    // Only the author may move a build between orgs: a co-member moving it
+    // into another org of theirs would hand edit rights to strangers.
+    if (existing.userId !== session.user.id) {
+      return c.json({ error: "forbidden" }, 403)
+    }
     const orgResult = await resolveOrgAssignment(
       b.organizationId,
       session.user.id,
@@ -631,7 +644,7 @@ builds.get(
       take: limit,
       select: LIST_SELECT,
     })
-    return c.json({ builds: rows.map(serializeListRow) })
+    return c.json({ builds: rows.map((r) => serializeListRow(r)) })
   },
 )
 
@@ -690,103 +703,69 @@ function asVariantMap(value: Prisma.JsonValue): Record<string, number> {
 // can linger in an anon cache entry for up to maxAge — the partner mutations
 // don't purge this path (no tractable per-key eviction). Bounded and low-risk:
 // the strip only shows a title/thumbnail, never the loadout.
-//
-// TEMPORARY: profile() is here to attribute ~1s of CPU seen on this route in
-// Workers Logs (two requests, same colo, 3 minutes apart, wallTime − cpuTime
-// only ~120–200ms — so pure execution, not the DB). Remove once answered; see
-// lib/phase-timing.ts for why the durations only mean anything locally.
-builds.get(
-  "/:slug/partners",
-  // Before edgeCache, so the session resolve edgeCache does lands inside the
-  // measured window — it's one of the two suspects.
-  profile("builds/:slug/partners"),
-  edgeCache({ maxAge: LIST_TTL }),
-  async (c) => {
-    const mark = marker(c)
-    // Everything upstream of the handler: edgeCache's isAuthenticated() →
-    // getSession(), plus the Cache API lookup.
-    mark("gate")
 
-    const slug = c.req.param("slug")
-    const session = await getSession(c)
-    const viewerId = session?.user.id
+builds.get("/:slug/partners", edgeCache({ maxAge: LIST_TTL }), async (c) => {
+  const slug = c.req.param("slug")
+  const session = await getSession(c)
+  const viewerId = session?.user.id
 
-    // Filter private partners in the DB rather than fetching all rows and
-    // filtering in JS — keeps us from over-selecting joined user/org/counts
-    // for partners the viewer can't see.
-    const partnerVisibility: Prisma.BuildWhereInput = viewerId
-      ? {
-          OR: [
-            {
-              visibility: {
-                in: [BuildVisibility.PUBLIC, BuildVisibility.UNLISTED],
-              },
+  // Filter private partners in the DB rather than fetching all rows and
+  // filtering in JS — keeps us from over-selecting joined user/org/counts
+  // for partners the viewer can't see.
+  const partnerVisibility: Prisma.BuildWhereInput = viewerId
+    ? {
+        OR: [
+          {
+            visibility: {
+              in: [BuildVisibility.PUBLIC, BuildVisibility.UNLISTED],
             },
-            { userId: viewerId },
-          ],
-        }
-      : {
-          visibility: {
-            in: [BuildVisibility.PUBLIC, BuildVisibility.UNLISTED],
           },
-        }
-
-    // Reading a property off the `prisma` Proxy runs its get-trap, which
-    // constructs this request's PrismaClient — and with it the wasm-compiler-edge
-    // query compiler — WITHOUT issuing a query (see db.ts). That splits client
-    // construction from query execution, which is the whole question: one is a
-    // fixed per-request cost, the other scales with the data (and the data here
-    // is 5 rows / ~4 KB, far too little to explain a second).
-    //
-    // `void` rather than an assigned-and-unused const purely to keep oxlint
-    // quiet. esbuild preserves property accesses rather than treating them as
-    // pure (they may run a getter — here one definitely does), so the bundler
-    // won't optimize this away and silently fold init back into `query`.
-    void prisma.$connect
-    mark("prismaInit")
-
-    const build = await prisma.build.findUnique({
-      where: { slug },
-      // partnerBuilds nests user + organization (via LIST_SELECT), so the default
-      // strategy fans out into several queries; join collapses them.
-      relationLoadStrategy: "join",
-      select: {
-        id: true,
-        userId: true,
-        visibility: true,
-        organizationId: true,
-        partnerOrder: true,
-        partnerVariants: true,
-        partnerBuilds: {
-          where: partnerVisibility,
-          take: 50,
-          select: LIST_SELECT,
+          { userId: viewerId },
+        ],
+      }
+    : {
+        visibility: {
+          in: [BuildVisibility.PUBLIC, BuildVisibility.UNLISTED],
         },
+      }
+
+  const build = await prisma.build.findUnique({
+    where: { slug },
+    // partnerBuilds nests user + organization (via LIST_SELECT), so the default
+    // strategy fans out into several queries; join collapses them.
+    relationLoadStrategy: "join",
+    select: {
+      id: true,
+      userId: true,
+      visibility: true,
+      organizationId: true,
+      partnerOrder: true,
+      partnerVariants: true,
+      partnerBuilds: {
+        where: partnerVisibility,
+        take: 50,
+        select: LIST_SELECT,
       },
-    })
-    mark("query")
-    if (!build) return c.json({ error: "not_found" }, 404)
-    if (!(await canViewerSeeBuild(build, viewerId ?? ""))) {
-      return c.json({ error: "not_found" }, 404)
-    }
+    },
+  })
+  if (!build) return c.json({ error: "not_found" }, 404)
+  if (!(await canViewerSeeBuild(build, viewerId ?? ""))) {
+    return c.json({ error: "not_found" }, 404)
+  }
 
-    // The owner's saved variant target rides along on each row (`variant`
-    // omitted = default). The web chip turns it into `?v=` on the link; an
-    // index that outgrew the partner's variant list is clamped by the viewer.
-    const variantMap = asVariantMap(build.partnerVariants)
-    const body = {
-      builds: orderPartners(build.partnerBuilds, build.partnerOrder).map(
-        (p) => {
-          const row = serializeListRow(p)
-          const variant = variantMap[p.id]
-          return variant ? { ...row, variant } : row
-        },
-      ),
-    }
-    mark("serialize")
-    return c.json(body)
-  },
-)
+  // The owner's saved variant target rides along on each row (`variant`
+  // omitted = default). The web chip turns it into `?v=` on the link; an
+  // index that outgrew the partner's variant list is clamped by the viewer.
+  const variantMap = asVariantMap(build.partnerVariants)
+  const body = {
+    builds: orderPartners(build.partnerBuilds, build.partnerOrder).map((p) => {
+      const row = serializeListRow(p)
+      const variant = variantMap[p.id]
+      return variant ? { ...row, variant } : row
+    }),
+  }
+  return c.json(body)
+})
 
 // Sort partner rows by the owner's saved order. Ids listed in `order` come
 // first in that order; anything not listed (newly linked, or never reordered)
@@ -1067,13 +1046,9 @@ async function canViewerSeeBuild(
   },
   viewerId: string,
 ) {
-  if (build.visibility === "PUBLIC" || build.visibility === "UNLISTED")
-    return true
-  if (build.userId === viewerId) return true
-  if (build.organizationId) {
-    return isOrgMember(build.organizationId, viewerId)
-  }
-  return false
+  const open = buildAccess(build, { id: viewerId, isOrgMember: false })
+  if (open.canAct || !build.organizationId) return open.canAct
+  return isOrgMember(build.organizationId, viewerId)
 }
 
 builds.post("/:slug/like", rateLimitUser("social"), async (c) => {
@@ -1211,7 +1186,7 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
         uniqueName: slim.itemUniqueName,
         imageName: slim.itemImageName,
       },
-      user: slim.user,
+      user: visibleAuthor(slim),
       organization: slim.organization,
       guide: slim.buildGuide ? { summary: slim.buildGuide.summary } : null,
     })
@@ -1245,14 +1220,13 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
   // paths (like/bookmark/fork) go through canViewerSeeBuild, which has no admin
   // bypass on purpose, so an admin can read but not act on a private build.
   const isAdmin = session?.user.isAdmin === true
-  const canView =
-    build.visibility === "PUBLIC" ||
-    build.visibility === "UNLISTED" ||
-    (viewerId != null && build.userId === viewerId) ||
-    viewerIsOrgMember ||
-    isAdmin
+  const access = buildAccess(build, {
+    id: viewerId,
+    isOrgMember: viewerIsOrgMember,
+    isAdmin,
+  })
 
-  if (!canView) return c.json({ error: "not_found" }, 404)
+  if (!access.canView) return c.json({ error: "not_found" }, 404)
 
   await maybeIncrementView(c, build.id, build.slug, viewerId, build.userId)
 
@@ -1273,9 +1247,7 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
     viewerHasBookmarked = bookmark != null
   }
 
-  // Mirrors `canMutateBuild` but reuses the membership resolved above.
-  const isOwner =
-    viewerId != null && (build.userId === viewerId || viewerIsOrgMember)
+  const isOwner = access.canMutate
 
   // Embed loads (?view=0) increment no view and set no cookie, so an anonymous
   // response is fully shareable — let the browser cache it too, not just the
@@ -1289,11 +1261,15 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
   }
 
   return c.json(
-    serializeBuildDetail(build, {
-      isOwner,
-      hasLiked: viewerHasLiked,
-      hasBookmarked: viewerHasBookmarked,
-    }),
+    serializeBuildDetail(
+      build,
+      {
+        isOwner,
+        hasLiked: viewerHasLiked,
+        hasBookmarked: viewerHasBookmarked,
+      },
+      isOwner || isAdmin,
+    ),
   )
 })
 

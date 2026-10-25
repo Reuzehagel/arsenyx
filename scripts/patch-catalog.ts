@@ -15,15 +15,10 @@
  * meta.json (run `data:stamp` after) and _report.json (diagnostics only).
  */
 
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  statSync,
-  writeFileSync,
-} from "node:fs"
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { dirname, join, relative, resolve } from "node:path"
+
+import { findJsonFiles } from "./build/image-hosts"
 
 const SKIP = new Set(["meta.json", "_report.json"])
 
@@ -95,13 +90,6 @@ function patch(
   return fixed
 }
 
-function walk(dir: string): string[] {
-  return readdirSync(dir).flatMap((n) => {
-    const p = join(dir, n)
-    return statSync(p).isDirectory() ? walk(p) : p.endsWith(".json") ? [p] : []
-  })
-}
-
 const [baseDir, fixedDir, targetArg] = process.argv.slice(2)
 if (!baseDir || !fixedDir) {
   console.error("usage: bun run data:patch <base-dir> <fixed-dir> [target-dir]")
@@ -111,7 +99,7 @@ const targetDir = resolve(targetArg ?? "apps/web/public/data")
 
 let touched = 0
 const manual: string[] = []
-for (const fixedPath of walk(resolve(fixedDir))) {
+for (const fixedPath of findJsonFiles(resolve(fixedDir))) {
   const rel = relative(resolve(fixedDir), fixedPath)
   if (SKIP.has(rel)) continue
   const basePath = join(resolve(baseDir), rel)
@@ -155,7 +143,7 @@ for (const fixedPath of walk(resolve(fixedDir))) {
   touched++
 }
 
-for (const rel of walk(resolve(baseDir)).map((p) =>
+for (const rel of findJsonFiles(resolve(baseDir)).map((p) =>
   relative(resolve(baseDir), p),
 )) {
   if (!existsSync(join(resolve(fixedDir), rel)))

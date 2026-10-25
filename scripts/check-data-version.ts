@@ -9,7 +9,9 @@
  * (a quick data fix) that forgets to bump `generatedAt` — clients then keep the
  * stale bytes forever under the unchanged URL. Run `bun run data:stamp` to fix.
  *
- * Compares against `$DATA_VERSION_BASE` (default `origin/main`). If that ref
+ * Compares against the merge-base of `$DATA_VERSION_BASE` (default
+ * `origin/main`) and HEAD, so a stale branch is judged on its own changes
+ * only. CI sets the base to the pre-push SHA on pushes to main. If that ref
  * isn't reachable (shallow clone, fresh repo), it skips rather than fail
  * spuriously — CI fetches full history so the guard is live there.
  */
@@ -43,13 +45,24 @@ if (git(["rev-parse", "--verify", "--quiet", BASE]).status !== 0) {
   process.exit(0)
 }
 
+// Diff from where this branch forked, not the base tip: a tip that moved on
+// (with its own generatedAt bump) would mask an unbumped hand-edit here.
+const mergeBase = git(["merge-base", BASE, "HEAD"])
+if (mergeBase.status !== 0) {
+  console.error(
+    `✗ check:data-version — no merge-base between '${BASE}' and HEAD.`,
+  )
+  process.exit(1)
+}
+const FORK = mergeBase.stdout.trim()
+
 // Did any catalog file change, ignoring the two build-stamp files that move
 // every run on their own (meta carries the version; _report is telemetry)?
 const dataChanged =
   git([
     "diff",
     "--quiet",
-    BASE,
+    FORK,
     "--",
     DATA,
     `:(exclude)${DATA}/meta.json`,
@@ -61,7 +74,7 @@ if (!dataChanged) {
   process.exit(0)
 }
 
-const baseShow = git(["show", `${BASE}:${DATA}/meta.json`])
+const baseShow = git(["show", `${FORK}:${DATA}/meta.json`])
 const baseGen =
   baseShow.status === 0
     ? (JSON.parse(baseShow.stdout) as { generatedAt?: string }).generatedAt
