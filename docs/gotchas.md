@@ -7,6 +7,8 @@ Non-obvious pitfalls. Add to this file when you hit one.
 - **Dev servers hide type errors.** Vite and `bun --hot` skip strict TS checks, and so does `vite build` — a green build proves nothing about types. `just check` is the gate.
 - **`gh issue view N` can print nothing and still exit 0** on this machine. Read issues with `gh issue view N --json title,body,comments,state`.
 - **PowerShell doesn't support `<` redirection** — wrap in `bash -c '...'` for Docker stdin (e.g. piping SQL into `psql`).
+- **`bun add` fails with `InstallFailed extracting tarball` while dev servers run.** They hold files in `node_modules` open on Windows. Stop them (`just stop`, or `preview_stop`), install, restart.
+- **React rendering tests:** opt a file into the DOM with `// @vitest-environment happy-dom`. Node's own `localStorage` global (undefined without a flag) shadows happy-dom's, so stub it — see [editor-draft-restore.test.tsx](../apps/web/src/components/build-editor/editor-draft-restore.test.tsx). Run tests with `bun run test`, not `bunx --bun vitest` (its worker crashes).
 - **cssstudio is OFF by default in dev.** Toggle via URL: append `?cssstudio=1` to enable, `?cssstudio=0` to disable. The flag persists in `localStorage.arsenyx.cssstudio` and the param strips itself after apply. See [apps/web/src/main.tsx](../apps/web/src/main.tsx).
 
 ## R2 image hosting (img.arsenyx.com)
@@ -16,10 +18,8 @@ Non-obvious pitfalls. Add to this file when you hit one.
 
 ## Shadcn in the monorepo
 
-The `shadcn` skill's bootstrap runs `shadcn info` from cwd and errors at the monorepo root (`error: monorepo_root`). Workarounds:
+The CLI errors with `monorepo_root` unless pointed at the app: pass `-c apps/web` (the local `shadcn` skill's preamble already does).
 
-- **Preferred:** start Claude Code with cwd `apps/web`, then the skill works normally.
-- **Otherwise:** skip the skill and use the CLI — `cd apps/web && bunx shadcn@latest view <name>` to inspect, `bunx shadcn@latest add <name> -c .` to add.
 - **Dep conflicts with our customised `button` / `input`:** `view` the component, write it manually into `apps/web/src/components/ui/`, rewrite `@/registry/base-nova/...` imports to `@/lib/utils` and `@/components/ui/...`.
 
 Never modify existing files in `apps/web/src/components/ui/` — override via `className`.

@@ -114,6 +114,10 @@ async function main() {
     console.log("✓ bun install (already done)")
   }
 
+  // Pre-commit format gate (.githooks/pre-commit); per-clone git config.
+  await run(["git", "config", "core.hooksPath", ".githooks"], REPO)
+  console.log("✓ git hooks enabled (.githooks)")
+
   if (!existsSync(API_ENV_EXAMPLE)) {
     throw new Error(`missing ${API_ENV_EXAMPLE}`)
   }

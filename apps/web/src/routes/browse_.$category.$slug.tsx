@@ -157,6 +157,7 @@ function ItemNotFound() {
       message="We couldn't find an item at that path."
       action={
         <Button
+          nativeButton={false}
           render={
             <RouterLink to="/browse" search={{ category: "warframes" }} />
           }
