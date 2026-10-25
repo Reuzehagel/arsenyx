@@ -55,29 +55,10 @@ export function useDraftAutosave({
   // from `storedDraft` (which survives variant-switch remounts, where
   // localDraft is intentionally null) and kept in sync by the autosave effect.
   const [hasDraft, setHasDraft] = useState(() => storedDraft !== null)
-  const draftInitializedRef = useRef(false)
 
-  useEffect(() => {
-    if (!draftInitializedRef.current) {
-      draftInitializedRef.current = true
-      return
-    }
-    const handle = window.setTimeout(() => {
-      // Capture + serialize inside the debounce so a burst of edits costs one
-      // snapshot per idle window, not one per keystroke.
-      saveEditorDraft(storeKey, {
-        buildData: capture.captureBuildData(),
-        buildName,
-        guideSummary: guide.buildSummary,
-        guideDescription: guide.buildDescription,
-      })
-      setHasDraft(true)
-    }, 600)
-    return () => window.clearTimeout(handle)
-    // Re-run on any edit. captureBuildData reads the values below; listing them
-    // keeps the snapshot current without re-binding the helper in deps.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
+  // Re-run on any edit. captureBuildData reads the values below; listing them
+  // keeps the snapshot current without re-binding the helper in deps.
+  const deps = [
     buildName,
     guide.buildSummary,
     guide.buildDescription,
@@ -95,7 +76,30 @@ export function useDraftAutosave({
     extras.deploymentContext,
     variants,
     clampedActiveIndex,
-  ])
+  ]
+  // Write only when a dep actually changed since the last run. A "skip the
+  // first run" flag isn't enough: StrictMode re-runs mount effects with the ref
+  // already set, which saved a draft for an untouched editor.
+  const lastDepsRef = useRef(deps)
+
+  useEffect(() => {
+    const changed = deps.some((d, i) => !Object.is(d, lastDepsRef.current[i]))
+    lastDepsRef.current = deps
+    if (!changed) return
+    const handle = window.setTimeout(() => {
+      // Capture + serialize inside the debounce so a burst of edits costs one
+      // snapshot per idle window, not one per keystroke.
+      saveEditorDraft(storeKey, {
+        buildData: capture.captureBuildData(),
+        buildName,
+        guideSummary: guide.buildSummary,
+        guideDescription: guide.buildDescription,
+      })
+      setHasDraft(true)
+    }, 600)
+    return () => window.clearTimeout(handle)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps)
 
   // Clear the draft and reload so the editor re-hydrates from the saved build
   // (or a blank new build). A reload is the simplest way to reset the live
