@@ -41,7 +41,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "fix",
         description:
-          "A wrong or broken link now shows a proper page with the site header and a way back, instead of a blank screen reading \"Not Found\". If liking, bookmarking, forking, deleting, or linking a build fails, you now get a message saying so instead of the button quietly flipping back.",
+          'A wrong or broken link now shows a proper page with the site header and a way back, instead of a blank screen reading "Not Found". If liking, bookmarking, forking, deleting, or linking a build fails, you now get a message saying so instead of the button quietly flipping back.',
       },
       {
         type: "feat",
