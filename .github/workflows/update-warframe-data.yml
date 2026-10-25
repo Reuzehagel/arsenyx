@@ -89,6 +89,40 @@ jobs:
             echo "changed=true" >> $GITHUB_OUTPUT
           fi
 
+      # The item files are minified one-liners, so GitHub's diff is unreadable;
+      # put a per-field / per-record summary at the top of the PR body instead.
+      - name: Write PR body
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          {
+            cat <<'EOF'
+          Automated weekly refresh of the static catalog
+          (`apps/web/public/data/`), rebuilt from a fresh DE PublicExport +
+          wiki Lua sync.
+
+          ## What changed
+
+          EOF
+            bun run --silent data:diff
+            cat <<'EOF'
+
+          ## Review
+
+          The summary above is generated (`bun run data:diff`); the raw JSON
+          files are collapsed in the diff as generated. The
+          `parsed-catalog.snap.txt` diff lists every mod/arcane whose stats
+          the editor now reads differently; check those lines. New
+          build-report entries usually mean `data/curated/` needs an entry.
+          Any new wiki Class strings or DE compatNames not yet curated
+          will fail the build — fix `data/curated/` if so.
+
+          Images are mirrored to R2 and the catalog rewritten to
+          img.arsenyx.com automatically (the cron has R2 creds), so CI's
+          check:images guard should pass. If it fails, an R2 secret is
+          likely missing — check out this branch and run `bun run sync:images`.
+          EOF
+          } > "$RUNNER_TEMP/pr-body.md"
+
       - name: Create PR
         if: steps.diff.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v8
@@ -102,20 +136,5 @@ jobs:
             apps/web/src/lib/stats/parsed-catalog.snap.txt
             data/curated/**
           title: "chore: refresh Warframe game data"
-          body: |
-            Automated weekly refresh of the static catalog
-            (`apps/web/public/data/`), rebuilt from a fresh DE PublicExport +
-            wiki Lua sync. The raw mirror (`data/raw/`) is gitignored, so only
-            the rebuilt catalog appears in this diff.
-
-            Review the catalog JSON diff before merging. The
-            `parsed-catalog.snap.txt` diff lists every mod/arcane whose
-            stats the editor now reads differently; check those lines.
-            Any new wiki Class strings or DE compatNames not yet curated
-            will fail the build — fix `data/curated/` if so.
-
-            Images are mirrored to R2 and the catalog rewritten to
-            img.arsenyx.com automatically (the cron has R2 creds), so CI's
-            check:images guard should pass. If it fails, an R2 secret is
-            likely missing — check out this branch and run `bun run sync:images`.
+          body-path: ${{ runner.temp }}/pr-body.md
           commit-message: "chore: refresh Warframe game data"
