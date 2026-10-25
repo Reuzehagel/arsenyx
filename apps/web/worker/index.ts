@@ -64,8 +64,9 @@ const BUILD_HTML_TTL = 300
 // TTL for the anonymous API meta subrequest — the cold-miss shield behind the
 // HTML cache above. Kept short and decoupled from BUILD_HTML_TTL so the two
 // caches don't compound: a freshly-written HTML entry carries meta at most this
-// stale, bounding worst-case staleness to ~BUILD_HTML_TTL + BUILD_META_TTL
-// rather than 2×BUILD_HTML_TTL.
+// stale. The API also edge-caches this read (DETAIL_TTL, 600s, in
+// apps/api/src/routes/builds.ts), so worst-case meta staleness is
+// ~BUILD_HTML_TTL + BUILD_META_TTL + DETAIL_TTL (~16 min).
 const BUILD_META_TTL = 60
 
 // Sync with the `head` options in src/routes/*.tsx.
