@@ -4,7 +4,7 @@ name: Changelog
 # this cheap check, not the whole build.
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled]
 
 permissions:
   contents: read
@@ -27,3 +27,16 @@ jobs:
           CHANGELOG_BASE: origin/${{ github.base_ref }}
           SKIP_CHANGELOG: ${{ contains(github.event.pull_request.labels.*.name, 'no-changelog') }}
         run: bun run check:changelog
+
+      # The squash commit is built from these commits, so this keeps AI
+      # attribution out of main even from sessions without the local hooks.
+      - name: Check for AI attribution
+        env:
+          BASE: origin/${{ github.base_ref }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          pattern='co-authored-by:.*(claude|anthropic)|generated with.*claude'
+          if { git log --format=%B "$BASE..HEAD"; printf '%s\n' "$PR_BODY"; } | grep -iE "$pattern"; then
+            echo "::error::Remove the Claude co-author / 'Generated with Claude Code' lines above from the PR commits or description."
+            exit 1
+          fi
