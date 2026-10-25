@@ -107,6 +107,23 @@ _Avoid_: Shoulder (that is the name of the hover visual, not of the concept), Fa
 30 base, 60 with a Reactor/Catalyst). Arsenyx computes both live as you edit.
 _Avoid_: Cost, Points, Energy (Energy is an in-game ability resource, unrelated).
 
+## Stats
+
+**Conditional stat**:
+A stat a mod or arcane grants only while something is happening: on kill, on hit, for a few
+seconds, while invisible. It counts toward the stats panel only when **Max stacks** is on.
+It is counted once, or multiplied by its stack count if it has one. Buffs for someone else
+(squadmates, allies, a companion, another weapon) are not conditional stats; they are not
+counted at all. The engine reads each stat type in one place only: the Warframe stats read
+defensive, movement and ability stats, so a weapon stat on a Warframe arcane changes nothing.
+_Avoid_: Buff (too loose: passive stats are buffs too), Proc.
+
+**Max stacks**:
+The stats-panel toggle that adds every **Conditional stat** at its full stack count, showing
+the build at its peak. Off (the default), the panel shows only stats that are always active.
+It appears only when a placed mod or arcane has a Conditional stat.
+_Avoid_: Buffed, Peak mode.
+
 ## Example dialogue
 
 > **Dev:** A user opened a Build with two Variants — do Likes attach to the Variant they're viewing?
