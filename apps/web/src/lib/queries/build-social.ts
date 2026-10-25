@@ -23,6 +23,7 @@ async function send<T>(
 export function useToggleLike(slug: string) {
   const qc = useQueryClient()
   return useMutation({
+    meta: { errorToast: "Couldn't update like" },
     mutationFn: async (next: boolean): Promise<LikeResponse> =>
       send<LikeResponse>(slug, "like", next ? "POST" : "DELETE"),
     onMutate: async (next) => {
@@ -56,6 +57,7 @@ export function useToggleLike(slug: string) {
 export function useToggleBookmark(slug: string) {
   const qc = useQueryClient()
   return useMutation({
+    meta: { errorToast: "Couldn't update bookmark" },
     mutationFn: async (next: boolean): Promise<BookmarkResponse> =>
       send<BookmarkResponse>(slug, "bookmark", next ? "POST" : "DELETE"),
     onMutate: async (next) => {

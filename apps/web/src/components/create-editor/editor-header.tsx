@@ -8,7 +8,7 @@ import {
   UploadCloud,
   X,
 } from "lucide-react"
-import { useRef, useState } from "react"
+import { type ReactElement, type ReactNode, useRef, useState } from "react"
 
 import { type PublishVisibility } from "@/components/build-editor"
 import { EndoFormaBadges } from "@/components/endo-forma-badges"
@@ -17,6 +17,11 @@ import { Button } from "@/components/ui/button"
 import { ButtonGroup } from "@/components/ui/button-group"
 import { Input } from "@/components/ui/input"
 import { Kbd } from "@/components/ui/kbd"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { formatVisibility } from "@/lib/util/user-display"
 import {
   getImageUrl,
@@ -33,6 +38,22 @@ const IS_MAC =
 const SAVE_HINT = IS_MAC ? "⌘S" : "Ctrl S"
 const UNDO_HINT = IS_MAC ? "⌘Z" : "Ctrl Z"
 const REDO_HINT = IS_MAC ? "⌘⇧Z" : "Ctrl Shift Z"
+
+/** Hover/focus hint for a header control (replaces native `title`). */
+function Hint({
+  label,
+  children,
+}: {
+  label: ReactNode
+  children: ReactElement
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger render={children} />
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  )
+}
 
 export function EditorHeader({
   item,
@@ -124,14 +145,16 @@ export function EditorHeader({
                   <h1 className="truncate text-xl leading-tight font-bold tracking-tight md:text-2xl">
                     {buildName}
                   </h1>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    title="Rename build"
-                    onClick={startEdit}
-                  >
-                    <Pencil />
-                  </Button>
+                  <Hint label="Rename build">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Rename build"
+                      onClick={startEdit}
+                    >
+                      <Pencil />
+                    </Button>
+                  </Hint>
                 </>
               )}
             </div>
@@ -145,17 +168,15 @@ export function EditorHeader({
               />
               {draft ? (
                 <span className="inline-flex items-center gap-1">
-                  <Badge
-                    variant="secondary"
-                    className="gap-1.5"
-                    title="Unsaved changes restored from a previous session"
-                  >
-                    <span
-                      className="size-1.5 rounded-full bg-amber-500"
-                      aria-hidden
-                    />
-                    Draft
-                  </Badge>
+                  <Hint label="Unsaved changes restored from a previous session">
+                    <Badge variant="secondary" className="gap-1.5">
+                      <span
+                        className="bg-warning size-1.5 rounded-full"
+                        aria-hidden
+                      />
+                      Draft
+                    </Badge>
+                  </Hint>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -171,47 +192,55 @@ export function EditorHeader({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <ButtonGroup>
-            <Button
-              variant="outline"
-              size="icon-sm"
-              onClick={history.onUndo}
-              disabled={!history.canUndo}
-              title={`Undo (${UNDO_HINT})`}
-              aria-label="Undo"
+            <Hint
+              label={
+                <>
+                  Undo <Kbd>{UNDO_HINT}</Kbd>
+                </>
+              }
             >
-              <Undo2 />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon-sm"
-              onClick={history.onRedo}
-              disabled={!history.canRedo}
-              title={`Redo (${REDO_HINT})`}
-              aria-label="Redo"
+              <Button
+                variant="outline"
+                size="icon-sm"
+                onClick={history.onUndo}
+                disabled={!history.canUndo}
+                aria-label="Undo"
+              >
+                <Undo2 />
+              </Button>
+            </Hint>
+            <Hint
+              label={
+                <>
+                  Redo <Kbd>{REDO_HINT}</Kbd>
+                </>
+              }
             >
-              <Redo2 />
-            </Button>
+              <Button
+                variant="outline"
+                size="icon-sm"
+                onClick={history.onRedo}
+                disabled={!history.canRedo}
+                aria-label="Redo"
+              >
+                <Redo2 />
+              </Button>
+            </Hint>
           </ButtonGroup>
           {settings && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={settings.onEdit}
-              title="Build settings"
-            >
-              <Settings2 data-icon="inline-start" />
-              {formatVisibility(settings.visibility)}
-            </Button>
+            <Hint label="Build settings">
+              <Button variant="outline" size="sm" onClick={settings.onEdit}>
+                <Settings2 data-icon="inline-start" />
+                {formatVisibility(settings.visibility)}
+              </Button>
+            </Hint>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onShare}
-            title="Copy shareable link"
-          >
-            <Share2 data-icon="inline-start" />
-            Share
-          </Button>
+          <Hint label="Copy shareable link">
+            <Button variant="outline" size="sm" onClick={onShare}>
+              <Share2 data-icon="inline-start" />
+              Share
+            </Button>
+          </Hint>
           <Button size="sm" onClick={onSave} disabled={saveStatus === "saving"}>
             <UploadCloud data-icon="inline-start" />
             {saveStatus === "saving"

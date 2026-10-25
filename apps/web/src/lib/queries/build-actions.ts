@@ -7,6 +7,7 @@ type ForkResponse = { id: string; slug: string }
 export function useDeleteBuild(slug: string) {
   const qc = useQueryClient()
   return useMutation({
+    meta: { errorToast: "Couldn't delete the build" },
     mutationFn: async (): Promise<void> => {
       try {
         await apiFetch<void>(`/builds/${encodeURIComponent(slug)}`, {
@@ -30,6 +31,7 @@ export function useDeleteBuild(slug: string) {
 export function useForkBuild(slug: string) {
   const qc = useQueryClient()
   return useMutation({
+    meta: { errorToast: "Couldn't fork the build" },
     mutationFn: async (): Promise<ForkResponse> => {
       try {
         return await apiFetch<ForkResponse>(

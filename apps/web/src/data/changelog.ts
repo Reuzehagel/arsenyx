@@ -38,6 +38,16 @@ export const CHANGELOG: ChangelogEntry[] = [
         description:
           "Unsaved editor drafts keep autosaving after you've worked on many builds. Once browser storage filled up, new drafts silently stopped saving; the oldest drafts now make room instead.",
       },
+      {
+        type: "fix",
+        description:
+          "A wrong or broken link now shows a proper page with the site header and a way back, instead of a blank screen reading \"Not Found\". If liking, bookmarking, forking, deleting, or linking a build fails, you now get a message saying so instead of the button quietly flipping back.",
+      },
+      {
+        type: "feat",
+        description:
+          "Build cards named after their item show the item's category instead of repeating the name, editor header buttons show proper tooltips (with shortcuts for undo and redo), and the site shows the Arsenyx name while it loads instead of a blank screen.",
+      },
     ],
   },
   {

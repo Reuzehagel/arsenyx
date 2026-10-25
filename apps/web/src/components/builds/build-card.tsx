@@ -11,7 +11,7 @@ import type { BuildListItem } from "@/lib/queries/builds-list-query"
 import { useItemImage } from "@/lib/use-item-image"
 import { formatAbsoluteTime, relativeTime } from "@/lib/util/relative-time"
 import { authorName } from "@/lib/util/user-display"
-import { getImageUrl } from "@/lib/warframe"
+import { getCategoryLabel, getImageUrl } from "@/lib/warframe"
 
 /** Shared per-card derivation: relative timestamp and the current catalog
  *  image URL resolved from the build's item. (Author is derived in
@@ -115,6 +115,14 @@ function FormaStat({
   )
 }
 
+/** Item name under the build title — or its category when the build is just
+ *  named after the item, so cards don't read "Furis / Furis". */
+function itemSubtitle(build: BuildListItem): string {
+  return build.name.trim() === build.item.name
+    ? getCategoryLabel(build.item.category)
+    : build.item.name
+}
+
 export function BuildCard({ build }: { build: BuildListItem }) {
   const { timeAgo, imageUrl } = useBuildCardData(build)
 
@@ -136,7 +144,7 @@ export function BuildCard({ build }: { build: BuildListItem }) {
           {build.name}
         </h3>
         <p className="text-muted-foreground line-clamp-1 text-xs">
-          {build.item.name}
+          {itemSubtitle(build)}
         </p>
         <BuildByline build={build} variant="card" />
         <div className="text-muted-foreground flex items-center justify-between gap-x-2 text-xs">
@@ -195,7 +203,7 @@ export function BuildRow({ build }: { build: BuildListItem }) {
           {build.name}
         </h3>
         <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs">
-          <span className="line-clamp-1">{build.item.name}</span>
+          <span className="line-clamp-1">{itemSubtitle(build)}</span>
           <span aria-hidden>·</span>
           <BuildByline build={build} variant="row" />
         </div>

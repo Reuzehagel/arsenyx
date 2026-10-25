@@ -571,13 +571,11 @@ function WarningBox({
         "p-4",
         fatal
           ? "border-destructive/50 bg-destructive/10"
-          : "border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+          : "border-warning/50 bg-warning/10 text-warning",
       )}
     >
       <AlertTitle>{title}</AlertTitle>
-      <AlertDescription
-        className={cn(!fatal && "text-amber-700 dark:text-amber-400")}
-      >
+      <AlertDescription className={cn(!fatal && "text-warning")}>
         <ul className="flex flex-col gap-1">
           {items.map((it, i) => (
             <li key={i}>
