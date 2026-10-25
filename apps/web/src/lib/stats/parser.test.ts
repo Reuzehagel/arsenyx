@@ -60,6 +60,93 @@ describe("parseStatString parenthetical notes", () => {
   })
 })
 
+// Regression: issue #393 — "+30% Multishot for 20s" ran the duration into the
+// stat name, so Galvanized on-kill stacks (and ~60 other timed buffs) never
+// parsed and the "Max stacks" toggle never appeared for them.
+describe("parseStatString timed and stacking buffs", () => {
+  it("Galvanized Chamber parses its on-kill stack", () => {
+    const stats = parseStatString(
+      "On Kill:\r\n+30% Multishot for 20s. Stacks up to 5x.",
+    )
+    expect(stats).toEqual([
+      {
+        type: "multishot",
+        value: 30,
+        operation: "percent_add",
+        isConditional: true,
+        maxStacks: 5,
+        condition: "On Kill",
+      },
+    ])
+  })
+
+  it("splits two stats joined by 'and'", () => {
+    const stats = parseStatString(
+      "On Enemy Frozen: Gain +2% Ability Strength and +2% Ability Duration for 15s. Stacks up to 20x.",
+    )
+    expect(stats.map((s) => [s.type, s.maxStacks])).toEqual([
+      ["ability_strength", 20],
+      ["ability_duration", 20],
+    ])
+  })
+
+  it("Cascadia Flare's percent cap becomes a stack count", () => {
+    const [stat] = parseStatString(
+      "On <DT_FIRE_COLOR>Heat Status Effect:\r\n+12% Damage for 10s. Stacks up to 480%.",
+    )
+    expect(stat.maxStacks).toBe(40)
+  })
+
+  it("a count that isn't a duration doesn't end the name", () => {
+    // Magus Aggress: 'for 4 consecutive attacks' is not a timed buff.
+    const stats = parseStatString(
+      "On Warframe Melee Transference: Heavy Blades deal +300% Critical Damage for 4 consecutive attacks. Cooldown 20s.",
+    )
+    expect(stats).toEqual([])
+  })
+
+  it.each([
+    "Killing enemies grants Allies within Affinity Range +30% Fire Rate for 15s.",
+    "On Weak Point Hit:\r\n+300% Damage for 18s on Secondary Weapon",
+    "Squad's Companions receive +300 Health and +180 Armor",
+    "On aim: x0.2 explosion radius, +100% damage and +5.5% ammo efficiency for every 1m radius lost.",
+  ])("drops buffs aimed elsewhere or scaled by the unmodeled: %s", (s) => {
+    expect(parseStatString(s)).toEqual([])
+  })
+
+  it.each([
+    "While invisible, gain +30% Ability Strength and +3x Final Critical Damage.",
+    "On Headshot Kill:\r\n+30% Ability Efficiency and +30% Ability Strength on the next Ability used within 4s.",
+  ])("marks trigger-gated buffs conditional: %s", (s) => {
+    const stats = parseStatString(s)
+    expect(stats.length).toBeGreaterThan(0)
+    expect(stats.every((st) => st.isConditional)).toBe(true)
+  })
+})
+
+// Merciless/Deadhead repeat their passive lines inside the on-kill string;
+// without the dedupe the passive was counted twice and scaled by the stacks.
+describe("parseModStats embedded passive lines", () => {
+  it("Primary Merciless counts its reload passive once, unstacked", () => {
+    const mod = {
+      name: "Primary Merciless",
+      levelStats: [
+        {
+          stats: [
+            "On Kill:\r\n+30% Damage for 4s. Stacks up to 12x.\r\n+30% Reload Speed",
+            "+30% Reload Speed",
+          ],
+        },
+      ],
+    } as unknown as Mod
+    const stats = parseModStats({ mod, rank: 0 })
+    expect(stats.filter((s) => s.type === "reload_speed")).toEqual([
+      { type: "reload_speed", value: 30, operation: "percent_add" },
+    ])
+    expect(stats.find((s) => s.type === "damage")?.maxStacks).toBe(12)
+  })
+})
+
 // Riven stats the stat engine has no model for: they render on the card but
 // parse to nothing. A riven stat whose name the parser doesn't recognise is
 // dropped silently, so every stat the dialog offers must either parse or be
