@@ -26,7 +26,7 @@ import {
 
 // Mac shows ⌘S; everything else shows Ctrl S. Computed once — the platform
 // doesn't change mid-session. The matching hotkey is registered in
-// editor-shell via useHotkey("mod+s").
+// use-build-save via useHotkey("mod+s").
 const IS_MAC =
   typeof navigator !== "undefined" &&
   /Mac|iPhone|iPad/.test(navigator.userAgent)

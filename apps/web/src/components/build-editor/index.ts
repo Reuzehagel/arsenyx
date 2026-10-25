@@ -8,12 +8,11 @@ export {
 export { BuildSurface, type BuildSurfaceProps } from "./build-surface"
 export { DragController } from "./drag-controller"
 export {
-  EditorShell,
   getVariantEpoch,
   resetEditorCache,
   subscribeVariantEpoch,
-  type EditorShellSearch,
-} from "./editor-shell"
+} from "./editor-cache"
+export { EditorShell, type EditorShellSearch } from "./editor-shell"
 export { EditorVariantBar } from "./editor-variant-bar"
 export {
   useArcaneSlots,
