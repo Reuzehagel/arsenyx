@@ -368,6 +368,9 @@ function parseClauseInto(
 
 export interface SourcedStat extends ParsedStat {
   sourceName: string
+  /** Limits the stat to the normal attacks or to the Incarnon Form ones;
+   *  absent means every attack mode. */
+  attackScope?: "normal" | "incarnon"
 }
 
 export interface CollectOptions {

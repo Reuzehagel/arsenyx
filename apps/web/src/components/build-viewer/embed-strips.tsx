@@ -1,5 +1,5 @@
 import {
-  getIncarnonBaseName,
+  findIncarnonEvolution,
   getIncarnonPerkDescription,
   type IncarnonPerk,
 } from "@arsenyx/shared/warframe/incarnon-data"
@@ -485,8 +485,7 @@ function EmbedIncarnonStrip({
   slug: string
 }) {
   const { data: evolutions } = useSuspenseQuery(incarnonEvolutionsQuery)
-  const baseName = getIncarnonBaseName(weaponName)
-  const evolution = baseName ? evolutions[baseName] : undefined
+  const evolution = findIncarnonEvolution(evolutions, weaponName)
   if (!evolution) return null
   const choosableTiers = evolution.tiers.filter((t) => t.perks.length > 1)
   if (choosableTiers.length === 0) return null
