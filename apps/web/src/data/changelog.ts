@@ -11,6 +11,21 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-10-27",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Incarnon evolution perks now change your weapon's stats. Always-on bonuses such as Survivor's Edge, Critical Parallel, the +Base Damage tier 2 perks, Rapid Reinforcement, and Extended Volley are counted in the stats panel. Bonuses that only trigger in certain situations are not counted yet.",
+      },
+      {
+        type: "fix",
+        description:
+          "Weapons with a second Incarnon Form attack, like Braton's AoE, no longer show it in the stats panel while Incarnon is turned off.",
+      },
+    ],
+  },
+  {
     date: "2026-10-25",
     changes: [
       {

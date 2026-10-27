@@ -23,3 +23,9 @@ Drafts live under `arsenyx:editor-draft:<storeKey>`: the build slug for a saved 
 - The search box is `[aria-label="Search mods"]`. Focus it with `.focus()` through `javascript_tool`, or click it. The `/` hotkey only works when focus isn't in another input or slot.
 - Results are ranked from a `useDeferredValue` copy of the query. The browser tool types instantly, so typing followed by Enter in the same batch is a race stress test. A human-speed check needs a `wait` of about 1s before Enter.
 - Placed mods render in the slot grid at the top of the page. Run `window.scrollTo(0, 0)` and take a screenshot to read them.
+
+## Read the stats panel
+
+- At the browser pane's default width the stats sidebar collapses into a "Stats" popover that is hard to drive. Run `resize_window` at 1500×1000 first so it renders inline, and reset it with preset `desktop` when done.
+- Read values with `javascript_tool`: `document.body.innerText`, from `Crit Chance` down through the attack-mode rows (`NORMAL ATTACK`, `INCARNON FORM`, …).
+- Incarnon weapons: the toggle is the visible `[role="switch"]` labelled Incarnon; tier pickers are buttons `T2`–`T5` (`find("T4")`), and a perk is picked by clicking its name.

@@ -407,3 +407,61 @@ describe("riven spliced elements", () => {
     expect(elemMap(stats).get("viral")).toBe(90)
   })
 })
+
+describe("incarnon perk stats", () => {
+  const weapon = makeWeapon({
+    attacks: [
+      {
+        name: "Normal Attack",
+        damage: { impact: 10, slash: 30 },
+        crit_chance: 10,
+      },
+      { name: "Incarnon Form", damage: { heat: 50 }, crit_chance: 30 },
+    ],
+  } as Partial<Gun>)
+  const serration = {
+    name: "Serration",
+    levelStats: [{ stats: ["+100% Damage"] }],
+  } as unknown as Mod
+
+  it("adds Base perks before mods and scopes magazine/reload to normal attacks", () => {
+    const stats = calculateWeaponStats({
+      weapon,
+      mods: [{ mod: serration, rank: 0 }],
+      arcanes: [],
+      incarnonStats: [
+        { type: "damage", value: 20, operation: "base_add", sourceName: "P" },
+        {
+          type: "critical_chance",
+          value: 12,
+          operation: "base_add",
+          sourceName: "P",
+        },
+        {
+          type: "magazine_size",
+          value: 10,
+          operation: "base_add",
+          attackScope: "normal",
+          sourceName: "P",
+        },
+        {
+          type: "reload_speed",
+          value: 50,
+          operation: "percent_add",
+          attackScope: "normal",
+          sourceName: "P",
+        },
+      ],
+    })
+    const [normal, form] = stats.attackModes
+    // (40 + 20) per pellet, split 1:3, then ×2 Serration.
+    expect(normal!.totalDamage.modified).toBe(120)
+    expect(normal!.criticalChance.modified).toBe(22)
+    expect(normal!.magazineSize!.modified).toBe(50)
+    expect(normal!.reloadTime!.modified).toBeCloseTo(2 / 1.5)
+    expect(form!.totalDamage.modified).toBe(140)
+    expect(form!.criticalChance.modified).toBe(42)
+    expect(form!.magazineSize!.modified).toBe(40)
+    expect(form!.reloadTime!.modified).toBe(2)
+  })
+})

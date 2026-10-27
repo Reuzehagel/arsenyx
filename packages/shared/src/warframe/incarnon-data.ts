@@ -20,8 +20,12 @@ export function getIncarnonPerkDescription(
   return perk.variants?.[weaponName] ?? perk.description
 }
 
-/** Stable identifier for the incarnon-form alt-fire attack mode in the item data. */
-export const INCARNON_FORM_ATTACK_NAME = "Incarnon Form"
+/** True for the Incarnon Form alt-fire attack modes in the item data. Prefix
+ *  match: some weapons split the form into several modes ("Incarnon Form AoE",
+ *  "Incarnon Form Radial Attack"). */
+export function isIncarnonFormAttack(attackName: string): boolean {
+  return attackName.startsWith("Incarnon Form")
+}
 
 /** All 53 incarnon-eligible base weapon names (8 innate + 45 Steel Path). */
 export const INCARNON_NAMES: ReadonlySet<string> = new Set([
