@@ -1,6 +1,7 @@
 import {
+  findIncarnonEvolution,
   hasIncarnon,
-  INCARNON_FORM_ATTACK_NAME,
+  isIncarnonFormAttack,
 } from "@arsenyx/shared/warframe/incarnon-data"
 import {
   isKitgunChamber,
@@ -36,6 +37,7 @@ import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import { adjustChamberForKitgun } from "@/lib/kitgun-stats"
 import { type HelminthAbility } from "@/lib/queries/helminth-query"
+import { incarnonEvolutionsQuery } from "@/lib/queries/incarnon-query"
 import { modularQuery } from "@/lib/queries/modular-query"
 import { type PlacedShard } from "@/lib/shards"
 import {
@@ -43,6 +45,7 @@ import {
   calculateWarframeStats,
   calculateWeaponStats,
   hasConditionalStats,
+  incarnonPerkStats,
   type CompanionStats,
   type WarframeStats,
   type WeaponStats,
@@ -227,6 +230,17 @@ export function ItemSidebar({
     enabled: isKitgunItem,
   })
 
+  const incarnonActive = showIncarnon && incarnonEnabled
+  const { data: evolutions } = useQuery({
+    ...incarnonEvolutionsQuery,
+    enabled: incarnonActive,
+  })
+  const incarnonStats = useMemo(() => {
+    const evolution = findIncarnonEvolution(evolutions, item.name)
+    if (!incarnonActive || !evolution || !incarnonPerks) return undefined
+    return incarnonPerkStats(evolution, incarnonPerks, item.name)
+  }, [incarnonActive, evolutions, incarnonPerks, item.name])
+
   const [showMaxStacks, setShowMaxStacks] = useState(false)
 
   // Stats panels fold on phones only. On sm+ (≥640px) the `sm:flex` rule
@@ -287,13 +301,14 @@ export function ItemSidebar({
       showMaxStacks,
       deploymentContext: effectiveDeploymentContext,
       lichBonusElement,
+      incarnonStats,
     })
     // The Incarnon Form alt-fire is only available with the adapter installed.
     if (showIncarnon && !incarnonEnabled) {
       return {
         ...stats,
         attackModes: stats.attackModes.filter(
-          (m) => m.name !== INCARNON_FORM_ATTACK_NAME,
+          (m) => !isIncarnonFormAttack(m.name),
         ),
       }
     }
@@ -314,6 +329,7 @@ export function ItemSidebar({
     incarnonEnabled,
     effectiveDeploymentContext,
     lichBonusElement,
+    incarnonStats,
   ])
 
   const companionStats = useMemo<CompanionStats | null>(() => {

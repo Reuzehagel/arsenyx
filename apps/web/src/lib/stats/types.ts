@@ -64,7 +64,9 @@ export type DamageType =
   | "void"
   | "tau"
 
-export type StatOperation = "flat_add" | "percent_add"
+/** `base_add` raises the weapon's base value before mods multiply it
+ *  (Incarnon "+X Base …" perks). */
+export type StatOperation = "flat_add" | "percent_add" | "base_add"
 
 export interface ParsedStat {
   type: StatType
