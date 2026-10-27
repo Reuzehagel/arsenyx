@@ -21,6 +21,7 @@
     "data:refresh": "bun run scripts/refresh-data.ts",
     "data:stamp": "bun run scripts/stamp-data.ts",
     "data:patch": "bun run scripts/patch-catalog.ts",
+    "data:ab": "bun run scripts/data-ab.ts",
     "data:diff": "bun run scripts/catalog-diff.ts",
     "typecheck": "bun run --filter '*' typecheck && bun run typecheck:scripts",
     "typecheck:scripts": "bun run --cwd=apps/web tsc --noEmit -p ../../scripts/tsconfig.json",

@@ -78,7 +78,8 @@ bun run sync:images                # mirror emitted images into R2, rewrite cata
 bun run check:images               # fail if catalog still hotlinks content/wiki.warframe.com
 bun run check:data-version         # fail if catalog changed but meta.json generatedAt didn't
 bun run data:stamp                 # bump meta.json generatedAt — run after any HAND-edit to apps/web/public/data/
-bun run data:patch <base> <fixed>  # apply only a fix's catalog delta (see "Shipping a pipeline fix" below)
+bun run data:ab [base-ref]          # ship only a pipeline change's catalog delta (see "Shipping a pipeline fix" below)
+bun run data:patch <base> <fixed>  # the patch step data:ab runs, for hand-built snapshots
 bun run data:diff [ref]            # markdown summary of catalog changes vs ref (default HEAD); the data cron's PR body
 ```
 
@@ -113,16 +114,15 @@ twice from the same mirror and patch the delta onto the committed catalog.
 you didn't know depended on the field (e.g. `mod-tradable.json` ← `tradable`):
 
 ```bash
-# fix committed on HEAD; `bun run data:sync` first if data/raw/ is missing or stale
-rm -rf data/ab && mkdir -p data/ab
-git switch --detach HEAD~1 && bun run build:items && cp -r apps/web/public/data data/ab/base
-git checkout -- apps/web/public/data data/curated && git switch -
-bun run build:items && cp -r apps/web/public/data data/ab/fixed
-git checkout -- apps/web/public/data data/curated && git clean -fdq apps/web/public/data
-bun run data:patch data/ab/base data/ab/fixed   # prints every changed field
-bun run data:stamp
+# `bun run data:sync` first if data/raw/ is missing (or a module: scripts/sync-wiki.ts <Module/name>)
+bun run data:ab            # base = HEAD in a throwaway worktree, fixed = working tree (committed or not); patches + stamps
+bun run data:ab HEAD~1     # fix already committed: compare against the commit before it
 bun --filter=arsenyx-web run test parsed-catalog --update  # then review the .snap.txt diff
 ```
+
+`data:ab` ends with a **Changed fields** count per field path (`--verbose` lists
+every change). Anything there besides your fix is drift: stop and investigate.
+`data:patch <base> <fixed>` stays available for hand-built snapshots.
 
 `apps/web/src/lib/stats/parsed-catalog.snap.txt` records how the stat engine reads every
 mod and arcane, so a mod or arcane data change (or a `lib/stats/parser.ts` change) moves
@@ -130,7 +130,8 @@ it. Its diff is the list of items whose stats changed. Check each line before yo
 
 Both sync and build rewrite tracked files as a side effect: `data:sync` →
 `data/PINS.json`, `build:items` → `data/curated/wiki-image-urls.json` (the
-image-URL cache). Revert them unless the change is a full refresh. Patched
+image-URL cache). Revert them unless the change is a full refresh (`data:ab`
+restores the image cache itself). Patched
 records keep the committed `img.arsenyx.com` URLs; a record the fix *adds*
 carries an upstream URL, which `check:images` flags — run `sync:images` then.
 

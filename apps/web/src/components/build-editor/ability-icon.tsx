@@ -1,4 +1,5 @@
-import { useSuspenseQuery } from "@tanstack/react-query"
+import type { Ability } from "@arsenyx/shared/warframe/types"
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
 import { Undo2, Zap } from "lucide-react"
 import { Suspense, useMemo, useState } from "react"
 
@@ -9,6 +10,7 @@ import {
   helminthQuery,
   type HelminthAbility,
 } from "@/lib/queries/helminth-query"
+import { abilityStatRows, type AbilityTotals } from "@/lib/stats"
 import { cn } from "@/lib/util/utils"
 import { getImageUrl } from "@/lib/warframe"
 
@@ -19,12 +21,25 @@ export function AbilityIcon({
   isHelminth,
   canSubsume,
   onSelectHelminth,
+  totals,
 }: {
-  ability: { name: string; description: string; imageName?: string }
+  ability: Pick<
+    Ability,
+    "uniqueName" | "name" | "description" | "imageName" | "stats"
+  >
   isHelminth: boolean
   canSubsume: boolean
   onSelectHelminth: (ability: HelminthAbility | null) => void
+  /** The build's ability totals; stats are hidden without them. */
+  totals?: AbilityTotals
 }) {
+  const statList = totals && (
+    <AbilityStatList
+      ability={ability}
+      isHelminth={isHelminth}
+      totals={totals}
+    />
+  )
   const triggerButton = (
     <button
       type="button"
@@ -60,6 +75,7 @@ export function AbilityIcon({
           <p className="text-muted-foreground mt-0.5 whitespace-pre-line">
             <StatText text={ability.description} />
           </p>
+          {statList}
         </>
       }
       popover={(close) =>
@@ -84,10 +100,53 @@ export function AbilityIcon({
             <p className="text-muted-foreground text-xs whitespace-pre-line">
               <StatText text={ability.description} />
             </p>
+            {statList}
           </div>
         )
       }
     />
+  )
+}
+
+export function AbilityStatList({
+  ability,
+  isHelminth,
+  totals,
+}: {
+  ability: Pick<Ability, "uniqueName" | "stats">
+  isHelminth: boolean
+  totals: AbilityTotals
+}) {
+  // A subsumed ability restored from a saved build carries no stats (builds
+  // persist only its identity), so read them from the Helminth catalog.
+  const { data } = useQuery({ ...helminthQuery, enabled: isHelminth })
+  const stats = isHelminth
+    ? data?.find((a) => a.uniqueName === ability.uniqueName)?.stats
+    : ability.stats
+  if (!stats?.length) return null
+
+  return (
+    <div className="mt-2 flex flex-col gap-0.5 border-t pt-2 text-xs">
+      {abilityStatRows(stats, totals, isHelminth).map((row, i) =>
+        row.heading ? (
+          <p key={i} className="mt-1 font-semibold">
+            {row.text}
+          </p>
+        ) : (
+          <p
+            key={i}
+            className={cn(
+              row.changed ? "text-foreground" : "text-muted-foreground",
+            )}
+          >
+            {row.text}
+          </p>
+        ),
+      )}
+      <p className="text-muted-foreground mt-1 text-[10px]">
+        Max rank, from wiki.warframe.com
+      </p>
+    </div>
   )
 }
 

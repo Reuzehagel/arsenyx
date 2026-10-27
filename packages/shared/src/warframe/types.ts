@@ -55,6 +55,35 @@ export interface Ability {
   name: string
   description: string
   imageName?: string
+  /** Max-rank stats from the wiki's Module:Ability/data/stats; absent when
+   *  the wiki has no entry for this ability. */
+  stats?: AbilityStat[]
+}
+
+/** Which build total an ability stat scales with. Absent = fixed value. */
+export type AbilityStatScale =
+  | "strength"
+  | "duration"
+  | "range"
+  | "efficiency"
+  | "drain"
+
+/** One ability stat row. `label` holds `|val1|`/`|val2|` placeholders filled
+ *  from `values`; a row without `values` is a sub-heading (e.g. one part of
+ *  a multi-mode ability). */
+export interface AbilityStat {
+  label: string
+  scale?: AbilityStatScale
+  values?: number[]
+  /** Replaces `values` when the ability is subsumed onto another frame. */
+  helminthValues?: number[]
+  /** Clamp on the scaled value (e.g. damage reduction capped at 90%). */
+  max?: number
+  /** Replaces `max` when the ability is subsumed (Eclipse: 95% → 75%). */
+  helminthMax?: number
+  min?: number
+  /** Decimal places the wiki rounds the scaled value to. */
+  round?: number
 }
 
 /** One switchable form of a twin-frame. Mods/auras/arcanes are tracked on the

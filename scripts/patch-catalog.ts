@@ -8,7 +8,10 @@
  * docs/commands.md ("Shipping a pipeline fix without upstream drift").
  *
  * Usage:
- *   bun run data:patch <base-dir> <fixed-dir> [target-dir]
+ *   bun run data:patch <base-dir> <fixed-dir> [target-dir] [--verbose]
+ *
+ * Prints one line per patched file, then a count per changed field path with
+ * record keys collapsed to `[]`; `--verbose` also prints every change.
  *
  * target-dir defaults to apps/web/public/data. Arrays of records are matched by
  * `uniqueName`; string arrays as sets; other arrays are replaced whole. Skips
@@ -90,7 +93,10 @@ function patch(
   return fixed
 }
 
-const [baseDir, fixedDir, targetArg] = process.argv.slice(2)
+const VERBOSE = process.argv.includes("--verbose")
+const [baseDir, fixedDir, targetArg] = process.argv
+  .slice(2)
+  .filter((a) => a !== "--verbose")
 if (!baseDir || !fixedDir) {
   console.error("usage: bun run data:patch <base-dir> <fixed-dir> [target-dir]")
   process.exit(1)
@@ -98,6 +104,8 @@ if (!baseDir || !fixedDir) {
 const targetDir = resolve(targetArg ?? "apps/web/public/data")
 
 let touched = 0
+/** Changed field path, record keys collapsed: `.abilities[].stats` → count. */
+const byField = new Map<string, number>()
 const manual: string[] = []
 for (const fixedPath of findJsonFiles(resolve(fixedDir))) {
   const rel = relative(resolve(fixedDir), fixedPath)
@@ -138,8 +146,14 @@ for (const fixedPath of findJsonFiles(resolve(fixedDir))) {
   if (log.length === 0) continue
   writeFileSync(targetPath, JSON.stringify(out, null, indent) + nl)
   console.log(`  ${rel}: ${log.length} change(s)`)
-  for (const l of log.slice(0, 20)) console.log(`    ${l}`)
-  if (log.length > 20) console.log(`    … ${log.length - 20} more`)
+  for (const l of log) {
+    if (VERBOSE) console.log(`    ${l}`)
+    const field =
+      l
+        .split(/ = | removed| added|: | [+-]/)[0]!
+        .replace(/\[[^\]]*\]/g, "[]") || "(root)"
+    byField.set(field, (byField.get(field) ?? 0) + 1)
+  }
   touched++
 }
 
@@ -148,6 +162,11 @@ for (const rel of findJsonFiles(resolve(baseDir)).map((p) =>
 )) {
   if (!existsSync(join(resolve(fixedDir), rel)))
     manual.push(`${rel} (removed by the fix)`)
+}
+if (byField.size > 0) {
+  console.log("\nChanged fields:")
+  for (const [field, n] of [...byField].sort((a, b) => b[1] - a[1]))
+    console.log(`  ${n}\t${field}`)
 }
 console.log(
   `\n✓ data:patch — ${touched} file(s) patched. Run \`bun run data:stamp\` next.`,

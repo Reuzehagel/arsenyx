@@ -18,6 +18,7 @@ import {
   RANKUP_WIKI_DISPUTED,
   rankUpFor,
 } from "@arsenyx/shared/warframe/rankup"
+import type { AbilityStat } from "@arsenyx/shared/warframe/types"
 
 import type { FramePolarityOverride } from "../../data/curated/frame-polarities"
 import { cleanDeName } from "./names"
@@ -31,6 +32,7 @@ interface FrameAbility {
   name: string
   description: string
   imageName?: string
+  stats?: AbilityStat[]
 }
 
 /** One switchable form of a twin-frame (e.g. Sirius & Orion). Forms have
