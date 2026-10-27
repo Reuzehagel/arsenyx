@@ -11,6 +11,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-10-27",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Hover a Warframe ability to see its stats with your build applied: damage, duration, range, energy cost, and more, scaled by your Strength, Duration, Range, and Efficiency. Subsumed Helminth abilities show their Helminth values. The numbers are max rank and come from the Warframe wiki, which covers most frames; the newest few, like Dante, Koumei, Temple, and Uriel, don't have stats there yet.",
+      },
+    ],
+  },
+  {
     date: "2026-10-25",
     changes: [
       {

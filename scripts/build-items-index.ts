@@ -51,6 +51,10 @@ import { buildBrowseIndex } from "./build/browse-index"
 import { injectMissingDeMods } from "./build/de-missing-mods"
 import { buildFamilyIndex, makeExpandCompat } from "./build/expand-compat"
 import { iterWikiRecords } from "./build/images"
+import {
+  abilityStatsLookup,
+  type AbilityRef,
+} from "./build/merge-ability-stats"
 import { mergeArcanes } from "./build/merge-arcanes"
 import { mergeCompanions } from "./build/merge-companions"
 import {
@@ -90,7 +94,11 @@ import { writeItemDetails } from "./build/write-details"
 
 const REPO_ROOT = resolve(import.meta.dirname, "..")
 const WIKI_DIR = resolve(REPO_ROOT, "data/raw/wiki")
-const OUT_DIR = resolve(REPO_ROOT, "apps/web/public/data")
+// data:ab (scripts/data-ab.ts) points this at a snapshot dir.
+const OUT_DIR = resolve(
+  REPO_ROOT,
+  process.env.CATALOG_OUT_DIR ?? "apps/web/public/data",
+)
 const DETAIL_DIR = resolve(OUT_DIR, "items")
 const WIKI_IMAGE_CACHE = resolve(REPO_ROOT, "data/curated/wiki-image-urls.json")
 
@@ -256,7 +264,35 @@ async function main() {
   }
   // Collapse twin-frames (e.g. Sirius & Orion ships as two DE rows) into one
   // entity carrying both forms, before any downstream consumer sees the list.
-  const mergedFrames = collapseTwinFrames(rawFrames)
+  const twinCollapsed = collapseTwinFrames(rawFrames)
+  // Per-ability stats from Module:Ability/data/stats (max-rank values).
+  const abilityStats = abilityStatsLookup(
+    readWikiModule(resolve(WIKI_DIR, "Ability_data_stats.lua")),
+    twinCollapsed.flatMap((f) => [
+      ...f.abilities,
+      ...(f.forms ?? []).flatMap((form) => form.abilities),
+    ]),
+  )
+  const withAbilityStats = <T extends AbilityRef>(a: T): T => {
+    const s = abilityStats(a)
+    return s ? { ...a, stats: s } : a
+  }
+  const mergedFrames = twinCollapsed.map((f) => ({
+    ...f,
+    abilities: f.abilities.map(withAbilityStats),
+    ...(f.forms && {
+      forms: f.forms.map((form) => ({
+        ...form,
+        abilities: form.abilities.map(withAbilityStats),
+      })),
+    }),
+  }))
+  const framesAbilities = mergedFrames
+    .filter((f) => f.category === "warframes")
+    .flatMap((f) => f.abilities)
+  console.log(
+    `Ability stats: ${framesAbilities.filter((a) => a.stats).length}/${framesAbilities.length} warframe abilities matched`,
+  )
   const operators = operatorsFromWiki(wikiFramesBlob)
   // Recorded in _report.json too, so it shows up in the weekly refresh PR's diff.
   const frameRankUpDrift = rankUpDrift(mergedFrames, wikiFramesBlob)
@@ -659,7 +695,7 @@ async function main() {
     deFramesBlob.ExportAbilities ?? [],
   )
   const helminth = helminthRaw.map((a) => ({
-    ...a,
+    ...withAbilityStats(a),
     imageName: imageByUniqueName.get(a.uniqueName) ?? a.imageName,
   }))
   await writeFile(

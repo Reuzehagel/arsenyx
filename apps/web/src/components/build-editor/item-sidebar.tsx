@@ -364,6 +364,7 @@ export function ItemSidebar({
                     isHelminth={Boolean(replaced)}
                     canSubsume={isPureWarframe && !readOnly}
                     onSelectHelminth={(ab) => onSetHelminth(i, ab)}
+                    totals={warframeStats ?? undefined}
                   />
                 )
               })}
