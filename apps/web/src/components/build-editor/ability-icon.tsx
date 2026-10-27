@@ -1,4 +1,4 @@
-import type { AbilityStat } from "@arsenyx/shared/warframe/types"
+import type { Ability } from "@arsenyx/shared/warframe/types"
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
 import { Undo2, Zap } from "lucide-react"
 import { Suspense, useMemo, useState } from "react"
@@ -23,13 +23,10 @@ export function AbilityIcon({
   onSelectHelminth,
   totals,
 }: {
-  ability: {
-    uniqueName: string
-    name: string
-    description: string
-    imageName?: string
-    stats?: AbilityStat[]
-  }
+  ability: Pick<
+    Ability,
+    "uniqueName" | "name" | "description" | "imageName" | "stats"
+  >
   isHelminth: boolean
   canSubsume: boolean
   onSelectHelminth: (ability: HelminthAbility | null) => void
@@ -111,12 +108,12 @@ export function AbilityIcon({
   )
 }
 
-function AbilityStatList({
+export function AbilityStatList({
   ability,
   isHelminth,
   totals,
 }: {
-  ability: { uniqueName: string; stats?: AbilityStat[] }
+  ability: Pick<Ability, "uniqueName" | "stats">
   isHelminth: boolean
   totals: AbilityTotals
 }) {

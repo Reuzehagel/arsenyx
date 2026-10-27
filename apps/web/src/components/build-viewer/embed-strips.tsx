@@ -3,12 +3,13 @@ import {
   getIncarnonPerkDescription,
   type IncarnonPerk,
 } from "@arsenyx/shared/warframe/incarnon-data"
-import type { LichBonusElement } from "@arsenyx/shared/warframe/types"
+import type { Ability, LichBonusElement } from "@arsenyx/shared/warframe/types"
 import { isZawStrike } from "@arsenyx/shared/warframe/zaw-data"
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
 import { ExternalLink, Zap } from "lucide-react"
 import { type ReactNode, Suspense } from "react"
 
+import { AbilityStatList } from "@/components/build-editor/ability-icon"
 import { ShardSlot } from "@/components/build-editor/shard-controls"
 import { TapPopover } from "@/components/tap-popover"
 import type { HelminthAbility } from "@/lib/queries/helminth-query"
@@ -16,6 +17,7 @@ import { incarnonEvolutionsQuery } from "@/lib/queries/incarnon-query"
 import { kitgunImagesQuery } from "@/lib/queries/kitgun-images-query"
 import { zawImagesQuery } from "@/lib/queries/zaw-images-query"
 import type { PlacedShard } from "@/lib/shards"
+import type { AbilityTotals } from "@/lib/stats/ability-stats"
 import { DAMAGE_TYPE_ICON, type DamageType } from "@/lib/stats/types"
 import { cn } from "@/lib/util/utils"
 import { getImageUrl } from "@/lib/warframe"
@@ -31,6 +33,7 @@ export function EmbedStrips({
   itemName,
   itemImageName,
   abilities,
+  abilityTotals,
   helminth,
   shards,
   zawComponents,
@@ -43,7 +46,9 @@ export function EmbedStrips({
   category: string
   itemName: string
   itemImageName?: string
-  abilities: Array<{ name: string; description: string; imageName?: string }>
+  abilities: Ability[]
+  /** The build's ability totals; stats are hidden without them. */
+  abilityTotals?: AbilityTotals
   helminth: Record<number, HelminthAbility>
   shards: (PlacedShard | null)[]
   zawComponents: { grip: string; link: string } | undefined
@@ -82,6 +87,7 @@ export function EmbedStrips({
       {showWarframeStrip && (
         <EmbedWarframeStrip
           abilities={abilities}
+          abilityTotals={abilityTotals}
           helminth={helminth}
           shards={shards}
           slug={slug}
@@ -214,13 +220,15 @@ function EmbedStripFrame({
 
 function EmbedWarframeStrip({
   abilities,
+  abilityTotals,
   helminth,
   shards,
   slug,
   itemName,
   itemImageName,
 }: {
-  abilities: Array<{ name: string; description: string; imageName?: string }>
+  abilities: Ability[]
+  abilityTotals?: AbilityTotals
   helminth: Record<number, HelminthAbility>
   shards: (PlacedShard | null)[]
   slug: string
@@ -245,6 +253,7 @@ function EmbedWarframeStrip({
               const replaced = helminth[i]
               const displayed = replaced
                 ? {
+                    uniqueName: replaced.uniqueName,
                     name: replaced.name,
                     description: replaced.description,
                     imageName: replaced.imageName,
@@ -255,6 +264,7 @@ function EmbedWarframeStrip({
                   key={i}
                   ability={displayed}
                   isHelminth={Boolean(replaced)}
+                  totals={abilityTotals}
                 />
               )
             })}
@@ -273,9 +283,14 @@ function EmbedWarframeStrip({
 function EmbedAbilityIcon({
   ability,
   isHelminth,
+  totals,
 }: {
-  ability: { name: string; description: string; imageName?: string }
+  ability: Pick<
+    Ability,
+    "uniqueName" | "name" | "description" | "imageName" | "stats"
+  >
   isHelminth: boolean
+  totals?: AbilityTotals
 }) {
   const triggerEl = (
     <button
@@ -309,6 +324,13 @@ function EmbedAbilityIcon({
       <p className="text-muted-foreground mt-0.5 text-xs">
         <StatText text={ability.description} />
       </p>
+      {totals && (
+        <AbilityStatList
+          ability={ability}
+          isHelminth={isHelminth}
+          totals={totals}
+        />
+      )}
     </>
   )
   return (

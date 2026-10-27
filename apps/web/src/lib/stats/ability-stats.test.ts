@@ -41,6 +41,27 @@ describe("abilityStatRows", () => {
     ).toBe("7.5m")
   })
 
+  it("lowers strength-scaled values below base and clamps to min", () => {
+    const t = totals(70, 100, 100, 100)
+    expect(
+      row({ label: "|val1|", scale: "strength", values: [100] }, t),
+    ).toEqual({ text: "70", changed: true })
+    expect(
+      row({ label: "|val1|", scale: "strength", values: [100], min: 80 }, t)
+        .text,
+    ).toBe("80")
+  })
+
+  it("falls back to the normal values for a subsumed ability without Helminth ones", () => {
+    expect(
+      row(
+        { label: "|val1|", scale: "strength", values: [30] },
+        totals(200, 100, 100, 100),
+        true,
+      ).text,
+    ).toBe("60")
+  })
+
   it("leaves fixed stats and unmodded builds unchanged", () => {
     expect(
       row({ label: "Cap: |val1|%", values: [50] }, totals(300, 100, 100, 100)),
