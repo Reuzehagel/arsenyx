@@ -266,12 +266,14 @@ async function main() {
   // entity carrying both forms, before any downstream consumer sees the list.
   const twinCollapsed = collapseTwinFrames(rawFrames)
   // Per-ability stats from Module:Ability/data/stats (max-rank values).
+  const abilityStatsUnhandled: string[] = []
   const abilityStats = abilityStatsLookup(
     readWikiModule(resolve(WIKI_DIR, "Ability_data_stats.lua")),
     twinCollapsed.flatMap((f) => [
       ...f.abilities,
       ...(f.forms ?? []).flatMap((form) => form.abilities),
     ]),
+    abilityStatsUnhandled,
   )
   const withAbilityStats = <T extends AbilityRef>(a: T): T => {
     const s = abilityStats(a)
@@ -890,6 +892,7 @@ async function main() {
         frameRankUpDrift,
         companionsUnmatched: unmatchedDeNames.sort(),
         modsUnmatched,
+        abilityStatsUnhandled: [...new Set(abilityStatsUnhandled)].sort(),
         skippedModularComponents: skippedModular.sort(),
         releaseHistoryUnmatched: Object.keys(curated.releaseHistory)
           .filter((n) => !releaseHistoryResolved.has(n))

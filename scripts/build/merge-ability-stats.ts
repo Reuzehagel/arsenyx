@@ -28,8 +28,9 @@ interface WikiAbilityStat {
   OperationType?: string
 }
 
-/** Every key `toStat` reads or deliberately drops. An unknown one fails the
- *  build so a new upstream field gets handled instead of silently lost. */
+/** Every key `toStat` reads or deliberately drops. A row with any other key
+ *  (or an unknown Modifier) is dropped rather than shown wrong, and reported
+ *  so the weekly refresh PR lists it (`abilityStatsUnhandled` in _report.json). */
 const KNOWN_KEYS = new Set([
   "Label",
   "Modifier",
@@ -64,13 +65,14 @@ function valueList(
   return out.length ? out : undefined
 }
 
-function toStat(w: WikiAbilityStat): AbilityStat | null {
-  for (const k of Object.keys(w)) {
-    if (!KNOWN_KEYS.has(k)) {
-      throw new Error(
-        `Unhandled ability stat key "${k}" on "${w.Label}" — map it in merge-ability-stats.ts`,
-      )
-    }
+function toStat(
+  w: WikiAbilityStat,
+  report: (problem: string) => void,
+): AbilityStat | null {
+  const unknownKey = Object.keys(w).find((k) => !KNOWN_KEYS.has(k))
+  if (unknownKey) {
+    report(`"${w.Label}": unhandled key "${unknownKey}"`)
+    return null
   }
   if (!w.Label) return null
   // shortcut: InverseModifier / OperationType="ADD" rows (3 in the module)
@@ -79,9 +81,8 @@ function toStat(w: WikiAbilityStat): AbilityStat | null {
   const values = valueList(w.Values)
   const scale = w.Modifier ? SCALES[w.Modifier] : undefined
   if (values && w.Modifier && w.Modifier !== "NONE" && !scale) {
-    throw new Error(
-      `Unknown ability stat Modifier "${w.Modifier}" on "${w.Label}"`,
-    )
+    report(`"${w.Label}": unknown Modifier "${w.Modifier}"`)
+    return null
   }
   const stat: AbilityStat = {
     // The wiki source spells the degree sign as a broken `xb0` escape.
@@ -104,16 +105,20 @@ export interface AbilityRef {
 }
 
 /** Build a `(ability) → stats` lookup from the parsed wiki module. `known` is
- *  every ability the catalog emits; it feeds the by-name Prime fallback. */
+ *  every ability the catalog emits; it feeds the by-name Prime fallback.
+ *  Rows dropped for an unknown key or Modifier are pushed to `unhandled`. */
 export function abilityStatsLookup(
   wiki: Record<string, unknown>,
   known: readonly AbilityRef[],
+  unhandled: string[] = [],
 ): (a: AbilityRef) => AbilityStat[] | undefined {
   const byAsset = new Map<string, AbilityStat[]>()
   for (const [key, rows] of Object.entries(wiki)) {
     if (!Array.isArray(rows)) continue
     const stats = (rows as WikiAbilityStat[])
-      .map(toStat)
+      .map((w) =>
+        toStat(w, (problem) => unhandled.push(`${basename(key)} ${problem}`)),
+      )
       .filter((s): s is AbilityStat => s !== null)
     if (stats.some((s) => s.values)) byAsset.set(basename(key), stats)
   }

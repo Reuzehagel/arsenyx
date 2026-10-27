@@ -80,17 +80,25 @@ describe("abilityStatsLookup", () => {
     expect(twoRoars({ uniqueName: "/Y/Other", name: "Roar" })).toBeUndefined()
   })
 
-  it("fails on a wiki key it doesn't handle", () => {
-    expect(() =>
-      abilityStatsLookup(
-        {
-          "/A/NewAbility": [
-            { Label: "X: |val1|", Values: { Val1: 1 }, Cap: 5 },
-          ],
-        },
-        [],
-      ),
-    ).toThrow(/Unhandled ability stat key "Cap"/)
+  it("drops and reports rows with an unknown key or Modifier", () => {
+    const unhandled: string[] = []
+    const ability = { uniqueName: "/A/NewAbility", name: "New" }
+    const lookup = abilityStatsLookup(
+      {
+        "/A/NewAbility": [
+          { Label: "X: |val1|", Values: { Val1: 1 }, Cap: 5 },
+          { Label: "Y: |val1|", Modifier: "NEW_STAT", Values: { Val1: 2 } },
+          { Label: "Z: |val1|", Values: { Val1: 3 } },
+        ],
+      },
+      [ability],
+      unhandled,
+    )
+    expect(lookup(ability)).toEqual([{ label: "Z: |val1|", values: [3] }])
+    expect(unhandled).toEqual([
+      'NewAbility "X: |val1|": unhandled key "Cap"',
+      'NewAbility "Y: |val1|": unknown Modifier "NEW_STAT"',
+    ])
   })
 
   it("returns undefined for abilities the wiki lacks", () => {
