@@ -3,7 +3,7 @@
 // imported by the build script) and are fetched on demand from
 // /data/incarnon-evolutions.json — see apps/web/src/lib/incarnon-query.ts.
 
-import type { IncarnonPerk } from "./incarnon-evolutions"
+import type { IncarnonEvolution, IncarnonPerk } from "./incarnon-evolutions"
 
 export type {
   IncarnonEvolution,
@@ -187,6 +187,15 @@ export function getIncarnonBaseName(weaponName: string): string | null {
   if (INCARNON_NAMES.has(weaponName)) return weaponName
   const stripped = stripVariant(weaponName)
   return INCARNON_NAMES.has(stripped) ? stripped : null
+}
+
+/** The evolution tree for any variant of an Incarnon weapon. */
+export function findIncarnonEvolution(
+  evolutions: Record<string, IncarnonEvolution> | undefined,
+  weaponName: string,
+): IncarnonEvolution | undefined {
+  const base = getIncarnonBaseName(weaponName)
+  return base ? evolutions?.[base] : undefined
 }
 
 export function hasIncarnon(weaponName: string): boolean {

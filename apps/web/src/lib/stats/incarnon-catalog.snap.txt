@@ -101,7 +101,7 @@ Boar T3 Mercenary Chamber | —
 Boar T3 Practiced Grip | —
 Boar T4 Elemental Balance | status_chance base_add 12 (normal) | status_chance base_add 96 (incarnon)
 Boar T4 Critical Parallel | critical_chance base_add 20 | critical_multiplier base_add 0.5
-Boar T4 Survivor's Edge | critical_chance base_add 10
+Boar T4 Survivor's Edge | critical_chance base_add 10 | status_chance base_add 6 (normal) | status_chance base_add 48 (incarnon)
 Boltor T2 Hunter's Mantra | damage base_add 18
 Telos Boltor T2 Hunter's Mantra | damage base_add 4
 Boltor Prime T2 Hunter's Mantra | damage base_add 4
@@ -243,18 +243,18 @@ Strun Prime T2 Blazing Barrel | damage base_add 2
 Strun T3 Rapid Reinforcement | reload_speed percent_add 60 (normal)
 Strun T3 Galvanic Reload | —
 Strun T3 Swift Deliverance | —
-Strun T4 Elemental Balance | status_chance base_add 11
-MK1-Strun T4 Elemental Balance | status_chance base_add 11
-Strun Wraith T4 Elemental Balance | status_chance base_add 10
-Strun Prime T4 Elemental Balance | status_chance base_add 11.3
+Strun T4 Elemental Balance | status_chance base_add 11 (normal) | status_chance base_add 132 (incarnon)
+MK1-Strun T4 Elemental Balance | status_chance base_add 11 (normal) | status_chance base_add 110 (incarnon)
+Strun Wraith T4 Elemental Balance | status_chance base_add 10 (normal) | status_chance base_add 100 (incarnon)
+Strun Prime T4 Elemental Balance | status_chance base_add 11.3 (normal) | status_chance base_add 136 (incarnon)
 Strun T4 Commodore's Fortune | critical_chance base_add 16
 MK1-Strun T4 Commodore's Fortune | critical_chance base_add 10
 Strun Wraith T4 Commodore's Fortune | critical_chance base_add 12
 Strun Prime T4 Commodore's Fortune | critical_chance base_add 12
-Strun T4 Brutal Edge | critical_chance base_add 4 | status_chance base_add 4
-MK1-Strun T4 Brutal Edge | critical_chance base_add 2 | status_chance base_add 2
-Strun Wraith T4 Brutal Edge | critical_chance base_add 4 | status_chance base_add 4.8
-Strun Prime T4 Brutal Edge | critical_chance base_add 4 | status_chance base_add 4
+Strun T4 Brutal Edge | critical_chance base_add 4 | status_chance base_add 4 (normal) | status_chance base_add 48 (incarnon)
+MK1-Strun T4 Brutal Edge | critical_chance base_add 2 | status_chance base_add 2 (normal) | status_chance base_add 20 (incarnon)
+Strun Wraith T4 Brutal Edge | critical_chance base_add 4 | status_chance base_add 4.8 (normal) | status_chance base_add 48 (incarnon)
+Strun Prime T4 Brutal Edge | critical_chance base_add 4 | status_chance base_add 4 (normal) | status_chance base_add 48 (incarnon)
 Sybaris T2 Well Rehearsed | damage base_add 20
 Dex Sybaris T2 Well Rehearsed | damage base_add 15
 Sybaris Prime T2 Well Rehearsed | damage base_add 15
@@ -266,9 +266,9 @@ Dex Sybaris T3 Extended Volley | magazine_size base_add 10 (normal)
 Sybaris Prime T3 Extended Volley | magazine_size base_add 12 (normal)
 Sybaris T3 Ready Retaliation | —
 Sybaris T3 Marksman's Hand | —
-Sybaris T4 Elemental Dominance | status_chance base_add 15
-Dex Sybaris T4 Elemental Dominance | status_chance base_add 15
-Sybaris Prime T4 Elemental Dominance | status_chance base_add 8
+Sybaris T4 Elemental Dominance | status_chance base_add 15 (normal) | status_chance base_add 30 (incarnon)
+Dex Sybaris T4 Elemental Dominance | status_chance base_add 15 (normal) | status_chance base_add 30 (incarnon)
+Sybaris Prime T4 Elemental Dominance | status_chance base_add 8 (normal) | status_chance base_add 16 (incarnon)
 Sybaris T4 Reaver's Rapture | —
 Sybaris T4 Survivor's Edge | critical_chance base_add 5 | status_chance base_add 10
 Torid T2 Final Fusillade | damage base_add 51
@@ -317,11 +317,11 @@ Ballistica Prime T2 Prolific Perforation | damage base_add 3
 Ballistica T3 Rapid Reinforcement | reload_speed percent_add 50 (normal)
 Ballistica T3 Swift Deliverance | —
 Ballistica T3 Void's Guidance | —
-Ballistica T4 Elemental Balance | status_chance base_add 20 (normal)
-Ballistica Prime T4 Elemental Balance | status_chance base_add 18 (normal)
-Ballistica T4 Survivor's Edge | critical_chance base_add 10
-Rakta Ballistica T4 Survivor's Edge | critical_chance base_add 8
-Ballistica Prime T4 Survivor's Edge | critical_chance base_add 7
+Ballistica T4 Elemental Balance | status_chance base_add 20 (normal) | status_chance base_add 20 (incarnon)
+Ballistica Prime T4 Elemental Balance | status_chance base_add 18 (normal) | status_chance base_add 72 (incarnon)
+Ballistica T4 Survivor's Edge | critical_chance base_add 10 | status_chance base_add 10 (normal) | status_chance base_add 10 (incarnon)
+Rakta Ballistica T4 Survivor's Edge | critical_chance base_add 8 | status_chance base_add 8 (normal) | status_chance base_add 8 (incarnon)
+Ballistica Prime T4 Survivor's Edge | critical_chance base_add 7 | status_chance base_add 7 (normal) | status_chance base_add 28 (incarnon)
 Ballistica T4 Critical Parallel | critical_chance base_add 15 | critical_multiplier base_add 1
 Rakta Ballistica T4 Critical Parallel | critical_chance base_add 14 | critical_multiplier base_add 1
 Ballistica Prime T4 Critical Parallel | critical_chance base_add 12 | critical_multiplier base_add 1
@@ -440,7 +440,7 @@ Stug T3 Swift Deliverance | —
 Stug T3 Resonant Restore | —
 Stug T4 Survivor's Edge | critical_chance base_add 15 | status_chance base_add 15
 Stug T4 Deathtrap Trigger | critical_chance base_add 25 | critical_multiplier base_add 1.5
-Stug T4 Elemental Dominance | status_chance base_add 20
+Stug T4 Elemental Dominance | status_chance base_add 20 (normal) | status_chance base_add 40 (incarnon)
 Vasto T2 Lone Gun | damage base_add 66
 Vasto Prime T2 Lone Gun | damage base_add 24
 Vasto T2 Deathtrap Trigger | damage base_add 66
@@ -577,7 +577,7 @@ Obex T4 Subtle Force | critical_chance base_add 10 | status_chance base_add 18
 Prisma Obex T4 Subtle Force | critical_chance base_add 10 | status_chance base_add 12
 Obex T4 Absolute Dominion | status_chance base_add 28
 Prisma Obex T4 Absolute Dominion | status_chance base_add 20
-Obex T4 Critical Coefficient | critical_multiplier base_add 0.6
+Obex T4 Critical Coefficient | critical_multiplier base_add 0.6 (normal) | critical_multiplier base_add 1.2 (incarnon)
 Okina T2 Seeing Red | damage base_add 60
 Okina Prime T2 Seeing Red | damage base_add 20
 Okina T2 Synergist Surety | damage base_add 60

@@ -40,6 +40,37 @@ describe("parseIncarnonPerkStats", () => {
     ).toEqual([])
   })
 
+  it("reads nameless and doubled Incarnon Form values from the previous stat", () => {
+    const status = (value: number, attackScope: "normal" | "incarnon") => ({
+      type: "status_chance",
+      value,
+      operation: "base_add",
+      attackScope,
+    })
+    // Strun: the unscoped value no longer reaches the form.
+    expect(
+      parseIncarnonPerkStats(
+        "+11% Base Status Chance; +132% in Incarnon Form.",
+      ),
+    ).toEqual([status(11, "normal"), status(132, "incarnon")])
+    // Boar Survivor's Edge: slash form.
+    expect(
+      parseIncarnonPerkStats(
+        "+10% Base Critical Chance; +6% Base Status Chance per projectile / +48% for Incarnon Form.",
+      ),
+    ).toEqual([
+      { type: "critical_chance", value: 10, operation: "base_add" },
+      status(6, "normal"),
+      status(48, "incarnon"),
+    ])
+    // Sybaris / Stug.
+    expect(
+      parseIncarnonPerkStats(
+        "+15% Base Status Chance (Sybaris); effect doubles in Incarnon Form.",
+      ),
+    ).toEqual([status(15, "normal"), status(30, "incarnon")])
+  })
+
   it("scopes per-projectile and Incarnon Form status", () => {
     expect(
       parseIncarnonPerkStats(

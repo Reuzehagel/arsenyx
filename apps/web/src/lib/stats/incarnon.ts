@@ -46,16 +46,45 @@ export function parseIncarnonPerkStats(description: string): PerkStat[] {
   const sentences = description
     // Variant notes like "(Braton)" — the description is already per-variant.
     .replace(/\s*\([^)]*\)/g, "")
+    // Strun/Sybaris say "in Incarnon Form"; "in" would read as a condition.
+    .replace(/\bin incarnon form\b/gi, "for Incarnon Form")
     .split(/(?<=\.)\s+|;\s*/)
+  // A clause without a stat name ("+48% for Incarnon Form", "effect doubles
+  // for Incarnon Form") continues the previous stat.
+  let prev = null as PerkStat | null
   for (const sentence of sentences) {
-    if (CONDITION.test(sentence)) continue
-    for (const raw of sentence.split(/,\s*(?=[+-]\d)|\s+and\s+(?=[+-]\d)/)) {
-      const stat = parseClause(raw.trim().replace(/\.$/, ""))
-      if (stat) out.push(stat)
+    if (CONDITION.test(sentence)) {
+      prev = null
+      continue
     }
+    for (const raw of sentence.split(
+      /,\s*(?=[+-]\d)|\s+and\s+(?=[+-]\d)|\s*\/\s*(?=[+-]\d)/,
+    )) {
+      const clause = raw.trim().replace(/\.$/, "")
+      const formOnly = FORM_ONLY.exec(clause)
+      const stat: PerkStat | null =
+        prev && formOnly
+          ? { ...prev, value: parseFloat(formOnly[1]), attackScope: "incarnon" }
+          : prev && DOUBLES.test(clause)
+            ? { ...prev, value: prev.value * 2, attackScope: "incarnon" }
+            : parseClause(clause)
+      if (stat) out.push(stat)
+      prev = stat
+    }
+  }
+  // A form-only value replaces the all-attacks one inside the form.
+  for (const s of out) {
+    if (
+      !s.attackScope &&
+      out.some((f) => f.attackScope === "incarnon" && f.type === s.type)
+    )
+      s.attackScope = "normal"
   }
   return out
 }
+
+const FORM_ONLY = /^\+(\d+(?:\.\d+)?)[%x]? for incarnon form$/i
+const DOUBLES = /^(?:effect )?doubles for incarnon form$/i
 
 function parseClause(clause: string): PerkStat | null {
   const m = CLAUSE.exec(clause)

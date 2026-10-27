@@ -1,5 +1,5 @@
 import {
-  getIncarnonBaseName,
+  findIncarnonEvolution,
   hasIncarnon,
   isIncarnonFormAttack,
 } from "@arsenyx/shared/warframe/incarnon-data"
@@ -236,7 +236,7 @@ export function ItemSidebar({
     enabled: incarnonActive,
   })
   const incarnonStats = useMemo(() => {
-    const evolution = evolutions?.[getIncarnonBaseName(item.name) ?? ""]
+    const evolution = findIncarnonEvolution(evolutions, item.name)
     if (!incarnonActive || !evolution || !incarnonPerks) return undefined
     return incarnonPerkStats(evolution, incarnonPerks, item.name)
   }, [incarnonActive, evolutions, incarnonPerks, item.name])
