@@ -85,6 +85,7 @@ export type DetailRow = Prisma.BuildGetPayload<{
 export type ViewerState = {
   isOwner: boolean
   hasLiked: boolean
+  hasDisliked: boolean
   hasBookmarked: boolean
 }
 
@@ -113,6 +114,7 @@ export function serializeBuildDetail(
     hasGuide: b.hasGuide,
     hideAuthor: b.hideAuthor,
     likeCount: b.likeCount,
+    dislikeCount: b.dislikeCount,
     bookmarkCount: b.bookmarkCount,
     viewCount: b.viewCount,
     formaCount: b.formaCount,
@@ -127,6 +129,7 @@ export function serializeBuildDetail(
     ...base,
     isOwner: viewer.isOwner,
     viewerHasLiked: viewer.hasLiked,
+    viewerHasDisliked: viewer.hasDisliked,
     viewerHasBookmarked: viewer.hasBookmarked,
   }
 }

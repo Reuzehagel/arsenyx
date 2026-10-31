@@ -60,6 +60,7 @@ export type BuildDetailResponse = {
   hasGuide: boolean
   hideAuthor: boolean
   likeCount: number
+  dislikeCount: number
   bookmarkCount: number
   viewCount: number
   formaCount: number
@@ -70,6 +71,7 @@ export type BuildDetailResponse = {
   guide: BuildGuideSummary | null
   isOwner: boolean
   viewerHasLiked: boolean
+  viewerHasDisliked: boolean
   viewerHasBookmarked: boolean
 }
 
