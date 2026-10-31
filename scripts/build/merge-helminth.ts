@@ -59,12 +59,14 @@ const SUBSUMABLE_ABILITIES: Record<string, string> = {
   Oberon: "Smite",
   Octavia: "Resonator",
   Oraxia: "Webbed Embrace",
+  "Orion & Sirius": "Astral Shell",
   Protea: "Dispensary",
   Qorvex: "Chyrinka Pillar",
   Revenant: "Reave",
   Rhino: "Roar",
   Saryn: "Molt",
   Sevagoth: "Gloom",
+  "Sirius & Orion": "Jade Stars",
   Styanax: "Tharros Strike",
   Temple: "Pyrotechnics",
   Titania: "Spellbind",
@@ -125,6 +127,20 @@ export function deriveHelminthAbilities(
         description: a.description,
         source: frame,
       })
+    } else if (frame === "Orion & Sirius") {
+      const twin_frame = byName.get("Sirius & Orion")
+      const b = twin_frame?.forms
+        ?.at(1)
+        ?.abilities.find((x) => x.name === abilityName)
+      if (b) {
+        out.push({
+          uniqueName: b.uniqueName,
+          name: b.name,
+          imageName: b.imageName,
+          description: b.description,
+          source: frame,
+        })
+      }
     }
   }
 
