@@ -506,6 +506,7 @@ function combineElements(
 ): DamageEntry[] {
   if (elements.length === 0) return []
 
+  // Rules: https://wiki.warframe.com/w/Damage#Elemental_Damage_Combinations
   // Per wiki, mod-added elements combine pairwise in slot order. Innate
   // elements are resolved AFTER mods: they either contribute to a combination
   // already containing their type, or pair with a leftover uncombined mod
