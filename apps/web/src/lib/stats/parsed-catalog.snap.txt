@@ -1,0 +1,1572 @@
+# Mods
+Amanata Pressure | damage +330%
+Coiling Viper | —
+Burning Wasp | —
+Votive Onslaught | —
+Slicing Feathers | —
+Sovereign Outcast | —
+Gemini Cross | —
+Defiled Snapdragon | —
+Eleventh Storm | —
+Swooping Falcon | —
+Vengeful Revenant | —
+Flailing Branch | —
+Stalking Fan | —
+Reaping Spiral | —
+Butcher's Revelry | —
+Final Harbinger | —
+Vulpine Mask | —
+Brutal Tide | —
+Grim Fury | —
+Bleeding Willow | —
+Twirling Spire | —
+Shimmering Blight | —
+Atlantis Vulcan | —
+Cyclone Kraken | —
+Sundering Weave | —
+Wise Razor | —
+Decisive Judgement | —
+Blind Justice | —
+Tranquil Cleave | —
+Iron Phoenix | —
+Galeforce Dawn | —
+Crushing Ruin | —
+Shattering Storm | —
+Bullet Dance | —
+High Noon | —
+Astral Twilight | —
+Gleaming Talon | —
+Seismic Palm | —
+Gaia's Tragedy | —
+Fracturing Wind | —
+Crossing Snakes | —
+Carving Mantis | —
+Swirling Tiger | —
+Mountain's Edge | —
+Gnashing Payara | —
+Spinning Needle | —
+Sinking Talon | —
+Pointed Wind | —
+Stinging Thorn | —
+Homing Fang | —
+Crimson Dervish | —
+Vermillion Storm | —
+Four Riders | —
+Malicious Raptor | —
+Harrowing Spire | —
+Cleaving Whirlwind | —
+Tempo Royale | —
+Rending Crane | —
+Higasa Serration | damage +450%
+Gale Kick | —
+Kavat's Grace | —
+Toxic Flight | toxin +275%
+Patagium | —
+Rending Turn | slash +60%
+Piercing Step | puncture +60%
+Mobilize | —
+Battering Maneuver | impact +60%
+Ice Spring | cold +275%
+Health Conversion | —
+Firewalker | heat +275%
+Energy Conversion | —
+Lightning Dash | electricity +275%
+Intruder | —
+Rush | sprint_speed +30%
+Preparation | —
+Fast Deflection | —
+Redirection | shield +100%
+Retribution | —
+Adaptation | —
+Rapid Resilience | —
+Flow | energy +100%
+Equilibrium | —
+Reflection | —
+Parry | —
+Warm Coat | —
+Thief's Wit | —
+Sure Footed | —
+Handspring | —
+Rolling Guard | —
+Vigorous Swap | damage +165% (conditional)
+Vitality | health +100%
+Provoked | —
+Heavy Impact | —
+Energy Nexus | —
+Enemy Sense | —
+Rage | —
+Antitoxin | toxin +45%
+Diamond Skin | radiation +45%
+Shock Absorbers | —
+Insulation | cold +60%
+Flame Repellent | heat +60%
+Lightning Rod | electricity +60%
+Aviator | —
+Master Thief | —
+Natural Talent | —
+Undying Will | —
+Reflex Guard | —
+Steel Fiber | armor +100%
+Intensify | ability_strength +30%
+Stretch | ability_range +45%
+Precision Intensify | —
+Streamline | ability_efficiency +30%
+Continuity | ability_duration +30%
+Archon Flow | energy +185%
+Archon Vitality | health +100%
+Archon Intensify | ability_strength +30% | ability_strength +30% (conditional)
+Archon Stretch | ability_range +45%
+Archon Continuity | ability_duration +55%
+Primed Vigor | shield +75% | health +75%
+Primed Redirection | shield +180%
+Primed Flow | energy +185%
+Primed Sure Footed | —
+Primed Continuity | ability_duration +55%
+Pain Threshold | —
+Vigor | shield +50% | health +50%
+Armored Agility | sprint_speed +15% | armor +40%
+Streamlined Form | —
+Fortitude | —
+Catalyzing Shields | —
+Overextended | ability_range +90% | ability_strength -60%
+Transient Fortitude | ability_strength +55% | ability_duration -27.5%
+Blind Rage | ability_strength +99% | ability_efficiency -55%
+Fleeting Expertise | ability_efficiency +60% | ability_duration -60%
+Narrow Minded | ability_duration +99% | ability_range -66%
+Constitution | ability_duration +28%
+Naramon Transmute Core | —
+Vazarin Transmute Core | —
+Madurai Transmute Core | —
+Lasting Purity | —
+Stinging Truth | magazine_size +40
+Entropy Burst | —
+Sequence Burn | —
+Shattering Justice | status_chance +90%
+Bright Purity | damage +100%
+Avenging Truth | —
+Disarming Purity | —
+Entropy Detonation | —
+Neutralizing Justice | —
+Toxic Blight | toxin +100%
+Spring-Loaded Blade | range +1 (conditional ×2)
+Voltage Sequence | —
+Stockpiled Blight | magazine_size +200%
+Entropy Flight | projectile_speed +140%
+Blade of Truth | damage +100%
+Scattered Justice | multishot +200%
+Deadly Sequence | critical_chance +200%
+Winds of Purity | —
+Eroding Blight | magazine_size +200%
+Justice Blades | damage +100%
+Gleaming Blight | status_chance +100%
+Gilded Truth | fire_rate +80%
+Entropy Spike | —
+Toxic Sequence | status_duration +200%
+Contagious Spread | toxin +90%
+Shotgun Savvy | status_chance +90%
+Galvanized Savvy | status_chance +80%
+Shredder | slash +90%
+Cleanse The Murmur | —
+Cleanse Infested | —
+Cleanse Grineer | —
+Cleanse Orokin | —
+Cleanse Corpus | —
+Shotgun Ammo Mutation | —
+Tactical Pump | reload_speed +60%
+Counterbalance | recoil -60%
+Seeking Force | punch_through +2.1
+Galvanized Acceleration | projectile_speed +30% | projectile_speed +30% (conditional ×2, On Kill)
+Fatal Acceleration | projectile_speed +40%
+Lingering Torment | status_duration +90%
+Magnetic Welt | —
+Disruptor | impact +90%
+Chilling Grasp | cold +90%
+Shotgun Barrage | fire_rate +90%
+Galvanized Hell | multishot +110% | multishot +30% (conditional ×4, On Kill)
+Hell's Chamber | multishot +120%
+Incendiary Coat | heat +90%
+Sweeping Serration | slash +120%
+Full Contact | impact +120%
+Breach Loader | puncture +120%
+Charged Shell | electricity +90%
+Point Blank | damage +90%
+Ravage | critical_multiplier +60%
+Blunderbuss | critical_chance +90%
+Ammo Stock | magazine_size +60%
+Flechette | puncture +90%
+Shell Compression | ammo_max +90%
+Shotgun Elementalist | magazine_size +60%
+Semi-Shotgun Cannonade | damage +240% | punch_through +1.5
+Primed Cleanse The Murmur | —
+Primed Cleanse Infested | —
+Primed Cleanse Grineer | —
+Primed Cleanse Orokin | —
+Primed Cleanse Corpus | —
+Primed Shotgun Ammo Mutation | —
+Primed Tactical Pump | reload_speed +100%
+Primed Counterbalance | recoil -85%
+Primed Chilling Grasp | cold +165%
+Primed Charged Shell | electricity +165%
+Primed Point Blank | damage +165%
+Primed Ravage | critical_multiplier +110%
+Primed Ammo Stock | magazine_size +110%
+Nano-Applicator | —
+Repeater Clip | —
+Shrapnel Shot | —
+Laser Sight | —
+Narrow Barrel | —
+Silent Battery | —
+Acid Shells | —
+Fomorian Accelerant | —
+Efficient Beams | status_chance +150%
+Seeking Fury | reload_speed +15% | punch_through +1.2
+Atomic Fallout | radiation +60% | magazine_size +40%
+Toxic Barrage | toxin +60% | status_chance +60%
+Magnetic Strafe | magnetic +60% | fire_rate +40%
+Frigid Blast | cold +60% | status_chance +60%
+Scattering Inferno | heat +60% | status_chance +60%
+Shell Shock | electricity +60% | status_chance +60%
+Burdened Magazine | magazine_size +60% | reload_speed -18%
+Frail Momentum | fire_rate +90% | damage -15%
+Vicious Spread | damage +90%
+Critical Deceleration | critical_chance +200% | fire_rate -20%
+Tainted Shell | fire_rate -55%
+Chilling Reload | cold +60% | reload_speed +40%
+Blaze | damage +60% | heat +60%
+Accelerated Blast | fire_rate +60% | puncture +60%
+Vigilante Vigor | —
+Vigilante Pursuit | —
+Vigilante Supplies | —
+Vigilante Offense | punch_through +1.5
+Vigilante Fervor | fire_rate +45%
+Vigilante Armaments | multishot +60%
+Umbral Intensify | ability_strength +44% | tau +11%
+Umbral Fiber | armor +100% | tau +11%
+Umbral Vitality | health +100% | tau +11%
+Tek Collateral | —
+Tek Gravity | —
+Tek Enhance | —
+Tek Assault | —
+Synth Reflex | —
+Synth Fiber | —
+Synth Deconstruct | —
+Synth Charge | —
+Strain Consume | —
+Strain Infection | —
+Strain Fever | —
+Strain Eruption | —
+Proton Snap | toxin +100% (conditional) | status_chance +50% (conditional)
+Proton Jet | —
+Proton Pulse | —
+Sacrificial Steel | critical_chance +220%
+Sacrificial Pressure | damage +110%
+Motus Impact | —
+Motus Setup | —
+Motus Signal | —
+Nira's Hatred | health +35% | ability_duration +15%
+Nira's Contempt | damage +90% | status_chance +60%
+Nira's Anguish | —
+Mecha Pulse | armor +60% (conditional)
+Mecha Empowered | —
+Mecha Recharge | —
+Mecha Overdrive | status_duration +90%
+Hunter Adrenaline | —
+Hunter Track | status_duration +90%
+Hunter Munitions | —
+Hunter Synergy | —
+Hunter Recovery | —
+Hunter Command | —
+Aero Periphery | —
+Aero Agility | —
+Aero Vantage | —
+Gladiator Resolve | health +40%
+Gladiator Finesse | —
+Gladiator Aegis | armor +40%
+Gladiator Vice | fire_rate +30%
+Gladiator Rush | —
+Gladiator Might | critical_multiplier +60%
+Saxum Thorax | impact +90% | status_chance +60%
+Saxum Spittle | impact +90% | status_chance +60%
+Saxum Carapace | armor +55% | health +20%
+Boreal's Hatred | shield +65% | ability_efficiency +15%
+Boreal's Contempt | damage +90%
+Boreal's Anguish | —
+Jugulus Spines | puncture +90% | status_chance +60%
+Jugulus Carapace | armor +55% | health +20%
+Jugulus Barbs | puncture +90% | status_chance +60%
+Augur Secrets | ability_strength +24%
+Augur Reach | ability_range +30%
+Augur Message | ability_duration +24%
+Augur Accord | shield +70%
+Augur Seeker | status_duration +90%
+Augur Pact | damage +90%
+Carnis Stinger | slash +90% | status_chance +60%
+Carnis Mandible | slash +90% | status_chance +60%
+Carnis Carapace | armor +55% | health +20%
+Amar's Hatred | armor +25% | ability_strength +15%
+Amar's Contempt | damage +90% | slash +30%
+Amar's Anguish | sprint_speed +15%
+Accelerated Deflection | —
+Calculated Redirection | shield +250%
+Repair Kit | —
+Fired Up | heat +5% (conditional ×20)
+Animal Instinct | —
+Primed Animal Instinct | —
+Enhanced Vitality | health +250%
+Self Destruct | —
+Spare Parts | —
+Metal Fiber | armor +250%
+Hard Engage | —
+Hastened Deflection | —
+Pack Leader | —
+Maul | damage +330%
+Loyal Companion | —
+Link Redirection | —
+Link Vitality | —
+Link Fiber | —
+Ferocity | critical_chance +300%
+Bite | critical_chance +330% | critical_multiplier +220%
+Savagery | —
+Primed Pack Leader | —
+Radon Claws | radiation +60% | critical_multiplier +80%
+Venom Teeth | toxin +60% | status_chance +60%
+Magnetic Claws | magnetic +60% | status_duration +40%
+Frost Jaw | cold +60% | status_chance +60%
+Flame Gland | heat +60% | status_chance +60%
+Shock Collar | electricity +60% | status_chance +60%
+Sepsis Claws | toxin +330% | status_chance +330%
+Burning Claws | heat +330% | status_chance +330%
+Shocking Claws | electricity +330% | status_chance +330%
+Chilling Claws | cold +330% | status_chance +330%
+Immunity Resistance | —
+Precision Conditioning | damage +385%
+Magnetic Strike | —
+Bell Ringer | —
+Bloodthirst | —
+Disabling Conditioning | damage +385%
+Cull the Weak | damage +240%
+Brute Conditioning | damage +385%
+Medi-Pet Kit | —
+Eagle Eye | zoom +40%
+Primary Acuity | —
+Infected Clip | toxin +90%
+Rifle Aptitude | status_chance +90%
+Galvanized Aptitude | status_chance +80%
+Shivering Contagion | —
+Sniper Ammo Mutation | —
+Sawtooth Clip | slash +90%
+Rifle Ammo Mutation | —
+Cautious Shot | —
+Fast Hands | reload_speed +30%
+Stabilizer | recoil -60%
+Metal Auger | punch_through +2.1
+Terminal Velocity | projectile_speed +60%
+Continuous Misery | status_duration +100%
+Hush | —
+Firestorm | —
+Rupture | impact +90%
+Adhesive Blast | —
+Cryo Rounds | cold +90%
+Speed Trigger | fire_rate +60%
+Galvanized Chamber | multishot +80% | multishot +30% (conditional ×5, On Kill)
+Split Chamber | multishot +90%
+Hellfire | heat +90%
+Bane of The Murmur | —
+Bane of Infested | —
+Bane of Grineer | —
+Bane of Orokin | —
+Bane of Corpus | —
+Fanged Fusillade | slash +120%
+Crash Course | impact +120%
+Piercing Caliber | puncture +120%
+Stormbringer | electricity +90%
+Serration | damage +165%
+Spectral Serration | —
+Vital Sense | critical_multiplier +120%
+Point Strike | critical_chance +150%
+Magazine Warp | magazine_size +30%
+Arrow Mutation | —
+Internal Bleeding | —
+Combustion Beam | —
+Sinister Reach | —
+Piercing Hit | puncture +90%
+Ammo Drum | ammo_max +90%
+Charged Chamber | —
+Target Acquired | —
+Rifle Elementalist | punch_through +0.6
+Semi-Rifle Cannonade | damage +240% | punch_through +1.5
+Napalm Grenades | —
+Primed Chamber | —
+Sharpshooter | energy +15 (conditional)
+Split Flights | multishot +100% (conditional ×4, On Hit)
+Thunderbolt | —
+Primed Sniper Ammo Mutation | —
+Primed Rifle Ammo Mutation | —
+Primed Fast Hands | reload_speed +55%
+Primed Stabilizer | recoil -85%
+Primed Firestorm | —
+Primed Cryo Rounds | cold +165%
+Primed Magazine Warp | magazine_size +55%
+Primed Bane of The Murmur | —
+Primed Bane of Infested | —
+Primed Bane of Grineer | —
+Primed Bane of Orokin | —
+Primed Bane of Corpus | —
+Catalyzer Link | —
+Hata-Satya | —
+Bhisaj-Bal | status_chance +90%
+Spring-Loaded Chamber | —
+Bladed Rounds | —
+Galvanized Scope | —
+Argon Scope | —
+Guided Ordnance | —
+Harkonar Scope | —
+Nightwatch Napalm | —
+Eximus Advantage | —
+Combat Reload | —
+Critical Precision | —
+Volatile Variant | status_chance +50%
+Overpressured Rounds | —
+Necrophagic Vigor | —
+Metamorphic Magazine | magazine_size +90% | ammo_max +90%
+Vile Discharge | —
+Sentient Barrage | —
+Dreadful Killshot | —
+Range Advantage | —
+Kinetic Ricochet | —
+Thermagnetic Shells | —
+Tether Grenades | —
+Flux Overdrive | —
+Mending Shot | —
+Aerial Ace | —
+Bursting Mass | —
+Meticulous Aim | —
+Exposing Harpoon | critical_chance +300% (conditional)
+Precision Strike | —
+Wild Frenzy | —
+Wildfire | magazine_size +20% | heat +60%
+Shred | fire_rate +30% | punch_through +1.2
+Radiated Reload | radiation +60% | reload_speed +40%
+Primed Shred | fire_rate +55% | punch_through +2.2
+Malignant Force | toxin +60% | status_chance +60%
+Magnetic Capacity | magnetic +60% | magazine_size +40%
+Rime Rounds | cold +60% | status_chance +60%
+Hammer Shot | critical_multiplier +60% | status_chance +80%
+Thermite Rounds | heat +60% | status_chance +60%
+High Voltage | electricity +60% | status_chance +60%
+Depleted Reload | magazine_size -60% | reload_speed +48%
+Vile Precision | recoil -90% | fire_rate -36%
+Tainted Mag | magazine_size +66% | reload_speed -33%
+Vile Acceleration | fire_rate +90% | damage -15%
+Heavy Caliber | damage +165%
+Critical Delay | critical_chance +200% | fire_rate -20%
+Anticipation | —
+Quick Charge | shield -20
+Armored Recovery | —
+Venomous Rise | —
+Tempered Bound | shield +30
+Calculated Spring | health +25%
+Adrenaline Boost | energy +50% | health -20%
+Rising Skill | shield -30
+Adept Surge | health -25
+No Current Leap | —
+Tactical Retreat | —
+Final Act | ability_strength +30% (conditional)
+Vital Systems Bypass | —
+Rime Vault | —
+Searing Leap | —
+Hastened Steps | sprint_speed +20% | shield -20%
+Heightened Reflexes | ability_efficiency -20%
+Overcharged | —
+Follow Through | energy +10
+Surplus Diverters | energy +6
+Voltaic Lance | —
+Overcharge Detectors | —
+Armored Evade | —
+Armored Acrobatics | —
+Anti-Flak Plating | —
+Air Thrusters | —
+Lashing Coil | —
+Star Divide | —
+Tainted Hydra | —
+Rising Steel | —
+Last Herald | —
+Crashing Timber | —
+Shadow Harvest | —
+Cunning Aspect | —
+Vicious Approach | —
+Argent Scourge | —
+Mafic Rain | —
+Rending Wind | —
+Fateful Truth | —
+Noble Cadence | —
+Crashing Havoc | —
+Celestial Nightfall | —
+Quaking Hand | —
+Dividing Blades | —
+Biting Piranha | —
+Piercing Fury | —
+Scarlet Hurricane | —
+Prize Kill | —
+Momentary Pause | —
+Lock and Load | —
+Double-Barrel Drift | recoil -20%
+Bounty Hunter | —
+Hydraulic Chamber | recoil -60% | magazine_size -10%
+Loaded Capacity | magazine_size +30% | reload_speed -15%
+Soft Hands | recoil -40% (conditional)
+Broad Eye | —
+Kill Switch | reload_speed +50% (conditional, On Kill)
+Loose Chamber | reload_speed +30% | recoil +50%
+Snap Shot | —
+Flak Shot | —
+Shred Shot | —
+Crash Shot | —
+Precision Munition | projectile_speed +50%
+Measured Burst | fire_rate -60% | damage +30%
+Focused Acceleration | projectile_speed +80%
+Sudden Justice | fire_rate +30% (conditional)
+Directed Convergence | —
+Ambush Optics | zoom -50%
+Vanquished Prey | —
+Recover | —
+Tactical Reload | —
+Double Tap | —
+Triple Tap | damage +40% (conditional)
+Grinloked | —
+Gun Glide | recoil -20%
+Apex Predator | —
+Hydraulic Gauge | recoil -60% | magazine_size -10%
+Maximum Capacity | magazine_size +30% | reload_speed -15%
+Twitch | recoil -40% (conditional)
+Final Tap | damage +100% (conditional)
+Feathered Arrows | projectile_speed +60% | damage -20%
+Lucky Shot | projectile_speed +40%
+Overview | —
+Lie In Wait | recoil +100%
+Brain Storm | —
+Gorgon Frenzy | fire_rate +30% (conditional, On Kill)
+Emergent Aftermath | reload_speed +50% (conditional, On Kill)
+Loose Hatch | reload_speed +30% | recoil +50%
+Plan B | —
+Agile Aim | —
+Soaring Strike | —
+Deft Tempo | —
+Thundermiter | magazine_size -60%
+Serrated Rounds | —
+Ripper Rounds | —
+Comet Rounds | —
+Spring-Loaded Broadhead | —
+Skull Shots | —
+Static Alacrity | projectile_speed +50%
+Calculated Victory | —
+Recuperate | —
+Eject Magazine | —
+Strafing Slide | recoil -20%
+Night Stalker | —
+Shrapnel Rounds | multishot +200% | damage -66%
+Hydraulic Barrel | recoil -40% | magazine_size -20%
+Full Capacity | magazine_size +30% | reload_speed -15%
+Reflex Draw | recoil -40% (conditional)
+Blind Shot | projectile_speed +40%
+Air Recon | —
+Secondary Wind | reload_speed +50% (conditional, On Kill)
+Loose Magazine | reload_speed +50% | recoil +50%
+Spry Sights | —
+Draining Gloom | magazine_size -60% | ammo_max -60%
+Razor Munitions | —
+Impaler Munitions | —
+Meteor Munitions | —
+Heavy Warhead | projectile_speed -50%
+Relentless Assault | —
+Martial Fury | fire_rate +20%
+Sword Alone | sprint_speed +30%
+Explosive Demise | —
+Sharpened Blade | —
+Serrated Edges | —
+Counterweight | —
+Heartseeker | —
+Mortal Conduct | —
+Impenetrable Offense | damage -10%
+Stand Ground | —
+Pistol Acuity | —
+Pathogen Rounds | toxin +90%
+Sure Shot | status_chance +90%
+Galvanized Shot | status_chance +80%
+Razor Shot | slash +90%
+Quickdraw | reload_speed +48%
+Steady Hands | recoil -60%
+Seeker | punch_through +2.1
+Lethal Momentum | projectile_speed +40%
+Perpetual Agony | status_duration +90%
+Hawk Eye | zoom +80%
+Expel The Murmur | —
+Expel Infested | —
+Expel Grineer | —
+Expel Orokin | —
+Expel Corpus | —
+Pistol Ammo Mutation | —
+Suppress | —
+Concussion Rounds | impact +90%
+Deep Freeze | cold +90%
+Gunslinger | fire_rate +72%
+Galvanized Diffusion | multishot +110% | multishot +30% (conditional ×4, On Kill)
+Barrel Diffusion | multishot +120%
+Heated Charge | heat +90%
+Maim | slash +120%
+Bore | puncture +120%
+Pummel | impact +120%
+Convulsion | electricity +90%
+Hornet Strike | damage +220%
+Target Cracker | critical_multiplier +60%
+Pistol Gambit | critical_chance +120%
+Slip Magazine | magazine_size +30%
+Hemorrhage | —
+Ruinous Extension | —
+No Return | puncture +90%
+Trick Mag | ammo_max +90%
+Concealed Explosives | —
+Pistol Elementalist | reload_speed +60%
+Semi-Pistol Cannonade | damage +300% | punch_through +1.5
+Primed Quickdraw | reload_speed +88%
+Primed Steady Hands | recoil -85%
+Primed Expel The Murmur | —
+Primed Expel Infested | —
+Primed Expel Grineer | —
+Primed Expel Orokin | —
+Primed Expel Corpus | —
+Primed Pistol Ammo Mutation | —
+Primed Heated Charge | heat +165%
+Primed Pistol Gambit | critical_chance +187%
+Primed Slip Magazine | magazine_size +55%
+Primed Convulsion | electricity +165%
+Primed Target Cracker | critical_multiplier +110%
+Embedded Catalyzer | —
+Energizing Shot | —
+Pressurized Magazine | —
+Sharpened Bullets | —
+Galvanized Crosshairs | —
+Hydraulic Crosshairs | —
+Zazvat-Kar | —
+Damzav-Vati | viral +240%
+Targeting Subsystem | —
+Velox Conclusion | —
+Sentient Surge | —
+Prototype Shock Coils | electricity +90%
+Critical Mutation | —
+Fulmination | —
+Primed Fulmination | —
+Stunning Speed | reload_speed +40% | status_chance +30%
+Accelerated Isotope | radiation +60% | fire_rate +40%
+Pistol Pestilence | toxin +60% | status_chance +60%
+Magnetic Might | magnetic +60% | critical_multiplier +40%
+Ice Storm | magazine_size +40% | cold +40%
+Frostbite | cold +60% | status_chance +60%
+Lethal Torrent | fire_rate +60% | multishot +60%
+Scorch | heat +60% | status_chance +60%
+Jolt | electricity +60% | status_chance +60%
+Merciless Gunfight | critical_multiplier +45% | punch_through +1.2
+Tainted Clip | magazine_size +60% | reload_speed -30%
+Anemic Agility | fire_rate +90% | damage -15%
+Magnum Force | damage +165%
+Hollow Point | critical_multiplier +60% | damage -15%
+Creeping Bullseye | critical_chance +200% | fire_rate -20%
+Stealth Drift | —
+Speed Drift | sprint_speed +12%
+Power Drift | ability_strength +15%
+Endurance Drift | energy +10%
+Cunning Drift | ability_range +15%
+Coaction Drift | —
+Agility Drift | —
+Clip Delegation | —
+Pain Points | —
+Biotic Rounds | viral +150% (conditional)
+Leaded Gas | gas +300% (conditional)
+Spontaneous Singularity | —
+Deadly Maneuvers | —
+Photon Overcharge | critical_multiplier +90%
+Dizzying Rounds | status_chance +200%
+Necramech Slipstream | —
+Necramech Friction | —
+Necramech Blitz | —
+Necramech Seismic Wave | —
+Necramech Redirection | shield +100%
+Necramech Repair | —
+Necramech Rebuke | —
+Necramech Flow | energy +100%
+Necramech Fury | —
+Necramech Reach | —
+Necramech Pressure Point | damage +60%
+Necramech Hydraulics | —
+Necramech Drift | —
+Necramech Vitality | health +100%
+Necramech Augur | —
+Necramech Refuel | —
+Necramech Thrusters | —
+Necramech Efficiency | —
+Necramech Deflection | —
+Necramech Enemy Sense | —
+Necramech Rage | —
+Necramech Aviator | —
+Necramech Steel Fiber | armor +100%
+Necramech Intensify | ability_strength +30%
+Necramech Stretch | ability_range +45%
+Necramech Streamline | ability_efficiency +30%
+Necramech Continuity | ability_duration +30%
+Fever Strike | toxin +90%
+Melee Prowess | status_chance +90%
+Jagged Edge | slash +90%
+Lasting Sting | status_duration +110%
+Energy Channel | —
+Covert Lethality | finisher_damage +100%
+Seismic Wave | —
+Reach | range +1.5
+Killing Blow | —
+Finishing Touch | finisher_damage +60%
+Smite The Murmur | —
+Smite Infested | —
+Smite Grineer | —
+Smite Orokin | —
+Smite Corpus | —
+Pressure Point | damage +120%
+Relentless Combination | —
+Reflex Coil | —
+Shattering Impact | —
+Heavy Trauma | impact +90%
+Healing Return | —
+Whirlwind | projectile_speed +180%
+Combo Killer | —
+Rebound | —
+Quick Return | —
+Power Throw | punch_through +2
+Mark of the Beast | —
+Combo Fury | reload_speed +100% (conditional)
+Volatile Rebound | —
+Volatile Quick Return | —
+North Wind | cold +90%
+Fury | fire_rate +30%
+Molten Impact | heat +90%
+Buzz Kill | slash +120%
+Auger Strike | puncture +120%
+Collision Force | impact +120%
+Shocking Touch | electricity +90%
+Condition Overload | —
+Berserker Fury | fire_rate +35% (conditional ×2)
+Organ Shatter | critical_multiplier +90%
+True Steel | critical_chance +120%
+Guardian Derision | —
+Sundering Strike | puncture +90%
+Dispatch Overdrive | —
+Melee Elementalist | —
+Primed Fever Strike | toxin +165%
+Galvanized Elementalist | status_chance +30% (conditional ×4)
+Primed Reach | range +3
+Primed Smite The Murmur | —
+Primed Smite Infested | —
+Primed Smite Grineer | —
+Primed Smite Orokin | —
+Primed Smite Corpus | —
+Primed Pressure Point | damage +165%
+Primed Heavy Trauma | impact +165%
+Galvanized Reflex | —
+Primed Fury | fire_rate +55%
+Galvanized Steel | critical_chance +110% | critical_multiplier +30% (conditional ×4)
+Maiming Strike | slide_attack +150%
+Weeping Wounds | —
+Body Count | —
+Blood Rush | —
+Rift Strike | —
+Hunter's Bonesaw | —
+Vulcan Blitz | —
+Electromagnetic Shielding | —
+Sentient Incision | —
+Burning Hate | —
+Static Discharge | —
+Rending Strike | slash +60% | puncture +80%
+Focus Radon | radiation +60%
+Virulent Scourge | toxin +60% | status_chance +60%
+Magnetic Rush | magnetic +60% | fire_rate +20%
+Vicious Frost | cold +60% | status_chance +60%
+Focus Energy | electricity +60%
+Volcanic Edge | heat +60% | status_chance +60%
+Voltaic Strike | electricity +60% | status_chance +60%
+Corrupt Charge | combo_duration -50%
+Spoiled Strike | damage +100% | fire_rate -20%
+Drifting Contact | status_chance +40%
+Life Strike | —
+Enduring Strike | —
+Enduring Affliction | —
+Quickening | fire_rate +40%
+True Punishment | combo_duration -50%
+Focused Defense | —
+Oull | —
+Xata | —
+Jahu | —
+Fass | —
+Netra | —
+Lohk | —
+Vome | —
+Ris | —
+Khra | —
+Worm Away | —
+Trojan Tracker | —
+Soft Safe | —
+Anti-V | —
+ByteRyte | —
+Keep-Clean | —
+Drive-Duster | —
+Computer Cop | —
+Thrash Landing | —
+Nitro Boost | —
+Extreme Velocity | —
+Sonic Boost | —
+Slay Board | —
+Inertia Dampeners | —
+Venerdo Hoverdrive | —
+Pop Top | —
+Kinetic Friction | —
+Rail Guards | —
+Bomb The Landin' | —
+Mag Locks | —
+Mad Stack | —
+Perfect Balance | —
+Quick Escape | —
+Juice | —
+Vapor Trail | —
+Primo Flair | —
+Trail Blazer | —
+Poppin' Vert | —
+Cold Arrival | —
+Air Time | —
+Amalgam Shotgun Barrage | fire_rate +85%
+Amalgam Serration | damage +155% | sprint_speed +25%
+Amalgam Javlok Magazine Warp | magazine_size +45%
+Amalgam Daikyu Target Acquired | —
+Amalgam Argonak Metal Auger | punch_through +3
+Amalgam Barrel Diffusion | multishot +110%
+Amalgam Ripkas True Steel | critical_chance +187%
+Amalgam Furax Body Count | —
+Amalgam Organ Shatter | critical_multiplier +85%
+Quick Correct | —
+Immuno Shield | —
+Instant Secure | —
+Threat Blocker | —
+Turbo Protect | —
+Runtime | sprint_speed +75% (conditional)
+Master Key | —
+Untraceable | —
+Failsafe | —
+Live Wire | —
+Firewall | —
+Auto Breach | —
+Swift Mercy | —
+Malicious Code | —
+Hard Reset | —
+Hit And Run | —
+Blood For Life | —
+Blood For Energy | —
+Power Drain | ability_strength +50%
+Out of Sight | —
+Blood For Ammo | —
+Unseen Dread | —
+Swift Momentum | —
+Aerodynamic | —
+Shepherd | —
+Combat Discipline | —
+Melee Guidance | —
+EMP Aura | —
+Worthy Comradery | —
+Sprint Boost | sprint_speed +15%
+Dead Eye | damage +52.5%
+Sniper Scavenger | —
+Shotgun Amp | damage +18%
+Shotgun Scavenger | —
+Rifle Amp | damage +27%
+Rifle Scavenger | —
+Toxin Resistance | toxin +15%
+Pistol Amp | damage +27%
+Pistol Scavenger | —
+Ready Steel | —
+Steel Charge | damage +60%
+Loot Detector | —
+Holster Amp | —
+Rejuvenation | —
+Physique | health +20%
+Energy Siphon | —
+Dreamer's Bond | —
+Enemy Radar | —
+Summoner's Wrath | —
+Infested Impedance | —
+Shield Disruption | shield -18%
+Corrosive Projection | armor -18%
+Power Donation | ability_strength -30%
+Stand United | armor +25%
+Empowered Blades | —
+Growing Power | —
+Brief Respite | —
+Hyperion Thrusters | projectile_speed +27.5%
+Superior Defenses | —
+Energy Inversion | shield +100%
+Auxiliary Power | energy +100%
+Enhanced Durability | health +100%
+Argon Plating | armor +100%
+Morphic Transformer | ability_strength +20%
+Energy Amplifier | ability_range +60%
+System Reroute | ability_efficiency +55%
+Efficient Transferral | ability_duration +30%
+Kinetic Diversion | —
+Primed Dual Rounds | multishot +110%
+Primed Deadly Efficiency | damage +220% (conditional)
+Venomous Clip | toxin +120%
+Polar Magazine | cold +120%
+Combustion Rounds | heat +120%
+Electrified Barrel | electricity +120%
+Modified Munitions | status_chance +60%
+Marked Target | —
+Quick Reload | reload_speed +100%
+Ballista Measure | range +20%
+Sabot Rounds | damage +60% | punch_through +3
+Automatic Trigger | fire_rate +60%
+Dual Rounds | multishot +60%
+Rubedo-Lined Barrel | damage +100%
+Hollowed Bullets | critical_multiplier +80%
+Parallax Scope | critical_chance +100%
+Critical Focus | —
+Magazine Extension | magazine_size +60%
+Shell Rush | —
+Ammo Chain | ammo_max +100%
+Archgun Ace | reload_speed +100% (conditional)
+Contamination Casing | toxin +60% | status_chance +60%
+Containment Breach | radiation +60% | multishot +30%
+Magnetized Cycle | magnetic +60% | fire_rate +30%
+Magma Chamber | heat +60% | status_chance +60%
+Charged Bullets | electricity +60% | status_chance +60%
+Hypothermic Shell | cold +60% | status_chance +60%
+Zodiac Shred | slash +90%
+Quasar Drill | puncture +90%
+Comet Blast | impact +90%
+Deadly Efficiency | damage +120% (conditional)
+Resolute Focus | —
+Primed Venomous Clip | toxin +187%
+Primed Rubedo-Lined Barrel | damage +187%
+Poisonous Sting | toxin +120%
+Glacial Edge | cold +120%
+Blazing Steel | heat +120%
+Conductive Blade | electricity +120%
+Sudden Impact | status_chance +60%
+Astral Autopsy | —
+Extend | —
+Furor | fire_rate +10%
+Cutting Edge | damage +110%
+Bleeding Edge | critical_multiplier +110%
+Tempered Blade | critical_chance +150%
+Infectious Injection | toxin +60% | status_chance +60%
+Critical Meltdown | radiation +60% | critical_chance +60%
+Magnetized Core | magnetic +60% | critical_multiplier +40%
+Searing Steel | heat +60% | status_chance +60%
+Ion Infusion | electricity +60% | status_chance +60%
+Cryo Coating | cold +60% | status_chance +60%
+Astral Slash | slash +90%
+Nebula Bore | puncture +90%
+Meteor Crash | impact +90%
+Primed Morphic Transformer | ability_strength +55%
+Ubri-Kaneph | —
+Sey-Taph | —
+Lashta-Vak | —
+Empazu-Shol | —
+Metem-Erun | —
+Da-Ren | —
+Ulashta-Shol | —
+Sil-Tabol | —
+Hayan-Dabor | —
+Evir-Ti | —
+Yar Dal | —
+Metem-Hakh | —
+Kaal-zidi | —
+Vikla-Safor | —
+Talsek-An | —
+Esti Vel-Ikha | —
+Hok-Kaal | —
+Omn-Evi | —
+Lorun-Tash | —
+Vik-Anam | —
+Xata Invocation | —
+Vome Invocation | —
+Ris Invocation | —
+Netra Invocation | —
+Lohk Canticle | —
+Khra Canticle | —
+Jahu Canticle | —
+Fass Canticle | —
+Opportunity's Reach | —
+Condition's Perfection | —
+Master's Edge | —
+Dreamer's Wrath | —
+Truth's Flame | —
+Discipline's Merit | —
+Peculiar Growth | —
+Peculiar Bloom | —
+Peculiar Audience | —
+Peculiar End | —
+Detect Vulnerability | —
+Vaporize | —
+Vacuum | —
+Thumper | —
+Targeting Receptor | —
+Electro Pulse | —
+Molecular Conversion | —
+Assault Mode | —
+Sanctuary | —
+Sacrifice | —
+Revenge | —
+Reawaken | —
+Auto Omni | —
+Regen | —
+Negate | —
+Primed Regen | —
+Botanist | —
+Looter | —
+Scan Matter | —
+Ammo Case | —
+Energy Generator | —
+Odomedic | —
+Calculated Shot | —
+Guardian | —
+Ambush | —
+Ghost | —
+Cordon | —
+Crowd Dispersion | —
+Coolant Leak | —
+Investigator | —
+Fetch | —
+Resourceful Retriever | —
+Loyal Retriever | —
+Prosperous Retriever | —
+Fatal Attraction | —
+Arc Coil | status_chance +10%
+Anti-Grav Array | —
+Astral Bond | void +30% (conditional) | damage +60% (conditional)
+Duplex Bond | —
+Tenacious Bond | —
+Tandem Bond | —
+Contagious Bond | —
+Mystic Bond | —
+Covert Bond | —
+Restorative Bond | —
+Momentous Bond | —
+Aerial Bond | —
+Manifold Bond | —
+Vicious Bond | —
+Seismic Bond | —
+Reinforced Bond | —
+Medi-Ray | —
+Shield Charger | —
+Synergized Prospectus | —
+Null Audit | —
+Aerial Prospectus | —
+Focused Prospectus | —
+Reflex Denial | —
+Evasive Denial | —
+Repo Audit | —
+Diversified Denial | —
+Equilibrium Audit | —
+Tractor Beam | —
+Whiplash Mine | —
+Stasis Field | —
+Shockwave Actuators | —
+Anti-Grav Grenade | —
+Security Override | —
+Blast Shield | —
+Unleashed | —
+Scavenge | —
+Protect | —
+Shelter | —
+Retrieve | —
+Proboscis | —
+Howl | —
+Neutralize | —
+Dig | —
+Stalk | —
+Hunt | —
+Trample | —
+Sly Devolution | —
+Endoparasitic Vector | —
+Acidic Spittle | —
+Volatile Parasite | —
+Infectious Bite | —
+Iatric Mycelium | —
+Paralytic Spores | —
+Anabolic Pollination | —
+Viral Quills | status_chance +40%
+Martyr Symbiosis | —
+Crescent Charge | —
+Survival Instinct | —
+Crescent Devolution | —
+Panzer Devolution | —
+Draining Bite | —
+Fear Sense | —
+Transfusion | —
+Swipe | —
+Sharpened Claws | —
+Reflect | —
+Pounce | —
+Territorial Aggression | —
+Charm | —
+Mischief | —
+Cat's Eye | —
+Assassin Posture | —
+Frenzied Posture | status_duration +80%
+Protector Posture | —
+Persistent Posture | —
+Elusive Posture | —
+Balanced Posture | —
+Calm & Frenzy | —
+Push & Pull | —
+Duality | —
+Energy Transfer | —
+Peaceful Provocation | —
+Surging Blades | —
+Loyal Merulina | —
+Merulina Guardian | —
+Dark Propagation | —
+Shadow Haze | —
+Cataclysmic Gate | —
+Fused Reservoir | —
+Critical Surge | —
+Prey of Dynar | —
+Ulfrun's Endurance | —
+Kinetic Collision | —
+Shocking Speed | —
+Shock Trooper | —
+Recharge Barrier | —
+Transistor Shield | —
+Capacitance | —
+Pool of Life | —
+Abating Link | —
+Vampire Leech | —
+Champion's Blessing | —
+Tesla Bank | —
+Photon Repeater | —
+Enduring Bastille | —
+Jet Stream | —
+Funnel Clouds | —
+Anchored Glide | —
+Airburst Rounds | —
+Target Fixation | —
+Rhythm Guard | —
+Razor Mortar | —
+Contagion Cloud | —
+Regenerative Molt | —
+Revealing Spores | —
+Venom Dose | —
+Negation Armor | —
+Elemental Sandstorm | —
+Desiccation's Curse | —
+Thermal Transfer | —
+Mach Crash | —
+Reinforcing Stomp | —
+Ironclad Charge | —
+Piercing Roar | —
+Iron Shrapnel | —
+Mesmer Shield | —
+Thrall Pact | —
+Blinding Reave | —
+Infiltrate | —
+Power of Three | —
+Empowered Quiver | —
+Piercing Navigator | —
+Concentrated Arrow | —
+Warding Thurible | —
+Lasting Covenant | —
+Tribunal | —
+Tidal Impunity | —
+Rousing Plunder | —
+Pilfering Swarm | —
+Viral Tempest | —
+Wrath of Ukko | —
+Volatile Recompense | —
+Hallowed Eruption | —
+Smite Infusion | —
+Phoenix Renewal | —
+Defiled Reckoning | —
+Hallowed Reckoning | —
+Noctua Swarm | —
+Endless Lullaby | —
+Reactive Storm | —
+Elusive Retribution | —
+Brood's Oversurge | —
+Repair Dispensary | —
+Temporal Artillery | —
+Temporal Erosion | —
+Reroot Rampage | —
+Teleport Rush | —
+Tear Gas | —
+Smoke Shadow | —
+Rising Storm | —
+Seeking Shuriken | —
+Pyroclastic Flow | —
+Divine Retribution | —
+Ward Recovery | —
+Safeguard | —
+Reaping Chakram | —
+Controlled Slide | —
+Creeping Terrify | —
+Discharge Strike | —
+Soul Survivor | —
+Despoil | —
+Shield of Shadows | —
+Primal Rage | —
+Celestial Stomp | —
+Enveloping Cloud | —
+Rift Torrent | —
+Cataclysmic Continuum | —
+Rift Haven | —
+Shield Overload | —
+Counter Pulse | —
+Sapping Reach | —
+Greedy Pull | —
+Fracturing Crush | —
+Magnetized Discharge | —
+Safeguard Switch | —
+Hushed Invisibility | —
+Irradiating Disarm | —
+Deceptive Bond | —
+Damage Decoy | —
+Savior Decoy | —
+Kumihimo Loading | —
+Omikuji's Fortune | —
+Venari Bodyguard | —
+Accumulating Whipclaw | —
+Pilfering Strangledome | —
+Singularity | —
+Assimilate | —
+Mind Freak | —
+Pacifying Bolts | —
+Chaos Sphere | —
+Blazing Pillage | —
+Aegis Gale | —
+Balefire Surge | —
+Larva Burst | —
+Teeming Virulence | —
+Insatiable | —
+Abundant Mutation | —
+Parasitic Vitality | —
+Axios Javelineers | —
+Tharros Lethality | —
+Intrepid Stand | —
+Prism Guard | —
+Explosive Legerdemain | —
+Total Eclipse | —
+Hall of Malevolence | —
+Coil Recharge | —
+Conductive Sphere | —
+Reverse Rotorswell | —
+Cathode Current | —
+Mending Splinters | —
+Shattered Storm | —
+Spectrosiphon | —
+Recrystalize | —
+Prismatic Companion | —
+Blending Talons | —
+Dread Ward | —
+Blood Forge | —
+Freeze Force | —
+Ice Wave Impedance | —
+Cold Front | —
+Chilling Globe | —
+Biting Frost | critical_chance +200% (conditional)
+Icy Avalanche | —
+Beguiling Lantern | —
+Razorwing Blitz | —
+Spellbound Harvest | —
+Ironclad Flight | —
+Chromatic Blade | —
+Purging Slash | —
+Surging Dash | —
+Furious Javelin | —
+Signal Flare | —
+Radiant Finish | —
+Warrior's Rest | —
+Exothermic | —
+Immolated Radiance | —
+Purifying Flames | —
+Healing Flame | —
+Fireball Frenzy | —
+Guardian Armor | —
+Vexing Retaliation | —
+Guided Effigy | —
+Everlasting Ward | —
+Afterburn | —
+Gastro | —
+Gastroparesis | —
+Gourmand | —
+Hearty Nourishment | —
+Catapult | —
+Infernum | —
+Spectral Spirit | —
+Muzzle Flash | —
+Staggering Shield | —
+Mesa's Waltz | —
+Ballistic Bullseye | —
+Wrecking Wall | —
+Fused Crucible | —
+Jade's Judgment | —
+Vampiric Grasp | —
+The Relentless Lost | —
+Untime Rift | —
+Rumbled | —
+Titanic Rumbler | —
+Path of Statues | —
+Rubble Heap | —
+Ore Gaze | —
+Tectonic Fracture | —
+Prolonged Paralysis | —
+Hysterical Fixation | —
+Enraged | —
+Hysterical Assault | —
+Eternal War | —
+Swing Line | —
+Partitioned Mallet | —
+Conductor | —
+Resonance | —
+Savage Silence | —
+Sonic Siphon | —
+Gaseous Quake | —
+Cold Snap | —
+Energy Field | —
+Afterburner | —
+Escape Velocity | —
+Neutron Star | —
+Molecular Fission | —
+Antimatter Mine | —
+Antimatter Absorb | —
+Swift Bite | —
+Lingering Transmutation | —
+Valence Formation | —
+Mentor's Legacy | —
+Primed Ammo Chain | ammo_max +165%
+Primed Combustion Rounds | heat +187%
+Primed Polar Magazine | cold +187%
+Fizzbang Flourish | —
+Necramech Stamina | —
+Air Martial | channeling -100%
+Harrowed Hook | —
+Helminth Ferocity | finisher_damage +120%
+Soaring Truth | critical_chance +200%
+Transmute Core | —
+Health Conversion | —
+Quick Thinking | —
+Maglev | —
+Clashing Forest | —
+Seeker Volley | —
+Munitions Vortex | —
+Void Hole | —
+Blackout Pulse | —
+Countermeasures | —
+Phoenix Blaze | —
+Particle Ram | —
+Tether | —
+Shatter Burst | —
+Orgone Tuning Matrix | —
+Defensive Fire | —
+Fortifying Fire | —
+Ironclad Matrix | —
+Scourging Warheads | —
+Waveband Disruptor | —
+Crimson Fugue | —
+Quicklock | —
+Ordnance Cheap Shot | —
+Overloader | —
+Warhead | —
+Ordnance Velocity | —
+Protective Shots | —
+Ripload | —
+Granum's Nemesis | —
+Worm's Torment | —
+Predator | —
+Section Density | —
+Hyperstrike | —
+Onslaught Matrix | shield +80% (conditional)
+Sentient Scalpel | —
+Turret Velocity | —
+Artillery Cheap Shot | —
+Forward Artillery | —
+Raider Matrix | —
+Revo Reducer | —
+Ion Burn | —
+Cruising Speed | —
+Indomitable Matrix | —
+Conic Nozzle | —
+Breach Quanta | —
+Flow Burn | —
+Battle Forge | —
+Death Blossom | —
+Form Up | —
+Battle Stations | —
+Squad Renew | —
+Intruder Stasis | —
+Fire Suppression | —
+Void Cloak | —
+
+# Arcanes
+Arcane Guardian | armor +900 (conditional)
+Arcane Avenger | critical_chance +45% (conditional)
+Arcane Double Back | —
+Arcane Resistance | —
+Arcane Ice | —
+Arcane Warmth | —
+Arcane Aegis | —
+Arcane Grace | —
+Arcane Blessing | —
+Arcane Barrier | —
+Arcane Escapist | —
+Arcane Nullifier | —
+Arcane Persistence | —
+Arcane Truculence | —
+Arcane Healing | —
+Arcane Expertise | —
+Arcane Deflection | —
+Arcane Agility | —
+Arcane Phantasm | —
+Arcane Circumvent | —
+Arcane Hot Shot | —
+Arcane Ice Storm | ability_strength +2% (conditional ×20) | ability_duration +2% (conditional ×20)
+Arcane Bellicose | —
+Arcane Power Ramp | ability_strength +9% (conditional)
+Arcane Camisado | —
+Arcane Pistoleer | —
+Akimbo Slip Shot | —
+Arcane Tanker | —
+Melee Fortification | armor +210 (conditional)
+Secondary Surge | —
+Exodia Brave | —
+Theorem Infection | —
+Melee Exposure | —
+Exodia Valor | —
+Melee Doughty | —
+Primary Bulwark | —
+Melee Afflictions | —
+Pax Soar | —
+Exodia Might | —
+Arcane Ultimatum | —
+Arcane Fury | —
+Arcane Precision | —
+Arcane Velocity | —
+Arcane Tempo | —
+Arcane Momentum | —
+Exodia Hunt | —
+Arcane Bodyguard | —
+Arcane Victory | —
+Melee Assimilation | —
+Melee Animosity | —
+Arcane Trickery | —
+Arcane Rage | —
+Arcane Acceleration | —
+Longbow Sharpshot | —
+Arcane Battery | —
+Exodia Contagion | —
+Exodia Epidemic | —
+Melee Retaliation | —
+Arcane Blade Charger | damage +300% (conditional)
+Melee Influence | —
+Arcane Strike | —
+Secondary Outburst | —
+Primary Overcharge | —
+Magus Aggress | —
+Theorem Contagion | —
+Secondary Fortifier | —
+Melee Crescendo | —
+Molt Augmented | ability_strength +0.24% (conditional ×250, On Kill)
+Primary Frostbite | critical_multiplier +3% (conditional ×40) | multishot +2.25% (conditional ×40)
+Primary Merciless | damage +30% (conditional ×12, On Kill) | reload_speed +30%
+Primary Dexterity | damage +60% (conditional ×6)
+Primary Deadhead | damage +120% (conditional ×3) | recoil -50%
+Primary Plated Round | —
+Arcane Primary Charger | —
+Primary Exhilarate | —
+Primary Blight | critical_multiplier +3.6% (conditional ×40) | multishot +1.8% (conditional ×40)
+Primary Obstruct | —
+Melee Vortex | —
+Secondary Irradiate | —
+Melee Duplicate | —
+Secondary Cryogenic | —
+Secondary Kinship | —
+Secondary Enervate | —
+Cascadia Flare | damage +12% (conditional ×40)
+Secondary Merciless | damage +30% (conditional ×12, On Kill) | reload_speed +30%
+Secondary Dexterity | damage +60% (conditional ×6)
+Secondary Deadhead | damage +120% (conditional ×3) | recoil -50%
+Secondary Shiver | —
+Conjunction Voltage | reload_speed +1.5% (conditional ×40) | multishot +3% (conditional ×40)
+Pax Seeker | —
+Shotgun Vendetta | multishot +180% (conditional) | reload_speed +75% (conditional)
+Primary Debilitate | —
+Primary Crux | status_chance +30% (conditional ×10)
+Exodia Triumph | —
+Exodia Force | —
+Theorem Demulcent | —
+Virtuos Tempo | fire_rate +60% (conditional, On Kill)
+Virtuos Shadow | critical_chance +60% (conditional)
+Virtuos Strike | critical_multiplier +80% (conditional)
+Virtuos Fury | damage +30% (conditional)
+Virtuos Null | —
+Virtuos Ghost | status_chance +60% (conditional)
+Virtuos Surge | void +98% (conditional, On Hit)
+Virtuos Forge | void +98% (conditional, On Hit)
+Virtuos Spike | void +98% (conditional, On Hit)
+Virtuos Trojan | void +98% (conditional, On Hit)
+Magus Husk | armor +300 (conditional)
+Magus Firewall | —
+Magus Elevate | —
+Magus Nourish | —
+Magus Replenish | health +30% (conditional)
+Magus Repair | —
+Magus Vigor | health +600 (conditional)
+Arcane Reaper | armor +660 (conditional)
+Magus Melt | —
+Magus Accelerant | —
+Magus Drive | —
+Magus Cloud | —
+Magus Glitch | —
+Magus Destruct | —
+Magus Anomaly | —
+Magus Revert | —
+Magus Overload | —
+Magus Cadence | sprint_speed +90% (conditional)
+Magus Lockdown | —
+Arcane Concentration | ability_duration +60% (conditional)
+Arcane Sculptor | ability_efficiency +175% (conditional)
+Arcane Universal Fallout | —
+Arcane Impetus | ability_strength +6% (conditional) | ability_efficiency +3% (conditional)
+Arcane Crepuscular | ability_strength +30% (conditional)
+Pax Charge | —
+Residual Boils | —
+Primary Compression | —
+Pax Bolt | ability_efficiency +30% (conditional)
+Secondary Encumber | —
+Melee Careen | —
+Arcane Consequence | —
+Arcane Arachne | —
+Arcane Energize | —
+Molt Reconstruct | —
+Arcane Intention | —
+Residual Malodor | —
+Residual Shock | —
+Arcane Rise | —
+Arcane Steadfast | —
+Arcane Awakening | —
+Arcane Pulse | —
+Arcane Eruption | —
+Residual Viremia | —
+Eternal Onslaught | critical_chance +180% (conditional)
+Eternal Logistics | —
+Emergence Dissipate | —
+Emergence Savior | —
+Emergence Renewed | —
+Eternal Eradicate | —
+Fractalized Reset | reload_speed +240% (conditional)
+Cascadia Overcharge | critical_chance +300% (conditional)
+Cascadia Accuracy | —
+Cascadia Empowered | —
+Molt Vigor | —
+Molt Efficiency | —

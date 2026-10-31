@@ -26,12 +26,6 @@ export function formatDotDate(iso?: string): string {
   return `${y}.${m}.${d}`
 }
 
-/** Locale date with a fallback for null/empty values. */
-export function formatLocaleDate(iso: string | null, fallback = "Never") {
-  if (!iso) return fallback
-  return new Date(iso).toLocaleDateString()
-}
-
 export function relativeTime(iso: string): string {
   const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000)
   if (mins < 1) return "just now"

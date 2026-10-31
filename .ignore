@@ -1,0 +1,3 @@
+# ripgrep (and the Grep tool) skip these unless the path is passed explicitly.
+# The committed catalog is minified single-line JSON: one match dumps 100s of KB.
+apps/web/public/data/

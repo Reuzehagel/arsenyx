@@ -322,6 +322,27 @@ function mapGuideRefs(
   }
 }
 
+/** Apply `fn` to every mod in a slot map — each Slot's own mod and its nested
+ *  Alternate — so the image refresh and strip passes treat both alike. */
+function mapPlacedMods(
+  slots: Partial<Record<SlotId, PlacedMod>> | undefined,
+  fn: (mod: Mod) => Mod,
+): Partial<Record<SlotId, PlacedMod>> | undefined {
+  if (!slots) return slots
+  const next: Partial<Record<SlotId, PlacedMod>> = {}
+  for (const [id, placed] of Object.entries(slots)) {
+    if (!placed) continue
+    next[id as SlotId] = {
+      ...placed,
+      mod: fn(placed.mod),
+      ...(placed.alternate && {
+        alternate: { ...placed.alternate, mod: fn(placed.alternate.mod) },
+      }),
+    }
+  }
+  return next
+}
+
 export function refreshImagesFromMap(
   data: SavedBuildData,
   imageMap: Record<string, string> | undefined,
@@ -330,29 +351,13 @@ export function refreshImagesFromMap(
   const url = (uniqueName?: string): string | undefined =>
     uniqueName ? imageMap[uniqueName] : undefined
 
-  const fixSlots = (
-    slots: Partial<Record<SlotId, PlacedMod>> | undefined,
-  ): Partial<Record<SlotId, PlacedMod>> | undefined => {
-    if (!slots) return slots
-    const next: Partial<Record<SlotId, PlacedMod>> = {}
-    for (const [id, placed] of Object.entries(slots)) {
-      if (!placed) continue
-      // Rivens have a stub uniqueName that isn't in the catalog/map, so pin
-      // them to the current RIVEN_IMAGE_NAME — this heals older builds that
-      // stored a now-dead riven image (e.g. the bare "OmegaMod.png").
-      if (placed.mod.rivenStats) {
-        next[id as SlotId] = {
-          ...placed,
-          mod: { ...placed.mod, imageName: RIVEN_IMAGE_NAME },
-        }
-        continue
-      }
-      const fresh = url(placed.mod.uniqueName)
-      next[id as SlotId] = fresh
-        ? { ...placed, mod: { ...placed.mod, imageName: fresh } }
-        : placed
-    }
-    return next
+  const fixMod = (mod: Mod): Mod => {
+    // Rivens have a stub uniqueName that isn't in the catalog/map, so pin
+    // them to the current RIVEN_IMAGE_NAME — this heals older builds that
+    // stored a now-dead riven image (e.g. the bare "OmegaMod.png").
+    if (mod.rivenStats) return { ...mod, imageName: RIVEN_IMAGE_NAME }
+    const fresh = url(mod.uniqueName)
+    return fresh ? { ...mod, imageName: fresh } : mod
   }
   const fixArcanes = (
     arcanes: (PlacedArcane | null)[] | undefined,
@@ -376,7 +381,7 @@ export function refreshImagesFromMap(
 
   return {
     ...data,
-    slots: fixSlots(data.slots),
+    slots: mapPlacedMods(data.slots, fixMod),
     arcanes: fixArcanes(data.arcanes),
     helminth: fixHelminth(data.helminth),
     // Guide-ref snapshots persist without imageName, same as placed slots.
@@ -386,7 +391,7 @@ export function refreshImagesFromMap(
     }),
     variants: data.variants?.map((v) => ({
       ...v,
-      slots: fixSlots(v.slots) ?? v.slots,
+      slots: mapPlacedMods(v.slots, fixMod) ?? v.slots,
       arcanes: fixArcanes(v.arcanes) ?? v.arcanes,
       helminth: fixHelminth(v.helminth),
     })),
@@ -406,20 +411,10 @@ export function refreshImagesFromMap(
  * stable `RIVEN_IMAGE_NAME` constant that never rots, so we keep it as-is.
  */
 export function stripPersistedImages(data: SavedBuildData): SavedBuildData {
-  const stripMod = (placed: PlacedMod): PlacedMod => {
-    if (placed.mod.rivenStats) return placed
-    const { imageName: _drop, ...mod } = placed.mod
-    return { ...placed, mod }
-  }
-  const stripSlots = (
-    slots: Partial<Record<SlotId, PlacedMod>> | undefined,
-  ): Partial<Record<SlotId, PlacedMod>> | undefined => {
-    if (!slots) return slots
-    const next: Partial<Record<SlotId, PlacedMod>> = {}
-    for (const [id, placed] of Object.entries(slots)) {
-      if (placed) next[id as SlotId] = stripMod(placed)
-    }
-    return next
+  const stripMod = (mod: Mod): Mod => {
+    if (mod.rivenStats) return mod
+    const { imageName: _drop, ...rest } = mod
+    return rest
   }
   const stripArcanes = (
     arcanes: (PlacedArcane | null)[] | undefined,
@@ -443,7 +438,7 @@ export function stripPersistedImages(data: SavedBuildData): SavedBuildData {
 
   return {
     ...data,
-    slots: stripSlots(data.slots),
+    slots: mapPlacedMods(data.slots, stripMod),
     arcanes: stripArcanes(data.arcanes),
     helminth: stripHelminth(data.helminth),
     guideRefs: mapGuideRefs(data.guideRefs, (entry) => {
@@ -452,7 +447,7 @@ export function stripPersistedImages(data: SavedBuildData): SavedBuildData {
     }),
     variants: data.variants?.map((v) => ({
       ...v,
-      slots: stripSlots(v.slots) ?? v.slots,
+      slots: mapPlacedMods(v.slots, stripMod) ?? v.slots,
       arcanes: stripArcanes(v.arcanes) ?? v.arcanes,
       helminth: stripHelminth(v.helminth),
     })),

@@ -1,3 +1,4 @@
+import { isIncarnonFormAttack } from "@arsenyx/shared/warframe/incarnon-data"
 import type {
   Attack,
   DamageTypes,
@@ -43,11 +44,15 @@ export interface WeaponCalcInput {
    */
   deploymentContext?: DeploymentContext
   /**
-   * Kuva/Tenet progenitor bonus element. Adds a flat +60% of the chosen
-   * element as if it were a mod stat, so it combines with mod elements
-   * (e.g. Cold + bonus Toxin → Viral).
+   * Kuva/Tenet progenitor bonus element. Adds +60% of the chosen element as a
+   * second innate element: per wiki, of the weapon's innate and the bonus,
+   * whichever comes first in Heat > Cold > Electricity > Toxin combines
+   * second-to-last, the other last (Tenet Glaxion Cold + bonus Electricity +
+   * Toxin mod → Viral + Electricity).
    */
   lichBonusElement?: LichBonusElement | null
+  /** Picked Incarnon evolution perks (see `incarnonPerkStats`). */
+  incarnonStats?: SourcedStat[]
 }
 
 const LICH_BONUS_PERCENT = 60
@@ -58,6 +63,7 @@ function lichBonusStat(element: LichBonusElement): SourcedStat {
     value: LICH_BONUS_PERCENT,
     operation: "percent_add",
     sourceName: "Bonus Element",
+    innate: true,
   }
 }
 
@@ -69,8 +75,13 @@ export function calculateWeaponStats(input: WeaponCalcInput): WeaponStats {
   if (input.lichBonusElement) {
     stats.push(lichBonusStat(input.lichBonusElement))
   }
+  stats.push(...(input.incarnonStats ?? []))
+  const statsFor = (attackName: string) => {
+    const scope = isIncarnonFormAttack(attackName) ? "incarnon" : "normal"
+    return stats.filter((s) => !s.attackScope || s.attackScope === scope)
+  }
 
-  const multishot = calcStat("multishot", 1, stats)
+  const multishot = calcStat("multishot", 1, statsFor("Normal Attack"))
   const hasAttacks = Boolean(weapon.attacks && weapon.attacks.length > 0)
   const attackModes: AttackModeStats[] = []
 
@@ -87,7 +98,7 @@ export function calculateWeaponStats(input: WeaponCalcInput): WeaponStats {
           fireRate: weapon.fireRate,
         },
         weapon,
-        stats,
+        statsFor("Normal Attack"),
       ),
     )
   }
@@ -114,7 +125,7 @@ export function calculateWeaponStats(input: WeaponCalcInput): WeaponStats {
             fireRate: attack.speed ?? weapon.fireRate,
           },
           weapon,
-          stats,
+          statsFor(attack.name),
         ),
       )
     }
@@ -138,16 +149,31 @@ function buildAttackMode(
   weapon: Gun | Melee | Weapon,
   stats: SourcedStat[],
 ): AttackModeStats {
-  const baseDamage = src.totalDamage ?? 0
-  const baseCritPct = src.crit ?? 0
-  const baseCritMult = src.critMult ?? 1
-  const baseStatusPct = src.status ?? 0
+  const baseAdd = (type: StatType) =>
+    stats.reduce(
+      (sum, s) =>
+        s.type === type && s.operation === "base_add" ? sum + s.value : sum,
+      0,
+    )
+  const baseCritPct = (src.crit ?? 0) + baseAdd("critical_chance")
+  const baseCritMult = (src.critMult ?? 1) + baseAdd("critical_multiplier")
+  const baseStatusPct = (src.status ?? 0) + baseAdd("status_chance")
   const baseFireRate = src.fireRate ?? 1
 
-  const damage =
+  const rawDamage =
     typeof src.damage === "object" && src.damage
       ? (src.damage as DamageTypes)
       : (weapon.damage ?? {})
+  // "+X Base Damage" is per pellet (attack data is per pellet too), split
+  // across the attack's damage types in proportion.
+  const damageAdd = baseAdd("damage")
+  const rawSum = sumDamage(rawDamage)
+  const damageScale = damageAdd && rawSum ? (rawSum + damageAdd) / rawSum : 1
+  const damage = Object.fromEntries(
+    Object.entries(rawDamage).map(([t, v]) => [t, (v ?? 0) * damageScale]),
+  ) as DamageTypes
+  const baseDamage =
+    (src.totalDamage ?? 0) + (damageScale !== 1 ? damageAdd : 0)
 
   const breakdown = calcDamageBreakdown(damage, stats)
   const mode: AttackModeStats = {
@@ -162,7 +188,12 @@ function buildAttackMode(
 
   const gun = weapon as Gun
   if (gun.magazineSize) {
-    mode.magazineSize = calcStat("magazine_size", gun.magazineSize, stats, 0)
+    mode.magazineSize = calcStat(
+      "magazine_size",
+      gun.magazineSize + baseAdd("magazine_size"),
+      stats,
+      0,
+    )
   }
   if (gun.reloadTime) {
     mode.reloadTime = calcReloadTime(gun.reloadTime, stats)
@@ -337,7 +368,8 @@ function calcDamageBreakdown(
   for (const s of stats) {
     if (
       BASE_ELEMENTS.includes(s.type as DamageType) &&
-      s.operation === "percent_add"
+      s.operation === "percent_add" &&
+      !s.innate
     ) {
       const type = s.type as DamageType
       if (!byType.has(type)) byType.set(type, [])
@@ -361,6 +393,15 @@ function calcDamageBreakdown(
       type,
       value: pctEquivalent,
       sources: [{ name: "Innate", value: pctEquivalent }],
+      isInnate: true,
+    })
+  }
+  for (const s of stats) {
+    if (!s.innate || !BASE_ELEMENTS.includes(s.type as DamageType)) continue
+    elementalMods.push({
+      type: s.type as DamageType,
+      value: s.value,
+      sources: [{ name: s.sourceName, value: s.value }],
       isInnate: true,
     })
   }
@@ -465,6 +506,7 @@ function combineElements(
 ): DamageEntry[] {
   if (elements.length === 0) return []
 
+  // Rules: https://wiki.warframe.com/w/Damage#Elemental_Damage_Combinations
   // Per wiki, mod-added elements combine pairwise in slot order. Innate
   // elements are resolved AFTER mods: they either contribute to a combination
   // already containing their type, or pair with a leftover uncombined mod
@@ -472,7 +514,13 @@ function combineElements(
   type Working = { entry: DamageEntry; sourceTypes: Set<DamageType> }
   const result: Working[] = []
   const moddedQueue = elements.filter((e) => !e.isInnate)
-  const innates = elements.filter((e) => e.isInnate)
+  // Two innates (weapon + progenitor bonus) resolve in Heat > Cold >
+  // Electricity > Toxin order — BASE_ELEMENTS is already in that order.
+  const innates = elements
+    .filter((e) => e.isInnate)
+    .sort(
+      (a, b) => BASE_ELEMENTS.indexOf(a.type) - BASE_ELEMENTS.indexOf(b.type),
+    )
 
   while (moddedQueue.length > 0) {
     const first = moddedQueue.shift()!

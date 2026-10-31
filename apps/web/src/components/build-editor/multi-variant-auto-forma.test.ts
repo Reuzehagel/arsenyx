@@ -324,3 +324,30 @@ describe("computeMultiVariantPlan (full cascade)", () => {
     expect(elapsed).toBeLessThan(2000)
   })
 })
+
+describe("Alternates are invisible to auto-forma", () => {
+  it("plans the same forma with and without an Alternate", () => {
+    // Tight capacity forces a forma; a heavy off-polarity Alternate on slot 0
+    // must not change which forma is chosen.
+    const bare: Partial<Record<SlotId, PlacedMod>> = {
+      "normal-0": placed("madurai", 16),
+      "normal-1": placed("madurai", 16),
+      "normal-2": placed("madurai", 16),
+      "normal-3": placed("madurai", 16),
+    }
+    const withAlt: Partial<Record<SlotId, PlacedMod>> = {
+      ...bare,
+      "normal-0": {
+        ...bare["normal-0"]!,
+        alternate: { mod: mod("vazarin", 20, "Alt"), rank: 0 },
+      },
+    }
+    const input = { ...emptyInputs(), hasReactor: false }
+    expect(
+      computeMultiVariantStage1Plan({ ...input, variantSlots: [withAlt] })
+        ?.steps,
+    ).toEqual(
+      computeMultiVariantStage1Plan({ ...input, variantSlots: [bare] })?.steps,
+    )
+  })
+})

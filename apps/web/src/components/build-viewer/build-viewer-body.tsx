@@ -7,6 +7,7 @@ import {
   type Arcane,
   DEFAULT_DEPLOYMENT_CONTEXT,
   type Mod,
+  type Warframe,
 } from "@arsenyx/shared/warframe/types"
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
 import { lazy, Suspense, useMemo } from "react"
@@ -20,8 +21,14 @@ import {
 // tree-shake those back out of the barrel, and the embed entry must stay lean.
 import { BuildSurface } from "@/components/build-editor/build-surface"
 import { resolveInitialArcanes } from "@/components/build-editor/layout"
-import { useArcaneSlots } from "@/components/build-editor/use-arcane-slots"
-import { useBuildSlots } from "@/components/build-editor/use-build-slots"
+import {
+  type PlacedArcane,
+  useArcaneSlots,
+} from "@/components/build-editor/use-arcane-slots"
+import {
+  placedModsInSlotOrder,
+  useBuildSlots,
+} from "@/components/build-editor/use-build-slots"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   getVariants,
@@ -47,6 +54,7 @@ import {
   type PartnerBuild,
 } from "@/lib/queries/partner-builds-query"
 import { padShards } from "@/lib/shards"
+import { calculateWarframeStats } from "@/lib/stats/warframe"
 import { authorName } from "@/lib/util/user-display"
 import { getCategoryLabel, type BrowseCategory } from "@/lib/warframe"
 
@@ -269,6 +277,21 @@ function BuildViewerBodyInner({
     { item: effectiveItem, category, layout, slots, allArcanes, hasReactor },
   )
 
+  // The embed's ability strip shows stats outside the sidebar, so it needs
+  // the same totals ItemSidebar computes.
+  const abilityTotals = useMemo(
+    () =>
+      embed && category === "warframes"
+        ? calculateWarframeStats({
+            warframe: item as unknown as Warframe,
+            mods: placedModsInSlotOrder(slots.placed),
+            arcanes: arcanes.placed.filter((a): a is PlacedArcane => !!a),
+            shards,
+          })
+        : undefined,
+    [embed, category, item, slots.placed, arcanes.placed, shards],
+  )
+
   const sidebarProps = {
     item,
     category,
@@ -325,6 +348,7 @@ function BuildViewerBodyInner({
             itemName={item.name}
             itemImageName={item.imageName ?? undefined}
             abilities={formAbilities ?? item.abilities ?? []}
+            abilityTotals={abilityTotals}
             helminth={helminth}
             shards={shards}
             zawComponents={zawComponents}

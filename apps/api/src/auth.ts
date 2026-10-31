@@ -5,6 +5,7 @@ import { username } from "better-auth/plugins"
 import { prisma } from "./db"
 import { webOrigins } from "./env"
 import { validateExternalUrl } from "./lib/validate"
+import { releaseUserSocial } from "./routes/_build-social"
 
 // Mirror of the BuildVisibility enum in prisma/schema.prisma. Inlined to
 // avoid pulling generated Prisma types into the auth bootstrap path.
@@ -289,7 +290,12 @@ export const auth = betterAuth({
     },
   },
   user: {
-    deleteUser: { enabled: true },
+    deleteUser: {
+      enabled: true,
+      beforeDelete: async (user) => {
+        await prisma.$transaction(releaseUserSocial(user.id))
+      },
+    },
     additionalFields: {
       // `input: false` is load-bearing — without it, /auth/update-user
       // accepts these fields from the request body and a logged-in user

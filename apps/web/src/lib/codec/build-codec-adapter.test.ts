@@ -267,3 +267,118 @@ describe("strip → re-resolve round trip", () => {
     expect(resolved.slots?.["normal-0"]?.mod.imageName).toBe(RIVEN_IMAGE_NAME)
   })
 })
+
+describe("Alternate mods persist through the save/load pipeline", () => {
+  function withAlt(
+    slot: PlacedMod,
+    altUniqueName: string,
+    imageName?: string,
+  ): PlacedMod {
+    return {
+      ...slot,
+      alternate: { mod: mod(altUniqueName, imageName), rank: 3 },
+    }
+  }
+
+  const withAlternates: SavedBuildData = {
+    version: 1,
+    slots: {
+      "normal-0": withAlt(
+        rivenPlaced("riven.png"),
+        "/Mods/PointBlank",
+        "pb.png",
+      ),
+      "normal-1": placedMod("/Mods/Blaze", "blaze.png"),
+    },
+    variants: [
+      {
+        id: "v0",
+        label: "Main",
+        slots: {
+          "normal-0": withAlt(
+            rivenPlaced("riven.png"),
+            "/Mods/PointBlank",
+            "pb.png",
+          ),
+          "normal-1": placedMod("/Mods/Blaze", "blaze.png"),
+        },
+        arcanes: [],
+      },
+      {
+        id: "v1",
+        label: "Alt",
+        slots: {
+          "normal-0": withAlt(
+            placedMod("/Mods/PrimedPointBlank", "ppb.png"),
+            "/Mods/Blaze",
+            "blaze.png",
+          ),
+        },
+        arcanes: [],
+      },
+    ],
+  }
+
+  it("strips the nested Alternate's imageName like the slot's own mod", () => {
+    const stripped = stripPersistedImages(withAlternates)
+    const alt = stripped.slots?.["normal-0"]?.alternate
+    expect(alt?.mod.uniqueName).toBe("/Mods/PointBlank")
+    expect(alt?.mod.imageName).toBeUndefined()
+    expect(alt?.rank).toBe(3)
+    expect(
+      stripped.variants?.[1]?.slots["normal-0" as SlotId]?.alternate?.mod
+        .imageName,
+    ).toBeUndefined()
+  })
+
+  it("round-trips Alternates per Variant through JSON save → reload", () => {
+    const persisted = JSON.parse(
+      JSON.stringify(stripPersistedImages(withAlternates)),
+    ) as unknown
+    const reloaded = refreshImagesFromMap(
+      normalizeBuildData(persisted, [], []),
+      {
+        "/Mods/PointBlank": "https://img/pb.png",
+        "/Mods/Blaze": "https://img/blaze.png",
+        "/Mods/PrimedPointBlank": "https://img/ppb.png",
+      },
+    )
+    const v0 = reloaded.variants?.[0]?.slots["normal-0" as SlotId]
+    const v1 = reloaded.variants?.[1]?.slots["normal-0" as SlotId]
+    expect(v0?.mod.rivenStats).toBeDefined()
+    expect(v0?.alternate?.mod.uniqueName).toBe("/Mods/PointBlank")
+    expect(v0?.alternate?.mod.imageName).toBe("https://img/pb.png")
+    expect(v0?.alternate?.rank).toBe(3)
+    expect(v1?.mod.uniqueName).toBe("/Mods/PrimedPointBlank")
+    expect(v1?.alternate?.mod.uniqueName).toBe("/Mods/Blaze")
+    expect(v1?.alternate?.mod.imageName).toBe("https://img/blaze.png")
+    expect(
+      reloaded.variants?.[0]?.slots["normal-1" as SlotId]?.alternate,
+    ).toBeUndefined()
+  })
+
+  it("re-resolves Alternate images from the editor catalog", () => {
+    const normalized = normalizeBuildData(
+      stripPersistedImages(withAlternates),
+      [mod("/Mods/PointBlank", "https://img/pb.png")],
+      [],
+    )
+    expect(normalized.slots?.["normal-0"]?.alternate?.mod.imageName).toBe(
+      "https://img/pb.png",
+    )
+  })
+
+  it("leaves a build without Alternates unchanged by the round trip", () => {
+    const plain: SavedBuildData = {
+      version: 1,
+      slots: { "normal-0": placedMod("/Mods/Serration") },
+    }
+    const reloaded = normalizeBuildData(
+      JSON.parse(JSON.stringify(stripPersistedImages(plain))) as unknown,
+      [],
+      [],
+    )
+    expect(reloaded).toEqual(plain)
+    expect("alternate" in (reloaded.slots?.["normal-0"] ?? {})).toBe(false)
+  })
+})

@@ -13,12 +13,11 @@
  *      set of items DE doesn't manifest (beast claws, railjack ordnance,
  *      modular pieces) but the wiki documents with an `Image` field.
  *      Resolved at build time and cached in
- *      `data/curated/wiki-image-urls.json` so subsequent builds are
- *      offline.
+ *      `data/curated/wiki-image-urls.json`.
  *
- * Both sources are content-hashed, so once resolved the URLs are stable
- * for the file's lifetime. Cache invalidation = re-running the resolve
- * step after a wiki re-upload or DE export bump.
+ * Both sources are content-hashed, so a re-upload changes the URL. DE URLs
+ * come fresh from each manifest sync; wiki URLs are re-resolved in full on
+ * `data:refresh` (cache misses only on other builds — see resolve-images.ts).
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs"
@@ -92,12 +91,13 @@ export async function resolveWikiImageUrls(
     // half-open stall must retry/abort rather than hang until SIGKILL.
     const res = await fetchRetry(url, {
       headers: { "User-Agent": "arsenyx-image-sync (https://www.arsenyx.com)" },
-    })
-    if (!res.ok) {
+    }).catch((err: Error) => {
+      // fetchRetry already throws on non-2xx; add which batch failed.
       throw new Error(
-        `MediaWiki API HTTP ${res.status} on batch ${i / BATCH_SIZE + 1}: ${res.statusText}`,
+        `MediaWiki API batch ${i / BATCH_SIZE + 1}: ${err.message}`,
+        { cause: err },
       )
-    }
+    })
     const json = (await res.json()) as MediaWikiQueryResponse
     // Map each canonical `File:<to>` title back to the bare filename(s) the
     // caller asked for, so a non-canonical Image field still resolves.

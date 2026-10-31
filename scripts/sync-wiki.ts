@@ -13,13 +13,16 @@
  *
  * Network-only. The build never calls this; `read-wiki.ts` parses from disk.
  * Run via `bun run scripts/sync-wiki.ts` or as part of `bun run data:sync`.
+ * Pass module names (`bun run scripts/sync-wiki.ts Ability/data/stats`) to
+ * mirror only those, keeping every other module's file and pin as it is.
  */
 
 import { createHash } from "node:crypto"
-import { mkdir, writeFile } from "node:fs/promises"
+import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { resolve } from "node:path"
 
 import { fetchText } from "./build/http"
+import { writePinsSection } from "./build/pins"
 
 /** Modules we mirror. `Module:Weapons/data/{primary,secondary,...}` are the
  *  eight subpages declared by the router; the other eight are independent
@@ -46,11 +49,13 @@ const MODULES = [
   "Focus/data",
   "Avionics/data",
   "Modular/data",
+  // Per-ability stat values, each tagged with the mod stat it scales by
+  // (Modifier) — see scripts/build/merge-ability-stats.ts.
+  "Ability/data/stats",
 ] as const
 
 const REPO_ROOT = resolve(import.meta.dirname, "..")
 const OUT_DIR = resolve(REPO_ROOT, "data/raw/wiki")
-const PINS_PATH = resolve(REPO_ROOT, "data/PINS.json")
 
 function moduleToFilename(module: string): string {
   return module.replace(/\//g, "_") + ".lua"
@@ -65,11 +70,27 @@ interface WikiPin {
 }
 
 async function main() {
-  console.log(`Mirroring ${MODULES.length} wiki modules to ${OUT_DIR}…`)
+  const only = process.argv.slice(2)
+  const unknown = only.filter(
+    (m) => !(MODULES as readonly string[]).includes(m),
+  )
+  if (unknown.length) throw new Error(`Not in MODULES: ${unknown.join(", ")}`)
+  const selected = only.length ? only : MODULES
+  console.log(`Mirroring ${selected.length} wiki modules to ${OUT_DIR}…`)
   await mkdir(OUT_DIR, { recursive: true })
 
-  const pins: WikiPin[] = []
-  for (const m of MODULES) {
+  // A partial run keeps the pins of the modules it didn't re-fetch.
+  const existing = only.length
+    ? (
+        JSON.parse(
+          await readFile(resolve(REPO_ROOT, "data/PINS.json"), "utf8"),
+        ) as { wiki?: { modules?: WikiPin[] } }
+      ).wiki?.modules
+    : undefined
+  const pins: WikiPin[] = (existing ?? []).filter(
+    (p) => !only.includes(p.module),
+  )
+  for (const m of selected) {
     const url = `https://wiki.warframe.com/index.php?title=Module:${m}&action=raw`
     process.stdout.write(`  Module:${m}… `)
     const body = await fetchText(url)
@@ -92,22 +113,12 @@ async function main() {
     process.stdout.write(`${(body.length / 1024).toFixed(1)} KB\n`)
   }
 
-  // Merge wiki pins into the existing PINS.json (sync-de.ts writes the DE
-  // half). If PINS.json doesn't exist yet, start with just the wiki half.
-  let existing: Record<string, unknown> = {}
-  try {
-    const txt = await Bun.file(PINS_PATH).text()
-    existing = JSON.parse(txt)
-  } catch {
-    // First run, no PINS.json yet — fine.
-  }
-  const merged = {
-    ...existing,
-    wiki: { fetchedAt: new Date().toISOString(), modules: pins },
-  }
-  await writeFile(PINS_PATH, JSON.stringify(merged, null, 2) + "\n", "utf8")
+  await writePinsSection("wiki", {
+    fetchedAt: new Date().toISOString(),
+    modules: pins,
+  })
 
-  console.log(`\n✓ ${MODULES.length} modules → data/raw/wiki/`)
+  console.log(`\n✓ ${selected.length} modules → data/raw/wiki/`)
   console.log(`✓ data/PINS.json updated with wiki section`)
 }
 

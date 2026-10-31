@@ -36,7 +36,16 @@
     <link rel="preconnect" href="https://wiki.warframe.com" />
   </head>
   <body class="antialiased">
-    <div id="root"></div>
+    <!-- Static placeholder until React's first commit replaces it, so the
+         page isn't blank black while the bundle and route data load. -->
+    <div id="root">
+      <div
+        aria-busy="true"
+        style="min-height: 100vh; display: flex; align-items: center; justify-content: center; font: 700 15px/1 Geist, system-ui, sans-serif; letter-spacing: 0.2em; opacity: 0.4"
+      >
+        ARSENYX
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

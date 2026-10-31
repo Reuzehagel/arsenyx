@@ -13,9 +13,10 @@ import { API_URL } from "./constants"
 // content types. The proxy returns the source bytes verbatim (no resizing).
 
 function isProxyable(src: string): boolean {
-  // Absolute http(s) OR protocol-relative (`//host/...`) URLs get proxied.
+  // Any http(s): scheme (even slashless `https:host/x`, which browsers may
+  // resolve off-site) OR protocol-relative (`//host`, `\\host`) gets proxied.
   // data:, blob:, and relative paths (e.g. local placeholders) pass through.
-  return /^(https?:)?\/\//i.test(src)
+  return /^(https?:|[\\/]{2})/i.test(src)
 }
 
 export function proxyImage(src: string | null | undefined): string | null {
@@ -25,6 +26,6 @@ export function proxyImage(src: string | null | undefined): string | null {
   // Left as-is, the browser resolves it against the page origin and fetches it
   // directly — leaking the visitor's IP / Referer, the exact doxxing vector
   // the proxy exists to close.
-  const absolute = src.startsWith("//") ? `https:${src}` : src
+  const absolute = /^[\\/]{2}/.test(src) ? `https:${src}` : src
   return `${API_URL}/img?u=${encodeURIComponent(absolute)}`
 }

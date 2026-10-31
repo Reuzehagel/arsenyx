@@ -16,23 +16,6 @@ export interface ExtractedOverframeData {
   }
 }
 
-function extractNextDataJson(html: string): unknown | null {
-  // Overframe embeds a JSON blob in <script id="__NEXT_DATA__" type="application/json">...</script>
-  const match = html.match(
-    /<script[^>]*id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i,
-  )
-  if (!match) return null
-
-  const raw = match[1]?.trim()
-  if (!raw) return null
-
-  try {
-    return JSON.parse(raw)
-  } catch {
-    return null
-  }
-}
-
 /**
  * Depth-first walk over a parsed JSON tree. For every object entry, `visit`
  * gets `(key, value, keyPath)` and may return a non-null match to stop the
@@ -162,16 +145,8 @@ function findFirstHelminthAbility(obj: unknown): {
   })
 }
 
-export function extractOverframeDataFromHtml(
-  html: string,
-  source: OverframeBuildSource,
-): ExtractedOverframeData {
-  return extractOverframeData(extractNextDataJson(html), source)
-}
-
 /**
- * Same extraction as {@link extractOverframeDataFromHtml} but starting from an
- * already-parsed `__NEXT_DATA__` object. The paste/bookmarklet import path
+ * Extract build data from an already-parsed `__NEXT_DATA__` object. The paste/bookmarklet import path
  * reads the JSON straight off the user's loaded Overframe tab (which has
  * already cleared Cloudflare's challenge), so it never has HTML to regex.
  */

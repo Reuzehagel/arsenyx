@@ -26,6 +26,7 @@
  * isPrime, vaulted, releaseDate.
  */
 
+import { spawnSync } from "node:child_process"
 import { readdirSync } from "node:fs"
 import { mkdir, rm, writeFile } from "node:fs/promises"
 import { resolve } from "node:path"
@@ -51,12 +52,17 @@ import { buildBrowseIndex } from "./build/browse-index"
 import { injectMissingDeMods } from "./build/de-missing-mods"
 import { buildFamilyIndex, makeExpandCompat } from "./build/expand-compat"
 import { iterWikiRecords } from "./build/images"
+import {
+  abilityStatsLookup,
+  type AbilityRef,
+} from "./build/merge-ability-stats"
 import { mergeArcanes } from "./build/merge-arcanes"
 import { mergeCompanions } from "./build/merge-companions"
 import {
   collapseTwinFrames,
   mergeFrame,
   operatorsFromWiki,
+  rankUpDrift,
   type MergedFrame,
 } from "./build/merge-frames"
 import { deriveHelminthAbilities } from "./build/merge-helminth"
@@ -69,6 +75,7 @@ import {
   type MergedWeapon,
 } from "./build/merge-weapons"
 import { buildModConflicts } from "./build/mod-conflicts"
+import { primeFamily } from "./build/names"
 import { readCurated } from "./build/read-curated"
 import {
   readDeArcanes,
@@ -83,11 +90,16 @@ import { readPePlusUpgrades, readPePlusWeaponTags } from "./build/read-pe-plus"
 import { readWikiModule } from "./build/read-wiki"
 import { resolveImages } from "./build/resolve-images"
 import { validateOutputs } from "./build/validate-output"
+import { resolveWikiModKeys } from "./build/wiki-mod-keys"
 import { writeItemDetails } from "./build/write-details"
 
 const REPO_ROOT = resolve(import.meta.dirname, "..")
 const WIKI_DIR = resolve(REPO_ROOT, "data/raw/wiki")
-const OUT_DIR = resolve(REPO_ROOT, "apps/web/public/data")
+// data:ab (scripts/data-ab.ts) points this at a snapshot dir.
+const OUT_DIR = resolve(
+  REPO_ROOT,
+  process.env.CATALOG_OUT_DIR ?? "apps/web/public/data",
+)
 const DETAIL_DIR = resolve(OUT_DIR, "items")
 const WIKI_IMAGE_CACHE = resolve(REPO_ROOT, "data/curated/wiki-image-urls.json")
 
@@ -105,6 +117,20 @@ const stats: BuildStats = {
   companions: { wiki: 0, deOnly: 0 },
   mods: { de: 0, kept: 0 },
   perCategory: {},
+}
+
+/** Texture filename (sans DE `!00_<hash>`) → first image URL under `dir`. */
+function imageUrlByFile(
+  imageByUniqueName: Map<string, string>,
+  dir: string,
+): Map<string, string> {
+  const out = new Map<string, string>()
+  for (const url of imageByUniqueName.values()) {
+    if (!url.includes(dir)) continue
+    const file = url.split("/").pop()?.split("!")[0]
+    if (file && !out.has(file)) out.set(file, url)
+  }
+  return out
 }
 
 async function main() {
@@ -239,8 +265,45 @@ async function main() {
   }
   // Collapse twin-frames (e.g. Sirius & Orion ships as two DE rows) into one
   // entity carrying both forms, before any downstream consumer sees the list.
-  const mergedFrames = collapseTwinFrames(rawFrames)
+  const twinCollapsed = collapseTwinFrames(rawFrames)
+  // Per-ability stats from Module:Ability/data/stats (max-rank values).
+  const abilityStatsUnhandled: string[] = []
+  const abilityStats = abilityStatsLookup(
+    readWikiModule(resolve(WIKI_DIR, "Ability_data_stats.lua")),
+    twinCollapsed.flatMap((f) => [
+      ...f.abilities,
+      ...(f.forms ?? []).flatMap((form) => form.abilities),
+    ]),
+    abilityStatsUnhandled,
+  )
+  const withAbilityStats = <T extends AbilityRef>(a: T): T => {
+    const s = abilityStats(a)
+    return s ? { ...a, stats: s } : a
+  }
+  const mergedFrames = twinCollapsed.map((f) => ({
+    ...f,
+    abilities: f.abilities.map(withAbilityStats),
+    ...(f.forms && {
+      forms: f.forms.map((form) => ({
+        ...form,
+        abilities: form.abilities.map(withAbilityStats),
+      })),
+    }),
+  }))
+  const framesAbilities = mergedFrames
+    .filter((f) => f.category === "warframes")
+    .flatMap((f) => f.abilities)
+  console.log(
+    `Ability stats: ${framesAbilities.filter((a) => a.stats).length}/${framesAbilities.length} warframe abilities matched`,
+  )
   const operators = operatorsFromWiki(wikiFramesBlob)
+  // Recorded in _report.json too, so it shows up in the weekly refresh PR's diff.
+  const frameRankUpDrift = rankUpDrift(mergedFrames, wikiFramesBlob)
+  for (const line of frameRankUpDrift) {
+    console.warn(
+      `  WARN ${line} — add or fix the frame in packages/shared/src/warframe/rankup.ts (or list it in RANKUP_WIKI_DISPUTED if the wiki is wrong)`,
+    )
+  }
   stats.frames.de = deFramesBlob.ExportWarframes.length
   stats.frames.merged = mergedFrames.length
   stats.frames.operators = operators.length
@@ -287,6 +350,7 @@ async function main() {
       }),
     ),
     cachePath: WIKI_IMAGE_CACHE,
+    refresh: process.argv.includes("--refresh-wiki-images"),
   })
 
   // ---------- 6. Merge mods + arcanes ----------
@@ -332,8 +396,10 @@ async function main() {
   // edge; resolving both endpoints by display Name against the emitted catalog
   // is robust to that drift.
   const wikiIncompatByName = new Map<string, string[]>()
+  const wikiModRecords: Array<{ internalName: string; name: unknown }> = []
   for (const { internalName, record } of iterWikiRecords(wikiModsBlob)) {
     const name = record["Name"]
+    wikiModRecords.push({ internalName, name })
     if (typeof name === "string") {
       wikiKnownModNames.add(name)
       wikiModUniqueNameByName.set(name, internalName)
@@ -394,6 +460,34 @@ async function main() {
   if (missing.resurfaced.length > 0) {
     console.warn(
       `  WARN de-missing-mods.ts: DE ships these again — delete the curated entries: ${missing.resurfaced.join(", ")}`,
+    )
+  }
+
+  // One uniqueName → wiki-record resolution (InternalName, else unique Name —
+  // see wiki-mod-keys.ts) feeds every wiki flag and the unmatched report.
+  const wikiKeyByUniqueName = resolveWikiModKeys(
+    missing.upgrades,
+    wikiModRecords,
+  )
+  const nameFallbacks: string[] = []
+  for (const u of missing.upgrades) {
+    const wikiKey = u.uniqueName && wikiKeyByUniqueName.get(u.uniqueName)
+    if (!wikiKey || wikiKey === u.uniqueName) continue
+    const exilus = wikiExilus.get(wikiKey)
+    if (exilus !== undefined) wikiExilus.set(u.uniqueName, exilus)
+    const tradable = wikiTradable.get(wikiKey)
+    if (tradable !== undefined) wikiTradable.set(u.uniqueName, tradable)
+    if (
+      wikiConclaveMods.has(wikiKey) &&
+      !PVE_USABLE_CONCLAVE_MODS.has(u.uniqueName)
+    )
+      wikiConclaveMods.add(u.uniqueName)
+    if (wikiIgnoreMods.has(wikiKey)) wikiIgnoreMods.add(u.uniqueName)
+    nameFallbacks.push(u.name!)
+  }
+  if (nameFallbacks.length > 0) {
+    console.log(
+      `  wiki mods: matched ${nameFallbacks.length} mod(s) by Name (InternalName drift): ${nameFallbacks.join(", ")}`,
     )
   }
 
@@ -471,8 +565,13 @@ async function main() {
   // `family` lives on the merged records — the lightweight `byCategory` browse
   // projection drops it — so build the variant-family index from
   // mergedWeapons/Companions, gated to real catalog items by category.
+  // Archwing frames join by name (Odonata ↔ Odonata Prime): their compat is a
+  // direct item hit, not a BaseSuit anchor. Warframes stay on the anchor path.
+  const archwingFrames = mergedFrames
+    .filter((f) => f.category === "archwing")
+    .map((f) => ({ uniqueName: f.uniqueName, family: primeFamily(f.name) }))
   const { familyKeyByUniqueName, familyMembers } = buildFamilyIndex(
-    [...mergedWeapons, ...mergedCompanions],
+    [...mergedWeapons, ...mergedCompanions, ...archwingFrames],
     categoryByUniqueName,
   )
   const expandCompat = makeExpandCompat({
@@ -510,9 +609,21 @@ async function main() {
   // Shape-check every emitted record and compare counts against the previous
   // build's meta.json (see validate-output.ts). Throws before the rm below,
   // so a broken merge can't replace a good catalog with a hollowed-out one.
+  // A crash mid-write (rm below) can leave meta.json missing or truncated —
+  // fall back to the committed copy rather than skip the regression check.
   const prevMeta = await Bun.file(resolve(OUT_DIR, "meta.json"))
     .json()
-    .catch(() => undefined)
+    .catch(() => {
+      const r = spawnSync(
+        "git",
+        ["show", "HEAD:apps/web/public/data/meta.json"],
+        {
+          cwd: REPO_ROOT,
+          encoding: "utf8",
+        },
+      )
+      return r.status === 0 ? JSON.parse(r.stdout) : undefined
+    })
   const nextCounts = {
     itemCount: Object.values(stats.perCategory).reduce((a, b) => a + b, 0),
     modCount: mergedMods.length,
@@ -544,6 +655,17 @@ async function main() {
     "utf8",
   )
   console.log(`  OK  mods-all.json (${mergedMods.length} mods)`)
+
+  // Emitted mods with no resolved wiki record (wikiKeyByUniqueName). Their
+  // wiki-sourced flags (IsExilus, Tradable, Conclave) silently default, so
+  // surface them in _report.json where the weekly refresh diff shows new
+  // drift (#297, #399). Avionics come from a separate wiki module — skip them.
+  const modsUnmatched = mergedMods
+    .filter(
+      (m) => m.type !== "Plexus Mod" && !wikiKeyByUniqueName.has(m.uniqueName),
+    )
+    .map((m) => `${m.name} (${m.uniqueName})`)
+    .sort()
 
   // Compact non-tradable list (uniqueNames only). The build viewer skips the
   // ~1.35 MB mods-all.json download for new-format builds, so it loads this to
@@ -586,7 +708,7 @@ async function main() {
     deFramesBlob.ExportAbilities ?? [],
   )
   const helminth = helminthRaw.map((a) => ({
-    ...a,
+    ...withAbilityStats(a),
     imageName: imageByUniqueName.get(a.uniqueName) ?? a.imageName,
   }))
   await writeFile(
@@ -666,12 +788,7 @@ async function main() {
   // matching each component's texture filename, keyed by component name for
   // the web picker. Their old wiki `Special:FilePath` URLs 404 on the current
   // wiki; these flow through sync:images → R2 like every other catalog image.
-  const zawByFile = new Map<string, string>()
-  for (const url of imageByUniqueName.values()) {
-    if (!url.includes("/Zaws/")) continue
-    const file = url.split("/").pop()?.split("!")[0]
-    if (file && !zawByFile.has(file)) zawByFile.set(file, url)
-  }
+  const zawByFile = imageUrlByFile(imageByUniqueName, "/Zaws/")
   const zawImages: Record<string, string> = {}
   for (const c of [...ZAW_STRIKES, ...ZAW_GRIPS, ...ZAW_LINKS]) {
     const url = zawByFile.get(c.imageName)
@@ -721,12 +838,7 @@ async function main() {
   // Flows through sync:images → R2 like every other catalog image. Innate
   // incarnons have no adapter, so they're absent from INCARNON_GENESIS_IMAGES
   // and from this map.
-  const adapterByFile = new Map<string, string>()
-  for (const url of imageByUniqueName.values()) {
-    if (!url.includes("/IncarnonWeapons/")) continue
-    const file = url.split("/").pop()?.split("!")[0]
-    if (file && !adapterByFile.has(file)) adapterByFile.set(file, url)
-  }
+  const adapterByFile = imageUrlByFile(imageByUniqueName, "/IncarnonWeapons/")
   const incarnonAdapterImages: Record<string, string> = {}
   for (const [name, file] of Object.entries(INCARNON_GENESIS_IMAGES)) {
     const url = adapterByFile.get(file)
@@ -788,7 +900,10 @@ async function main() {
         stats,
         weaponsUnmatched: [...weaponUnmatched].sort(),
         framesUnmatched: [...frameUnmatched].sort(),
+        frameRankUpDrift,
         companionsUnmatched: unmatchedDeNames.sort(),
+        modsUnmatched,
+        abilityStatsUnhandled: [...new Set(abilityStatsUnhandled)].sort(),
         skippedModularComponents: skippedModular.sort(),
         releaseHistoryUnmatched: Object.keys(curated.releaseHistory)
           .filter((n) => !releaseHistoryResolved.has(n))
@@ -810,6 +925,7 @@ async function main() {
   console.log(`Weapons unmatched (no wiki record): ${stats.weapons.unmatched}`)
   console.log(`Frames unmatched (no wiki record):  ${frameUnmatched.size}`)
   console.log(`DE companions only (no wiki match): ${stats.companions.deOnly}`)
+  console.log(`Mods unmatched (no wiki record):    ${modsUnmatched.length}`)
 }
 
 main().catch((err) => {

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-08T14:04:52.314Z",
+  "generatedAt": "2026-10-31T13:44:31.000Z",
   "source": "DE PublicExport + wiki Lua (v2 pipeline)",
   "pipelineVersion": 2,
   "itemCount": 872,
@@ -18,6 +18,6 @@
     "railjack": 1,
     "operators": 2
   },
-  "unmatchedWeapons": 2,
+  "unmatchedWeapons": 0,
   "unmatchedFrames": 1
 }

@@ -1,4 +1,3 @@
-import { isStanceMod } from "@arsenyx/shared/warframe/mods"
 import { isRivenMod } from "@arsenyx/shared/warframe/rivens"
 import type { Mod, Polarity } from "@arsenyx/shared/warframe/types"
 import { Search, X } from "lucide-react"
@@ -33,7 +32,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { fuzzyRank } from "@/lib/fuzzy"
 import { useHotkey } from "@/lib/hooks/hotkeys"
 import {
   BASE_ELEMENTS,
@@ -45,8 +43,8 @@ import { capitalize, cn } from "@/lib/util/utils"
 
 import { useStartDrag } from "./drag-controller"
 import { ModCard } from "./mod-card"
+import { isActionable, searchMods, slotKindPredicate } from "./mod-search"
 import type { ModSlotKind } from "./mod-slot"
-import { isAuraMod, isExilusCompatible } from "./use-build-slots"
 import { DIR_BY_KEY, type Dir } from "./use-keyboard-nav"
 
 const SORT_OPTIONS = ["Drain", "Name", "Rarity"] as const
@@ -193,13 +191,6 @@ interface ModSearchGridProps {
   selectedSlotKind?: ModSlotKind
 }
 
-function slotKindPredicate(kind: ModSlotKind | undefined) {
-  if (!kind || kind === "normal") return null
-  if (kind === "aura") return (m: Mod) => isAuraMod(m)
-  if (kind === "stance") return (m: Mod) => isStanceMod(m)
-  return (m: Mod) => !isAuraMod(m) && !isStanceMod(m) && isExilusCompatible(m)
-}
-
 const SLOT_KIND_REASON: Record<"aura" | "stance" | "exilus", string> = {
   aura: "Only aura mods fit the aura slot",
   stance: "Only stance mods fit the stance slot",
@@ -306,73 +297,25 @@ export function ModSearchGrid({
     })
   }, [ordered, gameMode, rarity, polarity])
 
-  const { displayed, matches } = useMemo(() => {
-    const q = deferredQuery.trim()
-    const qLower = q.toLowerCase()
-    const hasQuery = q.length > 0
-    const kindPred = slotKindPredicate(selectedSlotKind)
-
-    // Fuzzy-rank mod *names* (typo-tolerant: "seration" → Serration). Names are
-    // short discrete labels, the case uFuzzy is good at. The wider searchable
-    // text (stats, aliases, target — see getSearchable / #160) stays a substring
-    // check so a fuzzy match over that big blob can't over-match.
-    const nameRank = new Map<string, number>()
-    if (hasQuery) {
-      const ranked = fuzzyRank(
-        hardFiltered.map((m) => m.name),
-        q,
-      )
-      ranked.forEach((idx, rank) =>
-        nameRank.set(hardFiltered[idx].uniqueName, rank),
-      )
-    }
-
-    const set = new Set<string>()
-    const hits: Mod[] = []
-    const rest: Mod[] = []
-    for (const m of hardFiltered) {
-      const queryHit =
-        !hasQuery ||
-        nameRank.has(m.uniqueName) ||
-        (searchIndex.get(m.uniqueName) ?? "").includes(qLower)
-      const matchesFilters = queryHit && (!kindPred || kindPred(m))
-      if (matchesFilters) {
-        set.add(m.uniqueName)
-        hits.push(m)
-      } else {
-        rest.push(m)
-      }
-    }
-    // Float name matches to the front by relevance; everything else keeps the
-    // user's chosen sort order (stable sort preserves it for equal ranks).
-    if (hasQuery) {
-      hits.sort(
-        (a, b) =>
-          (nameRank.get(a.uniqueName) ?? Infinity) -
-          (nameRank.get(b.uniqueName) ?? Infinity),
-      )
-    }
-    const shouldFloat = hasQuery || !!kindPred
-    return {
-      matches: set,
-      displayed: shouldFloat ? [...hits, ...rest] : hardFiltered,
-    }
-  }, [hardFiltered, deferredQuery, searchIndex, selectedSlotKind])
+  const { displayed, matches } = useMemo(
+    () =>
+      searchMods(hardFiltered, deferredQuery, searchIndex, selectedSlotKind),
+    [hardFiltered, deferredQuery, searchIndex, selectedSlotKind],
+  )
 
   // Ordered list of uniqueNames the user can Tab/arrow into. Mirrors
   // `displayed` but skips dimmed (non-match) and used mods — those aren't
   // actionable. Tab from the input lands on `focusableOrder[0]`; arrow keys
   // step through this list.
-  const focusableOrder = useMemo(() => {
-    const out: string[] = []
-    for (const m of displayed) {
-      if (!matches.has(m.uniqueName)) continue
-      if (usedModNames?.has(m.name)) continue
-      if (conflictUniqueNames?.has(m.uniqueName)) continue
-      out.push(m.uniqueName)
-    }
-    return out
-  }, [displayed, matches, usedModNames, conflictUniqueNames])
+  const focusableOrder = useMemo(
+    () =>
+      displayed
+        .filter((m) =>
+          isActionable(m, matches, usedModNames, conflictUniqueNames),
+        )
+        .map((m) => m.uniqueName),
+    [displayed, matches, usedModNames, conflictUniqueNames],
+  )
 
   // Grid is 2 rows, column-flow: displayed[i] sits at row = i % 2, col = i / 2.
   // Navigate in visual 2D, skipping dimmed/used cards by continuing in the
@@ -486,6 +429,8 @@ export function ModSearchGrid({
           if (!onSelectRef.current) return
           e.preventDefault()
           onSelectRef.current(mod)
+          // Clear so the user can type the next mod straight away (#397).
+          setQuery("")
           focusInput()
           break
         case "Escape":
@@ -518,12 +463,30 @@ export function ModSearchGrid({
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 if (!onSelect) return
-                const firstName = focusableOrder[0]
-                if (!firstName) return
-                const first = displayed.find((m) => m.uniqueName === firstName)
+                // Rank against the live query, not the deferred one: an Enter
+                // that lands before the deferred render catches up would
+                // otherwise place the top of the stale (often unfiltered) list.
+                const live =
+                  query === deferredQuery
+                    ? { displayed, matches }
+                    : searchMods(
+                        hardFiltered,
+                        query,
+                        searchIndex,
+                        selectedSlotKind,
+                      )
+                const first = live.displayed.find((m) =>
+                  isActionable(
+                    m,
+                    live.matches,
+                    usedModNames,
+                    conflictUniqueNames,
+                  ),
+                )
                 if (!first) return
                 e.preventDefault()
                 onSelect(first)
+                setQuery("")
                 return
               }
               if (e.key === "Tab" && !e.shiftKey) {

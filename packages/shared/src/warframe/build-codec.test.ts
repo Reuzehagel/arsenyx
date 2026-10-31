@@ -248,3 +248,29 @@ describe("encodeBuildDoc / decodeBuildDoc round-trip", () => {
     expect(decodeBuildDoc("not-base64-!@#")).toBeNull()
   })
 })
+
+describe("decodeBuildDoc rejects / sanitizes crafted links", () => {
+  const b64 = (o: unknown) => Buffer.from(JSON.stringify(o)).toString("base64")
+
+  it("returns null for a v2 link with no variants", () => {
+    expect(
+      decodeBuildDoc(b64({ v: 2, i: "x", c: "warframes", r: false, vs: [] })),
+    ).toBeNull()
+    expect(
+      decodeBuildDoc(b64({ v: 2, i: "x", c: "warframes", r: false })),
+    ).toBeNull()
+  })
+
+  it("clamps arcane rank to 0..5", () => {
+    const doc = makeDoc([
+      makeVariant({
+        arcaneSlots: [
+          { uniqueName: "/a", name: "", rank: 99 },
+          { uniqueName: "/b", name: "", rank: -3 },
+        ],
+      }),
+    ])
+    const decoded = decodeBuildDoc(encodeBuildDoc(doc))
+    expect(decoded!.variants[0].arcaneSlots.map((a) => a?.rank)).toEqual([5, 0])
+  })
+})

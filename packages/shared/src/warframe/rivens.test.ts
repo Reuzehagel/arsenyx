@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { isRivenEligible } from "./rivens"
+import { getRivenStatsFor, isRivenEligible, isSplicedRivenStat } from "./rivens"
 
 // Wiki: Rivens exist for Primary, Secondary, Melee, Arch-Guns, and Robotic
 // (Sentinel/MOA/Hound) weapons — but NOT beast companion weapons or Arch-Melee.
@@ -40,5 +40,32 @@ describe("isRivenEligible", () => {
       false,
     )
     expect(isRivenEligible("companions", {})).toBe(false)
+  })
+})
+
+// Per the wiki's Spliced Values table: weakpoint/ammo stats are gun-only,
+// heavy-attack/parry stats melee-only, Reload While Holstered not on Archguns.
+describe("spliced riven stats", () => {
+  it("splits spliced stats by weapon class", () => {
+    const gun = getRivenStatsFor("primary")
+    const melee = getRivenStatsFor("melee")
+    const archgun = getRivenStatsFor("archwing")
+    for (const list of [gun, melee, archgun]) {
+      expect(list).toContain("Viral Damage")
+      expect(list).toContain("Status Damage")
+      expect(list).toContain("Damage vs. Techrot")
+    }
+    expect(gun).toContain("Weakpoint Critical Chance")
+    expect(melee).not.toContain("Weakpoint Damage")
+    expect(melee).toContain("Parry Angle")
+    expect(gun).not.toContain("Slam Attack Damage")
+    expect(gun).toContain("Reload While Holstered")
+    expect(archgun).not.toContain("Reload While Holstered")
+    expect(archgun).toContain("Ammo Efficiency")
+  })
+
+  it("flags only spliced stats", () => {
+    expect(isSplicedRivenStat("Magnetic Damage")).toBe(true)
+    expect(isSplicedRivenStat("Damage")).toBe(false)
   })
 })

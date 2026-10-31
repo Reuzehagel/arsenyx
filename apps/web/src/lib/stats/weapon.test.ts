@@ -136,6 +136,80 @@ describe("damage breakdown — innate + mod combination", () => {
   })
 })
 
+// #426: the progenitor bonus is a second innate element, not a mod. Of the
+// two innates, the earlier in Heat > Cold > Electricity > Toxin combines first.
+describe("damage breakdown — progenitor bonus element", () => {
+  const toxin = {
+    mod: elementMod("Infected Clip", 90, "DT_POISON_COLOR", "Toxin"),
+    rank: 0,
+  }
+
+  it("Cold weapon + bonus Electricity + Toxin mod → Viral + Electricity", () => {
+    const weapon = makeWeapon({ damage: { cold: 10 }, totalDamage: 10 })
+    const map = elemMap(
+      calculateWeaponStats({
+        weapon,
+        mods: [toxin],
+        arcanes: [],
+        lichBonusElement: "Electricity",
+      }),
+    )
+    expect([...map.keys()].sort()).toEqual(["electricity", "viral"])
+  })
+
+  it("Electricity weapon + bonus Heat + Toxin mod → Gas + Electricity", () => {
+    const weapon = makeWeapon({ damage: { electricity: 10 }, totalDamage: 10 })
+    const map = elemMap(
+      calculateWeaponStats({
+        weapon,
+        mods: [toxin],
+        arcanes: [],
+        lichBonusElement: "Heat",
+      }),
+    )
+    expect([...map.keys()].sort()).toEqual(["electricity", "gas"])
+  })
+
+  it("a mod of the bonus's element pulls the bonus forward", () => {
+    // Toxin + Electricity mods → Corrosive; the bonus Electricity folds into
+    // it, leaving the weapon's innate Cold alone.
+    const weapon = makeWeapon({ damage: { cold: 10 }, totalDamage: 10 })
+    const map = elemMap(
+      calculateWeaponStats({
+        weapon,
+        mods: [
+          toxin,
+          {
+            mod: elementMod(
+              "Stormbringer",
+              90,
+              "DT_ELECTRICITY_COLOR",
+              "Electricity",
+            ),
+            rank: 0,
+          },
+        ],
+        arcanes: [],
+        lichBonusElement: "Electricity",
+      }),
+    )
+    expect([...map.keys()].sort()).toEqual(["cold", "corrosive"])
+  })
+
+  it("two innates with no mods combine (Cold + bonus Electricity → Magnetic)", () => {
+    const weapon = makeWeapon({ damage: { cold: 10 }, totalDamage: 10 })
+    const map = elemMap(
+      calculateWeaponStats({
+        weapon,
+        mods: [],
+        arcanes: [],
+        lichBonusElement: "Electricity",
+      }),
+    )
+    expect([...map.keys()]).toEqual(["magnetic"])
+  })
+})
+
 // Regression (#313): a weapon whose only base damage is a COMBINED element
 // (Nukor's 100% Radiation, Lizzie's Viral/Magnetic/Cold/Corrosive waves) used
 // to compute a zero modded base, so every elemental mod added literally
@@ -336,5 +410,132 @@ describe("riven range", () => {
       arcanes: [],
     })
     expect(stats.attackModes[0]!.range!.modified).toBe(3.5)
+  })
+})
+
+// Riven elemental stats are applied bottom-to-top
+describe("riven elemental ordering", () => {
+  it("combines Riven elemental stats bottom-to-top", () => {
+    const weapon = makeWeapon({
+      damage: { impact: 100 },
+      totalDamage: 100,
+    })
+
+    const riven = {
+      name: "Riven Mod",
+      rivenStats: {
+        positives: [
+          { stat: "Heat", value: 90 },
+          { stat: "Toxin", value: 90 },
+        ],
+        negatives: [],
+      },
+    } as unknown as Mod
+
+    const stats = calculateWeaponStats({
+      weapon,
+      mods: [
+        {
+          mod: elementMod(
+            "Stormbringer",
+            90,
+            "DT_ELECTRICITY_COLOR",
+            "Electricity",
+          ),
+          rank: 0,
+        },
+        {
+          mod: riven,
+          rank: 0,
+        },
+      ],
+      arcanes: [],
+    })
+
+    const map = elemMap(stats)
+
+    expect(map.get("corrosive")).toBe(180)
+    expect(map.get("heat")).toBe(90)
+
+    expect(map.has("radiation")).toBe(false)
+    expect(map.has("toxin")).toBe(false)
+  })
+})
+
+// Spliced riven elements (Update 44.1) are named "<Element> Damage" and apply
+// directly as that combined element, like a riven rolling the element itself.
+describe("riven spliced elements", () => {
+  it("applies a spliced Viral Damage stat as Viral", () => {
+    const riven = {
+      name: "Riven Mod",
+      rivenStats: {
+        positives: [{ stat: "Viral Damage", value: 90 }],
+        negatives: [],
+      },
+    } as unknown as Mod
+    const stats = calculateWeaponStats({
+      weapon: makeWeapon({ damage: { impact: 100 }, totalDamage: 100 }),
+      mods: [{ mod: riven, rank: 0 }],
+      arcanes: [],
+    })
+    expect(elemMap(stats).get("viral")).toBe(90)
+  })
+})
+
+describe("incarnon perk stats", () => {
+  const weapon = makeWeapon({
+    attacks: [
+      {
+        name: "Normal Attack",
+        damage: { impact: 10, slash: 30 },
+        crit_chance: 10,
+      },
+      { name: "Incarnon Form", damage: { heat: 50 }, crit_chance: 30 },
+    ],
+  } as Partial<Gun>)
+  const serration = {
+    name: "Serration",
+    levelStats: [{ stats: ["+100% Damage"] }],
+  } as unknown as Mod
+
+  it("adds Base perks before mods and scopes magazine/reload to normal attacks", () => {
+    const stats = calculateWeaponStats({
+      weapon,
+      mods: [{ mod: serration, rank: 0 }],
+      arcanes: [],
+      incarnonStats: [
+        { type: "damage", value: 20, operation: "base_add", sourceName: "P" },
+        {
+          type: "critical_chance",
+          value: 12,
+          operation: "base_add",
+          sourceName: "P",
+        },
+        {
+          type: "magazine_size",
+          value: 10,
+          operation: "base_add",
+          attackScope: "normal",
+          sourceName: "P",
+        },
+        {
+          type: "reload_speed",
+          value: 50,
+          operation: "percent_add",
+          attackScope: "normal",
+          sourceName: "P",
+        },
+      ],
+    })
+    const [normal, form] = stats.attackModes
+    // (40 + 20) per pellet, split 1:3, then ×2 Serration.
+    expect(normal!.totalDamage.modified).toBe(120)
+    expect(normal!.criticalChance.modified).toBe(22)
+    expect(normal!.magazineSize!.modified).toBe(50)
+    expect(normal!.reloadTime!.modified).toBeCloseTo(2 / 1.5)
+    expect(form!.totalDamage.modified).toBe(140)
+    expect(form!.criticalChance.modified).toBe(42)
+    expect(form!.magazineSize!.modified).toBe(40)
+    expect(form!.reloadTime!.modified).toBe(2)
   })
 })

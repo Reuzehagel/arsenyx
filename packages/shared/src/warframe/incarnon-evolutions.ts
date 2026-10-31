@@ -3,6 +3,11 @@
 // emits it as apps/web/public/data/incarnon-evolutions.json for lazy fetch by
 // the editor sidebar. The web bundle never imports this directly — keep it
 // that way to preserve tree-shaking.
+//
+// Perk text is parsed into stats (apps/web/src/lib/stats/incarnon.ts), so
+// condition words and "Base" matter. Perk notes (stacking, Incarnon Form
+// scope, exact wording) live on wiki /w/<Weapon>_Incarnon_Genesis and
+// /w/Incarnon_Evolutions; the plain weapon pages omit them.
 
 export interface IncarnonPerk {
   name: string

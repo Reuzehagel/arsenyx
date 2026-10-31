@@ -1,0 +1,7 @@
+#!/bin/sh
+# Format gate before CI sees it (~0.5s). Enable once per clone:
+#   git config core.hooksPath .githooks
+bun run fmt:check >/dev/null 2>&1 || {
+  echo "pre-commit: formatting issues. Run \`just fix\`, then re-stage." >&2
+  exit 1
+}

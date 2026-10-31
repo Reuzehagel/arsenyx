@@ -6,13 +6,13 @@
  * Steps:
  *  1. `sync-de.ts`      → mirror DE PublicExport JSON blobs.   ┐ skipped with
  *  2. `sync-wiki.ts`    → mirror wiki Lua modules.             ┘ `--skip-sync`
- *  3. `build-items-index.ts` → emit apps/web/public/data/*.
+ *  3. `build-items-index.ts` → emit apps/web/public/data/*. A full run passes
+ *     `--refresh-wiki-images` to re-resolve every cached wiki image URL.
  *  4. `sync-images.ts`  → mirror emitted image URLs into R2 + rewrite the
  *     catalog to point at our CDN. Passed `--skip-if-no-creds`: a checkout
- *     without R2 creds (incl. the weekly CI cron, which has no R2 secrets)
- *     skips this and leaves upstream URLs in place. CI's `check:images`
- *     guard then blocks merging such a catalog, so a human runs
- *     `sync:images` locally on the data PR before it lands.
+ *     without R2 creds skips this and leaves upstream URLs in place (the
+ *     weekly cron has R2 secrets, so it mirrors). CI's `check:images` guard
+ *     then blocks merging such a catalog until someone runs `sync:images`.
  *
  * `--skip-sync` rebuilds from the raw mirror already on disk (steps 3–4 only)
  * — the fast inner loop when iterating on `data/curated/` without re-pulling
@@ -58,6 +58,8 @@ const STEPS: ReadonlyArray<{
   {
     label: "Build items-index + per-item details",
     script: "scripts/build-items-index.ts",
+    // Full refresh re-resolves wiki image URLs so re-uploaded art lands.
+    args: SKIP_SYNC ? [] : ["--refresh-wiki-images"],
   },
   {
     label: "Mirror images to R2 + rewrite catalog",

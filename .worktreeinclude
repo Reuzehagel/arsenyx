@@ -1,0 +1,3 @@
+# Gitignored files Claude Code copies into each new worktree.
+# The raw DE/wiki mirror `build:items` reads (see docs/commands.md).
+data/raw/

@@ -24,8 +24,9 @@ Game data is static, user data is dynamic. If something is read-heavy and rarely
 
 **Always**
 
-- `just check` before claiming done — the single gate for web + api + shared (`gen` → typecheck → oxlint → oxfmt --check). `vite build` and the dev servers don't typecheck, so type errors hide behind a green build. `gen` first refreshes the two gitignored generated artifacts a bare `bun run typecheck` would choke on: `apps/web/src/routeTree.gen.ts` (rebuilt when anything under `src/routes` is newer) and the Prisma client (always). Stale ones report type errors in files you never touched, so if `check` fails somewhere unrelated to your diff, suspect a generated artifact before your own code. `just fix` auto-applies lint + format. Both are repo-wide and take no file arguments.
+- `just check` before claiming done — the single gate for web + api + shared (`gen` → typecheck → oxlint → oxfmt --check → `check:native-button` → `just test`, ~10s). `vite build` and the dev servers don't typecheck, so type errors hide behind a green build. `gen` first refreshes the two gitignored generated artifacts a bare `bun run typecheck` would choke on: `apps/web/src/routeTree.gen.ts` (rebuilt when anything under `src/routes` is newer) and the Prisma client (always). Stale ones report type errors in files you never touched, so if `check` fails somewhere unrelated to your diff, suspect a generated artifact before your own code. `just fix` auto-applies lint + format. Both are repo-wide and take no file arguments.
 - Use `uv run python` instead of `python`/`python3`
+- PRs touching `apps/web/src/` or `apps/web/worker/` carry a player-facing entry in `apps/web/src/data/changelog.ts`, or are opened with `gh pr create --label no-changelog` when players can't see the change. CI's `check:changelog` enforces it; `just check` does not run it, so run `bun run check:changelog` (diffs against `origin/main`) before `gh pr create`.
 
 **Ask first**
 
@@ -35,14 +36,17 @@ Game data is static, user data is dynamic. If something is read-heavy and rarely
 **Never**
 
 - Modify `apps/web/src/components/ui/` — override via `className` instead
-- Don't assume Warframe game-mechanic facts from memory. Mod compatibility, slot rules, ability behavior, drop sources, etc. drift between updates and the model's training data is unreliable here. Check [wiki.warframe.com](https://wiki.warframe.com) (via WebFetch) or the data files under `apps/web/public/data/` before encoding a rule into filters, validators, or hardcoded branches. If a fact can't be verified, say so instead of guessing.
+- Don't assume Warframe game-mechanic facts from memory. Mod compatibility, slot rules, ability behavior, drop sources, etc. drift between updates and the model's training data is unreliable here. Check [wiki.warframe.com](https://wiki.warframe.com) or the data files under `apps/web/public/data/` before encoding a rule into filters, validators, or hardcoded branches. Read wiki prose pages with WebFetch; for a Lua data module, `curl` the raw source (`https://wiki.warframe.com/index.php?title=Module:<name>&action=raw`) and grep it, since WebFetch summarizes and misreports what a table holds. If a fact can't be verified, say so instead of guessing.
 
 ## Progressive disclosure — load on demand
 
-- [docs/commands.md](docs/commands.md) — full command reference (build, db, data sync)
+- [GLOSSARY.md](GLOSSARY.md) — domain terms (Build, Variant, Like, Bookmark): read before naming a new concept, route, or field
+- [docs/commands.md](docs/commands.md) — full command reference (build, db, data sync, shipping a data-pipeline fix)
 - [docs/gotchas.md](docs/gotchas.md) — non-obvious pitfalls (PowerShell, Base UI, shadcn in monorepo)
 - [docs/hotkeys.md](docs/hotkeys.md) — adding or rebinding a keyboard shortcut
+- [docs/verify-build-editor.md](docs/verify-build-editor.md) — driving the build editor in the browser pane (editor URL, discarding drafts, mod-search selectors)
 - [docs/search.md](docs/search.md) — full-text build search (the tsvector column, trigger, and GIN index live outside Prisma)
+- [docs/usage-analytics.md](docs/usage-analytics.md) — Cloudflare usage/billing: Worker CPU, edge-cache hit rate, analytics queries
 
 ## Keeping docs fresh
 

@@ -43,8 +43,13 @@ _Avoid_: ID, Permalink.
 
 **Like**:
 A one-click endorsement of a Build by a viewer; the count is denormalized on the Build,
-and you cannot Like your own. Modeled as `BuildLike`.
+and you cannot Like your own. Modeled as `BuildLike` with `value = 1`.
 _Avoid_: **Vote**, **Upvote**, Star, Heart.
+
+**Dislike**:
+The opposite of a Like: a `BuildLike` row with `value = -1`, counted separately on the
+Build. A viewer holds at most one of the two per Build, and cannot Dislike their own.
+_Avoid_: **Downvote**.
 
 **Bookmark**:
 A viewer saving a Build to their personal list for later. Modeled as `BuildBookmark`.
@@ -93,10 +98,36 @@ A position in a Variant that holds one mod. Kinds: **normal**, **aura**, **exilu
 re-stamped by Forma).
 _Avoid_: Cell, Position.
 
+**Alternate mod**:
+An optional second mod on a filled **Slot**, suggested as a one-for-one swap for the slot's
+mod. The typical case is a common mod standing in for a Riven the viewer doesn't own. A Slot
+can have at most one Alternate. Any slot kind on any **Category** can have one. The
+Variant must stay valid with the Alternate swapped in, and a Riven is never an Alternate.
+Alternates never count toward **Capacity**, **Drain**, or stats: those always describe the
+slot's own mods. A change bigger than a single-slot swap is a **Variant**, not an Alternate.
+_Avoid_: Shoulder (that is the name of the hover visual, not of the concept), Fallback, Substitute, Backup.
+
 **Capacity** / **Drain**:
 **Drain** is the cost a placed mod charges against the Item's mod **Capacity** (the budget,
 30 base, 60 with a Reactor/Catalyst). Arsenyx computes both live as you edit.
 _Avoid_: Cost, Points, Energy (Energy is an in-game ability resource, unrelated).
+
+## Stats
+
+**Conditional stat**:
+A stat a mod or arcane grants only while something is happening: on kill, on hit, for a few
+seconds, while invisible. It counts toward the stats panel only when **Max stacks** is on.
+It is counted once, or multiplied by its stack count if it has one. Buffs for someone else
+(squadmates, allies, a companion, another weapon) are not conditional stats; they are not
+counted at all. The engine reads each stat type in one place only: the Warframe stats read
+defensive, movement and ability stats, so a weapon stat on a Warframe arcane changes nothing.
+_Avoid_: Buff (too loose: passive stats are buffs too), Proc.
+
+**Max stacks**:
+The stats-panel toggle that adds every **Conditional stat** at its full stack count, showing
+the build at its peak. Off (the default), the panel shows only stats that are always active.
+It appears only when a placed mod or arcane has a Conditional stat.
+_Avoid_: Buffed, Peak mode.
 
 ## Example dialogue
 

@@ -286,3 +286,38 @@ describe("calculateFormaCount", () => {
     expect(count).toBe(2)
   })
 })
+
+describe("Alternates are invisible to the calculations", () => {
+  const normal = (name: string, baseDrain: number): Mod => ({
+    uniqueName: `/Mods/${name}`,
+    name,
+    polarity: "madurai",
+    rarity: "Rare",
+    baseDrain,
+    fusionLimit: 10,
+    type: "Rifle",
+    compatName: "Rifle",
+    tradable: true,
+  })
+
+  const without: Partial<Record<SlotId, PlacedMod>> = {
+    stance: placedStance("naramon"),
+    "normal-0": { mod: normal("Primed Point Blank", 4), rank: 10 },
+  }
+  const withAlt: Partial<Record<SlotId, PlacedMod>> = {
+    stance: {
+      ...placedStance("naramon"),
+      alternate: { mod: stanceMod("madurai"), rank: 0 },
+    },
+    "normal-0": {
+      ...without["normal-0"]!,
+      alternate: { mod: normal("Point Blank", 12), rank: 3 },
+    },
+  }
+
+  it("capacity is identical with and without an Alternate", () => {
+    expect(calculateCapacity(emptyInput({ placed: withAlt }))).toEqual(
+      calculateCapacity(emptyInput({ placed: without })),
+    )
+  })
+})

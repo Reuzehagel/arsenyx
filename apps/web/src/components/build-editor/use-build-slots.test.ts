@@ -1,12 +1,17 @@
+import { createSyntheticRiven } from "@arsenyx/shared/warframe/rivens"
 import type { Mod, Polarity } from "@arsenyx/shared/warframe/types"
 import { describe, expect, it } from "vitest"
 
 import {
+  canBeAlternate,
   dropOrphanSlots,
   placedModsInSlotOrder,
   type PlacedMod,
   type SlotId,
   type SlotLayout,
+  withAlternate,
+  withAlternateRank,
+  withoutAlternate,
 } from "./use-build-slots"
 
 function mod(name: string): PlacedMod {
@@ -107,5 +112,87 @@ describe("dropOrphanSlots", () => {
     }
     const out = dropOrphanSlots(seed, COMPANION_WEAPON)
     expect(out).toEqual({ "normal-0": "madurai" })
+  })
+})
+
+function modWith(name: string, overrides: Partial<Mod>): Mod {
+  return { ...mod(name).mod, ...overrides }
+}
+
+describe("canBeAlternate", () => {
+  it("accepts a mod that passes the slot-kind check", () => {
+    expect(canBeAlternate(mod("Point Blank").mod, "normal-0")).toBe(true)
+  })
+
+  it("rejects a mod that fails the slot-kind check", () => {
+    const aura = modWith("Steel Charge", { compatName: "AURA" })
+    expect(canBeAlternate(aura, "normal-0")).toBe(false)
+    expect(canBeAlternate(mod("Point Blank").mod, "aura-0")).toBe(false)
+    expect(canBeAlternate(aura, "aura-0")).toBe(true)
+  })
+
+  it("rejects the synthetic riven and configured rivens", () => {
+    expect(canBeAlternate(createSyntheticRiven(), "normal-0")).toBe(false)
+    const configured = modWith("Riven Mod", {
+      uniqueName: "/Riven/stub",
+      rarity: "Riven",
+      rivenStats: { positives: [], negatives: [] },
+    })
+    expect(canBeAlternate(configured, "normal-0")).toBe(false)
+  })
+})
+
+describe("alternate slot operations", () => {
+  const base = (): Partial<Record<SlotId, PlacedMod>> => ({
+    "normal-0": mod("Primed Point Blank"),
+    "normal-1": mod("Blaze"),
+  })
+
+  it("sets an alternate at max rank without touching the slot's mod", () => {
+    const placed = base()
+    const next = withAlternate(placed, "normal-0", mod("Point Blank").mod)
+    expect(next["normal-0"]?.mod.name).toBe("Primed Point Blank")
+    expect(next["normal-0"]?.rank).toBe(5)
+    expect(next["normal-0"]?.alternate?.mod.name).toBe("Point Blank")
+    expect(next["normal-0"]?.alternate?.rank).toBe(5)
+    expect(next["normal-1"]).toBe(placed["normal-1"])
+  })
+
+  it("keeps an explicit alternate rank, clamped to the mod's max", () => {
+    const next = withAlternate(base(), "normal-0", mod("Point Blank").mod, 2)
+    expect(next["normal-0"]?.alternate?.rank).toBe(2)
+    const over = withAlternate(base(), "normal-0", mod("Point Blank").mod, 99)
+    expect(over["normal-0"]?.alternate?.rank).toBe(5)
+  })
+
+  it("is a no-op on an empty slot or for an illegal alternate", () => {
+    const placed = base()
+    expect(withAlternate(placed, "normal-5", mod("Point Blank").mod)).toBe(
+      placed,
+    )
+    expect(withAlternate(placed, "normal-0", createSyntheticRiven())).toBe(
+      placed,
+    )
+  })
+
+  it("removes the alternate and leaves the slot's mod", () => {
+    const withAlt = withAlternate(base(), "normal-0", mod("Point Blank").mod)
+    const next = withoutAlternate(withAlt, "normal-0")
+    expect(next["normal-0"]?.alternate).toBeUndefined()
+    expect("alternate" in (next["normal-0"] ?? {})).toBe(false)
+    expect(next["normal-0"]?.mod.name).toBe("Primed Point Blank")
+    // Nothing to remove → same reference.
+    expect(withoutAlternate(next, "normal-0")).toBe(next)
+  })
+
+  it("sets the alternate's rank independently of the slot's rank", () => {
+    const withAlt = withAlternate(base(), "normal-0", mod("Point Blank").mod)
+    const next = withAlternateRank(withAlt, "normal-0", 1)
+    expect(next["normal-0"]?.alternate?.rank).toBe(1)
+    expect(next["normal-0"]?.rank).toBe(5)
+    expect(
+      withAlternateRank(next, "normal-0", -3)["normal-0"]?.alternate?.rank,
+    ).toBe(0)
+    expect(withAlternateRank(next, "normal-1", 1)).toBe(next)
   })
 })

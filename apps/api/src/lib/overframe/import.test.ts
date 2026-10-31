@@ -1,25 +1,12 @@
 import type { Context } from "hono"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-// Mock only safeFetch; keep the real SafeFetchError so the `instanceof` checks
-// in import.ts still match. fetchOverframeHtml streams the Response body, so
-// the mock returns a real Response built from an HTML string.
-vi.mock("../safe-fetch", async (importActual) => {
-  const actual = await importActual<typeof import("../safe-fetch")>()
-  return { ...actual, safeFetch: vi.fn() }
-})
-
 // The raw route handler is now sign-in-gated; stub getSession so handler tests
 // can simulate signed-in (default) and signed-out callers without Better Auth.
 vi.mock("../../lib/session", () => ({ getSession: vi.fn() }))
 
 import { getSession } from "../../lib/session"
-import { SafeFetchError, safeFetch } from "../safe-fetch"
-import {
-  isValidOverframeBuildUrl,
-  scrapeOverframeBuild,
-  scrapeOverframeFromNextData,
-} from "./import"
+import { parseOverframeBuildUrl, scrapeOverframeFromNextData } from "./import"
 
 const BUILD_URL = "https://overframe.gg/build/1005502/saryn-prime"
 
@@ -43,23 +30,21 @@ function makeNextData() {
   }
 }
 
-function htmlWith(nextData: unknown): string {
-  return `<!doctype html><html><body><script id="__NEXT_DATA__" type="application/json">${JSON.stringify(
-    nextData,
-  )}</script></body></html>`
-}
-
 afterEach(() => vi.clearAllMocks())
 
-describe("isValidOverframeBuildUrl", () => {
+describe("parseOverframeBuildUrl", () => {
   it("accepts overframe build URLs and rejects everything else", () => {
-    expect(isValidOverframeBuildUrl(BUILD_URL)).toBe(true)
-    expect(isValidOverframeBuildUrl("https://overframe.gg/build/1")).toBe(true)
-    expect(isValidOverframeBuildUrl("https://overframe.gg/builds/1")).toBe(
+    expect(parseOverframeBuildUrl(BUILD_URL) !== null).toBe(true)
+    expect(
+      parseOverframeBuildUrl("https://overframe.gg/build/1") !== null,
+    ).toBe(true)
+    expect(
+      parseOverframeBuildUrl("https://overframe.gg/builds/1") !== null,
+    ).toBe(false)
+    expect(parseOverframeBuildUrl("https://evil.com/build/1") !== null).toBe(
       false,
     )
-    expect(isValidOverframeBuildUrl("https://evil.com/build/1")).toBe(false)
-    expect(isValidOverframeBuildUrl("not a url")).toBe(false)
+    expect(parseOverframeBuildUrl("not a url") !== null).toBe(false)
   })
 })
 
@@ -181,49 +166,6 @@ describe("scrapeOverframeFromNextData", () => {
     const res = scrapeOverframeFromNextData(null, BUILD_URL)
     expect(res.slots).toHaveLength(0)
     expect(res.warnings.map((w) => w.type)).toContain("next_data_missing")
-  })
-})
-
-describe("scrapeOverframeBuild (fetch path)", () => {
-  it("returns a friendly Cloudflare message on a 403", async () => {
-    vi.mocked(safeFetch).mockRejectedValueOnce(
-      new SafeFetchError("upstream_status", 403),
-    )
-
-    const res = await scrapeOverframeBuild(BUILD_URL)
-    const warning = res.warnings.find((w) => w.type === "fetch_failed")
-
-    expect(warning).toBeDefined()
-    expect(warning?.message).toMatch(/Cloudflare bot protection/i)
-    expect(warning?.message).not.toMatch(/HTTP 403/) // no raw status leak
-  })
-
-  it("still surfaces other upstream statuses verbatim", async () => {
-    vi.mocked(safeFetch).mockRejectedValueOnce(
-      new SafeFetchError("upstream_status", 500),
-    )
-
-    const res = await scrapeOverframeBuild(BUILD_URL)
-    expect(
-      res.warnings.find((w) => w.type === "fetch_failed")?.message,
-    ).toMatch(/HTTP 500/)
-  })
-
-  it("extracts a build from fetched HTML", async () => {
-    vi.mocked(safeFetch).mockResolvedValueOnce(
-      new Response(htmlWith(makeNextData())),
-    )
-
-    const res = await scrapeOverframeBuild(BUILD_URL)
-    expect(res.itemName).toBe("Saryn Prime")
-    expect(res.slots).toHaveLength(3)
-    expect(res.warnings).toEqual([])
-  })
-
-  it("rejects a non-overframe URL before fetching", async () => {
-    const res = await scrapeOverframeBuild("https://evil.com/build/1")
-    expect(res.warnings[0]?.type).toBe("invalid_url")
-    expect(safeFetch).not.toHaveBeenCalled()
   })
 })
 

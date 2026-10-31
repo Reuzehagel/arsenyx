@@ -7,6 +7,7 @@ import { parseJsonBody } from "../lib/validate"
 import { rateLimitUser } from "../middleware/rate-limit"
 import { isPrismaNotFound, requireAdmin } from "./_admin"
 import { parseListQuery, runList } from "./_build-list"
+import { releaseUserSocial } from "./_build-social"
 import { allBuildsScope } from "./_build-visibility"
 import { parsePage, trimQ } from "./_query"
 import { isVisibility } from "./builds"
@@ -171,7 +172,10 @@ admin.delete("/users/:id", adminMutateLimit, async (c) => {
   }
 
   try {
-    await prisma.user.delete({ where: { id: targetId } })
+    await prisma.$transaction([
+      ...releaseUserSocial(targetId),
+      prisma.user.delete({ where: { id: targetId } }),
+    ])
   } catch (err) {
     if (isPrismaNotFound(err)) return c.json({ error: "not_found" }, 404)
     throw err
@@ -187,6 +191,7 @@ admin.get("/builds", adminSearchLimit, async (c) => {
     filters: parseListQuery(c),
     ...allBuildsScope(),
     defaultSort: "newest",
+    revealAuthor: true,
   })
   return c.json(result)
 })

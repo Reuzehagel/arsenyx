@@ -11,6 +11,206 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-10-31",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "You can now dislike a build. Like and dislike are either-or: picking one clears the other, and clicking it again takes it back. You still can't like or dislike your own builds.",
+      },
+      {
+        type: "fix",
+        description:
+          "Kuva and Tenet weapons with an innate element now combine elements in the same order as the game. The progenitor bonus element counts as a second innate element, so on a Tenet Glaxion (Cold) with bonus Electricity, a Toxin mod now makes Viral + Electricity instead of Corrosive + Cold.",
+      },
+    ],
+  },
+  {
+    date: "2026-10-27",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Hover a Warframe ability to see its stats with your build applied: damage, duration, range, energy cost, and more, scaled by your Strength, Duration, Range, and Efficiency. Subsumed Helminth abilities show their Helminth values. The numbers are max rank and come from the Warframe wiki, which covers most frames; the newest few, like Dante, Koumei, Temple, and Uriel, don't have stats there yet.",
+      },
+      {
+        type: "fix",
+        description:
+          "Incarnon evolution perks now change your weapon's stats. Always-on bonuses such as Survivor's Edge, Critical Parallel, the +Base Damage tier 2 perks, Rapid Reinforcement, and Extended Volley are counted in the stats panel. Bonuses that only trigger in certain situations are not counted yet.",
+      },
+      {
+        type: "fix",
+        description:
+          "Weapons with a second Incarnon Form attack, like Braton's AoE, no longer show it in the stats panel while Incarnon is turned off.",
+      },
+    ],
+  },
+  {
+    date: "2026-10-25",
+    changes: [
+      {
+        type: "fix",
+        description:
+          'Reopening the editor with an unsaved draft brings back your build name and guide text, not just your mods, and shows the "Draft restored" message with its Discard / Reset to saved button again.',
+      },
+      {
+        type: "fix",
+        description:
+          "Galvanized mods now count their on-kill stacks. Turn on Max stacks in the stats panel and Galvanized Chamber, Diffusion, Hell, Steel, Elementalist, and Acceleration add their full stacked bonus. The toggle never appeared for them before because any bonus written as lasting a few seconds wasn't being read. The same fix brings in around 60 other timed buffs, such as Kill Switch, Berserker Fury, Merciless, Deadhead, Dexterity, Frostbite, Blight, and Cascadia Flare.",
+      },
+      {
+        type: "fix",
+        description:
+          "Bonuses that only apply while something is happening no longer count all the time. Arcane Crepuscular's invisibility bonus, Pax Bolt, Biting Frost, Sharpshooter, Cascadia Overcharge, and the Magus arcanes now wait for Max stacks. Buffs for someone else are left out entirely: Shepherd's companion buff, Lohk Canticle's ally fire rate, and Arcane Precision's secondary-weapon damage. Merciless and Deadhead no longer count their passive twice, and Fired Up and Cascadia Flare now stop at 20 and 40 stacks, as the game does.",
+      },
+      {
+        type: "fix",
+        description:
+          "The Overframe import page goes straight to the bookmarklet. Pasting an Overframe URL hasn't worked since Overframe started blocking automated requests, so that box is gone.",
+      },
+      {
+        type: "fix",
+        description:
+          "A malformed share link no longer crashes the editor, and the site no longer loads as a blank page in browsers that block site storage.",
+      },
+      {
+        type: "fix",
+        description:
+          "Unsaved editor drafts keep autosaving after you've worked on many builds. Once browser storage filled up, new drafts silently stopped saving; the oldest drafts now make room instead.",
+      },
+      {
+        type: "fix",
+        description:
+          'A wrong or broken link now shows a proper page with the site header and a way back, instead of a blank screen reading "Not Found". If liking, bookmarking, forking, deleting, or linking a build fails, you now get a message saying so instead of the button quietly flipping back.',
+      },
+      {
+        type: "feat",
+        description:
+          "Build cards named after their item show the item's category instead of repeating the name, editor header buttons show proper tooltips (with shortcuts for undo and redo), and the site shows the Arsenyx name while it loads instead of a blank screen.",
+      },
+    ],
+  },
+  {
+    date: "2026-10-22",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "A filled mod slot can now carry an Alternate: a second mod you'd consider in its place. Add one with the + alt button in the slot's toolbar, rank it with − and + while hovering it, and remove it with the × on its card. It peeks out from behind the main mod in both the editor and the build page, and saves per variant. Alternates stay out of capacity, stats, and forma counts, so the numbers always describe the build as equipped.",
+      },
+      {
+        type: "feat",
+        description:
+          "The riven dialog offers the spliced stats from Update 44.1: the six elements, Status Damage, damage against Orokin, Scaldra, and Techrot, plus class-specific stats such as Heavy Attack Wind Up Speed and Parry Angle on melee, and Weakpoint Critical Chance and Ammo Efficiency on guns. Spliced stats are always positive, so they only appear in the positive rows. The spliced elements feed the stats panel. The others show on the card, but the stat engine doesn't model them yet, so they don't change the numbers.",
+      },
+      {
+        type: "fix",
+        description:
+          "Placing a mod from the search box clears the search. Typing a name and pressing Enter quickly could place whichever mod was at the top of the unfiltered list, because the results hadn't caught up with what you'd typed yet. Enter now always places the first match for the text actually in the box, then empties the box so you can type the next name straight away.",
+      },
+      {
+        type: "fix",
+        description:
+          "Narin reaches 300 max energy at rank 30 instead of 250. She gains +100 energy at rank 30 rather than the usual +50, and the editor hadn't been told.",
+      },
+      {
+        type: "fix",
+        description:
+          "Shade Prime, Helios Prime, and Odonata Prime can equip the precepts and mods their base versions can: Ghost, Revenge, and Ambush on Shade Prime, Investigator, Detect Vulnerability, and Targeting Receptor on Helios Prime, and Energy Field on Odonata Prime. They were missing from search on the Primes.",
+      },
+      {
+        type: "fix",
+        description:
+          "Cold Front can go in the Exilus slot, and eleven mods that were wrongly marked untradable now show as tradable, including Butcher's Revelry, Primed Redirection, Primed Deadly Efficiency, Brood's Oversurge, and Vampiric Grasp. Their game-data IDs had drifted apart from the wiki's, so their flags never got matched up.",
+      },
+      {
+        type: "chore",
+        description:
+          "Game data refreshed. Steflos Prime and Corufell Prime now have their full stats, polarities, and weapon class, so they show up as a Shotgun and a Heavy Scythe with the right mods. Nunchasa and Aksondol have corrected polarities, and Aksondol fires 4 projectiles a second rather than 10 hitscan shots. Galvanized Scope's second bonus now reads On Weak Point Kill, and Sharpshooter lost its placeholder text.",
+      },
+    ],
+  },
+  {
+    date: "2026-10-08",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Rivens with more than one element combine them in the right order. The game applies a riven's elements from the bottom of the card up, but the stats panel read them top-down, which could produce the wrong combined element.",
+      },
+    ],
+  },
+  {
+    date: "2026-10-01",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Sacrificial Steel adds its critical chance again, and Vigilante Fervor and Vile Precision add their fire rate. A note in brackets after the stat, like (x2 for Heavy Attacks), stopped the stat from being read at all, so the mods contributed nothing.",
+      },
+    ],
+  },
+  {
+    date: "2026-09-28",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Riven Range, Punch Through, Combo Duration, and Initial Combo are flat values, as they are in-game. A +1.5 Range riven read as +1.5% and added 1.5% of the weapon's base range. It now reads +1.5 and adds 1.5 m.",
+      },
+    ],
+  },
+  {
+    date: "2026-09-25",
+    changes: [
+      {
+        type: "chore",
+        description:
+          "Update 44 is in: Narin, Citrine Prime, Nunchasa, Steflos Prime, Aksondol, and Corufell Prime, plus the new mods Brood's Oversurge, Cold Front, Gastroparesis, and Infernum. Ability text for around fifteen frames, Banshee and Frost among them, and stats on about thirty weapons follow the update. Augmented Sonar is no longer in the game, so builds that use it will show it as missing. The front page lists the new arrivals, with Narin in the hero spot.",
+      },
+      {
+        type: "fix",
+        description:
+          "Tapping an Incarnon tier on a build page shows the perk chosen for it. The perk only showed in a hover tooltip, which never opens on a phone.",
+      },
+    ],
+  },
+  {
+    date: "2026-09-09",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Quick Thinking, Maglev, and Clashing Forest are back. All three are still in the game, but dropped out of the game data export in June, and the editor lost them with it.",
+      },
+    ],
+  },
+  {
+    date: "2026-09-05",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Forma counts are lower, and correct, for builds that change their Aura or Exilus polarity. Since Update 38.5 an item that has been polarized once can swap polarities between any slot, Aura and Exilus included, so what matters is which polarities a build needs, not which slot each sits in. The count used to treat Aura, Exilus, and the normal slots separately, and overstated the cost by one or two. The Stance slot still counts on its own, since its polarity can't be swapped.",
+      },
+      {
+        type: "fix",
+        description:
+          "GitHub accounts with a hyphen in the username can sign up. Sign-in failed before the account was created, every time, so there was no way past it.",
+      },
+      {
+        type: "fix",
+        description:
+          "Beast claws no longer offer companion precepts such as Fetch and Scavenge. Those go on the companion itself, not on its claws.",
+      },
+      {
+        type: "fix",
+        description:
+          "Sirius & Orion's ability text no longer shows raw placeholders like |LEFT_ATTACK| and |DAMAGE_TYPE|.",
+      },
+    ],
+  },
+  {
     date: "2026-09-03",
     changes: [
       {

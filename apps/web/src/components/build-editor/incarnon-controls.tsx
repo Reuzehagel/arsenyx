@@ -1,7 +1,6 @@
 import {
-  getIncarnonBaseName,
+  findIncarnonEvolution,
   getIncarnonPerkDescription,
-  type IncarnonEvolution,
   type IncarnonPerk,
 } from "@arsenyx/shared/warframe/incarnon-data"
 import { useSuspenseQuery } from "@tanstack/react-query"
@@ -48,10 +47,7 @@ export function IncarnonTierGrid({
   readOnly: boolean
 }) {
   const { data: evolutions } = useSuspenseQuery(incarnonEvolutionsQuery)
-  const baseName = getIncarnonBaseName(weaponName)
-  const evolution: IncarnonEvolution | undefined = baseName
-    ? evolutions[baseName]
-    : undefined
+  const evolution = findIncarnonEvolution(evolutions, weaponName)
   if (!evolution) return null
   // Tier 1 is the unlock — no choice. Render only tiers with >1 perk option.
   const choosableTiers = evolution.tiers.filter((t) => t.perks.length > 1)

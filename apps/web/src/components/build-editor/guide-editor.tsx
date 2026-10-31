@@ -558,7 +558,7 @@ function DiscordImageWarning({ source }: { source: string }) {
   }, [source])
   if (!hasDiscordUrl) return null
   return (
-    <Alert className="mt-2 border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-500">
+    <Alert className="border-warning/30 bg-warning/10 text-warning mt-2 px-3 py-2 text-xs">
       <TriangleAlert />
       <AlertDescription className="text-foreground/90 text-xs">
         Discord image links expire and will eventually 404 for other viewers.

@@ -10,6 +10,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import type { SavedVariant } from "@/lib/queries/build-query"
 import { cn } from "@/lib/util/utils"
 
@@ -60,22 +65,36 @@ export function EditorVariantBar({
   if (variants.length === 1 && !formNames) {
     return (
       <div className="flex items-center justify-end gap-1.5">
-        <button
-          type="button"
-          onClick={onDuplicate}
-          className={COLLAPSED_AFFORDANCE}
-          title="Add a variant that starts as a copy of this build"
-        >
-          + Copy
-        </button>
-        <button
-          type="button"
-          onClick={onAdd}
-          className={COLLAPSED_AFFORDANCE}
-          title="Add an empty build variant"
-        >
-          + Variant
-        </button>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <button
+                type="button"
+                onClick={onDuplicate}
+                className={COLLAPSED_AFFORDANCE}
+              />
+            }
+          >
+            + Copy
+          </TooltipTrigger>
+          <TooltipContent>
+            Add a variant that starts as a copy of this build
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <button
+                type="button"
+                onClick={onAdd}
+                className={COLLAPSED_AFFORDANCE}
+              />
+            }
+          >
+            + Variant
+          </TooltipTrigger>
+          <TooltipContent>Add an empty build variant</TooltipContent>
+        </Tooltip>
       </div>
     )
   }

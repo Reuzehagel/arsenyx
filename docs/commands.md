@@ -13,7 +13,7 @@ just setup              # first-run wizard — see CONTRIBUTING.md
 ## Build / verify
 
 ```bash
-just check                        # THE gate before claiming done — gen + typecheck + oxlint + oxfmt --check
+just check                        # THE gate before claiming done — gen + typecheck + oxlint + oxfmt --check + check:native-button + tests
 just fix                          # oxlint --fix + oxfmt --write
 just test                         # vitest across apps/web, apps/api, packages/shared + bun test scripts/build/
 just gen                          # generate apps/web/src/routeTree.gen.ts only (no-op if present)
@@ -21,6 +21,8 @@ bun --cwd apps/web run build      # Vite production build (does NOT typecheck �
 ```
 
 Oxlint / oxfmt config lives at the repo root (`.oxlintrc.json`, `.oxfmtrc.json`).
+
+`.githooks/pre-commit` blocks commits that fail `fmt:check`; `.githooks/commit-msg` strips Claude co-author / "Generated with Claude Code" lines. `just setup` enables both; on an existing clone run `git config core.hooksPath .githooks` once.
 
 ## Database (apps/api)
 
@@ -45,18 +47,10 @@ afterwards to verify the migration still matches production.
 
 ## Cloudflare Workers usage
 
-Per-Worker CPU and request breakdown, to tell a per-request regression (rising
-`CpuP50ms`) from plain traffic growth (flat `CpuP50ms`, rising `Requests`):
-
-```powershell
-$env:CF_ANALYTICS_TOKEN = "<token with Account -> Account Analytics -> Read>"
-./scripts/cf-worker-stats.ps1 -AccountId <account-id> -Days 30 -Daily
-```
-
-Notes: the env var is deliberately **not** `CF_API_TOKEN`/`CLOUDFLARE_API_TOKEN`
-— wrangler reads both, and an analytics-only token parked there breaks every
-`wrangler` command. `EstCpuMs` is `requests × P50`, so with a high `TailRatio` it
-is a floor, not a mean — the dashboard remains authoritative for billing.
+`bun run cf:usage` (`--daily` to split by day): CPU per Worker, the API
+edge-cache hit rate, and API CPU per route. Rising `msPerReq` is a per-request
+regression; flat `msPerReq` with rising `requests` is plain traffic growth. Auth,
+gotchas and baselines are in [docs/usage-analytics.md](usage-analytics.md).
 
 ## Data pipeline
 
@@ -84,6 +78,9 @@ bun run sync:images                # mirror emitted images into R2, rewrite cata
 bun run check:images               # fail if catalog still hotlinks content/wiki.warframe.com
 bun run check:data-version         # fail if catalog changed but meta.json generatedAt didn't
 bun run data:stamp                 # bump meta.json generatedAt — run after any HAND-edit to apps/web/public/data/
+bun run data:ab [base-ref]          # ship only a pipeline change's catalog delta (see "Shipping a pipeline fix" below)
+bun run data:patch <base> <fixed>  # the patch step data:ab runs, for hand-built snapshots
+bun run data:diff [ref]            # markdown summary of catalog changes vs ref (default HEAD); the data cron's PR body
 ```
 
 `build:items` alone leaves upstream CDN URLs in the catalog; `sync:images`
@@ -102,6 +99,41 @@ Run `data:stamp` afterward — it's served `immutable` and cache-busted by
 `?v=<generatedAt>`, so without a fresh `generatedAt` clients keep the stale
 bytes. `data:refresh` and `build:items` stamp it for free; `check:data-version`
 enforces it in CI.
+
+`_report.json` lists every DE record the wiki join missed (`weaponsUnmatched`,
+`framesUnmatched`, `companionsUnmatched`, `modsUnmatched`). An unmatched mod's
+wiki flags (`isExilus`, `tradable`, Conclave) silently default to `false`, so a
+new `modsUnmatched` entry in a refresh diff is a bug report waiting to happen.
+
+### Shipping a pipeline fix without upstream drift
+
+A full `build:items` from a fresh mirror also pulls in every unrelated upstream
+change since the last refresh. To ship only what a pipeline fix changes, build
+twice from the same mirror and patch the delta onto the committed catalog.
+`data:patch` matches records by `uniqueName`, so it also catches derived files
+you didn't know depended on the field (e.g. `mod-tradable.json` ← `tradable`):
+
+```bash
+# `bun run data:sync` first if data/raw/ is missing (or a module: scripts/sync-wiki.ts <Module/name>)
+bun run data:ab            # base = HEAD in a throwaway worktree, fixed = working tree (committed or not); patches + stamps
+bun run data:ab HEAD~1     # fix already committed: compare against the commit before it
+bun --filter=arsenyx-web run test parsed-catalog --update  # then review the .snap.txt diff
+```
+
+`data:ab` ends with a **Changed fields** count per field path (`--verbose` lists
+every change). Anything there besides your fix is drift: stop and investigate.
+`data:patch <base> <fixed>` stays available for hand-built snapshots.
+
+`apps/web/src/lib/stats/parsed-catalog.snap.txt` records how the stat engine reads every
+mod and arcane, so a mod or arcane data change (or a `lib/stats/parser.ts` change) moves
+it. Its diff is the list of items whose stats changed. Check each line before you accept it.
+
+Both sync and build rewrite tracked files as a side effect: `data:sync` →
+`data/PINS.json`, `build:items` → `data/curated/wiki-image-urls.json` (the
+image-URL cache). Revert them unless the change is a full refresh (`data:ab`
+restores the image cache itself). Patched
+records keep the committed `img.arsenyx.com` URLs; a record the fix *adds*
+carries an upstream URL, which `check:images` flags — run `sync:images` then.
 
 Occasional dev tools (run by path, not aliased):
 

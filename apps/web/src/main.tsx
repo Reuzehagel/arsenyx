@@ -1,9 +1,15 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import {
+  MutationCache,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query"
 import { RouterProvider, createRouter } from "@tanstack/react-router"
 import React from "react"
 import ReactDOM from "react-dom/client"
+import { toast } from "sonner"
 
 import { ThemeProvider } from "@/components/theme-provider"
+import { apiErrorMessage } from "@/lib/util/api-client"
 
 import { routeTree } from "./routeTree.gen"
 import "@/styles/globals.css"
@@ -63,6 +69,14 @@ function setupCssStudio() {
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000 } },
+  // Opt-in failure toast for mutations with no inline error UI (optimistic
+  // toggles roll back silently otherwise). Set `meta: { errorToast }`.
+  mutationCache: new MutationCache({
+    onError: (err, _vars, _ctx, mutation) => {
+      const fallback = mutation.meta?.errorToast
+      if (fallback) toast.error(apiErrorMessage(err, fallback))
+    },
+  }),
 })
 
 const router = createRouter({
@@ -76,6 +90,12 @@ const router = createRouter({
 declare module "@tanstack/react-router" {
   interface Register {
     router: typeof router
+  }
+}
+
+declare module "@tanstack/react-query" {
+  interface Register {
+    mutationMeta: { errorToast?: string }
   }
 }
 

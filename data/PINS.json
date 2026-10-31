@@ -102,7 +102,7 @@
     ]
   },
   "wiki": {
-    "fetchedAt": "2026-09-25T17:24:32.624Z",
+    "fetchedAt": "2026-10-27T19:42:48.689Z",
     "modules": [
       {
         "module": "Weapons/data/primary",
@@ -215,6 +215,13 @@
         "sha256": "d8d24a13d7124c1a6c430727e45138f9a03324f5bd5f5fc5dc6e7ce2d6147eb2",
         "bytes": 31607,
         "fetchedAt": "2026-09-25T17:24:32.623Z"
+      },
+      {
+        "module": "Ability/data/stats",
+        "file": "Ability_data_stats.lua",
+        "sha256": "4b5e954020071b95650f713c374ef8f394bac0ffab768d8fe94505561c676074",
+        "bytes": 179655,
+        "fetchedAt": "2026-10-27T19:42:48.689Z"
       }
     ]
   }

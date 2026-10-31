@@ -1,3 +1,5 @@
+import type { AbilityStat } from "@arsenyx/shared/warframe/types"
+
 import { staticDataQuery } from "./static-data-query"
 
 export interface HelminthAbility {
@@ -6,6 +8,7 @@ export interface HelminthAbility {
   imageName?: string
   description: string
   source: string
+  stats?: AbilityStat[]
 }
 
 export const helminthQuery = staticDataQuery<HelminthAbility[]>(

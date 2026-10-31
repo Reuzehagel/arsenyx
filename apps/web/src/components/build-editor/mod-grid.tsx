@@ -66,6 +66,7 @@ export function ModGrid({
   showStance,
   slots,
   onEditRiven,
+  onAddAlternate,
   arcaneRow,
   readOnly = false,
 }: {
@@ -78,6 +79,8 @@ export function ModGrid({
   showStance: boolean
   slots: BuildSlotsState
   onEditRiven?: (id: SlotId) => void
+  /** Edit-only: open the picker in alternate mode for this slot. */
+  onAddAlternate?: (id: SlotId) => void
   arcaneRow?: React.ReactNode
   readOnly?: boolean
 }) {
@@ -130,6 +133,12 @@ export function ModGrid({
         placed && onEditRiven && isRivenMod(placed.mod)
           ? () => onEditRiven(id)
           : undefined,
+      alternate: placed?.alternate,
+      onAddAlternate:
+        placed && onAddAlternate ? () => onAddAlternate(id) : undefined,
+      onRemoveAlternate: placed?.alternate
+        ? () => slots.removeAlternate(id)
+        : undefined,
       readOnly,
       hideDrain: options?.hideDrain ?? false,
     }

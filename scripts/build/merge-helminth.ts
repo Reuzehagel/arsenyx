@@ -59,12 +59,14 @@ const SUBSUMABLE_ABILITIES: Record<string, string> = {
   Oberon: "Smite",
   Octavia: "Resonator",
   Oraxia: "Webbed Embrace",
+  "Orion & Sirius": "Astral Shell",
   Protea: "Dispensary",
   Qorvex: "Chyrinka Pillar",
   Revenant: "Reave",
   Rhino: "Roar",
   Saryn: "Molt",
   Sevagoth: "Gloom",
+  "Sirius & Orion": "Jade Stars",
   Styanax: "Tharros Strike",
   Temple: "Pyrotechnics",
   Titania: "Spellbind",
@@ -99,8 +101,10 @@ export function deriveHelminthAbilities(
   frames: readonly MergedFrame[],
   exportAbilities: readonly RawAbility[],
 ): HelminthAbility[] {
-  const byName = new Map<string, MergedFrame>()
-  for (const f of frames) byName.set(f.name, f)
+  // Index twin-frame forms by their own name so each twin (e.g. "Orion & Sirius") resolves like a frame.
+  const byName = new Map<string, Pick<MergedFrame, "abilities">>()
+  for (const f of frames)
+    for (const form of f.forms ?? [f]) byName.set(form.name, form)
   const out: HelminthAbility[] = []
 
   for (const a of exportAbilities) {
