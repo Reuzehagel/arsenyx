@@ -371,6 +371,9 @@ export interface SourcedStat extends ParsedStat {
   /** Limits the stat to the normal attacks or to the Incarnon Form ones;
    *  absent means every attack mode. */
   attackScope?: "normal" | "incarnon"
+  /** Combines like the weapon's innate element, not in mod slot order
+   *  (the Kuva/Tenet progenitor bonus). */
+  innate?: boolean
 }
 
 export interface CollectOptions {
