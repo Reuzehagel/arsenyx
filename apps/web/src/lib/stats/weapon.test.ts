@@ -136,6 +136,80 @@ describe("damage breakdown — innate + mod combination", () => {
   })
 })
 
+// #426: the progenitor bonus is a second innate element, not a mod. Of the
+// two innates, the earlier in Heat > Cold > Electricity > Toxin combines first.
+describe("damage breakdown — progenitor bonus element", () => {
+  const toxin = {
+    mod: elementMod("Infected Clip", 90, "DT_POISON_COLOR", "Toxin"),
+    rank: 0,
+  }
+
+  it("Cold weapon + bonus Electricity + Toxin mod → Viral + Electricity", () => {
+    const weapon = makeWeapon({ damage: { cold: 10 }, totalDamage: 10 })
+    const map = elemMap(
+      calculateWeaponStats({
+        weapon,
+        mods: [toxin],
+        arcanes: [],
+        lichBonusElement: "Electricity",
+      }),
+    )
+    expect([...map.keys()].sort()).toEqual(["electricity", "viral"])
+  })
+
+  it("Electricity weapon + bonus Heat + Toxin mod → Gas + Electricity", () => {
+    const weapon = makeWeapon({ damage: { electricity: 10 }, totalDamage: 10 })
+    const map = elemMap(
+      calculateWeaponStats({
+        weapon,
+        mods: [toxin],
+        arcanes: [],
+        lichBonusElement: "Heat",
+      }),
+    )
+    expect([...map.keys()].sort()).toEqual(["electricity", "gas"])
+  })
+
+  it("a mod of the bonus's element pulls the bonus forward", () => {
+    // Toxin + Electricity mods → Corrosive; the bonus Electricity folds into
+    // it, leaving the weapon's innate Cold alone.
+    const weapon = makeWeapon({ damage: { cold: 10 }, totalDamage: 10 })
+    const map = elemMap(
+      calculateWeaponStats({
+        weapon,
+        mods: [
+          toxin,
+          {
+            mod: elementMod(
+              "Stormbringer",
+              90,
+              "DT_ELECTRICITY_COLOR",
+              "Electricity",
+            ),
+            rank: 0,
+          },
+        ],
+        arcanes: [],
+        lichBonusElement: "Electricity",
+      }),
+    )
+    expect([...map.keys()].sort()).toEqual(["cold", "corrosive"])
+  })
+
+  it("two innates with no mods combine (Cold + bonus Electricity → Magnetic)", () => {
+    const weapon = makeWeapon({ damage: { cold: 10 }, totalDamage: 10 })
+    const map = elemMap(
+      calculateWeaponStats({
+        weapon,
+        mods: [],
+        arcanes: [],
+        lichBonusElement: "Electricity",
+      }),
+    )
+    expect([...map.keys()]).toEqual(["magnetic"])
+  })
+})
+
 // Regression (#313): a weapon whose only base damage is a COMBINED element
 // (Nukor's 100% Radiation, Lizzie's Viral/Magnetic/Cold/Corrosive waves) used
 // to compute a zero modded base, so every elemental mod added literally

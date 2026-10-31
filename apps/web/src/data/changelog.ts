@@ -11,6 +11,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-10-31",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Kuva and Tenet weapons with an innate element now combine elements in the same order as the game. The progenitor bonus element counts as a second innate element, so on a Tenet Glaxion (Cold) with bonus Electricity, a Toxin mod now makes Viral + Electricity instead of Corrosive + Cold.",
+      },
+    ],
+  },
+  {
     date: "2026-10-27",
     changes: [
       {
