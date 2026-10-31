@@ -14,7 +14,7 @@ Phenmor T2 Void's Guidance | —
 Phenmor T2 Rapid Wrath | fire_rate percent_add 20
 Phenmor T2 Swift Deliverance | —
 Phenmor T3 Retribution's Vessel | magazine_size percent_add 50 (normal)
-Phenmor T3 Ready Retaliation | —
+Phenmor T3 Ready Retaliation | reload_speed percent_add 100 (normal) [situational]
 Phenmor T3 Executioner's Fortune | —
 Phenmor T4 Survivor's Edge | critical_chance percent_add 10 | status_chance percent_add 10
 Phenmor T4 Incarnon Efficiency | —
@@ -25,7 +25,7 @@ Phenmor T5 Lingering Judgement | —
 Laetum T2 Marksman's Hand | —
 Laetum T2 Rapid Wrath | fire_rate percent_add 20
 Laetum T2 Raptor's Chase | —
-Laetum T3 Lethal Rearmament | —
+Laetum T3 Lethal Rearmament | reload_speed percent_add 30 (normal) [situational x3]
 Laetum T3 Awakened Readiness | —
 Laetum T3 Feather of Justice | —
 Laetum T4 Caput Mortuum | —
@@ -71,7 +71,7 @@ Onos T5 Sequential Skullbuster | —
 Onos T5 Impaler's Ferocity | —
 Onos T5 Devastation Cascade | —
 Ruvox T2 Orokin Reach | range flat_add 1 (normal)
-Ruvox T2 Lethal Impetus | —
+Ruvox T2 Lethal Impetus | fire_rate percent_add 15 [situational x3]
 Ruvox T2 Gathering Momentum | —
 Ruvox T3 Shockwave Synergy | —
 Ruvox T3 Seismic Slam | —
@@ -82,9 +82,9 @@ Ruvox T4 Inspiring Execution | —
 Ruvox T5 Brutal Efficiency | —
 Ruvox T5 Vulnerability Serum | —
 Ruvox T5 Permanent Perforation | —
-Thalys T2 Dreadful Reach | —
+Thalys T2 Dreadful Reach | range flat_add 0.1 (normal) [situational x20]
 Thalys T2 Whirling Flurry | fire_rate percent_add 20
-Thalys T2 Raging Drift | —
+Thalys T2 Raging Drift | fire_rate percent_add 80 [situational]
 Thalys T3 Nimble Scythe | —
 Thalys T3 Echoes of Rage | —
 Thalys T3 Adept Reflexes | —
@@ -94,9 +94,9 @@ Thalys T4 Devastating Mercy | —
 Thalys T5 Explosive Growth | —
 Thalys T5 Chain Shatter | —
 Thalys T5 Void Splinters | —
-Boar T2 Reified Bane | damage base_add 10
+Boar T2 Reified Bane | damage base_add 10 | damage base_add 14 [situational]
 Boar T2 Fortress Salvo | damage base_add 16
-Boar T3 Ready Retaliation | —
+Boar T3 Ready Retaliation | reload_speed percent_add 100 (normal) [situational]
 Boar T3 Mercenary Chamber | —
 Boar T3 Practiced Grip | —
 Boar T4 Elemental Balance | status_chance base_add 12 (normal) | status_chance base_add 96 (incarnon)
@@ -137,25 +137,25 @@ Braton T4 Critical Parallel | critical_chance base_add 16 | critical_multiplier 
 MK1-Braton T4 Critical Parallel | critical_chance base_add 18 | critical_multiplier base_add 0.5
 Braton Vandal T4 Critical Parallel | critical_chance base_add 16 | critical_multiplier base_add 0.4
 Braton Prime T4 Critical Parallel | critical_chance base_add 18 | critical_multiplier base_add 0.2
-Braton T4 Prelude of Might | —
-MK1-Braton T4 Prelude of Might | —
-Braton Vandal T4 Prelude of Might | —
-Braton Prime T4 Prelude of Might | —
+Braton T4 Prelude of Might | critical_multiplier base_add 3.4 [situational]
+MK1-Braton T4 Prelude of Might | critical_multiplier base_add 3.3 [situational]
+Braton Vandal T4 Prelude of Might | critical_multiplier base_add 3 [situational]
+Braton Prime T4 Prelude of Might | critical_multiplier base_add 3 [situational]
 Braton T4 Survivor's Edge | critical_chance base_add 10 | status_chance base_add 12
 MK1-Braton T4 Survivor's Edge | critical_chance base_add 12 | status_chance base_add 12
 Braton Prime T4 Survivor's Edge | critical_chance base_add 10 | status_chance base_add 14
 Burston T2 Forceful Finality | damage base_add 42
 Burston T2 Fortress Salvo | damage base_add 42
 Burston T3 Extended Volley | magazine_size base_add 21 (normal)
-Burston T3 Ready Retaliation | —
+Burston T3 Ready Retaliation | reload_speed percent_add 100 (normal) [situational]
 Burston T3 Kinetic Battle | —
 Burston T4 Reaver's Rapture | —
 Burston T4 Absolute Valor | critical_chance base_add 22
 Burston T4 Fatal Affliction | —
 Dera T2 Crimson Overture | damage base_add 8
 Dera Vandal T2 Crimson Overture | damage base_add 6
-Dera T2 Paragon Essence | damage base_add 6
-Dera Vandal T2 Paragon Essence | damage base_add 4
+Dera T2 Paragon Essence | damage base_add 6 | fire_rate percent_add 5 [situational x6]
+Dera Vandal T2 Paragon Essence | damage base_add 4 | fire_rate percent_add 5 [situational x6]
 Dera T3 Swift Deliverance | —
 Dera T3 Extended Volley | magazine_size base_add 22 (normal)
 Dera Vandal T3 Extended Volley | magazine_size base_add 30 (normal)
@@ -179,7 +179,7 @@ Prisma Gorgon T2 Hunter's Mantra | damage base_add 5
 Gorgon T2 Hoplite's Virtue | damage base_add 10
 Gorgon Wraith T2 Hoplite's Virtue | damage base_add 5
 Prisma Gorgon T2 Hoplite's Virtue | damage base_add 5
-Gorgon T3 Resonant Restore | —
+Gorgon T3 Resonant Restore | magazine_size base_add 15 (normal) [situational x3]
 Gorgon T3 Rapid Reinforcement | reload_speed percent_add 50 (normal)
 Gorgon T3 Void's Guidance | —
 Gorgon T4 Survivor's Edge | critical_chance base_add 8 | status_chance base_add 9
@@ -190,9 +190,9 @@ Gorgon Wraith T4 Elemental Balance | status_chance base_add 14
 Prisma Gorgon T4 Elemental Balance | status_chance base_add 12
 Gorgon T4 Absolute Valor | critical_chance base_add 14
 Prisma Gorgon T4 Absolute Valor | critical_chance base_add 6
-Latron T2 Riddled Target | damage base_add 48
-Latron Wraith T2 Riddled Target | damage base_add 12
-Latron Prime T2 Riddled Target | damage base_add 6
+Latron T2 Riddled Target | damage base_add 48 | multishot percent_add 25 [situational x4]
+Latron Wraith T2 Riddled Target | damage base_add 12 | multishot percent_add 25 [situational x4]
+Latron Prime T2 Riddled Target | damage base_add 6 | multishot percent_add 25 [situational x4]
 Latron T2 Evasive Shot | damage base_add 48
 Latron Wraith T2 Evasive Shot | damage base_add 12
 Latron Prime T2 Evasive Shot | damage base_add 6
@@ -204,26 +204,26 @@ Latron T4 Headhunter | —
 Latron T4 Critical Parallel | critical_chance base_add 30 | critical_multiplier base_add 0.6
 Latron Wraith T4 Critical Parallel | critical_chance base_add 24 | critical_multiplier base_add 0.2
 Latron Prime T4 Critical Parallel | critical_chance base_add 24 | critical_multiplier base_add 0.2
-Miter T2 Swift Sawblades | damage base_add 77
+Miter T2 Swift Sawblades | damage base_add 77 | fire_rate percent_add 70 [situational]
 Miter T2 Plentiful Mayhem | damage base_add 57
 Miter T3 Swift Deliverance | —
-Miter T3 Ready Retaliation | —
+Miter T3 Ready Retaliation | reload_speed percent_add 100 (normal) [situational]
 Miter T3 Mercenary Chamber | —
 Miter T4 Sawblade Storm | —
 Miter T4 Commodore's Fortune | critical_chance base_add 22
 Miter T4 Critical Parallel | critical_chance base_add 12 | status_chance base_add 12
-Paris T2 Deadly Pace | damage base_add 40
-MK1-Paris T2 Deadly Pace | damage base_add 50
-Paris Prime T2 Deadly Pace | damage base_add 20
-Paris T2 Guardian's Might | damage base_add 40
-MK1-Paris T2 Guardian's Might | damage base_add 50
-Paris Prime T2 Guardian's Might | damage base_add 20
-Paris T3 Ardent Trigger | —
+Paris T2 Deadly Pace | damage base_add 40 | fire_rate percent_add 80 [situational]
+MK1-Paris T2 Deadly Pace | damage base_add 50 | fire_rate percent_add 80 [situational]
+Paris Prime T2 Deadly Pace | damage base_add 20 | fire_rate percent_add 80 [situational]
+Paris T2 Guardian's Might | damage base_add 40 | damage base_add 52 [situational]
+MK1-Paris T2 Guardian's Might | damage base_add 50 | damage base_add 40 [situational]
+Paris Prime T2 Guardian's Might | damage base_add 20 | damage base_add 74 [situational]
+Paris T3 Ardent Trigger | fire_rate percent_add 40 [situational]
 Paris T3 Marksman's Focus | —
 Paris T3 Swift Deliverance | —
-Paris T4 Vicious Promise | —
+Paris T4 Vicious Promise | critical_chance base_add 40 [situational] | critical_multiplier base_add 2 [situational]
 Paris T4 Elemental Balance | status_chance base_add 60
-Paris T4 Striking Succession | —
+Paris T4 Striking Succession | damage base_add 15 [situational x4]
 Soma T2 Fortress Salvo | —
 Soma T2 Fortifying Bloodshed | —
 Soma T3 Kinetic Battle | —
@@ -255,16 +255,16 @@ Strun T4 Brutal Edge | critical_chance base_add 4 | status_chance base_add 4 (no
 MK1-Strun T4 Brutal Edge | critical_chance base_add 2 | status_chance base_add 2 (normal) | status_chance base_add 20 (incarnon)
 Strun Wraith T4 Brutal Edge | critical_chance base_add 4 | status_chance base_add 4.8 (normal) | status_chance base_add 48 (incarnon)
 Strun Prime T4 Brutal Edge | critical_chance base_add 4 | status_chance base_add 4 (normal) | status_chance base_add 48 (incarnon)
-Sybaris T2 Well Rehearsed | damage base_add 20
-Dex Sybaris T2 Well Rehearsed | damage base_add 15
-Sybaris Prime T2 Well Rehearsed | damage base_add 15
-Sybaris T2 Blazing Barrel | damage base_add 20
-Dex Sybaris T2 Blazing Barrel | damage base_add 15
-Sybaris Prime T2 Blazing Barrel | damage base_add 15
+Sybaris T2 Well Rehearsed | damage base_add 20 | damage base_add 5 [situational x3]
+Dex Sybaris T2 Well Rehearsed | damage base_add 15 | damage base_add 5 [situational x3]
+Sybaris Prime T2 Well Rehearsed | damage base_add 15 | damage base_add 5 [situational x3]
+Sybaris T2 Blazing Barrel | damage base_add 20 | multishot percent_add 5 [situational x10]
+Dex Sybaris T2 Blazing Barrel | damage base_add 15 | multishot percent_add 5 [situational x10]
+Sybaris Prime T2 Blazing Barrel | damage base_add 15 | multishot percent_add 5 [situational x10]
 Sybaris T3 Extended Volley | magazine_size base_add 8 (normal)
 Dex Sybaris T3 Extended Volley | magazine_size base_add 10 (normal)
 Sybaris Prime T3 Extended Volley | magazine_size base_add 12 (normal)
-Sybaris T3 Ready Retaliation | —
+Sybaris T3 Ready Retaliation | reload_speed percent_add 60 (normal) [situational]
 Sybaris T3 Marksman's Hand | —
 Sybaris T4 Elemental Dominance | status_chance base_add 15 (normal) | status_chance base_add 30 (incarnon)
 Dex Sybaris T4 Elemental Dominance | status_chance base_add 15 (normal) | status_chance base_add 30 (incarnon)
@@ -281,8 +281,8 @@ Torid T4 Survivor's Edge | critical_chance base_add 15 | status_chance base_add 
 Torid T4 Elemental Balance | status_chance base_add 34
 Vectis T2 Inciting Incident | damage base_add 100
 Vectis Prime T2 Inciting Incident | damage base_add 200
-Vectis T2 Lone Enforcer | damage base_add 75
-Vectis Prime T2 Lone Enforcer | damage base_add 150
+Vectis T2 Lone Enforcer | damage base_add 75 | multishot percent_add 25 [situational]
+Vectis Prime T2 Lone Enforcer | damage base_add 150 | multishot percent_add 25 [situational]
 Vectis T3 Rapid Reinforcement | reload_speed percent_add 60 (normal)
 Vectis T3 Marksman's Hand | —
 Vectis T3 Silent Running | —
@@ -290,8 +290,8 @@ Vectis T4 Deadhead | —
 Vectis T4 Critical Parallel | critical_chance base_add 10 | critical_multiplier base_add 0.5
 Vectis Prime T4 Critical Parallel | critical_chance base_add 8 | critical_multiplier base_add 0.5
 Vectis T4 Survivor's Edge | —
-Angstrum T2 Haven Foray | damage base_add 50
-Angstrum T2 Paladin Virtue | damage base_add 75
+Angstrum T2 Haven Foray | damage base_add 50 | damage base_add 50 [situational]
+Angstrum T2 Paladin Virtue | damage base_add 75 | critical_multiplier base_add 0.5 [situational]
 Angstrum T3 Swift Deliverance | —
 Angstrum T3 Rapid Reinforcement | reload_speed percent_add 50 (normal)
 Angstrum T3 Hitman's Hoard | —
@@ -300,7 +300,7 @@ Prisma Angstrum T4 Critical Parallel | critical_chance base_add 10 | critical_mu
 Angstrum T4 Survivor's Edge | critical_chance base_add 9 | status_chance base_add 9
 Prisma Angstrum T4 Survivor's Edge | critical_chance base_add 6 | status_chance base_add 6
 Angstrum T4 Fatal Affliction | —
-Atomos T2 Paladin Virtue | damage base_add 24
+Atomos T2 Paladin Virtue | damage base_add 24 | critical_multiplier base_add 1 [situational]
 Atomos T2 Hoplite Virtue | damage base_add 24
 Atomos T3 Moonrise Velocity | range flat_add 7 (normal)
 Atomos T3 Mercenary Chamber | —
@@ -308,12 +308,12 @@ Atomos T3 Resonant Restore | —
 Atomos T4 Elemental Balance | status_chance base_add 20
 Atomos T4 Commodore's Fortune | critical_chance base_add 19
 Atomos T4 Survivor's Edge | critical_chance base_add 10 | status_chance base_add 10
-Ballistica T2 Headcracker | damage base_add 30
-Rakta Ballistica T2 Headcracker | damage base_add 10
-Ballistica Prime T2 Headcracker | damage base_add 3
-Ballistica T2 Prolific Perforation | damage base_add 30
-Rakta Ballistica T2 Prolific Perforation | damage base_add 10
-Ballistica Prime T2 Prolific Perforation | damage base_add 3
+Ballistica T2 Headcracker | damage base_add 30 | fire_rate percent_add 7.5 [situational x10]
+Rakta Ballistica T2 Headcracker | damage base_add 10 | fire_rate percent_add 7.5 [situational x10]
+Ballistica Prime T2 Headcracker | damage base_add 3 | fire_rate percent_add 7.5 [situational x10]
+Ballistica T2 Prolific Perforation | damage base_add 30 | critical_chance percent_add 10 [situational x8]
+Rakta Ballistica T2 Prolific Perforation | damage base_add 10 | critical_chance percent_add 10 [situational x8]
+Ballistica Prime T2 Prolific Perforation | damage base_add 3 | critical_chance percent_add 10 [situational x8]
 Ballistica T3 Rapid Reinforcement | reload_speed percent_add 50 (normal)
 Ballistica T3 Swift Deliverance | —
 Ballistica T3 Void's Guidance | —
@@ -336,7 +336,7 @@ Bronco T4 Enough for Everyone | —
 Bronco T4 Commodore's Fortune | critical_chance base_add 20
 Bronco T4 Rain of Lead | —
 Cestra T2 Steadfast Grit | damage base_add 10
-Cestra T2 Fortress Salvo | damage base_add 10
+Cestra T2 Fortress Salvo | damage base_add 10 | multishot percent_add 80 [situational]
 Cestra T3 Rapid Reinforcement | reload_speed percent_add 50 (normal)
 Cestra T3 Slayer's Nerve | —
 Cestra T3 Swift Deliverance | —
@@ -344,7 +344,7 @@ Cestra T4 Survivor's Edge | critical_chance base_add 18
 Cestra T4 Deathtrap Trigger | critical_multiplier base_add 2
 Cestra T4 Wiseman's Regard | —
 Despair T2 Fatal Affliction | damage base_add 50
-Despair T2 Stalker's Vendetta | damage base_add 60
+Despair T2 Stalker's Vendetta | damage base_add 60 | multishot percent_add 30 [situational]
 Despair T3 Marksman's Focus | —
 Despair T3 Swift Deliverance | —
 Despair T3 Rapid Reinforcement | reload_speed percent_add 100 (normal)
@@ -352,26 +352,26 @@ Despair T4 Elemental Balance | status_chance base_add 24
 Despair T4 Survivor's Edge | critical_chance base_add 12 | status_chance base_add 12
 Despair T4 Critical Parallel | critical_chance base_add 18 | critical_multiplier base_add 0.4
 Dual Toxocyst T2 Carnage Reign | damage base_add 60
-Dual Toxocyst T2 Fevered Frenzy | damage base_add 50
-Dual Toxocyst T3 Ready Retaliation | —
+Dual Toxocyst T2 Fevered Frenzy | damage base_add 50 | multishot percent_add 5 [situational x20]
+Dual Toxocyst T3 Ready Retaliation | reload_speed percent_add 100 (normal) [situational]
 Dual Toxocyst T3 Evolved Autoloader | —
 Dual Toxocyst T3 Marksman's Hand | —
 Dual Toxocyst T4 Commodore's Fortune | critical_chance base_add 20
 Dual Toxocyst T4 Neurotoxin | —
 Dual Toxocyst T4 Ripper Rounds | —
-Furis T2 Haven Foray | damage base_add 28
-MK1-Furis T2 Haven Foray | damage base_add 34
+Furis T2 Haven Foray | damage base_add 28 | damage base_add 30 [situational]
+MK1-Furis T2 Haven Foray | damage base_add 34 | damage base_add 30 [situational]
 Furis T2 Stormburst | damage base_add 28
 MK1-Furis T2 Stormburst | damage base_add 34
 Furis T3 Practiced Grip | —
 Furis T3 Extended Volley | magazine_size base_add 25 (normal)
 Furis T3 Executioner's Fortune | —
-Furis T4 Headcracker | —
-Furis T4 Prelude of Might | —
+Furis T4 Headcracker | fire_rate percent_add 5 [situational x10]
+Furis T4 Prelude of Might | critical_multiplier base_add 3 [situational]
 Furis T4 Elemental Balance | status_chance base_add 28
 MK1-Furis T4 Elemental Balance | status_chance base_add 39
-Gammacor T2 Sage's Resolve | damage base_add 10
-Gammacor T2 Infused Shots | damage base_add 6
+Gammacor T2 Sage's Resolve | damage base_add 10 | multishot percent_add 25 [situational]
+Gammacor T2 Infused Shots | damage base_add 6 | damage base_add 5 [situational x4]
 Gammacor T3 Evolved Autoloader | —
 Gammacor T3 Moonrise Velocity | range flat_add 8 (normal)
 Gammacor T3 Extended Volley | magazine_size base_add 40 (normal)
@@ -383,21 +383,21 @@ Gammacor T4 Elemental Balance | status_chance base_add 20
 Synoid Gammacor T4 Elemental Balance | status_chance base_add 10
 Kunai T2 Swift Conclusion | damage base_add 70
 MK1-Kunai T2 Swift Conclusion | damage base_add 80
-Kunai T2 Sage's Resolve | damage base_add 70
-MK1-Kunai T2 Sage's Resolve | damage base_add 80
+Kunai T2 Sage's Resolve | damage base_add 70 | multishot percent_add 100 [situational]
+MK1-Kunai T2 Sage's Resolve | damage base_add 80 | multishot percent_add 100 [situational]
 Kunai T3 Swift Deliverance | —
 Kunai T3 Extended Volley | magazine_size base_add 10 (normal)
 Kunai T3 Rapid Reinforcement | reload_speed percent_add 50 (normal)
 Kunai T4 Deathtrap Trigger | —
 MK1-Kunai T4 Deathtrap Trigger | —
-Kunai T4 Accelerating Volley | —
+Kunai T4 Accelerating Volley | fire_rate percent_add 20 [situational x5]
 Kunai T4 Survivor's Edge | critical_chance base_add 12 | status_chance base_add 12
-Lato T2 Haven Foray | damage base_add 40
-Lato Vandal T2 Haven Foray | damage base_add 22
-Lato Prime T2 Haven Foray | damage base_add 2
-Lato T2 Reified Bane | damage base_add 30
-Lato Vandal T2 Reified Bane | damage base_add 12
-Lato Prime T2 Reified Bane | damage base_add 2
+Lato T2 Haven Foray | damage base_add 40 | damage base_add 40 [situational]
+Lato Vandal T2 Haven Foray | damage base_add 22 | damage base_add 40 [situational]
+Lato Prime T2 Haven Foray | damage base_add 2 | damage base_add 34 [situational]
+Lato T2 Reified Bane | damage base_add 30 | damage base_add 30 [situational]
+Lato Vandal T2 Reified Bane | damage base_add 12 | damage base_add 30 [situational]
+Lato Prime T2 Reified Bane | damage base_add 2 | damage base_add 24 [situational]
 Lato T3 Void's Guidance | —
 Lato T3 Marksman's Gain | —
 Lato T3 Exact Penance | —
@@ -408,13 +408,13 @@ Lato T4 Deathtrap Trigger | —
 Lato Vandal T4 Deathtrap Trigger | —
 Lato Prime T4 Deathtrap Trigger | —
 Lato T4 Carnage Reign | —
-Lex T2 Hoplite Virtue | damage base_add 80
-Lex Prime T2 Hoplite Virtue | damage base_add 20
+Lex T2 Hoplite Virtue | damage base_add 80 | damage base_add 80 [situational]
+Lex Prime T2 Hoplite Virtue | damage base_add 20 | damage base_add 80 [situational]
 Lex T2 Trusty Sidearm | damage base_add 80
 Lex Prime T2 Trusty Sidearm | damage base_add 20
 Lex T3 Lex Talionis | —
 Lex T3 Extended Volley | magazine_size base_add 10 (normal)
-Lex T3 Ready Retaliation | —
+Lex T3 Ready Retaliation | reload_speed percent_add 100 (normal) [situational]
 Lex T4 Executioner's Dawn | —
 Lex T4 Elemental Balance | status_chance base_add 40
 Lex Prime T4 Elemental Balance | status_chance base_add 30
@@ -433,11 +433,11 @@ Sicarus Prime T4 Commodore's Fortune | critical_chance base_add 14
 Sicarus T4 Survivor's Edge | critical_chance base_add 12 | status_chance base_add 12
 Sicarus Prime T4 Survivor's Edge | critical_chance base_add 9 | status_chance base_add 9
 Sicarus T4 Wiseman's Regard | —
-Stug T2 Blazing Barrel | damage base_add 175
+Stug T2 Blazing Barrel | damage base_add 175 | multishot percent_add 5 [situational x10]
 Stug T2 Overcharge Blast | damage base_add 300
 Stug T3 Rapid Reinforcement | reload_speed percent_add 50 (normal)
 Stug T3 Swift Deliverance | —
-Stug T3 Resonant Restore | —
+Stug T3 Resonant Restore | magazine_size base_add 10 (normal) [situational x3]
 Stug T4 Survivor's Edge | critical_chance base_add 15 | status_chance base_add 15
 Stug T4 Deathtrap Trigger | critical_chance base_add 25 | critical_multiplier base_add 1.5
 Stug T4 Elemental Dominance | status_chance base_add 20 (normal) | status_chance base_add 40 (incarnon)
@@ -473,7 +473,7 @@ Ack & Brunt T3 Swift Break | —
 Ack & Brunt T4 Rogue Readiness | —
 Ack & Brunt T4 Absolute Valor | critical_chance base_add 17
 Ack & Brunt T4 Versatile Creed | critical_chance base_add 9 | status_chance base_add 9
-Anku T2 Edge of Justice | damage base_add 50
+Anku T2 Edge of Justice | damage base_add 50 | fire_rate percent_add 40 [situational]
 Anku T2 Guardian's Promise | damage base_add 50
 Anku T3 Standoff | —
 Anku T3 Swordsman's Celerity | —
@@ -502,13 +502,13 @@ Ceramic Dagger T2 Breacher's Opportunity | damage base_add 120
 Ceramic Dagger T3 Orokin Reach | range flat_add 1 (normal)
 Ceramic Dagger T3 Adept Reflexes | —
 Ceramic Dagger T3 Rogue Readiness | —
-Ceramic Dagger T4 Red Right Hand | —
+Ceramic Dagger T4 Red Right Hand | critical_multiplier base_add 2 [situational]
 Ceramic Dagger T4 Absolute Dominion | status_chance base_add 30
 Ceramic Dagger T4 Absolute Valor | critical_chance base_add 30
 Destreza T2 Weighted Impetus | damage base_add 50
 Destreza Prime T2 Weighted Impetus | damage base_add 40
-Destreza T2 Piercing Stature | damage base_add 50
-Destreza Prime T2 Piercing Stature | damage base_add 40
+Destreza T2 Piercing Stature | damage base_add 50 | status_chance percent_add 20 [situational x5]
+Destreza Prime T2 Piercing Stature | damage base_add 40 | status_chance percent_add 20 [situational x5]
 Destreza T3 Orokin Reach | range flat_add 1 (normal)
 Destreza T3 Overhand | —
 Destreza T3 Adept Reflexes | —
@@ -518,7 +518,7 @@ Destreza T4 Critical Forte | critical_multiplier base_add 1.2
 Destreza Prime T4 Critical Forte | critical_multiplier base_add 0.6
 Destreza T4 Decisive Stature | —
 Dual Ichor T2 Alchemist's Wrath | damage base_add 90
-Dual Ichor T2 Ronin's Rush | damage base_add 90
+Dual Ichor T2 Ronin's Rush | damage base_add 90 | fire_rate percent_add 30 [situational]
 Dual Ichor T3 Orokin Reach | range flat_add 0.6 (normal)
 Dual Ichor T3 Resolute Force | —
 Dual Ichor T3 Swift Break | —
@@ -528,9 +528,9 @@ Dual Ichor T4 Universal Readiness | —
 Furax T2 Swordsman's Flourish | damage base_add 110
 MK1-Furax T2 Swordsman's Flourish | damage base_add 100
 Furax Wraith T2 Swordsman's Flourish | damage base_add 65
-Furax T2 Kill Joy | damage base_add 90
-MK1-Furax T2 Kill Joy | damage base_add 80
-Furax Wraith T2 Kill Joy | damage base_add 55
+Furax T2 Kill Joy | damage base_add 90 | fire_rate percent_add 10 [situational x5]
+MK1-Furax T2 Kill Joy | damage base_add 80 | fire_rate percent_add 10 [situational x5]
+Furax Wraith T2 Kill Joy | damage base_add 55 | fire_rate percent_add 10 [situational x5]
 Furax T3 Moonrise Velocity | range flat_add 1 (normal)
 Furax T3 Overhand | —
 Furax T3 Standoff | —
@@ -549,8 +549,8 @@ Hate T4 Absolute Dominion | status_chance base_add 20
 Hate T4 Subtle Force | critical_chance base_add 6 | status_chance base_add 10
 Magistar T2 Crushing Verdict | damage base_add 100
 Sancti Magistar T2 Crushing Verdict | damage base_add 20
-Magistar T2 Edge of Justice | damage base_add 100
-Sancti Magistar T2 Edge of Justice | damage base_add 20
+Magistar T2 Edge of Justice | damage base_add 100 | fire_rate percent_add 40 [situational]
+Sancti Magistar T2 Edge of Justice | damage base_add 20 | fire_rate percent_add 40 [situational]
 Magistar T3 Seismic Slam | —
 Magistar T3 Orokin Reach | range flat_add 1.4 (normal)
 Magistar T3 Swift Break | —
@@ -598,7 +598,7 @@ Sibear T3 Kinetic Harmony | —
 Sibear T3 Resolute Force | —
 Sibear T4 Mounting Avalanche | —
 Sibear T4 Absolute Valor | critical_chance base_add 25
-Sibear T4 Red Right Hand | —
+Sibear T4 Red Right Hand | critical_multiplier base_add 2 [situational]
 Skana T2 Guardian's Promise | damage base_add 100
 Prisma Skana T2 Guardian's Promise | damage base_add 100
 Skana Prime T2 Guardian's Promise | damage base_add 10

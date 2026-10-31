@@ -19,6 +19,11 @@ export const CHANGELOG: ChangelogEntry[] = [
           "You can now dislike a build. Like and dislike are either-or: picking one clears the other, and clicking it again takes it back. You still can't like or dislike your own builds.",
       },
       {
+        type: "feat",
+        description:
+          "Situational Incarnon perks now count when you turn on Max stacks in the stats panel. That covers perks like Headcracker, Ready Retaliation, Lethal Impetus, Haven Foray, and Prelude of Might, applied at their full stack count. Perks that trigger on weapon swap or only on weakpoint hits still aren't counted.",
+      },
+      {
         type: "fix",
         description:
           "Kuva and Tenet weapons with an innate element now combine elements in the same order as the game. The progenitor bonus element counts as a second innate element, so on a Tenet Glaxion (Cold) with bonus Electricity, a Toxin mod now makes Viral + Electricity instead of Corrosive + Cold.",
