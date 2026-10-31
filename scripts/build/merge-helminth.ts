@@ -101,8 +101,10 @@ export function deriveHelminthAbilities(
   frames: readonly MergedFrame[],
   exportAbilities: readonly RawAbility[],
 ): HelminthAbility[] {
-  const byName = new Map<string, MergedFrame>()
-  for (const f of frames) byName.set(f.name, f)
+  // Index twin-frame forms by their own name so each twin (e.g. "Orion & Sirius") resolves like a frame.
+  const byName = new Map<string, Pick<MergedFrame, "abilities">>()
+  for (const f of frames)
+    for (const form of f.forms ?? [f]) byName.set(form.name, form)
   const out: HelminthAbility[] = []
 
   for (const a of exportAbilities) {
@@ -127,20 +129,6 @@ export function deriveHelminthAbilities(
         description: a.description,
         source: frame,
       })
-    } else if (frame === "Orion & Sirius") {
-      const twin_frame = byName.get("Sirius & Orion")
-      const b = twin_frame?.forms
-        ?.at(1)
-        ?.abilities.find((x) => x.name === abilityName)
-      if (b) {
-        out.push({
-          uniqueName: b.uniqueName,
-          name: b.name,
-          imageName: b.imageName,
-          description: b.description,
-          source: frame,
-        })
-      }
     }
   }
 
