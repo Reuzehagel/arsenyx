@@ -26,7 +26,7 @@ describe("parseIncarnonPerkStats", () => {
     ])
   })
 
-  it("keeps the unconditional part and drops the conditional rider", () => {
+  it("drops situational riders the panel can't show", () => {
     expect(
       parseIncarnonPerkStats(
         "+24 Base Damage (Braton). With Channeled Ability active: +30 additional Damage and +50% Ammo Efficiency.",
@@ -35,9 +35,39 @@ describe("parseIncarnonPerkStats", () => {
     expect(parseIncarnonPerkStats("+40% Accuracy while aiming.")).toEqual([])
     expect(
       parseIncarnonPerkStats(
-        "On Reload From Empty: +10 Base Magazine Capacity, stacking up to 3x.",
+        "On Equip: +40% Critical Chance for 4s and +1.4x Critical Damage Multiplier for 4s.",
       ),
     ).toEqual([])
+  })
+
+  it("reads situational perks as conditional stats with their stack cap", () => {
+    expect(
+      parseIncarnonPerkStats(
+        "On Reload From Empty: +10 Base Magazine Capacity, stacking up to 3x.",
+      ),
+    ).toEqual([
+      {
+        type: "magazine_size",
+        value: 10,
+        operation: "base_add",
+        attackScope: "normal",
+        isConditional: true,
+        maxStacks: 3,
+      },
+    ])
+    expect(
+      parseIncarnonPerkStats(
+        "+40 Base Damage (Paris). +80% Fire Rate with Sprint Speed 1.2 or higher.",
+      ),
+    ).toEqual([
+      { type: "damage", value: 40, operation: "base_add" },
+      {
+        type: "fire_rate",
+        value: 80,
+        operation: "percent_add",
+        isConditional: true,
+      },
+    ])
   })
 
   it("reads nameless and doubled Incarnon Form values from the previous stat", () => {
@@ -123,7 +153,7 @@ it("parses every evolution perk the way the snapshot says", async () => {
             ? stats
                 .map(
                   (s) =>
-                    `${s.type} ${s.operation} ${s.value}${s.attackScope ? ` (${s.attackScope})` : ""}`,
+                    `${s.type} ${s.operation} ${s.value}${s.attackScope ? ` (${s.attackScope})` : ""}${s.isConditional ? ` [situational${s.maxStacks ? ` x${s.maxStacks}` : ""}]` : ""}`,
                 )
                 .join(" | ")
             : "—"
@@ -135,4 +165,13 @@ it("parses every evolution perk the way the snapshot says", async () => {
   await expect(lines.join("\n") + "\n").toMatchFileSnapshot(
     "./incarnon-catalog.snap.txt",
   )
+})
+
+it("skips situational perks the wiki says misbehave", () => {
+  const stats = incarnonPerkStats(
+    INCARNON_EVOLUTIONS["Dual Toxocyst"],
+    [null, null, "Ready Retaliation"],
+    "Dual Toxocyst",
+  )
+  expect(stats).toEqual([])
 })

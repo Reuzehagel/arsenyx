@@ -75,7 +75,12 @@ export function calculateWeaponStats(input: WeaponCalcInput): WeaponStats {
   if (input.lichBonusElement) {
     stats.push(lichBonusStat(input.lichBonusElement))
   }
-  stats.push(...(input.incarnonStats ?? []))
+  // Situational perks follow the same "Max stacks" toggle as mods/arcanes.
+  for (const s of input.incarnonStats ?? []) {
+    if (!s.isConditional) stats.push(s)
+    else if (input.showMaxStacks)
+      stats.push({ ...s, value: s.value * (s.maxStacks ?? 1) })
+  }
   const statsFor = (attackName: string) => {
     const scope = isIncarnonFormAttack(attackName) ? "incarnon" : "normal"
     return stats.filter((s) => !s.attackScope || s.attackScope === scope)
