@@ -14,6 +14,11 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-10-31",
     changes: [
       {
+        type: "feat",
+        description:
+          "You can now dislike a build. Like and dislike are either-or: picking one clears the other, and clicking it again takes it back. You still can't like or dislike your own builds.",
+      },
+      {
         type: "fix",
         description:
           "Kuva and Tenet weapons with an innate element now combine elements in the same order as the game. The progenitor bonus element counts as a second innate element, so on a Tenet Glaxion (Cold) with bonus Electricity, a Toxin mod now makes Viral + Electricity instead of Corrosive + Cold.",

@@ -32,7 +32,7 @@ import {
   pruneRevisions,
   readRevisions,
 } from "./_build-revisions"
-import { toggleSocial } from "./_build-social"
+import { setLike, clearLike, toggleBookmark } from "./_build-social"
 import {
   bookmarkedScope,
   buildAccess,
@@ -1031,6 +1031,7 @@ async function getBuildForSocial(slug: string) {
       visibility: true,
       organizationId: true,
       likeCount: true,
+      dislikeCount: true,
       bookmarkCount: true,
     },
   })
@@ -1056,50 +1057,54 @@ async function canViewerSeeBuild(
   return isOrgMember(build.organizationId, viewerId)
 }
 
-builds.post("/:slug/like", rateLimitUser("social"), async (c) => {
-  const session = await getSession(c)
-  if (!session?.user) return c.json({ error: "unauthorized" }, 401)
-  const userId = session.user.id
+// POST sets (or flips to) a Like / Dislike; DELETE clears either one, whichever
+// way it went, so the response state is always known without a re-read.
+for (const [path, value] of [
+  ["like", 1],
+  ["dislike", -1],
+] as const) {
+  builds.post(`/:slug/${path}`, rateLimitUser("social"), async (c) => {
+    const session = await getSession(c)
+    if (!session?.user) return c.json({ error: "unauthorized" }, 401)
+    const userId = session.user.id
 
-  const build = await getBuildForSocial(c.req.param("slug"))
-  if (!build) return c.json({ error: "not_found" }, 404)
-  if (!(await canViewerSeeBuild(build, userId))) {
-    return c.json({ error: "not_found" }, 404)
-  }
-  if (build.userId === userId) {
-    return c.json({ error: "cannot_like_own_build" }, 400)
-  }
+    const build = await getBuildForSocial(c.req.param("slug"))
+    if (!build) return c.json({ error: "not_found" }, 404)
+    if (!(await canViewerSeeBuild(build, userId))) {
+      return c.json({ error: "not_found" }, 404)
+    }
+    if (build.userId === userId) {
+      return c.json({ error: "cannot_like_own_build" }, 400)
+    }
 
-  const likeCount = await toggleSocial(
-    "like",
-    "add",
-    build.id,
-    userId,
-    build.likeCount,
-  )
-  return c.json({ hasLiked: true, likeCount })
-})
+    const counts = await setLike(value, build.id, userId, {
+      likeCount: build.likeCount,
+      dislikeCount: build.dislikeCount,
+    })
+    return c.json({
+      hasLiked: value === 1,
+      hasDisliked: value === -1,
+      ...counts,
+    })
+  })
 
-// No visibility re-check here (unlike POST): you can only remove a row you
-// already created, so a stale link can't leak anything — the toggle is a no-op
-// for a build the viewer never liked.
-builds.delete("/:slug/like", rateLimitUser("social"), async (c) => {
-  const session = await getSession(c)
-  if (!session?.user) return c.json({ error: "unauthorized" }, 401)
-  const userId = session.user.id
+  // No visibility re-check here (unlike POST): you can only remove a row you
+  // already created, so a stale link can't leak anything — the clear is a
+  // no-op for a build the viewer never liked or disliked.
+  builds.delete(`/:slug/${path}`, rateLimitUser("social"), async (c) => {
+    const session = await getSession(c)
+    if (!session?.user) return c.json({ error: "unauthorized" }, 401)
 
-  const build = await getBuildForSocial(c.req.param("slug"))
-  if (!build) return c.json({ error: "not_found" }, 404)
+    const build = await getBuildForSocial(c.req.param("slug"))
+    if (!build) return c.json({ error: "not_found" }, 404)
 
-  const likeCount = await toggleSocial(
-    "like",
-    "remove",
-    build.id,
-    userId,
-    build.likeCount,
-  )
-  return c.json({ hasLiked: false, likeCount })
-})
+    const counts = await clearLike(build.id, session.user.id, {
+      likeCount: build.likeCount,
+      dislikeCount: build.dislikeCount,
+    })
+    return c.json({ hasLiked: false, hasDisliked: false, ...counts })
+  })
+}
 
 builds.post("/:slug/bookmark", rateLimitUser("social"), async (c) => {
   const session = await getSession(c)
@@ -1115,8 +1120,7 @@ builds.post("/:slug/bookmark", rateLimitUser("social"), async (c) => {
   // Build to save it for later is allowed (see GLOSSARY.md — Bookmark, unlike
   // Like, has no "not your own" rule).
 
-  const bookmarkCount = await toggleSocial(
-    "bookmark",
+  const bookmarkCount = await toggleBookmark(
     "add",
     build.id,
     userId,
@@ -1134,8 +1138,7 @@ builds.delete("/:slug/bookmark", rateLimitUser("social"), async (c) => {
   const build = await getBuildForSocial(c.req.param("slug"))
   if (!build) return c.json({ error: "not_found" }, 404)
 
-  const bookmarkCount = await toggleSocial(
-    "bookmark",
+  const bookmarkCount = await toggleBookmark(
     "remove",
     build.id,
     userId,
@@ -1235,20 +1238,20 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
 
   await maybeIncrementView(c, build.id, build.slug, viewerId, build.userId)
 
-  let viewerHasLiked = false
+  let viewerLike = 0
   let viewerHasBookmarked = false
   if (viewerId) {
     const [like, bookmark] = await Promise.all([
       prisma.buildLike.findUnique({
         where: { userId_buildId: { userId: viewerId, buildId: build.id } },
-        select: { id: true },
+        select: { value: true },
       }),
       prisma.buildBookmark.findUnique({
         where: { userId_buildId: { userId: viewerId, buildId: build.id } },
         select: { id: true },
       }),
     ])
-    viewerHasLiked = like != null
+    viewerLike = like?.value ?? 0
     viewerHasBookmarked = bookmark != null
   }
 
@@ -1270,7 +1273,8 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
       build,
       {
         isOwner,
-        hasLiked: viewerHasLiked,
+        hasLiked: viewerLike === 1,
+        hasDisliked: viewerLike === -1,
         hasBookmarked: viewerHasBookmarked,
       },
       isOwner || isAdmin,

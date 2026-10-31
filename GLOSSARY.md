@@ -43,8 +43,13 @@ _Avoid_: ID, Permalink.
 
 **Like**:
 A one-click endorsement of a Build by a viewer; the count is denormalized on the Build,
-and you cannot Like your own. Modeled as `BuildLike`.
+and you cannot Like your own. Modeled as `BuildLike` with `value = 1`.
 _Avoid_: **Vote**, **Upvote**, Star, Heart.
+
+**Dislike**:
+The opposite of a Like: a `BuildLike` row with `value = -1`, counted separately on the
+Build. A viewer holds at most one of the two per Build, and cannot Dislike their own.
+_Avoid_: **Downvote**.
 
 **Bookmark**:
 A viewer saving a Build to their personal list for later. Modeled as `BuildBookmark`.

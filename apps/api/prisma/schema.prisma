@@ -195,6 +195,7 @@ model Build {
   searchVector Unsupported("tsvector")?
 
   likeCount     Int @default(0)
+  dislikeCount  Int @default(0)
   bookmarkCount Int @default(0)
   viewCount     Int @default(0)
 
@@ -355,6 +356,7 @@ model BuildLike {
   buildId String
   build   Build  @relation(fields: [buildId], references: [id], onDelete: Cascade)
 
+  // 1 = like, -1 = dislike. One row per viewer, so the two are exclusive.
   value Int @default(1)
 
   createdAt DateTime @default(now())
