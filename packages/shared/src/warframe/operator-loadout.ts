@@ -41,6 +41,12 @@ export const OPERATOR_AMP_TYPES: AmpOption[] = [
   { value: "custom", label: "Modular Amp" },
 ]
 
+/** Display label: prebuilt name, or `Amp 7-6-1` for modular shorthand. */
+export function operatorAmpLabel(value: string): string {
+  if (isModularAmp(value)) return `Amp ${value}`
+  return OPERATOR_AMP_TYPES.find((t) => t.value === value)?.label ?? value
+}
+
 export const AMP_PRISMS: AmpOption[] = [
   { value: "1", label: "1 · Raplak" },
   { value: "2", label: "2 · Shwaak" },

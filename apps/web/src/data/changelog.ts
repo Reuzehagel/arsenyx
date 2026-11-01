@@ -11,6 +11,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-11-01",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Operator and Drifter builds. Pick a Focus School and an Amp (Mote Amp, Sirocco, or any modular Prism-Scaffold-Brace combination such as 7-7-7), then fill two Operator Arcane and two Amp Arcane slots. Embeds show the school and Amp too.",
+      },
+    ],
+  },
+  {
     date: "2026-10-31",
     changes: [
       {

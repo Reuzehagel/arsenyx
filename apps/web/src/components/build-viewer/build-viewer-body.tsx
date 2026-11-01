@@ -356,6 +356,8 @@ function BuildViewerBodyInner({
             incarnonEnabled={incarnonEnabled}
             incarnonPerks={incarnonPerks}
             lichBonusElement={lichBonusElement}
+            operatorAmp={operatorAmp}
+            focusSchool={focusSchool}
             slug={build.slug}
           />
         )}

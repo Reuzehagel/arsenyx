@@ -160,7 +160,9 @@ export function EditorHeader({
               )}
             </div>
             <span className="text-muted-foreground text-sm">
-              {item.name} · {categoryLabel}
+              {item.name}
+              {/* "Operator · Operators" reads as a stutter — skip the echo. */}
+              {!categoryLabel.startsWith(item.name) && ` · ${categoryLabel}`}
             </span>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
               {hasModSlots(category) && (

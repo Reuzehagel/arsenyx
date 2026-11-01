@@ -7,7 +7,11 @@ import {
   encodeBuildDoc,
 } from "./build-codec"
 import type { BuildDoc, BuildVariant } from "./build-doc"
-import { parseFocusSchool, parseOperatorAmp } from "./operator-loadout"
+import {
+  operatorAmpLabel,
+  parseFocusSchool,
+  parseOperatorAmp,
+} from "./operator-loadout"
 import { hasModSlots } from "./slot-layout"
 import type { BuildState } from "./types"
 
@@ -131,5 +135,13 @@ describe("hasModSlots", () => {
     expect(hasModSlots("operators")).toBe(false)
     expect(hasModSlots("warframes")).toBe(true)
     expect(hasModSlots("railjack")).toBe(true)
+  })
+})
+
+describe("operatorAmpLabel", () => {
+  it("names prebuilts and keeps modular shorthand", () => {
+    expect(operatorAmpLabel("mote-amp")).toBe("Mote Amp")
+    expect(operatorAmpLabel("sirocco")).toBe("Sirocco")
+    expect(operatorAmpLabel("7-6-1")).toBe("Amp 7-6-1")
   })
 })

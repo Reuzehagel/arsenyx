@@ -3,6 +3,10 @@ import {
   getIncarnonPerkDescription,
   type IncarnonPerk,
 } from "@arsenyx/shared/warframe/incarnon-data"
+import {
+  FOCUS_SCHOOLS,
+  operatorAmpLabel,
+} from "@arsenyx/shared/warframe/operator-loadout"
 import type { Ability, LichBonusElement } from "@arsenyx/shared/warframe/types"
 import { isZawStrike } from "@arsenyx/shared/warframe/zaw-data"
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
@@ -41,6 +45,8 @@ export function EmbedStrips({
   incarnonEnabled,
   incarnonPerks,
   lichBonusElement,
+  operatorAmp,
+  focusSchool,
   slug,
 }: {
   category: string
@@ -56,6 +62,8 @@ export function EmbedStrips({
   incarnonEnabled: boolean
   incarnonPerks: (string | null)[]
   lichBonusElement: LichBonusElement | null
+  operatorAmp?: string
+  focusSchool?: string
   slug: string
 }) {
   // Which curated strip (if any) applies. Each flag mirrors that strip's own
@@ -75,7 +83,9 @@ export function EmbedStrips({
     Boolean(kitgunComponents)
   const showIncarnonStrip = incarnonEnabled && incarnonPerks.some(Boolean)
   const showLichStrip = lichBonusElement !== null
+  const showOperatorStrip = category === "operators" && Boolean(operatorAmp)
   const showAnyStrip =
+    showOperatorStrip ||
     showWarframeStrip ||
     showZawStrip ||
     showKitgunStrip ||
@@ -130,6 +140,22 @@ export function EmbedStrips({
           itemImageName={itemImageName}
           slug={slug}
         />
+      )}
+      {showOperatorStrip && operatorAmp && (
+        <EmbedStripFrame
+          itemName={itemName}
+          itemImageName={itemImageName}
+          slug={slug}
+        >
+          <span className="text-sm font-medium">
+            {[
+              FOCUS_SCHOOLS.find((s) => s.value === focusSchool)?.label,
+              operatorAmpLabel(operatorAmp),
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </span>
+        </EmbedStripFrame>
       )}
       {!showAnyStrip && (
         <EmbedStripFrame

@@ -87,24 +87,27 @@ export function BuildSurface({
   conflicts,
 }: BuildSurfaceProps) {
   const readOnly = mode === "view"
+  // Mod-less categories (Operators) have a short sidebar that holds their
+  // main config (Focus School, Amp), so it stays inline at every width
+  // instead of collapsing into the Stats popover.
+  const modded = hasModSlots(category)
 
   return (
     <div
       className={cn(
         "flex flex-col gap-4",
         !embed &&
-          (!hasModSlots(category)
-            ? "xl:grid xl:grid-cols-[260px_minmax(0,1fr)] xl:items-stretch xl:gap-4"
-            : "xl:relative xl:block"),
+          (modded
+            ? "xl:relative xl:block"
+            : "xl:grid xl:grid-cols-[260px_minmax(0,1fr)] xl:items-start xl:gap-4"),
       )}
     >
       {!embed && (
         <div
           className={cn(
-            "flex w-full flex-col sm:hidden xl:flex xl:w-[260px]",
-            !hasModSlots(category)
-              ? "xl:static"
-              : "xl:absolute xl:top-0 xl:bottom-0 xl:left-0",
+            "flex w-full flex-col xl:w-[260px]",
+            modded &&
+              "sm:hidden xl:absolute xl:top-0 xl:bottom-0 xl:left-0 xl:flex",
           )}
         >
           <ItemSidebar {...sidebarProps} />
@@ -115,7 +118,7 @@ export function BuildSurface({
         className={cn(
           "bg-card @container/loadout flex min-w-0 flex-1 flex-col gap-3 overflow-hidden rounded-lg border",
           readOnly ? "p-[clamp(0.5rem,1.5vw,1rem)]" : "p-2 sm:p-4",
-          !embed && hasModSlots(category) && "xl:ml-[calc(260px+1rem)]",
+          !embed && modded && "xl:ml-[calc(260px+1rem)]",
         )}
         onClick={
           readOnly
@@ -136,31 +139,37 @@ export function BuildSurface({
           // centered while reserving a no-go zone on the left — without it,
           // builds with many variants slide a tab under the button.
           <div className="relative flex min-h-8 items-center justify-center sm:px-24 xl:px-0">
-            <ItemSidebarPopover
-              {...sidebarProps}
-              className={cn(
-                "absolute top-0 left-0",
-                !embed && "hidden sm:inline-flex xl:hidden",
-              )}
-            />
+            {modded && (
+              <ItemSidebarPopover
+                {...sidebarProps}
+                className={cn(
+                  "absolute top-0 left-0",
+                  !embed && "hidden sm:inline-flex xl:hidden",
+                )}
+              />
+            )}
             {topBar}
           </div>
         ) : topBarLayout === "row" ? (
           <div className="flex items-center gap-2">
-            <ItemSidebarPopover
-              {...sidebarProps}
-              className="hidden shrink-0 sm:inline-flex xl:hidden"
-            />
+            {modded && (
+              <ItemSidebarPopover
+                {...sidebarProps}
+                className="hidden shrink-0 sm:inline-flex xl:hidden"
+              />
+            )}
             {topBar && <div className="min-w-0 flex-1">{topBar}</div>}
           </div>
         ) : (
-          <ItemSidebarPopover
-            {...sidebarProps}
-            className={cn(
-              "self-start",
-              !embed && "hidden sm:inline-flex xl:hidden",
-            )}
-          />
+          modded && (
+            <ItemSidebarPopover
+              {...sidebarProps}
+              className={cn(
+                "self-start",
+                !embed && "hidden sm:inline-flex xl:hidden",
+              )}
+            />
+          )
         )}
 
         {conflicts && (
@@ -189,7 +198,7 @@ export function BuildSurface({
           }
         />
 
-        {!readOnly && hasModSlots(category) && <KeyboardHintsStrip />}
+        {!readOnly && modded && <KeyboardHintsStrip />}
       </div>
     </div>
   )

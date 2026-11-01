@@ -206,6 +206,7 @@ export function ItemSidebar({
   // Distinguish archwing *suits* (have health) from arch-guns / arch-melee
   // (have attack data). Both share the `archwing` browse category.
   const hasWeaponData = itemHasWeaponData(item)
+  const hasStats = hasModSlots(category)
   const isArchwingSuit =
     category === "archwing" && !hasWeaponData && item.health !== undefined
   const isWarframe =
@@ -631,9 +632,15 @@ export function ItemSidebar({
         )}
 
         {/* `sm:flex` is unconditional so desktop visibility never depends on
-            `statsExpanded` — the toggle that flips it is `sm:hidden`. */}
+            `statsExpanded` — the toggle that flips it is `sm:hidden`. Operators
+            have no stat panel, so the whole section (and its toggle) is
+            skipped. */}
         <div
-          className={cn("flex-col sm:flex", statsExpanded ? "flex" : "hidden")}
+          className={cn(
+            "flex-col sm:flex",
+            statsExpanded ? "flex" : "hidden",
+            !hasStats && "sm:hidden",
+          )}
         >
           <Separator />
           <div className="flex flex-col gap-3 p-3">
@@ -686,7 +693,7 @@ export function ItemSidebar({
           </div>
         </div>
       </div>
-      {!bare && (
+      {!bare && hasStats && (
         <button
           type="button"
           onClick={() => setStatsExpanded((v) => !v)}
