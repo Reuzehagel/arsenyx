@@ -49,6 +49,7 @@
     "Soaring Truth (/Lotus/Upgrades/Mods/Syndicate/BallisticaMod)",
     "Transmute Core (/Lotus/Upgrades/Mods/TransmuteCores/BaseTransmuteCore)"
   ],
+  "abilityStatsUnhandled": [],
   "skippedModularComponents": [
     "ADRA MUTAGEN",
     "ARIOLI MUTAGEN",
