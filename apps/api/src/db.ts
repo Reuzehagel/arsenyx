@@ -99,6 +99,9 @@ export function registerBackgroundWork(promise: Promise<unknown>): void {
 
 export const prisma = new Proxy({} as PrismaClient, {
   get(_, prop) {
+    // Better Auth's prisma adapter reads this at betterAuth() init (module
+    // load, outside withPrisma) for an optional schema check; skip the check.
+    if (prop === "_runtimeDataModel") return undefined
     return Reflect.get(currentClient() as object, prop)
   },
 })

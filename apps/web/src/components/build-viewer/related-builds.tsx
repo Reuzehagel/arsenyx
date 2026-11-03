@@ -128,7 +128,7 @@ export function RelatedBuildsStrip({
           </ul>
         )
       ) : (
-        <ul className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:thin]">
+        <ul className="-mx-1 flex [scrollbar-width:thin] gap-2 overflow-x-auto px-1 pb-1">
           {rows.map((r) => (
             <li key={r.build.slug} className="w-80 shrink-0">
               <RelatedBuildChip {...r} />

@@ -19,7 +19,10 @@
     "import/no-unassigned-import": "off",
     "import/no-named-as-default-member": "off",
     "no-shadow": "off",
-    "no-underscore-dangle": "off"
+    "no-underscore-dangle": "off",
+    "react/refs": "off",
+    "react/immutability": "off",
+    "react/set-state-in-effect": "off"
   },
   "ignorePatterns": [
     "build/",

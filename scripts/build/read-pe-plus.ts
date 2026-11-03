@@ -62,10 +62,10 @@ export function readPePlusUpgrades(): Map<string, PePlusUpgradeFields> {
     const fields: PePlusUpgradeFields = {}
     if (entry.compat) fields.compat = entry.compat
     if (entry.compatibilityTags?.length) {
-      fields.compatibilityTags = entry.compatibilityTags
+      fields.compatibilityTags = [...entry.compatibilityTags]
     }
     if (entry.incompatibilityTags?.length) {
-      fields.incompatibilityTags = entry.incompatibilityTags
+      fields.incompatibilityTags = [...entry.incompatibilityTags]
     }
     if (Object.keys(fields).length > 0) out.set(uniqueName, fields)
   }
@@ -84,7 +84,7 @@ export function readPePlusWeaponTags(): Map<string, string[]> {
     ExportWeapons as Record<string, IWeapon>,
   )) {
     if (entry.compatibilityTags?.length) {
-      out.set(uniqueName, entry.compatibilityTags)
+      out.set(uniqueName, [...entry.compatibilityTags])
     }
   }
   return out
