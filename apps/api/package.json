@@ -14,8 +14,8 @@
   },
   "dependencies": {
     "@arsenyx/shared": "workspace:*",
-    "@prisma/adapter-pg": "7.8.0",
-    "@prisma/client": "7.8.0",
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
     "better-auth": "^1.7.15",
     "hono": "^4.13.16",
     "nanoid": "^5.1.16",
@@ -26,7 +26,7 @@
     "@types/bun": "^1.4.4",
     "@types/pg": "^8.23.1",
     "dotenv": "^16.6.1",
-    "prisma": "7.8.0",
+    "prisma": "7.10.1",
     "typescript": "^5.9.3",
     "vitest": "^4.1.12",
     "wrangler": "^4.157.0"
