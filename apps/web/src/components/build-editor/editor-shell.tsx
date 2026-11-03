@@ -1,5 +1,6 @@
 import { getBlockedByConflict } from "@arsenyx/shared/warframe/mods"
 import { isRivenMod } from "@arsenyx/shared/warframe/rivens"
+import { hasModSlots } from "@arsenyx/shared/warframe/slot-layout"
 import type { Mod } from "@arsenyx/shared/warframe/types"
 import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
@@ -528,7 +529,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
           via `select-text` so the markdown textarea behaves normally.
         */}
         <div className="flex flex-col gap-4 select-none">
-          <KeyboardHintBanner />
+          {hasModSlots(category) && <KeyboardHintBanner />}
           <BuildSurface
             mode="edit"
             item={effectiveItem}
@@ -569,6 +570,10 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
               onSetIncarnonPerk: extras.setIncarnonPerkAt,
               deploymentContext: extras.deploymentContext,
               onSetDeploymentContext: extras.setDeploymentContext,
+              operatorAmp: extras.operatorAmp,
+              onSetOperatorAmp: extras.setOperatorAmp,
+              focusSchool: extras.focusSchool,
+              onSetFocusSchool: extras.setFocusSchool,
               placedMods: slots.placed,
               placedArcanes: arcanes.placed,
               formAbilities,
@@ -595,54 +600,56 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
             conflicts={conflictMap}
           />
 
-          <div
-            ref={searchPanelRef}
-            className={cn(
-              "bg-card scroll-mt-4 rounded-lg border p-4",
-              alternateFor && "border-primary/60",
-            )}
-          >
-            <SearchPanel
-              item={item}
-              category={category}
-              usedModNames={slots.usedNames}
-              conflictUniqueNames={conflictUniqueNames}
-              onSelect={handleModSelect}
-              helminth={extras.helminth}
-              selectedSlotKind={
-                // Plexus slot pools are governed by `selectedPlexusGroup`,
-                // not by the generic aura/exilus/stance predicates — those
-                // would dim every Plexus mod (none carry compatName=AURA).
-                category === "railjack"
-                  ? undefined
-                  : pickerSlot
-                    ? slotKind(pickerSlot)
+          {hasModSlots(category) && (
+            <div
+              ref={searchPanelRef}
+              className={cn(
+                "bg-card scroll-mt-4 rounded-lg border p-4",
+                alternateFor && "border-primary/60",
+              )}
+            >
+              <SearchPanel
+                item={item}
+                category={category}
+                usedModNames={slots.usedNames}
+                conflictUniqueNames={conflictUniqueNames}
+                onSelect={handleModSelect}
+                helminth={extras.helminth}
+                selectedSlotKind={
+                  // Plexus slot pools are governed by `selectedPlexusGroup`,
+                  // not by the generic aura/exilus/stance predicates — those
+                  // would dim every Plexus mod (none carry compatName=AURA).
+                  category === "railjack"
+                    ? undefined
+                    : pickerSlot
+                      ? slotKind(pickerSlot)
+                      : undefined
+                }
+                selectedSlot={pickerSlot}
+                selectedPlexusGroup={(() => {
+                  if (category !== "railjack" || !pickerSlot) return undefined
+                  // Aura slot lives inside the Integrated tab.
+                  if (pickerSlot.startsWith("aura-")) return "integrated"
+                  const m = /^normal-(\d+)$/.exec(pickerSlot)
+                  if (!m) return undefined
+                  const idx = Number(m[1])
+                  return getPlexusGroupForIndex(category, idx) ?? undefined
+                })()}
+                plexusFillCounts={plexusFillCounts}
+                selectedIsPlexusAura={
+                  category === "railjack" && !!pickerSlot?.startsWith("aura-")
+                }
+                alternateMode={
+                  alternateFor
+                    ? {
+                        forModName: slots.placed[alternateFor]!.mod.name,
+                        onCancel: () => setAlternateFor(null),
+                      }
                     : undefined
-              }
-              selectedSlot={pickerSlot}
-              selectedPlexusGroup={(() => {
-                if (category !== "railjack" || !pickerSlot) return undefined
-                // Aura slot lives inside the Integrated tab.
-                if (pickerSlot.startsWith("aura-")) return "integrated"
-                const m = /^normal-(\d+)$/.exec(pickerSlot)
-                if (!m) return undefined
-                const idx = Number(m[1])
-                return getPlexusGroupForIndex(category, idx) ?? undefined
-              })()}
-              plexusFillCounts={plexusFillCounts}
-              selectedIsPlexusAura={
-                category === "railjack" && !!pickerSlot?.startsWith("aura-")
-              }
-              alternateMode={
-                alternateFor
-                  ? {
-                      forModName: slots.placed[alternateFor]!.mod.name,
-                      onCancel: () => setAlternateFor(null),
-                    }
-                  : undefined
-              }
-            />
-          </div>
+                }
+              />
+            </div>
+          )}
 
           <div className="bg-card rounded-lg border p-4 select-text">
             <GuideEditor

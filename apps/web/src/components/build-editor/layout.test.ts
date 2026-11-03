@@ -28,6 +28,10 @@ const ARCANES: Arcane[] = [
   arc("Exodia Force", "Zaw", "Offensive"),
   arc("Primary Merciless", "Primary", "Offensive"),
   arc("Longbow Sharpshot", "Bow", "Offensive"),
+  arc("Magus Lockdown", "Operator", "Utility"),
+  arc("Emergence Dissipate", "Operator", "Utility"),
+  arc("Virtuos Shadow", "Amp", "Offensive"),
+  arc("Eternal Onslaught", "Amp", "Offensive"),
 ]
 
 const ZAW_STRIKE: Pick<DetailItem, "name" | "displayClass" | "uniqueName"> = {
@@ -375,6 +379,49 @@ describe("getArcaneSlotConfig — kitgun split", () => {
     expect(cfg.options[1]!.map((a) => a.name)).toEqual([
       "Pax Bolt",
       "Residual Boils",
+    ])
+  })
+})
+
+describe("Operator arcane routing", () => {
+  it("gives Operator builds four arcane slots", () => {
+    expect(
+      getArcaneSlotCount("operators", {
+        displayClass: "Operator",
+        uniqueName:
+          "/Lotus/Types/Game/CharacterCustomization/Operator/Operator",
+      }),
+    ).toBe(4)
+  })
+
+  it("separates Operator and Amp arcanes into their own slots", () => {
+    const cfg = getArcaneSlotConfig(ARCANES, "operators", 4)
+
+    expect(cfg.labels).toEqual([
+      "Operator Arcane 1",
+      "Operator Arcane 2",
+      "Amp Arcane 1",
+      "Amp Arcane 2",
+    ])
+
+    expect(cfg.options[0]!.map((a) => a.name)).toEqual([
+      "Magus Lockdown",
+      "Emergence Dissipate",
+    ])
+
+    expect(cfg.options[1]!.map((a) => a.name)).toEqual([
+      "Magus Lockdown",
+      "Emergence Dissipate",
+    ])
+
+    expect(cfg.options[2]!.map((a) => a.name)).toEqual([
+      "Virtuos Shadow",
+      "Eternal Onslaught",
+    ])
+
+    expect(cfg.options[3]!.map((a) => a.name)).toEqual([
+      "Virtuos Shadow",
+      "Eternal Onslaught",
     ])
   })
 })

@@ -32,6 +32,8 @@ type EditorHistorySnapshot = {
   incarnonEnabled: boolean
   incarnonPerks: (string | null)[]
   deploymentContext: DeploymentContext
+  operatorAmp: string | undefined
+  focusSchool: string | undefined
 }
 
 // Field-wise reference equality. Sound because every snapshot field is a value
@@ -73,6 +75,8 @@ export function useEditorUndo({
     incarnonEnabled: extras.incarnonEnabled,
     incarnonPerks: extras.incarnonPerks,
     deploymentContext: extras.deploymentContext,
+    operatorAmp: extras.operatorAmp,
+    focusSchool: extras.focusSchool,
   })
 
   const applyHistorySnapshot = (s: EditorHistorySnapshot) => {
@@ -88,6 +92,8 @@ export function useEditorUndo({
     extras.setIncarnonEnabled(s.incarnonEnabled)
     extras.setIncarnonPerks(s.incarnonPerks)
     extras.setDeploymentContext(s.deploymentContext)
+    extras.setOperatorAmp(s.operatorAmp)
+    extras.setFocusSchool(s.focusSchool)
   }
 
   // Seed the baseline from the mount snapshot (lazy init runs once). Every
@@ -129,6 +135,8 @@ export function useEditorUndo({
     extras.incarnonEnabled,
     extras.incarnonPerks,
     extras.deploymentContext,
+    extras.operatorAmp,
+    extras.focusSchool,
   ])
 
   // Ctrl/Cmd+Z undoes, Ctrl/Cmd+Shift+Z (or Ctrl+Y on Windows) redoes. Left to

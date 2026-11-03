@@ -2,6 +2,7 @@
 
 export type BrowseCategory =
   | "warframes"
+  | "operators"
   | "primary"
   | "secondary"
   | "melee"
@@ -542,6 +543,8 @@ export interface BuildState {
   // Arch-Gun deployment context. Only meaningful for arch-guns with a
   // divergent atmospheric damage profile.
   deploymentContext?: DeploymentContext
+  operatorAmp?: string
+  focusSchool?: string
 }
 
 export type DeploymentContext = "archwing" | "atmospheric"

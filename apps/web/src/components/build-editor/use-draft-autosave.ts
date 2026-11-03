@@ -74,6 +74,8 @@ export function useDraftAutosave({
     extras.incarnonEnabled,
     extras.incarnonPerks,
     extras.deploymentContext,
+    extras.operatorAmp,
+    extras.focusSchool,
     variants,
     clampedActiveIndex,
   ]

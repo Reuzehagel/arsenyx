@@ -158,7 +158,14 @@ export function ModGrid({
     category !== "railjack" && (auraSlotCount > 0 || showExilus || showStance)
 
   return (
-    <div className="flex flex-col gap-6">
+    <div
+      className={cn(
+        "flex flex-col gap-6",
+        // Mod-less (Operators): fill the card stretched to the sidebar height
+        // and center the arcane row in it.
+        normalSlotCount === 0 && "flex-1 justify-center",
+      )}
+    >
       {showTopExtrasRow && (
         <div className="flex w-full flex-wrap justify-center gap-4">
           {auraSlotCount > 0 && (
@@ -258,22 +265,28 @@ export function ModGrid({
           })()}
         </div>
       ) : (
-        <div
-          className={cn(
-            // Fixed upper bound = max column count × card width + gaps.
-            // A single max-width means the grid never snaps wider — flex-wrap
-            // handles 2→3→4 reflow within the same boundary.
-            "mx-auto flex flex-wrap justify-center gap-x-4 gap-y-6",
-            isCompanion ? "max-w-[984px]" : "max-w-[784px]",
-          )}
-        >
-          {Array.from({ length: normalSlotCount }, (_, i) => {
-            const id: SlotId = `normal-${i}`
-            return (
-              <ModSlot key={i} {...slotProps(id, toPolarity(polarities[i]))} />
-            )
-          })}
-        </div>
+        // Mod-less categories (Operators) skip the empty grid and its gap.
+        normalSlotCount > 0 && (
+          <div
+            className={cn(
+              // Fixed upper bound = max column count × card width + gaps.
+              // A single max-width means the grid never snaps wider — flex-wrap
+              // handles 2→3→4 reflow within the same boundary.
+              "mx-auto flex flex-wrap justify-center gap-x-4 gap-y-6",
+              isCompanion ? "max-w-[984px]" : "max-w-[784px]",
+            )}
+          >
+            {Array.from({ length: normalSlotCount }, (_, i) => {
+              const id: SlotId = `normal-${i}`
+              return (
+                <ModSlot
+                  key={i}
+                  {...slotProps(id, toPolarity(polarities[i]))}
+                />
+              )
+            })}
+          </div>
+        )
       )}
 
       {arcaneRow}

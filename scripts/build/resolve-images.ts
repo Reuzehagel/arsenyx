@@ -55,6 +55,9 @@ export async function resolveImages(opts: {
   wikiArcanesBlob: unknown
   /** curated.exaltedStances — only `wikiImage` is read here. */
   exaltedStances: Record<string, { wikiImage: string }>
+  /** uniqueName → wiki Image filename for records the wiki ships with an
+   *  empty InternalName (Operators), which the module walk above can't key. */
+  operatorWikiImages: ReadonlyMap<string, string>
   /** Path to data/curated/wiki-image-urls.json. */
   cachePath: string
   /** Re-resolve every filename, not just cache misses (full data:refresh). */
@@ -68,6 +71,7 @@ export async function resolveImages(opts: {
     wikiModsBlob,
     wikiArcanesBlob,
     exaltedStances,
+    operatorWikiImages,
     cachePath,
     refresh = false,
   } = opts
@@ -106,6 +110,12 @@ export async function resolveImages(opts: {
     const key = exaltedStanceImageKey(wikiImage)
     if (!wikiImageFileByUniqueName.has(key)) {
       wikiImageFileByUniqueName.set(key, wikiImage)
+    }
+  }
+
+  for (const [un, image] of operatorWikiImages) {
+    if (!wikiImageFileByUniqueName.has(un)) {
+      wikiImageFileByUniqueName.set(un, image)
     }
   }
 

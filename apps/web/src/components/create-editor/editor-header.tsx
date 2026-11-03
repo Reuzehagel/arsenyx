@@ -1,3 +1,4 @@
+import { hasModSlots } from "@arsenyx/shared/warframe/slot-layout"
 import { Link as RouterLink } from "@tanstack/react-router"
 import {
   Pencil,
@@ -23,6 +24,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { formatVisibility } from "@/lib/util/user-display"
+import { cn } from "@/lib/util/utils"
 import {
   getImageUrl,
   type BrowseCategory,
@@ -123,7 +125,11 @@ export function EditorHeader({
             <img
               src={getImageUrl(displayImageName ?? item.imageName)}
               alt={item.name}
-              className="h-full w-full object-cover"
+              className={cn(
+                "h-full w-full object-cover",
+                // Operator portraits are full-body busts; centering crops to the chest.
+                category === "operators" && "object-top",
+              )}
             />
           </div>
           <div className="flex min-w-0 flex-col justify-center gap-2">
@@ -159,13 +165,17 @@ export function EditorHeader({
               )}
             </div>
             <span className="text-muted-foreground text-sm">
-              {item.name} · {categoryLabel}
+              {item.name}
+              {/* "Operator · Operators" reads as a stutter — skip the echo. */}
+              {!categoryLabel.startsWith(item.name) && ` · ${categoryLabel}`}
             </span>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-              <EndoFormaBadges
-                totalEndoCost={totalEndoCost}
-                formaCount={formaCount}
-              />
+              {hasModSlots(category) && (
+                <EndoFormaBadges
+                  totalEndoCost={totalEndoCost}
+                  formaCount={formaCount}
+                />
+              )}
               {draft ? (
                 <span className="inline-flex items-center gap-1">
                   <Hint label="Unsaved changes restored from a previous session">

@@ -158,6 +158,7 @@ export interface FrameForm {
 // live in the catalog but are not browseable items.
 const CATEGORY_TAB_ORDER = [
   "warframes",
+  "operators",
   "primary",
   "secondary",
   "melee",

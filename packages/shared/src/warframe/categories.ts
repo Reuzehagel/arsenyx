@@ -8,6 +8,7 @@ import type { BrowseCategory } from "./types"
  */
 export const CATEGORY_LABELS: Record<BrowseCategory, string> = {
   warframes: "Warframes",
+  operators: "Operators",
   primary: "Primary",
   secondary: "Secondary",
   melee: "Melee",

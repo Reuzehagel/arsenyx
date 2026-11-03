@@ -104,6 +104,8 @@ export function useBuildSave({
       incarnonEnabled: extras.incarnonEnabled,
       incarnonPerks: extras.incarnonPerks,
       deploymentContext: extras.deploymentContext,
+      operatorAmp: extras.operatorAmp,
+      focusSchool: extras.focusSchool,
       normalSlotCount: layout.normalSlotCount,
       auraSlotCount: layout.auraSlotCount,
       showStance: layout.showStance,

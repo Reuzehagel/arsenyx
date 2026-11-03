@@ -1,3 +1,4 @@
+import { hasModSlots } from "@arsenyx/shared/warframe/slot-layout"
 import { Link as RouterLink } from "@tanstack/react-router"
 import { Pencil } from "lucide-react"
 
@@ -13,6 +14,7 @@ import {
 import type { BuildDetail } from "@/lib/queries/build-query"
 import { formatAbsoluteTime, relativeTime } from "@/lib/util/relative-time"
 import { formatVisibility } from "@/lib/util/user-display"
+import { cn } from "@/lib/util/utils"
 import { getImageUrl, type BrowseCategory } from "@/lib/warframe"
 
 import { BuildActionsMenu } from "./build-actions-menu"
@@ -56,7 +58,11 @@ export function ViewerHeader({
               <img
                 src={getImageUrl(headerImage)}
                 alt={build.item.name}
-                className="h-full w-full object-cover"
+                className={cn(
+                  "h-full w-full object-cover",
+                  // Operator portraits are full-body busts; centering crops to the chest.
+                  category === "operators" && "object-top",
+                )}
               />
             ) : null}
           </div>
@@ -118,10 +124,12 @@ export function ViewerHeader({
                 text rather than competing as bordered badges — the header read
                 as four stacked pills before. */}
             <div className="text-muted-foreground flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs">
-              <EndoFormaBadges
-                totalEndoCost={totalEndoCost}
-                formaCount={formaCount}
-              />
+              {hasModSlots(category) && (
+                <EndoFormaBadges
+                  totalEndoCost={totalEndoCost}
+                  formaCount={formaCount}
+                />
+              )}
               {/* Like count lives on the ♥ button below — don't repeat it
                   here. Views aren't shown anywhere else, so they stay. */}
               <span>{build.viewCount.toLocaleString("en-US")} views</span>

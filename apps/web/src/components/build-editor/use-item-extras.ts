@@ -9,6 +9,11 @@ import {
   kitgunGripsFor,
 } from "@arsenyx/shared/warframe/kitgun-data"
 import {
+  DEFAULT_OPERATOR_AMP,
+  parseFocusSchool,
+  parseOperatorAmp,
+} from "@arsenyx/shared/warframe/operator-loadout"
+import {
   DEFAULT_DEPLOYMENT_CONTEXT,
   type DeploymentContext,
   type LichBonusElement,
@@ -146,6 +151,20 @@ export function useItemExtras({
     () => savedData.deploymentContext ?? DEFAULT_DEPLOYMENT_CONTEXT,
   )
 
+  // Operator-only; left undefined elsewhere so non-Operator builds and share
+  // links never carry an Amp.
+  const [operatorAmp, setOperatorAmp] = useState<string | undefined>(() =>
+    category === "operators"
+      ? (parseOperatorAmp(savedData.operatorAmp) ?? DEFAULT_OPERATOR_AMP)
+      : undefined,
+  )
+  // Unset until picked — there's no sensible default school.
+  const [focusSchool, setFocusSchool] = useState<string | undefined>(() =>
+    category === "operators"
+      ? parseFocusSchool(savedData.focusSchool)
+      : undefined,
+  )
+
   const incarnonBaseName = getIncarnonBaseName(item.name)
   const incarnonAdapterImage =
     incarnonEnabled && incarnonBaseName
@@ -186,6 +205,10 @@ export function useItemExtras({
     setIncarnonPerkAt,
     deploymentContext,
     setDeploymentContext,
+    operatorAmp,
+    setOperatorAmp,
+    focusSchool,
+    setFocusSchool,
     helminth,
     setHelminth,
     setHelminthAt,

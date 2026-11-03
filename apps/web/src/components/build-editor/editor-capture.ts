@@ -55,6 +55,8 @@ export function makeEditorCapture({
         incarnonEnabled: extras.incarnonEnabled,
         incarnonPerks: extras.incarnonPerks,
         deploymentContext: extras.deploymentContext,
+        operatorAmp: extras.operatorAmp,
+        focusSchool: extras.focusSchool,
         // formIndex is a variant property (set via the form selector), not
         // live editor state — preserve it from the existing variant.
         formIndex: existing?.formIndex,
@@ -98,6 +100,8 @@ export function makeEditorCapture({
       incarnonEnabled: extras.incarnonEnabled,
       incarnonPerks: extras.incarnonPerks,
       deploymentContext: extras.deploymentContext,
+      operatorAmp: extras.operatorAmp,
+      focusSchool: extras.focusSchool,
       guideRefs,
       // Emit `variants` whenever there's more than one OR the single
       // remaining variant has a user-assigned label/id — otherwise the
