@@ -55,7 +55,7 @@ function checkoutDb(): string {
   if (url.hostname !== "localhost" || url.port !== "54320") {
     throw new Error(
       `DATABASE_URL host "${url.hostname}:${url.port}" is not the local dev container ` +
-        `(localhost:54320) — refusing to touch it.`,
+        `(localhost:54320) — refusing to touch it. Run \`just setup\` to repoint this checkout.`,
     )
   }
   return url.pathname.slice(1)
