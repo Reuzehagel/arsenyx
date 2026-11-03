@@ -89,13 +89,27 @@ export const Route = createFileRoute("/builds/$slug")({
       // useQuery with no height reservation, so warming it here lets it paint at
       // its final height on first render instead of fetching after the route
       // commits and shoving the guide + footer down — the build pages' dominant
-      // remaining CLS. Cheap and edge-cached (api builds.ts `/partners`), and it
-      // resolves within the static-file window so it adds ~no navigation latency.
+      // remaining CLS. The detail payload already carries the strip, so seed
+      // it from there instead of a second API request (each API cache miss pays
+      // a fixed Worker CPU cost). Falls back to fetching when it's absent.
+      const partnersKey = partnerBuildsQuery(params.slug).queryKey
+      const buildUpdatedAt =
+        qc.getQueryState(buildQuery(params.slug).queryKey)?.dataUpdatedAt ?? 0
+      const seedPartners =
+        !deps.embed &&
+        build.partners != null &&
+        // Don't clobber a newer copy (e.g. refetched after an editor mutation).
+        (qc.getQueryState(partnersKey)?.dataUpdatedAt ?? 0) < buildUpdatedAt
+      if (seedPartners) {
+        qc.setQueryData(partnersKey, build.partners, {
+          updatedAt: buildUpdatedAt,
+        })
+      }
       await Promise.all([
         qc.prefetchQuery(itemQuery(category, itemSlug)),
         qc.prefetchQuery(imageMapQuery),
         qc.prefetchQuery(modConflictsQuery),
-        ...(deps.embed
+        ...(deps.embed || seedPartners
           ? []
           : [qc.prefetchQuery(partnerBuildsQuery(params.slug))]),
       ])
