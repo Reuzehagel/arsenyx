@@ -22,17 +22,6 @@
     <!-- Warm the connections the embed needs before first paint. -->
     <link rel="preconnect" href="https://api.arsenyx.com" />
     <link rel="preconnect" href="https://img.arsenyx.com" />
-    <!-- Load Geist non-render-blocking: the embed paints immediately in the
-         system font and swaps when Geist arrives (minor FOUT), so a slow font
-         server never holds up the loadout. -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap"
-      media="print"
-      onload="this.media='all'"
-    />
   </head>
   <body class="antialiased">
     <div id="root"></div>

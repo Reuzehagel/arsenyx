@@ -4,7 +4,9 @@
 // www origin and injects per-page <title>/<meta>/<link rel=canonical> into
 // the SPA shell so crawlers and unfurl bots get real metadata in the initial
 // HTML response — no JS rendering required. Every user agent gets the same
-// rewritten HTML (serving it to bots only would be cloaking).
+// page body; the one split is that real browsers skip the build-page API wait
+// and get default head meta, which the client replaces with the same values
+// (see isBrowserNavigation).
 //
 // Titles/canonicals/og tags here mirror the client-side route heads
 // (src/routes/*.tsx `head` options + src/lib/seo.ts) — keep them in sync. Build
@@ -238,6 +240,14 @@ async function handleBuildPage(
     if (hit) return hit
   }
 
+  // A person's browser doesn't read the injected meta — <HeadContent /> sets
+  // the same title/canonical client-side — so don't make them wait on the API
+  // round-trip (0.2–1s on a colo miss) for it. Crawlers and unfurl bots still
+  // take the enriched path below; the page body is identical either way.
+  if (isBrowserNavigation(request)) {
+    return rewriteMeta(await env.ASSETS.fetch(request), {})
+  }
+
   // Kick off the OG image-map fetch up front so it overlaps the asset + API
   // fetches below; only the PUBLIC branch awaits it. fetchImageMap never
   // rejects (returns null on error), so the not-found / non-public early
@@ -315,6 +325,20 @@ function allowPartnerFraming(res: Response): Response {
     `frame-ancestors ${EMBED_FRAME_ANCESTORS}`,
   )
   return out
+}
+
+// Bot UAs that may still send Sec-Fetch-* (headless-Chrome crawlers/renderers).
+const BOT_UA =
+  /bot|crawl|spider|slurp|facebookexternalhit|embedly|preview|whatsapp|lighthouse|headless/i
+
+// True for a top-level navigation by a real browser. Browsers send
+// Sec-Fetch-Dest: document on navigations; plain-HTTP crawlers and unfurlers
+// (Discord, Twitter, Slack, …) don't, and the UA check catches the
+// Chrome-based ones that do. Erring towards "bot" only costs latency.
+// Exported for unit tests.
+export function isBrowserNavigation(request: Request): boolean {
+  if (request.headers.get("sec-fetch-dest") !== "document") return false
+  return !BOT_UA.test(request.headers.get("user-agent") ?? "")
 }
 
 function extractBuildSlug(pathname: string): string | null {

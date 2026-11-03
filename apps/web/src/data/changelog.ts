@@ -16,6 +16,11 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "fix",
         description:
+          "Pages load faster. Build pages start loading without waiting on the server, the site font is served by Arsenyx instead of Google (so it also works where Google is blocked), and mod card art stays cached between visits.",
+      },
+      {
+        type: "fix",
+        description:
           "Operator cards on the Browse page now show the Operator's head instead of a close-up of the torso.",
       },
       {

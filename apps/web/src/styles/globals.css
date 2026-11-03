@@ -1,13 +1,18 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 @import "tw-animate-css";
+/* Self-hosted: Google Fonts was a render-blocking third-party stylesheet
+   (and unreachable from China). Each subset loads only when its glyphs do. */
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
   --font-geist-sans:
-    "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-geist-mono: "Geist Mono", ui-monospace, SFMono-Regular, monospace;
+    "Geist Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-geist-mono:
+    "Geist Mono Variable", ui-monospace, SFMono-Regular, monospace;
 }
 
 body {

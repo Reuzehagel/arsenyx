@@ -1,6 +1,40 @@
 import { describe, expect, it } from "vitest"
 
-import { buildPageCacheKeyUrl } from "./index"
+import { buildPageCacheKeyUrl, isBrowserNavigation } from "./index"
+
+describe("isBrowserNavigation", () => {
+  const req = (headers: Record<string, string>) =>
+    new Request("https://www.arsenyx.com/builds/x", { headers })
+  const chrome =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36"
+
+  it("fast-paths a real browser navigation", () => {
+    expect(
+      isBrowserNavigation(
+        req({ "sec-fetch-dest": "document", "user-agent": chrome }),
+      ),
+    ).toBe(true)
+  })
+
+  it("keeps the enriched path for unfurlers without Sec-Fetch headers", () => {
+    expect(
+      isBrowserNavigation(
+        req({ "user-agent": "Mozilla/5.0 (compatible; Discordbot/2.0)" }),
+      ),
+    ).toBe(false)
+  })
+
+  it("keeps the enriched path for Chrome-based crawlers that send Sec-Fetch", () => {
+    expect(
+      isBrowserNavigation(
+        req({
+          "sec-fetch-dest": "document",
+          "user-agent": `${chrome} (compatible; Googlebot/2.1)`,
+        }),
+      ),
+    ).toBe(false)
+  })
+})
 
 // The worker itself is bundled by wrangler (not Vite) and lives outside the
 // typecheck/lint graph, so this covers only the pure cache-key logic — the two
