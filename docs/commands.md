@@ -125,6 +125,7 @@ bun run sync:images                # mirror emitted images into R2, rewrite cata
 # guards (CI) + manual-edit helper:
 bun run check:images               # fail if catalog still hotlinks content/wiki.warframe.com
 bun run check:data-version         # fail if catalog changed but meta.json generatedAt didn't
+bun run check:wrangler             # wrangler dry-run of both Workers; fails on config warnings (needs apps/web dist/) — run after editing a wrangler.toml
 bun run data:stamp                 # bump meta.json generatedAt — run after any HAND-edit to apps/web/public/data/
 bun run data:ab [base-ref]          # ship only a pipeline change's catalog delta (see "Shipping a pipeline fix" below)
 bun run data:patch <base> <fixed>  # the patch step data:ab runs, for hand-built snapshots
