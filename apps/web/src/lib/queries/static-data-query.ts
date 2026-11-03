@@ -16,6 +16,7 @@ export function staticDataQuery<T>(
   errMsg: string,
   options?: { notFoundOn404?: boolean },
 ) {
+  // index.html preloads items-index.json by this exact URL; keep the shapes in sync.
   const url = `${path}${path.includes("?") ? "&" : "?"}v=${__DATA_VERSION__}`
   return queryOptions({
     queryKey,

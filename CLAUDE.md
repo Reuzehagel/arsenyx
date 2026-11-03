@@ -46,6 +46,7 @@ Game data is static, user data is dynamic. If something is read-heavy and rarely
 - [docs/hotkeys.md](docs/hotkeys.md) — adding or rebinding a keyboard shortcut
 - [docs/verify-build-editor.md](docs/verify-build-editor.md) — driving the build editor in the browser pane (editor URL, discarding drafts, mod-search selectors)
 - [docs/search.md](docs/search.md) — full-text build search (the tsvector column, trigger, and GIN index live outside Prisma)
+- [docs/web-perf.md](docs/web-perf.md) — page-load performance: bundle breakdown per package, measuring vitals in the browser pane, current baseline
 - [docs/usage-analytics.md](docs/usage-analytics.md) — Cloudflare usage/billing: Worker CPU, edge-cache hit rate, analytics queries
 
 ## Keeping docs fresh
