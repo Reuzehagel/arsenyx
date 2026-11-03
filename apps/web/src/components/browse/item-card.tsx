@@ -32,6 +32,8 @@ export function ItemCard({ item }: ItemCardProps) {
             loading="lazy"
             className={cn(
               "absolute inset-0 h-full w-full object-cover transition-transform duration-200 group-hover:scale-110",
+              // Operator renders are full-body portraits; anchor to the head, not the torso
+              item.category === "operators" && "object-top",
               !item.imageName && "opacity-50",
             )}
           />
