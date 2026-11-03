@@ -27,7 +27,6 @@ bun run cf:usage          # add --daily to split the per-Worker table by day
   - The path key is `$workers.event.path`, not `$workers.event.request.path`.
   - The group limit goes in `parameters.limit`. A top-level `limit` is ignored, and the default is 10 groups. Groups cap at 1000, and grouping by path explodes per slug, so filter by path (`eq`, `includes`, `starts_with`, `regex`) instead.
   - To discover field names: `POST .../telemetry/keys` with `{"timeframe":{...},"datasets":["cloudflare-workers"]}`.
-- Production CPU profiling (`cf workers versions profile latest --worker-id arsenyx-api`) attaches to one isolate picked from any recent location. At this traffic level it lands on an idle one and returns an empty profile, even with test traffic running (tried 2026-11-03). Profile locally instead: run `wrangler dev --inspector-port <port> --var NODE_ENV:production` and drive `Profiler.start` / `Profiler.stop` over CDP while replaying cache-busting reads. Local timings are about 4× lower than production, so compare shares, not milliseconds.
 
 ## Baseline
 
