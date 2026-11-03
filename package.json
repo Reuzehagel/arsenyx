@@ -18,6 +18,7 @@
     "check:native-button": "bun run scripts/check-native-button.ts",
     "check:wrangler": "bun run scripts/check-wrangler.ts",
     "cf:usage": "bun run scripts/cf-usage.ts",
+    "cf:profile": "bun run scripts/cf-profile.ts",
     "data:sync": "bun run scripts/sync-de.ts && bun run scripts/sync-wiki.ts",
     "data:refresh": "bun run scripts/refresh-data.ts",
     "data:stamp": "bun run scripts/stamp-data.ts",

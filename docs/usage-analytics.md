@@ -27,7 +27,6 @@ bun run cf:usage          # add --daily to split the per-Worker table by day
   - The path key is `$workers.event.path`, not `$workers.event.request.path`.
   - The group limit goes in `parameters.limit`. A top-level `limit` is ignored, and the default is 10 groups. Groups cap at 1000, and grouping by path explodes per slug, so filter by path (`eq`, `includes`, `starts_with`, `regex`) instead.
   - To discover field names: `POST .../telemetry/keys` with `{"timeframe":{...},"datasets":["cloudflare-workers"]}`.
-- Production CPU profiling (`cf workers versions profile latest --worker-id arsenyx-api`) attaches to one isolate picked from any recent location. At this traffic level it lands on an idle one and returns an empty profile, even with test traffic running (tried 2026-11-03). Profile locally instead: run `wrangler dev --inspector-port <port> --var NODE_ENV:production` and drive `Profiler.start` / `Profiler.stop` over CDP while replaying cache-busting reads. Local timings are about 4× lower than production, so compare shares, not milliseconds.
 
 ## Baseline
 
@@ -35,3 +34,9 @@ Before #413's TTL bump (detail 120 s, lists 30 s), to compare against:
 
 - Edge cache, 3 days: 5.5% hit, 73% stale (expired), 21% miss.
 - API GET CPU, 24h ending 2026-10-25 11:00 UTC: `/builds/:slug` 54% at 56 ms/req, `/builds/:slug/partners` 29% at 45 ms, `/builds` 8% at 74 ms, `/users/*` 4%, `/auth/get-session` 2% at 12 ms. Total 2.45M CPU-ms over 50k requests.
+
+## Profiling
+
+`bun run cf:profile` CPU-profiles the local API ([scripts/cf-profile.ts](../scripts/cf-profile.ts); usage in its header). Production capture (`cf workers versions profile`) isn't the route: at our traffic it attaches to an idle isolate and returns an empty profile.
+
+Profile of a cache-missing build read (2026-11-03): about half the CPU is per-request setup, not route logic. Connection plus password hash ~30%, `createPrismaClient` ~10%, Prisma's per-client query planning ~10%. So the lever is fewer misses per page view, not faster queries.
