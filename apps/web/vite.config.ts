@@ -123,7 +123,7 @@ function versionFile(): Plugin {
       // disable update detection for every client with no other signal.
       // `this.error` throws (aborts the build); `this.warn` would only log and
       // still emit the broken file. Fires if the `main` rollup input key
-      // (build.rollupOptions.input) is ever renamed.
+      // (build.rolldownOptions.input) is ever renamed.
       if (!main) {
         this.error(
           "versionFile: no `main` entry chunk found; /version.json won't detect deploys",
@@ -172,7 +172,7 @@ export default defineConfig({
     // via autoCodeSplitting. Vendor manualChunks were tried and reverted —
     // they only shuffle code into eager modulepreloads, growing first paint.
     chunkSizeWarningLimit: 700,
-    rollupOptions: {
+    rolldownOptions: {
       // Two entries: the full SPA (index.html) and a lightweight read-only
       // viewer (embed.html → src/embed-main.tsx) the Worker serves for
       // `/builds/:slug?embed=1`. The embed entry has its own (much smaller)

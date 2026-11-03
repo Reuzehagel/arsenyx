@@ -72,3 +72,6 @@ skills-lock.json
 docs/superpowers/
 /plans/
 .scratch/
+
+# Vitest 5 artifacts
+.vitest/
