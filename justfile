@@ -104,6 +104,11 @@ test: deps
     bun --filter=arsenyx-web --filter=arsenyx-api --filter=@arsenyx/shared run test
     bun test scripts/build/
 
+# After merging PRs: list orphan .claude/worktrees folders and branches whose
+# remote is gone. Pass --go to delete them.
+prune-worktrees *args:
+    bun run scripts/prune-worktrees.ts {{args}}
+
 # Wipe this checkout's local DB and rebuild it from scratch
 # + schema push, search migration, fresh admin password, sample data.
 db-reset:
