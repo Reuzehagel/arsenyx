@@ -29,6 +29,11 @@ export const partnerBuildsQuery = (slug: string) =>
         throw new Error("failed_load_partners", { cause: err })
       }
     },
+    // Seeded from the build detail payload, so don't refetch on a timer: the
+    // always-mounted strip would otherwise hit /partners on every revisit and
+    // refocus. Partner mutations invalidate this key, which still refetches.
+    // Accepted: another user's partner edit shows only once this entry is GC'd.
+    staleTime: Infinity,
   })
 
 /** Typeahead for the partner picker. `mine=1` scopes results to builds the
@@ -91,8 +96,10 @@ export function useLinkPartner(ownerSlug: string) {
     // reads for ~60s, so an eager refetch returned the stale list and wiped the
     // optimistic entry. Query caching is now disabled on the Hyperdrive config
     // (see apps/api/wrangler.toml), so the refetch reads through.
-    onSettled: () => {
+    // The link is symmetric, so the partner's own strip changes too.
+    onSettled: (_d, _e, partner) => {
       qc.invalidateQueries({ queryKey: ["build", ownerSlug, "partners"] })
+      qc.invalidateQueries({ queryKey: ["build", partner.slug, "partners"] })
     },
   })
 }
@@ -201,8 +208,9 @@ export function useUnlinkPartner(ownerSlug: string) {
     onError: (_e, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(["build", ownerSlug, "partners"], ctx.prev)
     },
-    onSettled: () => {
+    onSettled: (_d, _e, partnerSlug) => {
       qc.invalidateQueries({ queryKey: ["build", ownerSlug, "partners"] })
+      qc.invalidateQueries({ queryKey: ["build", partnerSlug, "partners"] })
     },
   })
 }
