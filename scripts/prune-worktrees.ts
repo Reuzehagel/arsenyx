@@ -11,7 +11,7 @@
  * branch's sha, so a deleted branch stays recoverable from the reflog.
  */
 
-import { readdirSync, rmSync } from "node:fs"
+import { readdirSync, renameSync, rmSync } from "node:fs"
 import { resolve } from "node:path"
 
 const REPO = resolve(import.meta.dirname, "..")
@@ -68,7 +68,11 @@ if (!go) {
 let failed = 0
 for (const d of dirs) {
   try {
-    rmSync(d, { recursive: true, force: true })
+    // Rename first: it fails whole on a locked folder, where a bare rmSync
+    // would delete everything it can and leave a half-gutted tree.
+    const doomed = `${d}.prune-${Date.now()}`
+    renameSync(d, doomed)
+    rmSync(doomed, { recursive: true, force: true })
   } catch (e) {
     failed++
     console.error(`Could not delete ${d} (still locked?): ${e}`)
