@@ -99,7 +99,7 @@ export function BuildSurface({
         !embed &&
           (modded
             ? "xl:relative xl:block"
-            : "xl:grid xl:grid-cols-[260px_minmax(0,1fr)] xl:items-start xl:gap-4"),
+            : "xl:grid xl:grid-cols-[260px_minmax(0,1fr)] xl:items-stretch xl:gap-4"),
       )}
     >
       {!embed && (

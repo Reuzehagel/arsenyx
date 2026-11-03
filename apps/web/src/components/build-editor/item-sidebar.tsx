@@ -500,7 +500,7 @@ export function ItemSidebar({
         )}
         {category === "operators" && (
           <>
-            <div className="flex flex-col gap-1.5 p-3">
+            <div className="flex grow flex-col justify-center gap-1.5 p-3">
               <span className="text-xs font-medium">Focus School</span>
               <Select
                 items={FOCUS_SCHOOLS}
@@ -527,7 +527,7 @@ export function ItemSidebar({
 
             <Separator />
 
-            <div className="flex flex-col gap-3 p-3">
+            <div className="flex grow flex-col justify-center gap-1.5 p-3">
               <span className="text-xs font-medium">Amp</span>
 
               <Select
@@ -561,9 +561,9 @@ export function ItemSidebar({
               </Select>
 
               {isCustomAmp && (
-                <div className="flex flex-col gap-3">
+                <div className="mt-1.5 flex flex-col gap-3">
                   {AMP_PARTS.map((part, index) => (
-                    <div key={part.label} className="flex flex-col gap-1">
+                    <div key={part.label} className="flex flex-col gap-1.5">
                       <span className="text-muted-foreground text-xs">
                         {part.label}
                       </span>
@@ -605,8 +605,6 @@ export function ItemSidebar({
                 </div>
               )}
             </div>
-
-            <Separator />
           </>
         )}
         {hasModSlots(category) && (

@@ -24,6 +24,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { formatVisibility } from "@/lib/util/user-display"
+import { cn } from "@/lib/util/utils"
 import {
   getImageUrl,
   type BrowseCategory,
@@ -124,7 +125,11 @@ export function EditorHeader({
             <img
               src={getImageUrl(displayImageName ?? item.imageName)}
               alt={item.name}
-              className="h-full w-full object-cover"
+              className={cn(
+                "h-full w-full object-cover",
+                // Operator portraits are full-body busts; centering crops to the chest.
+                category === "operators" && "object-top",
+              )}
             />
           </div>
           <div className="flex min-w-0 flex-col justify-center gap-2">

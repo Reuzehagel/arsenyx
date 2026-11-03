@@ -158,7 +158,14 @@ export function ModGrid({
     category !== "railjack" && (auraSlotCount > 0 || showExilus || showStance)
 
   return (
-    <div className="flex flex-col gap-6">
+    <div
+      className={cn(
+        "flex flex-col gap-6",
+        // Mod-less (Operators): fill the card stretched to the sidebar height
+        // and center the arcane row in it.
+        normalSlotCount === 0 && "flex-1 justify-center",
+      )}
+    >
       {showTopExtrasRow && (
         <div className="flex w-full flex-wrap justify-center gap-4">
           {auraSlotCount > 0 && (

@@ -14,6 +14,7 @@ import {
 import type { BuildDetail } from "@/lib/queries/build-query"
 import { formatAbsoluteTime, relativeTime } from "@/lib/util/relative-time"
 import { formatVisibility } from "@/lib/util/user-display"
+import { cn } from "@/lib/util/utils"
 import { getImageUrl, type BrowseCategory } from "@/lib/warframe"
 
 import { BuildActionsMenu } from "./build-actions-menu"
@@ -57,7 +58,11 @@ export function ViewerHeader({
               <img
                 src={getImageUrl(headerImage)}
                 alt={build.item.name}
-                className="h-full w-full object-cover"
+                className={cn(
+                  "h-full w-full object-cover",
+                  // Operator portraits are full-body busts; centering crops to the chest.
+                  category === "operators" && "object-top",
+                )}
               />
             ) : null}
           </div>
