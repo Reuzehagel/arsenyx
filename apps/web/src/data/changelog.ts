@@ -11,7 +11,7 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    date: "2026-11-01",
+    date: "2026-11-03",
     changes: [
       {
         type: "feat",
