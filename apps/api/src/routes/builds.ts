@@ -1252,22 +1252,32 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
 
   await maybeIncrementView(c, build.id, build.slug, viewerId, build.userId)
 
-  let viewerLike = 0
-  let viewerHasBookmarked = false
-  if (viewerId) {
-    const [like, bookmark] = await Promise.all([
-      prisma.buildLike.findUnique({
-        where: { userId_buildId: { userId: viewerId, buildId: build.id } },
-        select: { value: true },
-      }),
-      prisma.buildBookmark.findUnique({
-        where: { userId_buildId: { userId: viewerId, buildId: build.id } },
-        select: { id: true },
-      }),
-    ])
-    viewerLike = like?.value ?? 0
-    viewerHasBookmarked = bookmark != null
-  }
+  // Partner strip rides along so a page view is one cache miss instead of two
+  // (each miss pays per-request Prisma client + connection setup). Embed loads
+  // (?view=0) never render the strip, so they skip the query.
+  const [like, bookmark, partners] = await Promise.all([
+    viewerId
+      ? prisma.buildLike.findUnique({
+          where: { userId_buildId: { userId: viewerId, buildId: build.id } },
+          select: { value: true },
+        })
+      : null,
+    viewerId
+      ? prisma.buildBookmark.findUnique({
+          where: { userId_buildId: { userId: viewerId, buildId: build.id } },
+          select: { id: true },
+        })
+      : null,
+    c.req.query("view") === "0"
+      ? null
+      : prisma.build.findUnique({
+          where: { id: build.id },
+          relationLoadStrategy: "join",
+          select: partnerSelect(viewerId),
+        }),
+  ])
+  const viewerLike = like?.value ?? 0
+  const viewerHasBookmarked = bookmark != null
 
   const isOwner = access.canMutate
 
@@ -1281,18 +1291,6 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
     c.header("Cache-Control", "public, max-age=300")
     c.header("Vary", "Cookie")
   }
-
-  // Partner strip rides along so a page view is one cache miss instead of two
-  // (each miss pays per-request Prisma client + connection setup). Embed loads
-  // (?view=0) never render the strip, so they skip the query.
-  const partners =
-    c.req.query("view") === "0"
-      ? null
-      : await prisma.build.findUnique({
-          where: { id: build.id },
-          relationLoadStrategy: "join",
-          select: partnerSelect(viewerId),
-        })
 
   return c.json({
     ...serializeBuildDetail(
