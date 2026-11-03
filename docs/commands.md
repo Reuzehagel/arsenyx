@@ -26,9 +26,18 @@ Oxlint / oxfmt config lives at the repo root (`.oxlintrc.json`, `.oxfmtrc.json`)
 
 ## Database (apps/api)
 
-Postgres is on PlanetScale (via Cloudflare Hyperdrive at runtime) — no local Postgres process. The Prisma CLI uses the direct `DATABASE_URL` in `apps/api/.env`.
+Prod is PlanetScale (via Cloudflare Hyperdrive at runtime). Dev is a local
+Postgres container ([compose.yaml](../compose.yaml), `localhost:54320`) shared by
+every checkout, with **one database per checkout/worktree** (`arsenyx_<folder>`),
+so parallel worktrees never collide. `just setup` points `apps/api/.env` at it
+(both `DATABASE_URL` and the Hyperdrive local string), pushes the schema, applies
+the search migration, and seeds an admin plus generated sample data
+([seed-sample.ts](../apps/api/scripts/seed-sample.ts): users, an org, ~70 builds
+of real catalog items with likes/guides). No prod or Neon data is copied.
 
 ```bash
+just db-reset                      # drop + rebuild this checkout's DB (same sample data each time)
+docker compose down                # stop the container (data persists in the volume)
 bun --cwd apps/api run db:push     # dev: push schema without migrations
 bun --cwd apps/api run db:studio   # Prisma Studio GUI
 bun --cwd apps/api run db:generate # regenerate Prisma client

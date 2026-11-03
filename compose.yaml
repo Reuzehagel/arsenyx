@@ -1,0 +1,25 @@
+# Local dev Postgres. One container shared by every checkout/worktree (the fixed
+# project `name` makes each worktree's copy of this file address the same one);
+# each checkout gets its own database inside it. Managed by scripts/dev-db.ts —
+# see docs/commands.md#database-appsapi.
+name: arsenyx-dev
+
+services:
+  db:
+    # pg_dump in this image does `just db-pull`, and pg_dump can't read a server
+    # newer than itself — keep this at or above production's major version.
+    image: postgres:18
+    environment:
+      POSTGRES_PASSWORD: postgres
+    ports:
+      # Not 5432, so a natively installed Postgres can't silently answer instead.
+      - "127.0.0.1:54320:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 1s
+      retries: 30
+
+volumes:
+  pgdata:
