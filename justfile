@@ -56,15 +56,11 @@ setup:
 # touched, which is a bad way to learn you needed to regenerate something.
 gen: deps gen-routes gen-prisma
 
-# A fresh worktree has no node_modules; without them gen-routes fails deep in
-# the vite build with an error that reads like a missing generated file.
-[unix]
+# Missing or stale node_modules (fresh worktree, or a pull that added a
+# package) fails typecheck in files you never touched, or gen-routes deep in the
+# vite build. Always sync: ~1.5s when already up to date.
 deps:
-    @[ -d node_modules ] || bun install --frozen-lockfile
-
-[windows]
-deps:
-    @if (-not (Test-Path node_modules)) { bun install --frozen-lockfile; if ($LASTEXITCODE) { exit $LASTEXITCODE } }
+    @bun install --frozen-lockfile --silent
 
 # ~1.5s, so it always runs rather than trying to outsmart the schema mtime.
 [working-directory('apps/api')]
