@@ -71,7 +71,7 @@ export function TabScroller({
   return (
     <div
       ref={wrapperRef}
-      className="-mx-4 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="-mx-4 [scrollbar-width:none] overflow-x-auto [&::-webkit-scrollbar]:hidden"
       style={edge === "none" ? undefined : { maskImage: MASK_IMAGES[edge] }}
     >
       <div className="w-max px-4">{children}</div>
