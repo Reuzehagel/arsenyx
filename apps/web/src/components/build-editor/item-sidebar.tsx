@@ -249,8 +249,10 @@ export function ItemSidebar({
   // actual phones.
   const [statsExpanded, setStatsExpanded] = useState(false)
   const hasConditional = useMemo(
-    () => hasConditionalStats(modList, arcaneList),
-    [modList, arcaneList],
+    () =>
+      hasConditionalStats(modList, arcaneList) ||
+      Boolean(incarnonStats?.some((s) => s.isConditional)),
+    [modList, arcaneList, incarnonStats],
   )
 
   const warframeStats = useMemo<WarframeStats | null>(() => {
