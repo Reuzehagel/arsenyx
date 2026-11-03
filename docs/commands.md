@@ -20,6 +20,12 @@ just gen                          # generate apps/web/src/routeTree.gen.ts only 
 bun --cwd apps/web run build      # Vite production build (does NOT typecheck — `just check` is the gate)
 ```
 
+Reading a PR's code: the generated catalog (`apps/web/public/data/`, `data/curated/wiki-image-urls.json`) can make `gh pr diff` hundreds of KB. Check out the branch and diff without it; read the data side separately when the PR is a data fix:
+
+```bash
+git diff <merge-base> HEAD -- . ':!apps/web/public/data' ':!data/curated/wiki-image-urls.json'
+```
+
 Oxlint / oxfmt config lives at the repo root (`.oxlintrc.json`, `.oxfmtrc.json`).
 
 `.githooks/pre-commit` blocks commits that fail `fmt:check`; `.githooks/commit-msg` strips Claude co-author / "Generated with Claude Code" lines. `just setup` enables both; on an existing clone run `git config core.hooksPath .githooks` once.

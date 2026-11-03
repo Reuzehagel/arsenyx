@@ -24,6 +24,20 @@ Drafts live under `arsenyx:editor-draft:<storeKey>`: the build slug for a saved 
 - Results are ranked from a `useDeferredValue` copy of the query. The browser tool types instantly, so typing followed by Enter in the same batch is a race stress test. A human-speed check needs a `wait` of about 1s before Enter.
 - Placed mods render in the slot grid at the top of the page. Run `window.scrollTo(0, 0)` and take a screenshot to read them.
 
+## Drive dropdowns, screenshots and Share
+
+- Sidebar dropdowns are Base UI selects. Clicking an option doesn't always register under automation; open the trigger, then press `Down` × n and `Return`.
+- Pane screenshots trail the action by about a second. `wait` 1s before a screenshot you'll judge, or confirm state with `find`/`javascript_tool`.
+- Share copies the link to the clipboard, and `navigator.clipboard.readText` is denied. Wrap `navigator.clipboard.writeText` to stash its argument on `window`, then click Share.
+
+## Save a build
+
+Saving needs the `api` server and a signed-in user. Email+password auth exists only when `NODE_ENV=development` (`apps/api/src/auth.ts`).
+
+1. Check that `DATABASE_URL` in `apps/api/.env` points at `*.neon.tech` (dev). `*.psdb.cloud` is prod: stop.
+2. From the editor page, create a throwaway account: `fetch('http://localhost:8787/auth/sign-up/email', {method: 'POST', credentials: 'include', headers: {'content-type': 'application/json'}, body: JSON.stringify({email, password, name})})`. Use `/auth/sign-in/email` if it already exists.
+3. Reload. The header now shows **Save**; pick **Unlisted** in the save dialog so test builds stay out of listings.
+
 ## Read the stats panel
 
 - At the browser pane's default width the stats sidebar collapses into a "Stats" popover that is hard to drive. Run `resize_window` at 1500×1000 first so it renders inline, and reset it with preset `desktop` when done.
