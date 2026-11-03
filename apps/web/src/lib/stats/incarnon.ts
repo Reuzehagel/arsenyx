@@ -6,7 +6,7 @@ import {
 import type { SourcedStat } from "./parser"
 import type { StatType } from "./types"
 
-// Reads the always-on stat lines out of Incarnon evolution perk text. Rules
+// Reads the stat lines out of Incarnon evolution perk text. Rules
 // (wiki Incarnon Evolutions + per-weapon Genesis pages):
 // - "+X Base …" raises the weapon's base value before mods (base_add).
 // - Other "+X% …" lines stack additively with the matching mods (percent_add).
@@ -14,12 +14,12 @@ import type { StatType } from "./types"
 // - Magazine, reload and range perks never affect the Incarnon Form.
 // - "for Incarnon Form" applies only to the form; "per projectile" (the per-
 //   pellet base value) only to the normal attacks.
-// Anything conditional ("On Kill:", "while aiming", "stacking") or not shown
-// in the stats panel is skipped.
+// Situational lines ("On Kill:", "while sliding", "stacking") come back as
+// conditional stats; anything not shown in the stats panel is skipped.
 
-// Any condition word drops its whole sentence: a trailing condition can cover
-// every clause, e.g. Paris's "+40% Base Critical Chance on undamaged enemies,
-// +2x Base Critical Damage Multiplier" is all conditional per the wiki.
+// Any condition word makes its whole sentence situational: a trailing
+// condition can cover every clause, e.g. Paris's "+40% Base Critical Chance on
+// undamaged enemies, +2x Base Critical Damage Multiplier" per the wiki.
 const CONDITION =
   /\b(on|with|while|when|if|each|during|after|in|against|stacking)\b|\bfor \d/i
 const CLAUSE =
@@ -43,6 +43,8 @@ type PerkStat = Omit<SourcedStat, "sourceName">
 
 export function parseIncarnonPerkStats(description: string): PerkStat[] {
   const out: PerkStat[] = []
+  // Soma's per-pellet base damage isn't modeled (no "per projectile" scope).
+  const perPellet = /\bper pellet\b/i.test(description)
   const sentences = description
     // Variant notes like "(Braton)" — the description is already per-variant.
     .replace(/\s*\([^)]*\)/g, "")
@@ -54,6 +56,7 @@ export function parseIncarnonPerkStats(description: string): PerkStat[] {
   let prev = null as PerkStat | null
   for (const sentence of sentences) {
     if (CONDITION.test(sentence)) {
+      if (!perPellet) out.push(...parseSituational(sentence))
       prev = null
       continue
     }
@@ -79,6 +82,38 @@ export function parseIncarnonPerkStats(description: string): PerkStat[] {
       out.some((f) => f.attackScope === "incarnon" && f.type === s.type)
     )
       s.attackScope = "normal"
+  }
+  return out
+}
+
+// A situational sentence ("On Headshot: +7.5% Fire Rate for 4s, stacking up
+// to 10x") yields conditional stats the "Max stacks" toggle applies at full
+// stacks. Per the wiki their bonuses add like the always-on ones. "On Equip"
+// buffs last a few seconds after a weapon swap, so they stay out.
+const STACKS = /\bstack(?:s|ing)?(?: up to)? (\d+)(?:x| times)/i
+const TRAILING_CONDITION =
+  /\s+(?:on|with|while|when|if|against|during|per (?!projectile))\b.*$/i
+
+function parseSituational(sentence: string): PerkStat[] {
+  // Weakpoint-only crit (Sicarus King's Gambit) is per hit, not a state.
+  if (/\bon equip\b|\bon weakpoint hits?\b/i.test(sentence)) return []
+  const stacks = STACKS.exec(sentence)
+  const maxStacks = stacks ? parseInt(stacks[1]) : undefined
+  const body = sentence
+    .replace(/^[^:+]*:\s*/, "")
+    .replace(/,?\s*\bstack(?:s|ing)?\b.*$/i, "")
+    .replace(/\s+for \d+(?:\.\d+)?\s*(?:s|seconds)\b/gi, "")
+    .replace(/\badditional /gi, "")
+  const out: PerkStat[] = []
+  for (const raw of body.split(/,\s*(?=[+-]\d)|\s+and\s+(?=[+-]\d)/)) {
+    const clause = raw.trim().replace(/\.$/, "").replace(TRAILING_CONDITION, "")
+    const stat = parseClause(clause)
+    if (stat)
+      out.push({
+        ...stat,
+        isConditional: true,
+        ...(maxStacks && { maxStacks }),
+      })
   }
   return out
 }
@@ -128,6 +163,13 @@ function parseClause(clause: string): PerkStat | null {
   return { type, value, operation, ...(attackScope && { attackScope }) }
 }
 
+// Situational perks the wiki says misbehave: Dual Toxocyst's "Currently does
+// not work"; Despair's set bonus is mainly a multiplicative +100% Damage.
+const BROKEN_SITUATIONAL: Record<string, string> = {
+  "Dual Toxocyst": "Ready Retaliation",
+  Despair: "Stalker's Vendetta",
+}
+
 /** Stats from the picked perks of an enabled Incarnon weapon. */
 export function incarnonPerkStats(
   evolution: IncarnonEvolution,
@@ -141,6 +183,8 @@ export function incarnonPerkStats(
     for (const s of parseIncarnonPerkStats(
       getIncarnonPerkDescription(picked, weaponName),
     )) {
+      if (s.isConditional && BROKEN_SITUATIONAL[weaponName] === picked.name)
+        continue
       out.push({ ...s, sourceName: picked.name })
     }
   }
