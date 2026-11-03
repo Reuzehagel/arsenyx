@@ -77,6 +77,10 @@ jobs:
         working-directory: apps/web
         run: bun run build
 
+      - name: Check Worker configs (wrangler dry-run)
+        # After Build (web) — apps/web's [assets] directory is ./dist.
+        run: bun run check:wrangler
+
       - name: Type-check (all workspaces)
         run: bun run typecheck
 
