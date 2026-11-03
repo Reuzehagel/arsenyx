@@ -8,8 +8,8 @@
  * seed), so every reset yields the same slugs. Localhost only.
  *
  * Mods go only on the item types whose generic mod family is unambiguous
- * (Warframe, Rifle, Shotgun, Pistol, Melee) and skip augments, exilus, conclave
- * and variant families (Primed, Umbral…) so no build stacks conflicting mods.
+ * (Warframe, Rifle, Shotgun, Pistol, Melee), skip augments, exilus and conclave
+ * mods, and never pair two mods that mod-conflicts.json says conflict.
  * Slot JSON matches what the editor saves (`stripPersistedImages` shape: mods
  * inline, no imageName). formaCalcVersion stays 0 ("never computed").
  */
@@ -55,10 +55,10 @@ const slug = () =>
   Array.from({ length: 10 }, () => pick([..."23456789abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"])).join("")
 const id = () => `seed${slug()}`
 
-const VARIANT_FAMILY = /^(Primed|Flawed|Umbral|Galvanized|Amalgam|Archon|Spectral|Sacrificial|Vigilante|Augur|Gladiator)\b/
 const mods: Mod[] = (json("mods-all.json") as Mod[]).filter(
-  (m) => !m.isAugment && !m.isExilus && !m.isConclave && !VARIANT_FAMILY.test(m.name),
+  (m) => !m.isAugment && !m.isExilus && !m.isConclave,
 )
+const conflicts = json("mod-conflicts.json") as Record<string, string[]>
 const modsFor = (compat: string) => mods.filter((m) => m.compatName === compat)
 
 const index = json("items-index.json") as Record<string, Item[]>
@@ -77,7 +77,12 @@ function buildData(compat: string, aura: boolean) {
     const { imageName: _drop, ...mod } = m
     return { mod, rank: m.fusionLimit }
   }
-  sample(modsFor(compat), 8).forEach((m, i) => (slots[`normal-${i}`] = placed(m)))
+  const chosen: Mod[] = []
+  for (const m of sample(modsFor(compat), Infinity)) {
+    if (chosen.length === 8) break
+    if (!chosen.some((c) => conflicts[c.uniqueName]?.includes(m.uniqueName))) chosen.push(m)
+  }
+  chosen.forEach((m, i) => (slots[`normal-${i}`] = placed(m)))
   if (aura) slots["aura-0"] = placed(pick(modsFor("AURA")))
   return {
     version: 1,

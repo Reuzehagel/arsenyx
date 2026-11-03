@@ -62,7 +62,7 @@ function renderEnv(template: string, values: Map<string, string>): string {
 function looksLikeRealPostgresUrl(url: string | undefined): boolean {
   if (!url) return false
   if (!url.startsWith("postgres")) return false
-  if (url.includes("ep-xxx")) return false // the placeholder host
+  if (url.includes("USER:PASS@")) return false // the .env.example placeholder
   return true
 }
 

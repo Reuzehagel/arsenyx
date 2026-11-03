@@ -6,8 +6,7 @@ name: arsenyx-dev
 
 services:
   db:
-    # pg_dump in this image does `just db-pull`, and pg_dump can't read a server
-    # newer than itself — keep this at or above production's major version.
+    # Keep at production's major version so dev SQL behaves like prod.
     image: postgres:18
     environment:
       POSTGRES_PASSWORD: postgres
