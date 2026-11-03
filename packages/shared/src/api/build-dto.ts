@@ -73,6 +73,9 @@ export type BuildDetailResponse = {
   viewerHasLiked: boolean
   viewerHasDisliked: boolean
   viewerHasBookmarked: boolean
+  /** The partner strip, same rows as `GET /builds/:slug/partners`. Absent on
+   *  embed loads (`?view=0`), which never render it. */
+  partners?: (BuildListItemResponse & { variant?: number })[]
 }
 
 /** One entry in a build's edit log (`GET /builds/:slug/revisions`). Consecutive

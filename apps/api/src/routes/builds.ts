@@ -91,6 +91,11 @@ const DETAIL_TTL = 600
 // well under DETAIL_TTL — for these routes the TTL is the *only* bound on
 // staleness, whereas detail also has purgeEdge. Raised 30 → 120 alongside
 // DETAIL_TTL: a just-hidden build lingering in lists for 2 min was judged fine.
+// Exception: the detail payload also embeds the partner strip (2026-11, to halve
+// misses per page view), so a partner that goes PRIVATE can linger in another
+// build's cached strip for up to DETAIL_TTL. Linking, unlinking, reordering and
+// variant changes do purge it. Accepted: the strip shows a title and
+// thumbnail, never a loadout.
 const LIST_TTL = 120
 
 // Exported so the admin visibility PATCH (admin.ts) validates against the same
@@ -709,68 +714,70 @@ function asVariantMap(value: Prisma.JsonValue): Record<string, number> {
 // don't purge this path (no tractable per-key eviction). Bounded and low-risk:
 // the strip only shows a title/thumbnail, never the loadout.
 
+//
+// The full detail response (GET /:slug) now carries these same rows as
+// `partners`, so the build page no longer calls this route. It stays for the
+// guide editor and for refetches after partner mutations.
 builds.get("/:slug/partners", edgeCache({ maxAge: LIST_TTL }), async (c) => {
   const slug = c.req.param("slug")
   const session = await getSession(c)
   const viewerId = session?.user.id
 
-  // Filter private partners in the DB rather than fetching all rows and
-  // filtering in JS — keeps us from over-selecting joined user/org/counts
-  // for partners the viewer can't see.
-  const partnerVisibility: Prisma.BuildWhereInput = viewerId
-    ? {
-        OR: [
-          {
-            visibility: {
-              in: [BuildVisibility.PUBLIC, BuildVisibility.UNLISTED],
-            },
-          },
-          { userId: viewerId },
-        ],
-      }
-    : {
-        visibility: {
-          in: [BuildVisibility.PUBLIC, BuildVisibility.UNLISTED],
-        },
-      }
-
   const build = await prisma.build.findUnique({
     where: { slug },
-    // partnerBuilds nests user + organization (via LIST_SELECT), so the default
-    // strategy fans out into several queries; join collapses them.
     relationLoadStrategy: "join",
     select: {
       id: true,
       userId: true,
       visibility: true,
       organizationId: true,
-      partnerOrder: true,
-      partnerVariants: true,
-      partnerBuilds: {
-        where: partnerVisibility,
-        take: 50,
-        select: LIST_SELECT,
-      },
+      ...partnerSelect(viewerId),
     },
   })
   if (!build) return c.json({ error: "not_found" }, 404)
   if (!(await canViewerSeeBuild(build, viewerId ?? ""))) {
     return c.json({ error: "not_found" }, 404)
   }
-
-  // The owner's saved variant target rides along on each row (`variant`
-  // omitted = default). The web chip turns it into `?v=` on the link; an
-  // index that outgrew the partner's variant list is clamped by the viewer.
-  const variantMap = asVariantMap(build.partnerVariants)
-  const body = {
-    builds: orderPartners(build.partnerBuilds, build.partnerOrder).map((p) => {
-      const row = serializeListRow(p)
-      const variant = variantMap[p.id]
-      return variant ? { ...row, variant } : row
-    }),
-  }
-  return c.json(body)
+  return c.json({ builds: serializePartners(build) })
 })
+
+// Select for a build's partner strip. Private partners are filtered in the DB
+// rather than in JS so we don't over-select joined user/org/counts for partners
+// the viewer can't see. partnerBuilds nests user + organization (via
+// LIST_SELECT), so callers pass `relationLoadStrategy: "join"` to collapse the
+// fan-out into one query.
+function partnerSelect(viewerId: string | undefined) {
+  const shown = {
+    visibility: { in: [BuildVisibility.PUBLIC, BuildVisibility.UNLISTED] },
+  }
+  return {
+    partnerOrder: true,
+    partnerVariants: true,
+    partnerBuilds: {
+      where: (viewerId
+        ? { OR: [shown, { userId: viewerId }] }
+        : shown) satisfies Prisma.BuildWhereInput,
+      take: 50,
+      select: LIST_SELECT,
+    },
+  } as const
+}
+
+// The owner's saved variant target rides along on each row (`variant` omitted =
+// default). The web chip turns it into `?v=` on the link; an index that outgrew
+// the partner's variant list is clamped by the viewer.
+function serializePartners(build: {
+  partnerOrder: string[]
+  partnerVariants: Prisma.JsonValue
+  partnerBuilds: Parameters<typeof serializeListRow>[0][]
+}) {
+  const variantMap = asVariantMap(build.partnerVariants)
+  return orderPartners(build.partnerBuilds, build.partnerOrder).map((p) => {
+    const row = serializeListRow(p)
+    const variant = variantMap[p.id]
+    return variant ? { ...row, variant } : row
+  })
+}
 
 // Sort partner rows by the owner's saved order. Ids listed in `order` come
 // first in that order; anything not listed (newly linked, or never reordered)
@@ -840,6 +847,8 @@ builds.put("/:slug/partners/order", rateLimitUser("mutate"), async (c) => {
     where: { id: own.id },
     data: { partnerOrder: nextOrder },
   })
+  // The detail payload embeds the partner strip.
+  purgeEdge(c, `/builds/${slug}`)
   return c.body(null, 204)
 })
 
@@ -898,6 +907,7 @@ builds.put(
       where: { id: own.id },
       data: { partnerVariants: map as InputJsonValue },
     })
+    purgeEdge(c, `/builds/${slug}`)
     return c.body(null, 204)
   },
 )
@@ -943,6 +953,8 @@ builds.put(
         data: { partnerBuilds: { connect: { id: own.id } } },
       }),
     ])
+    purgeEdge(c, `/builds/${slug}`)
+    purgeEdge(c, `/builds/${partnerSlug}`)
     return c.body(null, 204)
   },
 )
@@ -992,6 +1004,8 @@ builds.delete(
         },
       }),
     ])
+    purgeEdge(c, `/builds/${slug}`)
+    purgeEdge(c, `/builds/${partnerSlug}`)
     return c.body(null, 204)
   },
 )
@@ -1238,22 +1252,32 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
 
   await maybeIncrementView(c, build.id, build.slug, viewerId, build.userId)
 
-  let viewerLike = 0
-  let viewerHasBookmarked = false
-  if (viewerId) {
-    const [like, bookmark] = await Promise.all([
-      prisma.buildLike.findUnique({
-        where: { userId_buildId: { userId: viewerId, buildId: build.id } },
-        select: { value: true },
-      }),
-      prisma.buildBookmark.findUnique({
-        where: { userId_buildId: { userId: viewerId, buildId: build.id } },
-        select: { id: true },
-      }),
-    ])
-    viewerLike = like?.value ?? 0
-    viewerHasBookmarked = bookmark != null
-  }
+  // Partner strip rides along so a page view is one cache miss instead of two
+  // (each miss pays per-request Prisma client + connection setup). Embed loads
+  // (?view=0) never render the strip, so they skip the query.
+  const [like, bookmark, partners] = await Promise.all([
+    viewerId
+      ? prisma.buildLike.findUnique({
+          where: { userId_buildId: { userId: viewerId, buildId: build.id } },
+          select: { value: true },
+        })
+      : null,
+    viewerId
+      ? prisma.buildBookmark.findUnique({
+          where: { userId_buildId: { userId: viewerId, buildId: build.id } },
+          select: { id: true },
+        })
+      : null,
+    c.req.query("view") === "0"
+      ? null
+      : prisma.build.findUnique({
+          where: { id: build.id },
+          relationLoadStrategy: "join",
+          select: partnerSelect(viewerId),
+        }),
+  ])
+  const viewerLike = like?.value ?? 0
+  const viewerHasBookmarked = bookmark != null
 
   const isOwner = access.canMutate
 
@@ -1268,8 +1292,8 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
     c.header("Vary", "Cookie")
   }
 
-  return c.json(
-    serializeBuildDetail(
+  return c.json({
+    ...serializeBuildDetail(
       build,
       {
         isOwner,
@@ -1279,7 +1303,8 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
       },
       isOwner || isAdmin,
     ),
-  )
+    ...(partners && { partners: serializePartners(partners) }),
+  })
 })
 
 const VIEW_COOKIE_MAX_AGE = 12 * 60 * 60 // 12h
