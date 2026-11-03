@@ -28,6 +28,20 @@
     <link rel="preconnect" href="https://api.arsenyx.com" />
     <link rel="preconnect" href="https://img.arsenyx.com" />
     <link rel="preconnect" href="https://wiki.warframe.com" />
+    <script>
+      // The home hero waits on items-index.json (route loader). Start that
+      // fetch now, in parallel with the JS bundle, instead of after it boots.
+      // The URL must match staticDataQuery's exactly or the preload is wasted;
+      // __DATA_VERSION__ is substituted at build time (vite.config.ts).
+      if (location.pathname === "/") {
+        var l = document.createElement("link")
+        l.rel = "preload"
+        l.as = "fetch"
+        l.crossOrigin = "anonymous"
+        l.href = "/data/items-index.json?v=__DATA_VERSION__"
+        document.head.appendChild(l)
+      }
+    </script>
   </head>
   <body class="antialiased">
     <!-- Static placeholder until React's first commit replaces it, so the

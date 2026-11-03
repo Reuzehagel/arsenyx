@@ -58,6 +58,7 @@ function Home() {
                   <img
                     src={getImageUrl(hero.imageName)}
                     alt={hero.name}
+                    fetchPriority="high"
                     className="h-[220px] w-auto object-contain transition-transform duration-700 ease-out hover:scale-[1.02] md:h-[280px]"
                     draggable={false}
                   />
