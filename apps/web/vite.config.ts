@@ -152,6 +152,11 @@ export default defineConfig({
     tailwindcss(),
     sitemap(),
     versionFile(),
+    {
+      name: "arsenyx:data-version-html",
+      transformIndexHtml: (html) =>
+        html.replaceAll("__DATA_VERSION__", dataVersion()),
+    },
   ],
   resolve: {
     alias: {
