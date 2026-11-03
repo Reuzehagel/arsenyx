@@ -133,10 +133,14 @@ async function main() {
   }
 
   // Default: this checkout's own database in the local container (compose.yaml).
-  // An existing real URL (e.g. a Neon one) is kept.
+  // An existing real URL is kept, except the retired Neon dev copy (replaced by
+  // the container on 2026-11-03), which older checkouts still point at.
   const currentDbUrl = existing.get("DATABASE_URL")
   let dbUrl = currentDbUrl
-  if (!looksLikeRealPostgresUrl(currentDbUrl)) {
+  if (
+    !looksLikeRealPostgresUrl(currentDbUrl) ||
+    new URL(currentDbUrl!).hostname.endsWith(".neon.tech")
+  ) {
     dbUrl = localDbUrl()
     console.log(
       `✓ DATABASE_URL → local container (${new URL(dbUrl).pathname.slice(1)})`,

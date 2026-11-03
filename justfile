@@ -6,9 +6,11 @@ set windows-shell := ["pwsh", "-NoLogo", "-NoProfile", "-Command"]
 dev:
     bunx concurrently -k -n api,web -c blue,green "just api" "just web"
 
-# Run only the Hono API. Needs apps/api/.env (`just setup`).
+# Run only the Hono API. Needs apps/api/.env (`just setup`). The dev-db preflight
+# starts the container and stops a checkout whose .env points anywhere else.
 [working-directory('apps/api')]
 api:
+    bun ../../scripts/dev-db.ts ensure
     bun run dev
 
 # Run only the Vite SPA frontend.

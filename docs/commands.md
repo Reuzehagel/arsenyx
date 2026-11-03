@@ -20,9 +20,13 @@ pair together by hand:
 1. Read the API's real port from its log line `Ready on http://127.0.0.1:<port>`.
    Wrangler picks its own free port, so the port a preview tool reports can be wrong.
 2. `apps/web/.env.local`: `VITE_API_URL=http://localhost:<api port>`, then restart the web server.
-3. `apps/api/.env`: add the web origin to `WEB_ORIGIN` (comma-separated), then restart the API.
+3. Start the API with the web origin passed in, rather than editing `.env`:
+   `bun run dev --port <api port> --var WEB_ORIGIN:http://localhost:<web port>`.
 
-Both files are gitignored. Revert step 3 when you're done.
+An explicit `--port` (or `--inspector-port`, default 9229) that another
+checkout already holds does not fail on Windows: both `workerd`s bind and
+requests split between them, so you see the other checkout's DB errors. Pick
+ports nobody holds — check with `netstat -ano | grep LISTEN`.
 
 ## Build / verify
 

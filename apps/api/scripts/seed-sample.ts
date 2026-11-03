@@ -1,7 +1,8 @@
 /**
  * Seed a local dev database with generated sample data: users, an org, and
  * builds of real catalog items (apps/web/public/data) carrying real mods, plus
- * guides, likes, bookmarks, views and a CREATED revision each.
+ * guides, likes, bookmarks, views and a CREATED revision each, plus one set of
+ * linked Partner Builds.
  *
  * Invoked by scripts/setup.ts. Skips when any build already exists, so re-running
  * setup never duplicates; `just db-reset` starts over. Deterministic (fixed
@@ -134,6 +135,7 @@ async function main() {
     }
 
     let builds = 0
+    const owned = new Map<string, { bid: string; category: string; visibility: string }[]>()
     for (const [category, filter, compat, aura] of KINDS) {
       for (const item of sample(index[category]!.filter(filter), 14)) {
         const bid = id()
@@ -159,7 +161,23 @@ async function main() {
           await q(`INSERT INTO build_likes (id, "userId", "buildId", value) VALUES ($1, $2, $3, $4)`, [id(), uid, bid, rand() < 0.85 ? 1 : -1])
           if (rand() < 0.3) await q(`INSERT INTO build_bookmarks (id, "userId", "buildId") VALUES ($1, $2, $3)`, [id(), uid, bid])
         }
+        owned.set(owner, [...(owned.get(owner) ?? []), { bid, category, visibility }])
         builds++
+      }
+    }
+
+    // Partner Builds: one public Warframe build linked to three of the same
+    // owner's other builds (linking needs mutual ownership). The implicit join
+    // table stores each direction, so insert both.
+    let partners = 0
+    const isHub = (b: { category: string; visibility: string }) =>
+      b.category === "warframes" && b.visibility === "PUBLIC"
+    const hubOwner = [...owned.values()].find((bs) => bs.some(isHub) && bs.length >= 4)
+    if (hubOwner) {
+      const hub = hubOwner.find(isHub)!
+      for (const p of hubOwner.filter((b) => b !== hub).slice(0, 3)) {
+        await q(`INSERT INTO "_PartnerBuilds" ("A", "B") VALUES ($1, $2), ($2, $1)`, [hub.bid, p.bid])
+        partners++
       }
     }
 
@@ -169,7 +187,7 @@ async function main() {
       "dislikeCount" = (SELECT count(*) FROM build_likes l WHERE l."buildId" = b.id AND l.value = -1),
       "bookmarkCount" = (SELECT count(*) FROM build_bookmarks k WHERE k."buildId" = b.id)`)
     await q("COMMIT")
-    console.log(`✓ sample data: ${users.length} users, 1 org, ${builds} builds`)
+    console.log(`✓ sample data: ${users.length} users, 1 org, ${builds} builds, ${partners} partner links`)
   } catch (err) {
     await q("ROLLBACK").catch(() => {})
     throw err

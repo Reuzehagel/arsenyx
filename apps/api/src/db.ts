@@ -14,7 +14,8 @@ import { PrismaClient } from "./generated/prisma/client"
 // (`env.HYPERDRIVE.connectionString`), threaded in through `withPrisma`.
 // Unlike the old Neon `DATABASE_URL`, it can't be read from `process.env` —
 // it's a runtime binding with a dynamically-allocated local port. Hyperdrive
-// owns the upstream pool, so spinning up a fresh client per request is cheap.
+// owns the upstream pool, but the per-request client still costs: creation,
+// the pg connection and query planning are ~half of a cache miss's CPU.
 
 type RequestScope = {
   connectionString: string
