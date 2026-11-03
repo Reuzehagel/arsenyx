@@ -11,7 +11,7 @@ interface RateLimitBinding {
 
 export interface Bindings {
   // Workers Rate Limiting API — the `simple` form returns only `success`.
-  // Configured in wrangler.toml under [[unsafe.bindings]].
+  // Configured in wrangler.toml under [[ratelimits]].
   ANON_SEARCH_LIMITER: RateLimitBinding
   ANON_READ_LIMITER: RateLimitBinding
   AUTH_LIMITER: RateLimitBinding

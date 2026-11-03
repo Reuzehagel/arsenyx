@@ -16,6 +16,7 @@
     "check:data-version": "bun run scripts/check-data-version.ts",
     "check:changelog": "bun run scripts/check-changelog.ts",
     "check:native-button": "bun run scripts/check-native-button.ts",
+    "check:wrangler": "bun run scripts/check-wrangler.ts",
     "cf:usage": "bun run scripts/cf-usage.ts",
     "data:sync": "bun run scripts/sync-de.ts && bun run scripts/sync-wiki.ts",
     "data:refresh": "bun run scripts/refresh-data.ts",

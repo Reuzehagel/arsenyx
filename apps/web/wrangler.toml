@@ -55,3 +55,6 @@ binding = "CF_VERSION_METADATA"
 
 [observability]
 enabled = true
+
+[observability.traces]
+enabled = true

@@ -633,21 +633,21 @@ function cacheStore(
 // scripts/build-items-index.ts and a deploy starts fresh isolates, so a
 // regenerated map can never be older than the deploy that shipped it.
 //
-// We memoize the PROMISE, not the value, so concurrent cache-miss requests in
-// the same isolate share one fetch+parse instead of racing several. A failed
-// load clears the slot so the next request retries — caching the null would pin
-// missing OG images for the isolate's whole life over one transient blip.
-let imageMapCache: Promise<Record<string, string> | null> | null = null
+// We memoize the resolved VALUE, not the promise: a shared pending promise would
+// have one request await I/O owned by another, which Workers can cancel when
+// that request ends (leaving the waiter hung). Concurrent cold misses each do
+// their own cheap ASSETS fetch instead. A failed load (null) isn't cached, so
+// one transient blip doesn't pin missing OG images for the isolate's life.
+let imageMapCache: Record<string, string> | null = null
 
-function fetchImageMap(
+async function fetchImageMap(
   env: Env,
   base: URL,
 ): Promise<Record<string, string> | null> {
-  imageMapCache ??= loadImageMap(env, base).then((map) => {
-    if (!map) imageMapCache = null
-    return map
-  })
-  return imageMapCache
+  if (imageMapCache) return imageMapCache
+  const map = await loadImageMap(env, base)
+  if (map) imageMapCache = map
+  return map
 }
 
 // Never rejects — resolves to null on any failure, which is why fetchImageMap
