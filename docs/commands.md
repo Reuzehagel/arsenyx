@@ -10,6 +10,20 @@ just stop               # kill dev servers on :5173 / :5174 / :8787
 just setup              # first-run wizard — see CONTRIBUTING.md
 ```
 
+### Ports taken by another worktree
+
+When another checkout already holds :5173 / :8787, a second pair lands on other
+ports, but the web app still calls `http://localhost:8787` (the other checkout's
+API and database), and the API's CORS list rejects the new web port. Wire the
+pair together by hand:
+
+1. Read the API's real port from its log line `Ready on http://127.0.0.1:<port>`.
+   Wrangler picks its own free port, so the port a preview tool reports can be wrong.
+2. `apps/web/.env.local`: `VITE_API_URL=http://localhost:<api port>`, then restart the web server.
+3. `apps/api/.env`: add the web origin to `WEB_ORIGIN` (comma-separated), then restart the API.
+
+Both files are gitignored. Revert step 3 when you're done.
+
 ## Build / verify
 
 ```bash
@@ -32,9 +46,18 @@ Oxlint / oxfmt config lives at the repo root (`.oxlintrc.json`, `.oxfmtrc.json`)
 
 ## Database (apps/api)
 
-Postgres is on PlanetScale (via Cloudflare Hyperdrive at runtime) — no local Postgres process. The Prisma CLI uses the direct `DATABASE_URL` in `apps/api/.env`.
+Prod is PlanetScale (via Cloudflare Hyperdrive at runtime). Dev is a local
+Postgres container ([compose.yaml](../compose.yaml), `localhost:54320`) shared by
+every checkout, with **one database per checkout/worktree** (`arsenyx_<folder>`),
+so parallel worktrees never collide. `just setup` points `apps/api/.env` at it
+(both `DATABASE_URL` and the Hyperdrive local string), pushes the schema, applies
+the search migration, and seeds an admin plus generated sample data
+([seed-sample.ts](../apps/api/scripts/seed-sample.ts): users, an org, ~70 builds
+of real catalog items with likes/guides). No prod or Neon data is copied.
 
 ```bash
+just db-reset                      # drop + rebuild this checkout's DB (same sample data each time)
+docker compose down                # stop the container (data persists in the volume)
 bun --cwd apps/api run db:push     # dev: push schema without migrations
 bun --cwd apps/api run db:studio   # Prisma Studio GUI
 bun --cwd apps/api run db:generate # regenerate Prisma client
@@ -63,6 +86,25 @@ gotchas and baselines are in [docs/usage-analytics.md](usage-analytics.md).
 Sources (no npm dep): DE PublicExport JSON blobs (`data/raw/de/`) +
 wiki Lua modules (`data/raw/wiki/`). The build merges them with the
 curated overrides under `data/curated/`.
+
+### What the built catalog holds
+
+Game rules (compatibility, conflicts, tradability) come from these files, not memory:
+
+| File (`apps/web/public/data/`) | Holds |
+| --- | --- |
+| `items-index.json` | every item by category: uniqueName, slug, displayClass, image |
+| `items/<category>/<slug>.json` | one item's full stats, slots, polarities |
+| `mods-all.json` | every mod: polarity, drain, ranks, `compatName`, `type`, augment/exilus flags, level stats |
+| `mod-conflicts.json` | uniqueName → mods that can't share a build with it (Primed/Umbral/Archon variants etc.) |
+| `mod-tradable.json` | uniqueNames of tradable mods |
+| `arcanes-all.json` | every arcane: type, rarity, level stats |
+| `helminth-abilities.json` | abilities subsumable via Helminth |
+| `incarnon-evolutions.json` | Incarnon tiers and perks per weapon |
+| `modular.json` | kitgun/zaw part stats |
+| `*-images.json`, `image-map.json` | uniqueName/part → R2 image URL |
+| `meta.json` | `generatedAt` (cache-bust version), counts |
+| `_report.json` | build-pipeline report (unmatched entries) |
 
 `data/raw/` is **gitignored** — it's a network mirror, not source. The built
 catalog under `apps/web/public/data/` is what's committed and what ships, so a

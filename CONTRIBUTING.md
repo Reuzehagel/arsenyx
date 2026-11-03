@@ -12,15 +12,15 @@ Game data is **static** and served as JSON from `apps/web/public/data/`. User da
 
 ## Running locally
 
-Requires Bun 1.2+, [just](https://github.com/casey/just), and a free Neon Postgres project ([neon.tech](https://neon.tech) — 1 minute signup).
+Requires Bun 1.2+, [just](https://github.com/casey/just), and Docker (for a local Postgres).
 
 ```bash
 bun install
-just setup    # interactive — asks for your Neon DATABASE_URL (the unpooled
-              # one, ends in .neon.tech), generates an auth secret, pushes
-              # the schema, and seeds an admin user. Prints fresh credentials
-              # at the end — copy them.
+just setup    # starts a local Postgres container, gives this checkout its own
+              # database, generates an auth secret, pushes the schema, seeds an
+              # admin user + sample builds. Prints fresh credentials — copy them.
 just dev      # web on :5173, api on :8787 (wrangler cold-start is ~10s)
+just db-reset # wipe and rebuild this checkout's database at any time
 ```
 
 Sign in at `http://localhost:5173` with the email + password the setup wizard printed (email is `admin@local.dev`, password is a fresh 20-char string).

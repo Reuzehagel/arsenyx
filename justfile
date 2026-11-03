@@ -6,7 +6,7 @@ set windows-shell := ["pwsh", "-NoLogo", "-NoProfile", "-Command"]
 dev:
     bunx concurrently -k -n api,web -c blue,green "just api" "just web"
 
-# Run only the Hono API. Expects DATABASE_URL in apps/api/.env to point at a PlanetScale branch.
+# Run only the Hono API. Needs apps/api/.env (`just setup`).
 [working-directory('apps/api')]
 api:
     bun run dev
@@ -43,7 +43,7 @@ stop:
 stop:
     @foreach ($port in 5173, 5174, 8787) { $pids = (Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue).OwningProcess | Select-Object -Unique; if ($pids) { Write-Host "Stopping port $port (PID $($pids -join ', '))"; $pids | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue } } else { Write-Host "Port $port already free" } }
 
-# Interactive first-run setup. Asks for a Neon DATABASE_URL, generates a
+# First-run setup. Points apps/api/.env at a local Docker Postgres DB, generates a
 # BETTER_AUTH_SECRET, pushes the schema, and seeds an admin user with a fresh
 # random password (printed to stdout — copy it). Safe to re-run.
 setup:
@@ -56,15 +56,11 @@ setup:
 # touched, which is a bad way to learn you needed to regenerate something.
 gen: deps gen-routes gen-prisma
 
-# A fresh worktree has no node_modules; without them gen-routes fails deep in
-# the vite build with an error that reads like a missing generated file.
-[unix]
+# Missing or stale node_modules (fresh worktree, or a pull that added a
+# package) fails typecheck in files you never touched, or gen-routes deep in the
+# vite build. Always sync: ~1.5s when already up to date.
 deps:
-    @[ -d node_modules ] || bun install --frozen-lockfile
-
-[windows]
-deps:
-    @if (-not (Test-Path node_modules)) { bun install --frozen-lockfile; if ($LASTEXITCODE) { exit $LASTEXITCODE } }
+    @bun install --frozen-lockfile --silent
 
 # ~1.5s, so it always runs rather than trying to outsmart the schema mtime.
 [working-directory('apps/api')]
@@ -107,3 +103,9 @@ fix:
 test: deps
     bun --filter=arsenyx-web --filter=arsenyx-api --filter=@arsenyx/shared run test
     bun test scripts/build/
+
+# Wipe this checkout's local DB and rebuild it from scratch
+# + schema push, search migration, fresh admin password, sample data.
+db-reset:
+    bun run scripts/dev-db.ts reset
+    bun run scripts/setup.ts

@@ -36,12 +36,12 @@ Game data is static, user data is dynamic. If something is read-heavy and rarely
 **Never**
 
 - Modify `apps/web/src/components/ui/` — override via `className` instead
-- Don't assume Warframe game-mechanic facts from memory. Mod compatibility, slot rules, ability behavior, drop sources, etc. drift between updates and the model's training data is unreliable here. Check [wiki.warframe.com](https://wiki.warframe.com) or the data files under `apps/web/public/data/` before encoding a rule into filters, validators, or hardcoded branches. Read wiki prose pages with WebFetch; for a Lua data module, `curl` the raw source (`https://wiki.warframe.com/index.php?title=Module:<name>&action=raw`) and grep it, since WebFetch summarizes and misreports what a table holds. If a fact can't be verified, say so instead of guessing.
+- Don't assume Warframe game-mechanic facts from memory. Mod compatibility, slot rules, ability behavior, drop sources, etc. drift between updates and the model's training data is unreliable here. Check [wiki.warframe.com](https://wiki.warframe.com) or the data files under `apps/web/public/data/` ([index](docs/commands.md#what-the-built-catalog-holds), e.g. `mod-conflicts.json`) before encoding a rule into filters, validators, or hardcoded branches. Read wiki prose pages with WebFetch; for a Lua data module, `curl` the raw source (`https://wiki.warframe.com/index.php?title=Module:<name>&action=raw`) and grep it, since WebFetch summarizes and misreports what a table holds. If a fact can't be verified, say so instead of guessing.
 
 ## Progressive disclosure — load on demand
 
 - [GLOSSARY.md](GLOSSARY.md) — domain terms (Build, Variant, Like, Bookmark): read before naming a new concept, route, or field
-- [docs/commands.md](docs/commands.md) — full command reference (build, db, data sync, shipping a data-pipeline fix)
+- [docs/commands.md](docs/commands.md) — full command reference (build, local dev DB, data sync, shipping a data-pipeline fix, dev-server ports taken by another worktree)
 - [docs/gotchas.md](docs/gotchas.md) — non-obvious pitfalls (PowerShell, Base UI, shadcn in monorepo)
 - [docs/hotkeys.md](docs/hotkeys.md) — adding or rebinding a keyboard shortcut
 - [docs/verify-build-editor.md](docs/verify-build-editor.md) — driving the build editor in the browser pane (editor URL, discarding drafts, mod-search selectors)
