@@ -14,6 +14,11 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-03",
     changes: [
       {
+        type: "fix",
+        description:
+          "Operator cards on the Browse page now show the Operator's head instead of a close-up of the torso.",
+      },
+      {
         type: "feat",
         description:
           "Operator and Drifter builds. Pick a Focus School and an Amp (Mote Amp, Sirocco, or any modular Prism-Scaffold-Brace combination such as 7-7-7), then fill two Operator Arcane and two Amp Arcane slots. Embeds show the school and Amp too.",
