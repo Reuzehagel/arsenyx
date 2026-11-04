@@ -7,8 +7,9 @@
  *
  *   bun run cf:profile [--api http://localhost:8787] [--inspector 9229] [--requests 100] [--out file.cpuprofile]
  *
- * Start the API first with prod-like logging: `bun run dev --var NODE_ENV:production`
- * in apps/api (dev logging prints every query and skews the profile).
+ * Start the API first with prod-like logging: set NODE_ENV="production" in
+ * apps/api/.env, then `bun run dev` in apps/api (dev logging prints every query
+ * and skews the profile; `--var NODE_ENV:production` no longer overrides .env).
  */
 
 import { parseArgs } from "node:util"
