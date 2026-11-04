@@ -24,6 +24,32 @@ const { values: args } = parseArgs({
 })
 const N = Number(args.requests)
 
+// Both gotchas below produce a plausible profile of the wrong thing, so refuse
+// to start instead. Dev logging (NODE_ENV in .env beats wrangler.toml's var):
+const env = await Bun.file(new URL("../apps/api/.env", import.meta.url))
+  .text()
+  .catch(() => "")
+const nodeEnv = env.match(/^\s*NODE_ENV\s*=\s*["']?(\w+)/m)?.[1]
+if (nodeEnv && nodeEnv !== "production")
+  throw new Error(
+    `apps/api/.env has NODE_ENV="${nodeEnv}"; set it to "production" and restart the API`,
+  )
+// A port another checkout's workerd also holds: on Windows both bind, and the
+// profile comes from whichever process answers.
+const netstat = Bun.spawnSync(["netstat", "-ano"]).stdout.toString()
+for (const port of [args.inspector, new URL(args.api).port || "80"]) {
+  const pids = new Set(
+    netstat
+      .split("\n")
+      .filter((l) => /LISTEN/.test(l) && new RegExp(`:${port}\\s`).test(l))
+      .map((l) => l.trim().split(/\s+/).at(-1)),
+  )
+  if (pids.size > 1)
+    throw new Error(
+      `port ${port} is held by ${pids.size} processes (PIDs ${[...pids].join(", ")}); stop the stray workerd`,
+    )
+}
+
 type Node = {
   id: number
   callFrame: { functionName: string; url: string; lineNumber: number }
@@ -58,8 +84,14 @@ if (!slugs.length) throw new Error(`no builds from ${args.api}/builds`)
 const hit = async (i: number) => {
   const res = await fetch(
     `${args.api}/builds/${slugs[i % slugs.length]}?p=${Math.random()}`,
-    { headers: { "cf-connecting-ip": `10.0.${(i >> 8) & 255}.${i & 255}` } },
+    {
+      headers: { "cf-connecting-ip": `10.0.${(i >> 8) & 255}.${i & 255}` },
+      // A healthy miss is tens of ms; seconds means a stall (e.g. ::1 lookup).
+      signal: AbortSignal.timeout(5000),
+    },
   )
+  // A 429/500 run profiles the error path, not the route.
+  if (!res.ok) throw new Error(`request ${i}: HTTP ${res.status} ${res.url}`)
   await res.arrayBuffer()
 }
 for (let i = 0; i < 10; i++) await hit(i) // warm the isolate
@@ -67,7 +99,10 @@ for (let i = 0; i < 10; i++) await hit(i) // warm the isolate
 await send("Profiler.enable")
 await send("Profiler.setSamplingInterval", { interval: 100 })
 await send("Profiler.start")
-for (let i = 0; i < N; i++) await hit(i)
+for (let i = 0; i < N; i++) {
+  await hit(i)
+  if ((i + 1) % 25 === 0) console.error(`${i + 1}/${N} requests`)
+}
 const { profile } = (await send("Profiler.stop")) as { profile: Profile }
 ws.close()
 if (args.out) await Bun.write(args.out, JSON.stringify(profile))

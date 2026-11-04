@@ -26,6 +26,7 @@ bun run cf:usage          # add --daily to split the per-Worker table by day
 - Workers Logs (`POST /accounts/<id>/workers/observability/telemetry/query`) fails silently. A wrong key returns `success: true` with empty aggregates.
   - The path key is `$workers.event.path`, not `$workers.event.request.path`.
   - The group limit goes in `parameters.limit`. A top-level `limit` is ignored, and the default is 10 groups. Groups cap at 1000, and grouping by path explodes per slug, so filter by path (`eq`, `includes`, `starts_with`, `regex`) instead.
+  - Percentile operators are `median`, `p90`, `p99`, …; there is no `p50` (rejected with a ZodError).
   - To discover field names: `POST .../telemetry/keys` with `{"timeframe":{...},"datasets":["cloudflare-workers"]}`.
 
 ## Baseline
