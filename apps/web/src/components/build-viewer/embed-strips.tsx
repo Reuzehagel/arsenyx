@@ -146,6 +146,7 @@ export function EmbedStrips({
           itemName={itemName}
           itemImageName={itemImageName}
           slug={slug}
+          bustImage
         >
           <span className="text-sm font-medium">
             {[
@@ -162,6 +163,7 @@ export function EmbedStrips({
           itemName={itemName}
           itemImageName={itemImageName}
           slug={slug}
+          bustImage={category === "operators"}
         />
       )}
     </>
@@ -179,12 +181,15 @@ function EmbedStripFrame({
   itemImageName,
   slug,
   warframeLayout = false,
+  bustImage = false,
   children,
 }: {
   itemName: string
   itemImageName?: string
   slug: string
   warframeLayout?: boolean
+  /** Operator portraits are full-body busts; centering crops to the chest. */
+  bustImage?: boolean
   /** Optional middle content. Omitted for the fallback header bar (item +
    *  "View on Arsenyx") shown when a build qualifies for no curated strip. */
   children?: ReactNode
@@ -222,7 +227,10 @@ function EmbedStripFrame({
           <img
             src={getImageUrl(itemImageName)}
             alt={itemName}
-            className="h-full w-full object-cover"
+            className={cn(
+              "h-full w-full object-cover",
+              bustImage && "object-top",
+            )}
           />
         </div>
         <span

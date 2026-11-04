@@ -158,14 +158,7 @@ export function ModGrid({
     category !== "railjack" && (auraSlotCount > 0 || showExilus || showStance)
 
   return (
-    <div
-      className={cn(
-        "flex flex-col gap-6",
-        // Mod-less (Operators): fill the card stretched to the sidebar height
-        // and center the arcane row in it.
-        normalSlotCount === 0 && "flex-1 justify-center",
-      )}
-    >
+    <div className="flex flex-col gap-6">
       {showTopExtrasRow && (
         <div className="flex w-full flex-wrap justify-center gap-4">
           {auraSlotCount > 0 && (
@@ -264,29 +257,42 @@ export function ModGrid({
             })
           })()}
         </div>
-      ) : (
-        // Mod-less categories (Operators) skip the empty grid and its gap.
-        normalSlotCount > 0 && (
-          <div
-            className={cn(
-              // Fixed upper bound = max column count × card width + gaps.
-              // A single max-width means the grid never snaps wider — flex-wrap
-              // handles 2→3→4 reflow within the same boundary.
-              "mx-auto flex flex-wrap justify-center gap-x-4 gap-y-6",
-              isCompanion ? "max-w-[984px]" : "max-w-[784px]",
-            )}
-          >
-            {Array.from({ length: normalSlotCount }, (_, i) => {
-              const id: SlotId = `normal-${i}`
-              return (
-                <ModSlot
-                  key={i}
-                  {...slotProps(id, toPolarity(polarities[i]))}
-                />
-              )
-            })}
+      ) : category === "operators" ? (
+        // Tektolyst Artifact mods have no polarity
+        // (wiki.warframe.com/w/Antique_Mods) — no Forma picker. ModCard hides
+        // their drain itself.
+        <div className="mx-auto flex w-full max-w-[984px] flex-col gap-2">
+          <div className="text-muted-foreground/70 px-1 font-mono text-[11px] tracking-wider uppercase">
+            Tektolyst Artifact
           </div>
-        )
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-6">
+            {Array.from({ length: normalSlotCount }, (_, i) => (
+              <ModSlot
+                key={i}
+                {...slotProps(`normal-${i}`, undefined, {
+                  disableForma: true,
+                })}
+              />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div
+          className={cn(
+            // Fixed upper bound = max column count × card width + gaps.
+            // A single max-width means the grid never snaps wider — flex-wrap
+            // handles 2→3→4 reflow within the same boundary.
+            "mx-auto flex flex-wrap justify-center gap-x-4 gap-y-6",
+            isCompanion ? "max-w-[984px]" : "max-w-[784px]",
+          )}
+        >
+          {Array.from({ length: normalSlotCount }, (_, i) => {
+            const id: SlotId = `normal-${i}`
+            return (
+              <ModSlot key={i} {...slotProps(id, toPolarity(polarities[i]))} />
+            )
+          })}
+        </div>
       )}
 
       {arcaneRow}

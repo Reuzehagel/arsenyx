@@ -79,6 +79,17 @@ function meleeArcanesNoExodia(allArcanes: Arcane[]): Arcane[] {
   return getArcanesForSlot(allArcanes, "melee").filter((a) => !isZawArcane(a))
 }
 
+/** Operator arcane slots in order, each fed by one wiki slot `Type`. The last
+ *  is the Tektolyst Artifact's arcane slot (wiki.warframe.com/w/Tektolyst_Artifact:
+ *  "5 mod slots and 1 arcane slot"). */
+const OPERATOR_ARCANE_SLOTS = [
+  { slotType: "Operator", label: "Operator Arcane 1" },
+  { slotType: "Operator", label: "Operator Arcane 2" },
+  { slotType: "Amp", label: "Amp Arcane 1" },
+  { slotType: "Amp", label: "Amp Arcane 2" },
+  { slotType: "Tektolyst Artifacts", label: "Artifact Arcane" },
+] as const
+
 /** Arcane slot count per category. Within `archwing`, only arch-guns
  * have arcane slots (slot 0 = Primary Arcane, slot 1 = Secondary Arcane —
  * matches the in-game arsenal); archwing suits and arch-melee weapons
@@ -92,7 +103,7 @@ export function getArcaneSlotCount(
     case "warframes":
       return 2
     case "operators":
-      return 4
+      return OPERATOR_ARCANE_SLOTS.length
     case "melee":
       // Zaws have a dedicated Exodia slot in addition to the regular Melee
       // Arcane slot — both can be active simultaneously in-game.
@@ -129,19 +140,11 @@ export function getArcaneSlotConfig(
 ): ArcaneSlotConfig {
   if (count === 0) return { options: [] }
   if (category === "operators") {
-    const operatorArcanes = allArcanes.filter(
-      (arcane) => arcane.slotType === "Operator",
-    )
-    const ampArcanes = allArcanes.filter((arcane) => arcane.slotType === "Amp")
-
     return {
-      options: [operatorArcanes, operatorArcanes, ampArcanes, ampArcanes],
-      labels: [
-        "Operator Arcane 1",
-        "Operator Arcane 2",
-        "Amp Arcane 1",
-        "Amp Arcane 2",
-      ],
+      options: OPERATOR_ARCANE_SLOTS.map((s) =>
+        allArcanes.filter((arcane) => arcane.slotType === s.slotType),
+      ),
+      labels: OPERATOR_ARCANE_SLOTS.map((s) => s.label),
     }
   }
   if (category === "archwing") {
@@ -219,13 +222,37 @@ export function getArcaneSlotConfig(
  * re-bucket by arcane kind:
  *   - Zaws: Exodia → slot 1, regular melee arcanes → slot 0.
  *   - Kitguns: Pax/Residual (Kitgun slotType) → slot 1, weapon arcanes → slot 0.
+ *   - Operators: by slotType into OPERATOR_ARCANE_SLOTS.
  * Non-modular items keep their saved order untouched.
  */
 export function resolveInitialArcanes(
   item: Pick<DetailItem, "displayClass" | "uniqueName">,
+  category: BrowseCategory,
   arcanes: (PlacedArcane | null)[] | undefined,
 ): (PlacedArcane | null)[] | undefined {
   if (!arcanes) return arcanes
+  // Share links drop empty arcane slots, so an Operator's Amp or Artifact
+  // arcane would land in an Operator slot — re-bucket each into the first free
+  // slot of its type.
+  if (category === "operators") {
+    const out: (PlacedArcane | null)[] = OPERATOR_ARCANE_SLOTS.map(() => null)
+    const untyped: [number, PlacedArcane][] = []
+    arcanes.forEach((a, saved) => {
+      if (!a) return
+      const idx = OPERATOR_ARCANE_SLOTS.findIndex(
+        (s, i) => s.slotType === a.arcane.slotType && !out[i],
+      )
+      if (idx >= 0) out[idx] = a
+      else untyped.push([saved, a])
+    })
+    // An arcane whose wiki row lost its `Type` (#284) keeps its saved slot (or
+    // the first free one) instead of vanishing on the next save.
+    for (const [saved, a] of untyped) {
+      const idx = out[saved] === null ? saved : out.indexOf(null)
+      if (idx >= 0) out[idx] = a
+    }
+    return out
+  }
   const isZaw = isZawComponent(item.displayClass)
   const isKitgun = !isZaw && isKitgunWeapon(item)
   if (!isZaw && !isKitgun) return arcanes

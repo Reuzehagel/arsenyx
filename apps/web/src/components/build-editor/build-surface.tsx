@@ -1,5 +1,8 @@
 import type { ModConflictMap } from "@arsenyx/shared/warframe/mods"
-import { hasModSlots } from "@arsenyx/shared/warframe/slot-layout"
+import {
+  hasModCapacity,
+  hasModSlots,
+} from "@arsenyx/shared/warframe/slot-layout"
 import type { ReactNode } from "react"
 
 import { cn } from "@/lib/util/utils"
@@ -87,10 +90,10 @@ export function BuildSurface({
   conflicts,
 }: BuildSurfaceProps) {
   const readOnly = mode === "view"
-  // Mod-less categories (Operators) have a short sidebar that holds their
+  // Capacity-less categories (Operators) have a short sidebar that holds their
   // main config (Focus School, Amp), so it stays inline at every width
   // instead of collapsing into the Stats popover.
-  const modded = hasModSlots(category)
+  const modded = hasModCapacity(category)
 
   return (
     <div
@@ -198,7 +201,10 @@ export function BuildSurface({
           }
         />
 
-        {!readOnly && modded && <KeyboardHintsStrip />}
+        {!readOnly && hasModSlots(category) && (
+          // Pinned to the bottom when the card stretches to a taller sidebar.
+          <KeyboardHintsStrip className="mt-auto" />
+        )}
       </div>
     </div>
   )

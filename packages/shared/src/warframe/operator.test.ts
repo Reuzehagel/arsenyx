@@ -12,7 +12,7 @@ import {
   parseFocusSchool,
   parseOperatorAmp,
 } from "./operator-loadout"
-import { hasModSlots } from "./slot-layout"
+import { hasModCapacity, hasModSlots } from "./slot-layout"
 import type { BuildState } from "./types"
 
 function operatorBuild(operatorAmp: string): BuildState {
@@ -130,11 +130,12 @@ describe("Focus school codec", () => {
   })
 })
 
-describe("hasModSlots", () => {
-  it("is false only for mod-less Operators", () => {
-    expect(hasModSlots("operators")).toBe(false)
-    expect(hasModSlots("warframes")).toBe(true)
-    expect(hasModSlots("railjack")).toBe(true)
+describe("hasModSlots / hasModCapacity", () => {
+  it("gives Operators artifact mod slots but no capacity", () => {
+    expect(hasModSlots("operators")).toBe(true)
+    expect(hasModCapacity("operators")).toBe(false)
+    expect(hasModCapacity("warframes")).toBe(true)
+    expect(hasModCapacity("railjack")).toBe(true)
   })
 })
 

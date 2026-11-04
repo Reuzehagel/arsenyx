@@ -254,7 +254,7 @@ function BuildViewerBodyInner({
   })
   const arcanes = useArcaneSlots(
     arcaneCount,
-    resolveInitialArcanes(item, saved.arcanes),
+    resolveInitialArcanes(item, category, saved.arcanes),
   )
   const shards = useMemo(() => padShards(saved.shards), [saved.shards])
   const helminth = saved.helminth ?? {}

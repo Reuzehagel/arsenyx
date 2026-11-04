@@ -11,6 +11,26 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-11-04",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Operator and Drifter builds now include a Tektolyst Artifact: five slots for Antique mods (no capacity or Forma, and no duplicates) plus an Artifact Arcane slot for the Zid-An arcanes.",
+      },
+      {
+        type: "fix",
+        description:
+          "Operator share links keep each arcane in its own slot. An Amp arcane no longer lands in an Operator Arcane slot when the slots before it are empty.",
+      },
+      {
+        type: "fix",
+        description:
+          "The Operator portrait in build embeds shows the head instead of the torso.",
+      },
+    ],
+  },
+  {
     date: "2026-11-03",
     changes: [
       {

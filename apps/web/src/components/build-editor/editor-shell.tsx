@@ -154,7 +154,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
   })
   const arcanes = useArcaneSlots(
     arcaneCount,
-    resolveInitialArcanes(item, savedData.arcanes),
+    resolveInitialArcanes(item, category, savedData.arcanes),
   )
 
   // Alternate mode: the picker sets this slot's Alternate instead of placing

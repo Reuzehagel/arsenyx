@@ -16,7 +16,7 @@ import {
   isModularAmp,
   OPERATOR_AMP_TYPES,
 } from "@arsenyx/shared/warframe/operator-loadout"
-import { hasModSlots } from "@arsenyx/shared/warframe/slot-layout"
+import { hasModCapacity } from "@arsenyx/shared/warframe/slot-layout"
 import {
   DEFAULT_DEPLOYMENT_CONTEXT,
   type DeploymentContext,
@@ -206,7 +206,7 @@ export function ItemSidebar({
   // Distinguish archwing *suits* (have health) from arch-guns / arch-melee
   // (have attack data). Both share the `archwing` browse category.
   const hasWeaponData = itemHasWeaponData(item)
-  const hasStats = hasModSlots(category)
+  const hasStats = hasModCapacity(category)
   const isArchwingSuit =
     category === "archwing" && !hasWeaponData && item.health !== undefined
   const isWarframe =
@@ -502,7 +502,7 @@ export function ItemSidebar({
         )}
         {category === "operators" && (
           <>
-            <div className="flex grow flex-col justify-center gap-1.5 p-3">
+            <div className="flex flex-col gap-1.5 p-3">
               <span className="text-xs font-medium">Focus School</span>
               <Select
                 items={FOCUS_SCHOOLS}
@@ -529,7 +529,7 @@ export function ItemSidebar({
 
             <Separator />
 
-            <div className="flex grow flex-col justify-center gap-1.5 p-3">
+            <div className="flex flex-col gap-1.5 p-3">
               <span className="text-xs font-medium">Amp</span>
 
               <Select
@@ -609,7 +609,7 @@ export function ItemSidebar({
             </div>
           </>
         )}
-        {hasModSlots(category) && (
+        {hasModCapacity(category) && (
           <div className="flex flex-col gap-2 p-3">
             <div className="flex items-center justify-between text-xs">
               <span className="font-medium">{boosterLabel}</span>

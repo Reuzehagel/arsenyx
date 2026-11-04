@@ -1,4 +1,4 @@
-import { hasModSlots } from "@arsenyx/shared/warframe/slot-layout"
+import { hasModCapacity } from "@arsenyx/shared/warframe/slot-layout"
 import { Link as RouterLink } from "@tanstack/react-router"
 import { Pencil } from "lucide-react"
 
@@ -124,7 +124,7 @@ export function ViewerHeader({
                 text rather than competing as bordered badges — the header read
                 as four stacked pills before. */}
             <div className="text-muted-foreground flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs">
-              {hasModSlots(category) && (
+              {hasModCapacity(category) && (
                 <EndoFormaBadges
                   totalEndoCost={totalEndoCost}
                   formaCount={formaCount}

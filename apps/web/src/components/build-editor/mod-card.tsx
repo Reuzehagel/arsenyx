@@ -198,6 +198,12 @@ interface CompactProps {
   vtPrefix?: string
 }
 
+/** Tektolyst Artifact (Antique) mods take no capacity and ship DE's
+ *  catch-all compatName "ANY" (wiki.warframe.com/w/Antique_Mods). */
+function isAntiqueMod(mod: Mod): boolean {
+  return mod.uniqueName.includes("/Mods/Antiques/")
+}
+
 function CompactModCard({
   mod,
   rarity,
@@ -314,9 +320,10 @@ function ExpandedModCard({
   const setBonus = setSize > 0 ? mod.modSetStats?.[setTier - 1] : undefined
   const maxRank = modMaxRank(mod)
   const drain = drainOverride ?? baseDrainForMod(mod, rank)
-  const compatLabel =
-    mod.compatName ||
-    (mod.type ? mod.type.replace(" Mod", "").toUpperCase() : "")
+  const compatLabel = isAntiqueMod(mod)
+    ? "ANTIQUE"
+    : mod.compatName ||
+      (mod.type ? mod.type.replace(" Mod", "").toUpperCase() : "")
 
   const hasStats = stats.length > 0
 
@@ -474,6 +481,7 @@ export function ModCard({
   const effectiveRank = rank ?? maxRank
   const isMaxRank = maxRank > 0 && effectiveRank >= maxRank
   const effectiveHover = isHovered && !disableHover
+  const noDrain = hideDrain || isAntiqueMod(mod)
 
   // Scroll collapses the preview — otherwise the card can stay stuck open
   // if its wrapper moves out from under the cursor silently. Same problem
@@ -558,7 +566,7 @@ export function ModCard({
           setCount={setCount}
           drainOverride={drainOverride}
           matchState={matchState}
-          hideDrain={hideDrain}
+          hideDrain={noDrain}
         />
       </div>
     )
@@ -614,7 +622,7 @@ export function ModCard({
           isMaxRank={isMaxRank}
           drainOverride={drainOverride}
           matchState={matchState}
-          hideDrain={hideDrain}
+          hideDrain={noDrain}
         />
       </div>
 
