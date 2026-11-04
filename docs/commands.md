@@ -130,7 +130,7 @@ bun run sync:images                # mirror emitted images into R2, rewrite cata
 bun run check:images               # fail if catalog still hotlinks content/wiki.warframe.com
 bun run check:data-version         # fail if catalog changed but meta.json generatedAt didn't
 bun run check:wrangler             # wrangler dry-run of both Workers; fails on config warnings (needs apps/web dist/) — run after editing a wrangler.toml
-bun run data:stamp                 # bump meta.json generatedAt — run after any HAND-edit to apps/web/public/data/
+bun run data:stamp                 # bump meta.json generatedAt + recount records — run after any HAND-edit to apps/web/public/data/
 bun run data:ab [base-ref]          # ship only a pipeline change's catalog delta (see "Shipping a pipeline fix" below)
 bun run data:patch <base> <fixed>  # the patch step data:ab runs, for hand-built snapshots
 bun run data:diff [ref]            # markdown summary of catalog changes vs ref (default HEAD); the data cron's PR body
@@ -187,6 +187,8 @@ image-URL cache). Revert them unless the change is a full refresh (`data:ab`
 restores the image cache itself). Patched
 records keep the committed `img.arsenyx.com` URLs; a record the fix *adds*
 carries an upstream URL, which `check:images` flags — run `sync:images` then.
+Re-running `data:ab` after editing the fix refreshes the records it added
+(back to upstream URLs, so `sync:images` again).
 
 Occasional dev tools (run by path, not aliased):
 

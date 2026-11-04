@@ -34,9 +34,10 @@ Drafts live under `arsenyx:editor-draft:<storeKey>`: the build slug for a saved 
 
 Saving needs the `api` server and a signed-in user. Email+password auth exists only when `NODE_ENV=development` (`apps/api/src/auth.ts`).
 
-1. Check that `DATABASE_URL` in `apps/api/.env` points at `*.neon.tech` (dev). `*.psdb.cloud` is prod: stop.
-2. From the editor page, create a throwaway account: `fetch('http://localhost:8787/auth/sign-up/email', {method: 'POST', credentials: 'include', headers: {'content-type': 'application/json'}, body: JSON.stringify({email, password, name})})`. Use `/auth/sign-in/email` if it already exists.
-3. Reload. The header now shows **Save**; pick **Unlisted** in the save dialog so test builds stay out of listings.
+1. Check that `DATABASE_URL` in `apps/api/.env` points at `localhost:54320` (this checkout's own local DB; missing `.env` → `just setup`). `*.psdb.cloud` is prod: stop.
+2. If another checkout already holds `:8787`, wire a second web/api pair ([Ports taken by another worktree](commands.md#ports-taken-by-another-worktree)) and use its API port below.
+3. From the editor page, create a throwaway account: `fetch('http://localhost:8787/auth/sign-up/email', {method: 'POST', credentials: 'include', headers: {'content-type': 'application/json'}, body: JSON.stringify({email, password, name})})`. Use `/auth/sign-in/email` if it already exists.
+4. Reload. The header now shows **Save**; pick **Unlisted** in the save dialog so test builds stay out of listings.
 
 ## Read the stats panel
 
