@@ -11,7 +11,8 @@
  *  4. `sync-images.ts`  → mirror emitted image URLs into R2 + rewrite the
  *     catalog to point at our CDN. Passed `--skip-if-no-creds`: a checkout
  *     without R2 creds skips this and leaves upstream URLs in place (the
- *     weekly cron has R2 secrets, so it mirrors). CI's `check:images` guard
+ *     weekly cron runs this script without them, then mirrors in a separate
+ *     step that alone holds the R2 secrets). CI's `check:images` guard
  *     then blocks merging such a catalog until someone runs `sync:images`.
  *
  * `--skip-sync` rebuilds from the raw mirror already on disk (steps 3–4 only)

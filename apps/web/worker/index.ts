@@ -166,7 +166,11 @@ export default {
     // ignore it over HTTP anyway. The canonical www response carries HSTS via
     // public/_headers once the browser follows this 301.
     if (url.hostname === "arsenyx.com") {
-      const target = new URL(url.pathname + url.search, SITE_URL)
+      // Assign the path rather than resolving it: `new URL("//evil.example",
+      // SITE_URL)` is scheme-relative and would redirect off-site.
+      const target = new URL(SITE_URL)
+      target.pathname = url.pathname
+      target.search = url.search
       return new Response(null, {
         status: 301,
         headers: { location: target.toString() },

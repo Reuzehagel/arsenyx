@@ -15,7 +15,7 @@ import { Prisma } from "../generated/prisma/client"
 import { BuildVisibility } from "../generated/prisma/enums"
 import type { InputJsonValue } from "../generated/prisma/internal/prismaNamespace"
 import { edgeCache, purgeEdge } from "../lib/edge-cache"
-import { getSession } from "../lib/session"
+import { getFreshSession, getSession } from "../lib/session"
 import { hasPrismaCode, parseJsonBody, trimToMax } from "../lib/validate"
 import { enforceAnonSearchLimit, rateLimitUser } from "../middleware/rate-limit"
 import {
@@ -993,6 +993,12 @@ builds.delete(
     if (!isOwnOwner && !isPartnerOwner) {
       return c.json({ error: "forbidden" }, 403)
     }
+    // "Either owner" only applies to an existing link — without this, owning
+    // any build let a caller write (and bump updatedAt on) any other build.
+    const linked = await prisma.build.count({
+      where: { id: own.id, partnerBuilds: { some: { id: partner.id } } },
+    })
+    if (linked === 0) return c.json({ error: "not_found" }, 404)
 
     // Sweep the severed link's variant targets on both sides while we're
     // already writing both rows — stale entries are harmless on read, but
@@ -1242,7 +1248,11 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
   // to view it back and the viewer 404s. This is a VIEW-only power: the social
   // paths (like/bookmark/fork) go through canViewerSeeBuild, which has no admin
   // bypass on purpose, so an admin can read but not act on a private build.
-  const isAdmin = session.user.isAdmin === true
+  // Re-checked past the cookie cache so a demoted admin loses the bypass at
+  // once; only cached admins pay the extra lookup.
+  const isAdmin =
+    session.user.isAdmin === true &&
+    (await getFreshSession(c))?.user.isAdmin === true
   const access = buildAccess(build, {
     id: viewerId,
     isOrgMember: viewerIsOrgMember,

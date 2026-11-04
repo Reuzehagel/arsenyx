@@ -18,3 +18,15 @@ export async function getSession(c: Context): Promise<AuthSession> {
   c.set(SESSION_KEY, { value: session } satisfies Cached)
   return session
 }
+
+/** Session read past the 60s cookie cache, for checks that must see a ban or
+ *  admin demotion immediately (and a ban's deleted sessions). Replaces the
+ *  per-request cache so later getSession() calls see the same fresh value. */
+export async function getFreshSession(c: Context): Promise<AuthSession> {
+  const session = await auth.api.getSession({
+    headers: c.req.raw.headers,
+    query: { disableCookieCache: true },
+  })
+  c.set(SESSION_KEY, { value: session } satisfies Cached)
+  return session
+}

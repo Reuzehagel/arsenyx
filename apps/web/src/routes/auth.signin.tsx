@@ -16,8 +16,14 @@ type SignInSearch = { redirect?: string }
 export const Route = createFileRoute("/auth/signin")({
   head: () => seo({ title: "Sign in", noindex: true }),
   component: SignInPage,
+  // Same-origin paths only: it's appended to the origin for the OAuth
+  // callbackURL, where `@host`, `.host` or `//host` would change the host.
   validateSearch: (search: Record<string, unknown>): SignInSearch => ({
-    redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+    redirect:
+      typeof search.redirect === "string" &&
+      /^\/(?![/\\])/.test(search.redirect)
+        ? search.redirect
+        : undefined,
   }),
 })
 

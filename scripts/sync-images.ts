@@ -150,14 +150,15 @@ const REFRESH_METADATA = process.argv.includes("--refresh-metadata")
 /** Map file extension → image MIME type. Trusting the upstream Content-Type
  *  bit us once: some responses came back as `application/octet-stream`, which
  *  R2 then served back verbatim and browsers treated as a download. Since we
- *  control the key (and therefore the extension), derive the type ourselves. */
+ *  control the key (and therefore the extension), derive the type ourselves.
+ *  No `svg`: an SVG served as image/svg+xml runs script when opened directly,
+ *  and wiki filenames are editor-controlled. Falls through to octet-stream. */
 const MIME_BY_EXT: Record<string, string> = {
   png: "image/png",
   jpg: "image/jpeg",
   jpeg: "image/jpeg",
   gif: "image/gif",
   webp: "image/webp",
-  svg: "image/svg+xml",
   avif: "image/avif",
   ico: "image/x-icon",
 }
