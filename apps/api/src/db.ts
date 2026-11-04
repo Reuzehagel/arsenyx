@@ -135,6 +135,18 @@ export function registerBackgroundWork(promise: Promise<unknown>): void {
   wrapped.finally(() => scope.pending.delete(wrapped))
 }
 
+// Fire-and-forget SQL that must not force a PrismaClient into existence: it
+// runs on the request's pg Pool (shared with the client when one exists).
+// Used for view counting on the anonymous snapshot path, which otherwise never
+// touches Postgres.
+export function backgroundSql(text: string, values: unknown[]): void {
+  registerBackgroundWork(
+    currentPool()
+      .query(text, values)
+      .catch((err) => console.error("background sql failed", err)),
+  )
+}
+
 export const prisma = new Proxy({} as PrismaClient, {
   get(_, prop) {
     // Better Auth's prisma adapter reads this at betterAuth() init (module

@@ -2,7 +2,6 @@ import { Hono } from "hono"
 
 import { prisma } from "../db"
 import { Prisma } from "../generated/prisma/client"
-import { purgeEdge } from "../lib/edge-cache"
 import { parseJsonBody } from "../lib/validate"
 import { rateLimitUser } from "../middleware/rate-limit"
 import { isPrismaNotFound, requireAdmin } from "./_admin"
@@ -10,7 +9,7 @@ import { parseListQuery, runList } from "./_build-list"
 import { releaseUserSocial } from "./_build-social"
 import { allBuildsScope } from "./_build-visibility"
 import { parsePage, trimQ } from "./_query"
-import { isVisibility } from "./builds"
+import { invalidateBuilds, isVisibility } from "./builds"
 
 export const admin = new Hono()
 
@@ -213,12 +212,19 @@ admin.patch("/builds/:slug", adminMutateLimit, async (c) => {
     const updated = await prisma.build.update({
       where: { slug },
       data: { visibility },
-      select: { id: true, slug: true, visibility: true },
+      select: {
+        id: true,
+        slug: true,
+        visibility: true,
+        partnerBuilds: { select: { slug: true } },
+      },
     })
-    // Evict any anonymous edge-cached detail so a build flipped to PRIVATE
-    // stops being served publicly — mirrors the owner PATCH (builds.ts).
-    purgeEdge(c, `/builds/${slug}`)
-    return c.json(updated)
+    // Evict the anonymous edge cache + KV snapshot (and the partners' strips)
+    // so a build flipped to PRIVATE stops being served publicly — mirrors the
+    // owner PATCH (builds.ts).
+    const { partnerBuilds, ...rest } = updated
+    invalidateBuilds(c, [slug, ...partnerBuilds.map((p) => p.slug)])
+    return c.json(rest)
   } catch (err) {
     if (isPrismaNotFound(err)) return c.json({ error: "not_found" }, 404)
     throw err
@@ -230,15 +236,19 @@ admin.delete("/builds/:slug", adminMutateLimit, async (c) => {
   if (actor instanceof Response) return actor
 
   const slug = c.req.param("slug")
+  let partners: { slug: string }[]
   try {
-    await prisma.build.delete({ where: { slug } })
+    ;({ partnerBuilds: partners } = await prisma.build.delete({
+      where: { slug },
+      select: { partnerBuilds: { select: { slug: true } } },
+    }))
   } catch (err) {
     if (isPrismaNotFound(err)) return c.json({ error: "not_found" }, 404)
     throw err
   }
-  // Drop the anonymous edge-cached detail of the now-deleted build — mirrors
-  // the owner DELETE (builds.ts).
-  purgeEdge(c, `/builds/${slug}`)
+  // Drop the anonymous edge cache + KV snapshot of the now-deleted build and
+  // refresh its partners' strips — mirrors the owner DELETE (builds.ts).
+  invalidateBuilds(c, [slug, ...partners.map((p) => p.slug)])
   return c.body(null, 204)
 })
 

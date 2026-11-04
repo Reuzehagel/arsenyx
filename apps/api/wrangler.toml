@@ -83,6 +83,14 @@ id = "c99d68f482634c9b944449a03bc6b13d"
 # never committed: set CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE
 # in apps/api/.env (see .env.example).
 
+# Anonymous build-detail snapshots (src/routes/_build-snapshot.ts).
+# PROTOTYPE: placeholder id, works under `wrangler dev` (simulated locally) only.
+# Before deploying: `bunx wrangler kv namespace create BUILD_SNAPSHOTS` and put
+# the returned id here.
+[[kv_namespaces]]
+binding = "BUILD_SNAPSHOTS"
+id = "00000000000000000000000000000000"
+
 [observability]
 enabled = true
 
