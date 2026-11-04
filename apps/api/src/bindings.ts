@@ -20,4 +20,8 @@ export interface Bindings {
   // `connectionString` is resolved at runtime (dynamic local port) and fed to
   // the Prisma pg adapter in db.ts. Configured under [[hyperdrive]].
   HYPERDRIVE: Hyperdrive
+
+  // Anonymous build-detail snapshots (routes/_build-snapshot.ts). Optional:
+  // without it, anonymous detail reads take the live Prisma path.
+  BUILD_SNAPSHOTS?: KVNamespace
 }

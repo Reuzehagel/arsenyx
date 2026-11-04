@@ -100,6 +100,9 @@
       },
     },
   },
+  "patchedDependencies": {
+    "@prisma/client@7.10.1": "patches/@prisma%2Fclient@7.10.1.patch",
+  },
   "packages": {
     "@arsenyx/shared": ["@arsenyx/shared@workspace:packages/shared"],
 

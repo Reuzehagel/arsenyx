@@ -4,13 +4,13 @@ import { BuildVisibility } from "../generated/prisma/enums"
 /**
  * Single source of truth for the Visibility scope of every Build *list* query.
  *
- * runList (_build-list.ts) scopes a query two ways at once: a Prisma `where`
- * for the paged findMany and a raw-SQL `baseFilter` for the full-text-search /
- * count path. The two halves must express the same predicate, or a list leaks
- * Builds the viewer shouldn't see. Defining both together — one function per
- * scope — makes them impossible to edit in isolation, so they can't silently
- * drift. (Per-Build view/mutate checks for single builds stay in builds.ts;
- * this module is only the list scopes.)
+ * runList (_build-list.ts) scopes every list with the raw-SQL `baseFilter`.
+ * The Prisma `baseWhere` beside it is the same predicate for Prisma callers
+ * (the profile directory's AUTHORED_PUBLIC_BUILD); the two must agree, or a
+ * list leaks Builds the viewer shouldn't see. Defining both together — one
+ * function per scope — makes them impossible to edit in isolation, so they
+ * can't silently drift. (Per-Build view/mutate checks for single builds stay
+ * in builds.ts; this module is only the list scopes.)
  *
  * The fields are named to match runList's params so a route spreads a scope:
  *   runList({ filters, ...publicScope(), defaultSort: "newest" })
