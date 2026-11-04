@@ -47,5 +47,8 @@
     "oxfmt": "^0.76.0",
     "oxlint": "^1.91.0",
     "warframe-public-export-plus": "^0.6.12"
+  },
+  "patchedDependencies": {
+    "@prisma/client@7.10.1": "patches/@prisma%2Fclient@7.10.1.patch"
   }
 }

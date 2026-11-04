@@ -67,6 +67,15 @@ bun --cwd apps/api run db:studio   # Prisma Studio GUI
 bun --cwd apps/api run db:generate # regenerate Prisma client
 ```
 
+**Upgrading Prisma:** `@prisma/client` carries a bun patch
+([patches/](../patches/), `patchedDependencies` in the root `package.json`) that
+shares the query compiler, plan cache and parameterization graph across the
+per-request clients. The patch is keyed to the exact version, so after a bump
+[prisma-patch.test.ts](../apps/api/src/prisma-patch.test.ts) fails: run
+`bun patch @prisma/client`, re-apply the old patch's edits to
+`runtime/wasm-compiler-edge.mjs` in the printed folder (old patch shows them),
+then `bun patch --commit <folder>` and delete the old patch file.
+
 Destructive/manual migrations live in `apps/api/scripts/migrations/` as dated
 `.sql` files, applied with `prisma db execute --file`.
 
