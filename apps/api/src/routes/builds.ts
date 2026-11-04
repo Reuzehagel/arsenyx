@@ -1184,8 +1184,11 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
   // `?embed=1` (apps/web/worker/index.ts), which forwards no cookies.
   if (!session?.user) {
     const kv = snapshotKv(c)
+    // A failed KV read falls back to Postgres rather than 500ing the page.
     const hit = kv
-      ? await kv.getWithMetadata<SnapshotMeta>(snapshotKey(slug), "text")
+      ? await kv
+          .getWithMetadata<SnapshotMeta>(snapshotKey(slug), "text")
+          .catch(() => null)
       : null
     let text = hit?.value
     let meta = hit?.metadata
@@ -1193,7 +1196,9 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
     // treated as missing, never served.
     if (text == null || !meta || !isAnonVisible(meta.visibility)) {
       const snap = await loadAnonSnapshot(slug)
-      if (kv) registerBackgroundWork(writeSnapshot(kv, slug, snap))
+      // Only store real snapshots: a delete per 404/PRIVATE probe is a billed
+      // KV write, and a stale key is already ignored by the check above.
+      if (kv && snap) registerBackgroundWork(writeSnapshot(kv, slug, snap))
       if (!snap) return c.json({ error: "not_found" }, 404)
       text = JSON.stringify(snap.body)
       meta = snap.meta
