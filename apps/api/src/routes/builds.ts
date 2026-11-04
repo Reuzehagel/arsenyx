@@ -9,7 +9,8 @@ import { Hono, type Context } from "hono"
 import { getCookie, setCookie } from "hono/cookie"
 import { customAlphabet } from "nanoid"
 
-import { prisma, registerBackgroundWork } from "../db"
+import type { Bindings } from "../bindings"
+import { backgroundSql, prisma, registerBackgroundWork } from "../db"
 import { Prisma } from "../generated/prisma/client"
 import { BuildVisibility } from "../generated/prisma/enums"
 import type { InputJsonValue } from "../generated/prisma/internal/prismaNamespace"
@@ -24,7 +25,6 @@ import {
   runList,
   serializeBuildDetail,
   serializeListRow,
-  visibleAuthor,
 } from "./_build-list"
 import {
   describeEdit,
@@ -32,6 +32,14 @@ import {
   pruneRevisions,
   readRevisions,
 } from "./_build-revisions"
+import {
+  embedFromSnapshot,
+  isAnonVisible,
+  snapshotKey,
+  writeSnapshot,
+  type Snapshot,
+  type SnapshotMeta,
+} from "./_build-snapshot"
 import { setLike, clearLike, toggleBookmark } from "./_build-social"
 import {
   bookmarkedScope,
@@ -335,6 +343,8 @@ builds.patch("/:slug", rateLimitUser("mutate"), async (c) => {
       // or not it changed, so "was the guide edited" has to be answered by
       // comparing content, not by the field's presence.
       buildGuide: { select: { summary: true, description: true } },
+      // Their snapshots embed this build's card (invalidateBuilds below).
+      partnerBuilds: { select: { slug: true } },
     },
   })
   if (!existing) return c.json({ error: "not_found" }, 404)
@@ -455,7 +465,7 @@ builds.patch("/:slug", rateLimitUser("mutate"), async (c) => {
     select: { id: true, slug: true },
   })
   pruneRevisions(existing.id)
-  purgeEdge(c, `/builds/${slug}`)
+  invalidateBuilds(c, [slug, ...existing.partnerBuilds.map((p) => p.slug)])
   return c.json(updated)
 })
 
@@ -489,7 +499,12 @@ builds.delete("/:slug", rateLimitUser("mutate"), async (c) => {
 
   const existing = await prisma.build.findUnique({
     where: { slug },
-    select: { id: true, userId: true, organizationId: true },
+    select: {
+      id: true,
+      userId: true,
+      organizationId: true,
+      partnerBuilds: { select: { slug: true } },
+    },
   })
   if (!existing) return c.json({ error: "not_found" }, 404)
   if (!(await canMutateBuild(existing, session.user.id))) {
@@ -497,7 +512,7 @@ builds.delete("/:slug", rateLimitUser("mutate"), async (c) => {
   }
 
   await prisma.build.delete({ where: { id: existing.id } })
-  purgeEdge(c, `/builds/${slug}`)
+  invalidateBuilds(c, [slug, ...existing.partnerBuilds.map((p) => p.slug)])
   return c.body(null, 204)
 })
 
@@ -848,7 +863,7 @@ builds.put("/:slug/partners/order", rateLimitUser("mutate"), async (c) => {
     data: { partnerOrder: nextOrder },
   })
   // The detail payload embeds the partner strip.
-  purgeEdge(c, `/builds/${slug}`)
+  invalidateBuilds(c, [slug])
   return c.body(null, 204)
 })
 
@@ -907,7 +922,7 @@ builds.put(
       where: { id: own.id },
       data: { partnerVariants: map as InputJsonValue },
     })
-    purgeEdge(c, `/builds/${slug}`)
+    invalidateBuilds(c, [slug])
     return c.body(null, 204)
   },
 )
@@ -953,8 +968,7 @@ builds.put(
         data: { partnerBuilds: { connect: { id: own.id } } },
       }),
     ])
-    purgeEdge(c, `/builds/${slug}`)
-    purgeEdge(c, `/builds/${partnerSlug}`)
+    invalidateBuilds(c, [slug, partnerSlug])
     return c.body(null, 204)
   },
 )
@@ -1004,8 +1018,7 @@ builds.delete(
         },
       }),
     ])
-    purgeEdge(c, `/builds/${slug}`)
-    purgeEdge(c, `/builds/${partnerSlug}`)
+    invalidateBuilds(c, [slug, partnerSlug])
     return c.body(null, 204)
   },
 )
@@ -1163,77 +1176,60 @@ builds.delete("/:slug/bookmark", rateLimitUser("social"), async (c) => {
 
 builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
   const slug = c.req.param("slug")
+  // Memoized; rateLimitAnonRead already resolved it for this request.
+  const session = await getSession(c)
 
-  // Fast path for the link-unfurl Worker (apps/web/worker/index.ts): skip the
-  // heavy `buildData` JSON column, the guide body, the session lookup, and
-  // the viewer-state queries. Only PUBLIC / UNLISTED builds are visible
-  // anonymously, and the Worker further filters to PUBLIC before injecting
-  // meta. This shrinks the edge-cached payload by ~10–50× for embeds.
-  if (c.req.query("embed") === "1") {
-    const slim = await prisma.build.findUnique({
-      where: { slug },
-      relationLoadStrategy: "join",
-      select: {
-        slug: true,
-        name: true,
-        description: true,
-        visibility: true,
-        hideAuthor: true,
-        likeCount: true,
-        viewCount: true,
-        itemName: true,
-        itemCategory: true,
-        itemUniqueName: true,
-        itemImageName: true,
-        user: { select: { name: true, username: true, displayUsername: true } },
-        organization: { select: { name: true, verified: true } },
-        buildGuide: { select: { summary: true } },
-      },
-    })
-    if (
-      !slim ||
-      (slim.visibility !== "PUBLIC" && slim.visibility !== "UNLISTED")
-    )
-      return c.json({ error: "not_found" }, 404)
-    return c.json({
-      name: slim.name,
-      description: slim.description,
-      visibility: slim.visibility,
-      hideAuthor: slim.hideAuthor,
-      likeCount: slim.likeCount,
-      viewCount: slim.viewCount,
-      item: {
-        name: slim.itemName,
-        category: slim.itemCategory,
-        uniqueName: slim.itemUniqueName,
-        imageName: slim.itemImageName,
-      },
-      user: visibleAuthor(slim),
-      organization: slim.organization,
-      guide: slim.buildGuide ? { summary: slim.buildGuide.summary } : null,
-    })
+  // Anonymous: served from the KV snapshot (see _build-snapshot.ts), so a miss
+  // here never constructs a PrismaClient. Also covers the link-unfurl Worker's
+  // `?embed=1` (apps/web/worker/index.ts), which forwards no cookies.
+  if (!session?.user) {
+    const kv = snapshotKv(c)
+    const hit = kv
+      ? await kv.getWithMetadata<SnapshotMeta>(snapshotKey(slug), "text")
+      : null
+    let text = hit?.value
+    let meta = hit?.metadata
+    // Belt and braces: a key whose metadata isn't anonymously visible is
+    // treated as missing, never served.
+    if (text == null || !meta || !isAnonVisible(meta.visibility)) {
+      const snap = await loadAnonSnapshot(slug)
+      if (kv) registerBackgroundWork(writeSnapshot(kv, slug, snap))
+      if (!snap) return c.json({ error: "not_found" }, 404)
+      text = JSON.stringify(snap.body)
+      meta = snap.meta
+    }
+    if (c.req.query("embed") === "1") {
+      return c.json(embedFromSnapshot(JSON.parse(text)))
+    }
+    if (c.req.query("view") === "0") {
+      // Embed loads never render the partner strip. No view, no cookie, so the
+      // browser may cache it too (Vary: Cookie keeps it off signed-in loads).
+      const { partners: _, ...body } = JSON.parse(text)
+      c.header("Cache-Control", "public, max-age=300")
+      c.header("Vary", "Cookie")
+      return c.json(body)
+    }
+    maybeIncrementView(c, meta.id, slug, undefined, "")
+    return c.body(text, 200, { "Content-Type": "application/json" })
   }
 
-  const [session, build] = await Promise.all([
-    getSession(c),
-    prisma.build.findUnique({
-      where: { slug },
-      // Fold user + organization + buildGuide into one LATERAL-join SELECT
-      // rather than a query-per-relation. The detail page was the single
-      // largest source of DB query volume (one view = build + guide + author +
-      // org as four separate SELECTs); see _build-list.ts for the rationale.
-      relationLoadStrategy: "join",
-      include: DETAIL_INCLUDE,
-    }),
-  ])
+  const build = await prisma.build.findUnique({
+    where: { slug },
+    // Fold user + organization + buildGuide into one LATERAL-join SELECT
+    // rather than a query-per-relation. The detail page was the single
+    // largest source of DB query volume (one view = build + guide + author +
+    // org as four separate SELECTs); see _build-list.ts for the rationale.
+    relationLoadStrategy: "join",
+    include: DETAIL_INCLUDE,
+  })
 
   if (!build) return c.json({ error: "not_found" }, 404)
 
-  const viewerId = session?.user.id
+  const viewerId = session.user.id
   // Resolve org membership once — both the view check and the owner/mutate
   // check below need the same (org, viewer) answer.
   const viewerIsOrgMember =
-    viewerId != null && build.organizationId != null
+    build.organizationId != null
       ? await isOrgMember(build.organizationId, viewerId)
       : false
   // Admins bypass visibility so they can moderate any build — without this, an
@@ -1241,7 +1237,7 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
   // to view it back and the viewer 404s. This is a VIEW-only power: the social
   // paths (like/bookmark/fork) go through canViewerSeeBuild, which has no admin
   // bypass on purpose, so an admin can read but not act on a private build.
-  const isAdmin = session?.user.isAdmin === true
+  const isAdmin = session.user.isAdmin === true
   const access = buildAccess(build, {
     id: viewerId,
     isOrgMember: viewerIsOrgMember,
@@ -1250,24 +1246,20 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
 
   if (!access.canView) return c.json({ error: "not_found" }, 404)
 
-  await maybeIncrementView(c, build.id, build.slug, viewerId, build.userId)
+  maybeIncrementView(c, build.id, build.slug, viewerId, build.userId)
 
   // Partner strip rides along so a page view is one cache miss instead of two
   // (each miss pays per-request Prisma client + connection setup). Embed loads
   // (?view=0) never render the strip, so they skip the query.
   const [like, bookmark, partners] = await Promise.all([
-    viewerId
-      ? prisma.buildLike.findUnique({
-          where: { userId_buildId: { userId: viewerId, buildId: build.id } },
-          select: { value: true },
-        })
-      : null,
-    viewerId
-      ? prisma.buildBookmark.findUnique({
-          where: { userId_buildId: { userId: viewerId, buildId: build.id } },
-          select: { id: true },
-        })
-      : null,
+    prisma.buildLike.findUnique({
+      where: { userId_buildId: { userId: viewerId, buildId: build.id } },
+      select: { value: true },
+    }),
+    prisma.buildBookmark.findUnique({
+      where: { userId_buildId: { userId: viewerId, buildId: build.id } },
+      select: { id: true },
+    }),
     c.req.query("view") === "0"
       ? null
       : prisma.build.findUnique({
@@ -1280,17 +1272,6 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
   const viewerHasBookmarked = bookmark != null
 
   const isOwner = access.canMutate
-
-  // Embed loads (?view=0) increment no view and set no cookie, so an anonymous
-  // response is fully shareable — let the browser cache it too, not just the
-  // edge. A guide page with many embeds (and repeat visits) then skips the
-  // refetch entirely. Gate on no-session so a personalized (owner/like/bookmark)
-  // payload is never publicly cached; Vary: Cookie stops a logged-in viewer from
-  // reusing the anonymous body from their own HTTP cache.
-  if (!session && c.req.query("view") === "0") {
-    c.header("Cache-Control", "public, max-age=300")
-    c.header("Vary", "Cookie")
-  }
 
   return c.json({
     ...serializeBuildDetail(
@@ -1307,9 +1288,59 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
   })
 })
 
+function snapshotKv(c: Context): KVNamespace | undefined {
+  return (c.env as Bindings | undefined)?.BUILD_SNAPSHOTS
+}
+
+const ANON_VIEWER = {
+  isOwner: false,
+  hasLiked: false,
+  hasDisliked: false,
+  hasBookmarked: false,
+}
+
+// The anonymous GET /:slug body, partner strip included, in one query. null
+// when the build is missing or not anonymously visible, so a PRIVATE build can
+// never become a snapshot. partnerSelect(undefined) drops PRIVATE partners.
+async function loadAnonSnapshot(slug: string): Promise<Snapshot | null> {
+  const build = await prisma.build.findUnique({
+    where: { slug },
+    relationLoadStrategy: "join",
+    include: {
+      ...DETAIL_INCLUDE,
+      partnerBuilds: partnerSelect(undefined).partnerBuilds,
+    },
+  })
+  if (!build || !isAnonVisible(build.visibility)) return null
+  return {
+    body: {
+      ...serializeBuildDetail(build, ANON_VIEWER),
+      partners: serializePartners(build),
+    },
+    meta: { id: build.id, visibility: build.visibility },
+  }
+}
+
+// Every mutation that changes what an anonymous viewer of these builds sees:
+// evicts the colo-local edge cache and rewrites (or drops) each KV snapshot
+// after the response. Pass the partners too when a build's own card changes
+// (name, visibility, thumbnail, deletion): their strips embed it.
+export function invalidateBuilds(c: Context, slugs: string[]): void {
+  const kv = snapshotKv(c)
+  for (const slug of new Set(slugs)) {
+    purgeEdge(c, `/builds/${slug}`)
+    if (kv)
+      registerBackgroundWork(
+        loadAnonSnapshot(slug)
+          .then((snap) => writeSnapshot(kv, slug, snap))
+          .catch((err) => console.error("snapshot refresh failed", err)),
+      )
+  }
+}
+
 const VIEW_COOKIE_MAX_AGE = 12 * 60 * 60 // 12h
 
-async function maybeIncrementView(
+function maybeIncrementView(
   c: Context,
   buildId: string,
   slug: string,
@@ -1330,29 +1361,26 @@ async function maybeIncrementView(
   if (c.req.query("view") === "0") return
   const cookieName = `vw_${slug}`
   if (getCookie(c, cookieName)) return
-  registerBackgroundWork(
-    prisma.$executeRaw`
-      UPDATE builds SET "viewCount" = "viewCount" + 1 WHERE id = ${buildId}
-    `.catch((err) => console.error("view count update failed", err)),
+  // All-time counter plus the per-day bucket for the trailing-30-day "trending"
+  // sort, in one statement. Background work through backgroundSql so the
+  // anonymous snapshot path pays one bare pg connection, not a PrismaClient.
+  // The opportunistic prune keeps the bucket table bounded to the window
+  // without a cron: counted views are already rare (12h dedup), and a ~2%
+  // sample trims it without a DELETE on every request.
+  backgroundSql(
+    `WITH counted AS (
+       UPDATE builds SET "viewCount" = "viewCount" + 1 WHERE id = $1
+     )
+     INSERT INTO build_view_days ("buildId", day, count)
+     VALUES ($1, CURRENT_DATE, 1)
+     ON CONFLICT ("buildId", day)
+       DO UPDATE SET count = build_view_days.count + 1`,
+    [buildId],
   )
-  // Per-day bucket for the trailing-30-day "trending" sort. Same dedup/embed
-  // guards as the all-time counter above, so bots and iframes don't inflate it.
-  registerBackgroundWork(
-    prisma.$executeRaw`
-      INSERT INTO build_view_days ("buildId", day, count)
-      VALUES (${buildId}, CURRENT_DATE, 1)
-      ON CONFLICT ("buildId", day)
-        DO UPDATE SET count = build_view_days.count + 1
-    `.catch((err) => console.error("view day bucket update failed", err)),
-  )
-  // Opportunistic prune so the bucket table stays bounded to the window. No cron
-  // needed: counted views are already rare (12h dedup), and a ~2% sample keeps
-  // the table trimmed without a DELETE on every request.
   if (Math.random() < 0.02) {
-    registerBackgroundWork(
-      prisma.$executeRaw`
-        DELETE FROM build_view_days WHERE day < CURRENT_DATE - INTERVAL '31 days'
-      `.catch((err) => console.error("view day prune failed", err)),
+    backgroundSql(
+      `DELETE FROM build_view_days WHERE day < CURRENT_DATE - INTERVAL '31 days'`,
+      [],
     )
   }
   const isProd = process.env.NODE_ENV === "production"

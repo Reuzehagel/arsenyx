@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks"
 
 import { PrismaPg } from "@prisma/adapter-pg"
+import pg from "pg"
 
 import { PrismaClient } from "./generated/prisma/client"
 import "./lib/scram-cache"
@@ -97,6 +98,31 @@ export function registerBackgroundWork(promise: Promise<unknown>): void {
   const wrapped = promise.catch(() => {})
   scope.pending.add(wrapped)
   wrapped.finally(() => scope.pending.delete(wrapped))
+}
+
+// Fire-and-forget SQL that must not force a PrismaClient into existence. On a
+// request that already has a client (signed-in reads) it reuses it; otherwise
+// it opens one bare pg connection, which skips client construction and query
+// planning, the bulk of a miss's CPU. Used for view counting on the anonymous
+// snapshot path, which otherwise never touches Postgres.
+export function backgroundSql(text: string, values: unknown[]): void {
+  const scope = currentScope()
+  const run = scope.client
+    ? scope.client.$executeRawUnsafe(text, ...values)
+    : (async () => {
+        const client = new pg.Client({
+          connectionString: scope.connectionString,
+        })
+        await client.connect()
+        try {
+          await client.query(text, values)
+        } finally {
+          await client.end()
+        }
+      })()
+  registerBackgroundWork(
+    run.catch((err) => console.error("background sql failed", err)),
+  )
 }
 
 export const prisma = new Proxy({} as PrismaClient, {
