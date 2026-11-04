@@ -53,9 +53,11 @@ const list = (await (await fetch(`${args.api}/builds?limit=40`)).json()) as {
 const slugs = list.builds?.map((b) => b.slug) ?? []
 if (!slugs.length) throw new Error(`no builds from ${args.api}/builds`)
 // A fresh query param misses the edge cache, so every request runs the handler.
+// A varying client IP keeps runs over ~110 requests under ANON_READ_LIMITER.
 const hit = async (i: number) => {
   const res = await fetch(
     `${args.api}/builds/${slugs[i % slugs.length]}?p=${Math.random()}`,
+    { headers: { "cf-connecting-ip": `10.0.${(i >> 8) & 255}.${i & 255}` } },
   )
   await res.arrayBuffer()
 }

@@ -9,7 +9,7 @@
  * the admin + sample data on top. Refuses any non-local DATABASE_URL.
  */
 
-import { existsSync, readFileSync } from "node:fs"
+import { existsSync, readFileSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
 
 const REPO = resolve(import.meta.dirname, "..")
@@ -61,12 +61,26 @@ function checkoutDb(): string {
   return url.pathname.slice(1)
 }
 
+// Repoint .env files written before setup.ts pinned IPv4: under wrangler ≥4.157
+// workerd tries ::1 first for "localhost" and every request stalls ~2 s.
+function pinHyperdriveIpv4() {
+  const env = readFileSync(API_ENV, "utf8")
+  const fixed = env.replace(
+    /^(CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE\s*=\s*"?postgres(?:ql)?:\/\/[^@\s"]*)@localhost:/m,
+    "$1@127.0.0.1:",
+  )
+  if (fixed === env) return
+  writeFileSync(API_ENV, fixed, "utf8")
+  console.log("✓ apps/api/.env: Hyperdrive local string → 127.0.0.1")
+}
+
 async function main() {
   const cmd = process.argv[2]
   if (cmd !== "ensure" && cmd !== "reset") {
     throw new Error("usage: bun scripts/dev-db.ts ensure|reset")
   }
   const db = checkoutDb()
+  pinHyperdriveIpv4()
   await run(["docker", "compose", "up", "-d", "--wait", "--quiet-pull"])
   if (cmd === "reset")
     await psql(`DROP DATABASE IF EXISTS "${db}" WITH (FORCE)`)

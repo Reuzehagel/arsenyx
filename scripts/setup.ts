@@ -176,10 +176,12 @@ async function main() {
   const nextValues = new Map(existing)
   nextValues.set("NODE_ENV", "development")
   nextValues.set("DATABASE_URL", dbUrl!)
-  // The local Worker reaches the DB through this, not DATABASE_URL.
+  // The local Worker reaches the DB through this, not DATABASE_URL. workerd
+  // (wrangler ≥4.157) tries ::1 first for "localhost" and stalls ~2 s per
+  // connection before falling back, so pin IPv4.
   nextValues.set(
     "CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE",
-    dbUrl!,
+    dbUrl!.replace("@localhost:", "@127.0.0.1:"),
   )
   nextValues.set("BETTER_AUTH_SECRET", secret)
   const rendered = renderEnv(template, nextValues)
