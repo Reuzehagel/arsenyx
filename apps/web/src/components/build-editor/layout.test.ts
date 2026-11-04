@@ -32,6 +32,7 @@ const ARCANES: Arcane[] = [
   arc("Emergence Dissipate", "Operator", "Utility"),
   arc("Virtuos Shadow", "Amp", "Offensive"),
   arc("Eternal Onslaught", "Amp", "Offensive"),
+  arc("Zid-An Uskos", "Tektolyst Artifacts", "Tektolyst Artifact"),
 ]
 
 const ZAW_STRIKE: Pick<DetailItem, "name" | "displayClass" | "uniqueName"> = {
@@ -153,14 +154,14 @@ describe("resolveInitialArcanes — kitgun re-bucketing", () => {
 
   it("routes a saved Pax/Residual arcane to slot 1, even from index 0", () => {
     // Old single-slot kitgun builds saved the Pax at index 0.
-    const out = resolveInitialArcanes(KITGUN_SECONDARY, [
+    const out = resolveInitialArcanes(KITGUN_SECONDARY, "secondary", [
       placed(arc("Pax Bolt", "Kitgun")),
     ])
     expect(out).toEqual([null, placed(arc("Pax Bolt", "Kitgun"))])
   })
 
   it("keeps a weapon arcane in slot 0 and pairs it with a Pax", () => {
-    const out = resolveInitialArcanes(KITGUN_SECONDARY, [
+    const out = resolveInitialArcanes(KITGUN_SECONDARY, "secondary", [
       placed(arc("Pax Bolt", "Kitgun")),
       placed(arc("Cascadia Flare", "Secondary")),
     ])
@@ -172,7 +173,7 @@ describe("resolveInitialArcanes — kitgun re-bucketing", () => {
 
   it("leaves non-modular weapons' saved order untouched", () => {
     const saved = [placed(arc("Cascadia Flare", "Secondary"))]
-    expect(resolveInitialArcanes(NORMAL_PISTOL, saved)).toBe(saved)
+    expect(resolveInitialArcanes(NORMAL_PISTOL, "secondary", saved)).toBe(saved)
   })
 })
 
@@ -384,24 +385,25 @@ describe("getArcaneSlotConfig — kitgun split", () => {
 })
 
 describe("Operator arcane routing", () => {
-  it("gives Operator builds four arcane slots", () => {
+  it("gives Operator builds five arcane slots", () => {
     expect(
       getArcaneSlotCount("operators", {
         displayClass: "Operator",
         uniqueName:
           "/Lotus/Types/Game/CharacterCustomization/Operator/Operator",
       }),
-    ).toBe(4)
+    ).toBe(5)
   })
 
-  it("separates Operator and Amp arcanes into their own slots", () => {
-    const cfg = getArcaneSlotConfig(ARCANES, "operators", 4)
+  it("separates Operator, Amp and Artifact arcanes into their own slots", () => {
+    const cfg = getArcaneSlotConfig(ARCANES, "operators", 5)
 
     expect(cfg.labels).toEqual([
       "Operator Arcane 1",
       "Operator Arcane 2",
       "Amp Arcane 1",
       "Amp Arcane 2",
+      "Artifact Arcane",
     ])
 
     expect(cfg.options[0]!.map((a) => a.name)).toEqual([
@@ -423,5 +425,27 @@ describe("Operator arcane routing", () => {
       "Virtuos Shadow",
       "Eternal Onslaught",
     ])
+
+    expect(cfg.options[4]!.map((a) => a.name)).toEqual(["Zid-An Uskos"])
+  })
+
+  it("re-buckets compacted share-link arcanes by slot type", () => {
+    const placed = (a: Arcane): PlacedArcane => ({ arcane: a, rank: 0 })
+    const zid = placed(arc("Zid-An Uskos", "Tektolyst Artifacts"))
+    const amp = placed(arc("Virtuos Shadow", "Amp"))
+    const op = placed(arc("Magus Lockdown", "Operator"))
+    const operator = { displayClass: "Operator", uniqueName: "/op" }
+    expect(
+      resolveInitialArcanes(operator, "operators", [zid, amp, op]),
+    ).toEqual([op, null, amp, null, zid])
+  })
+
+  it("keeps an arcane with no slot type at its saved index", () => {
+    const placed = (a: Arcane): PlacedArcane => ({ arcane: a, rank: 0 })
+    const lost = placed(arc("Magus Lockdown"))
+    const operator = { displayClass: "Operator", uniqueName: "/op" }
+    expect(
+      resolveInitialArcanes(operator, "operators", [null, null, lost]),
+    ).toEqual([null, null, lost, null, null])
   })
 })

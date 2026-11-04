@@ -39,6 +39,7 @@ const SUBPATH_TO_TYPE: Record<string, string> = {
   Zariman: "Zariman",
   OperatorAmps: "Amp",
   OperatorArmour: "Operator",
+  Antiques: "Tektolyst Artifact",
 }
 
 /** Filter DE's combined relic+arcane blob to just arcanes (by uniqueName

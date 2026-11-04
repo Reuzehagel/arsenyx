@@ -45,6 +45,7 @@ import {
 } from "@arsenyx/shared/warframe/zaw-data"
 
 import { ARCANE_KEEP, ARCANE_SLOT_FALLBACKS } from "../data/curated/arcane-keep"
+import { DE_MISSING_ARCANES } from "../data/curated/de-missing-arcanes"
 import { DE_MISSING_MODS } from "../data/curated/de-missing-mods"
 import { OPERATOR_IMAGE_FIXES } from "../data/curated/operator-images"
 import { PVE_USABLE_CONCLAVE_MODS } from "../data/curated/pve-usable-conclave-mods"
@@ -510,7 +511,17 @@ async function main() {
   stats.mods.kept = modCounts.kept
 
   const deArcanes = readDeArcanes()
-  const allMergedArcanes = mergeArcanes(deArcanes.ExportRelicArcane ?? [])
+  // Backfill the Tektolyst Artifact arcanes DE's export never shipped.
+  const missingArcanes = injectMissingDeMods(
+    deArcanes.ExportRelicArcane ?? [],
+    DE_MISSING_ARCANES,
+  )
+  if (missingArcanes.resurfaced.length > 0) {
+    console.warn(
+      `  WARN de-missing-arcanes.ts: DE ships these again — delete the curated entries: ${missingArcanes.resurfaced.join(", ")}`,
+    )
+  }
+  const allMergedArcanes = mergeArcanes(missingArcanes.upgrades)
   // DE ships per-ability-slot copies of some arcanes (Arcane Steadfast has
   // 5 records — one per ability + on-cast) and a handful of cut entries
   // (e.g. "Arcane Liquid") that aren't in-game. `wikiArcaneNames` (built in

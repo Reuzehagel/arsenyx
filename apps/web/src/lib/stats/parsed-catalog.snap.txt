@@ -1570,3 +1570,8 @@ Cascadia Accuracy | —
 Cascadia Empowered | —
 Molt Vigor | —
 Molt Efficiency | —
+Zid-An Asheir | —
+Zid-An Haras | —
+Zid-An Osbok | —
+Zid-An Sek-Eel | —
+Zid-An Uskos | heat +2.4% (conditional)

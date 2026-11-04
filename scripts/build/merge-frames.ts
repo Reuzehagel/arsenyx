@@ -168,7 +168,7 @@ export interface MergeFramesOpts {
  *      the base name's augments too (`isPrime` strips " Prime" suffix).
  *
  *  Necramechs / Archwings each have their own pool, plus per-name
- *  augments. Operators take no mods (they use Focus, not mods). */
+ *  augments. Operators take only their Tektolyst Artifact's mods. */
 function modPoolsForFrame(
   name: string,
   category: FrameCategory,
@@ -183,8 +183,9 @@ function modPoolsForFrame(
       return ["Necramech", name]
     case "archwing":
       return ["Archwing", name]
+    // Tektolyst Artifact (Antique) mods — the only DE mods with compatName ANY.
     case "operators":
-      return []
+      return ["ANY"]
   }
 }
 

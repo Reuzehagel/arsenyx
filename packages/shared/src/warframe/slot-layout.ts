@@ -6,11 +6,12 @@ import type { BrowseCategory } from "./types"
 // the web editor's `layout.ts` — those need the resolved item, not just a
 // category.
 
-/** Normal mod slot count. Companions have 10, necramechs have 12, the Plexus
- *  has 14 (3 Battle + 3 Tactical + 8 Integrated; its 1 Aura is counted
- *  separately), everything else 8. */
+/** Normal mod slot count. Operators have 5 (their Tektolyst Artifact's mod
+ *  slots), companions have 10, necramechs have 12, the Plexus has 14
+ *  (3 Battle + 3 Tactical + 8 Integrated; its 1 Aura is counted separately),
+ *  everything else 8. */
 export function getNormalSlotCount(category: BrowseCategory): number {
-  if (category === "operators") return 0
+  if (category === "operators") return 5
   if (category === "companions") return 10
   if (category === "necramechs") return 12
   if (category === "railjack") return 14
@@ -41,10 +42,17 @@ export function hasExilusSlot(category: BrowseCategory): boolean {
  *  no aura/exilus/arcane, so `decodeOverframeSlotId` special-cases them. This
  *  predicate keeps both OUT of the uniform all-normal path used by
  *  companions/archwing/railjack. */
-/** Whether the category is modded at all. Mod-less categories (Operators) skip
- *  the mod grid, capacity/reactor/Forma, mod search and mod hotkey hints. */
+/** Whether the category is modded at all (mod grid, mod search, mod hotkey
+ *  hints). */
 export function hasModSlots(category: BrowseCategory): boolean {
   return getNormalSlotCount(category) > 0
+}
+
+/** Whether mods draw on a capacity pool: capacity bar, reactor, Forma,
+ *  polarities and the stats panel. Operators' Tektolyst Artifact (Antique)
+ *  mods take no capacity and have no polarity (wiki.warframe.com/w/Antique_Mods). */
+export function hasModCapacity(category: BrowseCategory): boolean {
+  return hasModSlots(category) && category !== "operators"
 }
 
 export function isWarframeLike(category: BrowseCategory): boolean {
