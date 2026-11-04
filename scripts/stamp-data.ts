@@ -1,5 +1,6 @@
 /**
- * Bump `apps/web/public/data/meta.json`'s `generatedAt` to now.
+ * Bump `apps/web/public/data/meta.json`'s `generatedAt` to now and recompute its
+ * record counts.
  *
  * The catalog under `apps/web/public/data/` is served `immutable, max-age=1yr`
  * under stable URLs; the app cache-busts via `?v=<generatedAt>` (see
@@ -13,11 +14,27 @@
 import { readFileSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
 
-const META = resolve(import.meta.dirname, "../apps/web/public/data/meta.json")
+const DATA = resolve(import.meta.dirname, "../apps/web/public/data")
+const META = resolve(DATA, "meta.json")
+const read = (f: string) => JSON.parse(readFileSync(resolve(DATA, f), "utf8"))
 
-const meta = JSON.parse(readFileSync(META, "utf8")) as { generatedAt: string }
+const meta = read("meta.json") as {
+  generatedAt: string
+  itemCount: number
+  modCount: number
+  arcaneCount: number
+  perCategory: Record<string, number>
+}
 const prev = meta.generatedAt
 meta.generatedAt = new Date().toISOString()
+// data:patch skips meta.json, so a patch that adds or drops records leaves the
+// counts stale — recompute them from the emitted files.
+const index = read("items-index.json") as Record<string, unknown[]>
+for (const [cat, items] of Object.entries(index))
+  meta.perCategory[cat] = items.length
+meta.itemCount = Object.values(meta.perCategory).reduce((a, b) => a + b, 0)
+meta.modCount = read("mods-all.json").length
+meta.arcaneCount = read("arcanes-all.json").length
 // Match build-items-index.ts exactly: 2-space indent, no trailing newline —
 // otherwise the stamp introduces a spurious whitespace diff.
 writeFileSync(META, JSON.stringify(meta, null, 2))

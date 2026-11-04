@@ -63,6 +63,7 @@ gen: deps gen-routes gen-prisma
 # vite build. Always sync: ~1.5s when already up to date.
 deps:
     @bun install --frozen-lockfile --silent
+    @bun run scripts/check-singleton-deps.ts
 
 # ~1.5s, so it always runs rather than trying to outsmart the schema mtime.
 [working-directory('apps/api')]

@@ -50,8 +50,14 @@ function patch(
       const out: Json[] = []
       for (const h of head) {
         const k = keyOf(h)
-        if (k === undefined || !b.has(k)) out.push(h)
-        else if (!f.has(k)) log.push(`${path}[${k}] removed`)
+        if (k === undefined || !b.has(k)) {
+          // In fixed but not base: this fix adds the record and an earlier run
+          // already did. Refresh it so a re-run picks up later edits to the fix.
+          const fresh = k === undefined ? undefined : f.get(k)
+          if (fresh !== undefined && !same(h, fresh))
+            log.push(`${path}[${k}] refreshed`)
+          out.push(fresh ?? h)
+        } else if (!f.has(k)) log.push(`${path}[${k}] removed`)
         else out.push(patch(h, b.get(k), f.get(k), `${path}[${k}]`, log))
       }
       for (const [k, v] of f) {
@@ -150,7 +156,7 @@ for (const fixedPath of findJsonFiles(resolve(fixedDir))) {
     if (VERBOSE) console.log(`    ${l}`)
     const field =
       l
-        .split(/ = | removed| added|: | [+-]/)[0]!
+        .split(/ = | removed| added| refreshed|: | [+-]/)[0]!
         .replace(/\[[^\]]*\]/g, "[]") || "(root)"
     byField.set(field, (byField.get(field) ?? 0) + 1)
   }
