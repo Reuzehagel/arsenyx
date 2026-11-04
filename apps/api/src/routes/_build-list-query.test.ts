@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { parseListQuery } from "./_build-list"
+import { LIST_COLUMNS_SQL, LIST_SELECT, parseListQuery } from "./_build-list"
 
 // Minimal stand-in for the Hono context slice parseListQuery reads.
 function ctx(query: Record<string, string>) {
@@ -46,5 +46,18 @@ describe("parseListQuery", () => {
   it("passes item through as an opaque uniqueName", () => {
     const item = "/Lotus/Powersuits/Archwing/SupportJetPack/SupportJetPack"
     expect(parseListQuery(ctx({ item })).item).toBe(item)
+  })
+})
+
+// runList reads lists with LIST_COLUMNS_SQL and serializes the rows with the
+// same serializeListRow as the Prisma (search) path, so a field added to
+// LIST_SELECT but not to the SQL would silently go missing from most lists.
+describe("LIST_COLUMNS_SQL", () => {
+  it("selects every LIST_SELECT field", () => {
+    const text = LIST_COLUMNS_SQL.text
+    for (const k of Object.keys(LIST_SELECT))
+      expect(text).toMatch(new RegExp(`\\b${k}\\b`))
+    for (const rel of [LIST_SELECT.user, LIST_SELECT.organization])
+      for (const k of Object.keys(rel.select)) expect(text).toContain(`'${k}'`)
   })
 })

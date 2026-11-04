@@ -9,7 +9,7 @@ import {
 } from "@arsenyx/shared/warframe/build-list"
 import { isValidCategory } from "@arsenyx/shared/warframe/categories"
 
-import { prisma } from "../db"
+import { prisma, sql } from "../db"
 import { Prisma } from "../generated/prisma/client"
 import { parseBool, parsePage, trimQ } from "./_query"
 
@@ -200,38 +200,6 @@ export function parseListQuery(c: {
   return { page, limit, sort, q, category, item, hasGuide, hasShards }
 }
 
-function orderByForSort(sort: ListSort) {
-  switch (sort) {
-    case "updated":
-      return [{ updatedAt: "desc" as const }]
-    case "top":
-      return [{ likeCount: "desc" as const }, { createdAt: "desc" as const }]
-    case "bookmarked":
-      return [
-        { bookmarkCount: "desc" as const },
-        { createdAt: "desc" as const },
-      ]
-    case "viewed":
-      return [{ viewCount: "desc" as const }, { createdAt: "desc" as const }]
-    case "trending":
-      // Trending ranks by a 30-day view-sum join (build_view_days) that can't be
-      // expressed as a Prisma scalar orderBy — runList routes it through raw SQL
-      // (trendingBuildIds). This fallback is defensive and should be unreachable.
-      return [{ createdAt: "desc" as const }]
-    case "forma-asc":
-      return [{ formaCount: "asc" as const }, { createdAt: "desc" as const }]
-    case "forma-desc":
-      return [{ formaCount: "desc" as const }, { createdAt: "desc" as const }]
-    case "name-asc":
-      return [{ name: "asc" as const }, { createdAt: "desc" as const }]
-    case "name-desc":
-      return [{ name: "desc" as const }, { createdAt: "desc" as const }]
-    case "newest":
-    default:
-      return [{ createdAt: "desc" as const }]
-  }
-}
-
 /**
  * Search path: tsvector match ordered by ts_rank (with sort as tiebreaker).
  * Returns the paginated ID list + total match count.
@@ -367,35 +335,9 @@ async function searchBuildIds(params: {
   return { ids: rows.map((r) => r.id), total: totalRows[0]?.n ?? 0 }
 }
 
-// Non-search "trending" path: rank build IDs by their trailing-30-day view sum.
-// Like the search path, this returns an ordered ID list (the window sum can't be
-// a Prisma scalar orderBy) that runList hydrates via fetchOrdered.
-async function trendingBuildIds(params: {
-  baseFilter: Prisma.Sql
-  category: string | undefined
-  item: string | undefined
-  hasGuide: boolean | undefined
-  hasShards: boolean | undefined
-  skip: number
-  take: number
-}): Promise<string[]> {
-  const { baseFilter, skip, take, ...filters } = params
-  const filtersSql = listFiltersSql(filters)
-  const rows = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
-    SELECT id
-    FROM builds
-    ${TRENDING_JOIN}
-    WHERE ${baseFilter}
-      ${filtersSql}
-    ORDER BY COALESCE(tv.s, 0) DESC, "createdAt" DESC
-    LIMIT ${take} OFFSET ${skip}
-  `)
-  return rows.map((r) => r.id)
-}
-
-// The raw-SQL paths (search, trending) return IDs in rank order. Prisma's
+// The search path returns IDs in rank order. Prisma's
 // `id: { in: [...] }` doesn't preserve that order, so we re-sort the hydrated
-// rows to match. Shared so both paths serialize identically.
+// rows to match.
 async function fetchOrdered(
   ids: string[],
   total: number,
@@ -427,13 +369,11 @@ async function fetchOrdered(
 
 export async function runList({
   filters,
-  baseWhere,
   baseFilter,
   defaultSort,
   revealAuthor = false,
 }: {
   filters: ListFilters
-  baseWhere: Prisma.BuildWhereInput
   baseFilter: Prisma.Sql
   defaultSort: ListSort
   /** Admin moderation only: show authors of hideAuthor org builds. */
@@ -442,14 +382,6 @@ export async function runList({
   const { page, limit, q, category, item, hasGuide, hasShards } = filters
   const sort: ListSort = filters.sort ?? defaultSort
   const skip = (page - 1) * limit
-
-  const where: Record<string, unknown> = { ...baseWhere }
-  if (category) where.itemCategory = category
-  if (item) where.itemUniqueName = item
-  // `!== undefined`, not truthiness — `false` filters to builds WITHOUT the
-  // flag rather than meaning "no filter". Keep in sync with listFiltersSql.
-  if (hasGuide !== undefined) where.hasGuide = hasGuide
-  if (hasShards !== undefined) where.hasShards = hasShards
 
   if (q) {
     const { ids, total } = await searchBuildIds({
@@ -466,38 +398,43 @@ export async function runList({
     return fetchOrdered(ids, total, page, limit, revealAuthor)
   }
 
-  if (sort === "trending") {
-    const [ids, total] = await Promise.all([
-      trendingBuildIds({
-        baseFilter,
-        category,
-        item,
-        hasGuide,
-        hasShards,
-        skip,
-        take: limit,
-      }),
-      prisma.build.count({ where }),
-    ])
-    return fetchOrdered(ids, total, page, limit, revealAuthor)
-  }
-
-  const [rows, total] = await Promise.all([
-    prisma.build.findMany({
-      where,
-      orderBy: orderByForSort(sort),
-      skip,
-      take: limit,
-      relationLoadStrategy: "join",
-      select: LIST_SELECT,
-    }),
-    prisma.build.count({ where }),
-  ])
+  // Plain SQL rather than Prisma: no PrismaClient is built for a list request
+  // (client construction + query compile dominate a cache miss's CPU).
+  // Sequential on purpose: in parallel the pool opens a second connection,
+  // and connection setup costs more CPU than the extra round trip.
+  const filtersSql = listFiltersSql({ category, item, hasGuide, hasShards })
+  const rows = await sql<ListRow>(Prisma.sql`
+    SELECT ${LIST_COLUMNS_SQL}
+    FROM builds
+    ${sort === "trending" ? TRENDING_JOIN : Prisma.empty}
+    WHERE ${baseFilter}
+      ${filtersSql}
+    ORDER BY ${tiebreakerSql(sort)}
+    LIMIT ${limit} OFFSET ${skip}
+  `)
+  const totalRows = await sql<{ n: number }>(Prisma.sql`
+    SELECT COUNT(*)::int AS n FROM builds WHERE ${baseFilter} ${filtersSql}
+  `)
 
   return {
     builds: rows.map((r) => serializeListRow(r, revealAuthor)),
-    total,
+    total: totalRows[0]?.n ?? 0,
     page,
     limit,
   }
 }
+
+// LIST_SELECT as SQL: same columns and key order, relations as json objects so
+// the rows are ListRow-shaped. Scalar subqueries (not joins) keep the
+// unqualified column names in baseFilter / tiebreakerSql unambiguous.
+export const LIST_COLUMNS_SQL = Prisma.sql`
+  id, slug, name, visibility, "likeCount", "bookmarkCount", "viewCount",
+  "formaCount", "hasGuide", "hasShards", "hideAuthor", "createdAt", "updatedAt",
+  "itemUniqueName", "itemName", "itemImageName", "itemCategory",
+  (SELECT json_build_object('id', u.id, 'name', u.name, 'username', u.username,
+     'displayUsername', u."displayUsername", 'image', u.image)
+   FROM users u WHERE u.id = builds."userId") AS "user",
+  (SELECT json_build_object('id', o.id, 'name', o.name, 'slug', o.slug,
+     'image', o.image, 'verified', o.verified)
+   FROM organizations o WHERE o.id = builds."organizationId") AS organization
+`

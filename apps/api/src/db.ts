@@ -1,8 +1,9 @@
 import { AsyncLocalStorage } from "node:async_hooks"
 
 import { PrismaPg } from "@prisma/adapter-pg"
+import { Pool, types } from "pg"
 
-import { PrismaClient } from "./generated/prisma/client"
+import { type Prisma, PrismaClient } from "./generated/prisma/client"
 import "./lib/scram-cache"
 
 // Workers reuses isolates across requests, and the pg Pool is request-scoped.
@@ -20,14 +21,24 @@ import "./lib/scram-cache"
 
 type RequestScope = {
   connectionString: string
+  pool: Pool | null
   client: PrismaClient | null
   pending: Set<Promise<unknown>>
 }
 
 const als = new AsyncLocalStorage<RequestScope>()
 
-function createPrismaClient(connectionString: string) {
-  const adapter = new PrismaPg({ connectionString })
+// One pg Pool per request, shared by raw `sql` reads and the PrismaClient, so a
+// request that uses both reuses the same connection(s).
+function currentPool(): Pool {
+  const scope = currentScope()
+  if (!scope.pool)
+    scope.pool = new Pool({ connectionString: scope.connectionString })
+  return scope.pool
+}
+
+function createPrismaClient(pool: Pool) {
+  const adapter = new PrismaPg(pool)
   return new PrismaClient({
     adapter,
     log:
@@ -49,8 +60,31 @@ function currentScope(): RequestScope {
 
 function currentClient(): PrismaClient {
   const scope = currentScope()
-  if (!scope.client) scope.client = createPrismaClient(scope.connectionString)
+  if (!scope.client) scope.client = createPrismaClient(currentPool())
   return scope.client
+}
+
+// Prisma's DateTime columns are `timestamp without time zone` holding UTC; pg's
+// default parser reads them as local time. Per query, so Prisma's parsing of
+// the shared pool is untouched.
+const TIMESTAMP_OID = 1114
+const sqlTypes = {
+  getTypeParser: ((oid: number, format?: "text" | "binary") =>
+    oid === TIMESTAMP_OID
+      ? (s: string) => new Date(`${s.replace(" ", "T")}Z`)
+      : types.getTypeParser(oid, format)) as typeof types.getTypeParser,
+}
+
+/** Plain parameterized SQL on the request's connection, without constructing
+ *  a PrismaClient (~half of a cache miss's CPU). For hot anonymous reads; rows
+ *  come back as pg parses them (timestamps → UTC Date, json → objects). */
+export async function sql<T>(query: Prisma.Sql): Promise<T[]> {
+  const res = await currentPool().query({
+    text: query.text,
+    values: query.values,
+    types: sqlTypes,
+  })
+  return res.rows as T[]
 }
 
 export function withPrisma<T>(
@@ -64,6 +98,7 @@ export function withPrisma<T>(
   // pay the Prisma init cost.
   const scope: RequestScope = {
     connectionString,
+    pool: null,
     client: null,
     pending: new Set(),
   }
@@ -71,14 +106,15 @@ export function withPrisma<T>(
     try {
       return await fn()
     } finally {
-      // Keep the client alive until all background work registered via
-      // registerBackgroundWork() settles, then disconnect.
-      const client = scope.client
-      if (client || scope.pending.size > 0) {
+      // Keep the pool alive until all background work registered via
+      // registerBackgroundWork() settles, then close it. Read the scope after
+      // that, since background work may be what first opened it.
+      if (scope.pool || scope.pending.size > 0) {
         ctx.waitUntil(
-          Promise.allSettled([...scope.pending]).then(() =>
-            client?.$disconnect(),
-          ),
+          Promise.allSettled([...scope.pending]).then(async () => {
+            await scope.client?.$disconnect()
+            await scope.pool?.end()
+          }),
         )
       }
     }
