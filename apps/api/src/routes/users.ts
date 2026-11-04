@@ -1,6 +1,6 @@
 import { Hono } from "hono"
 
-import { prisma } from "../db"
+import { prisma, sql } from "../db"
 import { Prisma } from "../generated/prisma/client"
 import { enforceAnonSearchLimit } from "../middleware/rate-limit"
 import { parseListQuery, runList } from "./_build-list"
@@ -11,20 +11,26 @@ export const users = new Hono()
 
 const DIRECTORY_PAGE = 20
 
-const PROFILE_SELECT = {
-  id: true,
-  name: true,
-  username: true,
-  displayUsername: true,
-  image: true,
-  bio: true,
-  createdAt: true,
-  isVerified: true,
-  isCommunityLeader: true,
-  isModerator: true,
-  isAdmin: true,
-  isBanned: true,
-} as const
+const PROFILE_COLUMNS_SQL = Prisma.sql`id, name, username, "displayUsername",
+  image, bio, "createdAt", "isVerified", "isCommunityLeader", "isModerator",
+  "isAdmin", "isBanned"`
+
+type Profile = Prisma.UserGetPayload<{
+  select: {
+    id: true
+    name: true
+    username: true
+    displayUsername: true
+    image: true
+    bio: true
+    createdAt: true
+    isVerified: true
+    isCommunityLeader: true
+    isModerator: true
+    isAdmin: true
+    isBanned: true
+  }
+}>
 
 // Public profile directory. Lives on the router root rather than a named
 // sibling like /users/public: `username` has no reserved-word list of its own
@@ -135,36 +141,32 @@ users.get("/:username", async (c) => {
     return c.json({ error: "invalid_username" }, 400)
   }
 
-  const user = await prisma.user.findUnique({
-    where: { username },
-    select: PROFILE_SELECT,
-  })
+  // Plain SQL rather than Prisma: no PrismaClient is built for a profile read.
+  const [user] = await sql<Profile>(Prisma.sql`
+    SELECT ${PROFILE_COLUMNS_SQL} FROM users WHERE username = ${username}
+  `)
   if (!user || user.isBanned) return c.json({ error: "not_found" }, 404)
 
-  const [agg, memberships] = await Promise.all([
-    prisma.build.aggregate({
-      where: userPublicScope(user.id).baseWhere,
-      _count: true,
-      _sum: { likeCount: true, bookmarkCount: true, viewCount: true },
-    }),
-    prisma.organizationMember.findMany({
-      relationLoadStrategy: "join",
-      where: { userId: user.id },
-      orderBy: { joinedAt: "asc" },
-      select: {
-        role: true,
-        organization: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            image: true,
-            verified: true,
-          },
-        },
-      },
-    }),
-  ])
+  // Sequential, not Promise.all: one connection beats a second connect.
+  const [agg] = await sql<{
+    buildCount: number
+    totalLikes: number
+    totalBookmarks: number
+    totalViews: number
+  }>(Prisma.sql`
+    SELECT COUNT(*)::int AS "buildCount",
+      COALESCE(SUM("likeCount"), 0)::int AS "totalLikes",
+      COALESCE(SUM("bookmarkCount"), 0)::int AS "totalBookmarks",
+      COALESCE(SUM("viewCount"), 0)::int AS "totalViews"
+    FROM builds WHERE ${userPublicScope(user.id).baseFilter}
+  `)
+  const orgs = await sql<Record<string, unknown>>(Prisma.sql`
+    SELECT o.id, o.name, o.slug, o.image, o.verified, m.role
+    FROM organization_members m
+    JOIN organizations o ON o.id = m."organizationId"
+    WHERE m."userId" = ${user.id}
+    ORDER BY m."joinedAt" ASC
+  `)
 
   return c.json({
     id: user.id,
@@ -180,22 +182,16 @@ users.get("/:username", async (c) => {
       moderator: user.isModerator,
       admin: user.isAdmin,
     },
-    stats: {
-      buildCount: agg._count,
-      totalLikes: agg._sum.likeCount ?? 0,
-      totalBookmarks: agg._sum.bookmarkCount ?? 0,
-      totalViews: agg._sum.viewCount ?? 0,
-    },
-    orgs: memberships.map((m) => ({ ...m.organization, role: m.role })),
+    stats: agg,
+    orgs,
   })
 })
 
 users.get("/:username/builds", async (c) => {
   const username = c.req.param("username").toLowerCase()
-  const user = await prisma.user.findUnique({
-    where: { username },
-    select: { id: true, isBanned: true },
-  })
+  const [user] = await sql<{ id: string; isBanned: boolean }>(Prisma.sql`
+    SELECT id, "isBanned" FROM users WHERE username = ${username}
+  `)
   if (!user || user.isBanned) return c.json({ error: "not_found" }, 404)
 
   const result = await runList({
