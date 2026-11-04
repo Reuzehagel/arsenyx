@@ -222,6 +222,19 @@ describe("diffBuildData", () => {
       label: "…and 80 more changes",
     })
   })
+
+  it("caps stored size when a huge label is stamped onto every change", () => {
+    const label = "x".repeat(400_000)
+    const slots = Object.fromEntries(
+      Array.from({ length: 45 }, (_, i) => [`n${i}`, mod(`m${i}`)]),
+    )
+    const changes = diffBuildData(
+      doc({ label, slots: {} }),
+      doc({ label, slots }),
+    )
+    expect(changes).toHaveLength(41)
+    expect(JSON.stringify(changes).length).toBeLessThan(10_000)
+  })
 })
 
 describe("mergeChanges", () => {

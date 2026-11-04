@@ -27,14 +27,14 @@ jobs:
       pull-requests: write
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: 1.3.13 # keep in sync with ci.yml
 
       - name: Cache Bun dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
@@ -45,13 +45,18 @@ jobs:
       # auto-PR unreviewed (the commit is also scoped via add-paths below).
       - run: bun install --frozen-lockfile
 
+      # Runs without R2 secrets: these steps parse third-party upstream data, so
+      # they never see the bucket keys. Its own sync:images step self-skips here.
       - name: Sync upstream + rebuild items
         run: bun run data:refresh
-        # data:refresh runs `sync:images --skip-if-no-creds` as its last step;
-        # with these present it mirrors new images into R2 and rewrites the
-        # catalog to img.arsenyx.com, so the auto-PR already passes
-        # check:images. If any secret is unset, sync:images self-skips and the
-        # PR lands hotlinked (recoverable by running sync:images on the branch).
+
+      # Mirrors new images into R2 and rewrites the catalog to img.arsenyx.com,
+      # so the auto-PR already passes check:images. If any secret is unset it
+      # self-skips and the PR lands hotlinked (recoverable by running
+      # sync:images on the branch).
+      - name: Mirror images to R2
+        run: bun run sync:images --skip-if-no-creds
+        timeout-minutes: 15
         env:
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
@@ -125,7 +130,7 @@ jobs:
 
       - name: Create PR
         if: steps.diff.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@v8
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           branch: auto/update-warframe-data
           # Scope the commit to generated data so a stray bun.lock / build

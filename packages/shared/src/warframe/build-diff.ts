@@ -34,6 +34,25 @@ export interface BuildChange {
  *  and starts being a JSON column that grows without bound. */
 const MAX_CHANGES = 40
 
+/** Per-field length cap on stored changes. Labels, scopes and details echo
+ *  user strings (variant labels, mod names) and a variant's label is stamped
+ *  onto every one of its changes — uncapped, one PATCH could store ~40× its
+ *  own body. Generous for any real name. */
+const MAX_FIELD = 120
+
+function clip(s: string): string {
+  return s.length > MAX_FIELD ? `${s.slice(0, MAX_FIELD - 1)}…` : s
+}
+
+function clipChange(c: BuildChange): BuildChange {
+  return {
+    ...c,
+    label: clip(c.label),
+    ...(c.scope !== undefined && { scope: clip(c.scope) }),
+    ...(c.detail !== undefined && { detail: clip(c.detail) }),
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Defensive readers over the persisted shape (apps/web SavedBuildData). That
 // type lives in apps/web and can't be imported here (api must not reach into
@@ -355,14 +374,14 @@ export function diffBuildData(before: unknown, after: unknown): BuildChange[] {
 
   if (out.length === 0) return [{ op: "info", label: "No loadout changes" }]
   if (out.length > MAX_CHANGES) {
-    const kept = out.slice(0, MAX_CHANGES)
+    const kept = out.slice(0, MAX_CHANGES).map(clipChange)
     kept.push({
       op: "info",
       label: `…and ${out.length - MAX_CHANGES} more changes`,
     })
     return kept
   }
-  return out
+  return out.map(clipChange)
 }
 
 /** The op that undoes each op. */

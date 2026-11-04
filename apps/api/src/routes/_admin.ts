@@ -1,6 +1,6 @@
 import type { Context } from "hono"
 
-import { getSession } from "../lib/session"
+import { getFreshSession } from "../lib/session"
 import { hasPrismaCode } from "../lib/validate"
 
 export type AdminUser = { id: string; isAdmin: boolean }
@@ -12,7 +12,9 @@ export function isPrismaNotFound(err: unknown): boolean {
 }
 
 export async function requireAdmin(c: Context): Promise<AdminUser | Response> {
-  const session = await getSession(c)
+  // Fresh, not cookie-cached: a just-demoted admin must not get a 60s window
+  // to re-promote themselves or act against the admin who demoted them.
+  const session = await getFreshSession(c)
   if (!session?.user) {
     return new Response(JSON.stringify({ error: "unauthorized" }), {
       status: 401,

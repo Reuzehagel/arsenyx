@@ -8,6 +8,7 @@ import { isPrismaNotFound, requireAdmin } from "./_admin"
 import { parseListQuery, runList } from "./_build-list"
 import { releaseUserSocial } from "./_build-social"
 import { allBuildsScope } from "./_build-visibility"
+import { promoteOrgSuccessors } from "./_org-succession"
 import { parsePage, trimQ } from "./_query"
 import { invalidateBuilds, isVisibility } from "./builds"
 
@@ -173,6 +174,7 @@ admin.delete("/users/:id", adminMutateLimit, async (c) => {
   try {
     await prisma.$transaction([
       ...releaseUserSocial(targetId),
+      promoteOrgSuccessors(targetId),
       prisma.user.delete({ where: { id: targetId } }),
     ])
   } catch (err) {

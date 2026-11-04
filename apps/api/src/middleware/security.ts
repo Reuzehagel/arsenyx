@@ -1,7 +1,7 @@
 import type { MiddlewareHandler } from "hono"
 
 import { webOrigins } from "../env"
-import { getSession } from "../lib/session"
+import { getFreshSession } from "../lib/session"
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"])
 
@@ -53,11 +53,13 @@ export const originGuard: MiddlewareHandler = async (c, next) => {
 }
 
 // Reject mutating requests from banned users. Result is cached on the context
-// so the downstream route's own getSession() call doesn't re-hit Better Auth.
+// so the downstream route's own getSession() call reuses it.
 export const banGuard: MiddlewareHandler = async (c, next) => {
   if (SAFE_METHODS.has(c.req.method)) return next()
 
-  const session = await getSession(c)
+  // Fresh read so a ban (and its deleted sessions) applies immediately rather
+  // than after the cookie cache expires. Mutations only, so reads stay cheap.
+  const session = await getFreshSession(c)
   if (session?.user.isBanned) {
     return c.json({ error: "banned" }, 403)
   }

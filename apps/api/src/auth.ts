@@ -1,11 +1,13 @@
 import { betterAuth } from "better-auth"
 import { prismaAdapter } from "better-auth/adapters/prisma"
+import { APIError } from "better-auth/api"
 import { username } from "better-auth/plugins"
 
 import { prisma } from "./db"
 import { webOrigins } from "./env"
 import { validateExternalUrl } from "./lib/validate"
 import { releaseUserSocial } from "./routes/_build-social"
+import { promoteOrgSuccessors } from "./routes/_org-succession"
 
 // Mirror of the BuildVisibility enum in prisma/schema.prisma. Inlined to
 // avoid pulling generated Prisma types into the auth bootstrap path.
@@ -14,6 +16,7 @@ const VALID_BUILD_VISIBILITIES = new Set(["PUBLIC", "PRIVATE", "UNLISTED"])
 // Cap on the free-text display `name`. Comfortably above any real GitHub
 // profile name; see the clamp in sanitizeUserData for why it exists.
 const MAX_DISPLAY_NAME = 120
+const MAX_DISPLAY_USERNAME = 50
 
 // Usernames we won't let a regular user claim — `admin/support/security/...`
 // in `/profile/<name>` reads as official Arsenyx staff, which is a phishing
@@ -208,6 +211,9 @@ function sanitizeUserData(
     if (typeof v === "string" && isReservedUsername(v)) {
       const { displayUsername: _du, ...rest } = out
       out = rest
+    } else if (typeof v === "string") {
+      // Same reason as `name` above; mirrors the settings input's maxLength.
+      out = { ...out, displayUsername: v.trim().slice(0, MAX_DISPLAY_USERNAME) }
     }
   }
 
@@ -230,6 +236,15 @@ const isHttps = process.env.BETTER_AUTH_URL?.startsWith("https://") === true
 // Email+password sign-in exists only for local dev — we have no email service
 // for verification/reset flows, so prod stays GitHub-OAuth-only.
 const devEmailPasswordEnabled = process.env.NODE_ENV === "development"
+
+// Read from the DB, not the session: the cookie cache can be up to 60s stale.
+async function isBanned(userId: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { isBanned: true },
+  })
+  return user?.isBanned === true
+}
 
 export const auth = betterAuth({
   appName: "Arsenyx",
@@ -288,12 +303,30 @@ export const auth = betterAuth({
       create: { before: async (data) => ({ data: sanitizeUserData(data) }) },
       update: { before: async (data) => ({ data: sanitizeUserData(data) }) },
     },
+    // banGuard only covers the app routes; without this a banned user just
+    // signs in again and keeps using /auth/* (rename, delete-and-recreate).
+    session: {
+      create: {
+        before: async (session) => {
+          if (await isBanned(session.userId)) {
+            throw new APIError("FORBIDDEN", { message: "banned" })
+          }
+        },
+      },
+    },
   },
   user: {
     deleteUser: {
       enabled: true,
       beforeDelete: async (user) => {
-        await prisma.$transaction(releaseUserSocial(user.id))
+        // The ban lives on the user row, so deleting it would shed the ban.
+        if (await isBanned(user.id)) {
+          throw new APIError("FORBIDDEN", { message: "banned" })
+        }
+        await prisma.$transaction([
+          ...releaseUserSocial(user.id),
+          promoteOrgSuccessors(user.id),
+        ])
       },
     },
     additionalFields: {

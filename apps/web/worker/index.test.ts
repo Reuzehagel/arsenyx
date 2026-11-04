@@ -1,6 +1,28 @@
 import { describe, expect, it } from "vitest"
 
-import { buildPageCacheKeyUrl, isBrowserNavigation } from "./index"
+import worker, { buildPageCacheKeyUrl, isBrowserNavigation } from "./index"
+
+describe("apex redirect", () => {
+  const env = { ASSETS: { fetch: async () => new Response("") } }
+  const ctx = { waitUntil() {} }
+  const location = async (url: string) => {
+    const res = await worker.fetch(new Request(url), env as never, ctx as never)
+    return res.headers.get("location")
+  }
+
+  it("keeps the path and query on www", async () => {
+    expect(await location("https://arsenyx.com/builds/x?y=1")).toBe(
+      "https://www.arsenyx.com/builds/x?y=1",
+    )
+  })
+
+  it("never redirects off-site for scheme-relative paths", async () => {
+    for (const path of ["//evil.example/x", "/\\evil.example/x"]) {
+      const loc = await location(`https://arsenyx.com${path}`)
+      expect(new URL(loc!).origin).toBe("https://www.arsenyx.com")
+    }
+  })
+})
 
 describe("isBrowserNavigation", () => {
   const req = (headers: Record<string, string>) =>
