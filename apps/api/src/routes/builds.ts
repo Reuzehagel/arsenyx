@@ -100,9 +100,9 @@ const DETAIL_TTL = 600
 // staleness, whereas detail also has purgeEdge. Raised 30 → 120 alongside
 // DETAIL_TTL: a just-hidden build lingering in lists for 2 min was judged fine.
 // Exception: the detail payload also embeds the partner strip (2026-11, to halve
-// misses per page view), so a partner that goes PRIVATE can linger in another
-// build's cached strip for up to DETAIL_TTL. Linking, unlinking, reordering and
-// variant changes do purge it. Accepted: the strip shows a title and
+// misses per page view). A build's PATCH/DELETE refreshes its partners' detail
+// (invalidateBuilds), so a partner going PRIVATE lingers only in other colos'
+// edge caches, for up to DETAIL_TTL. Accepted: the strip shows a title and
 // thumbnail, never a loadout.
 const LIST_TTL = 120
 
