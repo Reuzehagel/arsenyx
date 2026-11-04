@@ -43,6 +43,7 @@ Game data is static, user data is dynamic. If something is read-heavy and rarely
 - [GLOSSARY.md](GLOSSARY.md) — domain terms (Build, Variant, Like, Bookmark): read before naming a new concept, route, or field
 - [docs/commands.md](docs/commands.md) — full command reference (build, local dev DB, data sync, reading a PR's diff, shipping a data-pipeline fix, dev-server ports taken by another worktree)
 - [docs/gotchas.md](docs/gotchas.md) — non-obvious pitfalls (PowerShell, Base UI, shadcn in monorepo)
+- [docs/reviewing-prs.md](docs/reviewing-prs.md) — reviewing or merging a PR: merge-blocker checklist (hand to reviewer subagents), batch-merge order
 - [docs/hotkeys.md](docs/hotkeys.md) — adding or rebinding a keyboard shortcut
 - [docs/verify-build-editor.md](docs/verify-build-editor.md) — driving the build editor in the browser pane (editor URL, discarding drafts, mod-search selectors)
 - [docs/search.md](docs/search.md) — full-text build search (the tsvector column, trigger, and GIN index live outside Prisma)
