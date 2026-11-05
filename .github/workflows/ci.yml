@@ -72,7 +72,7 @@ jobs:
 
       - name: Build (web)
         # Must run before typecheck — @tanstack/router-plugin generates
-        # apps/web/src/routeTree.gen.ts during vite build, and tsc fails
+        # apps/web/src/routeTree.gen.ts during vite build, and tsgo fails
         # in apps/web without it.
         working-directory: apps/web
         run: bun run build

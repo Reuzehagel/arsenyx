@@ -27,7 +27,7 @@
     "data:ab": "bun run scripts/data-ab.ts",
     "data:diff": "bun run scripts/catalog-diff.ts",
     "typecheck": "bun run --filter '*' typecheck && bun run typecheck:scripts",
-    "typecheck:scripts": "bun run --cwd=apps/web tsc --noEmit -p ../../scripts/tsconfig.json",
+    "typecheck:scripts": "bun run --cwd=apps/web tsgo --noEmit -p ../../scripts/tsconfig.json",
     "lint": "oxlint apps/web/src apps/web/worker apps/api/src packages/shared/src scripts data/curated",
     "lint:fix": "oxlint --fix apps/web/src apps/web/worker apps/api/src packages/shared/src scripts data/curated",
     "fmt": "oxfmt --write apps/web/src apps/web/worker apps/api/src packages/shared/src scripts data/curated '!**/generated/**' '!**/*.gen.ts' '!**/components/ui/**' '!data/curated/*.json' '!data/curated/*.md'",
@@ -40,6 +40,7 @@
   "devDependencies": {
     "@types/bun": "^1.4.4",
     "@types/luaparse": "^0.2.13",
+    "@typescript/native-preview": "7.0.0-dev.20260707.2",
     "aws4fetch": "^1.0.20",
     "concurrently": "^9.2.5",
     "luaparse": "^0.3.1",
