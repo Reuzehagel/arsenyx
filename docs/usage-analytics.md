@@ -3,7 +3,7 @@
 Where the Workers' CPU time goes, and why. Run:
 
 ```bash
-bun run cf:usage          # add --daily to split the per-Worker table by day
+bun run cf:usage          # --daily splits the per-Worker table by day; --since <iso> starts table 3 at e.g. a deploy
 ```
 
 [scripts/cf-usage.ts](../scripts/cf-usage.ts) prints three tables: CPU and requests per Worker for the current billing cycle, the API edge-cache hit / expired / miss split, and API CPU per route. Extend the script rather than hand-writing queries here.
@@ -28,6 +28,9 @@ bun run cf:usage          # add --daily to split the per-Worker table by day
   - The group limit goes in `parameters.limit`. A top-level `limit` is ignored, and the default is 10 groups. Groups cap at 1000, and grouping by path explodes per slug, so filter by path (`eq`, `includes`, `starts_with`, `regex`) instead.
   - Percentile operators are `median`, `p90`, `p99`, …; there is no `p50` (rejected with a ZodError).
   - To discover field names: `POST .../telemetry/keys` with `{"timeframe":{...},"datasets":["cloudflare-workers"]}`.
+  - Header *values* that carry secrets are redacted: a cookie filter like `includes "session_token"` matches nothing (still `success: true`), so the logs can't split signed-in from anonymous traffic. Log a marker line from the route instead (as `detail:live` does).
+  - `not_exists` returns `success: false`; filter on the opposite condition, or subtract from the total.
+  - `console.log` lines are separate events from the invocation (which alone carries `$workers.cpuTimeMs`); match them with `$metadata.message` `eq` the exact text.
 
 ## Baseline
 
@@ -36,7 +39,7 @@ Before #413's TTL bump (detail 120 s, lists 30 s), to compare against:
 - Edge cache, 3 days: 5.5% hit, 73% stale (expired), 21% miss.
 - API GET CPU, 24h ending 2026-10-25 11:00 UTC: `/builds/:slug` 54% at 56 ms/req, `/builds/:slug/partners` 29% at 45 ms, `/builds` 8% at 74 ms, `/users/*` 4%, `/auth/get-session` 2% at 12 ms. Total 2.45M CPU-ms over 50k requests.
 
-After #451 (prod, 2026-11-04 21:30 → 11-05 08:00 UTC): `/builds/:slug` median 9 ms, but the 17% of requests ≥ 60 ms (mean 158 ms) were 79% of its CPU. `?embed=1` averaged 127 ms, so nearly every unfurl missed the KV snapshot. A Prisma-path request costs ~140 ms in prod against ~25–30 ms in the local profile, likely cold isolates at our low per-colo traffic (unconfirmed). Response: `SNAPSHOT_TTL` 10 min → 24 h. The detail route logs `detail:kv-miss` and `detail:live` (signed-in) per request; count them in Workers Logs (filter on the log message) to size what's left before converting those paths to plain SQL.
+After #451 (prod, 2026-11-04 21:30 → 11-05 08:00 UTC): `/builds/:slug` median 9 ms, but the 17% of requests ≥ 60 ms (mean 158 ms) were 79% of its CPU. `?embed=1` averaged 127 ms, so nearly every unfurl missed the KV snapshot. A Prisma-path request costs ~140 ms in prod against ~25–30 ms in the local profile, likely cold isolates at our low per-colo traffic (unconfirmed). Response: `SNAPSHOT_TTL` 10 min → 24 h. The detail route logs `detail:kv-miss` and `detail:live` (signed-in) per request; `cf:usage` counts them under table 3. Convert those paths to plain SQL once `detail:live` × ~140 ms tops ~3M CPU-ms a month.
 
 ## Profiling
 

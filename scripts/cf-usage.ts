@@ -6,7 +6,10 @@
  * Three tables:
  *   1. CPU + requests per Worker, current billing cycle (GraphQL analytics)
  *   2. API edge-cache hit / expired / miss, last 3 days (zone GraphQL analytics)
- *   3. API CPU per route, last 24h (Workers Logs — needs CF_ANALYTICS_TOKEN)
+ *   3. API CPU per route, last 24h or `--since <iso>` (e.g. a deploy time), with
+ *      median, p90 and the CPU share of >= 60 ms requests; plus counts of the
+ *      detail:kv-miss / detail:live log lines (Workers Logs — needs
+ *      CF_ANALYTICS_TOKEN)
  *
  * Auth: CF_ANALYTICS_TOKEN (read-only token), else wrangler's OAuth token, which
  * covers 1 and 2 only. The token is deliberately not CF_API_TOKEN /
@@ -144,9 +147,11 @@ console.table(
   })),
 )
 
-// 3. API CPU per route, last 24h. Path filters, not groupBys: grouping by path
-// explodes per slug and caps at 1000 groups. The path key is $workers.event.path;
-// $workers.event.request.path silently matches nothing.
+// 3. API CPU per route since --since (default: last 24h). Path filters, not
+// groupBys: grouping by path explodes per slug and caps at 1000 groups. The
+// path key is $workers.event.path; $workers.event.request.path silently
+// matches nothing. "heavy" = the share of a route's CPU from requests >= 60 ms:
+// the mean hides a bimodal route (cheap cache/KV hits vs. Prisma-path misses).
 if (!analyticsToken) {
   console.log(
     "\n3. Per-route CPU skipped: needs CF_ANALYTICS_TOKEN (Workers Observability read).",
@@ -154,78 +159,116 @@ if (!analyticsToken) {
   process.exit(0)
 }
 
-const ROUTES: [label: string, operation: string, value: string][] = [
-  ["GET /builds/:slug", "regex", "^/builds/[^/]+$"],
-  ["GET /builds/:slug/partners", "includes", "/partners"],
-  ["GET /builds", "eq", "/builds"],
-  ["GET /users/*", "starts_with", "/users/"],
-  ["GET /orgs/*", "starts_with", "/orgs/"],
-  ["GET /auth/get-session", "eq", "/auth/get-session"],
-  ["GET /img*", "starts_with", "/img"],
+const sinceArg = process.argv[process.argv.indexOf("--since") + 1]
+const since = process.argv.includes("--since")
+  ? Date.parse(sinceArg)
+  : now.getTime() - DAY_MS
+if (Number.isNaN(since)) {
+  console.error(`✗ cf:usage — --since needs an ISO time, got "${sinceArg}"`)
+  process.exit(1)
+}
+
+type Filter = { key: string; operation: string; value?: string | number }
+const f = (key: string, operation: string, value?: string | number) => ({
+  key,
+  operation,
+  value,
+})
+const path = (operation: string, value: string) =>
+  f("$workers.event.path", operation, value)
+const DETAIL = path("regex", "^/builds/[^/]+$")
+const ROUTES: [label: string, ...filters: Filter[]][] = [
+  ["GET /builds/:slug", DETAIL],
+  [
+    "  ?embed=1",
+    DETAIL,
+    f("$workers.event.request.url", "includes", "embed=1"),
+  ],
+  ["  ?view=0", DETAIL, f("$workers.event.request.url", "includes", "view=0")],
+  ["GET /builds/:slug/partners", path("includes", "/partners")],
+  ["GET /builds", path("eq", "/builds")],
+  ["GET /users/*", path("starts_with", "/users/")],
+  ["GET /orgs/*", path("starts_with", "/orgs/")],
+  ["GET /auth/get-session", path("eq", "/auth/get-session")],
+  ["GET /img*", path("starts_with", "/img")],
 ]
+const GET = f("$workers.event.request.method", "eq", "GET")
+const HEAVY = f("$workers.cpuTimeMs", "gte", 60)
 
 type Calc = { result: { calculations: { aggregates: { value: number }[] }[] } }
-async function routeCpu(pathFilter?: { operation: string; value: string }) {
-  const filters = [
-    {
-      key: "$workers.scriptName",
-      operation: "eq",
-      type: "string",
-      value: "arsenyx-api",
-    },
-    {
-      key: "$workers.event.request.method",
-      operation: "eq",
-      type: "string",
-      value: "GET",
-    },
-    ...(pathFilter
-      ? [{ key: "$workers.event.path", type: "string", ...pathFilter }]
-      : []),
-  ]
+async function query(filters: Filter[], withCpu = true) {
+  const cpuKey = { key: "$workers.cpuTimeMs", keyType: "number" }
   const r = await cf<Calc>(
     `accounts/${ACCOUNT}/workers/observability/telemetry/query`,
     {
       queryId: "adhoc",
-      timeframe: { from: now.getTime() - DAY_MS, to: now.getTime() },
+      timeframe: { from: since, to: now.getTime() },
       view: "calculations",
       parameters: {
         datasets: ["cloudflare-workers"],
         filterCombination: "and",
-        filters,
+        filters: [
+          f("$workers.scriptName", "eq", "arsenyx-api"),
+          ...filters,
+        ].map((x) => ({
+          type: typeof x.value === "number" ? "number" : "string",
+          ...x,
+        })),
         calculations: [
-          { operator: "sum", key: "$workers.cpuTimeMs", keyType: "number" },
           { operator: "count" },
+          ...(withCpu
+            ? ["sum", "median", "p90"].map((operator) => ({
+                operator,
+                ...cpuKey,
+              }))
+            : []),
         ],
         groupBys: [],
       },
     },
   )
-  const [cpu, count] = r.result.calculations.map(
+  const [count, cpu = 0, median = 0, p90 = 0] = r.result.calculations.map(
     (c) => c.aggregates[0]?.value ?? 0,
   )
-  return { cpu, count }
+  return { count, cpu, median, p90 }
 }
 
-const allGet = await routeCpu()
+const allGet = await query([GET])
 const routes = await Promise.all(
-  ROUTES.map(async ([label, operation, value]) => ({
-    label,
-    ...(await routeCpu({ operation, value })),
-  })),
+  ROUTES.map(async ([label, ...filters]) => {
+    const [all, heavy] = await Promise.all([
+      query([GET, ...filters]),
+      query([GET, ...filters, HEAVY]),
+    ])
+    return { label, ...all, heavyCpu: heavy.cpu }
+  }),
 )
-console.log("\n3. API GET CPU per route, last 24h")
+console.log(`\n3. API GET CPU per route since ${iso(new Date(since))}`)
 console.table(
-  routes
-    .sort((a, b) => b.cpu - a.cpu)
-    .map((r) => ({
-      route: r.label,
-      cpuMs: fmt(r.cpu),
-      share: pct(r.cpu, allGet.cpu),
-      requests: fmt(r.count),
-      msPerReq: (r.cpu / Math.max(r.count, 1)).toFixed(1),
-    })),
+  routes.map((r) => ({
+    route: r.label,
+    cpuMs: fmt(r.cpu),
+    share: pct(r.cpu, allGet.cpu),
+    requests: fmt(r.count),
+    msPerReq: (r.cpu / Math.max(r.count, 1)).toFixed(1),
+    median: r.median,
+    p90: r.p90,
+    heavy: pct(r.heavyCpu, Math.max(r.cpu, 1)),
+  })),
 )
 console.log(
   `All API GETs: ${fmt(allGet.cpu)} ms CPU over ${fmt(allGet.count)} requests`,
 )
+
+// Build-detail requests that took a Prisma path (builds.ts logs one line
+// each): an anonymous KV miss, or a signed-in viewer. Console lines are their
+// own events, matched on $metadata.message.
+const detailPaths = await Promise.all(
+  ["detail:kv-miss", "detail:live"].map(async (m) => ({
+    log: m,
+    requests: fmt(
+      (await query([f("$metadata.message", "eq", m)], false)).count,
+    ),
+  })),
+)
+console.table(detailPaths)

@@ -10,6 +10,10 @@ In `apps/api/src` and `apps/web/worker`, a module-level variable may cache a res
 
 A cache read on a request path (KV, the edge cache) is an optimisation over Postgres: when it throws, the request falls back to the database, never a 500. The read path writes to the cache only when it has a value to store; a write or delete per miss or 404 is billed (KV) and multiplied by anyone probing slugs. Invalidation on mutation is where deletes belong. Pattern: the anonymous branch of `GET /builds/:slug` in [apps/api/src/routes/builds.ts](apps/api/src/routes/builds.ts).
 
+## Writes refresh every build snapshot they change
+
+The anonymous build snapshot lives 24 h in KV and embeds the build, its author, its org, and its partner strip. A mutation that changes any of those (or deletes them, including by cascade) calls `invalidateBuilds` after the write; for a user or org change, it collects the slugs with `snapshotSlugs(where)` *before* the write, since a cascade removes the rows. Flag a new write to builds, users, organizations or partner links that skips this: the old content stays public for a day. Pattern: `orgs.delete` in [apps/api/src/routes/orgs.ts](apps/api/src/routes/orgs.ts).
+
 ## Game rules come from the catalog
 
 A Warframe rule (which mods conflict, fit a slot, stack, trade; ability or item behaviour) is read from `apps/web/public/data/` ([index](docs/commands.md#what-the-built-catalog-holds)) or cites a wiki page. Flag a hand-written list or regex of mod/item names that encodes such a rule: it drifts with every game update. Example: `mod-conflicts.json`, never a `/^(Primed|Umbral…)/` name filter.
