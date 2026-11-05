@@ -22,7 +22,8 @@ if (import.meta.env.DEV) {
 // so dev/preview traffic never pollutes the stats and the embed entry
 // (embed-main.tsx, iframed by external guide pages) stays untracked.
 // The token is public by design: it ships in the page to every visitor.
-if (import.meta.env.PROD) {
+// Hostname check keeps forks/mirrors that ship this code out of our stats.
+if (import.meta.env.PROD && location.hostname === "www.arsenyx.com") {
   const beacon = document.createElement("script")
   beacon.src = "https://static.cloudflareinsights.com/beacon.min.js"
   beacon.defer = true
