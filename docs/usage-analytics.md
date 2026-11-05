@@ -36,6 +36,8 @@ Before #413's TTL bump (detail 120 s, lists 30 s), to compare against:
 - Edge cache, 3 days: 5.5% hit, 73% stale (expired), 21% miss.
 - API GET CPU, 24h ending 2026-10-25 11:00 UTC: `/builds/:slug` 54% at 56 ms/req, `/builds/:slug/partners` 29% at 45 ms, `/builds` 8% at 74 ms, `/users/*` 4%, `/auth/get-session` 2% at 12 ms. Total 2.45M CPU-ms over 50k requests.
 
+After #451 (prod, 2026-11-04 21:30 → 11-05 08:00 UTC): `/builds/:slug` median 9 ms, but the 17% of requests ≥ 60 ms (mean 158 ms) were 79% of its CPU. `?embed=1` averaged 127 ms, so nearly every unfurl missed the KV snapshot. A Prisma-path request costs ~140 ms in prod against ~25–30 ms in the local profile, likely cold isolates at our low per-colo traffic (unconfirmed). Response: `SNAPSHOT_TTL` 10 min → 24 h. The detail route logs `detail:kv-miss` and `detail:live` (signed-in) per request; count them in Workers Logs (filter on the log message) to size what's left before converting those paths to plain SQL.
+
 ## Profiling
 
 `bun run cf:profile` CPU-profiles the local API ([scripts/cf-profile.ts](../scripts/cf-profile.ts); usage in its header). Production capture (`cf workers versions profile`) isn't the route: at our traffic it attaches to an idle isolate and returns an empty profile.

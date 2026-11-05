@@ -1201,6 +1201,8 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
     // Belt and braces: a key whose metadata isn't anonymously visible is
     // treated as missing, never served.
     if (text == null || !meta || !isAnonVisible(meta.visibility)) {
+      // Counted in Workers Logs to size this path (docs/usage-analytics.md).
+      console.log("detail:kv-miss")
       const snap = await loadAnonSnapshot(slug)
       // Only store real snapshots: a delete per 404/PRIVATE probe is a billed
       // KV write, and a stale key is already ignored by the check above.
@@ -1224,6 +1226,7 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
     return c.body(text, 200, { "Content-Type": "application/json" })
   }
 
+  console.log("detail:live")
   const build = await prisma.build.findUnique({
     where: { slug },
     // Fold user + organization + buildGuide into one LATERAL-join SELECT
@@ -1344,13 +1347,31 @@ export function invalidateBuilds(c: Context, slugs: string[]): void {
   const kv = snapshotKv(c)
   for (const slug of new Set(slugs)) {
     purgeEdge(c, `/builds/${slug}`)
-    if (kv)
-      registerBackgroundWork(
-        loadAnonSnapshot(slug)
-          .then((snap) => writeSnapshot(kv, slug, snap))
-          .catch((err) => console.error("snapshot refresh failed", err)),
-      )
+    if (!kv) continue
+    const refresh = () =>
+      loadAnonSnapshot(slug).then((snap) => writeSnapshot(kv, slug, snap))
+    // Second pass overwrites a racing read-through's pre-commit put (see
+    // SNAPSHOT_TTL). Its DB read finishes well inside the delay.
+    registerBackgroundWork(
+      refresh()
+        .then(() => new Promise((r) => setTimeout(r, RACE_REFRESH_MS)))
+        .then(refresh)
+        .catch((err) => console.error("snapshot refresh failed", err)),
+    )
   }
+}
+
+const RACE_REFRESH_MS = 5_000
+
+// Slugs whose anonymous snapshot shows one of this user's builds: their own
+// builds plus every build whose partner strip lists one. Read BEFORE deleting
+// the user (the rows cascade away), then pass to invalidateBuilds after.
+export async function userBuildSlugs(userId: string): Promise<string[]> {
+  const rows = await prisma.build.findMany({
+    where: { userId },
+    select: { slug: true, partnerBuilds: { select: { slug: true } } },
+  })
+  return rows.flatMap((b) => [b.slug, ...b.partnerBuilds.map((p) => p.slug)])
 }
 
 const VIEW_COOKIE_MAX_AGE = 12 * 60 * 60 // 12h

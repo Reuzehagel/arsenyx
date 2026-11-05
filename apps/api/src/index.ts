@@ -5,11 +5,12 @@ import { auth } from "./auth"
 import type { Bindings } from "./bindings"
 import { withPrisma } from "./db"
 import { webOrigins } from "./env"
+import { getSession } from "./lib/session"
 import { rateLimitAnonRead, rateLimitAuth } from "./middleware/rate-limit"
 import { banGuard, originGuard, securityHeaders } from "./middleware/security"
 import { isPrismaNotFound } from "./routes/_admin"
 import { admin } from "./routes/admin"
-import { builds } from "./routes/builds"
+import { builds, invalidateBuilds, userBuildSlugs } from "./routes/builds"
 import { img } from "./routes/img"
 import { imports } from "./routes/imports"
 import { me } from "./routes/me"
@@ -55,6 +56,15 @@ app.onError((err, c) => {
 // Must be registered BEFORE the /auth/* handler below — Hono only runs
 // middleware declared ahead of the route it matches.
 app.use("/auth/*", rateLimitAuth())
+
+// Self-deletion cascades to the user's builds; drop their anonymous KV
+// snapshots, which would otherwise keep serving them for SNAPSHOT_TTL.
+app.use("/auth/delete-user", async (c, next) => {
+  const userId = (await getSession(c))?.user?.id
+  const slugs = userId ? await userBuildSlugs(userId) : []
+  await next()
+  if (c.res.status === 200) invalidateBuilds(c, slugs)
+})
 
 app.all("/auth/*", (c) => auth.handler(c.req.raw))
 
