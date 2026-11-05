@@ -14,6 +14,7 @@ import { enforceAnonSearchLimit, rateLimitUser } from "../middleware/rate-limit"
 import { parseListQuery, runList } from "./_build-list"
 import { orgMemberScope, orgPublicScope } from "./_build-visibility"
 import { parsePage, trimQ } from "./_query"
+import { invalidateBuilds, snapshotSlugs } from "./builds"
 
 export const orgs = new Hono()
 
@@ -410,6 +411,8 @@ orgs.patch("/:slug", rateLimitUser("mutate"), async (c) => {
       data,
       select: { id: true, slug: true },
     })
+    // Name, slug and logo are embedded in the org's build snapshots.
+    invalidateBuilds(c, await snapshotSlugs({ organizationId: ctx.id }))
     return c.json(updated)
   } catch (err) {
     if (hasPrismaCode(err, "P2002")) {
@@ -428,7 +431,10 @@ orgs.delete("/:slug", rateLimitUser("mutate"), async (c) => {
   if (!ctx) return c.json({ error: "not_found" }, 404)
   if (ctx.role !== "ADMIN") return c.json({ error: "forbidden" }, 403)
 
+  // Builds survive (organizationId → null) but their snapshots embed the org.
+  const slugs = await snapshotSlugs({ organizationId: ctx.id })
   await prisma.organization.delete({ where: { id: ctx.id } })
+  invalidateBuilds(c, slugs)
   return c.body(null, 204)
 })
 

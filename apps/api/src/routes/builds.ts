@@ -1201,6 +1201,9 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
     // Belt and braces: a key whose metadata isn't anonymously visible is
     // treated as missing, never served.
     if (text == null || !meta || !isAnonVisible(meta.visibility)) {
+      // shortcut: measurement only (docs/usage-analytics.md); remove both
+      // detail:* logs once the plain-SQL rewrite of these paths is decided.
+      console.log("detail:kv-miss")
       const snap = await loadAnonSnapshot(slug)
       // Only store real snapshots: a delete per 404/PRIVATE probe is a billed
       // KV write, and a stale key is already ignored by the check above.
@@ -1224,6 +1227,7 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
     return c.body(text, 200, { "Content-Type": "application/json" })
   }
 
+  console.log("detail:live")
   const build = await prisma.build.findUnique({
     where: { slug },
     // Fold user + organization + buildGuide into one LATERAL-join SELECT
@@ -1344,13 +1348,34 @@ export function invalidateBuilds(c: Context, slugs: string[]): void {
   const kv = snapshotKv(c)
   for (const slug of new Set(slugs)) {
     purgeEdge(c, `/builds/${slug}`)
-    if (kv)
-      registerBackgroundWork(
-        loadAnonSnapshot(slug)
-          .then((snap) => writeSnapshot(kv, slug, snap))
-          .catch((err) => console.error("snapshot refresh failed", err)),
-      )
+    if (!kv) continue
+    const refresh = () =>
+      loadAnonSnapshot(slug).then((snap) => writeSnapshot(kv, slug, snap))
+    // Second pass overwrites a racing read-through's pre-commit put (see
+    // SNAPSHOT_TTL). Its DB read finishes well inside the delay.
+    registerBackgroundWork(
+      refresh()
+        .then(() => new Promise((r) => setTimeout(r, RACE_REFRESH_MS)))
+        .then(refresh)
+        .catch((err) => console.error("snapshot refresh failed", err)),
+    )
   }
+}
+
+const RACE_REFRESH_MS = 5_000
+
+// Slugs whose anonymous snapshot shows a matching build: the builds plus every
+// build whose partner strip lists one. For changes to what those builds embed
+// (author, org) or deletions; read BEFORE a delete (rows cascade away), then
+// pass to invalidateBuilds after the write.
+export async function snapshotSlugs(
+  where: Prisma.BuildWhereInput,
+): Promise<string[]> {
+  const rows = await prisma.build.findMany({
+    where,
+    select: { slug: true, partnerBuilds: { select: { slug: true } } },
+  })
+  return rows.flatMap((b) => [b.slug, ...b.partnerBuilds.map((p) => p.slug)])
 }
 
 const VIEW_COOKIE_MAX_AGE = 12 * 60 * 60 // 12h

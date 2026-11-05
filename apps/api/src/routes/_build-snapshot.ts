@@ -16,13 +16,19 @@ import type { BuildVisibility } from "../generated/prisma/enums"
 // Staleness bound: SNAPSHOT_TTL. Counts (likeCount, viewCount, bookmarkCount,
 // dislikeCount), author name/avatar and org name/logo are frozen until the next
 // refresh, i.e. at most SNAPSHOT_TTL plus KV's ~60 s cross-colo read cache.
-// The same TTL bounds the one race refresh can't close: a read-through that
-// loaded the row just before a mutation committed can land its put after the
-// mutation's refresh (KV is last-writer-wins, no compare-and-set). So it
-// matches the edge cache's DETAIL_TTL (10 min), the staleness already accepted
-// for this route, which also covers what no trigger refreshes: a deleted
-// author's builds, renames, org changes and direct DB scripts.
-export const SNAPSHOT_TTL = 10 * 60
+// That is also the bound for what no trigger refreshes: counts and direct DB
+// scripts. Account and org changes are covered (`snapshotSlugs` +
+// `invalidateBuilds` in admin.ts, orgs.ts and index.ts).
+//
+// It is long because every miss rebuilds through a PrismaClient, ~140 ms CPU
+// in prod (Nov 2026 Workers Logs), and long-tail builds viewed less often than
+// the TTL miss on every view. At 10 min, misses were ~80% of this route's CPU.
+//
+// The race refresh alone can't close (a read-through that loaded the row just
+// before a mutation committed lands its put after the mutation's refresh; KV is
+// last-writer-wins) is closed by invalidateBuilds refreshing a second time a
+// few seconds later, so a PRIVATE flip can't be undone for a whole TTL.
+export const SNAPSHOT_TTL = 24 * 60 * 60
 
 export type SnapshotMeta = { id: string; visibility: BuildVisibility }
 export type Snapshot = { body: Record<string, unknown>; meta: SnapshotMeta }
