@@ -6,6 +6,7 @@ Non-obvious pitfalls. Add to this file when you hit one.
 
 - **Dev servers hide type errors.** Vite and `bun --hot` skip strict TS checks, and so does `vite build` — a green build proves nothing about types. `just check` is the gate.
 - **`gh issue view N` can print nothing and still exit 0** on this machine. Read issues with `gh issue view N --json title,body,comments,state`.
+- **Git Bash rewrites arguments that start with `/`** into Windows paths (`/` → `C:/Program Files/Git/`), so `bun script.ts /builds/x` receives garbage. Prefix the command with `MSYS_NO_PATHCONV=1` when passing URL paths.
 - **PowerShell doesn't support `<` redirection** — wrap in `bash -c '...'` for Docker stdin (e.g. piping SQL into `psql`).
 - **`bun add` fails with `InstallFailed extracting tarball` while dev servers run.** They hold files in `node_modules` open on Windows. Stop them (`just stop`, or `preview_stop`), install, restart.
 - **"Unrecognized extension value in extension set"** (guide editor crash, `markdown-commands.test.ts` red) means two copies of a CodeMirror package. `just deps` (run by `just test`/`just check`) catches it via [check-singleton-deps.ts](../scripts/check-singleton-deps.ts). Two causes:

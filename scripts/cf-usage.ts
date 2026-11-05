@@ -11,6 +11,9 @@
  *      detail:kv-miss / detail:live log lines (Workers Logs — needs
  *      CF_ANALYTICS_TOKEN)
  *
+ * `--rum [host]` prints Web Analytics (referrers, countries, devices, paths)
+ * for the last 30 days instead.
+ *
  * Auth: CF_ANALYTICS_TOKEN (read-only token), else wrangler's OAuth token, which
  * covers 1 and 2 only. The token is deliberately not CF_API_TOKEN /
  * CLOUDFLARE_API_TOKEN: wrangler reads those, and an analytics-only token there
@@ -77,6 +80,39 @@ const iso = (d: Date) => d.toISOString().replace(/\.\d+Z$/, "Z")
 const fmt = (n: number) => Math.round(n).toLocaleString("en-US")
 const pct = (part: number, whole: number) =>
   `${((100 * part) / whole).toFixed(1)}%`
+
+// `--rum [host]`: Web Analytics (visitor) report for the last 30 days instead of
+// the CPU tables. Any host that loads our beacon token shows up here (forks too).
+const rumAt = process.argv.indexOf("--rum")
+if (rumAt !== -1) {
+  const arg = process.argv[rumAt + 1]
+  const host = arg && !arg.startsWith("--") ? arg : "www.arsenyx.com"
+  const since = iso(new Date(Date.now() - 30 * DAY_MS))
+  const group = (dim: string, limit: number) =>
+    `${dim}: rumPageloadEventsAdaptiveGroups(limit:${limit}, orderBy:[count_DESC],
+      filter:{requestHost:"${host}", datetime_geq:"${since}"}) {
+      count sum { visits } dimensions { ${dim} } }`
+  type RumRow = {
+    count: number
+    sum: { visits: number }
+    dimensions: Record<string, string>
+  }
+  const dims = ["refererHost", "countryName", "deviceType", "requestPath"]
+  const rum = await gql<{
+    viewer: { accounts: Record<string, RumRow[]>[] }
+  }>(`{ viewer { accounts(filter:{accountTag:"${ACCOUNT}"}) {
+    ${dims.map((d) => group(d, 15)).join("\n")} } } }`)
+  const acc = rum.viewer.accounts[0]!
+  console.log(`Web Analytics, ${host}, since ${since}`)
+  for (const d of dims) {
+    console.log(`\n${d.padEnd(30)}  page views  visits`)
+    for (const r of acc[d]!)
+      console.log(
+        `${(r.dimensions[d] || "(none)").slice(0, 30).padEnd(30)}  ${fmt(r.count).padStart(10)}  ${fmt(r.sum.visits).padStart(6)}`,
+      )
+  }
+  process.exit(0)
+}
 
 const now = new Date()
 const cycleStart = new Date(

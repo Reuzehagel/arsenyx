@@ -8,6 +8,8 @@ bun run cf:usage          # --daily splits the per-Worker table by day; --since 
 
 [scripts/cf-usage.ts](../scripts/cf-usage.ts) prints three tables: CPU and requests per Worker for the current billing cycle, the API edge-cache hit / expired / miss split, and API CPU per route. Extend the script rather than hand-writing queries here.
 
+Visitor traffic (Web Analytics, the cookieless beacon in `apps/web/src/main.tsx`): `bun run cf:usage --rum [host]` prints referrers, countries, devices and paths for the last 30 days (default host `www.arsenyx.com`). The dataset is `rumPageloadEventsAdaptiveGroups`, filtered by `requestHost`. It's adaptively sampled: counts in round tens mean 1-in-10 sampling, so small rows are rough. An empty `refererHost` means a direct visit (Discord and app links send none).
+
 ## Billing facts
 
 - The Workers Paid allowance that gets exceeded is **30M CPU-ms per month**, not requests. Requests (10M included) sit far below that. Overage is cents per million CPU-ms.
