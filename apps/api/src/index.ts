@@ -10,7 +10,7 @@ import { rateLimitAnonRead, rateLimitAuth } from "./middleware/rate-limit"
 import { banGuard, originGuard, securityHeaders } from "./middleware/security"
 import { isPrismaNotFound } from "./routes/_admin"
 import { admin } from "./routes/admin"
-import { builds, invalidateBuilds, userBuildSlugs } from "./routes/builds"
+import { builds, invalidateBuilds, snapshotSlugs } from "./routes/builds"
 import { img } from "./routes/img"
 import { imports } from "./routes/imports"
 import { me } from "./routes/me"
@@ -57,14 +57,17 @@ app.onError((err, c) => {
 // middleware declared ahead of the route it matches.
 app.use("/auth/*", rateLimitAuth())
 
-// Self-deletion cascades to the user's builds; drop their anonymous KV
-// snapshots, which would otherwise keep serving them for SNAPSHOT_TTL.
-app.use("/auth/delete-user", async (c, next) => {
-  const userId = (await getSession(c))?.user?.id
-  const slugs = userId ? await userBuildSlugs(userId) : []
-  await next()
-  if (c.res.status === 200) invalidateBuilds(c, slugs)
-})
+// Self-deletion cascades to the user's builds, and a profile update changes the
+// author they embed; refresh their anonymous KV snapshots, which would
+// otherwise keep serving the old state for SNAPSHOT_TTL.
+for (const path of ["/auth/delete-user", "/auth/update-user"]) {
+  app.use(path, async (c, next) => {
+    const userId = (await getSession(c))?.user?.id
+    const slugs = userId ? await snapshotSlugs({ userId }) : []
+    await next()
+    if (c.res.status === 200) invalidateBuilds(c, slugs)
+  })
+}
 
 app.all("/auth/*", (c) => auth.handler(c.req.raw))
 

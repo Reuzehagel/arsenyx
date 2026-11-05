@@ -16,9 +16,9 @@ import type { BuildVisibility } from "../generated/prisma/enums"
 // Staleness bound: SNAPSHOT_TTL. Counts (likeCount, viewCount, bookmarkCount,
 // dislikeCount), author name/avatar and org name/logo are frozen until the next
 // refresh, i.e. at most SNAPSHOT_TTL plus KV's ~60 s cross-colo read cache.
-// That is also the bound for what no trigger refreshes: renames, org
-// changes/deletion and direct DB scripts. Account deletion is covered
-// (`userBuildSlugs` + `invalidateBuilds` in admin.ts and index.ts).
+// That is also the bound for what no trigger refreshes: counts and direct DB
+// scripts. Account and org changes are covered (`snapshotSlugs` +
+// `invalidateBuilds` in admin.ts, orgs.ts and index.ts).
 //
 // It is long because every miss rebuilds through a PrismaClient, ~140 ms CPU
 // in prod (Nov 2026 Workers Logs), and long-tail builds viewed less often than

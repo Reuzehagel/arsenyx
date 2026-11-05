@@ -10,7 +10,7 @@ import { releaseUserSocial } from "./_build-social"
 import { allBuildsScope } from "./_build-visibility"
 import { promoteOrgSuccessors } from "./_org-succession"
 import { parsePage, trimQ } from "./_query"
-import { invalidateBuilds, isVisibility, userBuildSlugs } from "./builds"
+import { invalidateBuilds, isVisibility, snapshotSlugs } from "./builds"
 
 export const admin = new Hono()
 
@@ -171,7 +171,7 @@ admin.delete("/users/:id", adminMutateLimit, async (c) => {
     return c.json({ error: "cannot_self_delete" }, 400)
   }
 
-  const slugs = await userBuildSlugs(targetId)
+  const slugs = await snapshotSlugs({ userId: targetId })
   try {
     await prisma.$transaction([
       ...releaseUserSocial(targetId),

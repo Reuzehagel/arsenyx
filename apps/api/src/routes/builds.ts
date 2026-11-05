@@ -1201,7 +1201,8 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
     // Belt and braces: a key whose metadata isn't anonymously visible is
     // treated as missing, never served.
     if (text == null || !meta || !isAnonVisible(meta.visibility)) {
-      // Counted in Workers Logs to size this path (docs/usage-analytics.md).
+      // shortcut: measurement only (docs/usage-analytics.md); remove both
+      // detail:* logs once the plain-SQL rewrite of these paths is decided.
       console.log("detail:kv-miss")
       const snap = await loadAnonSnapshot(slug)
       // Only store real snapshots: a delete per 404/PRIVATE probe is a billed
@@ -1363,12 +1364,15 @@ export function invalidateBuilds(c: Context, slugs: string[]): void {
 
 const RACE_REFRESH_MS = 5_000
 
-// Slugs whose anonymous snapshot shows one of this user's builds: their own
-// builds plus every build whose partner strip lists one. Read BEFORE deleting
-// the user (the rows cascade away), then pass to invalidateBuilds after.
-export async function userBuildSlugs(userId: string): Promise<string[]> {
+// Slugs whose anonymous snapshot shows a matching build: the builds plus every
+// build whose partner strip lists one. For changes to what those builds embed
+// (author, org) or deletions; read BEFORE a delete (rows cascade away), then
+// pass to invalidateBuilds after the write.
+export async function snapshotSlugs(
+  where: Prisma.BuildWhereInput,
+): Promise<string[]> {
   const rows = await prisma.build.findMany({
-    where: { userId },
+    where,
     select: { slug: true, partnerBuilds: { select: { slug: true } } },
   })
   return rows.flatMap((b) => [b.slug, ...b.partnerBuilds.map((p) => p.slug)])
