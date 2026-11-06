@@ -11,6 +11,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-11-06",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Switching variants on a build you opened from a Partner Build no longer removes the link back to the build you came from.",
+      },
+    ],
+  },
+  {
     date: "2026-11-04",
     changes: [
       {

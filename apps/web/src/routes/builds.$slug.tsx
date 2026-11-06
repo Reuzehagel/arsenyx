@@ -231,6 +231,10 @@ function BuildViewer({ embed = false }: { embed?: boolean }) {
       to: ".",
       params: true,
       search: (s) => (i === 0 ? { ...s, v: undefined } : { ...s, v: i }),
+      // Keep the history state: a partner-chip hop stamps `buildFrom` there
+      // (see build-trail.ts), and a bare replace would wipe it, dropping the
+      // "back to" chip as soon as the reader switches variants.
+      state: (prev) => prev,
       replace: true,
     })
 
