@@ -12,7 +12,8 @@
  *      CF_ANALYTICS_TOKEN)
  *
  * `--rum [host]` prints Web Analytics (referrers, countries, devices, paths)
- * for the last 30 days instead.
+ * for the last 30 days instead; `--rum-perf [host]` prints P75 page-load
+ * timings (7 days) by device, country and path.
  *
  * Auth: CF_ANALYTICS_TOKEN (read-only token), else wrangler's OAuth token, which
  * covers 1 and 2 only. The token is deliberately not CF_API_TOKEN /
@@ -80,6 +81,57 @@ const iso = (d: Date) => d.toISOString().replace(/\.\d+Z$/, "Z")
 const fmt = (n: number) => Math.round(n).toLocaleString("en-US")
 const pct = (part: number, whole: number) =>
   `${((100 * part) / whole).toFixed(1)}%`
+
+// `--rum-perf [host]`: Web Analytics page-load timings (P75, ms) for the last 7
+// days, overall and split by device, country and path. "rest" is page load
+// minus request, response and connect: mostly parsing, running JS and loading
+// subresources before the load event. Counts are adaptively sampled (round
+// thousands = few real loads), so one slow visit can swing a row's P75.
+const perfAt = process.argv.indexOf("--rum-perf")
+if (perfAt !== -1) {
+  const arg = process.argv[perfAt + 1]
+  const host = arg && !arg.startsWith("--") ? arg : "www.arsenyx.com"
+  const since = iso(new Date(Date.now() - 7 * DAY_MS))
+  const dims = ["", "deviceType", "countryName", "requestPath"]
+  const group = (dim: string) =>
+    `${dim || "all"}: rumPerformanceEventsAdaptiveGroups(limit:12, orderBy:[count_DESC],
+      filter:{requestHost:"${host}", datetime_geq:"${since}"}) {
+      count quantiles { pageLoadTimeP75 requestTimeP75 responseTimeP75
+        connectionTimeP75 firstContentfulPaintP75 }
+      ${dim ? `dimensions { ${dim} }` : ""} }`
+  type PerfRow = {
+    count: number
+    quantiles: Record<string, number>
+    dimensions?: Record<string, string>
+  }
+  const perf = await gql<{
+    viewer: { accounts: Record<string, PerfRow[]>[] }
+  }>(`{ viewer { accounts(filter:{accountTag:"${ACCOUNT}"}) {
+    ${dims.map(group).join("\n")} } } }`)
+  const acc = perf.viewer.accounts[0]!
+  // Quantiles are microseconds.
+  const ms = (us: number) => fmt(us / 1000).padStart(7)
+  console.log(`Web Analytics P75 timings (ms), ${host}, since ${since}`)
+  for (const d of dims) {
+    const key = d || "all"
+    console.log(
+      `\n${key.padEnd(28)}  count     load    req   resp   conn   rest    FCP`,
+    )
+    for (const r of acc[key]!) {
+      const q = r.quantiles
+      const rest =
+        q.pageLoadTimeP75! -
+        q.requestTimeP75! -
+        q.responseTimeP75! -
+        q.connectionTimeP75!
+      const label = d ? r.dimensions?.[d] || "(none)" : "all"
+      console.log(
+        `${label.slice(0, 28).padEnd(28)}  ${fmt(r.count).padStart(5)}${ms(q.pageLoadTimeP75!)}${ms(q.requestTimeP75!)}${ms(q.responseTimeP75!)}${ms(q.connectionTimeP75!)}${ms(rest)}${ms(q.firstContentfulPaintP75!)}`,
+      )
+    }
+  }
+  process.exit(0)
+}
 
 // `--rum [host]`: Web Analytics (visitor) report for the last 30 days instead of
 // the CPU tables. Any host that loads our beacon token shows up here (forks too).

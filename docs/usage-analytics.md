@@ -10,6 +10,8 @@ bun run cf:usage          # --daily splits the per-Worker table by day; --since 
 
 Visitor traffic (Web Analytics, the cookieless beacon in `apps/web/src/main.tsx`): `bun run cf:usage --rum [host]` prints referrers, countries, devices and paths for the last 30 days (default host `www.arsenyx.com`). The dataset is `rumPageloadEventsAdaptiveGroups`, filtered by `requestHost`. It's adaptively sampled: counts in round tens mean 1-in-10 sampling, so small rows are rough. An empty `refererHost` means a direct visit (Discord and app links send none).
 
+Page-load timings (the dashboard's "Page load time summary"): `bun run cf:usage --rum-perf [host]` prints P75 load, request, response, connect, the rest (parse, JS and subresources) and FCP for the last 7 days, by device, country and path, from `rumPerformanceEventsAdaptiveGroups`. A row backed by a handful of sampled loads swings on one slow visit, so read the 24 h dashboard P75 as a few visitors, not a trend. The GraphQL budget is small: a query with a bad field name still spends it, and once spent the API refuses everything for 5 minutes.
+
 ## Billing facts
 
 - The Workers Paid allowance that gets exceeded is **30M CPU-ms per month**, not requests. Requests (10M included) sit far below that. Overage is cents per million CPU-ms.
