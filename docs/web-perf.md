@@ -32,4 +32,5 @@ const nav = performance.getEntriesByType("navigation")[0]
 - **Caching is done:** hashed `/assets/*` and versioned `/data/*` are `immutable`, HTML revalidates, UI art caches for a day ([public/\_headers](../apps/web/public/_headers)). Everything is brotli and an edge HIT.
 - **Warm vitals:** home TTFB 73 ms, CLS 0; build page LCP about 1.05 s (a mod-card frame image), CLS 0; no long tasks.
 - **Home hero:** `index.html` preloads `items-index.json` on `/` only, and the hero `<img>` is `fetchPriority="high"` (#441).
-- **Open:** catalog images are PNGs (the home hero is 80 KB at 512 px), and WebP would roughly halve them; that's a `sync:images` pipeline change. `wiki.warframe.com` is preconnected site-wide, but only build pages hotlink icons from it.
+- **Catalog images are WebP:** `sync:images` re-encodes PNG sources to lossy WebP (q85) through `sharp`, about half the bytes. JPGs stay as JPGs (WebP saves only ~15%). The old `.png` objects stay in R2 because saved builds can still reference them.
+- **Open:** `wiki.warframe.com` is preconnected site-wide, but only build pages hotlink icons from it.

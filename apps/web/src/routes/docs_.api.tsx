@@ -348,7 +348,7 @@ function DocsApiPage() {
       "name": "Ash",
       "slug": "ash",
       "category": "warframes",
-      "imageName": "https://img.arsenyx.com/Ash-<hash>.png",
+      "imageName": "https://img.arsenyx.com/Ash-<hash>.webp",
       "masteryReq": 0,
       "isPrime": false,
       "displayClass": "Warframe",

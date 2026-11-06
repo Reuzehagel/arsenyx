@@ -11,6 +11,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-11-06",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Item, mod and arcane images download faster. Most of them now use a smaller image format, so Browse and build pages fill in sooner, especially on slow connections.",
+      },
+    ],
+  },
+  {
     date: "2026-11-04",
     changes: [
       {
