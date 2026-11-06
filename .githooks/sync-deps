@@ -1,0 +1,9 @@
+#!/bin/sh
+# Shared by post-merge and post-checkout: when bun.lock differs between the
+# two commits, sync node_modules so `bun run <script>` doesn't hit missing
+# packages (`just` recipes run `deps` themselves; plain bun scripts don't).
+# $1/$2 = old/new commit.
+git diff --quiet "$1" "$2" -- bun.lock 2>/dev/null && exit 0
+echo "bun.lock changed, running just deps..."
+just deps || echo "just deps failed; see above (a stale install needs: bun install --force)"
+exit 0
