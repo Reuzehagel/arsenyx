@@ -16,6 +16,11 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "fix",
         description:
+          "Secondary kitguns (Catchmoon, Gaze, Rattleguts, Sporelacer, Tombfinger, Vermisplicer) show their real crit, status, fire rate and damage in the build editor again, instead of all zeros.",
+      },
+      {
+        type: "fix",
+        description:
           "Item, mod and arcane images download faster. Most of them now use a smaller image format, so Browse and build pages fill in sooner, especially on slow connections.",
       },
     ],

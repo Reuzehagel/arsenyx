@@ -1,7 +1,14 @@
-import type { Gun, ModularKitguns } from "@arsenyx/shared/warframe/types"
+import type {
+  Gun,
+  ModularData,
+  ModularKitguns,
+} from "@arsenyx/shared/warframe/types"
 import { describe, expect, it } from "vitest"
 
+import catchmoon from "../../public/data/items/secondary/catchmoon-secondary.json"
+import modular from "../../public/data/modular.json"
 import { adjustChamberForKitgun } from "./kitgun-stats"
+import { calculateWeaponStats } from "./stats/weapon"
 
 const MODULAR: ModularKitguns = {
   primary: {
@@ -123,5 +130,40 @@ describe("adjustChamberForKitgun", () => {
         MODULAR,
       ),
     ).toBe(CHAMBER)
+  })
+})
+
+// Shipped data, end to end: a wiki table rename once emptied
+// `kitgun.secondary` and the editor showed all-zero stats for secondary
+// kitguns. Expected values from wiki Module:Modular/data (Catchmoon chamber
+// 21% crit / 2x / 21% status; Bashrack +7% / +0.1x / -4%).
+describe("shipped modular.json", () => {
+  const stats = (grip: string) =>
+    calculateWeaponStats({
+      weapon: adjustChamberForKitgun(
+        catchmoon as unknown as Gun,
+        "Catchmoon",
+        "secondary",
+        grip,
+        "Bashrack",
+        (modular as unknown as ModularData).kitgun,
+      ),
+      mods: [],
+      arcanes: [],
+    }).attackModes[0]!
+
+  it("rebuilds Catchmoon (Secondary) Gibber + Bashrack", () => {
+    const s = stats("Gibber")
+    expect(s.criticalChance.modified).toBeCloseTo(28)
+    expect(s.criticalMultiplier.modified).toBeCloseTo(2.1)
+    expect(s.statusChance.modified).toBeCloseTo(17)
+    expect(s.fireRate.modified).toBeCloseTo(3.17)
+    expect(s.totalDamage.modified).toBeCloseTo(160) // 119 heat + 41 impact
+  })
+
+  it("rebuilds Catchmoon (Secondary) Haymaker + Bashrack", () => {
+    const s = stats("Haymaker")
+    expect(s.fireRate.modified).toBeCloseTo(1.17)
+    expect(s.totalDamage.modified).toBeCloseTo(460) // 269 heat + 191 impact
   })
 })
