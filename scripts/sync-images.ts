@@ -3,7 +3,13 @@
  * rewrite the JSON catalog to point at our public CDN domain.
  *
  *   build:items  →  imageName = "https://content.warframe.com/.../Foo.png!00_xyz"
- *   sync:images  →  imageName = "https://img.arsenyx.com/Foo-abc123.png"
+ *   sync:images  →  imageName = "https://img.arsenyx.com/Foo-abc123.webp"
+ *
+ * PNG sources are re-encoded to lossy WebP before upload (about half the
+ * bytes; JPGs gain little and are mirrored as-is). Catalog URLs still on our
+ * CDN as `.png` from before the switch are upgraded in place by
+ * `upgradePngsToWebp`; the old `.png` objects stay in the bucket because
+ * saved builds can hold those URLs.
  *
  * Idempotent. Re-running after a partial run picks up where it left off;
  * re-running after a no-op build is fast (HEADs only, no uploads).
@@ -28,6 +34,7 @@ import { readFileSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
 
 import { AwsClient } from "aws4fetch"
+import sharp from "sharp"
 
 import { fetchRetry } from "./build/http"
 import { escapeRegex, findJsonFiles, sourceUrlRe } from "./build/image-hosts"
@@ -108,7 +115,8 @@ function extractSourceUrls(text: string): Set<string> {
 // Storage-key derivation.
 // ---------------------------------------------------------------------------
 
-/** `<stem>-<sha8>.<ext>` — derived from the source URL. Debuggable basename
+/** `<stem>-<sha8>.<ext>` — derived from the source URL, with `.png`
+ *  swapped for `.webp` (see `toWebp`). Debuggable basename
  *  plus 8 hex chars of SHA-256 so two unrelated upstream files with the
  *  same basename can't collide. The source URL itself already carries the
  *  upstream's content hash (DE's `!00_xxx`, wiki's `?xxx`), so the key
@@ -127,7 +135,8 @@ function keyForUrl(url: string): string {
   const hash = createHash("sha256").update(url).digest("hex").slice(0, 8)
   const dot = base.lastIndexOf(".")
   if (dot <= 0) return `${base}-${hash}`
-  return `${base.slice(0, dot)}-${hash}${base.slice(dot)}`
+  const ext = base.slice(dot)
+  return `${base.slice(0, dot)}-${hash}${/^\.png$/i.test(ext) ? ".webp" : ext}`
 }
 
 // ---------------------------------------------------------------------------
@@ -218,6 +227,36 @@ async function refreshMetadata(key: string): Promise<void> {
   }
 }
 
+/** Lossy WebP at q85 keeps icon edges clean and roughly halves PNG bytes.
+ *  Alpha stays at full quality (sharp's default `alphaQuality: 100`), which
+ *  matters for the transparent item and mod icons. */
+async function toWebp(png: ArrayBuffer): Promise<Uint8Array> {
+  return sharp(Buffer.from(png)).webp({ quality: 85, effort: 6 }).toBuffer()
+}
+
+async function putObject(
+  key: string,
+  body: ArrayBuffer | Uint8Array,
+): Promise<void> {
+  const put = await aws.fetch(objectUrl(key), {
+    method: "PUT",
+    body,
+    signal: AbortSignal.timeout(R2_TIMEOUT_MS),
+    headers: {
+      // Set Content-Type from our key's extension, not the upstream
+      // response — see MIME_BY_EXT comment above. Content-Disposition:
+      // inline tells browsers to render in-tab instead of triggering
+      // the save dialog when the user opens the image directly.
+      "Content-Type": contentTypeForKey(key),
+      "Content-Disposition": "inline",
+      "Cache-Control": CACHE_CONTROL,
+    },
+  })
+  if (!put.ok) {
+    throw new Error(`PUT ${key} → HTTP ${put.status} ${await put.text()}`)
+  }
+}
+
 async function ensureUploaded(url: string, key: string): Promise<UploadResult> {
   if (await existsInBucket(key)) {
     return { url, key, status: "skipped" }
@@ -241,24 +280,77 @@ async function ensureUploaded(url: string, key: string): Promise<UploadResult> {
     console.warn(`  upstream HTTP ${status} for ${url}`)
     return { url, key, status: "missing" }
   }
-  const put = await aws.fetch(objectUrl(key), {
-    method: "PUT",
-    body,
-    signal: AbortSignal.timeout(R2_TIMEOUT_MS),
-    headers: {
-      // Set Content-Type from our key's extension, not the upstream
-      // response — see MIME_BY_EXT comment above. Content-Disposition:
-      // inline tells browsers to render in-tab instead of triggering
-      // the save dialog when the user opens the image directly.
-      "Content-Type": contentTypeForKey(key),
-      "Content-Disposition": "inline",
-      "Cache-Control": CACHE_CONTROL,
-    },
-  })
-  if (!put.ok) {
-    throw new Error(`PUT ${key} → HTTP ${put.status} ${await put.text()}`)
-  }
+  await putObject(key, key.endsWith(".webp") ? await toWebp(body) : body)
   return { url, key, status: "uploaded" }
+}
+
+/** Upgrade catalog URLs already on our CDN as `<stem>-<sha8>.png` (mirrored
+ *  before the WebP switch) to the `.webp` key `keyForUrl` now derives for the
+ *  same source, so a later full sync lands on the same object. Encodes from
+ *  the PNG already in R2, with no upstream fetch. A no-op once the catalog
+ *  holds no `.png` CDN URLs. */
+async function upgradePngsToWebp(files: readonly string[]): Promise<void> {
+  const pngRe = new RegExp(
+    `${escapeRegex(PUBLIC_URL)}/([^"\\\\]+)\\.png(?=")`,
+    "g",
+  )
+  const stems = new Set<string>()
+  for (const f of files) {
+    for (const m of readFileSync(f, "utf8").matchAll(pngRe)) stems.add(m[1]!)
+  }
+  if (stems.size === 0) return
+  console.log(`\nWebP pass: ${stems.size} catalog PNGs on our CDN`)
+
+  const failed = new Set<string>()
+  let encoded = 0
+  let pngBytes = 0
+  let webpBytes = 0
+  const list = [...stems]
+  await pMap(list, 16, async (stem, i) => {
+    const webpKey = `${decodeURIComponent(stem)}.webp`
+    if (!(await existsInBucket(webpKey))) {
+      const res = await aws.fetch(
+        objectUrl(`${decodeURIComponent(stem)}.png`),
+        {
+          signal: AbortSignal.timeout(R2_TIMEOUT_MS),
+        },
+      )
+      if (!res.ok) {
+        // Keep the .png URL: rewriting it would point at nothing.
+        console.warn(`  GET ${stem}.png → HTTP ${res.status}, left as PNG`)
+        failed.add(stem)
+        return
+      }
+      const png = await res.arrayBuffer()
+      const webp = await toWebp(png)
+      await putObject(webpKey, webp)
+      encoded++
+      pngBytes += png.byteLength
+      webpBytes += webp.byteLength
+    }
+    if ((i + 1) % 200 === 0 || i === list.length - 1) {
+      console.log(`  ${i + 1}/${list.length}  (${encoded} encoded)`)
+    }
+  })
+  if (encoded > 0) {
+    const mb = (n: number) => (n / 1048576).toFixed(1)
+    console.log(
+      `  ${encoded} encoded: ${mb(pngBytes)} MB PNG → ${mb(webpBytes)} MB WebP`,
+    )
+  }
+
+  let rewritten = 0
+  for (const f of files) {
+    const text = readFileSync(f, "utf8")
+    const out = text.replace(pngRe, (m, stem: string) =>
+      failed.has(stem) ? m : `${PUBLIC_URL}/${stem}.webp`,
+    )
+    if (out !== text) {
+      writeFileSync(f, out, "utf8")
+      rewritten++
+    }
+  }
+  console.log(`  Rewrote ${rewritten} JSON files to the .webp URLs`)
 }
 
 /** Run `fn` over `items` with at most `concurrency` in flight at once. */
@@ -349,6 +441,7 @@ async function main(): Promise<void> {
     console.log(
       "Nothing to mirror — either build:items hasn't run, or all URLs are already on our CDN.",
     )
+    await upgradePngsToWebp(files)
     return
   }
 
@@ -406,6 +499,7 @@ async function main(): Promise<void> {
   console.log(
     `\nRewrote ${rewrittenFiles} JSON files to point at ${PUBLIC_URL}`,
   )
+  await upgradePngsToWebp(files)
 }
 
 await main()
