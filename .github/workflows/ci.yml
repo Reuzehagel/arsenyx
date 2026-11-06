@@ -70,6 +70,10 @@ jobs:
         # Base UI errors when a <Button render={<Link…/>}> keeps nativeButton.
         run: bun run check:native-button
 
+      - name: Check import layering
+        # Rules and reasons: scripts/lib/layering.ts.
+        run: bun run check:layering
+
       - name: Build (web)
         # Must run before typecheck — @tanstack/router-plugin generates
         # apps/web/src/routeTree.gen.ts during vite build, and tsgo fails

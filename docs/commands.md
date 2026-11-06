@@ -31,7 +31,7 @@ ports nobody holds — check with `netstat -ano | grep LISTEN`.
 ## Build / verify
 
 ```bash
-just check                        # THE gate before claiming done — gen + typecheck + oxlint + oxfmt --check + check:native-button + tests
+just check                        # THE gate before claiming done — gen + typecheck + oxlint + oxfmt --check + check:native-button + check:layering + tests
 just fix                          # oxlint --fix + oxfmt --write
 just test                         # = `bun run test` (CI runs the same): vitest across apps/web, apps/api, packages/shared + bun test scripts/
 just gen                          # generate apps/web/src/routeTree.gen.ts only (no-op if present)
@@ -146,7 +146,7 @@ bun run check:images               # fail if catalog still hotlinks content/wiki
 bun run check:data-version         # fail if catalog changed but meta.json generatedAt didn't
 bun run check:wrangler             # wrangler dry-run of both Workers; fails on config warnings (needs apps/web dist/) — run after editing a wrangler.toml
 bun run data:stamp                 # bump meta.json generatedAt + recount records — run after any HAND-edit to apps/web/public/data/
-bun run data:ab [base-ref]          # ship only a pipeline change's catalog delta (see "Shipping a pipeline fix" below)
+bun run data:ab [base-ref]          # ship only a pipeline change's catalog delta; --check verifies a no-op refactor (see "Shipping a pipeline fix" below)
 bun run data:patch <base> <fixed>  # the patch step data:ab runs, for hand-built snapshots
 bun run data:diff [ref]            # markdown summary of catalog changes vs ref (default HEAD); the data cron's PR body
 ```
@@ -187,6 +187,8 @@ bun run data:ab            # base = HEAD in a throwaway worktree, fixed = workin
 bun run data:ab HEAD~1     # fix already committed: compare against the commit before it
 bun --filter=arsenyx-web run test parsed-catalog --update  # then review the .snap.txt diff
 ```
+
+**A refactor that must not change the catalog:** `bun run data:ab HEAD --check` builds both sides the same way, exits 1 listing every differing file (meta.json's `generatedAt` ignored), and touches neither the live catalog nor the image cache. From a worktree without `data/raw/`, add `--raw <main-checkout>/data/raw`.
 
 `data:ab` ends with a **Changed fields** count per field path (`--verbose` lists
 every change). Anything there besides your fix is drift: stop and investigate.

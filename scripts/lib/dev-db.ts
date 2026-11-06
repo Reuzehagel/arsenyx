@@ -39,7 +39,11 @@ export function pinIpv4(url: string): string {
 }
 
 /** Repoints the Hyperdrive line of an .env written before setup.ts pinned
- *  IPv4; returns the text unchanged when already pinned or absent. */
+ *  IPv4; returns the text unchanged when already pinned or absent. Still
+ *  load-bearing: any checkout whose .env predates the pin (other worktrees,
+ *  old clones) stalls ~2 s per request under wrangler ≥4.157 without it.
+ *  Remove only once no such .env can exist (e.g. setup.ts rewrites .env on
+ *  every run). */
 export function pinHyperdriveIpv4(env: string): string {
   return env.replace(
     /^(CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE\s*=\s*"?)([^"\r\n]*)/m,

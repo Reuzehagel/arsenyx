@@ -25,6 +25,8 @@ import { existsSync, readFileSync } from "node:fs"
 import { homedir } from "node:os"
 import { join } from "node:path"
 
+import { DETAIL_MARKERS } from "../apps/api/src/lib/measure"
+
 const ACCOUNT = "18bb3173149fb0f522be36b26ed7027d"
 const ZONE = "89b436282a7d8a3063c6f91aba820608" // arsenyx.com
 const CYCLE_START_DAY = 8 // billing cycle runs from the 8th
@@ -352,7 +354,7 @@ console.log(
 // each): an anonymous KV miss, or a signed-in viewer. Console lines are their
 // own events, matched on $metadata.message.
 const detailPaths = await Promise.all(
-  ["detail:kv-miss", "detail:live"].map(async (m) => ({
+  Object.values(DETAIL_MARKERS).map(async (m) => ({
     log: m,
     requests: fmt(
       (await query([f("$metadata.message", "eq", m)], false)).count,

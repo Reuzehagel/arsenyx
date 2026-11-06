@@ -29,6 +29,7 @@ import type { Prisma } from "../generated/prisma/client"
 import type { BuildVisibility } from "../generated/prisma/enums"
 import type { InputJsonValue } from "../generated/prisma/internal/prismaNamespace"
 import { edgeCache } from "../lib/edge-cache"
+import { DETAIL_MARKERS } from "../lib/measure"
 import { getSession, requireUser } from "../lib/session"
 import {
   hasPrismaCode,
@@ -907,8 +908,7 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
     return c.body(snap.text, 200, { "Content-Type": "application/json" })
   }
 
-  // shortcut: measurement only — see the detail:kv-miss log in _build-snapshot.ts.
-  console.log("detail:live")
+  console.log(DETAIL_MARKERS.live)
   const build = await prisma.build.findUnique({
     where: { slug },
     relationLoadStrategy: "join",

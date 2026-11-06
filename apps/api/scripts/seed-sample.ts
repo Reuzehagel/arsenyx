@@ -33,7 +33,13 @@ if (!isLocalDbUrl(dbUrl)) {
 const DATA = resolve(REPO_ROOT, CATALOG_DIR)
 const json = (f: string) => JSON.parse(readFileSync(resolve(DATA, f), "utf8"))
 
-type Item = { uniqueName: string; name: string; category: string; imageName?: string; displayClass?: string }
+type Item = {
+  uniqueName: string
+  name: string
+  category: string
+  imageName?: string
+  displayClass?: string
+}
 type Mod = Record<string, unknown> & {
   uniqueName: string
   name: string
@@ -57,7 +63,9 @@ const pick = <T>(xs: T[]): T => xs[int(xs.length)]!
 const sample = <T>(xs: T[], n: number): T[] =>
   [...xs].sort(() => rand() - 0.5).slice(0, n)
 const slug = () =>
-  Array.from({ length: 10 }, () => pick([..."23456789abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"])).join("")
+  Array.from({ length: 10 }, () =>
+    pick([..."23456789abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"]),
+  ).join("")
 const id = () => `seed${slug()}`
 
 const mods: Mod[] = (json(CATALOG_FILES.mods) as Mod[]).filter(
@@ -85,7 +93,8 @@ function buildData(compat: string, aura: boolean) {
   const chosen: Mod[] = []
   for (const m of sample(modsFor(compat), Infinity)) {
     if (chosen.length === 8) break
-    if (!chosen.some((c) => conflicts[c.uniqueName]?.includes(m.uniqueName))) chosen.push(m)
+    if (!chosen.some((c) => conflicts[c.uniqueName]?.includes(m.uniqueName)))
+      chosen.push(m)
   }
   chosen.forEach((m, i) => (slots[`normal-${i}`] = placed(m)))
   if (aura) slots["aura-0"] = placed(pick(modsFor("AURA")))
@@ -100,8 +109,32 @@ function buildData(compat: string, aura: boolean) {
   }
 }
 
-const NAMES = ["Tennoroll", "voidwalker", "GrineerHunter", "lotus_fan", "KuvaKid", "SteelPathSam", "eidolon_eve", "CorpusCarl", "Ordis42", "Tenno_Tess", "duviri_dan", "Nightwave"]
-const BUILD_NAMES = ["General Use", "Steel Path", "Budget", "Crit Focus", "Status Spread", "Eidolon", "Endurance", "Speedrun", "Starter", "No Forma"]
+const NAMES = [
+  "Tennoroll",
+  "voidwalker",
+  "GrineerHunter",
+  "lotus_fan",
+  "KuvaKid",
+  "SteelPathSam",
+  "eidolon_eve",
+  "CorpusCarl",
+  "Ordis42",
+  "Tenno_Tess",
+  "duviri_dan",
+  "Nightwave",
+]
+const BUILD_NAMES = [
+  "General Use",
+  "Steel Path",
+  "Budget",
+  "Crit Focus",
+  "Status Spread",
+  "Eidolon",
+  "Endurance",
+  "Speedrun",
+  "Starter",
+  "No Forma",
+]
 const GUIDE = `## Overview\n\nA well-rounded setup for most content.\n\n## Mods\n\n- Core damage first\n- Flex slots for **utility**\n\n## Playstyle\n\nKeep moving, prioritise priority targets.`
 
 async function main() {
@@ -111,11 +144,13 @@ async function main() {
   const q = (text: string, values: unknown[] = []) => client.query(text, values)
   try {
     const { rows } = await q("SELECT 1 FROM builds LIMIT 1")
-    if (rows.length) return console.log("✓ sample data skipped (builds already exist)")
+    if (rows.length)
+      return console.log("✓ sample data skipped (builds already exist)")
 
     await q("BEGIN")
     const now = Date.now()
-    const ago = (maxDays: number) => new Date(now - rand() * maxDays * 86_400_000)
+    const ago = (maxDays: number) =>
+      new Date(now - rand() * maxDays * 86_400_000)
 
     const users: string[] = []
     for (const name of NAMES) {
@@ -124,7 +159,14 @@ async function main() {
       await q(
         `INSERT INTO users (id, name, email, "emailVerified", username, "displayUsername", "isVerified", "createdAt", "updatedAt")
          VALUES ($1, $2, $3, true, $4, $2, $5, $6, $6)`,
-        [uid, name, `${name.toLowerCase()}@sample.local`, name.toLowerCase(), rand() < 0.3, ago(365)],
+        [
+          uid,
+          name,
+          `${name.toLowerCase()}@sample.local`,
+          name.toLowerCase(),
+          rand() < 0.3,
+          ago(365),
+        ],
       )
     }
 
@@ -135,37 +177,72 @@ async function main() {
     )
     const orgMembers = users.slice(0, 3)
     for (const [i, uid] of orgMembers.entries()) {
-      await q(`INSERT INTO organization_members ("organizationId", "userId", role) VALUES ($1, $2, $3)`, [orgId, uid, i === 0 ? "ADMIN" : "MEMBER"])
+      await q(
+        `INSERT INTO organization_members ("organizationId", "userId", role) VALUES ($1, $2, $3)`,
+        [orgId, uid, i === 0 ? "ADMIN" : "MEMBER"],
+      )
     }
 
     let builds = 0
-    const owned = new Map<string, { bid: string; category: string; visibility: string }[]>()
+    const owned = new Map<
+      string,
+      { bid: string; category: string; visibility: string }[]
+    >()
     for (const [category, filter, compat, aura] of KINDS) {
       for (const item of sample(index[category]!.filter(filter), 14)) {
         const bid = id()
         const owner = pick(users)
         const inOrg = orgMembers.includes(owner) && rand() < 0.4
-        const visibility = rand() < 0.85 ? "PUBLIC" : pick(["PRIVATE", "UNLISTED"])
+        const visibility =
+          rand() < 0.85 ? "PUBLIC" : pick(["PRIVATE", "UNLISTED"])
         const hasGuide = rand() < 0.35
         const createdAt = ago(120)
         await q(
           `INSERT INTO builds (id, slug, "userId", "organizationId", "itemUniqueName", "itemCategory", "itemName", "itemImageName",
              name, visibility, "buildData", "hasGuide", "viewCount", "createdAt", "updatedAt")
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$14)`,
-          [bid, slug(), owner, inOrg ? orgId : null, item.uniqueName, category, item.name, item.imageName ?? null,
-            `${item.name} ${pick(BUILD_NAMES)}`, visibility, JSON.stringify(buildData(compat, aura)), hasGuide, int(5000), createdAt],
+          [
+            bid,
+            slug(),
+            owner,
+            inOrg ? orgId : null,
+            item.uniqueName,
+            category,
+            item.name,
+            item.imageName ?? null,
+            `${item.name} ${pick(BUILD_NAMES)}`,
+            visibility,
+            JSON.stringify(buildData(compat, aura)),
+            hasGuide,
+            int(5000),
+            createdAt,
+          ],
         )
         if (hasGuide) {
-          await q(`INSERT INTO build_guides (id, "buildId", summary, description, "updatedAt") VALUES ($1, $2, $3, $4, NOW())`,
-            [id(), bid, `How I run ${item.name}.`, GUIDE])
+          await q(
+            `INSERT INTO build_guides (id, "buildId", summary, description, "updatedAt") VALUES ($1, $2, $3, $4, NOW())`,
+            [id(), bid, `How I run ${item.name}.`, GUIDE],
+          )
         }
-        await q(`INSERT INTO build_revisions (id, "buildId", "editorId", kind, "createdAt") VALUES ($1, $2, $3, 'CREATED', $4)`,
-          [id(), bid, owner, createdAt])
+        await q(
+          `INSERT INTO build_revisions (id, "buildId", "editorId", kind, "createdAt") VALUES ($1, $2, $3, 'CREATED', $4)`,
+          [id(), bid, owner, createdAt],
+        )
         for (const uid of sample(users, int(users.length))) {
-          await q(`INSERT INTO build_likes (id, "userId", "buildId", value) VALUES ($1, $2, $3, $4)`, [id(), uid, bid, rand() < 0.85 ? 1 : -1])
-          if (rand() < 0.3) await q(`INSERT INTO build_bookmarks (id, "userId", "buildId") VALUES ($1, $2, $3)`, [id(), uid, bid])
+          await q(
+            `INSERT INTO build_likes (id, "userId", "buildId", value) VALUES ($1, $2, $3, $4)`,
+            [id(), uid, bid, rand() < 0.85 ? 1 : -1],
+          )
+          if (rand() < 0.3)
+            await q(
+              `INSERT INTO build_bookmarks (id, "userId", "buildId") VALUES ($1, $2, $3)`,
+              [id(), uid, bid],
+            )
         }
-        owned.set(owner, [...(owned.get(owner) ?? []), { bid, category, visibility }])
+        owned.set(owner, [
+          ...(owned.get(owner) ?? []),
+          { bid, category, visibility },
+        ])
         builds++
       }
     }
@@ -176,11 +253,16 @@ async function main() {
     let partners = 0
     const isHub = (b: { category: string; visibility: string }) =>
       b.category === "warframes" && b.visibility === "PUBLIC"
-    const hubOwner = [...owned.values()].find((bs) => bs.some(isHub) && bs.length >= 4)
+    const hubOwner = [...owned.values()].find(
+      (bs) => bs.some(isHub) && bs.length >= 4,
+    )
     if (hubOwner) {
       const hub = hubOwner.find(isHub)!
       for (const p of hubOwner.filter((b) => b !== hub).slice(0, 3)) {
-        await q(`INSERT INTO "_PartnerBuilds" ("A", "B") VALUES ($1, $2), ($2, $1)`, [hub.bid, p.bid])
+        await q(
+          `INSERT INTO "_PartnerBuilds" ("A", "B") VALUES ($1, $2), ($2, $1)`,
+          [hub.bid, p.bid],
+        )
         partners++
       }
     }
@@ -191,7 +273,9 @@ async function main() {
       "dislikeCount" = (SELECT count(*) FROM build_likes l WHERE l."buildId" = b.id AND l.value = -1),
       "bookmarkCount" = (SELECT count(*) FROM build_bookmarks k WHERE k."buildId" = b.id)`)
     await q("COMMIT")
-    console.log(`✓ sample data: ${users.length} users, 1 org, ${builds} builds, ${partners} partner links`)
+    console.log(
+      `✓ sample data: ${users.length} users, 1 org, ${builds} builds, ${partners} partner links`,
+    )
   } catch (err) {
     await q("ROLLBACK").catch(() => {})
     throw err

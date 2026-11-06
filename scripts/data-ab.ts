@@ -7,7 +7,13 @@
  * base→fixed delta onto the current catalog (`data:patch`) and stamps it.
  *
  * Usage:
- *   bun run data:ab [base-ref] [--verbose]
+ *   bun run data:ab [base-ref] [--verbose] [--check] [--raw <dir>]
+ *
+ * --check  verify a refactor instead of shipping it: diff the two builds
+ *          (meta.json's generatedAt ignored), exit 1 on any difference, and
+ *          leave the live catalog alone.
+ * --raw    read the mirror from <dir> instead of data/raw/ (e.g. the main
+ *          checkout's, from a worktree that has none).
  *
  * Snapshots land in `data/ab/{base,fixed}` (gitignored); the fixed build
  * writes there via CATALOG_OUT_DIR, so the live catalog is only touched by
@@ -31,13 +37,20 @@ import {
   WIKI_IMAGE_CACHE as IMAGE_CACHE,
   REPO_ROOT as ROOT,
 } from "./build/paths"
+import { diffCatalogDirs } from "./lib/catalog-dirs"
 
 const AB = resolve(ROOT, "data/ab")
 const WT = resolve(AB, "wt")
 
 const args = process.argv.slice(2)
 const verbose = args.includes("--verbose")
-const baseRef = args.find((a) => !a.startsWith("--")) ?? "HEAD"
+const check = args.includes("--check")
+const rawFlag = args.indexOf("--raw")
+const rawArg = rawFlag >= 0 ? args[rawFlag + 1] : undefined
+const baseRef =
+  args.find((a, i) => !a.startsWith("--") && i !== rawFlag + 1) ?? "HEAD"
+const RAW = resolve(ROOT, "data/raw")
+const rawSrc = rawArg ? resolve(rawArg) : RAW
 
 function run(cmd: string, cmdArgs: string[], cwd = ROOT, outDir?: string) {
   console.log(`\n$ ${cmd} ${cmdArgs.join(" ")}  (in ${cwd})`)
@@ -49,9 +62,14 @@ function run(cmd: string, cmdArgs: string[], cwd = ROOT, outDir?: string) {
   if (r.status !== 0) throw new Error(`${cmd} ${cmdArgs.join(" ")} failed`)
 }
 
-if (!existsSync(resolve(ROOT, "data/raw"))) {
-  throw new Error("data/raw/ is missing: run `bun run data:sync` first")
+if (!existsSync(rawSrc)) {
+  throw new Error(
+    `${rawSrc} is missing: run \`bun run data:sync\` first, or pass --raw <dir>`,
+  )
 }
+// The working-tree build reads data/raw/; borrow --raw's mirror for it.
+const borrowedRaw = rawSrc !== RAW && !existsSync(RAW)
+if (borrowedRaw) cpSync(rawSrc, RAW, { recursive: true })
 
 rmSync(AB, { recursive: true, force: true })
 spawnSync("git", ["worktree", "prune"], { cwd: ROOT })
@@ -60,7 +78,7 @@ const imageCache = readFileSync(IMAGE_CACHE)
 try {
   // Base: the ref's code and dependencies, our mirror.
   run("git", ["worktree", "add", "--detach", WT, baseRef])
-  cpSync(resolve(ROOT, "data/raw"), resolve(WT, "data/raw"), {
+  cpSync(rawSrc, resolve(WT, "data/raw"), {
     recursive: true,
   })
   run("bun", ["install", "--frozen-lockfile"], WT)
@@ -74,6 +92,17 @@ try {
 } finally {
   writeFileSync(IMAGE_CACHE, imageCache)
   spawnSync("git", ["worktree", "remove", "--force", WT], { cwd: ROOT })
+  if (borrowedRaw) rmSync(RAW, { recursive: true, force: true })
+}
+
+if (check) {
+  const diff = diffCatalogDirs(resolve(AB, "base"), resolve(AB, "fixed"))
+  if (diff.length > 0) {
+    console.error(`\n✗ catalog differs from ${baseRef}:\n${diff.join("\n")}`)
+    process.exit(1)
+  }
+  console.log(`\n✓ catalog is identical to ${baseRef}'s build`)
+  process.exit(0)
 }
 
 run("bun", [

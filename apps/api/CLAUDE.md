@@ -50,7 +50,6 @@ Prod injects secrets via `wrangler secret put` (see [wrangler.toml](wrangler.tom
 - `bun run db:generate` (or `db:push`) after schema changes
 
 **Never**
-- Import `apps/web/*` — only `@arsenyx/shared` crosses the boundary
 - Commit `src/generated/`
 - Hand-roll a build list query — use `_build-list.ts`
 

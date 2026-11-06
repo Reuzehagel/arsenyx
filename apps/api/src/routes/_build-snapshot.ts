@@ -9,6 +9,7 @@ import { prisma, registerBackgroundWork } from "../db"
 import type { Prisma } from "../generated/prisma/client"
 import type { BuildVisibility } from "../generated/prisma/enums"
 import { purgeEdge } from "../lib/edge-cache"
+import { DETAIL_MARKERS } from "../lib/measure"
 import {
   ANON_VIEWER,
   DETAIL_INCLUDE,
@@ -159,9 +160,7 @@ export async function readAnonSnapshot(
   ) {
     return { text: hit.value, meta: hit.metadata }
   }
-  // shortcut: measurement only (docs/usage-analytics.md, scripts/cf-usage.ts);
-  // remove both detail:* logs once the plain-SQL rewrite of these paths is decided.
-  console.log("detail:kv-miss")
+  console.log(DETAIL_MARKERS.kvMiss)
   const snap = await loadAnonSnapshot(slug)
   // Only store real snapshots: a delete per 404/PRIVATE probe is a billed KV
   // write, and a stale key is already ignored by the check above.
