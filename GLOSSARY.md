@@ -24,6 +24,12 @@ helminth choices. A Build has 1–5 Variants per form (twin frames have two form
 _Avoid_: Build (the container, not the loadout), Loadout. Also note: a Warframe Prime/Wraith/Prisma
 "variant" is **not** a Variant here — those are modeled as separate **Items** in the catalog.
 
+**Variant mode**:
+A Build-wide setting (`variantMode`). **linked** (the default) means every Variant uses the
+same forma and Archon Shards, like configs of one item in-game. **independent** means each
+Variant has its own. Helminth is per Variant in both modes.
+_Avoid_: Sync, Shared mode.
+
 **Guide**:
 Optional authored prose on a Build: a short summary (≤160 chars) and a longer description
 (≤50k chars). Can be build-wide or per-Variant.

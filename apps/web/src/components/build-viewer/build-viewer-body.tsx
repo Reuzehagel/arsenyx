@@ -19,6 +19,7 @@ import {
   type BuildCatalogs,
   getVariants,
   loadBuildData,
+  resolveVariantMode,
   selectVariant,
 } from "@/lib/codec/build-codec-adapter"
 import { hasGuideContent } from "@/lib/guide"
@@ -130,6 +131,7 @@ function BuildViewerBodyInner({
     () => selectVariant(savedAll, activeIndex),
     [savedAll, activeIndex],
   )
+  const variantMode = useMemo(() => resolveVariantMode(savedAll), [savedAll])
 
   // Reserve height for the guide's lazy chunk only when GuideDisplay will
   // render something (else the reservation leaves an empty gap).
@@ -246,6 +248,11 @@ function BuildViewerBodyInner({
                 formNames={isTwin ? formNames : undefined}
                 activeFormIndex={activeFormIndex}
                 onSelectForm={isTwin ? selectForm : undefined}
+                note={
+                  variantMode === "independent"
+                    ? "Each variant has its own forma and Archon Shards"
+                    : undefined
+                }
               />
             ) : undefined
           }

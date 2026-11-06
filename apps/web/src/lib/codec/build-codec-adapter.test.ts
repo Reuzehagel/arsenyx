@@ -1,3 +1,7 @@
+import {
+  decodeBuildDoc,
+  encodeBuildDoc,
+} from "@arsenyx/shared/warframe/build-codec"
 import type {
   HelminthAbility,
   SavedBuildData,
@@ -7,12 +11,16 @@ import type {
   SlotId,
 } from "@arsenyx/shared/warframe/build-data"
 import { RIVEN_IMAGE_NAME } from "@arsenyx/shared/warframe/rivens"
-import type { Arcane, Mod } from "@arsenyx/shared/warframe/types"
+import type { Arcane, Mod, PlacedShard } from "@arsenyx/shared/warframe/types"
 import { describe, expect, it } from "vitest"
 
 import {
   buildDocFromVariants,
+  getVariants,
+  linkVariants,
   loadBuildData,
+  newVariantSeed,
+  resolveVariantMode,
   savedDataFromBuildDoc,
   selectVariant,
   stripPersistedImages,
@@ -467,5 +475,107 @@ describe("Alternate mods persist through the save/load pipeline", () => {
     )
     expect(reloaded).toEqual(plain)
     expect("alternate" in (reloaded.slots?.["normal-0"] ?? {})).toBe(false)
+  })
+})
+
+describe("variant mode: per-variant forma + shards", () => {
+  const madurai = { "normal-0": "madurai" } as const
+  const naramon = { "normal-0": "naramon" } as const
+  const crimson = { color: "crimson", stat: "Ability Strength" } as PlacedShard
+  const v = (id: string, extra: Partial<SavedVariant> = {}): SavedVariant => ({
+    id,
+    label: id,
+    slots: {},
+    arcanes: [],
+    ...extra,
+  })
+
+  it("copies the legacy top-level forma onto every variant on load", () => {
+    const data: SavedBuildData = {
+      formaPolarities: madurai,
+      variants: [v("a", { shards: [] }), v("b", { shards: [] })],
+    }
+    expect(getVariants(data).map((x) => x.formaPolarities)).toEqual([
+      madurai,
+      madurai,
+    ])
+    expect(selectVariant(data, 1).formaPolarities).toEqual(madurai)
+  })
+
+  it("infers linked for legacy builds unless variants already differ", () => {
+    const same = { variants: [v("a"), v("b")], formaPolarities: madurai }
+    expect(resolveVariantMode(same)).toBe("linked")
+    const diffShards = {
+      ...same,
+      variants: [v("a", { shards: [crimson] }), v("b", { shards: [] })],
+    }
+    expect(resolveVariantMode(diffShards)).toBe("independent")
+    expect(resolveVariantMode({ ...diffShards, variantMode: "linked" })).toBe(
+      "linked",
+    )
+  })
+
+  it("linkVariants copies forma to all, shards only within the same form", () => {
+    const variants = [
+      v("a", { formaPolarities: naramon, shards: [crimson] }),
+      v("b", { formaPolarities: madurai, shards: [] }),
+      v("c", { formaPolarities: madurai, shards: [], formIndex: 1 }),
+    ]
+    const linked = linkVariants(variants, 0)
+    expect(linked.map((x) => x.formaPolarities)).toEqual([
+      naramon,
+      naramon,
+      naramon,
+    ])
+    expect(linked.map((x) => x.shards)).toEqual([[crimson], [crimson], []])
+    // Already linked → same reference, so callers can detect "no change".
+    expect(linkVariants(linked, 0)).toBe(linked)
+  })
+
+  it("seeds a new variant per mode", () => {
+    const src = v("a", { formaPolarities: naramon, shards: [crimson] })
+    expect(newVariantSeed("independent", src, 0)).toEqual({
+      formaPolarities: {},
+      shards: [],
+    })
+    expect(newVariantSeed("linked", src, 0)).toEqual({
+      formaPolarities: naramon,
+      shards: [crimson],
+    })
+    // Another twin-frame form keeps the forma but installs its own shards.
+    expect(newVariantSeed("linked", src, 1)).toEqual({
+      formaPolarities: naramon,
+      shards: [],
+    })
+  })
+
+  it("round-trips per-variant forma through a share link", () => {
+    const base = {
+      item: { uniqueName: "/Warframes/Rhino", name: "Rhino" },
+      category: "warframes" as const,
+      hasReactor: true,
+      slots: {},
+      formaPolarities: naramon,
+      arcanes: [],
+      shards: [],
+      helminth: {},
+      normalSlotCount: 2,
+      auraSlotCount: 0,
+      showStance: false,
+    }
+    const doc = decodeBuildDoc(
+      encodeBuildDoc(
+        buildDocFromVariants(base, [
+          v("a", { formaPolarities: naramon, shards: [] }),
+          v("b", { formaPolarities: madurai, shards: [] }),
+        ]),
+      ),
+    )
+    const saved = savedDataFromBuildDoc(doc!, [], [])
+    expect(saved.variants?.map((x) => x.formaPolarities)).toEqual([
+      naramon,
+      madurai,
+    ])
+    expect(resolveVariantMode(saved)).toBe("independent")
   })
 })

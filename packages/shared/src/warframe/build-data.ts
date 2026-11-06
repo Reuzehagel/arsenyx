@@ -76,6 +76,11 @@ export type SavedVariant = {
    *  from the legacy top-level `shards`/`formShards` (copy-on-load), so an old
    *  build's single set shows on every variant until one is edited. */
   shards?: (PlacedShard | null)[]
+  /** This variant's forma polarities. Absent on builds saved before
+   *  per-variant forma — `getVariants` copies the top-level
+   *  `formaPolarities` in (copy-on-load). In "linked" mode the editor keeps
+   *  the copies in sync (per twin-frame form). */
+  formaPolarities?: Partial<Record<SlotId, Polarity>>
   helminth?: Record<number, HelminthAbility>
   incarnonEnabled?: boolean
   incarnonPerks?: (string | null)[]
@@ -92,9 +97,15 @@ export type SavedVariant = {
   guideDescription?: string
 }
 
+/** Whether a Build's Variants share one forma + shard set ("linked", like
+ *  in-game configs of one item) or each carry their own ("independent"). */
+export type VariantMode = "linked" | "independent"
+
 /** Shape stored in `Build.buildData` (Prisma JSON). */
 export type SavedBuildData = {
   version?: number
+  /** Absent on older builds — `resolveVariantMode` infers it. */
+  variantMode?: VariantMode
   slots?: Partial<Record<SlotId, PlacedMod>>
   formaPolarities?: Partial<Record<SlotId, Polarity>>
   arcanes?: (PlacedArcane | null)[]
@@ -152,6 +163,7 @@ export type PerVariantDataField = Exclude<
   | "slots"
   | "arcanes"
   | "shards"
+  | "formaPolarities"
   | "guideSummary"
   | "guideDescription"
 >

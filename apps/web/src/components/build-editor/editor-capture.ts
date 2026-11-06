@@ -2,6 +2,7 @@ import {
   pickPerVariantData,
   type SavedBuildData,
   type SavedVariant,
+  type VariantMode,
 } from "@arsenyx/shared/warframe/build-data"
 import type { Arcane, Mod } from "@arsenyx/shared/warframe/types"
 
@@ -9,6 +10,7 @@ import { type ExtrasState, extrasToSaved } from "@/lib/build/extras"
 import { foldedVariants } from "@/lib/build/variants"
 import {
   isSyntheticVariant,
+  linkVariants,
   stripPersistedImages,
   SYNTHETIC_VARIANT_ID,
   SYNTHETIC_VARIANT_LABEL,
@@ -31,7 +33,9 @@ export function makeEditorCapture({
   buildDescription,
   allMods,
   allArcanes,
+  variantMode,
 }: {
+  variantMode: VariantMode
   variants: SavedVariant[]
   clampedActiveIndex: number
   slots: Pick<BuildSlotsState, "placed" | "formaPolarities">
@@ -57,7 +61,9 @@ export function makeEditorCapture({
       label: existing?.label ?? SYNTHETIC_VARIANT_LABEL,
       slots: live.slots,
       arcanes: live.arcanes,
+      // Shards and forma are stored per-variant: capture the live sets.
       shards: live.shards,
+      formaPolarities: live.formaPolarities,
       // formIndex is set by the form selector, not live editor state.
       ...pickPerVariantData({ ...live, formIndex: existing?.formIndex }),
       // Per-variant guides are written straight into `variants[i]` by the
@@ -68,10 +74,22 @@ export function makeEditorCapture({
     }
   }
 
-  /** Every variant, the active one replaced by its live snapshot. */
-  const captureVariants = () =>
-    foldedVariants(variants, clampedActiveIndex, captureActiveSnapshot())
+  /** Every variant, the active one replaced by its live snapshot. In linked
+   *  mode the active variant's shards (and its form's forma) are copied onto
+   *  the others. */
+  const captureVariants = () => {
+    const merged = foldedVariants(
+      variants,
+      clampedActiveIndex,
+      captureActiveSnapshot(),
+    )
+    return variantMode === "linked"
+      ? linkVariants(merged, clampedActiveIndex)
+      : merged
+  }
 
+  // Every value read here must also be in useDraftAutosave's `deps`, or
+  // editing it alone never writes a draft.
   const captureBuildData = (): SavedBuildData => {
     const nextVariants = captureVariants()
     // Snapshot every mod/arcane referenced from guide text so the viewer
@@ -83,6 +101,7 @@ export function makeEditorCapture({
     )
     return stripPersistedImages({
       version: 1,
+      variantMode,
       // Top-level fields mirror the active variant for legacy readers.
       ...captureLive(),
       formIndex: variants[clampedActiveIndex]?.formIndex,

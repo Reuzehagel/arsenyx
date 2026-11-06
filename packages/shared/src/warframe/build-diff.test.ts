@@ -252,6 +252,30 @@ describe("diffBuildData", () => {
     expect(changes).toHaveLength(41)
     expect(JSON.stringify(changes).length).toBeLessThan(10_000)
   })
+
+  it("reports linked forma once, build-wide", () => {
+    const before = doc({}, { formaPolarities: { n0: "madurai" } })
+    const after = doc({}, { formaPolarities: { n0: "naramon", n1: "vazarin" } })
+    expect(diffBuildData(before, after)).toEqual([
+      { op: "modify", label: "Forma", detail: "2 slots changed" },
+    ])
+  })
+
+  it("reports independent forma per variant", () => {
+    const before = doc({ formaPolarities: { n0: "madurai" } })
+    const after = doc(
+      { formaPolarities: { n0: "naramon" } },
+      { variantMode: "independent" },
+    )
+    expect(diffBuildData(before, after)).toEqual([
+      {
+        op: "modify",
+        label: "Forma",
+        detail: "1 slot changed",
+        scope: "Steel Path",
+      },
+    ])
+  })
 })
 
 describe("mergeChanges", () => {
