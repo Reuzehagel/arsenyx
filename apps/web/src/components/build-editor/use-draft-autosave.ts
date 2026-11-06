@@ -6,6 +6,8 @@ import type { ExtrasState } from "@/lib/build/extras"
 import {
   clearEditorDraft,
   clearImportDraft,
+  loadEditorDraft,
+  replacedDraftKey,
   saveEditorDraft,
   type EditorDraftPayload,
 } from "@/lib/drafts"
@@ -133,26 +135,37 @@ export function useDraftAutosave({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // The replaced draft lives in its own slot, not just the toast, so a missed
+  // toast doesn't lose it: every later mount of this item offers it again until
+  // it's restored or discarded. An existing backup is never
+  // overwritten. shortcut: a second adoption keeps the oldest draft, not the
+  // first share's edits; track adopted-vs-own drafts if users hit that.
+  const backupKey = replacedDraftKey(storeKey)
   useEffect(() => {
-    if (!adoption) return
-    saveEditorDraft(storeKey, snapshot())
-    if (adoption.importId) clearImportDraft(adoption.importId)
-    onAdopted?.()
-    const { replaced } = adoption
+    if (adoption) {
+      saveEditorDraft(storeKey, snapshot())
+      if (adoption.importId) clearImportDraft(adoption.importId)
+      onAdopted?.()
+      if (adoption.replaced && !loadEditorDraft(backupKey))
+        saveEditorDraft(backupKey, adoption.replaced)
+    }
+    const replaced = loadEditorDraft(backupKey)
     if (!replaced) return
     toast("Replaced your unsaved draft", {
       id: `draft-replaced:${storeKey}`,
-      description: "This build took the place of your draft for this item.",
+      description: "A shared build took the place of your draft for this item.",
       duration: 10_000,
       action: {
         label: "Restore it",
         onClick: () => {
           saveEditorDraft(storeKey, replaced)
+          clearEditorDraft(backupKey)
           onResetToSaved()
         },
       },
+      cancel: { label: "Discard", onClick: () => clearEditorDraft(backupKey) },
     })
-    // Once, for the adopting mount.
+    // Once per mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

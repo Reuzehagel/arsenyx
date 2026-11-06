@@ -276,11 +276,14 @@ async function fetchBuild(
   slug: string,
 ): Promise<BuildMetaResponse | "not-found" | null> {
   try {
-    // `meta=1`: the slim payload, and no view count (the Worker never
-    // forwards the vw_<slug> cookie, so every unfurl would count). The 2.5s
-    // abort keeps a slow API from blocking TTFB; on timeout, default meta.
+    // The slim payload, and no view count (the Worker never forwards the
+    // vw_<slug> cookie, so every unfurl would count). The 2.5s abort keeps a
+    // slow API from blocking TTFB; on timeout, default meta.
+    // shortcut: still the legacy `?embed=1` name, which old and new APIs both
+    // read, so the two Workers deploy in either order. Switch to `?meta=1` in a
+    // later release, then drop LEGACY_META_QUERY from _build-snapshot.ts.
     const res = await fetch(
-      `${API_ORIGIN}/builds/${encodeURIComponent(slug)}?meta=1`,
+      `${API_ORIGIN}/builds/${encodeURIComponent(slug)}?embed=1`,
       {
         headers: { accept: "application/json" },
         signal: AbortSignal.timeout(2500),

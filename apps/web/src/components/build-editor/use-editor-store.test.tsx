@@ -16,6 +16,7 @@ import {
   editorStoreKey,
   loadEditorDraft,
   loadImportDraft,
+  replacedDraftKey,
   saveEditorDraft,
   saveImportDraft,
 } from "@/lib/drafts"
@@ -263,5 +264,31 @@ describe("build editor session", () => {
     act(() => action.onClick())
     expect(store.buildName).toBe("My draft")
     expect(loadEditorDraft(STORE_KEY)?.buildName).toBe("My draft")
+  })
+
+  it("keeps the replaced draft when the toast is missed and offers it on the next open", () => {
+    saveEditorDraft(STORE_KEY, {
+      buildData: { version: 1, slots: {} } as SavedBuildData,
+      buildName: "My draft",
+      guideSummary: "",
+      guideDescription: "",
+    })
+    const id = saveImportDraft({
+      data: { version: 1, slots: {} } as SavedBuildData,
+      buildName: "Imported",
+    })
+    openEditor({ search: { ...SEARCH, draft: id } }).unmount()
+    vi.mocked(toast).mockClear()
+
+    // Toast ignored; the user comes back to this item later.
+    openEditor()
+    expect(store.buildName).toBe("Imported")
+    const call = vi
+      .mocked(toast)
+      .mock.calls.find(([title]) => title === "Replaced your unsaved draft")
+    const action = call?.[1]?.action as unknown as { onClick: () => void }
+    act(() => action.onClick())
+    expect(store.buildName).toBe("My draft")
+    expect(loadEditorDraft(replacedDraftKey(STORE_KEY))).toBeNull()
   })
 })

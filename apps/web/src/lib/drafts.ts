@@ -95,6 +95,9 @@ function otherDraftKeysOldestFirst(keep: string): string[] {
     .map((d) => d.key)
 }
 
+/** Draft slot holding the draft a share link or import replaced. */
+export const replacedDraftKey = (storeKey: string) => `${storeKey}::replaced`
+
 export function clearEditorDraft(storeKey: string): void {
   storageRemove(`${EDITOR_PREFIX}${storeKey}`)
 }

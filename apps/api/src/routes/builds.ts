@@ -65,7 +65,6 @@ import {
   deleteBuild,
   detailVariant,
   metaFromSnapshot,
-  invalidateBuildAndPartners,
   invalidateBuilds,
   readAnonSnapshot,
 } from "./_build-snapshot"
@@ -370,11 +369,14 @@ builds.patch("/:slug", rateLimitUser("mutate"), async (c) => {
         },
       },
     },
-    select: { id: true, slug: true },
+    // Partner slugs come back from the update itself: a separate read after
+    // the commit could fail and 500 a save that already landed.
+    select: { id: true, slug: true, partnerBuilds: { select: { slug: true } } },
   })
   pruneRevisions(existing.id)
-  await invalidateBuildAndPartners(c, { id: existing.id })
-  return c.json(updated)
+  const { partnerBuilds, ...result } = updated
+  invalidateBuilds(c, [result.slug, ...partnerBuilds.map((p) => p.slug)])
+  return c.json(result)
 })
 
 builds.get("/:slug/revisions", async (c) => {

@@ -11,6 +11,15 @@ describe("findLayerViolations", () => {
     expect(lines("apps/web/src/lib/codec/x.ts", src)).toEqual([2])
   })
 
+  test("flags a barrel import of a forbidden folder", () => {
+    const src = `import { E } from "@/components/build-editor"
+import { V } from "../build-viewer"
+`
+    expect(lines("apps/web/src/components/build-loadout/x.tsx", src)).toEqual([
+      1, 2,
+    ])
+  })
+
   test("flags a relative import that climbs into a forbidden folder", () => {
     const src = `import { y } from "../build-editor/editor-shell"`
     expect(lines("apps/web/src/components/build-loadout/x.tsx", src)).toEqual([

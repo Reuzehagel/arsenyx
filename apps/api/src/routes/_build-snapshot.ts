@@ -77,8 +77,9 @@ const DETAIL_VARIANTS = {
 
 export type DetailVariant = keyof typeof DETAIL_VARIANTS
 
-// `?embed=1` is what web Workers deployed before the `?meta=1` rename send;
-// without it their unfurls would count views. Remove once both Workers deploy.
+// `?embed=1` is what the web Worker still sends (see fetchBuild in
+// apps/web/worker/index.ts), so the API can deploy before or after it. Remove
+// once a released Worker sends `?meta=1`.
 const LEGACY_META_QUERY = "?embed=1"
 
 export function detailVariant(c: Context): DetailVariant {
@@ -243,15 +244,6 @@ export async function snapshotSlugs(
     select: { slug: true, partnerBuilds: { select: { slug: true } } },
   })
   return rows.flatMap((b) => [b.slug, ...b.partnerBuilds.map((p) => p.slug)])
-}
-
-/** After a write to one build's own card (name, visibility, thumbnail…):
- *  refreshes it and every partner strip that embeds it. */
-export async function invalidateBuildAndPartners(
-  c: Context,
-  where: { id: string } | { slug: string },
-): Promise<void> {
-  invalidateBuilds(c, await snapshotSlugs(where))
 }
 
 /** Deletes one build and refreshes it (dropping its snapshot) and its

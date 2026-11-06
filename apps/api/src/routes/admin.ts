@@ -15,7 +15,6 @@ import { BUILD_USER_SELECT, parseListQuery, runList } from "./_build-list"
 import {
   deleteBuild,
   deleteOrganization,
-  invalidateBuildAndPartners,
   invalidateBuilds,
   snapshotSlugs,
 } from "./_build-snapshot"
@@ -177,11 +176,17 @@ admin.patch("/builds/:slug", adminMutateLimit, async (c) => {
   const updated = await prisma.build.update({
     where: { slug },
     data: { visibility },
-    select: { id: true, slug: true, visibility: true },
+    select: {
+      id: true,
+      slug: true,
+      visibility: true,
+      partnerBuilds: { select: { slug: true } },
+    },
   })
   // A build flipped to PRIVATE must stop being served publicly.
-  await invalidateBuildAndPartners(c, { id: updated.id })
-  return c.json(updated)
+  const { partnerBuilds, ...result } = updated
+  invalidateBuilds(c, [result.slug, ...partnerBuilds.map((p) => p.slug)])
+  return c.json(result)
 })
 
 admin.delete("/builds/:slug", adminMutateLimit, async (c) => {

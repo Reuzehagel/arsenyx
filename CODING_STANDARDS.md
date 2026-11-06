@@ -12,7 +12,7 @@ A cache read on a request path (KV, the edge cache) is an optimisation over Post
 
 ## Writes refresh every build snapshot they change
 
-The anonymous build snapshot lives 24 h in KV and embeds the build, its author, its org, and its partner strip. A mutation that changes any of those (or deletes them, including by cascade) calls `invalidateBuilds` after the write; for a user or org change, it collects the slugs with `snapshotSlugs(where)` *before* the write, since a cascade removes the rows. Flag a new write to builds, users, organizations or partner links that skips this: the old content stays public for a day. The helpers that do both halves (`invalidateBuildAndPartners`, `deleteBuild`, `deleteOrganization`) live in [apps/api/src/routes/_build-snapshot.ts](apps/api/src/routes/_build-snapshot.ts); a new path should use one.
+The anonymous build snapshot lives 24 h in KV and embeds the build, its author, its org, and its partner strip. A mutation that changes any of those (or deletes them, including by cascade) calls `invalidateBuilds` after the write; for a user or org change, it collects the slugs with `snapshotSlugs(where)` *before* the write, since a cascade removes the rows. Flag a new write to builds, users, organizations or partner links that skips this: the old content stays public for a day. The helpers that do both halves (`deleteBuild`, `deleteOrganization`) live in [apps/api/src/routes/_build-snapshot.ts](apps/api/src/routes/_build-snapshot.ts); a new path should use one.
 
 ## Edge and client head tags are identical
 

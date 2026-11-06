@@ -95,7 +95,10 @@ export function findLayerViolations(
       const allowed = rule.allow?.some(
         (a) => target === a || `${target}.ts` === a || `${target}.tsx` === a,
       )
-      if (!allowed && rule.forbid.some((p) => target.startsWith(p))) {
+      if (
+        !allowed && // A bare folder import (a barrel) resolves without the trailing slash.
+        rule.forbid.some((p) => target.startsWith(p) || `${target}/` === p)
+      ) {
         const line = source.slice(0, m.index).split("\n").length
         out.push({ file, line, target, rule })
       }

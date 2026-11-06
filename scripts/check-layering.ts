@@ -12,6 +12,7 @@ const REPO_ROOT = resolve(import.meta.dirname, "..")
 const ROOTS = [
   "apps/web/src",
   "apps/api/src",
+  "apps/api/scripts",
   "packages/shared/src",
   "data/curated",
 ]
