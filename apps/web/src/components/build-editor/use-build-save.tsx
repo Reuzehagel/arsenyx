@@ -133,11 +133,17 @@ export function useBuildSave({
         // catalog — so the list endpoint can show/sort it without shipping
         // buildData. `catalogVersion` stamps which catalog snapshot it was
         // computed against (server stamps the calc version). Independent
-        // variants differ, so cards show the highest count of any variant.
+        // variants and twin-frame forms differ, so cards show the highest
+        // count of any variant, each against its own form's innates.
         formaCount: Math.max(
           formaCount,
           ...(buildData.variants ?? []).map((v) =>
-            computeFormaCount(item, category, v.formaPolarities ?? {}),
+            computeFormaCount(
+              item,
+              category,
+              v.formaPolarities ?? {},
+              v.formIndex,
+            ),
           ),
         ),
         catalogVersion: __DATA_VERSION__,

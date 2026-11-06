@@ -515,7 +515,9 @@ describe("variant mode: per-variant forma + shards", () => {
     )
   })
 
-  it("linkVariants copies forma to all, shards only within the same form", () => {
+  // Sirius & Orion share Archon Shards; each Son has its own forma
+  // (wiki: Sirius_&_Orion/Abilities/Passive).
+  it("linkVariants copies shards to all, forma only within the same form", () => {
     const variants = [
       v("a", { formaPolarities: naramon, shards: [crimson] }),
       v("b", { formaPolarities: madurai, shards: [] }),
@@ -525,28 +527,76 @@ describe("variant mode: per-variant forma + shards", () => {
     expect(linked.map((x) => x.formaPolarities)).toEqual([
       naramon,
       naramon,
-      naramon,
+      madurai,
     ])
-    expect(linked.map((x) => x.shards)).toEqual([[crimson], [crimson], []])
+    expect(linked.map((x) => x.shards)).toEqual([
+      [crimson],
+      [crimson],
+      [crimson],
+    ])
     // Already linked → same reference, so callers can detect "no change".
     expect(linkVariants(linked, 0)).toBe(linked)
   })
 
+  it("infers linked for a twin-frame build whose forms differ only in forma", () => {
+    const data: SavedBuildData = {
+      variantMode: undefined,
+      variants: [
+        v("a", { formaPolarities: naramon, shards: [crimson] }),
+        v("b", { formaPolarities: madurai, shards: [crimson], formIndex: 1 }),
+      ],
+    }
+    expect(resolveVariantMode(data)).toBe("linked")
+  })
+
   it("seeds a new variant per mode", () => {
     const src = v("a", { formaPolarities: naramon, shards: [crimson] })
-    expect(newVariantSeed("independent", src, 0)).toEqual({
+    const other = v("o", { formaPolarities: madurai, formIndex: 1 })
+    expect(newVariantSeed("independent", [src], src, 0)).toEqual({
       formaPolarities: {},
       shards: [],
     })
-    expect(newVariantSeed("linked", src, 0)).toEqual({
+    expect(newVariantSeed("linked", [src], src, 0)).toEqual({
       formaPolarities: naramon,
       shards: [crimson],
     })
-    // Another twin-frame form keeps the forma but installs its own shards.
-    expect(newVariantSeed("linked", src, 1)).toEqual({
-      formaPolarities: naramon,
-      shards: [],
+    // Another twin-frame form shares the shards but has its own forma: that
+    // form's existing set, or none when the form has no variants yet.
+    expect(newVariantSeed("linked", [src, other], src, 1)).toEqual({
+      formaPolarities: madurai,
+      shards: [crimson],
     })
+    expect(newVariantSeed("linked", [src], src, 1)).toEqual({
+      formaPolarities: {},
+      shards: [crimson],
+    })
+  })
+
+  it("re-links a linked build re-saved by a client from before per-variant forma", () => {
+    // That client rebuilt the active variant ("a") without formaPolarities,
+    // mirrored its live forma and shards at the top level, and passed "b" and
+    // the other form's "c" through with stale copies.
+    const data: SavedBuildData = {
+      formaPolarities: naramon,
+      shards: [crimson],
+      variants: [
+        v("a", { shards: [crimson] }),
+        v("b", { formaPolarities: madurai, shards: [] }),
+        v("c", { formaPolarities: madurai, shards: [], formIndex: 1 }),
+      ],
+    }
+    const variants = getVariants(data)
+    expect(variants.map((x) => x.formaPolarities)).toEqual([
+      naramon,
+      naramon,
+      madurai,
+    ])
+    expect(variants.map((x) => x.shards)).toEqual([
+      [crimson],
+      [crimson],
+      [crimson],
+    ])
+    expect(resolveVariantMode(data)).toBe("linked")
   })
 
   it("round-trips per-variant forma through a share link", () => {
