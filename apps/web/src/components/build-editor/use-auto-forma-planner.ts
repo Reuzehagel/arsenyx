@@ -78,9 +78,12 @@ export function useAutoFormaPlanner(opts: {
         // variant's `used`, producing phantom forma recommendations.
         i === clampedActiveIndex
           ? slots.placed
-          : // Independent: other variants have their own forma, so plan this
-            // one alone. An empty variant is always feasible and never moved.
-            variantMode === "independent"
+          : // Variants with their own forma (independent mode, or another
+            // twin-frame form) are planned alone. An empty variant is always
+            // feasible and never moved.
+            variantMode === "independent" ||
+              (v.formIndex ?? 0) !==
+                (variants[clampedActiveIndex]?.formIndex ?? 0)
             ? {}
             : dropOrphanSlots(v.slots ?? {}, layout),
       ),

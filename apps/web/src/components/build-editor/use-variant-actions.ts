@@ -55,7 +55,7 @@ export function useVariantActions(opts: {
     `v${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`
 
   // Independent: a new variant starts fresh (no forma, no shards). Linked: it
-  // takes the build's forma, and the shards of its own form.
+  // takes the build's shards and its form's forma.
   const makeBlankVariant = (
     label: string,
     formIndex: number,
@@ -66,7 +66,12 @@ export function useVariantActions(opts: {
     slots: {},
     arcanes: [],
     // Explicit sets so copy-on-load never fills them from the top level.
-    ...newVariantSeed(variantMode, captured[clampedActiveIndex], formIndex),
+    ...newVariantSeed(
+      variantMode,
+      captured,
+      captured[clampedActiveIndex],
+      formIndex,
+    ),
     formIndex,
   })
 

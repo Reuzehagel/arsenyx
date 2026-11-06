@@ -351,8 +351,11 @@ export function diffBuildData(before: unknown, after: unknown): BuildChange[] {
   const beforeVariants = readVariants(a)
   const afterVariants = readVariants(b)
   const byKey = new Map(beforeVariants.map((v) => [v.key, v]))
-  // Independent variants each carry their own forma; otherwise it's one set.
-  const independent = b.variantMode === "independent"
+  // Twin-frame forms each have their own forma even when linked, so a build
+  // spanning forms reports forma per variant too.
+  const independent =
+    b.variantMode === "independent" ||
+    new Set(arr(b.variants).map((v) => obj(v)?.formIndex ?? 0)).size > 1
 
   const out: BuildChange[] = []
 

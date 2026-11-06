@@ -27,7 +27,8 @@ _Avoid_: Build (the container, not the loadout), Loadout. Also note: a Warframe 
 **Variant mode**:
 A Build-wide setting (`variantMode`). **linked** (the default) means every Variant uses the
 same forma and Archon Shards, like configs of one item in-game. **independent** means each
-Variant has its own. Helminth is per Variant in both modes.
+Variant has its own. Helminth is per Variant in both modes. Twin frames follow the game even when
+linked: Sirius & Orion share Archon Shards, but each form has its own forma.
 _Avoid_: Sync, Shared mode.
 
 **Guide**:
