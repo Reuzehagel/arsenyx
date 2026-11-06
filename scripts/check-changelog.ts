@@ -37,10 +37,18 @@ if (git(["rev-parse", "--verify", "--quiet", BASE]).status !== 0) {
   process.exit(0)
 }
 
-// Three-dot: only what this branch changed, not what main gained since.
-const changed = git(["diff", "--name-only", `${BASE}...HEAD`])
-  .stdout.split("\n")
-  .filter(Boolean)
+// Diff from the merge base (only what this branch changed, not what main
+// gained since) to the working tree, plus untracked files, so a local run
+// before committing sees the same change set CI will. CI's tree is clean, so
+// there it equals `${BASE}...HEAD`.
+const mergeBase = git(["merge-base", BASE, "HEAD"]).stdout.trim()
+const lines = (args: string[]) => git(args).stdout.split("\n").filter(Boolean)
+const changed = [
+  ...new Set([
+    ...lines(["diff", "--name-only", mergeBase]),
+    ...lines(["ls-files", "--others", "--exclude-standard"]),
+  ]),
+]
 
 const appChanges = changed.filter(
   (f) =>
