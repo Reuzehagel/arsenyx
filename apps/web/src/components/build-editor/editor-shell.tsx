@@ -497,6 +497,7 @@ export function EditorShell({
       <VariantModeDialog
         target={pendingVariantMode}
         activeLabel={variants[clampedActiveIndex]?.label ?? "this variant"}
+        twinFrame={(formNames?.length ?? 0) > 1}
         onCancel={() => setPendingVariantMode(null)}
         onConfirm={() => {
           if (pendingVariantMode) applyVariantMode(pendingVariantMode)

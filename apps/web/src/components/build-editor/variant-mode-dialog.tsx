@@ -15,11 +15,14 @@ import {
 export function VariantModeDialog({
   target,
   activeLabel,
+  twinFrame,
   onCancel,
   onConfirm,
 }: {
   target: VariantMode | null
   activeLabel: string
+  /** Twin-frames share shards across forms but keep forma per form. */
+  twinFrame: boolean
   onCancel: () => void
   onConfirm: () => void
 }) {
@@ -34,7 +37,9 @@ export function VariantModeDialog({
           </DialogTitle>
           <DialogDescription>
             {target === "linked"
-              ? `Every variant will use the forma and Archon Shards of "${activeLabel}". The other variants' forma and shards will be replaced.`
+              ? twinFrame
+                ? `Every variant will use the Archon Shards of "${activeLabel}", and variants of the same form will use its forma. Their current shards and forma will be replaced.`
+                : `Every variant will use the forma and Archon Shards of "${activeLabel}". The other variants' forma and shards will be replaced.`
               : "Each variant keeps the forma and Archon Shards it has now. After this, changing them only affects the variant you're editing."}
           </DialogDescription>
         </DialogHeader>
