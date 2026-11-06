@@ -1,4 +1,7 @@
-import type { SavedVariant } from "@arsenyx/shared/warframe/build-data"
+import type {
+  SavedVariant,
+  VariantMode,
+} from "@arsenyx/shared/warframe/build-data"
 import { MAX_VARIANTS } from "@arsenyx/shared/warframe/build-doc"
 import { useState } from "react"
 
@@ -45,7 +48,12 @@ export function EditorVariantBar({
   formNames,
   activeFormIndex,
   onSwitchForm,
+  variantMode,
+  onVariantModeChange,
 }: {
+  /** Whether variants share one forma + shard set (build-wide). */
+  variantMode: VariantMode
+  onVariantModeChange: (mode: VariantMode) => void
   variants: SavedVariant[]
   activeIndex: number
   onSwitch: (index: number) => void
@@ -120,6 +128,8 @@ export function EditorVariantBar({
       formNames={formNames}
       activeFormIndex={activeFormIndex}
       onSwitchForm={onSwitchForm}
+      variantMode={variantMode}
+      onVariantModeChange={onVariantModeChange}
     />
   )
 }
@@ -137,6 +147,8 @@ function EditorVariantBarMulti({
   formNames,
   activeFormIndex = 0,
   onSwitchForm,
+  variantMode,
+  onVariantModeChange,
 }: {
   variants: SavedVariant[]
   activeIndex: number
@@ -150,6 +162,8 @@ function EditorVariantBarMulti({
   formNames?: string[]
   activeFormIndex?: number
   onSwitchForm?: (formIndex: number) => void
+  variantMode: VariantMode
+  onVariantModeChange: (mode: VariantMode) => void
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [labelDraft, setLabelDraft] = useState(active.label)
@@ -296,6 +310,29 @@ function EditorVariantBarMulti({
         >
           + Variant
         </button>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <button
+                type="button"
+                onClick={() =>
+                  onVariantModeChange(
+                    variantMode === "linked" ? "independent" : "linked",
+                  )
+                }
+                className={cn(COLLAPSED_AFFORDANCE, "ml-1")}
+              />
+            }
+          >
+            Forma &amp; shards:{" "}
+            {variantMode === "linked" ? "shared" : "per variant"}
+          </TooltipTrigger>
+          <TooltipContent className="max-w-64">
+            {variantMode === "linked"
+              ? "Every variant uses the same forma and Archon Shards, like configs of one item in-game. Click to let each variant have its own."
+              : "Each variant has its own forma and Archon Shards. Click to make every variant use this variant's."}
+          </TooltipContent>
+        </Tooltip>
       </div>
     </div>
   )

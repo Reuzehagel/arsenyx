@@ -189,11 +189,18 @@ for (const r of rows) {
   }
   let next: number
   try {
-    next = computeFormaCount(
-      item,
-      r.itemCategory as BrowseCategory,
-      extractFormaPolarities(r.buildData),
-      extractFormIndex(r.buildData),
+    // Highest count across the top-level set and every variant's own set,
+    // each against its own twin-frame form (matches the editor save).
+    const variants = (r.buildData as { variants?: unknown } | null)?.variants
+    next = Math.max(
+      ...[r.buildData, ...(Array.isArray(variants) ? variants : [])].map((d) =>
+        computeFormaCount(
+          item,
+          r.itemCategory as BrowseCategory,
+          extractFormaPolarities(d),
+          extractFormIndex(d),
+        ),
+      ),
     )
   } catch {
     computeError++

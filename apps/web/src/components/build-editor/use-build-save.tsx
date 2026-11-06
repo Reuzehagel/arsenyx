@@ -13,6 +13,7 @@ import { useState } from "react"
 import { toast } from "sonner"
 
 import { authClient } from "@/lib/auth-client"
+import { computeFormaCount } from "@/lib/build/forma-count"
 import type { DetailItem } from "@/lib/catalog"
 import {
   buildDocFromVariants,
@@ -116,6 +117,7 @@ export function useBuildSave({
     }
     setSaveStatus("saving")
     try {
+      const buildData = capture.captureBuildData()
       const body = {
         name: buildName.trim() || item.name,
         visibility: nextVisibility,
@@ -125,13 +127,25 @@ export function useBuildSave({
         // images are re-resolved by uniqueName at render time (viewer via
         // image-map.json, editor via the catalog), so storing them just bloats
         // the row and rots across image-scheme changes.
-        buildData: capture.captureBuildData(),
+        buildData,
         // Forma count is a projection of buildData + the item's innate
         // polarities (catalog). Compute it here — the only place with the
         // catalog — so the list endpoint can show/sort it without shipping
         // buildData. `catalogVersion` stamps which catalog snapshot it was
-        // computed against (server stamps the calc version).
-        formaCount,
+        // computed against (server stamps the calc version). Independent
+        // variants and twin-frame forms differ, so cards show the highest
+        // count of any variant, each against its own form's innates.
+        formaCount: Math.max(
+          formaCount,
+          ...(buildData.variants ?? []).map((v) =>
+            computeFormaCount(
+              item,
+              category,
+              v.formaPolarities ?? {},
+              v.formIndex,
+            ),
+          ),
+        ),
         catalogVersion: __DATA_VERSION__,
         guide: {
           summary: guide.buildSummary.trim() || null,

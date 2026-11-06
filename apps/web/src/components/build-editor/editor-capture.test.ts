@@ -16,6 +16,7 @@ const variant = (id: string, formIndex?: number): SavedVariant => ({
 
 const capture = (variants: SavedVariant[], clampedActiveIndex: number) =>
   makeEditorCapture({
+    variantMode: "independent",
     variants,
     clampedActiveIndex,
     slots: { placed: {}, formaPolarities: {} },

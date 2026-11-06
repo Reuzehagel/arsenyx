@@ -1,3 +1,7 @@
+import {
+  decodeBuildDoc,
+  encodeBuildDoc,
+} from "@arsenyx/shared/warframe/build-codec"
 import type {
   HelminthAbility,
   SavedBuildData,
@@ -7,12 +11,16 @@ import type {
   SlotId,
 } from "@arsenyx/shared/warframe/build-data"
 import { RIVEN_IMAGE_NAME } from "@arsenyx/shared/warframe/rivens"
-import type { Arcane, Mod } from "@arsenyx/shared/warframe/types"
+import type { Arcane, Mod, PlacedShard } from "@arsenyx/shared/warframe/types"
 import { describe, expect, it } from "vitest"
 
 import {
   buildDocFromVariants,
+  getVariants,
+  linkVariants,
   loadBuildData,
+  newVariantSeed,
+  resolveVariantMode,
   savedDataFromBuildDoc,
   selectVariant,
   stripPersistedImages,
@@ -467,5 +475,157 @@ describe("Alternate mods persist through the save/load pipeline", () => {
     )
     expect(reloaded).toEqual(plain)
     expect("alternate" in (reloaded.slots?.["normal-0"] ?? {})).toBe(false)
+  })
+})
+
+describe("variant mode: per-variant forma + shards", () => {
+  const madurai = { "normal-0": "madurai" } as const
+  const naramon = { "normal-0": "naramon" } as const
+  const crimson = { color: "crimson", stat: "Ability Strength" } as PlacedShard
+  const v = (id: string, extra: Partial<SavedVariant> = {}): SavedVariant => ({
+    id,
+    label: id,
+    slots: {},
+    arcanes: [],
+    ...extra,
+  })
+
+  it("copies the legacy top-level forma onto every variant on load", () => {
+    const data: SavedBuildData = {
+      formaPolarities: madurai,
+      variants: [v("a", { shards: [] }), v("b", { shards: [] })],
+    }
+    expect(getVariants(data).map((x) => x.formaPolarities)).toEqual([
+      madurai,
+      madurai,
+    ])
+    expect(selectVariant(data, 1).formaPolarities).toEqual(madurai)
+  })
+
+  it("infers linked for legacy builds unless variants already differ", () => {
+    const same = { variants: [v("a"), v("b")], formaPolarities: madurai }
+    expect(resolveVariantMode(same)).toBe("linked")
+    const diffShards = {
+      ...same,
+      variants: [v("a", { shards: [crimson] }), v("b", { shards: [] })],
+    }
+    expect(resolveVariantMode(diffShards)).toBe("independent")
+    expect(resolveVariantMode({ ...diffShards, variantMode: "linked" })).toBe(
+      "linked",
+    )
+  })
+
+  // Sirius & Orion share Archon Shards; each Son has its own forma
+  // (wiki: Sirius_&_Orion/Abilities/Passive).
+  it("linkVariants copies shards to all, forma only within the same form", () => {
+    const variants = [
+      v("a", { formaPolarities: naramon, shards: [crimson] }),
+      v("b", { formaPolarities: madurai, shards: [] }),
+      v("c", { formaPolarities: madurai, shards: [], formIndex: 1 }),
+    ]
+    const linked = linkVariants(variants, 0)
+    expect(linked.map((x) => x.formaPolarities)).toEqual([
+      naramon,
+      naramon,
+      madurai,
+    ])
+    expect(linked.map((x) => x.shards)).toEqual([
+      [crimson],
+      [crimson],
+      [crimson],
+    ])
+    // Already linked → same reference, so callers can detect "no change".
+    expect(linkVariants(linked, 0)).toBe(linked)
+  })
+
+  it("infers linked for a twin-frame build whose forms differ only in forma", () => {
+    const data: SavedBuildData = {
+      variantMode: undefined,
+      variants: [
+        v("a", { formaPolarities: naramon, shards: [crimson] }),
+        v("b", { formaPolarities: madurai, shards: [crimson], formIndex: 1 }),
+      ],
+    }
+    expect(resolveVariantMode(data)).toBe("linked")
+  })
+
+  it("seeds a new variant per mode", () => {
+    const src = v("a", { formaPolarities: naramon, shards: [crimson] })
+    const other = v("o", { formaPolarities: madurai, formIndex: 1 })
+    expect(newVariantSeed("independent", [src], src, 0)).toEqual({
+      formaPolarities: {},
+      shards: [],
+    })
+    expect(newVariantSeed("linked", [src], src, 0)).toEqual({
+      formaPolarities: naramon,
+      shards: [crimson],
+    })
+    // Another twin-frame form shares the shards but has its own forma: that
+    // form's existing set, or none when the form has no variants yet.
+    expect(newVariantSeed("linked", [src, other], src, 1)).toEqual({
+      formaPolarities: madurai,
+      shards: [crimson],
+    })
+    expect(newVariantSeed("linked", [src], src, 1)).toEqual({
+      formaPolarities: {},
+      shards: [crimson],
+    })
+  })
+
+  it("re-links a linked build re-saved by a client from before per-variant forma", () => {
+    // That client rebuilt the active variant ("a") without formaPolarities,
+    // mirrored its live forma and shards at the top level, and passed "b" and
+    // the other form's "c" through with stale copies.
+    const data: SavedBuildData = {
+      formaPolarities: naramon,
+      shards: [crimson],
+      variants: [
+        v("a", { shards: [crimson] }),
+        v("b", { formaPolarities: madurai, shards: [] }),
+        v("c", { formaPolarities: madurai, shards: [], formIndex: 1 }),
+      ],
+    }
+    const variants = getVariants(data)
+    expect(variants.map((x) => x.formaPolarities)).toEqual([
+      naramon,
+      naramon,
+      madurai,
+    ])
+    expect(variants.map((x) => x.shards)).toEqual([
+      [crimson],
+      [crimson],
+      [crimson],
+    ])
+    expect(resolveVariantMode(data)).toBe("linked")
+  })
+
+  it("round-trips per-variant forma through a share link", () => {
+    const base = {
+      item: { uniqueName: "/Warframes/Rhino", name: "Rhino" },
+      category: "warframes" as const,
+      hasReactor: true,
+      slots: {},
+      formaPolarities: naramon,
+      arcanes: [],
+      shards: [],
+      helminth: {},
+      normalSlotCount: 2,
+      auraSlotCount: 0,
+      showStance: false,
+    }
+    const doc = decodeBuildDoc(
+      encodeBuildDoc(
+        buildDocFromVariants(base, [
+          v("a", { formaPolarities: naramon, shards: [] }),
+          v("b", { formaPolarities: madurai, shards: [] }),
+        ]),
+      ),
+    )
+    const saved = savedDataFromBuildDoc(doc!, [], [])
+    expect(saved.variants?.map((x) => x.formaPolarities)).toEqual([
+      naramon,
+      madurai,
+    ])
+    expect(resolveVariantMode(saved)).toBe("independent")
   })
 })

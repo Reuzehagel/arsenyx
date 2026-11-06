@@ -31,6 +31,7 @@ import {
   type HelminthAbility,
   type SavedBuildData,
   type SavedVariant,
+  type VariantMode,
   type PlacedArcane,
   type PlacedMod,
   type SlotId,
@@ -524,14 +525,32 @@ export function isSyntheticVariant(v: SavedVariant): boolean {
  */
 export function getVariants(data: SavedBuildData): SavedVariant[] {
   if (data.variants && data.variants.length > 0) {
-    // The common case (every variant already carries `shards`) returns the
-    // array by reference; only legacy builds missing some `shards` allocate.
-    if (data.variants.every((v) => v.shards)) return data.variants
-    return data.variants.map((v) =>
-      v.shards
-        ? v
-        : { ...v, shards: shardsForFormSaved(data, v.formIndex ?? 0) },
-    )
+    // The common case (every variant already carries `shards` and forma)
+    // returns the array by reference; only legacy builds allocate.
+    if (data.variants.every((v) => v.shards && v.formaPolarities))
+      return data.variants
+    // A client from before per-variant forma re-saved a newer build: it wrote
+    // the active variant without `formaPolarities` (its live set is the
+    // top-level mirror), passed the others through with now-stale copies and
+    // dropped `variantMode`. Such a build was linked, so re-link it from the
+    // top-level mirror (forma for the active form, shards for all) instead of
+    // letting the stale copies read as independent forma.
+    const stale =
+      !data.variantMode &&
+      data.variants.some((v) => v.formaPolarities) &&
+      data.variants.some((v) => !v.formaPolarities)
+    const activeForm = data.formIndex ?? 0
+    return data.variants.map((v) => {
+      const relink = stale && (v.formIndex ?? 0) === activeForm
+      return {
+        ...v,
+        shards: stale
+          ? (data.shards ?? [])
+          : (v.shards ?? shardsForFormSaved(data, v.formIndex ?? 0)),
+        formaPolarities:
+          (!relink && v.formaPolarities) || (data.formaPolarities ?? {}),
+      }
+    })
   }
   return [
     {
@@ -540,9 +559,86 @@ export function getVariants(data: SavedBuildData): SavedVariant[] {
       slots: data.slots ?? {},
       arcanes: data.arcanes ?? [],
       shards: data.shards ?? [],
+      formaPolarities: data.formaPolarities ?? {},
       ...pickPerVariantData(data),
     },
   ]
+}
+
+const shardKey = (s: SavedVariant["shards"]) => {
+  const keys = (s ?? []).map((x) =>
+    x ? `${x.color}:${x.stat}:${x.tauforged ? 1 : 0}` : "",
+  )
+  while (keys.length > 0 && keys[keys.length - 1] === "") keys.pop()
+  return keys.join("|")
+}
+const formaKey = (f: SavedVariant["formaPolarities"]) =>
+  Object.entries(f ?? {})
+    .filter(([, p]) => p)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .join("|")
+
+/**
+ * Linked mode: copy `variants[sourceIndex]`'s Archon Shards onto every variant,
+ * and its forma onto every variant of the same twin-frame form. Matches the
+ * game: Sirius & Orion share Archon Shards, but each Son has its own Upgrade
+ * loadout and takes its own forma. Returns the array by reference when
+ * nothing differs.
+ */
+export function linkVariants(
+  variants: SavedVariant[],
+  sourceIndex: number,
+): SavedVariant[] {
+  const src = variants[sourceIndex]
+  if (!src) return variants
+  const form = src.formIndex ?? 0
+  let changed = false
+  const next = variants.map((v) => {
+    const sameForm = (v.formIndex ?? 0) === form
+    if (
+      shardKey(v.shards) === shardKey(src.shards) &&
+      (!sameForm ||
+        formaKey(v.formaPolarities) === formaKey(src.formaPolarities))
+    )
+      return v
+    changed = true
+    return {
+      ...v,
+      shards: src.shards,
+      ...(sameForm && { formaPolarities: src.formaPolarities }),
+    }
+  })
+  return changed ? next : variants
+}
+
+/** Forma + shards a new blank variant of `formIndex` starts with.
+ *  Independent: nothing. Linked: the build's shards (from `source`), plus the
+ *  forma its form already has (none for a form with no variants yet). */
+export function newVariantSeed(
+  mode: VariantMode,
+  variants: SavedVariant[],
+  source: SavedVariant | undefined,
+  formIndex: number,
+): Pick<SavedVariant, "formaPolarities" | "shards"> {
+  if (mode === "independent" || !source)
+    return { formaPolarities: {}, shards: [] }
+  const sameForm = variants.find((v) => (v.formIndex ?? 0) === formIndex)
+  return {
+    formaPolarities: sameForm?.formaPolarities ?? {},
+    shards: source.shards ?? [],
+  }
+}
+
+/** The build's variant mode. Builds saved before the mode existed are
+ *  "linked" unless their variants already differ in forma or shards — loading
+ *  those as linked would overwrite the other variants on the next edit. */
+export function resolveVariantMode(data: SavedBuildData): VariantMode {
+  if (data.variantMode) return data.variantMode
+  const variants = getVariants(data)
+  // Every form's forma group must agree, not just the first variant's.
+  return variants.every((_, i) => linkVariants(variants, i) === variants)
+    ? "linked"
+    : "independent"
 }
 
 /**
@@ -599,9 +695,10 @@ export function projectSavedVariant(
     arcanes: v.arcanes,
     ...pickPerVariantData(v),
     // getVariants already resolved copy-on-load for legacy builds, so
-    // `v.shards` is set. formaPolarities, hasReactor, zaw,
-    // kitgun, lich, buildName are shared across variants and stay as-is.
+    // `v.shards`/`v.formaPolarities` are set. hasReactor, zaw, kitgun, lich,
+    // buildName are shared across variants and stay as-is.
     shards: v.shards ?? [],
+    formaPolarities: v.formaPolarities ?? {},
   }
 }
 
@@ -634,11 +731,12 @@ export function buildDocFromVariants(
     lichBonusElement: shared.lichBonusElement,
     buildName: shared.buildName,
     variants: variants.map((sv) => {
-      // Forma is build-wide, so base.formaPolarities is intentionally applied
-      // to every variant's projection. The variant's helminth rides along in
-      // the overlay but is unread: only `shared` emits helminthAbility.
+      // Per-variant forma (linked builds hold identical copies per form). The
+      // variant's helminth rides along in the overlay but is unread: only
+      // `shared` emits helminthAbility.
       const vs = editorStateToBuildState({
         ...base,
+        formaPolarities: sv.formaPolarities ?? base.formaPolarities,
         slots: sv.slots,
         arcanes: sv.arcanes,
         shards: sv.shards ?? [],
@@ -700,6 +798,8 @@ export function savedDataFromBuildDoc(
       // Shards are per-variant (projectVariant reads each variant's own
       // shardSlots), so carry each projection's set onto its variant.
       shards: data.shards ?? [],
+      // Each doc variant's slots carry their own formaPolarity.
+      formaPolarities: data.formaPolarities ?? {},
       ...pickPerVariantData(data),
       formIndex: v.formIndex,
       guideSummary: v.guideSummary,

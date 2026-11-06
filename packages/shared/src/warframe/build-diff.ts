@@ -112,6 +112,7 @@ interface Variant {
   mods: Placed[]
   arcanes: Placed[]
   shards: string[]
+  forma: Record<string, unknown>
   helminth: string[]
   guideSummary: string | null
   guideDescription: string | null
@@ -154,6 +155,8 @@ function readVariant(v: unknown, index: number, fallback: DocJson): Variant {
       .map(placedArcane)
       .filter((a): a is Placed => a !== null),
     shards: arr(src.shards).map(stamp),
+    // Variants saved before per-variant forma only have the top-level set.
+    forma: obj(src.formaPolarities) ?? obj(fallback.formaPolarities) ?? {},
     helminth: helminthNames(src.helminth ?? fallback.helminth),
     // Kept as separate fields and compared field-by-field. Folding them into
     // one string would mean allocating a copy of the guide prose (up to 50 KB
@@ -239,7 +242,27 @@ function countChanged(before: string[], after: string[]): number {
   return n
 }
 
-function diffVariant(before: Variant, after: Variant): BuildChange[] {
+function formaChange(
+  before: Record<string, unknown>,
+  after: Record<string, unknown>,
+): BuildChange[] {
+  const slots = new Set([...Object.keys(before), ...Object.keys(after)])
+  const n = [...slots].filter((k) => str(before[k]) !== str(after[k])).length
+  if (n === 0) return []
+  return [
+    {
+      op: "modify",
+      label: "Forma",
+      detail: `${n} ${n === 1 ? "slot" : "slots"} changed`,
+    },
+  ]
+}
+
+function diffVariant(
+  before: Variant,
+  after: Variant,
+  perVariantForma: boolean,
+): BuildChange[] {
   const out: BuildChange[] = [
     ...cancelMoves(after.mods, before.mods),
     ...cancelMoves(after.arcanes, before.arcanes),
@@ -254,6 +277,9 @@ function diffVariant(before: Variant, after: Variant): BuildChange[] {
       detail: `${shardsChanged} of ${total} changed`,
     })
   }
+
+  // Linked builds share one forma set — diffBuildWide reports it once.
+  if (perVariantForma) out.push(...formaChange(before.forma, after.forma))
 
   // Helminth isn't a slot, so there's no +/- form for it — name the swap.
   const bh = before.helminth.join(", ")
@@ -325,6 +351,11 @@ export function diffBuildData(before: unknown, after: unknown): BuildChange[] {
   const beforeVariants = readVariants(a)
   const afterVariants = readVariants(b)
   const byKey = new Map(beforeVariants.map((v) => [v.key, v]))
+  // Twin-frame forms each have their own forma even when linked, so a build
+  // spanning forms reports forma per variant too.
+  const independent =
+    b.variantMode === "independent" ||
+    new Set(arr(b.variants).map((v) => obj(v)?.formIndex ?? 0)).size > 1
 
   const out: BuildChange[] = []
 
@@ -366,7 +397,7 @@ export function diffBuildData(before: unknown, after: unknown): BuildChange[] {
         detail: `${prev.label} → ${av.label}`,
       })
     }
-    out.push(...diffVariant(prev, av))
+    out.push(...diffVariant(prev, av, independent))
   })
 
   for (const gone of byKey.values()) {
@@ -378,6 +409,13 @@ export function diffBuildData(before: unknown, after: unknown): BuildChange[] {
   }
 
   out.push(...diffBuildWide(a, b))
+  if (!independent)
+    out.push(
+      ...formaChange(
+        obj(a.formaPolarities) ?? {},
+        obj(b.formaPolarities) ?? {},
+      ),
+    )
 
   if (out.length === 0) return [{ op: "info", label: NO_CHANGES_LABEL }]
   if (out.length > MAX_CHANGES) {

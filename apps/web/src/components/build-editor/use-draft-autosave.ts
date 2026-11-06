@@ -1,4 +1,7 @@
-import type { SavedVariant } from "@arsenyx/shared/warframe/build-data"
+import type {
+  SavedVariant,
+  VariantMode,
+} from "@arsenyx/shared/warframe/build-data"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
@@ -41,10 +44,13 @@ export function useDraftAutosave({
   extras,
   variants,
   clampedActiveIndex,
+  variantMode,
   onResetToSaved,
   adoption,
   onAdopted,
 }: {
+  /** Switching modes alone must write a draft, or a reload re-infers it. */
+  variantMode: VariantMode
   storeKey: string
   localDraft: EditorDraftPayload | null
   isUpdate: boolean
@@ -77,7 +83,8 @@ export function useDraftAutosave({
   })
 
   // Re-run on any edit. captureBuildData reads the values below; listing them
-  // keeps the snapshot current without re-binding the helper in deps.
+  // keeps the snapshot current without re-binding the helper in deps. A new
+  // value read by captureBuildData (editor-capture.ts) must be added here.
   const deps = [
     buildName,
     guide.buildSummary,
@@ -88,6 +95,7 @@ export function useDraftAutosave({
     extras,
     variants,
     clampedActiveIndex,
+    variantMode,
   ]
   // Write only when a dep actually changed since the last run. A "skip the
   // first run" flag isn't enough: StrictMode re-runs mount effects with the ref
