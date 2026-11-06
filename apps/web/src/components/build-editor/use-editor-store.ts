@@ -1,6 +1,7 @@
 import type {
   SavedBuildData,
   SavedVariant,
+  VariantMode,
 } from "@arsenyx/shared/warframe/build-data"
 import { clampVariantIndex } from "@arsenyx/shared/warframe/build-doc"
 import { getIncarnonBaseName } from "@arsenyx/shared/warframe/incarnon-data"
@@ -20,7 +21,9 @@ import type { DetailItem } from "@/lib/catalog"
 import {
   getVariants,
   isSyntheticVariant,
+  linkVariants,
   projectSavedVariant,
+  resolveVariantMode,
 } from "@/lib/codec/build-codec-adapter"
 import { withFormPolarities } from "@/lib/form-axis"
 import { useFormAxis } from "@/lib/hooks/use-form-axis"
@@ -135,6 +138,9 @@ export function useEditorStore({
     seedVariants(savedDataAll, item),
   )
   const [activeIndex, setActiveIndex] = useState(v)
+  const [variantMode, setVariantMode] = useState<VariantMode>(() =>
+    resolveVariantMode(savedDataAll),
+  )
   const clampedActiveIndex = clampVariantIndex({ variants }, activeIndex)
 
   // Read live from `variants` so changing a variant's form updates the
@@ -193,9 +199,9 @@ export function useEditorStore({
   const history = useEditorUndo({ slots, arcanes, extras, setExtras })
 
   /** Make `next[index]` the active variant. `next` must already hold the
-   *  outgoing variant's live edits (see `captureActiveSnapshot`). Forma and
-   *  the build-wide extras carry over; history and the slot selection restart
-   *  for the new variant. */
+   *  outgoing variant's live edits (see `captureVariants`). The target's own
+   *  forma loads (per-variant; linked copies are already equal); the build-wide
+   *  extras carry over; history and the slot selection restart. */
   const activate = (next: SavedVariant[], index: number) => {
     const savedData = projectSavedVariant(savedDataAll, next[index])
     // Fitted to the target's form: a twin-frame form switch changes the layout.
@@ -216,13 +222,14 @@ export function useEditorStore({
     setVariants(next)
     setActiveIndex(index)
     slots.setPlaced(loadout.placed)
+    slots.setFormaPolarities(loadout.formaPolarities)
     slots.setSelected("normal-0")
     arcanes.setPlaced(loadout.arcanes)
     arcanes.setSelected(null)
     setExtras(nextExtras)
     history.reset({
       placed: loadout.placed,
-      formaPolarities: slots.formaPolarities,
+      formaPolarities: loadout.formaPolarities,
       arcanes: loadout.arcanes,
       extras: nextExtras,
     })
@@ -232,6 +239,7 @@ export function useEditorStore({
   const isUpdate = !!existingBuild && existingBuild.isOwner
 
   const capture = makeEditorCapture({
+    variantMode,
     variants,
     clampedActiveIndex,
     slots,
@@ -254,6 +262,7 @@ export function useEditorStore({
     extras,
     variants,
     clampedActiveIndex,
+    variantMode,
     onResetToSaved,
     adoption,
     onAdopted,
@@ -263,10 +272,19 @@ export function useEditorStore({
     variants,
     setVariants,
     clampedActiveIndex,
-    captureActiveSnapshot: capture.captureActiveSnapshot,
+    captureVariants: capture.captureVariants,
     activate,
     activeFormIndex: formAxis.activeFormIndex,
+    variantMode,
   })
+
+  /** Switch the build's Variant mode. Linking copies the active variant's
+   *  shards (and its form's forma) onto the others. */
+  const applyVariantMode = (next: VariantMode) => {
+    if (next === "linked")
+      setVariants(linkVariants(capture.captureVariants(), clampedActiveIndex))
+    setVariantMode(next)
+  }
 
   return {
     item,
@@ -298,5 +316,7 @@ export function useEditorStore({
     hasDraft,
     resetToSaved,
     variantActions,
+    variantMode,
+    applyVariantMode,
   }
 }

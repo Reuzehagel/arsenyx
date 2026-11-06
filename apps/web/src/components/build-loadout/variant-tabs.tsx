@@ -16,7 +16,10 @@ export function VariantTabs({
   formNames,
   activeFormIndex = 0,
   onSelectForm,
+  note,
 }: {
+  /** Small line under the tabs, e.g. that variants differ in forma. */
+  note?: string
   variants: { id: string; label: string }[]
   activeIndex: number
   onSelect: (index: number) => void
@@ -51,6 +54,7 @@ export function VariantTabs({
           </VariantTab>
         ))}
       </div>
+      {note ? <p className="text-muted-foreground text-xs">{note}</p> : null}
     </div>
   )
 }

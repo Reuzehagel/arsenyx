@@ -1,4 +1,4 @@
-import type { SlotId } from "@arsenyx/shared/warframe/build-data"
+import type { SlotId, VariantMode } from "@arsenyx/shared/warframe/build-data"
 import { getBlockedByConflict } from "@arsenyx/shared/warframe/mods"
 import { isRivenMod } from "@arsenyx/shared/warframe/rivens"
 import type { Mod } from "@arsenyx/shared/warframe/types"
@@ -37,6 +37,7 @@ import { useEditorStore, type EditorShellSearch } from "./use-editor-store"
 import { useSlotKeyboardNav } from "./use-keyboard-nav"
 import { usePublishSettings } from "./use-publish-settings"
 import { useRivenDialog } from "./use-riven-dialog"
+import { VariantModeDialog } from "./variant-mode-dialog"
 
 export type { EditorShellSearch }
 
@@ -113,7 +114,25 @@ export function EditorShell({
     hasDraft,
     resetToSaved,
     variantActions,
+    variantMode,
+    applyVariantMode,
   } = store
+
+  // Mode switch awaiting confirmation; null = no dialog.
+  const [pendingVariantMode, setPendingVariantMode] =
+    useState<VariantMode | null>(null)
+  const changeVariantMode = (next: VariantMode) => {
+    // Confirm only once some variant has forma or shards to affect.
+    const hasForma = capture
+      .captureVariants()
+      .some(
+        (v) =>
+          Object.values(v.formaPolarities ?? {}).some(Boolean) ||
+          (v.shards ?? []).some(Boolean),
+      )
+    if (hasForma) setPendingVariantMode(next)
+    else applyVariantMode(next)
+  }
   const { normalSlotCount, auraSlotCount } = layout
   useSlotKeyboardNav({ slots, layout })
 
@@ -260,9 +279,10 @@ export function EditorShell({
     hasReactor: extras.hasReactor,
   })
 
-  // Forma is build-wide in Warframe, so the planner considers every variant's
-  // slots together.
+  // In linked mode the planner considers every variant of the active form
+  // together (they share forma).
   const autoForma = useAutoFormaPlanner({
+    variantMode,
     variants,
     clampedActiveIndex,
     layout,
@@ -378,6 +398,8 @@ export function EditorShell({
                 formNames={formNames}
                 activeFormIndex={activeFormIndex}
                 onSwitchForm={variantActions.switchForm}
+                variantMode={variantMode}
+                onVariantModeChange={changeVariantMode}
               />
             }
             edit={{
@@ -471,6 +493,16 @@ export function EditorShell({
       />
 
       {riven.dialog}
+
+      <VariantModeDialog
+        target={pendingVariantMode}
+        activeLabel={variants[clampedActiveIndex]?.label ?? "this variant"}
+        onCancel={() => setPendingVariantMode(null)}
+        onConfirm={() => {
+          if (pendingVariantMode) applyVariantMode(pendingVariantMode)
+          setPendingVariantMode(null)
+        }}
+      />
 
       {autoForma.pendingHeavyPlan && (
         <AutoFormaDialog

@@ -48,6 +48,11 @@ export const CHANGELOG: ChangelogEntry[] = [
         description:
           "A large cleanup under the hood: the header no longer reloads on every page change, and link previews show the same titles and descriptions as the page.",
       },
+      {
+        type: "feat",
+        description:
+          'Variants can now each have their own forma and Archon Shards. In the editor, the "Forma & shards" button next to the variant tabs switches between "shared" (the default, like configs of one item in-game) and "per variant". A new variant then starts with no forma, and Auto Forma plans only the variant you\'re editing. Build cards show the highest forma count of any variant.',
+      },
     ],
   },
   {

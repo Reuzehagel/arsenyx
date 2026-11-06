@@ -12,13 +12,13 @@ export const MAX_VARIANTS = 5
 
 /**
  * Per-variant slice of a build. Mods/arcanes/incarnon perks/deployment
- * context/Archon Shards vary between variants; everything else (item, forma,
+ * context/Archon Shards/forma vary between variants; everything else (item,
  * reactor, helminth, lich element, guide, name) is shared across all
  * variants of one build.
  *
- * `formaPolarity` still lives on individual `ModSlot`s for backward
- * compatibility with `BuildState`; the editor must keep formaPolarity
- * synchronized across variants for the same slot id.
+ * Forma lives on each variant's `ModSlot.formaPolarity`. In a "linked" build
+ * the editor keeps it (and same-form shards) identical across variants; the
+ * mode itself isn't encoded — the web adapter infers it on decode.
  */
 export interface BuildVariant {
   id: string

@@ -2,6 +2,7 @@ import type {
   SavedVariant,
   PlacedMod,
   SlotId,
+  VariantMode,
 } from "@arsenyx/shared/warframe/build-data"
 import { useEffect, useMemo, useState } from "react"
 
@@ -37,12 +38,13 @@ interface AutoFormaPlanner {
 /**
  * Owns the editor's auto-forma planning: the reactive (cheap) plan recomputed
  * each render, the heavy (stages 2/3) plan held for preview confirmation, and
- * the button/dialog handlers. Forma is build-wide in Warframe, so the planner
- * overlays the active variant's live slots onto the saved `variants[]` set and
- * considers them all together. The plan *computation* lives in
+ * the button/dialog handlers. In linked mode the variants of one form share
+ * forma, so the planner overlays the active variant's live slots onto those
+ * saved variants and considers them together. The plan *computation* lives in
  * lib/build/auto-forma; this hook is the editor-side state + wiring.
  */
 export function useAutoFormaPlanner(opts: {
+  variantMode: VariantMode
   variants: SavedVariant[]
   clampedActiveIndex: number
   layout: BuildLayout
@@ -55,6 +57,7 @@ export function useAutoFormaPlanner(opts: {
   setVariants: SetVariants
 }): AutoFormaPlanner {
   const {
+    variantMode,
     variants,
     clampedActiveIndex,
     layout,
@@ -75,9 +78,13 @@ export function useAutoFormaPlanner(opts: {
         // variant's `used`, producing phantom forma recommendations.
         i === clampedActiveIndex
           ? slots.placed
-          : dropOrphanSlots(v.slots ?? {}, layout),
+          : // Independent: other variants have their own forma, so plan this
+            // one alone. An empty variant is always feasible and never moved.
+            variantMode === "independent"
+            ? {}
+            : dropOrphanSlots(v.slots ?? {}, layout),
       ),
-    [variants, clampedActiveIndex, slots.placed, layout],
+    [variants, clampedActiveIndex, slots.placed, layout, variantMode],
   )
 
   const reactiveAutoFormaPlan = useMemo<FullAutoFormaPlan | null>(() => {

@@ -64,8 +64,9 @@ yarn-error.log*
 # rust crates (local experiments — dps-calc target, etc.)
 /crates/
 
-# claude temp files
-.claude/
+# claude temp files (launch.json is shared so every worktree gets the preview servers)
+.claude/*
+!.claude/launch.json
 .agents/
 skills-lock.json
 .superpowers/
