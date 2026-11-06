@@ -1,6 +1,26 @@
+import { readFileSync } from "node:fs"
+import path from "node:path"
+
+import {
+  DEFAULT_DESCRIPTION,
+  DEFAULT_TITLE,
+  PAGE_META,
+  RESERVED_BUILD_SUBPATHS,
+  SITE_URL,
+  type PagePath,
+} from "@arsenyx/shared/seo/site"
 import { describe, expect, it } from "vitest"
 
-import worker, { buildPageCacheKeyUrl, isBrowserNavigation } from "./index"
+import { buildPageSeo, pageSeo, seo } from "../src/lib/seo"
+import { Route as BrowseRoute } from "../src/routes/_app/browse"
+import { Route as OrgSettingsRoute } from "../src/routes/_app/org.$slug_.settings"
+import worker, {
+  buildMeta,
+  buildPageCacheKeyUrl,
+  genericPageMeta,
+  isBrowserNavigation,
+  type Meta,
+} from "./index"
 
 describe("apex redirect", () => {
   const env = { ASSETS: { fetch: async () => new Response("") } }
@@ -58,12 +78,9 @@ describe("isBrowserNavigation", () => {
   })
 })
 
-// The worker itself is bundled by wrangler (not Vite) and lives outside the
-// typecheck/lint graph, so this covers only the pure cache-key logic — the two
-// invariants whose regression would be expensive: a deploy serving a stale
-// asset shell (white screen), or one hot slug fragmenting across tracking-param
-// variants. The actual cache hit/miss/store path needs a Workers runtime and is
-// intentionally not exercised here.
+// The two invariants whose regression is expensive: a deploy serving a stale
+// asset shell (white screen), or one hot slug fragmenting across tracking
+// params. The Cache API hit/store path needs workerd and is not exercised.
 describe("buildPageCacheKeyUrl", () => {
   const url = new URL("https://www.arsenyx.com/builds/wPDrEvV3Wf")
 
@@ -71,7 +88,6 @@ describe("buildPageCacheKeyUrl", () => {
     const a = buildPageCacheKeyUrl(url, "v1")
     const b = buildPageCacheKeyUrl(url, "v2")
     expect(a).not.toBe(b)
-    expect(a).toContain("__v=v1")
   })
 
   it("drops the query string so tracking params don't fragment the hot slug", () => {
@@ -82,12 +98,127 @@ describe("buildPageCacheKeyUrl", () => {
       buildPageCacheKeyUrl(url, "v1"),
     )
   })
+})
 
-  it("falls back to a 'dev' namespace when no version is bound", () => {
-    expect(buildPageCacheKeyUrl(url, undefined)).toContain("__v=dev")
+// The two head layers must emit identical tags (apps/web/CLAUDE.md). Both read
+// PAGE_META; this pins that each derives the same final values from it.
+describe("static page meta parity (worker vs client seo())", () => {
+  const client = (head: ReturnType<typeof seo>) => {
+    const get = (key: string, value: string) =>
+      head.meta.find((m) => m[key] === value)?.content
+    return {
+      title: head.meta.find((m) => m.title)?.title,
+      description: get("name", "description"),
+      canonical: head.links[0]?.href,
+      noindex: get("name", "robots") === "noindex",
+    }
+  }
+  const edge = (meta: Meta) => ({
+    title: meta.title ?? DEFAULT_TITLE,
+    description: meta.description ?? DEFAULT_DESCRIPTION,
+    canonical: meta.canonical,
+    noindex: meta.noindex ?? false,
   })
 
-  it("URL-encodes the version so an odd id can't corrupt the key", () => {
-    expect(buildPageCacheKeyUrl(url, "a b/c")).toContain("__v=a%20b%2Fc")
+  for (const path of Object.keys(PAGE_META) as PagePath[]) {
+    it(path, () => {
+      expect(edge(genericPageMeta(new URL(path, SITE_URL)))).toEqual(
+        client(pageSeo(path)),
+      )
+    })
+  }
+
+  // The routes' own head(), fed the search their validateSearch produces.
+  type Head = (ctx: unknown) => ReturnType<typeof seo>
+  const validateBrowse = BrowseRoute.options.validateSearch as (
+    search: Record<string, unknown>,
+  ) => unknown
+  for (const raw of ["melee", "all", "junk"]) {
+    it(`/browse?category=${raw}`, () => {
+      const url = new URL(`/browse?category=${raw}`, SITE_URL)
+      const search = validateBrowse({ category: raw })
+      const head = BrowseRoute.options.head as Head
+      expect(edge(genericPageMeta(url))).toEqual(
+        client(head({ match: { search } })),
+      )
+    })
+  }
+
+  it("/org/:slug/settings", () => {
+    const url = new URL("/org/acme/settings", SITE_URL)
+    const head = OrgSettingsRoute.options.head as Head
+    expect(edge(genericPageMeta(url))).toEqual(
+      client(head({ params: { slug: "acme" } })),
+    )
+  })
+
+  // buildPageSeo is the build route's head (routes/_app/builds.$slug.tsx).
+  it("/builds/:slug (public)", () => {
+    const b = {
+      name: "Eidolon\nsniper",
+      description: "A  build",
+      visibility: "PUBLIC" as const,
+      hideAuthor: false,
+      likeCount: 1200,
+      viewCount: 5,
+      item: {
+        name: "Rubico",
+        category: "primary",
+        uniqueName: "/x",
+        imageName: null,
+      },
+      user: { name: "N", username: "n", displayUsername: "N\tick" },
+      organization: null,
+      guide: null,
+    }
+    const meta = buildMeta(b as never, "abc", null)
+    expect(edge(meta)).toEqual(client(buildPageSeo(b, "abc", null)))
+    expect(meta.ogDescription).toBe(
+      `${meta.description} · 1.2k likes · 5 views`,
+    )
+  })
+})
+
+describe("noindex", () => {
+  // A Disallow would block the crawl that reads the noindex, so the URL could
+  // still be indexed URL-only.
+  it("robots.txt disallows none of the noindex pages", () => {
+    const robots = readFileSync(
+      path.resolve(import.meta.dirname, "../public/robots.txt"),
+      "utf8",
+    )
+    const disallows = [...robots.matchAll(/^Disallow:\s*(\S+)/gm)].map(
+      (m) => m[1],
+    )
+    const noindex = [
+      ...(Object.keys(PAGE_META) as PagePath[]).filter(
+        (p) => genericPageMeta(new URL(p, SITE_URL)).noindex,
+      ),
+      "/auth/signin",
+      "/org/acme/settings",
+    ]
+    for (const rule of disallows) {
+      // robots rules are path prefixes where `*` matches any run.
+      const re = new RegExp(
+        `^${rule
+          .split("*")
+          .map((s) => s.replace(/[.?+^$()|[\]{}\\]/g, "\\$&"))
+          .join(".*")}`,
+      )
+      expect(noindex.filter((p) => re.test(p))).toEqual([])
+    }
+  })
+})
+
+describe("RESERVED_BUILD_SUBPATHS", () => {
+  it("lists exactly the static /builds/<segment> routes", () => {
+    const tree = readFileSync(
+      path.resolve(import.meta.dirname, "../src/routeTree.gen.ts"),
+      "utf8",
+    )
+    const statics = new Set(
+      [...tree.matchAll(/fullPath: '\/builds\/([^'/$]+)'/g)].map((m) => m[1]),
+    )
+    expect(statics).toEqual(RESERVED_BUILD_SUBPATHS)
   })
 })

@@ -5,7 +5,7 @@ interface StatCap {
   max?: number
 }
 
-export const STAT_CAPS: Partial<Record<StatType, StatCap>> = {
+const STAT_CAPS: Partial<Record<StatType, StatCap>> = {
   // Can't reduce cost below 25% (175% efficiency) or go below 0% efficiency.
   ability_efficiency: { min: 25, max: 175 },
   ability_duration: { min: 12.5 },

@@ -1,3 +1,5 @@
+import { getCategoryLabel } from "@arsenyx/shared/warframe/categories"
+import type { BrowseItem } from "@arsenyx/shared/warframe/types"
 import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import {
@@ -30,11 +32,11 @@ import {
 } from "@/components/ui/dialog"
 import { authClient } from "@/lib/auth-client"
 import { fuzzyRank } from "@/lib/fuzzy"
+import { SEARCH_DEBOUNCE_MS } from "@/lib/hooks/use-url-search-input"
+import { getImageUrl } from "@/lib/image-url"
+import { allItems } from "@/lib/items-index"
 import { itemsIndexQuery } from "@/lib/queries/items-index-query"
 import { EXTERNAL_LINKS } from "@/lib/util/constants"
-import { CATEGORIES, getImageUrl, type BrowseItem } from "@/lib/warframe"
-
-const SEARCH_DEBOUNCE_MS = 200
 
 type ItemEntry = BrowseItem & { categoryLabel: string }
 
@@ -56,57 +58,44 @@ export function CommandPalette({
   const [selected, setSelected] = useState("")
   const { data: session } = authClient.useSession()
 
+  // The header mounts this only while open, so state starts fresh each time.
   useEffect(() => {
-    if (open) return
-    setQuery("")
-    setDebouncedQuery("")
-  }, [open])
-
-  useEffect(() => {
-    if (!open) return
     const t = setTimeout(
       () => setDebouncedQuery(query.trim()),
       SEARCH_DEBOUNCE_MS,
     )
     return () => clearTimeout(t)
-  }, [query, open])
+  }, [query])
 
-  const { data: items } = useQuery({ ...itemsIndexQuery, enabled: open })
+  const { data: items } = useQuery(itemsIndexQuery)
 
-  const allItems = useMemo<ItemEntry[]>(() => {
-    if (!items) return []
-    // Dedupe by slug, not uniqueName: modular kitgun barrels (Catchmoon,
-    // Sporelacer, Vermisplicer, …) share a single uniqueName across their
-    // Primary and Secondary forms, but those are distinct browsable items
-    // with distinct slugs. slug is unique per catalog entry, so this keeps
-    // every form as its own row while still collapsing true duplicates.
-    const byKey = new Map<string, ItemEntry>()
-    for (const { id, label } of CATEGORIES) {
-      for (const it of items[id] ?? []) {
-        if (!byKey.has(it.slug)) {
-          byKey.set(it.slug, { ...it, categoryLabel: label })
-        }
-      }
-    }
-    return [...byKey.values()]
-  }, [items])
+  const entries = useMemo<ItemEntry[]>(
+    () =>
+      items
+        ? allItems(items).map((it) => ({
+            ...it,
+            categoryLabel: getCategoryLabel(it.category),
+          }))
+        : [],
+    [items],
+  )
 
-  // Searchable text per item, aligned by index with `allItems`. Folding in
+  // Searchable text per item, aligned by index with `entries`. Folding in
   // displayClass lets a class term ("excalibur umbra") match alongside the name.
   const haystack = useMemo(
     () =>
-      allItems.map((it) =>
+      entries.map((it) =>
         it.displayClass ? `${it.name} ${it.displayClass}` : it.name,
       ),
-    [allItems],
+    [entries],
   )
 
   const filteredItems = useMemo<ItemEntry[]>(
     () =>
       fuzzyRank(haystack, debouncedQuery)
         .slice(0, 10)
-        .map((i) => allItems[i]),
-    [allItems, haystack, debouncedQuery],
+        .map((i) => entries[i]),
+    [entries, haystack, debouncedQuery],
   )
 
   useEffect(() => {

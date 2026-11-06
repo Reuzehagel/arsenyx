@@ -1,7 +1,7 @@
 // Lightweight incarnon lookups: names + genesis adapter images + variant
 // stripping. The full evolution trees live in incarnon-evolutions.ts (only
 // imported by the build script) and are fetched on demand from
-// /data/incarnon-evolutions.json — see apps/web/src/lib/incarnon-query.ts.
+// /data/incarnon-evolutions.json — see apps/web/src/lib/queries/incarnon-query.ts.
 
 import type { IncarnonEvolution, IncarnonPerk } from "./incarnon-evolutions"
 

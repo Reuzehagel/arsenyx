@@ -18,15 +18,19 @@
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
 
+import { CATALOG_FILES } from "@arsenyx/shared/warframe/catalog-files"
 import { Client } from "pg"
 
+import { CATALOG_DIR, REPO_ROOT } from "../../../scripts/build/paths"
+import { isLocalDbUrl } from "../../../scripts/lib/dev-db"
+
 const dbUrl = process.env.DATABASE_URL ?? ""
-if (new URL(dbUrl).hostname !== "localhost") {
+if (!isLocalDbUrl(dbUrl)) {
   console.error("seed-sample only runs against a localhost DATABASE_URL.")
   process.exit(1)
 }
 
-const DATA = resolve(import.meta.dirname, "../../web/public/data")
+const DATA = resolve(REPO_ROOT, CATALOG_DIR)
 const json = (f: string) => JSON.parse(readFileSync(resolve(DATA, f), "utf8"))
 
 type Item = { uniqueName: string; name: string; category: string; imageName?: string; displayClass?: string }
@@ -56,13 +60,13 @@ const slug = () =>
   Array.from({ length: 10 }, () => pick([..."23456789abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"])).join("")
 const id = () => `seed${slug()}`
 
-const mods: Mod[] = (json("mods-all.json") as Mod[]).filter(
+const mods: Mod[] = (json(CATALOG_FILES.mods) as Mod[]).filter(
   (m) => !m.isAugment && !m.isExilus && !m.isConclave,
 )
-const conflicts = json("mod-conflicts.json") as Record<string, string[]>
+const conflicts = json(CATALOG_FILES.modConflicts) as Record<string, string[]>
 const modsFor = (compat: string) => mods.filter((m) => m.compatName === compat)
 
-const index = json("items-index.json") as Record<string, Item[]>
+const index = json(CATALOG_FILES.itemsIndex) as Record<string, Item[]>
 // [category, displayClass filter, mod compatName, aura?]
 const KINDS: [string, (i: Item) => boolean, string, boolean][] = [
   ["warframes", () => true, "WARFRAME", true],

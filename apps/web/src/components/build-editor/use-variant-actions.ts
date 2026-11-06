@@ -1,16 +1,12 @@
+import type { SavedVariant } from "@arsenyx/shared/warframe/build-data"
 import { MAX_VARIANTS } from "@arsenyx/shared/warframe/build-doc"
-import type { useNavigate } from "@tanstack/react-router"
 
-import type { SavedVariant } from "@/lib/queries/build-query"
+import { foldedVariants, type SetVariants } from "@/lib/build/variants"
 
-type SetVariants = (
-  next: SavedVariant[] | ((prev: SavedVariant[]) => SavedVariant[]),
-) => void
-
-export interface VariantActions {
+interface VariantActions {
   switchVariant: (i: number) => void
   addVariant: () => void
-  duplicateActive: () => void
+  duplicateActive: (label?: string) => void
   deleteActive: () => void
   renameActive: (label: string) => void
   /** Twin-frames (Sirius & Orion): switch the top-level form axis. Snapshots
@@ -20,25 +16,17 @@ export interface VariantActions {
 }
 
 /**
- * The variant CRUD handlers (switch / add / duplicate / delete / rename). Pulled
- * out of editor-shell as a cohesive group, but deliberately kept thin: the
- * variants state, the module cache it writes through (`setVariants`), and the
- * structural epoch all stay in the composition root — those carry subtle
- * remount/race semantics best kept co-located. This hook just sequences
- * snapshot → mutate → navigate for each action.
- *
- * Each mutation snapshots the active variant's live edits back into the array
- * first (`captureActiveSnapshot`), then updates `?v` so the EditorShell remount
- * re-hydrates from the right variant. Structural changes (add/duplicate/delete)
- * also bump the epoch so a delete that leaves `?v` unchanged still remounts.
+ * The variant CRUD handlers (switch / add / duplicate / delete / rename). Each
+ * snapshots the active variant's live edits back into the array first
+ * (`captureActiveSnapshot`), then hands the new array and the variant to land
+ * on to `activate`, which re-seeds the live editor state.
  */
 export function useVariantActions(opts: {
   variants: SavedVariant[]
   setVariants: SetVariants
   clampedActiveIndex: number
   captureActiveSnapshot: () => SavedVariant
-  navigate: ReturnType<typeof useNavigate>
-  bumpVariantEpoch: () => void
+  activate: (next: SavedVariant[], index: number) => void
   /** Twin-frames: the form whose variants are currently shown. Variant CRUD
    *  is scoped to this form (its own MAX_VARIANTS budget). 0 for normal
    *  frames (all variants share form 0). */
@@ -49,8 +37,7 @@ export function useVariantActions(opts: {
     setVariants,
     clampedActiveIndex,
     captureActiveSnapshot,
-    navigate,
-    bumpVariantEpoch,
+    activate,
     activeFormIndex,
   } = opts
 
@@ -75,46 +62,29 @@ export function useVariantActions(opts: {
     formIndex,
   })
 
-  // Share-aware `?v` write: when `share` is in the URL, an explicit `v: 0`
-  // keeps the user's choice from being overridden by the share's activeIndex.
-  const gotoVariant = (i: number) =>
-    navigate({
-      to: ".",
-      search: (s) => ({ ...s, v: i === 0 && !s.share ? undefined : i }),
-      replace: true,
-    })
-
   const switchVariant = (i: number) => {
     if (i === clampedActiveIndex) return
-    const snapshot = captureActiveSnapshot()
-    const next = variants.map((v, idx) =>
-      idx === clampedActiveIndex ? snapshot : v,
+    activate(
+      foldedVariants(variants, clampedActiveIndex, captureActiveSnapshot()),
+      i,
     )
-    setVariants(next)
-    // `gotoVariant` carries the share-aware `?v` write: when `share` is in the
-    // URL, `v: undefined` would let validateSearch's `activeVariantFromShare`
-    // fallback re-derive v from the share's encoded activeIndex (silently
-    // overriding the user's click back to variant 0), so it emits explicit
-    // `v: 0` in that case and a clean `v: undefined` when share is absent.
-    gotoVariant(i)
   }
 
   const addVariant = () => {
     if (formCount >= MAX_VARIANTS) return
-    const snapshot = captureActiveSnapshot()
-    const seeded = variants.map((v, idx) =>
-      idx === clampedActiveIndex ? snapshot : v,
+    const seeded = foldedVariants(
+      variants,
+      clampedActiveIndex,
+      captureActiveSnapshot(),
     )
     const blank = makeBlankVariant(`Variant ${formCount + 1}`, activeFormIndex)
-    const next = [...seeded, blank]
-    setVariants(next)
-    gotoVariant(next.length - 1)
-    bumpVariantEpoch()
+    activate([...seeded, blank], seeded.length)
   }
 
-  const duplicateActive = () => {
+  const duplicateActive = (label?: string) => {
     if (formCount >= MAX_VARIANTS) return
-    const snapshot = captureActiveSnapshot()
+    const live = captureActiveSnapshot()
+    const snapshot = label === undefined ? live : { ...live, label }
     // `...snapshot` carries the active variant's formIndex, so the copy stays
     // in the same form.
     const dup: SavedVariant = {
@@ -122,59 +92,49 @@ export function useVariantActions(opts: {
       id: newVariantId(),
       label: `${snapshot.label} (copy)`,
     }
-    const seeded = variants.map((v, idx) =>
-      idx === clampedActiveIndex ? snapshot : v,
-    )
+    const seeded = foldedVariants(variants, clampedActiveIndex, snapshot)
     const insertAt = clampedActiveIndex + 1
-    const next = [...seeded.slice(0, insertAt), dup, ...seeded.slice(insertAt)]
-    setVariants(next)
-    gotoVariant(insertAt)
-    bumpVariantEpoch()
+    activate(
+      [...seeded.slice(0, insertAt), dup, ...seeded.slice(insertAt)],
+      insertAt,
+    )
   }
 
   const deleteActive = () => {
     // Keep at least one variant per form so every form stays representable.
     if (formCount <= 1) return
     const next = variants.filter((_, i) => i !== clampedActiveIndex)
-    setVariants(next)
     // Land on another variant of the SAME form (guaranteed to exist since
     // formCount > 1), not whatever slides into the old global index.
     const sameForm = next.findIndex((v) => formOf(v) === activeFormIndex)
-    gotoVariant(sameForm < 0 ? 0 : sameForm)
-    // Deleting a non-last active variant can keep `?v` unchanged (the next
-    // variant slides into this index), so the navigate alone won't remount.
-    bumpVariantEpoch()
+    activate(next, sameForm < 0 ? 0 : sameForm)
   }
 
+  /** `label` arrives normalized by the variant bar. */
   const renameActive = (label: string) => {
-    const trimmed = label.trim().slice(0, 24) || `Variant ${formCount}`
     setVariants((prev) =>
-      prev.map((v, i) =>
-        i === clampedActiveIndex ? { ...v, label: trimmed } : v,
-      ),
+      prev.map((v, i) => (i === clampedActiveIndex ? { ...v, label } : v)),
     )
   }
 
   const switchForm = (formIndex: number) => {
     if (formIndex === activeFormIndex) return
-    const snapshot = captureActiveSnapshot()
-    const captured = variants.map((v, idx) =>
-      idx === clampedActiveIndex ? snapshot : v,
+    const captured = foldedVariants(
+      variants,
+      clampedActiveIndex,
+      captureActiveSnapshot(),
     )
     const target = captured.findIndex((v) => formOf(v) === formIndex)
     if (target >= 0) {
-      setVariants(captured)
-      gotoVariant(target)
-      bumpVariantEpoch()
+      activate(captured, target)
       return
     }
     // Target form has no variants yet (e.g. an imported build missing a form)
     // — seed a blank one so the form is always reachable.
-    const blank = makeBlankVariant("Variant 1", formIndex)
-    const next = [...captured, blank]
-    setVariants(next)
-    gotoVariant(next.length - 1)
-    bumpVariantEpoch()
+    activate(
+      [...captured, makeBlankVariant("Variant 1", formIndex)],
+      captured.length,
+    )
   }
 
   return {

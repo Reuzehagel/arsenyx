@@ -3,30 +3,14 @@
  * mods array. The build script normalizes once and filters per item.
  */
 
-import type { Mod, Polarity } from "./types"
+import { PLEXUS_MOD_TYPE } from "./plexus"
+import type { Mod } from "./types"
 
-export function normalizePolarity(polarity?: string): Polarity {
-  if (!polarity || typeof polarity !== "string") return "universal"
-  const lower = polarity.toLowerCase()
-
-  const map: Record<string, Polarity> = {
-    madurai: "madurai",
-    vazarin: "vazarin",
-    naramon: "naramon",
-    zenurik: "zenurik",
-    unairu: "unairu",
-    penjaga: "penjaga",
-    umbra: "umbra",
-    any: "any",
-    universal: "universal",
-    d: "vazarin",
-    r: "madurai",
-    dash: "naramon",
-    v: "madurai",
-  }
-
-  return map[lower] ?? "universal"
-}
+/** Pool the build gives beast-claw mods (DE ships them as compatName "Claws",
+ *  see data/curated/beast-claws.ts), and the wiki Class of the beast claws
+ *  that take it. */
+export const BEAST_CLAW_POOL = "BeastClaws"
+export const BEAST_CLAW_CLASS = "Claws (Beast)"
 
 // --- compatibility matchers ---
 
@@ -47,6 +31,8 @@ export function getModSetCode(mod: Pick<Mod, "modSet">): string | null {
   return seg ?? null
 }
 
+export type PlexusSlotKind = "battle" | "tactical" | "integrated"
+
 /** Sub-slot kind for a Plexus mod. Path segment after `/Railjack/` in the
  * mod's uniqueName is the canonical taxonomy:
  *   `Abilities`  → battle
@@ -57,10 +43,8 @@ export function getModSetCode(mod: Pick<Mod, "modSet">): string | null {
  *     `getPlexusSlotKind` returns `integrated` for both — call
  *     `isPlexusAuraMod` to disambiguate.)
  * Returns null for anything that isn't a Plexus mod. */
-export type PlexusSlotKind = "battle" | "tactical" | "integrated"
-
 export function getPlexusSlotKind(mod: Mod): PlexusSlotKind | null {
-  if (mod.type?.toLowerCase() !== "plexus mod") return null
+  if (!isPlexusMod(mod)) return null
   const segment = mod.uniqueName.split("/Railjack/")[1]?.split("/")[0]
   if (!segment) return null
   if (segment === "Abilities") return "battle"
@@ -75,10 +59,10 @@ export function getPlexusSlotKind(mod: Mod): PlexusSlotKind | null {
 }
 
 /** True when the mod is a Plexus (Railjack) mod. Use this everywhere
- * instead of `mod.type === "Plexus Mod"` so the picker, placement gate,
- * and slot-kind helpers can't drift on a casing change in the mod data. */
+ * instead of a string compare so the picker, placement gate, and slot-kind
+ * helpers can't drift on a casing change in the mod data. */
 export function isPlexusMod(mod: Pick<Mod, "type">): boolean {
-  return mod.type?.toLowerCase() === "plexus mod"
+  return mod.type?.toLowerCase() === PLEXUS_MOD_TYPE.toLowerCase()
 }
 
 /** Identifies the "Aura"/Matrix mods that only fit the Plexus Aura slot.
@@ -131,10 +115,6 @@ const EXTRA_MODS_BY_ITEM: Record<string, readonly string[]> = {
  */
 export function getModsForItem(
   item: {
-    /** Lowercase stance compatibility (e.g. "polearms", "swords"). When
-     *  set, stance mods are filtered to that class only; when absent,
-     *  all stance mods that match the broader modPools pass. */
-    meleeClass?: string
     uniqueName?: string
     /** The DE `compatName` values this item
      *  accepts. Includes generic pools ("Rifle", "WARFRAME"), refinement
@@ -156,7 +136,6 @@ export function getModsForItem(
 ): Mod[] {
   if (!item.modPools || item.modPools.length === 0) return []
 
-  const meleeClass = item.meleeClass?.toLowerCase()
   const itemUniqueName = item.uniqueName
   const poolSet = new Set(item.modPools)
   // Built once (not per-mod) so the tag refinement is O(1) membership.
@@ -201,8 +180,7 @@ export function getModsForItem(
       // Excluded if the item has any tag the mod forbids.
       if (mod.incompatTags?.some((t) => itemTags.has(t))) return false
       // If the mod requires tags, the item must have at least one (ANY-of).
-      // Stances are exempt: they're already routed by compatName/meleeClass
-      // below, and their `*_STANCE` requirement is absent on power/sentinel
+      // Stances are exempt: they're already routed by compatName, and their `*_STANCE` requirement is absent on power/sentinel
       // weapons (POWER_WEAPON/SENTINEL_WEAPON), so applying it would wrongly
       // hide stances from exalted and companion melee.
       if (
@@ -242,16 +220,8 @@ export function getModsForItem(
       if (decidableOnly && !weaponHasRequired) return false
     }
 
-    // Stance mods are class-specific. The item's modPools already
-    // includes the stance-compat name (e.g. "Polearms") — but a
-    // melee weapon's pool also includes the generic "Melee" pool,
-    // and a stance mod with `compatName: "Polearms"` would only fire
-    // for polearms. So pool membership is necessary AND sufficient;
-    // the meleeClass refinement is only useful when modPools is
-    // missing the stance-compat (very old items / synthesized).
-    if (isStanceMod(mod) && meleeClass && compatName) {
-      return compatName.toLowerCase() === meleeClass
-    }
+    // Stance mods are class-specific, and the item's modPools carries its
+    // stance-compat name (e.g. "Polearms"), so pool membership alone gates them.
     return true
   })
 }

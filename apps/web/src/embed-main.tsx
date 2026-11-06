@@ -1,3 +1,5 @@
+import { clamp } from "@arsenyx/shared/util/math"
+import { isValidCategory } from "@arsenyx/shared/warframe/categories"
 import { slugify } from "@arsenyx/shared/warframe/slugs"
 import {
   QueryClient,
@@ -13,44 +15,29 @@ import ReactDOM from "react-dom/client"
 // into the embed bundle and defeat the lazy-loading in build-viewer-body.
 import { BuildViewerBody } from "@/components/build-viewer/build-viewer-body"
 import { EmbedShell } from "@/components/build-viewer/embed-shell"
-import { clampEmbedParams } from "@/lib/embed-params"
 import { buildQuery } from "@/lib/queries/build-query"
-import { isValidCategory, type BrowseCategory } from "@/lib/warframe"
+import { parseVariantIndex } from "@/lib/util/search-params"
 import "@/styles/globals.css"
 
 /**
- * Dedicated entry for `/builds/:slug?embed=1`, served by the Worker
- * (apps/web/worker/index.ts) instead of the full SPA shell. It mounts ONLY the
- * read-only viewer — no TanStack Router, no app chrome — so a guide page with
- * many embeds doesn't boot the entire app once per iframe. The slug comes from
- * the path; scale/bg/v come from the query string (mirroring the
- * `validateSearch` rules in routes/builds.$slug.tsx).
+ * Dedicated entry for `/builds/:slug?embed=1`, served instead of the SPA shell
+ * by the Worker (apps/web/worker/index.ts) and the dev server (vite.config.ts).
+ * It mounts ONLY the read-only viewer — no TanStack Router, no app chrome — so
+ * a guide page with many embeds doesn't boot the entire app once per iframe.
  */
 
 function parseParams() {
   const p = new URLSearchParams(location.search)
-  // In production the Worker serves embed.html at the real `/builds/<slug>`
-  // path, so the slug comes from the path. The `?slug=` fallback is for dev /
-  // vite preview, where embed.html is reached directly at `/embed.html` and the
-  // path carries no slug.
-  const slug = decodeURIComponent(
-    location.pathname.split("/")[2] ?? p.get("slug") ?? "",
-  )
-  const num = (v: string | null) => {
-    if (v === null) return undefined
-    const n = Number(v)
-    return Number.isFinite(n) ? n : undefined
+  const slug = decodeURIComponent(location.pathname.split("/")[2] ?? "")
+  const scaleRaw = Number(p.get("scale") ?? NaN)
+  return {
+    slug,
+    /** CSS zoom for the whole embed (0.9 = 90%). */
+    scale: Number.isFinite(scaleRaw) ? clamp(scaleRaw, 0.1, 2) : undefined,
+    /** Host-page background (hex without #) so the embed blends in. */
+    bg: p.get("bg") || undefined,
+    v: parseVariantIndex(p.get("v")),
   }
-
-  // Bounds logic is shared with the SPA route's validateSearch — see
-  // clampEmbedParams. Coerce the URLSearchParams strings first, then clamp.
-  const { scale, bg, v } = clampEmbedParams({
-    scale: num(p.get("scale")),
-    bg: p.get("bg") ?? undefined,
-    v: num(p.get("v")),
-  })
-
-  return { slug, scale, bg, v }
 }
 
 function EmbedViewer({
@@ -73,15 +60,14 @@ function EmbedViewer({
       <p className="text-muted-foreground p-4 text-sm">Unsupported build.</p>
     )
   }
-  const category = build.item.category as BrowseCategory
+  const category = build.item.category
   const itemSlug = slugify(build.item.name)
 
   // No inner Suspense: BuildViewerBody's own useSuspenseQuery calls bubble up to
-  // the single boundary in EmbedApp (mirrors routes/builds.$slug.tsx, one
-  // Suspense per render path).
+  // the single boundary in EmbedApp.
   return (
     <BuildViewerBody
-      key={`${slug}-${activeIndex ?? 0}`}
+      key={slug}
       build={build}
       category={category}
       itemSlug={itemSlug}

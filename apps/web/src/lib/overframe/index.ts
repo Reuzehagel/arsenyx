@@ -1,32 +1,42 @@
 import {
+  auraSlotId,
+  normalSlotId,
+  type HelminthAbility,
+  type SavedBuildData,
+  type SlotId,
+} from "@arsenyx/shared/warframe/build-data"
+import {
   expandNameVariants,
   normalizeName,
   similarity,
   similarityNormalized,
 } from "@arsenyx/shared/warframe/name-match"
-import { decodeOverframeSlotId } from "@arsenyx/shared/warframe/overframe-slots"
+import {
+  decodeOverframeSlotId,
+  encodeOverframeSlotId,
+} from "@arsenyx/shared/warframe/overframe-slots"
 import type { OverframeScrapeResponse } from "@arsenyx/shared/warframe/overframe-wire"
-import type { Arcane, Mod, Polarity } from "@arsenyx/shared/warframe/types"
-
-import type { SlotId } from "@/components/build-editor"
-import type { SavedBuildData } from "@/lib/queries/build-query"
-import type { HelminthAbility } from "@/lib/queries/helminth-query"
 import type {
+  Arcane,
+  Mod,
+  Polarity,
   BrowseCategory,
   BrowseItem,
-  DetailItem,
-  ItemsIndex,
-} from "@/lib/warframe"
+} from "@arsenyx/shared/warframe/types"
 
-// Scrape DTOs are defined once in @arsenyx/shared (the api produces them).
-export type ScrapeResponse = OverframeScrapeResponse
+import {
+  getInnatePolarities,
+  innatePolarityForSlot,
+} from "@/lib/build/polarities"
+import type { DetailItem, ItemsIndex } from "@/lib/catalog"
+import { videoEmbedMarkdown } from "@/lib/util/video-embed"
 
-export type ApplyWarning = {
-  type:
-    | "mod_not_found"
-    | "arcane_not_found"
-    | "helminth_not_found"
-    | "slot_out_of_range"
+/** Overframe's polarity code for "no polarity" (see the api's
+ *  lib/overframe/polarity.ts); every other unmapped code is unknown. */
+const OVERFRAME_NO_POLARITY = 0
+
+type ApplyWarning = {
+  type: "mod_not_found" | "arcane_not_found" | "helminth_not_found"
   message: string
 }
 
@@ -37,7 +47,7 @@ export type ApplyWarning = {
  * (the matched mod's `type`, e.g. "Stance"/"Melee"/"Primary") is the tell for
  * layout bugs: a Stance mod landing in `exilus`, or an exilus mod in `arcane`.
  */
-export type OverframeSlotTrace = {
+type OverframeSlotTrace = {
   ofSlotId: number
   ofName: string | null
   ofPolarityCode: number
@@ -85,7 +95,7 @@ function normalizeOverframeGuide(raw: string | undefined): string | undefined {
   const normalized = raw
     .replace(
       /\[\[\s*youtube\s+id=["']([A-Za-z0-9_-]+)[^"']*["']\s*\]\]/gi,
-      (_m, id: string) => `\n\nhttps://youtu.be/${id}\n\n`,
+      (_m, id: string) => videoEmbedMarkdown(id),
     )
     .replace(/\[((?:\\.|[^\]\\])*)\]\(\/[^)]*\)/g, (_m, label: string) =>
       label.replace(/\\(.)/g, "$1"),
@@ -94,11 +104,11 @@ function normalizeOverframeGuide(raw: string | undefined): string | undefined {
 }
 
 export function matchOverframeItem(
-  scrape: ScrapeResponse,
+  scrape: OverframeScrapeResponse,
   items: ItemsIndex,
 ): { item: BrowseItem; category: BrowseCategory } | null {
   const all: BrowseItem[] = Object.values(items).flat() as BrowseItem[]
-  const { item } = matchItemByName(scrape.itemName, all)
+  const item = matchItemByName(scrape.itemName, all)
   if (!item) return null
   return { item, category: item.category }
 }
@@ -106,8 +116,8 @@ export function matchOverframeItem(
 function matchItemByName(
   overframeName: string | undefined,
   items: BrowseItem[],
-): { item: BrowseItem | null; score: number } {
-  if (!overframeName) return { item: null, score: 0 }
+): BrowseItem | null {
+  if (!overframeName) return null
   const target = normalizeName(overframeName)
   let best: BrowseItem | null = null
   let bestScore = 0
@@ -118,7 +128,7 @@ function matchItemByName(
       bestScore = score
     }
   }
-  return { item: bestScore >= 0.72 ? best : null, score: bestScore }
+  return bestScore >= 0.72 ? best : null
 }
 
 interface NormalizedMod {
@@ -130,14 +140,14 @@ function matchModByName(
   overframeName: string,
   normalized: NormalizedMod[],
   byNormName: Map<string, Mod>,
-): { mod: Mod | null; score: number } {
+): Mod | null {
   const variants = expandNameVariants(overframeName)
   let best: Mod | null = null
   let bestScore = 0
   for (const variant of variants) {
     const target = normalizeName(variant)
     const exact = byNormName.get(target)
-    if (exact) return { mod: exact, score: 1 }
+    if (exact) return exact
     for (const { mod, normName } of normalized) {
       const score = similarityNormalized(target, normName)
       if (score > bestScore) {
@@ -146,7 +156,7 @@ function matchModByName(
       }
     }
   }
-  return { mod: bestScore >= 0.78 ? best : null, score: bestScore }
+  return bestScore >= 0.78 ? best : null
 }
 
 // ---------- slot_id interpretation ----------
@@ -156,46 +166,33 @@ function matchModByName(
  * Returns null if the slot_id can't be mapped.
  */
 function interpretSlot(
-  slot_id: number,
+  raw: OverframeScrapeResponse["slots"][number],
   category: BrowseCategory,
 ): { kind: "mod"; id: SlotId } | { kind: "arcane"; index: number } | null {
-  const mapping = decodeOverframeSlotId(slot_id, category)
+  let slotId = raw.slot_id
+  // Buildstring-decoded slots carry their type; place them by this category.
+  if (raw.slotType) {
+    try {
+      slotId = encodeOverframeSlotId(raw.slotType, raw.slotIndex ?? 0, category)
+    } catch {
+      return null // the category has no such slot
+    }
+  }
+  const mapping = decodeOverframeSlotId(slotId, category)
   if (!mapping) return null
   if (mapping.kind === "arcane") return mapping
+  const { slotType, slotIndex } = mapping
   const id: SlotId =
-    mapping.slotType === "exilus" || mapping.slotType === "stance"
-      ? mapping.slotType
-      : (`${mapping.slotType}-${mapping.slotIndex}` as SlotId)
+    slotType === "aura"
+      ? auraSlotId(slotIndex)
+      : slotType === "normal"
+        ? normalSlotId(slotIndex)
+        : slotType
   return { kind: "mod", id }
 }
 
-function innatePolarityFor(
-  detail: DetailItem,
-  slotId: SlotId,
-): Polarity | undefined {
-  if (slotId.startsWith("aura-")) {
-    const idx = Number(slotId.slice("aura-".length))
-    const a = detail.auraPolarity
-    if (!a) return undefined
-    return (Array.isArray(a) ? a[idx] : idx === 0 ? a : undefined) as
-      | Polarity
-      | undefined
-  }
-  if (slotId === "exilus") {
-    return (detail.exilusPolarity ?? undefined) as Polarity | undefined
-  }
-  if (slotId === "stance") {
-    return (detail.stancePolarity ?? undefined) as Polarity | undefined
-  }
-  if (slotId.startsWith("normal-")) {
-    const idx = Number(slotId.slice("normal-".length))
-    return (detail.polarities?.[idx] ?? undefined) as Polarity | undefined
-  }
-  return undefined
-}
-
 export function applyOverframeScrape(args: {
-  scrape: ScrapeResponse
+  scrape: OverframeScrapeResponse
   item: BrowseItem
   category: BrowseCategory
   detailItem: DetailItem
@@ -213,6 +210,7 @@ export function applyOverframeScrape(args: {
     helminthAbilities,
   } = args
   const warnings: ApplyWarning[] = []
+  const innates = getInnatePolarities(detailItem, category)
   const slots: NonNullable<SavedBuildData["slots"]> = {}
   const formaPolarities: NonNullable<SavedBuildData["formaPolarities"]> = {}
   const arcaneSlots: NonNullable<SavedBuildData["arcanes"]> = []
@@ -236,7 +234,7 @@ export function applyOverframeScrape(args: {
       ofPolarity: rawSlot.polarity ?? null,
       rank: rawSlot.rank,
     }
-    const interp = interpretSlot(rawSlot.slot_id, category)
+    const interp = interpretSlot(rawSlot, category)
     if (!interp) {
       trace.push({
         ...base,
@@ -275,27 +273,38 @@ export function applyOverframeScrape(args: {
     }
 
     const slotId = interp.id
-    const importedPolarity = rawSlot.polarity as Polarity | undefined
-    const innate = innatePolarityFor(detailItem, slotId)
+    const importedPolarity = rawSlot.polarity
+    const innate = innatePolarityForSlot(innates, slotId)
     let forma: Polarity | undefined
+    let polarityNote: string | undefined
     if (importedPolarity && importedPolarity !== innate) {
       forma = importedPolarity
       formaPolarities[slotId] = importedPolarity
-    } else if (!importedPolarity && innate) {
+    } else if (
+      !importedPolarity &&
+      innate &&
+      rawSlot.polarityCode === OVERFRAME_NO_POLARITY
+    ) {
       // OF reports no polarity but slot has innate → universal forma cleared it.
       forma = "universal"
       formaPolarities[slotId] = "universal"
+    } else if (
+      !importedPolarity &&
+      rawSlot.polarityCode !== OVERFRAME_NO_POLARITY
+    ) {
+      // A code the api can't map yet: we don't know the slot's polarity, so
+      // keep the innate one rather than guess a forma.
+      polarityNote = `unknown polarity code ${rawSlot.polarityCode}`
     }
 
     let matchedName: string | null = null
     let matchedType: string | undefined
     if (rawSlot.overframeId && rawSlot.overframeName) {
-      const match = matchModByName(
+      const matched = matchModByName(
         rawSlot.overframeName,
         normalizedMods,
         modsByNormName,
       )
-      const matched = match.mod
       if (!matched) {
         warnings.push({
           type: "mod_not_found",
@@ -320,7 +329,13 @@ export function applyOverframeScrape(args: {
       forma: forma ?? null,
       matched: matchedName,
       matchedType,
-      note: rawSlot.overframeName && !matchedName ? "no mod match" : undefined,
+      note:
+        [
+          rawSlot.overframeName && !matchedName ? "no mod match" : undefined,
+          polarityNote,
+        ]
+          .filter(Boolean)
+          .join("; ") || undefined,
     })
   }
 

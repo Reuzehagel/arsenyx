@@ -2,10 +2,10 @@
  * Merge DE ExportUpgrades into our normalized Mod shape.
  *
  * Inputs (sibling arrays in ExportUpgrades_en.json):
- *   ExportUpgrades  (1595 mod records)
- *   ExportModSet    (19 set-bonus records — looked up by uniqueName)
- *   ExportAvionics  (82 Railjack/Plexus avionics)
- *   ExportFocusUpgrades (105 focus upgrades)
+ *   ExportUpgrades  (mod records)
+ *   ExportModSet    (set-bonus records — looked up by uniqueName)
+ *   ExportAvionics  (Railjack/Plexus avionics)
+ * plus the wiki-sourced flags of wiki-mod-flags.ts.
  *
  * Outputs:
  *   MergedMod[] — what mods-all.json emits.
@@ -27,30 +27,24 @@
  *   - Unknown type enum value
  */
 
-import { type DeUpgrade, mapRarity, normalizeDescription } from "./read-de"
+import { BEAST_CLAW_POOL } from "@arsenyx/shared/warframe/mods"
+import { PLEXUS_MOD_TYPE, PLEXUS_POOL } from "@arsenyx/shared/warframe/plexus"
+import {
+  DE_POLARITY_MAP,
+  type Polarity,
+} from "@arsenyx/shared/warframe/polarities"
+import type { Mod } from "@arsenyx/shared/warframe/types"
+
+import { BEAST_CLAW_MOD_PATHS } from "../../data/curated/beast-claws"
+import {
+  DROPPED_MOD_NAMES,
+  DROPPED_MOD_UNIQUE_NAMES,
+} from "../../data/curated/mod-drops"
+import type { DeUpgrade } from "./de-types"
+import { modVariantBase, PRIMED_MOD_PREFIXES } from "./names"
+import { mapRarity, normalizeDescription } from "./read-de"
 import type { PePlusUpgradeFields } from "./read-pe-plus"
-
-/** DE's `AP_*` polarity → canonical lowercase name used by the UI. */
-const DE_POLARITY_MAP: Record<string, string> = {
-  AP_ATTACK: "madurai",
-  AP_DEFENSE: "vazarin",
-  AP_TACTIC: "naramon",
-  AP_POWER: "zenurik",
-  AP_WARD: "unairu",
-  AP_PRECEPT: "penjaga",
-  AP_UMBRA: "umbra",
-  AP_ANY: "any",
-  AP_UNIVERSAL: "universal",
-}
-
-/** DE path fragments that mark a compatName="Claws" mod as beast/companion
- *  (not a player melee Claws mod). Player claw stances live under
- *  /MeleeTrees/ and /PvPMods/ and must NOT match. */
-const BEAST_CLAW_PATHS = [
-  "/Sentinel/Kubrow/",
-  "/BeastWeapons/",
-  "/Sets/Hunter/",
-] as const
+import type { WikiModFlags } from "./wiki-mod-flags"
 
 /** Closed set of DE mod types — assert on drift. */
 const KNOWN_MOD_TYPES = new Set<string>([
@@ -75,8 +69,8 @@ export interface MergedMod {
   uniqueName: string
   name: string
   description?: string
-  polarity: string
-  rarity: string
+  polarity: Polarity
+  rarity: Mod["rarity"]
   baseDrain: number
   fusionLimit: number
   /** Trimmed, canonical-cased compatName. Matches the weapon's
@@ -90,21 +84,21 @@ export interface MergedMod {
   /** True for Primed/Umbral mods. */
   isPrime: boolean
   /** Exilus-eligible. DE doesn't ship a flag; sourced from wiki
-   *  `Mods_data.IsExilus`, keyed by `uniqueName` (= wiki InternalName). */
+   *  `Mods_data.IsExilus` (see wiki-mod-flags.ts). */
   isExilus: boolean
-  /** PvP-only mod. Detected from the description ("… in Conclave").
-   *  The web mod picker filters these out by default — see the Game
-   *  Mode toggle in `mod-search-grid.tsx`. */
+  /** PvP-only mod: wiki `Conclave = true`, minus the PvE-usable allowlist
+   *  (wiki-mod-flags.ts). The web mod picker hides these by default — see
+   *  the Game Mode toggle in `mod-search-grid.tsx`. */
   isConclave: boolean
   /** Tradable on Warframe Market. DE ships no tradability for upgrades, so
-   *  this comes from wiki `Mods_data.Tradable` (keyed by uniqueName). Gates
-   *  the Market link on the build-view detail popover. Defaults false. */
+   *  this comes from wiki `Mods_data.Tradable`. Gates the Market link on the
+   *  build-view detail popover. Defaults false. */
   tradable: boolean
   levelStats?: Array<{ stats: string[] }>
   modSet?: string
   modSetStats?: string[]
-  /** Wiki Image filename, filled by build-items-index from the central
-   *  wiki-image lookup. Bare filename; consumer resolves via wiki. */
+  /** Image URL, filled by build-items-index from the central image lookup
+   *  (resolve-images.ts). */
   imageName?: string
   /** OpenWF `compat` — either a specific item `uniqueName` (augments)
    *  or a generic class-anchor path (e.g. `.../PlayerMeleeWeapon`) for
@@ -143,8 +137,8 @@ interface FilterCounts {
 function shouldKeep(
   mod: DeUpgrade,
   counts: FilterCounts,
-  wikiIgnore: Set<string>,
-  wikiKnownNames: Set<string>,
+  wikiIgnore: ReadonlySet<string>,
+  wikiKnownNames: ReadonlySet<string>,
 ): boolean {
   counts.total++
   // Wiki maintainers flagged this as unreleased / non-functional
@@ -167,16 +161,14 @@ function shouldKeep(
   }
   // Conclave (PvP) mods are kept and tagged with `isConclave` at emission
   // time (sourced from the wiki's `Conclave = true` flag — see
-  // build-items-index.ts). The Game Mode toggle in the picker hides them
+  // wiki-mod-flags.ts). The Game Mode toggle in the picker hides them
   // by default. We still count description-based hits for the build-time
   // diagnostic, but the count is informational only; emission decides PvP
   // membership.
   if (normalizeDescription(mod.description)?.includes("Conclave")) {
     counts.conclave++
   }
-  // "Unfused Artifact" entries (Railjack crew-ship innate-damage
-  // placeholders) have no stats and aren't buildable in-game.
-  if (mod.name === "Unfused Artifact") {
+  if (DROPPED_MOD_NAMES.has(mod.name)) {
     counts.hardcoded++
     return false
   }
@@ -211,11 +203,7 @@ function shouldKeep(
     counts.hardcoded++
     return false
   }
-  // Unused upstream entry — a stray duplicate "Pressure Point" with combo
-  // count bonus. Not a real in-game mod.
-  if (
-    uniqueName === "/Lotus/Upgrades/Mods/Melee/WeaponMeleeDamageOnHeavyKillMod"
-  ) {
+  if (DROPPED_MOD_UNIQUE_NAMES.has(uniqueName)) {
     counts.hardcoded++
     return false
   }
@@ -229,8 +217,8 @@ function shouldKeep(
  *  drain, levelStats, OpenWF compat fields) is read straight off `raw` and
  *  `plus`, so it lives in `toMergedMod`. */
 interface MergedModParts {
-  polarity: string
-  rarity: string
+  polarity: Polarity
+  rarity: Mod["rarity"]
   compatName: string
   type: string
   isAugment: boolean
@@ -281,38 +269,43 @@ export interface MergeModsResult {
   counts: FilterCounts
 }
 
-export function mergeMods(
-  rawUpgrades: DeUpgrade[],
-  rawModSets: DeUpgrade[] = [],
-  /** Optional OpenWF augmentation map keyed by mod `uniqueName`. When
-   *  supplied, each merged mod gets `compat` from this lookup. */
-  pePlus: Map<string, PePlusUpgradeFields> = new Map(),
-  /** Wiki-sourced `IsExilus` flag keyed by mod `uniqueName`. Mods missing
-   *  from this map default to `false`. */
-  wikiExilus: Map<string, boolean> = new Map(),
-  /** DE `ExportAvionics` — railjack Plexus mods. Ship empty `compatName`
-   *  and empty `type` in DE, so we tag them with `type: "Plexus Mod"`
-   *  here to match the runtime predicate in
-   *  packages/shared/src/warframe/mods.ts (`isPlexusMod`). */
-  rawAvionics: DeUpgrade[] = [],
-  /** Wiki mods flagged `_IgnoreEntry = true` (keyed by InternalName). */
-  wikiIgnore: Set<string> = new Set(),
-  /** All wiki mod display Names. Gates the Primed-Expert allowance against
-   *  DE's stream of unreleased Primed mods (Primed Fast Deflection,
-   *  Primed Charged Chamber, Primed Blunderbuss, Primed Streamline have
-   *  no wiki entry → dropped; Primed Continuity / Reach / Fury / Steady
-   *  Hands / Redirection do → kept). Keyed by Name rather than
-   *  InternalName because the wiki inconsistently includes the `/Expert/`
-   *  infix in InternalName. */
-  wikiKnownNames: Set<string> = new Set(),
-  /** Wiki mods with `Conclave = true` (keyed by InternalName). The
-   *  canonical PvP marker — the description "in Conclave" substring only
-   *  catches ~14% of Conclave mods. */
-  wikiConclave: Set<string> = new Set(),
-  /** Wiki-sourced `Tradable` flag keyed by mod `uniqueName`. Mods missing
-   *  from this map default to `false` (no Market link). */
-  wikiTradable: Map<string, boolean> = new Map(),
-): MergeModsResult {
+export interface MergeModsOpts {
+  upgrades: DeUpgrade[]
+  /** DE `ExportModSet` — set-bonus stats, attached per mod. */
+  modSets?: DeUpgrade[]
+  /** DE `ExportAvionics` — railjack Plexus mods. DE ships them with empty
+   *  `compatName` and `type`, so they're tagged PLEXUS_MOD_TYPE here to
+   *  match the runtime predicate (`isPlexusMod`). */
+  avionics?: DeUpgrade[]
+  /** OpenWF augmentation fields keyed by mod `uniqueName` (`compat`, tags). */
+  pePlus?: Map<string, PePlusUpgradeFields>
+  /** Wiki-sourced flags; a mod missing from a map defaults to false. */
+  wiki?: Partial<
+    Pick<
+      WikiModFlags,
+      "exilus" | "tradable" | "conclave" | "ignore" | "knownNames"
+    >
+  >
+}
+
+export function mergeMods(opts: MergeModsOpts): MergeModsResult {
+  const {
+    upgrades: rawUpgrades,
+    modSets: rawModSets = [],
+    avionics: rawAvionics = [],
+    pePlus = new Map(),
+  } = opts
+  const {
+    exilus: wikiExilus = new Map<string, boolean>(),
+    tradable: wikiTradable = new Map<string, boolean>(),
+    conclave: wikiConclave = new Set<string>(),
+    ignore: wikiIgnore = new Set<string>(),
+    // Gates the Primed-Expert allowance against DE's stream of unreleased
+    // Primed mods (see shouldKeep). Keyed by Name rather than InternalName
+    // because the wiki inconsistently includes the `/Expert/` infix.
+    knownNames: wikiKnownNames = new Set<string>(),
+  } = opts.wiki ?? {}
+
   // Build the mod-set index first so we can attach set stats per mod.
   const setStats = new Map<string, string[]>()
   for (const set of rawModSets) {
@@ -344,7 +337,7 @@ export function mergeMods(
     if (!polarity) {
       throw new Error(
         `Unknown DE polarity "${polarityRaw}" on mod ${raw.name}. ` +
-          `Add to DE_POLARITY_MAP in merge-mods.ts.`,
+          `Add to POLARITY_TABLE in packages/shared/src/warframe/polarities.ts.`,
       )
     }
 
@@ -366,7 +359,7 @@ export function mergeMods(
 
     // Rarity — derive Amalgam/Galvanized from the name (matching legacy
     // behavior); otherwise map DE rarity.
-    let rarity: string
+    let rarity: Mod["rarity"]
     if (raw.name.startsWith("Amalgam ")) rarity = "Amalgam"
     else if (raw.name.startsWith("Galvanized ")) rarity = "Galvanized"
     else rarity = mapRarity(raw.rarity, { context: `mod ${raw.name}` })
@@ -374,23 +367,16 @@ export function mergeMods(
     // Trim compatName — DE has " Itzal" (leading space), trailing whitespace
     // can leak in, etc. Preserve case so it matches weapon.modPools entries.
     let compatName = (raw.compatName ?? "").trim()
-    // Beast-claw mods (Maul, Bite, Frost Jaw, Sepsis Claws, Beast Postures,
-    // Hunter Synergy, …) ship with compatName "Claws" — the same string
-    // player melee Claws mods use — so without disambiguation they leak
-    // onto weapon Claws (Venka, Ripkas, Garuda Talons). They live under
-    // several DE paths (/Sentinel/Kubrow/, /BeastWeapons/, the Hunter set);
-    // remap any "Claws" mod under those to a distinct pool name so player
-    // Claws and beast claws stop colliding. Player claw stances live under
-    // /MeleeTrees/ and /PvPMods/ and are left untouched. Paired with
-    // "BeastClaws" in class-pools.ts and KNOWN_MOD_POOLS in merge-weapons.ts.
+    // Beast-claw mods share compatName "Claws" with player melee Claws mods;
+    // give them their own pool (see data/curated/beast-claws.ts).
     if (
       compatName === "Claws" &&
-      BEAST_CLAW_PATHS.some((p) => raw.uniqueName?.includes(p))
+      BEAST_CLAW_MOD_PATHS.some((p) => raw.uniqueName?.includes(p))
     ) {
-      compatName = "BeastClaws"
+      compatName = BEAST_CLAW_POOL
     }
 
-    const isPrime = raw.name.includes("Primed ") || raw.name.includes("Umbral ")
+    const isPrime = PRIMED_MOD_PREFIXES.some((p) => raw.name.includes(p))
     // Augments are detected by an "Augment"-rooted suffix on the DE
     // `uniqueName` path (e.g. .../FooAugmentCard, .../BarAugmentMod): the
     // regex matches "Augment" followed by zero or more word chars at end of
@@ -419,22 +405,17 @@ export function mergeMods(
     )
   }
 
-  // Avionics (Railjack Plexus mods). DE ships them with empty `type` and
-  // empty `compatName`, so the regular `shouldKeep` / type-validation paths
-  // above would drop them. Process separately and tag with the canonical
-  // "Plexus Mod" type the runtime expects.
+  // Avionics bypass `shouldKeep` / type validation, which would drop them
+  // for their empty `type` and `compatName`.
   for (const raw of rawAvionics) {
     if (!raw.name || !raw.uniqueName) continue
-    // Drop the pre-fusion "Unfused Artifact" placeholders. DE ships one
-    // per `/Railjack/<section>/Base*` shell; the real avionics live under
-    // `Lavan*` / `Vidar* `/ `Zekti*` house variants and have proper names.
-    if (raw.name === "Unfused Artifact") continue
+    if (DROPPED_MOD_NAMES.has(raw.name)) continue
     const polarityRaw = raw.polarity ?? ""
     const polarity = DE_POLARITY_MAP[polarityRaw] ?? null
     if (!polarity) {
       throw new Error(
         `Unknown DE polarity "${polarityRaw}" on avionic ${raw.name}. ` +
-          `Add to DE_POLARITY_MAP in merge-mods.ts.`,
+          `Add to POLARITY_TABLE in packages/shared/src/warframe/polarities.ts.`,
       )
     }
     const rarity = mapRarity(raw.rarity, { context: `avionic ${raw.name}` })
@@ -443,13 +424,11 @@ export function mergeMods(
       toMergedMod(raw, plus, {
         polarity,
         rarity,
-        // The Plexus item's `modPools` is `["Plexus"]` (see
-        // data/curated/plexus.ts), and `getModsForItem` filters by
-        // `mod.compatName ∈ modPools`. Tag avionics so the structural
-        // router lets them through; sub-slot routing (Battle/Tactical/
-        // Integrated) still happens via uniqueName path and `type`.
-        compatName: "Plexus",
-        type: "Plexus Mod",
+        // `getModsForItem` filters by `mod.compatName ∈ modPools` and the
+        // Plexus item's modPools is [PLEXUS_POOL]; sub-slot routing
+        // (Battle/Tactical/Integrated) goes by uniqueName path and `type`.
+        compatName: PLEXUS_POOL,
+        type: PLEXUS_MOD_TYPE,
         isAugment: false,
         isPrime: false,
         isExilus: false,
@@ -475,7 +454,8 @@ export function mergeMods(
   }
   for (const m of mods) {
     if (m.isExilus || !m.isPrime) continue
-    if (exilusBaseNames.has(m.name.replace(/^(?:Primed|Umbral) /, ""))) {
+    const base = modVariantBase(m.name, PRIMED_MOD_PREFIXES)
+    if (base !== undefined && exilusBaseNames.has(base)) {
       m.isExilus = true
     }
   }

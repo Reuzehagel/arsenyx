@@ -1,18 +1,31 @@
 /**
- * Route merged records into the BrowseCategory buckets the web app
- * consumes today. Equivalent to the legacy `categorizeItem()` in
- * shared/warframe/categorize.ts but works against MergedWeapon/MergedFrame/
- * MergedCompanion shapes.
- *
- * BrowseCategory union (frozen — must match shared/warframe/types.ts):
- *   "warframes" | "primary" | "secondary" | "melee" | "necramechs"
- *   | "companions" | "companion-weapons" | "exalted-weapons"
- *   | "archwing" | "railjack"
+ * Route merged frame / weapon records into the BrowseCategory buckets the web
+ * app consumes (companions all land in "companions").
  */
 
-import type { MergedCompanion } from "./merge-companions"
+import type { BrowseCategory } from "@arsenyx/shared/warframe/types"
+
+import { NON_BUILDABLE_FRAMES } from "../../data/curated/frames"
 import type { MergedFrame } from "./merge-frames"
 import type { MergedWeapon } from "./merge-weapons"
+import { ATMOSPHERE_SLOT } from "./names"
+
+/** Routing for a weapon the wiki doesn't document yet, by DE productCategory:
+ *  its browse category, and the generic per-slot mod pool that keeps it
+ *  MODDABLE until the wiki catches up (merge-weapons.ts; applied only to
+ *  weapons with a riven disposition). `SentinelWeapons` has no pool: which
+ *  generic pool sentinel weapons accept is a game-mechanic fact we won't guess
+ *  — add it (verified) the day a wikiless sentinel weapon ships. */
+export const WIKILESS_PRODUCT_CATEGORIES: Readonly<
+  Record<string, { category: BrowseCategory; pool?: string }>
+> = {
+  LongGuns: { category: "primary", pool: "Rifle" },
+  Pistols: { category: "secondary", pool: "Pistol" },
+  Melee: { category: "melee", pool: "Melee" },
+  SentinelWeapons: { category: "companion-weapons" },
+  SpaceGuns: { category: "archwing", pool: "Archgun" },
+  SpaceMelee: { category: "archwing", pool: "Archmelee" },
+}
 
 /** Build the set of weapon uniqueNames that are exalted, by union'ing every
  *  warframe + necramech's `exalted` array. The wiki sometimes classifies
@@ -26,27 +39,10 @@ export function buildExaltedSet(frames: readonly MergedFrame[]): Set<string> {
   return out
 }
 
-export type BrowseCategory =
-  | "warframes"
-  | "operators"
-  | "primary"
-  | "secondary"
-  | "melee"
-  | "necramechs"
-  | "companions"
-  | "companion-weapons"
-  | "exalted-weapons"
-  | "archwing"
-  | "railjack"
-
-/** Map MergedFrame.category → BrowseCategory. */
+/** Map MergedFrame.category → BrowseCategory (null: not a buildable frame). */
 export function categorizeFrame(f: MergedFrame): BrowseCategory | null {
-  if (f.name === "Helminth") return null
+  if (NON_BUILDABLE_FRAMES.has(f.name)) return null
   return f.category
-}
-
-export function categorizeCompanion(_c: MergedCompanion): BrowseCategory {
-  return "companions"
 }
 
 /** The wiki "Class" label surfaced on a frame's browse card. */
@@ -115,7 +111,7 @@ export function categorizeWeapon(
       break
     // Archwing (Archguns + Archmelees + atmospheric Archgun deployment)
     case "Archgun":
-    case "Archgun (Atmosphere)":
+    case ATMOSPHERE_SLOT:
     case "Archmelee":
       out.push("archwing")
       break
@@ -128,7 +124,7 @@ export function categorizeWeapon(
     // Railjack — turrets, ordnance, and reactors live in the catalog under
     // their own browse category in principle, but the Railjack browse tab
     // is intentionally hidden for now (see CATEGORIES in
-    // apps/web/src/lib/warframe.ts). Skip emission so they don't show up in
+    // apps/web/src/lib/catalog.ts). Skip emission so they don't show up in
     // browse results; the editor's railjack handling stays dormant until we
     // resurface them.
     case "Railjack Turret":
@@ -153,23 +149,9 @@ export function categorizeWeapon(
       // brand-new real weapon (in DE, not yet on the wiki) still emit, while
       // disposition-less SpecialItems noise stays dropped.
       if (!w.displayClass && w.omegaAttenuation === undefined) return []
-      switch (w.productCategory) {
-        case "LongGuns":
-          out.push("primary")
-          break
-        case "Pistols":
-          out.push("secondary")
-          break
-        case "Melee":
-          out.push("melee")
-          break
-        case "SentinelWeapons":
-          out.push("companion-weapons")
-          break
-        case "SpaceGuns":
-        case "SpaceMelee":
-          out.push("archwing")
-          break
+      {
+        const wikiless = WIKILESS_PRODUCT_CATEGORIES[w.productCategory]
+        if (wikiless) out.push(wikiless.category)
       }
       break
     default:

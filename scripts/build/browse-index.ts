@@ -1,37 +1,45 @@
 /**
  * Phase 7 of the catalog build: fold every merged entity (frames, weapons,
  * companions, the synthetic Plexus) into the per-category `byCategory` browse
- * listing, and collect the weapon detail map keyed by `${category}|${slug}`.
+ * listing, and list the per-item detail files to emit. Category, slug and
+ * displayClass are decided here once; write-details.ts only serializes.
  */
 
 import { slugify } from "@arsenyx/shared/warframe/slugs"
-import type { BrowseItem } from "@arsenyx/shared/warframe/types"
+import type { BrowseCategory, BrowseItem } from "@arsenyx/shared/warframe/types"
 
+import { PLEXUS_BROWSE_ITEM, PLEXUS_DETAIL } from "../../data/curated/plexus"
+import { RELEASE_HISTORY } from "../../data/curated/release-history"
 import {
   buildExaltedSet,
-  categorizeCompanion,
   categorizeFrame,
   categorizeWeapon,
   frameDisplayClass,
   isExaltedWeapon,
-  type BrowseCategory,
 } from "./categorize"
 import type { MergedCompanion } from "./merge-companions"
 import type { MergedFrame } from "./merge-frames"
 import type { MergedWeapon } from "./merge-weapons"
-import type { CuratedData } from "./read-curated"
+import { isPrime } from "./names"
 
 /** Just the running counters this phase increments. */
 interface BrowseStats {
   frames: { emitted: number }
   weapons: { emitted: number }
-  perCategory: Record<string, number>
 }
+
+/** One `items/<cat>/<slug>.json` file. */
+export type DetailEntry = { cat: BrowseCategory; slug: string } & (
+  | { kind: "weapon"; record: MergedWeapon }
+  | { kind: "frame"; record: MergedFrame; displayClass: string }
+  | { kind: "companion"; record: MergedCompanion }
+  | { kind: "plexus"; record: typeof PLEXUS_DETAIL }
+)
 
 export interface BrowseIndex {
   byCategory: Partial<Record<BrowseCategory, BrowseItem[]>>
-  /** `${category}|${slug}` → weapon, for the per-item detail emit. */
-  weaponDetailByCatAndSlug: Map<string, MergedWeapon>
+  /** Every detail file, in write order: weapons, frames, companions, Plexus. */
+  details: DetailEntry[]
   /** Release-history display names that matched an item, for dead-entry warns. */
   releaseHistoryResolved: Set<string>
 }
@@ -41,7 +49,6 @@ export function buildBrowseIndex(opts: {
   operators: MergedFrame[]
   mergedWeapons: MergedWeapon[]
   mergedCompanions: MergedCompanion[]
-  curated: Pick<CuratedData, "releaseHistory" | "plexusBrowse">
   imageByUniqueName: Map<string, string>
   stats: BrowseStats
 }): BrowseIndex {
@@ -50,7 +57,6 @@ export function buildBrowseIndex(opts: {
     operators,
     mergedWeapons,
     mergedCompanions,
-    curated,
     imageByUniqueName,
     stats,
   } = opts
@@ -65,7 +71,7 @@ export function buildBrowseIndex(opts: {
   // names so we can warn about dead curated entries.
   const releaseHistoryResolved = new Set<string>()
   function applyReleaseHistory(name: string, item: BrowseItem): void {
-    const rec = curated.releaseHistory[name]
+    const rec = RELEASE_HISTORY[name]
     if (!rec) return
     releaseHistoryResolved.add(name)
     if (rec.releaseDate) item.releaseDate = rec.releaseDate
@@ -73,37 +79,43 @@ export function buildBrowseIndex(opts: {
   }
 
   // Frames
+  const frameDetails: DetailEntry[] = []
   for (const f of [...mergedFrames, ...operators]) {
     const cat = categorizeFrame(f)
     if (!cat) continue
+    const slug = slugify(f.name)
+    const displayClass = frameDisplayClass(f)
     const browseItem: BrowseItem = {
       uniqueName: f.uniqueName,
       name: f.name,
-      slug: slugify(f.name),
+      slug,
       category: cat,
       imageName: imageByUniqueName.get(f.uniqueName),
       masteryReq: f.masteryReq,
       isPrime: f.isPrime,
-      displayClass: frameDisplayClass(f),
+      displayClass,
     }
     applyReleaseHistory(f.name, browseItem)
     push(cat, browseItem)
+    frameDetails.push({ kind: "frame", cat, slug, record: f, displayClass })
     stats.frames.emitted++
   }
 
   // Weapons — pre-compute the exalted set from frames' exalted[] arrays
   // so categorize picks up exalteds the wiki doesn't tag (Garuda Talons).
   const exaltedSet = buildExaltedSet(mergedFrames)
-  const weaponDetailByCatAndSlug = new Map<string, MergedWeapon>()
+  /** `${category}|${slug}` → detail entry; a later weapon on the same key
+   *  replaces the record but keeps the first one's write position. */
+  const weaponDetails = new Map<string, DetailEntry>()
   // DE ships internal clones that share a display name (and thus slug) with a
-  // real weapon but carry a distinct uniqueName, so the uniqueName dedup above
-  // doesn't catch them — e.g. `TnDoppelgangerGrimoire` collides with the real
-  // `TnGrimoire`. Without a guard the clone emits a duplicate browse card and
-  // overwrites the real weapon's `${cat}|${slug}` detail entry. Key the guard
-  // on `${category}|${slug}` (the same unit the detail map and browse cards
-  // use) so two genuinely distinct weapons that happen to slugify alike in
-  // *different* categories both survive. First-wins: the real weapon precedes
-  // its clone in DE's export, so keep the first.
+  // real weapon but carry a distinct uniqueName, so the uniqueName dedup in
+  // build-items-index doesn't catch them — e.g. `TnDoppelgangerGrimoire`
+  // collides with the real `TnGrimoire`. Without a guard the clone emits a
+  // duplicate browse card and overwrites the real weapon's detail entry. Key
+  // the guard on `${category}|${slug}` (the same unit the detail files and
+  // browse cards use) so two genuinely distinct weapons that happen to
+  // slugify alike in *different* categories both survive. First-wins: the
+  // real weapon precedes its clone in DE's export, so keep the first.
   const seenWeaponSlugs = new Set<string>()
   for (const w of mergedWeapons) {
     const cats = categorizeWeapon(w, exaltedSet)
@@ -119,7 +131,7 @@ export function buildBrowseIndex(opts: {
       category: cats[0]!,
       imageName: imageByUniqueName.get(w.uniqueName),
       masteryReq: w.masteryReq,
-      isPrime: w.name.includes(" Prime"),
+      isPrime: isPrime(w.name),
       displayClass: w.displayClass ?? undefined,
     }
     applyReleaseHistory(w.name, browseItem)
@@ -127,7 +139,13 @@ export function buildBrowseIndex(opts: {
     for (const c of cats) {
       // Emit the detail file for every category so links resolve regardless
       // of which path reaches the weapon.
-      weaponDetailByCatAndSlug.set(`${c}|${slug}`, w)
+      if (slug)
+        weaponDetails.set(`${c}|${slug}`, {
+          kind: "weapon",
+          cat: c,
+          slug,
+          record: w,
+        })
       // Exalted weapons have their own "Exalted Weapons" tab; don't also list
       // them in the generic weapon tabs (melee/primary/secondary) where they
       // cluttered the list and double-rendered in the All view.
@@ -138,39 +156,47 @@ export function buildBrowseIndex(opts: {
   }
 
   // Companions
+  const companionDetails: DetailEntry[] = []
   for (const c of mergedCompanions) {
-    const cat = categorizeCompanion(c)
+    const slug = slugify(c.name)
     const browseItem: BrowseItem = {
       uniqueName: c.uniqueName,
       name: c.name,
-      slug: slugify(c.name),
-      category: cat,
+      slug,
+      category: "companions",
       imageName: imageByUniqueName.get(c.uniqueName),
       masteryReq: c.masteryReq,
       isPrime: c.isPrime,
       displayClass: c.subType === "sentinel" ? "Sentinel" : "Beast Companion",
     }
     applyReleaseHistory(c.name, browseItem)
-    push(cat, browseItem)
+    push("companions", browseItem)
+    companionDetails.push({
+      kind: "companion",
+      cat: "companions",
+      slug,
+      record: c,
+    })
   }
 
   // Synthetic Plexus — the only browseable Railjack item. Turrets,
   // ordnance, and reactors stay in the catalog but are sidebar pickers
   // inside the Plexus editor (see scripts/build/categorize.ts).
-  push("railjack", {
-    uniqueName: curated.plexusBrowse.uniqueName,
-    name: curated.plexusBrowse.name,
-    slug: curated.plexusBrowse.slug,
-    category: "railjack",
-    imageName: curated.plexusBrowse.imageName,
-    isPrime: false,
-    displayClass: "Plexus",
-  })
+  push("railjack", PLEXUS_BROWSE_ITEM)
 
-  // Per-category counts
-  for (const [cat, arr] of Object.entries(byCategory)) {
-    stats.perCategory[cat] = arr?.length ?? 0
+  return {
+    byCategory,
+    details: [
+      ...weaponDetails.values(),
+      ...frameDetails,
+      ...companionDetails,
+      {
+        kind: "plexus",
+        cat: "railjack",
+        slug: PLEXUS_DETAIL.slug,
+        record: PLEXUS_DETAIL,
+      },
+    ],
+    releaseHistoryResolved,
   }
-
-  return { byCategory, weaponDetailByCatAndSlug, releaseHistoryResolved }
 }

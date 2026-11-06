@@ -31,16 +31,14 @@
 
 import { createHash } from "node:crypto"
 import { readFileSync, writeFileSync } from "node:fs"
-import { resolve } from "node:path"
 
 import { AwsClient } from "aws4fetch"
 import sharp from "sharp"
 
 import { fetchRetry } from "./build/http"
-import { escapeRegex, findJsonFiles, sourceUrlRe } from "./build/image-hosts"
-
-const REPO_ROOT = resolve(import.meta.dirname, "..")
-const DATA_DIR = resolve(REPO_ROOT, "apps/web/public/data")
+import { escapeRegex, sourceUrlRe } from "./build/image-hosts"
+import { CATALOG_OUT_DIR as DATA_DIR } from "./build/paths"
+import { findJsonFiles } from "./lib/json-records"
 
 /** Upstream URLs we mirror (see `SOURCE_HOSTS` in build/image-hosts.ts).
  *  URLs on any other host are left untouched in the catalog (so manually-

@@ -19,7 +19,6 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { UserAvatar } from "@/components/user-avatar"
 import { authClient } from "@/lib/auth-client"
 import { myOrgsQuery } from "@/lib/queries/org-query"
-import { ROUTES } from "@/lib/util/constants"
 import { proxyImage } from "@/lib/util/image-proxy"
 
 export function UserMenu() {
@@ -36,7 +35,7 @@ export function UserMenu() {
       <Button
         size="sm"
         variant="ghost"
-        render={<Link href={ROUTES.signIn} />}
+        render={<Link href="/auth/signin" />}
         nativeButton={false}
         className="cursor-default"
       >
@@ -49,11 +48,11 @@ export function UserMenu() {
   const user = session.user
   const name = user.name ?? user.email ?? "Account"
   const initial = name.charAt(0).toUpperCase()
-  const isAdmin = (user as { isAdmin?: boolean }).isAdmin === true
+  const isAdmin = user.isAdmin === true
 
   async function onSignOut() {
     await authClient.signOut()
-    navigate({ to: ROUTES.home })
+    navigate({ to: "/" })
   }
 
   return (
@@ -91,13 +90,13 @@ export function UserMenu() {
             ) : null}
           </div>
           <DropdownMenuSeparator />
-          <DropdownMenuItem render={<Link href={ROUTES.profile} />}>
+          <DropdownMenuItem render={<Link href="/profile" />}>
             My Profile
           </DropdownMenuItem>
-          <DropdownMenuItem render={<Link href={ROUTES.myBuilds} />}>
+          <DropdownMenuItem render={<Link href="/builds/mine" />}>
             My Builds
           </DropdownMenuItem>
-          <DropdownMenuItem render={<Link href={ROUTES.bookmarks} />}>
+          <DropdownMenuItem render={<Link href="/bookmarks" />}>
             My Bookmarks
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
@@ -107,7 +106,7 @@ export function UserMenu() {
           {isAdmin ? (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem render={<Link href={ROUTES.admin} />}>
+              <DropdownMenuItem render={<Link href="/admin" />}>
                 Admin
               </DropdownMenuItem>
             </>

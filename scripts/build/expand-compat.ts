@@ -27,7 +27,7 @@
 /** Path tokens that mark a frame/necramech "BaseSuit" anchor, each gated to a
  *  category so the path-prefix heuristic can't pull a same-directory exalted
  *  weapon in as a "frame variant". */
-export const BASE_SUIT_ANCHORS = [
+const BASE_SUIT_ANCHORS = [
   { token: "BaseSuit", cat: "warframes" },
   { token: "BaseMechSuit", cat: "necramechs" },
 ] as const
@@ -71,7 +71,7 @@ export function buildFamilyIndex(
 }
 
 export interface ExpandCompatDeps extends FamilyIndex {
-  knownItemUniqueNames: ReadonlySet<string>
+  /** Every catalog item uniqueName → its browse category. */
   categoryByUniqueName: ReadonlyMap<string, string>
 }
 
@@ -79,15 +79,10 @@ export interface ExpandCompatDeps extends FamilyIndex {
 export function makeExpandCompat(
   deps: ExpandCompatDeps,
 ): (compat: string) => string[] {
-  const {
-    knownItemUniqueNames,
-    categoryByUniqueName,
-    familyKeyByUniqueName,
-    familyMembers,
-  } = deps
+  const { categoryByUniqueName, familyKeyByUniqueName, familyMembers } = deps
 
   return function expandCompat(compat: string): string[] {
-    if (knownItemUniqueNames.has(compat)) {
+    if (categoryByUniqueName.has(compat)) {
       // Direct hit on an item: fan out to its family (Prime/Wraith/… variants).
       const key = familyKeyByUniqueName.get(compat)
       const members = key ? familyMembers.get(key) : undefined
@@ -97,10 +92,8 @@ export function makeExpandCompat(
       if (!compat.includes(token)) continue
       const dir = compat.slice(0, compat.lastIndexOf("/") + 1)
       const out: string[] = []
-      for (const un of knownItemUniqueNames) {
-        if (un.startsWith(dir) && categoryByUniqueName.get(un) === cat) {
-          out.push(un)
-        }
+      for (const [un, unCat] of categoryByUniqueName) {
+        if (un.startsWith(dir) && unCat === cat) out.push(un)
       }
       return out
     }

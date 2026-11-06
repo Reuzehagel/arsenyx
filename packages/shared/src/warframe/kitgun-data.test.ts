@@ -6,7 +6,6 @@ import {
   KITGUN_GRIPS,
   KITGUN_LOADERS,
   kitgunGripsFor,
-  kitgunLoadersFor,
 } from "./kitgun-data"
 
 const SOLARIS_CHAMBER =
@@ -51,11 +50,6 @@ describe("part option filtering", () => {
       "Tremor",
     ])
   })
-
-  it("offers every loader regardless of maker or class", () => {
-    expect(kitgunLoadersFor()).toHaveLength(20)
-    expect(kitgunLoadersFor()).toBe(KITGUN_LOADERS)
-  })
 })
 
 describe("defaults", () => {
@@ -63,7 +57,7 @@ describe("defaults", () => {
     for (const cls of ["primary", "secondary"] as const) {
       const { grip, loader } = defaultKitgunComponents(cls)
       expect(kitgunGripsFor(cls).map((g) => g.name)).toContain(grip)
-      expect(kitgunLoadersFor().map((l) => l.name)).toContain(loader)
+      expect(KITGUN_LOADERS.map((l) => l.name)).toContain(loader)
     }
   })
 })

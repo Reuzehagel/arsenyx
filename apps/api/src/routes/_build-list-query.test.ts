@@ -52,12 +52,40 @@ describe("parseListQuery", () => {
 // runList reads lists with LIST_COLUMNS_SQL and serializes the rows with the
 // same serializeListRow as the Prisma (search) path, so a field added to
 // LIST_SELECT but not to the SQL would silently go missing from most lists.
+
+/** Split at top-level commas (not inside parentheses). */
+function topLevelItems(sql: string): string[] {
+  const out: string[] = []
+  let depth = 0
+  let cur = ""
+  for (const ch of sql) {
+    if (ch === "(") depth++
+    if (ch === ")") depth--
+    if (ch === "," && depth === 0) {
+      out.push(cur.trim())
+      cur = ""
+    } else cur += ch
+  }
+  if (cur.trim()) out.push(cur.trim())
+  return out
+}
+
+/** The column a select item produces: its alias, else the column itself. */
+const columnName = (item: string) =>
+  (/\bAS\s+"?(\w+)"?\s*$/i.exec(item)?.[1] ?? item).replace(/"/g, "")
+
 describe("LIST_COLUMNS_SQL", () => {
-  it("selects every LIST_SELECT field", () => {
-    const text = LIST_COLUMNS_SQL.text
-    for (const k of Object.keys(LIST_SELECT))
-      expect(text).toMatch(new RegExp(`\\b${k}\\b`))
-    for (const rel of [LIST_SELECT.user, LIST_SELECT.organization])
-      for (const k of Object.keys(rel.select)) expect(text).toContain(`'${k}'`)
+  it("produces exactly LIST_SELECT's columns, in order", () => {
+    const columns = topLevelItems(LIST_COLUMNS_SQL.text).map(columnName)
+    expect(columns).toEqual(Object.keys(LIST_SELECT))
+  })
+
+  it("builds each relation object with exactly its select's keys", () => {
+    const items = topLevelItems(LIST_COLUMNS_SQL.text)
+    for (const rel of ["user", "organization"] as const) {
+      const item = items.find((i) => columnName(i) === rel)!
+      const keys = [...item.matchAll(/'(\w+)',/g)].map((m) => m[1])
+      expect(keys).toEqual(Object.keys(LIST_SELECT[rel].select))
+    }
   })
 })

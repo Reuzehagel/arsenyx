@@ -33,7 +33,7 @@ ports nobody holds — check with `netstat -ano | grep LISTEN`.
 ```bash
 just check                        # THE gate before claiming done — gen + typecheck + oxlint + oxfmt --check + check:native-button + tests
 just fix                          # oxlint --fix + oxfmt --write
-just test                         # vitest across apps/web, apps/api, packages/shared + bun test scripts/build/
+just test                         # = `bun run test` (CI runs the same): vitest across apps/web, apps/api, packages/shared + bun test scripts/
 just gen                          # generate apps/web/src/routeTree.gen.ts only (no-op if present)
 bun --cwd apps/web run build      # Vite production build (does NOT typecheck — `just check` is the gate)
 ```
@@ -97,8 +97,14 @@ gotchas and baselines are in [docs/usage-analytics.md](usage-analytics.md).
 ## Data pipeline
 
 Sources (no npm dep): DE PublicExport JSON blobs (`data/raw/de/`) +
-wiki Lua modules (`data/raw/wiki/`). The build merges them with the
-curated overrides under `data/curated/`.
+wiki Lua modules (`data/raw/wiki/`, the list is `WIKI_MODULES` in
+[scripts/build/read-wiki.ts](../scripts/build/read-wiki.ts)). The build merges them with the
+curated overrides under `data/curated/` — per-item game facts the sources get
+wrong or lack (aliases, mod-pool overrides, twin-frames, subsumable abilities,
+beast-claw routing, dropped mods, …) are data there, not code in `scripts/build/`.
+Every pipeline path, including `CATALOG_OUT_DIR` (redirects the catalog that
+`build:items`, `sync:images`, `check:images`, `data:stamp` and `data:patch`
+read and write), is in [scripts/build/paths.ts](../scripts/build/paths.ts).
 
 ### What the built catalog holds
 
@@ -110,14 +116,14 @@ Game rules (compatibility, conflicts, tradability) come from these files, not me
 | `items/<category>/<slug>.json` | one item's full stats, slots, polarities |
 | `mods-all.json` | every mod: polarity, drain, ranks, `compatName`, `type`, augment/exilus flags, level stats |
 | `mod-conflicts.json` | uniqueName → mods that can't share a build with it (Primed/Umbral/Archon variants etc.) |
-| `mod-tradable.json` | uniqueNames of tradable mods |
+| `mod-tradable.json` | uniqueNames of NON-tradable mods (absent = tradable) |
 | `arcanes-all.json` | every arcane: type, rarity, level stats |
 | `helminth-abilities.json` | abilities subsumable via Helminth |
 | `incarnon-evolutions.json` | Incarnon tiers and perks per weapon |
 | `modular.json` | kitgun/zaw part stats |
 | `*-images.json`, `image-map.json` | uniqueName/part → R2 image URL |
 | `meta.json` | `generatedAt` (cache-bust version), counts |
-| `_report.json` | build-pipeline report (unmatched entries) |
+| `_report.json` | build-pipeline report (unmatched entries, unknown companion types, rank-up drift) |
 
 `data/raw/` is **gitignored** — it's a network mirror, not source. The built
 catalog under `apps/web/public/data/` is what's committed and what ships, so a

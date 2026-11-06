@@ -1,7 +1,7 @@
+import { getCategoryLabel } from "@arsenyx/shared/warframe/categories"
+import type { BrowseCategory } from "@arsenyx/shared/warframe/types"
 import { Link as RouterLink } from "@tanstack/react-router"
 
-import { Footer } from "@/components/footer"
-import { Header } from "@/components/header"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -11,22 +11,6 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Skeleton } from "@/components/ui/skeleton"
-import { getCategoryLabel, type BrowseCategory } from "@/lib/warframe"
-
-/** Page chrome (Header + main wrap + Footer). Stays mounted across the
- *  Suspense boundary so the header doesn't unmount/remount when item data
- *  resolves. */
-export function ItemDetailFrame({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="relative flex min-h-screen flex-col">
-      <Header />
-      <main className="flex-1">
-        <div className="wrap flex flex-col gap-6 py-6">{children}</div>
-      </main>
-      <Footer />
-    </div>
-  )
-}
 
 export function ItemDetailBreadcrumb({
   category,

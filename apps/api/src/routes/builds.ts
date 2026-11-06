@@ -1,4 +1,13 @@
-import { MAX_VARIANTS } from "@arsenyx/shared/warframe/build-doc"
+import { isBuildVisibility } from "@arsenyx/shared/api/build-dto"
+import { LIST_DEFAULT_SORTS } from "@arsenyx/shared/api/build-list"
+import {
+  BUILD_SEARCH_Q_MAX,
+  GUIDE_SUMMARY_MAX,
+} from "@arsenyx/shared/api/limits"
+import {
+  hasShardsInBuildData,
+  variantsOverCap,
+} from "@arsenyx/shared/warframe/build-data"
 import { isValidCategory } from "@arsenyx/shared/warframe/categories"
 import {
   FORMA_CALC_VERSION,
@@ -9,14 +18,24 @@ import { Hono, type Context } from "hono"
 import { getCookie, setCookie } from "hono/cookie"
 import { customAlphabet } from "nanoid"
 
-import type { Bindings } from "../bindings"
-import { backgroundSql, prisma, registerBackgroundWork } from "../db"
-import { Prisma } from "../generated/prisma/client"
-import { BuildVisibility } from "../generated/prisma/enums"
+import {
+  poolQuery,
+  prisma,
+  registerBackgroundWork,
+  sometimesInBackground,
+} from "../db"
+import { isHttps } from "../env"
+import type { Prisma } from "../generated/prisma/client"
+import type { BuildVisibility } from "../generated/prisma/enums"
 import type { InputJsonValue } from "../generated/prisma/internal/prismaNamespace"
-import { edgeCache, purgeEdge } from "../lib/edge-cache"
-import { getFreshSession, getSession } from "../lib/session"
-import { hasPrismaCode, parseJsonBody, trimToMax } from "../lib/validate"
+import { edgeCache } from "../lib/edge-cache"
+import { getSession, requireUser } from "../lib/session"
+import {
+  hasPrismaCode,
+  httpError,
+  parseJsonBody,
+  trimToMax,
+} from "../lib/validate"
 import { enforceAnonSearchLimit, rateLimitUser } from "../middleware/rate-limit"
 import {
   DETAIL_INCLUDE,
@@ -27,147 +46,77 @@ import {
   serializeListRow,
 } from "./_build-list"
 import {
+  asVariantMap,
+  isVariantIndex,
+  partnerSelect,
+  serializePartners,
+} from "./_build-partners"
+import {
   describeEdit,
   MAX_REVISION_NOTE,
   pruneRevisions,
   readRevisions,
+  toBuildUpdate,
+  type BuildPatch,
+  type GuideInput,
 } from "./_build-revisions"
 import {
-  embedFromSnapshot,
-  isAnonVisible,
-  snapshotKey,
-  writeSnapshot,
-  type Snapshot,
-  type SnapshotMeta,
+  deleteBuild,
+  detailVariant,
+  metaFromSnapshot,
+  invalidateBuildAndPartners,
+  invalidateBuilds,
+  readAnonSnapshot,
 } from "./_build-snapshot"
 import { setLike, clearLike, toggleBookmark } from "./_build-social"
 import {
   bookmarkedScope,
-  buildAccess,
+  canActOnBuild,
+  canMutateBuild,
+  isOrgMember,
+  mutableScope,
   ownerScope,
   publicScope,
+  searchScope,
+  viewerAccess,
 } from "./_build-visibility"
 
 export const builds = new Hono()
 
-// URL-safe alphabet without visually-confusing chars (no 0/O, 1/l/I).
-const generateSlug = customAlphabet(
-  "23456789abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ",
-  10,
-)
-
-// Attempts a fresh slug on @@unique collision. With a 56-char alphabet and
-// 10-char slugs the collision space is ~3e17; 5 retries is dramatically more
-// than enough.
-const SLUG_COLLISION_RETRIES = 5
-
 const MAX_NAME = 120
 const MAX_DESCRIPTION = 2000
-const MAX_GUIDE_SUMMARY = 400
 const MAX_GUIDE_DESCRIPTION = 50_000
 
 // Edge-cache TTLs for the anonymous public reads (see lib/edge-cache.ts).
 //
-// These were 10s, which at current traffic meant a near-zero hit rate: ~0.4
-// req/s spread across colos is roughly one request per colo per 50s, so a 10s
-// window almost never caught a second hit. Every miss reaches a handler that
-// touches `prisma.*`, and that constructs a fresh PrismaClient — instantiating
-// the 3.6 MB WASM query compiler — per request (see db.ts). Cache hits return
-// before any of that, so TTL is the main lever on API CPU.
+// Every miss still runs the Worker handler — an anonymous detail miss is a KV
+// snapshot read, a list/profile miss plain SQL on the request's pool (see
+// db.ts) — so TTL is the main lever on API CPU. Raised 10 → 120 → 600 (2026-10): at 120s
+// only ~5.5% of edge-cache lookups hit and ~73% found an entry that had just
+// expired, so the API Worker sat over the Workers Paid 30M CPU-ms allowance.
 //
-// DETAIL is the safe one to raise: purgeEdge() evicts all three of its variants
-// on write, and authenticated editors bypass the cache entirely, so owners
-// always see their own writes. The residual staleness is that purges are
-// colo-local — other colos serve stale for up to the TTL.
+// DETAIL is the safe one to raise: invalidateBuilds evicts all its variants on
+// write, and authenticated editors bypass the cache entirely, so owners always
+// see their own writes. The residual staleness is that purges are colo-local —
+// other colos serve stale for up to the TTL.
 //
 // Second, less obvious cost: a cache HIT never runs the handler, so it never
 // runs maybeIncrementView. Raising this therefore undercounts views by roughly
 // the hit rate. Judged acceptable because views are already deduped per browser
 // via the `vw_<slug>` cookie, so the metric was never a raw impression count —
 // but if viewCount fidelity ever matters more than CPU, this is the dial.
-//
-// Raised 120 → 600 (2026-10): at 120s only ~5.5% of edge-cache lookups hit and
-// ~73% found an entry that had just expired, so the API Worker sat over the
-// Workers Paid 30M CPU-ms allowance. Lagging counts/views were judged fine.
 const DETAIL_TTL = 600
 
 // For the list-shaped responses — GET /builds and GET /:slug/partners, both
-// projected through LIST_SELECT. The binding constraint is that NEITHER is
-// purged on write: their keys include every filter/sort/page combination and the
-// Cache API has no wildcard delete, so a PUBLIC->PRIVATE flip or a delete can
-// linger for the whole TTL with no way to evict it early. That is why this stays
-// well under DETAIL_TTL — for these routes the TTL is the *only* bound on
-// staleness, whereas detail also has purgeEdge. Raised 30 → 120 alongside
-// DETAIL_TTL: a just-hidden build lingering in lists for 2 min was judged fine.
-// Exception: the detail payload also embeds the partner strip (2026-11, to halve
-// misses per page view). A build's PATCH/DELETE refreshes its partners' detail
-// (invalidateBuilds), so a partner going PRIVATE lingers only in other colos'
-// edge caches, for up to DETAIL_TTL. Accepted: the strip shows a title and
-// thumbnail, never a loadout.
+// projected through LIST_SELECT. NEITHER is purged on write (purgeEdge), so a
+// PUBLIC->PRIVATE flip or a delete can linger for the whole TTL; that is why
+// this stays well under DETAIL_TTL. A just-hidden build lingering in lists for
+// 2 min was judged fine. The detail payload also embeds the partner strip; a
+// build's PATCH/DELETE refreshes its partners' detail, so there a partner
+// going PRIVATE lingers only in other colos' edge caches, for up to
+// DETAIL_TTL. Accepted: the strip shows a title and thumbnail, never a
+// loadout.
 const LIST_TTL = 120
-
-// Exported so the admin visibility PATCH (admin.ts) validates against the same
-// guard rather than keeping a divergent copy — visibility logic stays centralised
-// here per apps/api/CLAUDE.md.
-export function isVisibility(v: unknown): v is BuildVisibility {
-  return (
-    typeof v === "string" &&
-    Object.values(BuildVisibility).includes(v as BuildVisibility)
-  )
-}
-
-// Defense in depth: the editor caps `variants` at MAX_VARIANTS *per form*
-// (twin-frames like Sirius & Orion give each form its own budget), but a
-// crafted request could send more. Persisting an unbounded array would
-// bloat the Build.buildData JSON column. Group by `formIndex` and reject if
-// any single form exceeds the cap, or there are implausibly many forms.
-const MAX_FORMS = 4
-export function variantsOverCap(buildData: unknown): boolean {
-  if (!buildData || typeof buildData !== "object") return false
-  const variants = (buildData as Record<string, unknown>).variants
-  if (!Array.isArray(variants)) return false
-  const perForm = new Map<number, number>()
-  for (const v of variants) {
-    const fi =
-      v &&
-      typeof v === "object" &&
-      typeof (v as Record<string, unknown>).formIndex === "number"
-        ? ((v as Record<string, unknown>).formIndex as number)
-        : 0
-    perForm.set(fi, (perForm.get(fi) ?? 0) + 1)
-  }
-  if (perForm.size > MAX_FORMS) return true
-  for (const count of perForm.values()) if (count > MAX_VARIANTS) return true
-  return false
-}
-
-function hasShardsInBuildData(buildData: unknown): boolean {
-  if (!buildData || typeof buildData !== "object") return false
-  const data = buildData as Record<string, unknown>
-  const anyPlaced = (v: unknown): boolean =>
-    Array.isArray(v) && v.some((s) => s != null)
-  // Top-level `shards` mirrors the active variant (and is the only set for
-  // single-loadout builds).
-  if (anyPlaced(data.shards)) return true
-  // Shards are per-variant — any variant carrying its own set counts.
-  if (Array.isArray(data.variants)) {
-    if (
-      data.variants.some(
-        (v) =>
-          v &&
-          typeof v === "object" &&
-          anyPlaced((v as Record<string, unknown>).shards),
-      )
-    )
-      return true
-  }
-  // Legacy twin-frame per-form shards (pre per-variant builds).
-  const formShards = data.formShards
-  if (formShards && typeof formShards === "object") {
-    return Object.values(formShards as Record<string, unknown>).some(anyPlaced)
-  }
-  return false
-}
 
 const MAX_CATALOG_VERSION = 64
 
@@ -196,25 +145,64 @@ function parseFormaFields(b: Record<string, unknown>): {
   }
 }
 
-function parseGuide(input: unknown) {
+function parseGuide(input: unknown): GuideInput | null {
   if (!input || typeof input !== "object") return null
   const g = input as Record<string, unknown>
-  const summary = trimToMax(g.summary, MAX_GUIDE_SUMMARY)
-  const description = trimToMax(g.description, MAX_GUIDE_DESCRIPTION)
   return {
-    summary,
-    description,
-    hasGuide: summary != null || description != null,
+    summary: trimToMax(g.summary, GUIDE_SUMMARY_MAX),
+    description: trimToMax(g.description, MAX_GUIDE_DESCRIPTION),
   }
 }
 
-builds.post("/", rateLimitUser("mutate"), async (c) => {
-  const session = await getSession(c)
-  if (!session?.user) return c.json({ error: "unauthorized" }, 401)
+/** `hideAuthor` only means something on an org-published build; the one
+ *  place it is normalized, at write time. */
+const hideAuthorFor = (requested: unknown, organizationId: string | null) =>
+  organizationId !== null && requested === true
 
-  const parsed = await parseJsonBody(c)
-  if (!parsed.ok) return parsed.response
-  const b = parsed.value
+// URL-safe alphabet without visually-confusing chars (no 0/O, 1/l/I).
+const generateSlug = customAlphabet(
+  "23456789abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ",
+  10,
+)
+
+// With a 56-char alphabet and 10-char slugs the collision space is ~3e17; 5
+// retries on the @@unique collision is dramatically more than enough.
+const SLUG_COLLISION_RETRIES = 5
+
+/** Creates a build under a fresh slug, with the CREATED anchor of its edit
+ *  log: Build.createdAt says when, but only that row says who, which for an
+ *  org build is not the same question. */
+async function createBuild(
+  data: Omit<Prisma.BuildUncheckedCreateInput, "slug" | "revisions">,
+  revisionNote: string | null,
+) {
+  for (let attempt = 0; attempt < SLUG_COLLISION_RETRIES; attempt++) {
+    try {
+      return await prisma.build.create({
+        data: {
+          ...data,
+          slug: generateSlug(),
+          revisions: {
+            create: {
+              editorId: data.userId,
+              kind: "CREATED",
+              note: revisionNote,
+            },
+          },
+        },
+        select: { id: true, slug: true },
+      })
+    } catch (err: unknown) {
+      if (hasPrismaCode(err, "P2002")) continue
+      throw err
+    }
+  }
+  throw httpError(500, "slug_collision")
+}
+
+builds.post("/", rateLimitUser("mutate"), async (c) => {
+  const user = await requireUser(c)
+  const b = await parseJsonBody(c)
 
   const itemUniqueName =
     typeof b.itemUniqueName === "string" ? b.itemUniqueName.trim() : ""
@@ -223,12 +211,11 @@ builds.post("/", rateLimitUser("mutate"), async (c) => {
   const itemImageName =
     typeof b.itemImageName === "string" ? b.itemImageName : null
   const name = typeof b.name === "string" ? b.name.trim() : ""
-  const description = trimToMax(b.description, MAX_DESCRIPTION)
-  const userDefault = (session.user as { defaultBuildVisibility?: string })
+  const userDefault = (user as { defaultBuildVisibility?: string })
     .defaultBuildVisibility
-  const visibility: BuildVisibility = isVisibility(b.visibility)
+  const visibility: BuildVisibility = isBuildVisibility(b.visibility)
     ? b.visibility
-    : isVisibility(userDefault)
+    : isBuildVisibility(userDefault)
       ? userDefault
       : "PUBLIC"
 
@@ -247,6 +234,7 @@ builds.post("/", rateLimitUser("mutate"), async (c) => {
 
   const buildData = b.buildData as InputJsonValue
   const guide = parseGuide(b.guide)
+  const hasGuide = guide?.summary != null || guide?.description != null
   // Lenient: a client that doesn't send a count (or sends a bad one) gets a
   // sentinel `formaCalcVersion: 0` row, which the recompute backfill picks up.
   const forma = parseFormaFields(b) ?? {
@@ -255,80 +243,36 @@ builds.post("/", rateLimitUser("mutate"), async (c) => {
     catalogVersion: null,
   }
 
-  const orgResult = await resolveOrgAssignment(
-    b.organizationId,
-    session.user.id,
+  const organizationId = await resolveOrgAssignment(b.organizationId, user.id)
+
+  const created = await createBuild(
+    {
+      userId: user.id,
+      itemUniqueName,
+      itemCategory,
+      itemName,
+      itemImageName,
+      name,
+      description: trimToMax(b.description, MAX_DESCRIPTION),
+      visibility,
+      organizationId,
+      hideAuthor: hideAuthorFor(b.hideAuthor, organizationId),
+      buildData,
+      hasShards: hasShardsInBuildData(buildData),
+      ...forma,
+      hasGuide,
+      buildGuide: hasGuide ? { create: guide! } : undefined,
+    },
+    trimToMax(b.revisionNote, MAX_REVISION_NOTE),
   )
-  if (!orgResult.ok) return c.json({ error: orgResult.error }, orgResult.status)
-  const organizationId = orgResult.value
-  // Author can opt to suppress their handle on org-published builds.
-  // Always false when there's no org (no-op).
-  const hideAuthor = organizationId !== null && b.hideAuthor === true
-
-  // Retry on the astronomically-unlikely slug collision.
-  for (let attempt = 0; attempt < SLUG_COLLISION_RETRIES; attempt++) {
-    const slug = generateSlug()
-    try {
-      const created = await prisma.build.create({
-        data: {
-          slug,
-          userId: session.user.id,
-          itemUniqueName,
-          itemCategory,
-          itemName,
-          itemImageName,
-          name,
-          description,
-          visibility,
-          organizationId,
-          hideAuthor,
-          buildData,
-          hasShards: hasShardsInBuildData(buildData),
-          formaCount: forma.formaCount,
-          formaCalcVersion: forma.formaCalcVersion,
-          catalogVersion: forma.catalogVersion,
-          hasGuide: guide?.hasGuide ?? false,
-          buildGuide: guide?.hasGuide
-            ? {
-                create: {
-                  summary: guide.summary,
-                  description: guide.description,
-                },
-              }
-            : undefined,
-          // Anchor entry for the edit log. Written here rather than backfilled
-          // so every build created from now on has a real "created by" row —
-          // Build.createdAt says when, but only this says who, which for an org
-          // build is not the same question.
-          revisions: {
-            create: {
-              editorId: session.user.id,
-              kind: "CREATED",
-              note: trimToMax(b.revisionNote, MAX_REVISION_NOTE),
-            },
-          },
-        },
-        select: { id: true, slug: true },
-      })
-      return c.json(created, 201)
-    } catch (err: unknown) {
-      // P2002 = unique constraint on slug → retry
-      if (hasPrismaCode(err, "P2002")) continue
-      throw err
-    }
-  }
-
-  return c.json({ error: "slug_collision" }, 500)
+  return c.json(created, 201)
 })
 
 builds.patch("/:slug", rateLimitUser("mutate"), async (c) => {
-  const slug = c.req.param("slug")
-
-  const session = await getSession(c)
-  if (!session?.user) return c.json({ error: "unauthorized" }, 401)
+  const user = await requireUser(c)
 
   const existing = await prisma.build.findUnique({
-    where: { slug },
+    where: { slug: c.req.param("slug") },
     // buildData is pulled (5-80 KB) so the revision written below can diff
     // against it. PATCH is rare next to reads, and there is no other way to
     // know what changed — the client sends the whole document, not a patch.
@@ -339,35 +283,30 @@ builds.patch("/:slug", rateLimitUser("mutate"), async (c) => {
       buildData: true,
       name: true,
       visibility: true,
-      // For the revision below: the editor sends `guide` on every save whether
-      // or not it changed, so "was the guide edited" has to be answered by
-      // comparing content, not by the field's presence.
+      // The editor sends `guide` on every save whether or not it changed, so
+      // "was the guide edited" is answered by comparing content.
       buildGuide: { select: { summary: true, description: true } },
-      // Their snapshots embed this build's card (invalidateBuilds below).
-      partnerBuilds: { select: { slug: true } },
     },
   })
   if (!existing) return c.json({ error: "not_found" }, 404)
-  if (!(await canMutateBuild(existing, session.user.id))) {
+  if (!(await canMutateBuild(existing, user.id))) {
     return c.json({ error: "forbidden" }, 403)
   }
 
-  const parsed = await parseJsonBody(c)
-  if (!parsed.ok) return parsed.response
-  const b = parsed.value
+  const b = await parseJsonBody(c)
 
-  const data: Record<string, unknown> = {}
+  const patch: BuildPatch = {}
   if (typeof b.name === "string") {
     const name = b.name.trim()
     if (!name || name.length > MAX_NAME)
       return c.json({ error: "invalid_name" }, 400)
-    data.name = name
+    patch.name = name
   }
   if (typeof b.description === "string" || b.description === null) {
-    data.description = trimToMax(b.description, MAX_DESCRIPTION)
+    patch.description = trimToMax(b.description, MAX_DESCRIPTION)
   }
-  if (isVisibility(b.visibility)) {
-    data.visibility = b.visibility
+  if (isBuildVisibility(b.visibility)) {
+    patch.visibility = b.visibility
   }
   if (
     (b.organizationId === null || typeof b.organizationId === "string") &&
@@ -375,116 +314,79 @@ builds.patch("/:slug", rateLimitUser("mutate"), async (c) => {
   ) {
     // Only the author may move a build between orgs: a co-member moving it
     // into another org of theirs would hand edit rights to strangers.
-    if (existing.userId !== session.user.id) {
+    if (existing.userId !== user.id) {
       return c.json({ error: "forbidden" }, 403)
     }
-    const orgResult = await resolveOrgAssignment(
-      b.organizationId,
-      session.user.id,
-    )
-    if (!orgResult.ok)
-      return c.json({ error: orgResult.error }, orgResult.status)
-    data.organizationId = orgResult.value
+    patch.organizationId = await resolveOrgAssignment(b.organizationId, user.id)
   }
-  // hideAuthor only makes sense when the build is org-published. We use the
-  // effective org after this PATCH (incoming value if provided, else the
-  // existing one) so toggling org off forces hideAuthor back to false in the
-  // same write — no stale flag pointing at a now-null org.
-  if (typeof b.hideAuthor === "boolean") {
-    const effectiveOrgId =
-      data.organizationId !== undefined
-        ? data.organizationId
-        : existing.organizationId
-    data.hideAuthor = effectiveOrgId !== null && b.hideAuthor === true
-  } else if (
-    data.organizationId !== undefined &&
-    data.organizationId !== existing.organizationId
-  ) {
-    // The org is being changed in this PATCH and the client didn't supply
-    // a fresh hideAuthor. Reset to false so a flag chosen for the previous
-    // org (or no org) can't silently bleed into the new attribution — the
-    // publisher must re-opt in for each org.
-    data.hideAuthor = false
+  // Against the org after this PATCH. An org change without a fresh
+  // hideAuthor resets it, so a flag chosen for the previous org (or none)
+  // can't bleed into the new attribution — the publisher re-opts in per org.
+  if (typeof b.hideAuthor === "boolean" || patch.organizationId !== undefined) {
+    patch.hideAuthor = hideAuthorFor(
+      b.hideAuthor,
+      patch.organizationId !== undefined
+        ? patch.organizationId
+        : existing.organizationId,
+    )
   }
   if (b.buildData && typeof b.buildData === "object") {
     if (variantsOverCap(b.buildData)) {
       return c.json({ error: "too_many_variants" }, 400)
     }
-    data.buildData = b.buildData as InputJsonValue
-    data.hasShards = hasShardsInBuildData(b.buildData)
+    patch.buildData = b.buildData as InputJsonValue
+    patch.hasShards = hasShardsInBuildData(b.buildData)
     // buildData changed → the forma count must move with it. Take the fresh
     // count if the client sent a valid one; otherwise flag the row stale
     // (formaCalcVersion 0) so the recompute backfill corrects it rather than
     // leaving a silently-wrong count behind.
-    const forma = parseFormaFields(b)
-    if (forma) {
-      data.formaCount = forma.formaCount
-      data.formaCalcVersion = forma.formaCalcVersion
-      data.catalogVersion = forma.catalogVersion
-    } else {
-      data.formaCalcVersion = FORMA_UNSTAMPED
-    }
+    Object.assign(
+      patch,
+      parseFormaFields(b) ?? { formaCalcVersion: FORMA_UNSTAMPED },
+    )
   }
-  // The editor flips itemImageName when the incarnon toggle is applied;
-  // accept it on PATCH so the build-overview thumbnail tracks the change.
-  // Reject undefined deliberately — PATCH treats absent fields as "don't
-  // touch" and only string|null as "write this value". POST differs because
-  // every create needs a value, so it coerces non-string to null instead.
+  // The editor flips itemImageName when the incarnon toggle is applied, so
+  // the build-overview thumbnail tracks it. Absent means "don't touch";
+  // only string|null writes.
   if (typeof b.itemImageName === "string" || b.itemImageName === null) {
-    data.itemImageName = b.itemImageName
+    patch.itemImageName = b.itemImageName
   }
-
   const guide = parseGuide(b.guide)
-  if (guide) {
-    data.hasGuide = guide.hasGuide
-    data.buildGuide = {
-      upsert: {
-        create: { summary: guide.summary, description: guide.description },
-        update: { summary: guide.summary, description: guide.description },
-      },
-    }
-  }
+  if (guide) patch.guide = guide
 
-  // Every accepted PATCH writes one revision, in the same statement as the
-  // update so a save can never land without its log entry. Bursts of saves from
-  // one editing session are folded at READ time (see the revisions route) —
-  // folding on write would need the pre-burst document, which isn't stored.
-  const changes = describeEdit(existing, data, guide)
-  data.revisions = {
-    create: {
-      editorId: session.user.id,
-      kind: "EDITED",
-      note: trimToMax(b.revisionNote, MAX_REVISION_NOTE),
-      changes: changes as unknown as InputJsonValue,
-    },
-  }
-
+  // One revision per accepted PATCH, in the same statement as the update so a
+  // save can never land without its log entry.
   const updated = await prisma.build.update({
     where: { id: existing.id },
-    data,
+    data: {
+      ...toBuildUpdate(patch),
+      revisions: {
+        create: {
+          editorId: user.id,
+          kind: "EDITED",
+          note: trimToMax(b.revisionNote, MAX_REVISION_NOTE),
+          changes: describeEdit(existing, patch) as unknown as InputJsonValue,
+        },
+      },
+    },
     select: { id: true, slug: true },
   })
   pruneRevisions(existing.id)
-  invalidateBuilds(c, [slug, ...existing.partnerBuilds.map((p) => p.slug)])
+  await invalidateBuildAndPartners(c, { id: existing.id })
   return c.json(updated)
 })
 
 builds.get("/:slug/revisions", async (c) => {
-  const slug = c.req.param("slug")
-
-  const session = await getSession(c)
-  if (!session?.user) return c.json({ error: "unauthorized" }, 401)
+  const user = await requireUser(c)
 
   const build = await prisma.build.findUnique({
-    where: { slug },
+    where: { slug: c.req.param("slug") },
     select: { id: true, userId: true, organizationId: true },
   })
   if (!build) return c.json({ error: "not_found" }, 404)
   // Same gate as editing: if you can change the build you can see who else
-  // has. This deliberately reuses canMutateBuild rather than checking org
-  // membership directly, so it covers solo builds (author sees their own log)
-  // without inventing a second permission rule.
-  if (!(await canMutateBuild(build, session.user.id))) {
+  // has — which also covers solo builds (the author sees their own log).
+  if (!(await canMutateBuild(build, user.id))) {
     return c.json({ error: "forbidden" }, 403)
   }
 
@@ -492,34 +394,23 @@ builds.get("/:slug/revisions", async (c) => {
 })
 
 builds.delete("/:slug", rateLimitUser("mutate"), async (c) => {
-  const slug = c.req.param("slug")
-
-  const session = await getSession(c)
-  if (!session?.user) return c.json({ error: "unauthorized" }, 401)
+  const user = await requireUser(c)
 
   const existing = await prisma.build.findUnique({
-    where: { slug },
-    select: {
-      id: true,
-      userId: true,
-      organizationId: true,
-      partnerBuilds: { select: { slug: true } },
-    },
+    where: { slug: c.req.param("slug") },
+    select: { id: true, userId: true, organizationId: true },
   })
   if (!existing) return c.json({ error: "not_found" }, 404)
-  if (!(await canMutateBuild(existing, session.user.id))) {
+  if (!(await canMutateBuild(existing, user.id))) {
     return c.json({ error: "forbidden" }, 403)
   }
 
-  await prisma.build.delete({ where: { id: existing.id } })
-  invalidateBuilds(c, [slug, ...existing.partnerBuilds.map((p) => p.slug)])
+  await deleteBuild(c, { id: existing.id })
   return c.body(null, 204)
 })
 
 builds.post("/:slug/fork", rateLimitUser("mutate"), async (c) => {
-  const session = await getSession(c)
-  if (!session?.user) return c.json({ error: "unauthorized" }, 401)
-  const userId = session.user.id
+  const user = await requireUser(c)
 
   const source = await prisma.build.findUnique({
     where: { slug: c.req.param("slug") },
@@ -540,50 +431,36 @@ builds.post("/:slug/fork", rateLimitUser("mutate"), async (c) => {
       catalogVersion: true,
     },
   })
-  if (!source) return c.json({ error: "not_found" }, 404)
-  if (!(await canViewerSeeBuild(source, userId))) {
+  if (!source || !(await canActOnBuild(source, user.id))) {
     return c.json({ error: "not_found" }, 404)
   }
 
-  const forkName = `Fork of ${source.name}`.slice(0, MAX_NAME)
-
-  for (let attempt = 0; attempt < SLUG_COLLISION_RETRIES; attempt++) {
-    const slug = generateSlug()
-    try {
-      const created = await prisma.build.create({
-        data: {
-          slug,
-          userId,
-          itemUniqueName: source.itemUniqueName,
-          itemCategory: source.itemCategory,
-          itemName: source.itemName,
-          itemImageName: source.itemImageName,
-          name: forkName,
-          visibility: "PRIVATE",
-          buildData: source.buildData as InputJsonValue,
-          hasShards: source.hasShards,
-          formaCount: source.formaCount,
-          formaCalcVersion: source.formaCalcVersion,
-          catalogVersion: source.catalogVersion,
-          forkedFromId: source.id,
-        },
-        select: { id: true, slug: true },
-      })
-      return c.json(created, 201)
-    } catch (err: unknown) {
-      if (hasPrismaCode(err, "P2002")) continue
-      throw err
-    }
-  }
-
-  return c.json({ error: "slug_collision" }, 500)
+  const created = await createBuild(
+    {
+      userId: user.id,
+      itemUniqueName: source.itemUniqueName,
+      itemCategory: source.itemCategory,
+      itemName: source.itemName,
+      itemImageName: source.itemImageName,
+      name: `Fork of ${source.name}`.slice(0, MAX_NAME),
+      visibility: "PRIVATE",
+      buildData: source.buildData as InputJsonValue,
+      hasShards: source.hasShards,
+      formaCount: source.formaCount,
+      formaCalcVersion: source.formaCalcVersion,
+      catalogVersion: source.catalogVersion,
+      forkedFromId: source.id,
+    },
+    null,
+  )
+  return c.json(created, 201)
 })
 
 builds.get("/", edgeCache({ maxAge: LIST_TTL }), async (c) => {
   const result = await runList({
     filters: parseListQuery(c),
     ...publicScope(),
-    defaultSort: "newest",
+    defaultSort: LIST_DEFAULT_SORTS.public,
   })
   return c.json(result)
 })
@@ -600,8 +477,7 @@ builds.get(
   rateLimitUser("search", { includeSafeMethods: true }),
   async (c) => {
     const session = await getSession(c)
-    const viewerId = session?.user.id
-    const q = (c.req.query("q") ?? "").trim().slice(0, 200)
+    const q = (c.req.query("q") ?? "").trim().slice(0, BUILD_SEARCH_Q_MAX)
     if (q.length < 2) return c.json({ builds: [] })
 
     // Anon traffic isn't keyed by the DB-backed `rateLimitUser` middleware
@@ -616,41 +492,14 @@ builds.get(
         ? Math.min(limitRaw, SEARCH_MAX_LIMIT)
         : SEARCH_DEFAULT_LIMIT
 
-    // `mine=1` narrows to builds the requester holds mutate rights on (own +
-    // org). The partner picker uses this: linking requires mutual ownership
-    // (see PUT /:slug/partners/:partnerSlug), so surfacing other people's
-    // builds there only sets up a guaranteed 403.
-    let scope: Prisma.BuildWhereInput
-    if (c.req.query("mine") === "1") {
-      if (!viewerId) return c.json({ error: "unauthorized" }, 401)
-      const memberships = await prisma.organizationMember.findMany({
-        where: { userId: viewerId },
-        select: { organizationId: true },
-      })
-      scope = {
-        OR: [
-          { userId: viewerId },
-          ...(memberships.length > 0
-            ? [
-                {
-                  organizationId: {
-                    in: memberships.map((m) => m.organizationId),
-                  },
-                },
-              ]
-            : []),
-        ],
-      }
-    } else {
-      // PUBLIC only — UNLISTED is "accessible by URL, not enumerable", and a
-      // typeahead is enumeration. Viewers can additionally find their own
-      // builds regardless of visibility.
-      scope = viewerId
-        ? {
-            OR: [{ visibility: BuildVisibility.PUBLIC }, { userId: viewerId }],
-          }
-        : { visibility: BuildVisibility.PUBLIC }
-    }
+    // `mine=1` narrows to builds the requester may mutate. The partner picker
+    // uses this: linking requires mutual ownership (PUT
+    // /:slug/partners/:partnerSlug), so offering other people's builds there
+    // only sets up a guaranteed 403.
+    const scope =
+      c.req.query("mine") === "1"
+        ? await mutableScope((await requireUser(c)).id)
+        : searchScope(session?.user.id)
 
     const rows = await prisma.build.findMany({
       relationLoadStrategy: "join",
@@ -674,72 +523,33 @@ builds.get(
 )
 
 async function loadPartnerContext(slug: string, partnerSlug: string) {
+  const select = {
+    id: true,
+    userId: true,
+    organizationId: true,
+    partnerVariants: true,
+  } as const
   const [own, partner] = await Promise.all([
-    prisma.build.findUnique({
-      where: { slug },
-      select: {
-        id: true,
-        userId: true,
-        organizationId: true,
-        partnerVariants: true,
-      },
-    }),
-    prisma.build.findUnique({
-      where: { slug: partnerSlug },
-      select: {
-        id: true,
-        userId: true,
-        visibility: true,
-        organizationId: true,
-        partnerVariants: true,
-      },
-    }),
+    prisma.build.findUnique({ where: { slug }, select }),
+    prisma.build.findUnique({ where: { slug: partnerSlug }, select }),
   ])
   return { own, partner }
 }
 
-// Coerce the `partnerVariants` JSON column into a clean id -> variant-index
-// map. Defensive by design: anything that isn't a positive integer below
-// MAX_VARIANTS is treated as unset (0 / absent both mean "default variant",
-// so 0 is never stored). Also the single point where stale garbage in the
-// column gets dropped on rewrite.
-function asVariantMap(value: Prisma.JsonValue): Record<string, number> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {}
-  const out: Record<string, number> = {}
-  for (const [id, v] of Object.entries(value)) {
-    if (
-      typeof v === "number" &&
-      Number.isInteger(v) &&
-      v > 0 &&
-      v < MAX_VARIANTS
-    ) {
-      out[id] = v
-    }
-  }
-  return out
-}
-
-// Edge-cached like the detail route: this fires on every full build-detail
-// page view (the "Related builds" strip), so an uncached query here doubles
-// the DB hits per anonymous view. Session-cookie requests bypass the cache
-// (edgeCache checks the Cookie header), so authenticated viewers still get
-// their viewer-specific partner visibility. Accepted staleness, same class as
-// the GET /builds list: if a partner flips PUBLIC->PRIVATE or is unlinked, it
-// can linger in an anon cache entry for up to maxAge — the partner mutations
-// don't purge this path (no tractable per-key eviction). Bounded and low-risk:
-// the strip only shows a title/thumbnail, never the loadout.
-
+// The partner strip on its own. The full detail response (GET /:slug) carries
+// the same rows as `partners`, so the build page doesn't call this; it serves
+// the guide editor and refetches after partner mutations. Edge-cached and not
+// purged (see LIST_TTL); session-cookie requests bypass the cache, so signed-in
+// viewers get their viewer-specific rows.
 //
-// The full detail response (GET /:slug) now carries these same rows as
-// `partners`, so the build page no longer calls this route. It stays for the
-// guide editor and for refetches after partner mutations.
+// Gated like GET /:slug, admin moderation view included: an admin who can open
+// a PRIVATE build sees the strip the detail payload already embeds. The rows
+// themselves have no admin bypass (visiblePartnerScope), same as there.
 builds.get("/:slug/partners", edgeCache({ maxAge: LIST_TTL }), async (c) => {
-  const slug = c.req.param("slug")
-  const session = await getSession(c)
-  const viewerId = session?.user.id
+  const viewerId = (await getSession(c))?.user.id
 
   const build = await prisma.build.findUnique({
-    where: { slug },
+    where: { slug: c.req.param("slug") },
     relationLoadStrategy: "join",
     select: {
       id: true,
@@ -750,67 +560,11 @@ builds.get("/:slug/partners", edgeCache({ maxAge: LIST_TTL }), async (c) => {
     },
   })
   if (!build) return c.json({ error: "not_found" }, 404)
-  if (!(await canViewerSeeBuild(build, viewerId ?? ""))) {
+  if (!(await viewerAccess(c, build, viewerId)).canView) {
     return c.json({ error: "not_found" }, 404)
   }
   return c.json({ builds: serializePartners(build) })
 })
-
-// Select for a build's partner strip. Private partners are filtered in the DB
-// rather than in JS so we don't over-select joined user/org/counts for partners
-// the viewer can't see. partnerBuilds nests user + organization (via
-// LIST_SELECT), so callers pass `relationLoadStrategy: "join"` to collapse the
-// fan-out into one query.
-function partnerSelect(viewerId: string | undefined) {
-  const shown = {
-    visibility: { in: [BuildVisibility.PUBLIC, BuildVisibility.UNLISTED] },
-  }
-  return {
-    partnerOrder: true,
-    partnerVariants: true,
-    partnerBuilds: {
-      where: (viewerId
-        ? { OR: [shown, { userId: viewerId }] }
-        : shown) satisfies Prisma.BuildWhereInput,
-      take: 50,
-      select: LIST_SELECT,
-    },
-  } as const
-}
-
-// The owner's saved variant target rides along on each row (`variant` omitted =
-// default). The web chip turns it into `?v=` on the link; an index that outgrew
-// the partner's variant list is clamped by the viewer.
-function serializePartners(build: {
-  partnerOrder: string[]
-  partnerVariants: Prisma.JsonValue
-  partnerBuilds: Parameters<typeof serializeListRow>[0][]
-}) {
-  const variantMap = asVariantMap(build.partnerVariants)
-  return orderPartners(build.partnerBuilds, build.partnerOrder).map((p) => {
-    const row = serializeListRow(p)
-    const variant = variantMap[p.id]
-    return variant ? { ...row, variant } : row
-  })
-}
-
-// Sort partner rows by the owner's saved order. Ids listed in `order` come
-// first in that order; anything not listed (newly linked, or never reordered)
-// keeps its original relative position at the end. Stale ids in `order` that
-// no longer resolve to a visible partner are simply skipped.
-function orderPartners<T extends { id: string }>(
-  rows: T[],
-  order: string[],
-): T[] {
-  if (order.length === 0) return rows
-  const rank = new Map(order.map((id, i) => [id, i]))
-  const fallback = order.length
-  // Array.sort is stable, so rows that tie on rank (all the unlisted ones share
-  // `fallback`) keep their original relative order for free.
-  return rows
-    .slice()
-    .sort((a, b) => (rank.get(a.id) ?? fallback) - (rank.get(b.id) ?? fallback))
-}
 
 // Persist the owner's display order for its partner strip. One-sided: only
 // the owning build's `partnerOrder` is written (the partner side keeps its
@@ -819,18 +573,14 @@ function orderPartners<T extends { id: string }>(
 // partner build ids; we store it verbatim after intersecting with the current
 // links so a stale/foreign id can't be smuggled in.
 //
-// MUST stay registered before "/:slug/partners/:partnerSlug": Hono matches
-// routes in registration order, so the param route would otherwise capture
-// `order` as a partnerSlug and this handler would be unreachable.
+// MUST stay registered before "/:slug/partners/:partnerSlug" (pinned by
+// route-order.test.ts): Hono matches in registration order, so the param
+// route would otherwise capture `order` as a partnerSlug.
 builds.put("/:slug/partners/order", rateLimitUser("mutate"), async (c) => {
-  const session = await getSession(c)
-  if (!session?.user) return c.json({ error: "unauthorized" }, 401)
-  const viewerId = session.user.id
+  const user = await requireUser(c)
 
   const slug = c.req.param("slug")
-  const parsed = await parseJsonBody(c, { maxBytes: 8 * 1024 })
-  if (!parsed.ok) return parsed.response
-  const order = parsed.value.order
+  const order = (await parseJsonBody(c, { maxBytes: 8 * 1024 })).order
   if (!Array.isArray(order) || order.some((id) => typeof id !== "string")) {
     return c.json({ error: "invalid_order" }, 400)
   }
@@ -845,14 +595,13 @@ builds.put("/:slug/partners/order", rateLimitUser("mutate"), async (c) => {
     },
   })
   if (!own) return c.json({ error: "not_found" }, 404)
-  if (!(await canMutateBuild(own, viewerId))) {
+  if (!(await canMutateBuild(own, user.id))) {
     return c.json({ error: "forbidden" }, 403)
   }
 
   // Keep only ids that are actually linked, in the requested order; drop
   // unknowns, then dedup (Set preserves insertion order). Partners omitted from
-  // the request keep appending after these (the read-side `orderPartners`
-  // fallback handles that).
+  // the request keep appending after these (serializePartners' fallback).
   const linked = new Set(own.partnerBuilds.map((p) => p.id))
   const nextOrder = [
     ...new Set((order as string[]).filter((id) => linked.has(id))),
@@ -877,20 +626,12 @@ builds.put(
   "/:slug/partners/:partnerSlug/variant",
   rateLimitUser("mutate"),
   async (c) => {
-    const session = await getSession(c)
-    if (!session?.user) return c.json({ error: "unauthorized" }, 401)
-    const viewerId = session.user.id
+    const user = await requireUser(c)
 
-    const parsed = await parseJsonBody(c, { maxBytes: 1024 })
-    if (!parsed.ok) return parsed.response
-    const raw = parsed.value.variant
-    const valid =
-      raw === null ||
-      (typeof raw === "number" &&
-        Number.isInteger(raw) &&
-        raw >= 0 &&
-        raw < MAX_VARIANTS)
-    if (!valid) return c.json({ error: "invalid_variant" }, 400)
+    const raw = (await parseJsonBody(c, { maxBytes: 1024 })).variant
+    if (raw !== null && !isVariantIndex(raw)) {
+      return c.json({ error: "invalid_variant" }, 400)
+    }
     const variant = raw ?? 0
 
     const slug = c.req.param("slug")
@@ -908,7 +649,7 @@ builds.put(
       },
     })
     if (!own) return c.json({ error: "not_found" }, 404)
-    if (!(await canMutateBuild(own, viewerId))) {
+    if (!(await canMutateBuild(own, user.id))) {
       return c.json({ error: "forbidden" }, 403)
     }
     const partner = own.partnerBuilds[0]
@@ -931,9 +672,7 @@ builds.put(
   "/:slug/partners/:partnerSlug",
   rateLimitUser("mutate"),
   async (c) => {
-    const session = await getSession(c)
-    if (!session?.user) return c.json({ error: "unauthorized" }, 401)
-    const viewerId = session.user.id
+    const user = await requireUser(c)
 
     const slug = c.req.param("slug")
     const partnerSlug = c.req.param("partnerSlug")
@@ -948,8 +687,8 @@ builds.put(
     // their own build to a third party's PUBLIC build and ride its
     // reputation. Mutual ownership is the consent gate.
     const [canMutateOwn, canMutatePartner] = await Promise.all([
-      canMutateBuild(own, viewerId),
-      canMutateBuild(partner, viewerId),
+      canMutateBuild(own, user.id),
+      canMutateBuild(partner, user.id),
     ])
     if (!canMutateOwn || !canMutatePartner) {
       return c.json({ error: "forbidden" }, 403)
@@ -977,9 +716,7 @@ builds.delete(
   "/:slug/partners/:partnerSlug",
   rateLimitUser("mutate"),
   async (c) => {
-    const session = await getSession(c)
-    if (!session?.user) return c.json({ error: "unauthorized" }, 401)
-    const viewerId = session.user.id
+    const user = await requireUser(c)
 
     const slug = c.req.param("slug")
     const partnerSlug = c.req.param("partnerSlug")
@@ -987,8 +724,8 @@ builds.delete(
     if (!own || !partner) return c.json({ error: "not_found" }, 404)
     // Either owner can sever the link.
     const [isOwnOwner, isPartnerOwner] = await Promise.all([
-      canMutateBuild(own, viewerId),
-      canMutateBuild(partner, viewerId),
+      canMutateBuild(own, user.id),
+      canMutateBuild(partner, user.id),
     ])
     if (!isOwnOwner && !isPartnerOwner) {
       return c.json({ error: "forbidden" }, 403)
@@ -1030,27 +767,21 @@ builds.delete(
 )
 
 builds.get("/mine", async (c) => {
-  const session = await getSession(c)
-  if (!session?.user) return c.json({ error: "unauthorized" }, 401)
-
+  const user = await requireUser(c)
   const result = await runList({
     filters: parseListQuery(c),
-    ...ownerScope(session.user.id),
-    defaultSort: "updated",
+    ...ownerScope(user.id),
+    defaultSort: LIST_DEFAULT_SORTS.mine,
   })
   return c.json(result)
 })
 
 builds.get("/bookmarks", async (c) => {
-  const session = await getSession(c)
-  if (!session?.user) return c.json({ error: "unauthorized" }, 401)
-  const userId = session.user.id
-
-  // Bookmarked AND visible to viewer (own / public / unlisted; not others' private).
+  const user = await requireUser(c)
   const result = await runList({
     filters: parseListQuery(c),
-    ...bookmarkedScope(userId),
-    defaultSort: "newest",
+    ...bookmarkedScope(user.id),
+    defaultSort: LIST_DEFAULT_SORTS.bookmarks,
   })
   return c.json(result)
 })
@@ -1070,26 +801,6 @@ async function getBuildForSocial(slug: string) {
   })
 }
 
-// Can this viewer ACT on the build (like / bookmark / fork / link as partner)?
-// Deliberately NO admin bypass — and that asymmetry with the GET /:slug view
-// check (which does let admins through) is intentional, not an oversight: an
-// admin may VIEW any build to moderate it, but must not be able to like,
-// bookmark, or fork a PRIVATE build they don't own. Acting on a build is a
-// member-level capability gated by real visibility; only viewing is a
-// moderation power. Keep this admin-free.
-async function canViewerSeeBuild(
-  build: {
-    userId: string
-    visibility: BuildVisibility
-    organizationId: string | null
-  },
-  viewerId: string,
-) {
-  const open = buildAccess(build, { id: viewerId, isOrgMember: false })
-  if (open.canAct || !build.organizationId) return open.canAct
-  return isOrgMember(build.organizationId, viewerId)
-}
-
 // POST sets (or flips to) a Like / Dislike; DELETE clears either one, whichever
 // way it went, so the response state is always known without a re-read.
 for (const [path, value] of [
@@ -1097,20 +808,17 @@ for (const [path, value] of [
   ["dislike", -1],
 ] as const) {
   builds.post(`/:slug/${path}`, rateLimitUser("social"), async (c) => {
-    const session = await getSession(c)
-    if (!session?.user) return c.json({ error: "unauthorized" }, 401)
-    const userId = session.user.id
+    const user = await requireUser(c)
 
     const build = await getBuildForSocial(c.req.param("slug"))
-    if (!build) return c.json({ error: "not_found" }, 404)
-    if (!(await canViewerSeeBuild(build, userId))) {
+    if (!build || !(await canActOnBuild(build, user.id))) {
       return c.json({ error: "not_found" }, 404)
     }
-    if (build.userId === userId) {
+    if (build.userId === user.id) {
       return c.json({ error: "cannot_like_own_build" }, 400)
     }
 
-    const counts = await setLike(value, build.id, userId, {
+    const counts = await setLike(value, build.id, user.id, {
       likeCount: build.likeCount,
       dislikeCount: build.dislikeCount,
     })
@@ -1125,13 +833,12 @@ for (const [path, value] of [
   // already created, so a stale link can't leak anything — the clear is a
   // no-op for a build the viewer never liked or disliked.
   builds.delete(`/:slug/${path}`, rateLimitUser("social"), async (c) => {
-    const session = await getSession(c)
-    if (!session?.user) return c.json({ error: "unauthorized" }, 401)
+    const user = await requireUser(c)
 
     const build = await getBuildForSocial(c.req.param("slug"))
     if (!build) return c.json({ error: "not_found" }, 404)
 
-    const counts = await clearLike(build.id, session.user.id, {
+    const counts = await clearLike(build.id, user.id, {
       likeCount: build.likeCount,
       dislikeCount: build.dislikeCount,
     })
@@ -1140,23 +847,19 @@ for (const [path, value] of [
 }
 
 builds.post("/:slug/bookmark", rateLimitUser("social"), async (c) => {
-  const session = await getSession(c)
-  if (!session?.user) return c.json({ error: "unauthorized" }, 401)
-  const userId = session.user.id
+  const user = await requireUser(c)
 
   const build = await getBuildForSocial(c.req.param("slug"))
-  if (!build) return c.json({ error: "not_found" }, 404)
-  if (!(await canViewerSeeBuild(build, userId))) {
+  if (!build || !(await canActOnBuild(build, user.id))) {
     return c.json({ error: "not_found" }, 404)
   }
-  // Unlike POST /like there's no self-bookmark guard: bookmarking your own
-  // Build to save it for later is allowed (see GLOSSARY.md — Bookmark, unlike
-  // Like, has no "not your own" rule).
+  // No self-bookmark guard: bookmarking your own Build to save it for later is
+  // allowed (GLOSSARY.md — Bookmark, unlike Like, has no "not your own" rule).
 
   const bookmarkCount = await toggleBookmark(
     "add",
     build.id,
-    userId,
+    user.id,
     build.bookmarkCount,
   )
   return c.json({ hasBookmarked: true, bookmarkCount })
@@ -1164,9 +867,7 @@ builds.post("/:slug/bookmark", rateLimitUser("social"), async (c) => {
 
 // No visibility re-check here — same reasoning as DELETE /:slug/like.
 builds.delete("/:slug/bookmark", rateLimitUser("social"), async (c) => {
-  const session = await getSession(c)
-  if (!session?.user) return c.json({ error: "unauthorized" }, 401)
-  const userId = session.user.id
+  const user = await requireUser(c)
 
   const build = await getBuildForSocial(c.req.param("slug"))
   if (!build) return c.json({ error: "not_found" }, 404)
@@ -1174,7 +875,7 @@ builds.delete("/:slug/bookmark", rateLimitUser("social"), async (c) => {
   const bookmarkCount = await toggleBookmark(
     "remove",
     build.id,
-    userId,
+    user.id,
     build.bookmarkCount,
   )
   return c.json({ hasBookmarked: false, bookmarkCount })
@@ -1182,94 +883,48 @@ builds.delete("/:slug/bookmark", rateLimitUser("social"), async (c) => {
 
 builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
   const slug = c.req.param("slug")
+  const variant = detailVariant(c)
   // Memoized; rateLimitAnonRead already resolved it for this request.
   const session = await getSession(c)
 
-  // Anonymous: served from the KV snapshot (see _build-snapshot.ts), so a miss
-  // here never constructs a PrismaClient. Also covers the link-unfurl Worker's
-  // `?embed=1` (apps/web/worker/index.ts), which forwards no cookies.
+  // Anonymous: served from the KV snapshot, so a miss here never constructs
+  // a PrismaClient.
   if (!session?.user) {
-    const kv = snapshotKv(c)
-    // A failed KV read falls back to Postgres rather than 500ing the page.
-    const hit = kv
-      ? await kv
-          .getWithMetadata<SnapshotMeta>(snapshotKey(slug), "text")
-          .catch(() => null)
-      : null
-    let text = hit?.value
-    let meta = hit?.metadata
-    // Belt and braces: a key whose metadata isn't anonymously visible is
-    // treated as missing, never served.
-    if (text == null || !meta || !isAnonVisible(meta.visibility)) {
-      // shortcut: measurement only (docs/usage-analytics.md); remove both
-      // detail:* logs once the plain-SQL rewrite of these paths is decided.
-      console.log("detail:kv-miss")
-      const snap = await loadAnonSnapshot(slug)
-      // Only store real snapshots: a delete per 404/PRIVATE probe is a billed
-      // KV write, and a stale key is already ignored by the check above.
-      if (kv && snap) registerBackgroundWork(writeSnapshot(kv, slug, snap))
-      if (!snap) return c.json({ error: "not_found" }, 404)
-      text = JSON.stringify(snap.body)
-      meta = snap.meta
+    const snap = await readAnonSnapshot(c, slug)
+    if (!snap) return c.json({ error: "not_found" }, 404)
+    if (variant === "meta") {
+      return c.json(metaFromSnapshot(JSON.parse(snap.text)))
     }
-    if (c.req.query("embed") === "1") {
-      return c.json(embedFromSnapshot(JSON.parse(text)))
-    }
-    if (c.req.query("view") === "0") {
-      // Embed loads never render the partner strip. No view, no cookie, so the
-      // browser may cache it too (Vary: Cookie keeps it off signed-in loads).
-      const { partners: _, ...body } = JSON.parse(text)
+    if (variant === "noView") {
+      // No view, no cookie, so the browser may cache it too (Vary: Cookie
+      // keeps it off signed-in loads).
+      const { partners: _, ...body } = JSON.parse(snap.text)
       c.header("Cache-Control", "public, max-age=300")
       c.header("Vary", "Cookie")
       return c.json(body)
     }
-    maybeIncrementView(c, meta.id, slug, undefined, "")
-    return c.body(text, 200, { "Content-Type": "application/json" })
+    maybeIncrementView(c, snap.meta.id, slug, false)
+    return c.body(snap.text, 200, { "Content-Type": "application/json" })
   }
 
+  // shortcut: measurement only — see the detail:kv-miss log in _build-snapshot.ts.
   console.log("detail:live")
   const build = await prisma.build.findUnique({
     where: { slug },
-    // Fold user + organization + buildGuide into one LATERAL-join SELECT
-    // rather than a query-per-relation. The detail page was the single
-    // largest source of DB query volume (one view = build + guide + author +
-    // org as four separate SELECTs); see _build-list.ts for the rationale.
     relationLoadStrategy: "join",
     include: DETAIL_INCLUDE,
   })
-
   if (!build) return c.json({ error: "not_found" }, 404)
 
   const viewerId = session.user.id
-  // Resolve org membership once — both the view check and the owner/mutate
-  // check below need the same (org, viewer) answer.
-  const viewerIsOrgMember =
-    build.organizationId != null
-      ? await isOrgMember(build.organizationId, viewerId)
-      : false
-  // Admins bypass visibility so they can moderate any build — without this, an
-  // admin who sets someone else's build to PRIVATE immediately loses the right
-  // to view it back and the viewer 404s. This is a VIEW-only power: the social
-  // paths (like/bookmark/fork) go through canViewerSeeBuild, which has no admin
-  // bypass on purpose, so an admin can read but not act on a private build.
-  // Re-checked past the cookie cache so a demoted admin loses the bypass at
-  // once; only cached admins pay the extra lookup.
-  const isAdmin =
-    session.user.isAdmin === true &&
-    (await getFreshSession(c))?.user.isAdmin === true
-  const access = buildAccess(build, {
-    id: viewerId,
-    isOrgMember: viewerIsOrgMember,
-    isAdmin,
-  })
-
+  const access = await viewerAccess(c, build, viewerId)
   if (!access.canView) return c.json({ error: "not_found" }, 404)
 
-  maybeIncrementView(c, build.id, build.slug, viewerId, build.userId)
+  maybeIncrementView(c, build.id, build.slug, build.userId === viewerId)
 
   // Partner strip rides along so a page view is one cache miss instead of two
-  // (each miss pays per-request Prisma client + connection setup). Embed loads
-  // (?view=0) never render the strip, so they skip the query.
+  // (each miss pays per-request Prisma client + connection setup). The embed
+  // viewer never renders it, so it skips the query.
   const [like, bookmark, partners] = await Promise.all([
     prisma.buildLike.findUnique({
       where: { userId_buildId: { userId: viewerId, buildId: build.id } },
@@ -1279,7 +934,7 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
       where: { userId_buildId: { userId: viewerId, buildId: build.id } },
       select: { id: true },
     }),
-    c.req.query("view") === "0"
+    variant === "noView"
       ? null
       : prisma.build.findUnique({
           where: { id: build.id },
@@ -1287,182 +942,74 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
           select: partnerSelect(viewerId),
         }),
   ])
-  const viewerLike = like?.value ?? 0
-  const viewerHasBookmarked = bookmark != null
-
-  const isOwner = access.canMutate
 
   return c.json({
     ...serializeBuildDetail(
       build,
       {
-        isOwner,
-        hasLiked: viewerLike === 1,
-        hasDisliked: viewerLike === -1,
-        hasBookmarked: viewerHasBookmarked,
+        isOwner: access.canMutate,
+        hasLiked: like?.value === 1,
+        hasDisliked: like?.value === -1,
+        hasBookmarked: bookmark != null,
       },
-      isOwner || isAdmin,
+      access.canMutate || access.isAdmin,
     ),
     ...(partners && { partners: serializePartners(partners) }),
   })
 })
 
-function snapshotKv(c: Context): KVNamespace | undefined {
-  return (c.env as Bindings | undefined)?.BUILD_SNAPSHOTS
-}
-
-const ANON_VIEWER = {
-  isOwner: false,
-  hasLiked: false,
-  hasDisliked: false,
-  hasBookmarked: false,
-}
-
-// The anonymous GET /:slug body, partner strip included, in one query. null
-// when the build is missing or not anonymously visible, so a PRIVATE build can
-// never become a snapshot. partnerSelect(undefined) drops PRIVATE partners.
-async function loadAnonSnapshot(slug: string): Promise<Snapshot | null> {
-  const build = await prisma.build.findUnique({
-    where: { slug },
-    relationLoadStrategy: "join",
-    include: {
-      ...DETAIL_INCLUDE,
-      partnerBuilds: partnerSelect(undefined).partnerBuilds,
-    },
-  })
-  if (!build || !isAnonVisible(build.visibility)) return null
-  return {
-    body: {
-      ...serializeBuildDetail(build, ANON_VIEWER),
-      partners: serializePartners(build),
-    },
-    meta: { id: build.id, visibility: build.visibility },
-  }
-}
-
-// Every mutation that changes what an anonymous viewer of these builds sees:
-// evicts the colo-local edge cache and rewrites (or drops) each KV snapshot
-// after the response. Pass the partners too when a build's own card changes
-// (name, visibility, thumbnail, deletion): their strips embed it.
-export function invalidateBuilds(c: Context, slugs: string[]): void {
-  const kv = snapshotKv(c)
-  for (const slug of new Set(slugs)) {
-    purgeEdge(c, `/builds/${slug}`)
-    if (!kv) continue
-    const refresh = () =>
-      loadAnonSnapshot(slug).then((snap) => writeSnapshot(kv, slug, snap))
-    // Second pass overwrites a racing read-through's pre-commit put (see
-    // SNAPSHOT_TTL). Its DB read finishes well inside the delay.
-    registerBackgroundWork(
-      refresh()
-        .then(() => new Promise((r) => setTimeout(r, RACE_REFRESH_MS)))
-        .then(refresh)
-        .catch((err) => console.error("snapshot refresh failed", err)),
-    )
-  }
-}
-
-const RACE_REFRESH_MS = 5_000
-
-// Slugs whose anonymous snapshot shows a matching build: the builds plus every
-// build whose partner strip lists one. For changes to what those builds embed
-// (author, org) or deletions; read BEFORE a delete (rows cascade away), then
-// pass to invalidateBuilds after the write.
-export async function snapshotSlugs(
-  where: Prisma.BuildWhereInput,
-): Promise<string[]> {
-  const rows = await prisma.build.findMany({
-    where,
-    select: { slug: true, partnerBuilds: { select: { slug: true } } },
-  })
-  return rows.flatMap((b) => [b.slug, ...b.partnerBuilds.map((p) => p.slug)])
-}
-
 const VIEW_COOKIE_MAX_AGE = 12 * 60 * 60 // 12h
 
+/** Counts a view of the full page (never the meta or noView variants, never the
+ *  author's own), deduped per browser by a 12h `vw_<slug>` cookie. */
 function maybeIncrementView(
   c: Context,
   buildId: string,
   slug: string,
-  viewerId: string | undefined,
-  ownerId: string,
+  viewerIsAuthor: boolean,
 ) {
-  if (viewerId && viewerId === ownerId) return
-  // The link-unfurl Worker (apps/web/worker/index.ts) appends ?embed=1 when it
-  // hydrates OG meta tags for bot scrapes. Those calls forward no cookies, so
-  // without this guard every Discord unfurl would inflate
-  // viewCount — and the Set-Cookie we'd attach would also defeat the Worker's
-  // edge cache. Skip the side effect (and the cookie) entirely.
-  if (c.req.query("embed") === "1") return
-  // The embed viewer (apps/web/src/embed-main.tsx) appends ?view=0. An embed
-  // impression on a third-party guide page is not a build view, so skip the
-  // bump. Skipping also means no Set-Cookie, which lets the detail handler mark
-  // the response browser-cacheable (see below).
-  if (c.req.query("view") === "0") return
+  if (viewerIsAuthor || detailVariant(c) !== "full") return
   const cookieName = `vw_${slug}`
   if (getCookie(c, cookieName)) return
   // All-time counter plus the per-day bucket for the trailing-30-day "trending"
-  // sort, in one statement. Background work through backgroundSql so the
-  // anonymous snapshot path pays one pooled pg query, not a PrismaClient.
-  // The opportunistic prune keeps the bucket table bounded to the window
-  // without a cron: counted views are already rare (12h dedup), and a ~2%
-  // sample trims it without a DELETE on every request.
-  backgroundSql(
-    `WITH counted AS (
-       UPDATE builds SET "viewCount" = "viewCount" + 1 WHERE id = $1
-     )
-     INSERT INTO build_view_days ("buildId", day, count)
-     VALUES ($1, CURRENT_DATE, 1)
-     ON CONFLICT ("buildId", day)
-       DO UPDATE SET count = build_view_days.count + 1`,
-    [buildId],
+  // sort, in one statement, on the pool so the anonymous snapshot path never
+  // builds a PrismaClient. The sampled prune keeps the bucket table bounded to
+  // the window without a cron: counted views are already rare (12h dedup).
+  registerBackgroundWork(
+    poolQuery(
+      `WITH counted AS (
+         UPDATE builds SET "viewCount" = "viewCount" + 1 WHERE id = $1
+       )
+       INSERT INTO build_view_days ("buildId", day, count)
+       VALUES ($1, CURRENT_DATE, 1)
+       ON CONFLICT ("buildId", day)
+         DO UPDATE SET count = build_view_days.count + 1`,
+      [buildId],
+    ),
+    "view count",
   )
-  if (Math.random() < 0.02) {
-    backgroundSql(
+  sometimesInBackground(0.02, "view-day prune", () =>
+    poolQuery(
       `DELETE FROM build_view_days WHERE day < CURRENT_DATE - INTERVAL '31 days'`,
-      [],
-    )
-  }
-  const isProd = process.env.NODE_ENV === "production"
+    ),
+  )
   setCookie(c, cookieName, "1", {
     path: "/",
     maxAge: VIEW_COOKIE_MAX_AGE,
     httpOnly: true,
-    sameSite: isProd ? "None" : "Lax",
-    secure: isProd,
+    sameSite: isHttps ? "None" : "Lax",
+    secure: isHttps,
   })
 }
 
-async function canMutateBuild(
-  existing: { userId: string; organizationId: string | null },
-  sessionUserId: string,
-) {
-  if (existing.userId === sessionUserId) return true
-  if (existing.organizationId)
-    return isOrgMember(existing.organizationId, sessionUserId)
-  return false
-}
-
-async function isOrgMember(organizationId: string, userId: string) {
-  const membership = await prisma.organizationMember.findUnique({
-    where: { organizationId_userId: { organizationId, userId } },
-    select: { userId: true },
-  })
-  return membership != null
-}
-
-type OrgAssignment =
-  | { ok: true; value: string | null }
-  | { ok: false; error: string; status: 400 | 403 }
-
+/** The org a build may be published under: null for none, else one the user
+ *  belongs to. Throws 400/403 otherwise. */
 async function resolveOrgAssignment(
   raw: unknown,
   userId: string,
-): Promise<OrgAssignment> {
-  if (raw == null) return { ok: true, value: null }
-  if (typeof raw !== "string")
-    return { ok: false, error: "invalid_organization_id", status: 400 }
-  if (!(await isOrgMember(raw, userId)))
-    return { ok: false, error: "not_org_member", status: 403 }
-  return { ok: true, value: raw }
+): Promise<string | null> {
+  if (raw == null) return null
+  if (typeof raw !== "string") throw httpError(400, "invalid_organization_id")
+  if (!(await isOrgMember(raw, userId))) throw httpError(403, "not_org_member")
+  return raw
 }

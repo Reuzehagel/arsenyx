@@ -47,6 +47,23 @@ describe("diffBuildData", () => {
     ])
   })
 
+  it("reports arcane swaps and rank changes from saved { arcane, rank } entries", () => {
+    const arc = (name: string, rank = 5) => ({ arcane: { name }, rank })
+    const before = doc({
+      arcanes: [arc("Arcane Energize"), arc("Molt Augmented")],
+    })
+    const after = doc({
+      arcanes: [arc("Arcane Energize", 3), arc("Arcane Avenger"), null],
+    })
+    expect(labels(diffBuildData(before, after))).toEqual(
+      expect.arrayContaining([
+        "remove Molt Augmented",
+        "add Arcane Avenger",
+        "modify Arcane Energize",
+      ]),
+    )
+  })
+
   it("ignores a mod moved between slots", () => {
     const before = doc({ slots: { n0: mod("Reach"), n1: mod("Fury") } })
     const after = doc({ slots: { n1: mod("Reach"), n2: mod("Fury") } })

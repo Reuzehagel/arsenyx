@@ -1,5 +1,8 @@
 // Warframe item types for browseable equipment
 
+import type { HelminthAbility } from "./build-data"
+import type { Polarity } from "./polarities"
+
 export type BrowseCategory =
   | "warframes"
   | "operators"
@@ -163,13 +166,6 @@ export interface Gun extends Weapon {
 // Melee-specific
 export interface Melee extends Weapon {
   stancePolarity?: string
-  /**
-   * Canonical stance compat-name for this melee (e.g. "Polearms"). Matches
-   * stance mod `compatName` so the picker can filter stances per weapon.
-   * Currently absent from upstream data — when populated, `getModsForItem`
-   * filters stance mods; while missing, the picker shows every stance mod.
-   */
-  meleeClass?: string
   blockingAngle?: number
   comboDuration?: number
   followThrough?: number
@@ -183,23 +179,6 @@ export interface Melee extends Weapon {
   heavySlamRadialDamage?: number
   heavySlamRadius?: number
   windUp?: number
-}
-
-// Necramech
-export interface Necramech extends BaseItem {
-  health: number
-  shield: number
-  armor: number
-  abilities?: Ability[]
-}
-
-// Companion (Sentinels + Pets)
-export interface Companion extends BaseItem {
-  health?: number
-  shield?: number
-  armor?: number
-  power?: number
-  type?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -294,9 +273,6 @@ export interface ModularData {
   zaw: ModularZaws
 }
 
-// Union type for all browseable items
-export type BrowseableItem = Warframe | Gun | Melee | Necramech | Companion
-
 // Simplified item for grid display
 export interface BrowseItem {
   uniqueName: string
@@ -313,37 +289,7 @@ export interface BrowseItem {
   releaseDate?: string // Format: "YYYY-MM-DD"
 }
 
-// Sort options for browse page
-export type SortOption = "name-asc" | "name-desc" | "date-desc" | "date-asc"
-
-// Filter options for browse page
-export interface BrowseFilters {
-  category: BrowseCategory
-  query?: string
-  masteryMax?: number
-  primeOnly?: boolean
-  hideVaulted?: boolean
-  sort?: SortOption
-}
-
-// =============================================================================
-// POLARITIES
-// =============================================================================
-
-export type Polarity =
-  | "madurai"
-  | "vazarin"
-  | "naramon"
-  | "zenurik"
-  | "unairu"
-  | "penjaga"
-  | "umbra"
-  | "any"
-  | "universal"
-
-// =============================================================================
-// MOD TYPES
-// =============================================================================
+export type { Polarity } from "./polarities"
 
 export interface Mod {
   uniqueName: string
@@ -402,10 +348,6 @@ export interface Mod {
   wikiaThumbnail?: string
 }
 
-// =============================================================================
-// ARCANE TYPES
-// =============================================================================
-
 export interface Arcane {
   uniqueName: string
   name: string
@@ -428,10 +370,6 @@ export interface Arcane {
   }>
 }
 
-// =============================================================================
-// BUILD STATE TYPES
-// =============================================================================
-
 export type SlotType = "aura" | "exilus" | "stance" | "normal" | "arcane"
 
 export interface ModSlot {
@@ -439,7 +377,7 @@ export interface ModSlot {
   type: SlotType
   innatePolarity?: Polarity
   formaPolarity?: Polarity // User-applied forma polarity
-  mod?: PlacedMod
+  mod?: BuildStateMod
 }
 
 export interface RivenStatEntry {
@@ -452,7 +390,7 @@ export interface RivenStats {
   negatives: RivenStatEntry[]
 }
 
-export interface PlacedMod {
+export interface BuildStateMod {
   uniqueName: string
   name: string
   imageName?: string
@@ -471,7 +409,7 @@ export interface PlacedMod {
   rivenStats?: RivenStats
 }
 
-export interface PlacedArcane {
+export interface BuildStateArcane {
   uniqueName: string
   name: string
   imageName?: string
@@ -493,7 +431,7 @@ export interface BuildState {
   exilusSlot?: ModSlot
   stanceSlot?: ModSlot
   normalSlots: ModSlot[] // 8 slots (12 for Necramechs)
-  arcaneSlots: (PlacedArcane | null)[] // Warframes: 2 slots, Weapons: 1 slot
+  arcaneSlots: (BuildStateArcane | null)[] // Warframes: 2 slots, Weapons: 1 slot
 
   // Archon Shards (Warframes only) - 5 slots
   shardSlots: (PlacedShard | null)[]
@@ -514,7 +452,10 @@ export interface BuildState {
   // Helminth ability replacement (only for warframes)
   helminthAbility?: {
     slotIndex: number // 0-3, which ability slot was replaced
-    ability: HelminthAbility
+    // Share links may omit the description; the catalog entry always has one.
+    ability: Omit<HelminthAbility, "description" | "stats"> & {
+      description?: string
+    }
   }
 
   // Zaw component selection (Zaw melee weapons only).
@@ -563,17 +504,9 @@ export const LICH_BONUS_ELEMENTS = [
 
 export type LichBonusElement = (typeof LICH_BONUS_ELEMENTS)[number]
 
-export interface HelminthAbility {
-  uniqueName: string
-  name: string
-  imageName?: string
-  source: string // "Helminth" or source Warframe name
-  description?: string
-}
-
-// =============================================================================
-// ARCHON SHARD TYPES
-// =============================================================================
+/** Name prefixes of the Kuva / Tenet / Coda variant weapons (the ones that
+ *  carry a Lich bonus element). */
+export const LICH_PREFIXES = ["Kuva ", "Tenet ", "Coda "] as const
 
 export type ShardColor =
   | "crimson"
@@ -583,37 +516,28 @@ export type ShardColor =
   | "violet"
   | "emerald"
 
+/** Frame stats an Archon shard feeds into the stat engine (the web
+ *  `StatType` ids). Shard stats without one are display-only. */
+export type ShardBuildStat =
+  | "health"
+  | "shield"
+  | "armor"
+  | "energy"
+  | "sprint_speed"
+  | "ability_strength"
+  | "ability_duration"
+
 export interface ShardStat {
   name: string // e.g., "Health", "Ability Strength"
   baseValue: number // Regular shard bonus
   tauforgedValue: number // Tauforged bonus (+50%)
   unit: string // "", "%", "s", etc.
+  /** The engine stat this adds to: `unit ""` adds flat, `"%"` adds percent. */
+  stat?: ShardBuildStat
 }
 
 export interface PlacedShard {
   color: ShardColor
   stat: string // Stat name key
   tauforged: boolean
-}
-
-// ---------------------------------------------------------------------------
-// Item Stats (extracted from browseable item data for display)
-// ---------------------------------------------------------------------------
-
-export interface ItemStats {
-  health?: number
-  shield?: number
-  armor?: number
-  energy?: number
-  sprintSpeed?: number
-  abilities?: Array<{ name: string; imageName?: string; description: string }>
-  fireRate?: number
-  criticalChance?: number
-  criticalMultiplier?: number
-  procChance?: number
-  totalDamage?: number
-  magazineSize?: number
-  reloadTime?: number
-  range?: number
-  comboDuration?: number
 }

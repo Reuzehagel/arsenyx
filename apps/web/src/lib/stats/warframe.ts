@@ -1,7 +1,8 @@
 import { rankUpFor } from "@arsenyx/shared/warframe/rankup"
-import type { Warframe } from "@arsenyx/shared/warframe/types"
+import { shardValue } from "@arsenyx/shared/warframe/shards"
+import type { PlacedShard, Warframe } from "@arsenyx/shared/warframe/types"
 
-import { findShardStat, type PlacedShard } from "@/lib/shards"
+import { findShardStat } from "@/lib/shards"
 
 import { EXCLUDED_WARFRAME_AURAS } from "./aura-ignore"
 import { applyStatCap } from "./caps"
@@ -12,12 +13,7 @@ import {
   type PlacedModInput,
   type SourcedStat,
 } from "./parser"
-import type {
-  StatContribution,
-  StatType,
-  StatValue,
-  WarframeStats,
-} from "./types"
+import type { StatType, StatValue, WarframeStats } from "./types"
 
 // wiki.warframe.com/w/Umbral_Set: Vitality/Fiber scale +30%/+80%, Intensify +25%/+75%
 const UMBRAL_SET_BONUSES: Record<string, Record<number, number>> = {
@@ -27,7 +23,12 @@ const UMBRAL_SET_BONUSES: Record<string, Record<number, number>> = {
 }
 const UMBRAL_MODS = new Set(Object.keys(UMBRAL_SET_BONUSES))
 
-export interface WarframeCalcInput {
+/** Set-bonus multiplier on an Umbral mod's stats with `equipped` Umbral mods. */
+export function umbralSetMultiplier(modName: string, equipped: number): number {
+  return UMBRAL_SET_BONUSES[modName]?.[Math.min(equipped, 3)] ?? 1
+}
+
+interface WarframeCalcInput {
   warframe: Warframe
   mods: PlacedModInput[]
   arcanes: PlacedArcaneInput[]
@@ -43,7 +44,7 @@ export interface CompanionStats {
   energy: StatValue
 }
 
-export interface CompanionCalcInput {
+interface CompanionCalcInput {
   companion: {
     name: string
     health?: number
@@ -90,7 +91,7 @@ export function calculateWarframeStats(
 
   const umbralCount = mods.filter((m) => UMBRAL_MODS.has(m.mod.name)).length
   const setMultiplierFor = (name: string): number =>
-    UMBRAL_SET_BONUSES[name]?.[umbralCount] ?? 1
+    umbralSetMultiplier(name, umbralCount)
 
   const stats = collectSourcedStats(mods, arcanes, {
     setMultiplierFor,
@@ -119,17 +120,26 @@ export function calculateWarframeStats(
 const shardLabel = (color: string): string =>
   `${color[0].toUpperCase()}${color.slice(1)} Shard`
 
-const SHARD_FLAT_MAP: Record<string, StatType> = {
-  Health: "health",
-  "Shield Capacity": "shield",
-  Armor: "armor",
-  "Energy Max": "energy",
-}
-
-const SHARD_PCT_MAP: Record<string, StatType> = {
-  "Parkour Velocity": "sprint_speed",
-  "Ability Strength": "ability_strength",
-  "Ability Duration": "ability_duration",
+/** {@link accumulate} plus the placed shards that feed `statType`. */
+function accumulateWithShards(
+  statType: StatType,
+  stats: SourcedStat[],
+  shards: (PlacedShard | null)[],
+) {
+  const acc = accumulate(statType, stats)
+  for (const shard of shards) {
+    if (!shard) continue
+    const stat = findShardStat(shard.color, shard.stat)
+    // `satisfies`: a ShardBuildStat that isn't a StatType would never match.
+    if (!stat || (stat.stat satisfies StatType | undefined) !== statType)
+      continue
+    const amount = shardValue(stat, shard.tauforged)
+    const operation = stat.unit === "%" ? "percent_add" : "flat_add"
+    if (operation === "percent_add") acc.percent += amount
+    else acc.flat += amount
+    acc.contributions.push({ name: shardLabel(shard.color), amount, operation })
+  }
+  return acc
 }
 
 function calcSingle(
@@ -139,29 +149,11 @@ function calcSingle(
   shards: (PlacedShard | null)[],
   digits: number,
 ): StatValue {
-  const {
-    percent: basePercent,
-    flat: baseFlat,
-    contributions,
-  } = accumulate(statType, stats)
-  let percent = basePercent
-  let flat = baseFlat
-
-  for (const shard of shards) {
-    if (!shard) continue
-    const stat = findShardStat(shard.color, shard.stat)
-    if (!stat) continue
-    const name = shardLabel(shard.color)
-    const value = shard.tauforged ? stat.tauforgedValue : stat.baseValue
-    if (stat.unit === "" && SHARD_FLAT_MAP[shard.stat] === statType) {
-      flat += value
-      contributions.push({ name, amount: value, operation: "flat_add" })
-    } else if (stat.unit === "%" && SHARD_PCT_MAP[shard.stat] === statType) {
-      percent += value
-      contributions.push({ name, amount: value, operation: "percent_add" })
-    }
-  }
-
+  const { percent, flat, contributions } = accumulateWithShards(
+    statType,
+    stats,
+    shards,
+  )
   const modified = base * (1 + percent / 100) + flat
   return {
     base: round(base, digits),
@@ -170,44 +162,25 @@ function calcSingle(
   }
 }
 
+/** Ability stats are percentages of a 100% base; flat adds don't apply. */
 function calcAbility(
   statType: StatType,
   stats: SourcedStat[],
   shards: (PlacedShard | null)[],
 ): StatValue {
   const base = 100
-  const contributions: StatContribution[] = []
-  let percent = 0
-  for (const s of stats) {
-    if (s.type !== statType || s.operation !== "percent_add") continue
-    percent += s.value
-    contributions.push({
-      name: s.sourceName,
-      amount: s.value,
-      operation: "percent_add",
-    })
-  }
-  for (const shard of shards) {
-    if (!shard) continue
-    if (SHARD_PCT_MAP[shard.stat] !== statType) continue
-    const stat = findShardStat(shard.color, shard.stat)
-    if (!stat || stat.unit !== "%") continue
-    const value = shard.tauforged ? stat.tauforgedValue : stat.baseValue
-    percent += value
-    contributions.push({
-      name: shardLabel(shard.color),
-      amount: value,
-      operation: "percent_add",
-    })
-  }
-  const uncapped = base + percent
-  const capped = applyStatCap(statType, uncapped)
+  const { percent, contributions } = accumulateWithShards(
+    statType,
+    stats,
+    shards,
+  )
+  const capped = applyStatCap(statType, base + percent)
   return {
     base,
     modified: round(capped.value, 1),
     ...(capped.uncapped !== undefined
       ? { uncapped: round(capped.uncapped, 1) }
       : {}),
-    contributions,
+    contributions: contributions.filter((c) => c.operation === "percent_add"),
   }
 }

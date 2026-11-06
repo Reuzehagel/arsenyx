@@ -1,10 +1,8 @@
-import { describe, expect, it } from "bun:test"
+import { describe, expect, it, spyOn } from "bun:test"
 
-import {
-  normalizePolarities,
-  normalizePolarity,
-  POLARITY_SET,
-} from "./polarity"
+import { POLARITIES } from "@arsenyx/shared/warframe/polarities"
+
+import { normalizePolarities, normalizePolarity } from "./polarity"
 
 describe("normalizePolarity", () => {
   it("lowercases recognized polarities", () => {
@@ -32,8 +30,18 @@ describe("normalizePolarity", () => {
     expect(normalizePolarity("Mystery")).toBe("mystery")
   })
 
-  it("POLARITY_SET holds canonical names but not the 'none' sentinel", () => {
-    expect(POLARITY_SET.has("madurai")).toBe(true)
-    expect(POLARITY_SET.has("none")).toBe(false)
+  it("accepts every shared polarity and the wiki-only 'exilus' silently", () => {
+    const warn = spyOn(console, "warn").mockImplementation(() => {})
+    try {
+      for (const p of [...POLARITIES, "exilus"]) {
+        const wikiSpelling = p.charAt(0).toUpperCase() + p.slice(1)
+        expect(normalizePolarity(wikiSpelling)).toBe(p)
+      }
+      expect(warn).not.toHaveBeenCalled()
+      normalizePolarity("Mystery")
+      expect(warn).toHaveBeenCalledTimes(1)
+    } finally {
+      warn.mockRestore()
+    }
   })
 })

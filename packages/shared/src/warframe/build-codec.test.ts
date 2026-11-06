@@ -155,8 +155,7 @@ describe("encodeBuildDoc / decodeBuildDoc round-trip", () => {
         makeVariant({ id: "o2", label: "O2", formIndex: 1, shardSlots: [] }),
       ]),
     )
-    // atob/btoa match the codec's node base64 path for ASCII payloads.
-    const json = JSON.parse(atob(modern))
+    const json = JSON.parse(decodeURIComponent(atob(modern)))
     json.sh = json.vs[0].sh
     json.shf = { 1: json.vs[1].sh }
     for (const v of json.vs) delete v.sh

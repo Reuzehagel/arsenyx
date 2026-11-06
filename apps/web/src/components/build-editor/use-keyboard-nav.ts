@@ -1,11 +1,11 @@
-import { useHotkey } from "@/lib/hooks/hotkeys"
+import { normalSlotId, type SlotId } from "@arsenyx/shared/warframe/build-data"
 
-import {
-  getVisibleSlots,
-  type BuildSlotsState,
-  type SlotId,
-  type SlotLayout,
-} from "./use-build-slots"
+import { slotKind } from "@/lib/build/slot-id"
+import { getVisibleSlots, type SlotLayout } from "@/lib/build/slot-order"
+import { HOTKEYS, useHotkey } from "@/lib/hooks/hotkeys"
+
+import { MOD_SEARCH_GRID_ATTR } from "./mod-search"
+import type { BuildSlotsState } from "./use-build-slots"
 
 export type Dir = "left" | "right" | "up" | "down"
 
@@ -20,12 +20,9 @@ const COLS = 4
 
 function buildGrid(layout: SlotLayout): (SlotId | null)[][] {
   const grid: (SlotId | null)[][] = []
-  // Top row = the visible non-normal slots in reading order
-  // (aura-0, stance?, exilus?, aura-1..N-1). Derive it from getVisibleSlots so
-  // the slot ordering and the locked-stance exclusion live in one place rather
-  // than being re-encoded here (a locked stance is already absent from it).
+  // Top row = the visible non-normal slots in reading order.
   const topOrder = getVisibleSlots(layout).filter(
-    (id) => !id.startsWith("normal-"),
+    (id) => slotKind(id) !== "normal",
   )
   if (topOrder.length > 0) {
     const top: (SlotId | null)[] = new Array(
@@ -40,9 +37,7 @@ function buildGrid(layout: SlotLayout): (SlotId | null)[][] {
     const row: (SlotId | null)[] = []
     for (let j = 0; j < COLS; j++) {
       const idx = i + j
-      row.push(
-        idx < layout.normalSlotCount ? (`normal-${idx}` as SlotId) : null,
-      )
+      row.push(idx < layout.normalSlotCount ? normalSlotId(idx) : null)
     }
     grid.push(row)
   }
@@ -110,42 +105,32 @@ function move(current: SlotId, dir: Dir, layout: SlotLayout): SlotId {
 export function useSlotKeyboardNav({
   slots,
   layout,
-  enabled = true,
 }: {
-  slots: BuildSlotsState
+  slots: Pick<BuildSlotsState, "selected" | "select" | "placed">
   layout: SlotLayout
-  enabled?: boolean
 }) {
-  useHotkey(
-    ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"],
-    (e) => {
-      const dir = DIR_BY_KEY[e.key]
-      if (!dir) return
-      // Mod-search grid has its own keyboard handling (Tab in, arrows cycle
-      // matches, Enter places). Don't also move the editor slot selection.
-      const t = e.target as HTMLElement | null
-      if (t?.closest("[data-mod-search-grid]")) return
-      // First arrow press after a click-outside restores selection to the
-      // top-left normal slot rather than jumping a direction from there.
-      if (slots.selected === null) {
-        slots.select("normal-0")
-        return
-      }
-      const next = move(slots.selected, dir, layout)
-      if (next !== slots.selected) slots.select(next)
-    },
-    { enabled },
-  )
+  useHotkey(HOTKEYS.moveSlot, (e) => {
+    const dir = DIR_BY_KEY[e.key]
+    if (!dir) return
+    // Mod-search grid has its own keyboard handling (Tab in, arrows cycle
+    // matches, Enter places). Don't also move the editor slot selection.
+    const t = e.target as HTMLElement | null
+    if (t?.closest(`[${MOD_SEARCH_GRID_ATTR}]`)) return
+    // First arrow press after a click-outside restores selection to the
+    // top-left normal slot rather than jumping a direction from there.
+    if (slots.selected === null) {
+      slots.select("normal-0")
+      return
+    }
+    const next = move(slots.selected, dir, layout)
+    if (next !== slots.selected) slots.select(next)
+  })
 
-  useHotkey(
-    "`",
-    (e) => {
-      const t = e.target as HTMLElement | null
-      if (t?.closest("[data-mod-search-grid]")) return
-      const list = getVisibleSlots(layout)
-      const firstEmpty = list.find((id) => !slots.placed[id])
-      if (firstEmpty && firstEmpty !== slots.selected) slots.select(firstEmpty)
-    },
-    { enabled },
-  )
+  useHotkey(HOTKEYS.firstEmptySlot, (e) => {
+    const t = e.target as HTMLElement | null
+    if (t?.closest(`[${MOD_SEARCH_GRID_ATTR}]`)) return
+    const list = getVisibleSlots(layout)
+    const firstEmpty = list.find((id) => !slots.placed[id])
+    if (firstEmpty && firstEmpty !== slots.selected) slots.select(firstEmpty)
+  })
 }

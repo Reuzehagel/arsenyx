@@ -1,32 +1,34 @@
+import type { SavedVariant } from "@arsenyx/shared/warframe/build-data"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
+import type { ExtrasState } from "@/lib/build/extras"
 import {
   clearEditorDraft,
+  clearImportDraft,
   saveEditorDraft,
   type EditorDraftPayload,
-} from "@/lib/editor-draft"
-import type { SavedVariant } from "@/lib/queries/build-query"
+} from "@/lib/drafts"
 
-import { resetEditorCache } from "./editor-cache"
 import type { EditorCapture } from "./editor-capture"
 import type { ArcaneSlotsState } from "./use-arcane-slots"
 import type { BuildSlotsState } from "./use-build-slots"
-import type { ItemExtras } from "./use-item-extras"
 
 /**
  * Debounce the full editor state to localStorage so a refresh doesn't wipe
  * unsaved work. The first run is the hydration render (no user edit yet), so
  * skip it; after that, any change writes a draft. The draft is cleared on a
- * successful save and by the explicit Reset/Discard control. We intentionally
- * don't auto-clear on a manual revert-to-saved: that needed a baseline
- * snapshot that was wrong after a variant-switch remount (it got re-seeded to
- * the dirty state, so it could delete a live draft) — the visible badge plus
- * Reset/Discard cover bailing out instead.
+ * successful save and by the explicit Reset/Discard control; a manual
+ * revert-to-saved doesn't auto-clear it — the visible badge plus Reset/Discard
+ * cover bailing out instead.
+ *
+ * A share link or import (`adoption`) is written as the draft on mount and the
+ * URL drops it (`onAdopted`), so the session is an ordinary new-build session
+ * from then on and a refresh restores it. A draft it replaced is offered back
+ * in a toast.
  */
 export function useDraftAutosave({
   storeKey,
-  storedDraft,
   localDraft,
   isUpdate,
   capture,
@@ -37,9 +39,11 @@ export function useDraftAutosave({
   extras,
   variants,
   clampedActiveIndex,
+  onResetToSaved,
+  adoption,
+  onAdopted,
 }: {
   storeKey: string
-  storedDraft: EditorDraftPayload | null
   localDraft: EditorDraftPayload | null
   isUpdate: boolean
   capture: EditorCapture
@@ -47,14 +51,28 @@ export function useDraftAutosave({
   guide: { buildSummary: string; buildDescription: string }
   slots: BuildSlotsState
   arcanes: ArcaneSlotsState
-  extras: ItemExtras
+  extras: ExtrasState
   variants: SavedVariant[]
   clampedActiveIndex: number
+  /** Re-create the editor session; called after the draft is dropped. */
+  onResetToSaved: () => void
+  adoption: {
+    replaced: EditorDraftPayload | null
+    importId: string | undefined
+  } | null
+  onAdopted?: () => void
 }) {
-  // Whether an autosaved draft is currently overriding the saved build. Seeded
-  // from `storedDraft` (which survives variant-switch remounts, where
-  // localDraft is intentionally null) and kept in sync by the autosave effect.
-  const [hasDraft, setHasDraft] = useState(() => storedDraft !== null)
+  // Whether an autosaved draft is currently overriding the saved build.
+  const [hasDraft, setHasDraft] = useState(
+    () => localDraft !== null || adoption !== null,
+  )
+
+  const snapshot = (): EditorDraftPayload => ({
+    buildData: capture.captureBuildData(),
+    buildName,
+    guideSummary: guide.buildSummary,
+    guideDescription: guide.buildDescription,
+  })
 
   // Re-run on any edit. captureBuildData reads the values below; listing them
   // keeps the snapshot current without re-binding the helper in deps.
@@ -65,17 +83,7 @@ export function useDraftAutosave({
     slots.placed,
     slots.formaPolarities,
     arcanes.placed,
-    extras.shards,
-    extras.hasReactor,
-    extras.helminth,
-    extras.zawComponents,
-    extras.kitgunComponents,
-    extras.lichBonusElement,
-    extras.incarnonEnabled,
-    extras.incarnonPerks,
-    extras.deploymentContext,
-    extras.operatorAmp,
-    extras.focusSchool,
+    extras,
     variants,
     clampedActiveIndex,
   ]
@@ -91,25 +99,20 @@ export function useDraftAutosave({
     const handle = window.setTimeout(() => {
       // Capture + serialize inside the debounce so a burst of edits costs one
       // snapshot per idle window, not one per keystroke.
-      saveEditorDraft(storeKey, {
-        buildData: capture.captureBuildData(),
-        buildName,
-        guideSummary: guide.buildSummary,
-        guideDescription: guide.buildDescription,
-      })
+      saveEditorDraft(storeKey, snapshot())
       setHasDraft(true)
     }, 600)
     return () => window.clearTimeout(handle)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps)
 
-  // Clear the draft and reload so the editor re-hydrates from the saved build
-  // (or a blank new build). A reload is the simplest way to reset the live
-  // slot/arcane hooks, which only initialize at mount.
+  // Clear the draft, then have the owner re-create the session so it
+  // re-hydrates from the saved build (or a blank new build).
+  const toastId = `draft-restored:${storeKey}`
   const resetToSaved = () => {
     clearEditorDraft(storeKey)
-    resetEditorCache()
-    window.location.reload()
+    toast.dismiss(toastId)
+    onResetToSaved()
   }
 
   // Tell the user once, on the mount where we actually restored a draft, that
@@ -117,9 +120,9 @@ export function useDraftAutosave({
   useEffect(() => {
     if (localDraft === null) return
     toast("Draft restored", {
-      // Stable id dedupes StrictMode's double-invoked mount effect (and any
-      // remount) into a single toast instead of stacking duplicates.
-      id: `draft-restored:${storeKey}`,
+      // Stable id dedupes StrictMode's double-invoked mount effect into a
+      // single toast instead of stacking duplicates.
+      id: toastId,
       description: "Your unsaved edits from last time are back.",
       action: {
         label: isUpdate ? "Reset to saved" : "Discard",
@@ -127,6 +130,29 @@ export function useDraftAutosave({
       },
     })
     // Fire once, for the restoring mount only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (!adoption) return
+    saveEditorDraft(storeKey, snapshot())
+    if (adoption.importId) clearImportDraft(adoption.importId)
+    onAdopted?.()
+    const { replaced } = adoption
+    if (!replaced) return
+    toast("Replaced your unsaved draft", {
+      id: `draft-replaced:${storeKey}`,
+      description: "This build took the place of your draft for this item.",
+      duration: 10_000,
+      action: {
+        label: "Restore it",
+        onClick: () => {
+          saveEditorDraft(storeKey, replaced)
+          onResetToSaved()
+        },
+      },
+    })
+    // Once, for the adopting mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

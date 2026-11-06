@@ -24,14 +24,14 @@ import { basename, resolve } from "node:path"
 
 import { fetchBytes, fetchText } from "./build/http"
 import { lzmaDecompressText } from "./build/lzma"
+import { RAW_DE_DIR } from "./build/paths"
 import { writePinsSection } from "./build/pins"
 
 const INDEX_URL = "https://content.warframe.com/PublicExport/index_en.txt.lzma"
 const BLOB_URL = (entry: string) =>
   `https://content.warframe.com/PublicExport/Manifest/${entry}`
 
-const REPO_ROOT = resolve(import.meta.dirname, "..")
-const OUT_DIR = resolve(REPO_ROOT, "data/raw/de")
+const OUT_DIR = RAW_DE_DIR
 
 interface PinEntry {
   name: string

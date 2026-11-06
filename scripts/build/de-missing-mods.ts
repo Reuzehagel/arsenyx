@@ -5,7 +5,7 @@
  * the normal pipeline (polarity/rarity mapping, wiki flags, image resolve).
  */
 
-import type { DeUpgrade } from "./read-de"
+import type { DeUpgrade } from "./de-types"
 
 export interface InjectMissingResult {
   upgrades: DeUpgrade[]

@@ -20,6 +20,12 @@
  * fails loud on drift).
  */
 
+import {
+  BEAST_CLAW_CLASS,
+  BEAST_CLAW_POOL,
+} from "@arsenyx/shared/warframe/mods"
+import { PLEXUS_POOL } from "@arsenyx/shared/warframe/plexus"
+
 /** Wiki Class → list of DE mod compatNames the weapon accepts. */
 export const CLASS_DEFAULT_POOLS: Record<string, readonly string[]> = {
   // ──────── Primary weapons ────────
@@ -79,8 +85,8 @@ export const CLASS_DEFAULT_POOLS: Record<string, readonly string[]> = {
   Archmelee: ["Archmelee"],
 
   // ──────── Railjack ────────
-  Ordnance: ["Plexus"],
-  Turret: ["Plexus"],
+  Ordnance: [PLEXUS_POOL],
+  Turret: [PLEXUS_POOL],
 
   // ──────── Companion weapons ────────
   // The Class field on Module:Weapons/data/companion uses a mix of
@@ -95,7 +101,7 @@ export const CLASS_DEFAULT_POOLS: Record<string, readonly string[]> = {
   // Deliberately NOT "BEAST": those are precepts equipped on the companion
   // itself, not on its claws — including the pool here offered Fetch and
   // friends in the claws slot (#363).
-  "Claws (Beast)": ["BeastClaws"],
+  [BEAST_CLAW_CLASS]: [BEAST_CLAW_POOL],
   Melee: ["Melee"], // companion weapon variant
 
   // ──────── Modular Zaw classes ────────
@@ -120,8 +126,3 @@ export const CLASS_DEFAULT_POOLS: Record<string, readonly string[]> = {
   Enemy: [],
   Unique: [],
 }
-
-/** Sanity: every value here is a pool we want to assert in merge-weapons. */
-export const ALL_MENTIONED_POOLS: Set<string> = new Set(
-  Object.values(CLASS_DEFAULT_POOLS).flatMap((p) => [...p]),
-)

@@ -10,6 +10,7 @@ import { toast } from "sonner"
 
 import { ThemeProvider } from "@/components/theme-provider"
 import { apiErrorMessage } from "@/lib/util/api-client"
+import { STORAGE_KEYS, storageGet, storageSet } from "@/lib/util/storage"
 
 import { routeTree } from "./routeTree.gen"
 import "@/styles/globals.css"
@@ -34,15 +35,10 @@ if (import.meta.env.PROD && location.hostname === "www.arsenyx.com") {
 }
 
 function setupCssStudio() {
-  const KEY = "arsenyx.cssstudio"
   const params = new URLSearchParams(location.search)
   const param = params.get("cssstudio")
   if (param === "1" || param === "0") {
-    try {
-      localStorage.setItem(KEY, param)
-    } catch {
-      /* private mode — fine, just won't persist */
-    }
+    storageSet(STORAGE_KEYS.cssStudio, param)
     // Strip the param so the URL doesn't stay sticky as the user navigates.
     params.delete("cssstudio")
     const qs = params.toString()
@@ -52,13 +48,7 @@ function setupCssStudio() {
       location.pathname + (qs ? `?${qs}` : "") + location.hash,
     )
   }
-  let on = false
-  try {
-    on = localStorage.getItem(KEY) === "1"
-  } catch {
-    /* fine */
-  }
-  if (on) {
+  if (storageGet(STORAGE_KEYS.cssStudio) === "1") {
     void import("cssstudio").then(({ startStudio }) => startStudio())
   } else {
     // eslint-disable-next-line no-console

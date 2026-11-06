@@ -11,10 +11,9 @@ import { spawnSync } from "node:child_process"
 import { existsSync, readFileSync } from "node:fs"
 import { resolve } from "node:path"
 
-import { summarizeCatalogDiff, type FileChange } from "./build/catalog-diff"
+import { CATALOG_DIR as DATA, REPO_ROOT } from "./build/paths"
+import { summarizeCatalogDiff, type FileChange } from "./lib/catalog-diff"
 
-const REPO_ROOT = resolve(import.meta.dirname, "..")
-const DATA = "apps/web/public/data"
 const base = process.argv[2] ?? "HEAD"
 
 function git(args: string[]): string {

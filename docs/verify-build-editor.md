@@ -12,6 +12,8 @@ Drafts autosave to localStorage and come back on reload. A leftover mod from an 
 
 Drafts live under `arsenyx:editor-draft:<storeKey>`: the build slug for a saved build, `__new_build__:<category>:<slug>` for a new one.
 
+Opening a `?share=` or `?draft=` (import) link writes it as that item's draft and drops the param from the URL, so a refresh restores it. A draft it replaced is offered back by a "Replaced your unsaved draft" toast (Restore it).
+
 ## Read toasts and isolate a regression
 
 - Toasts last about 4s and land up to a second after load. Poll `[data-sonner-toast]` every 100ms from `javascript_tool`; a single check after a `wait` misses them.

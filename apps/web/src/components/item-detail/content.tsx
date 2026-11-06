@@ -1,3 +1,5 @@
+import { getCategoryLabel } from "@arsenyx/shared/warframe/categories"
+import type { BrowseCategory } from "@arsenyx/shared/warframe/types"
 import { Link as RouterLink } from "@tanstack/react-router"
 import { ArrowRight } from "lucide-react"
 
@@ -10,14 +12,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import {
-  formatPct,
-  formatStat,
-  getCategoryLabel,
-  getImageUrl,
-  type BrowseCategory,
-  type DetailItem,
-} from "@/lib/warframe"
+import type { DetailItem } from "@/lib/catalog"
+import { getImageUrl } from "@/lib/image-url"
+import { formatPct, formatStat } from "@/lib/util/format"
 
 import { TopBuildsSection } from "./top-builds-section"
 

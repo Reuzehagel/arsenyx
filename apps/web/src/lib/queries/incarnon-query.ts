@@ -1,3 +1,7 @@
+import {
+  CATALOG_FILES,
+  catalogUrl,
+} from "@arsenyx/shared/warframe/catalog-files"
 import type { IncarnonEvolution } from "@arsenyx/shared/warframe/incarnon-data"
 
 import { staticDataQuery } from "./static-data-query"
@@ -5,8 +9,7 @@ import { staticDataQuery } from "./static-data-query"
 export const incarnonEvolutionsQuery = staticDataQuery<
   Record<string, IncarnonEvolution>
 >(
-  ["incarnon-evolutions"],
-  "/data/incarnon-evolutions.json",
+  catalogUrl(CATALOG_FILES.incarnonEvolutions),
   "failed to load incarnon evolutions",
 )
 
@@ -16,7 +19,6 @@ export const incarnonEvolutionsQuery = staticDataQuery<
 export const incarnonAdapterImagesQuery = staticDataQuery<
   Record<string, string>
 >(
-  ["incarnon-adapter-images"],
-  "/data/incarnon-adapter-images.json",
+  catalogUrl(CATALOG_FILES.incarnonAdapterImages),
   "failed to load incarnon adapter images",
 )

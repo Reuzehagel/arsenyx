@@ -1,16 +1,18 @@
 import { Hono } from "hono"
 import { cors } from "hono/cors"
+import { HTTPException } from "hono/http-exception"
 
 import { auth } from "./auth"
 import type { Bindings } from "./bindings"
 import { withPrisma } from "./db"
 import { webOrigins } from "./env"
 import { getSession } from "./lib/session"
+import { isPrismaNotFound } from "./lib/validate"
 import { rateLimitAnonRead, rateLimitAuth } from "./middleware/rate-limit"
 import { banGuard, originGuard, securityHeaders } from "./middleware/security"
-import { isPrismaNotFound } from "./routes/_admin"
+import { invalidateBuilds, snapshotSlugs } from "./routes/_build-snapshot"
 import { admin } from "./routes/admin"
-import { builds, invalidateBuilds, snapshotSlugs } from "./routes/builds"
+import { builds } from "./routes/builds"
 import { img } from "./routes/img"
 import { imports } from "./routes/imports"
 import { me } from "./routes/me"
@@ -35,6 +37,9 @@ app.use(
 )
 
 app.onError((err, c) => {
+  // requireUser / requireAdmin / parseJsonBody / httpError carry their JSON
+  // response.
+  if (err instanceof HTTPException) return err.getResponse()
   if (isPrismaNotFound(err)) return c.json({ error: "not_found" }, 404)
   // Don't `console.error(err)` directly — for Prisma errors that drags in
   // `meta` (column names plus the parameter-bearing context from the

@@ -1,3 +1,11 @@
+import type {
+  AdminBuildsResponse,
+  AdminOrgsResponse,
+  AdminStats,
+  AdminUserFlag,
+  AdminUsersResponse,
+} from "@arsenyx/shared/api/admin"
+import type { BuildVisibility } from "@arsenyx/shared/api/build-dto"
 import {
   queryOptions,
   useMutation,
@@ -5,76 +13,35 @@ import {
 } from "@tanstack/react-query"
 
 import {
-  apiErrorMessage,
-  apiFetch,
-  ApiError,
+  apiCall,
   type ApiFetchInit,
+  toQueryString,
 } from "@/lib/util/api-client"
 
-async function adminCall<T = unknown>(
-  path: string,
-  opts: ApiFetchInit = {},
-): Promise<T> {
-  try {
-    return await apiFetch<T>(path, opts)
-  } catch (err) {
-    if (err instanceof ApiError) {
-      throw new Error(apiErrorMessage(err, `http_${err.status}`), {
-        cause: err,
-      })
-    }
-    throw err
-  }
+import { buildKeys } from "./build-query"
+import { orgKeys } from "./org-query"
+
+type AdminListParams = { page: number; q: string; category?: string }
+
+const adminKeys = {
+  users: ["admin", "users"] as const,
+  builds: ["admin", "builds"] as const,
+  orgs: ["admin", "orgs"] as const,
+  stats: ["admin", "stats"] as const,
 }
 
-function listQuery(params: {
-  page: number
-  q: string
-  category?: string
-}): string {
-  const qs = new URLSearchParams()
-  if (params.page > 1) qs.set("page", String(params.page))
-  if (params.q) qs.set("q", params.q)
-  if (params.category) qs.set("category", params.category)
-  const s = qs.toString()
-  return s ? `?${s}` : ""
-}
+/** The admin panel shows the server's message verbatim. */
+const adminCall = <T = unknown>(path: string, init: ApiFetchInit = {}) =>
+  apiCall<T>(path, { ...init, serverMessage: true })
+
+const listQuery = (p: AdminListParams) =>
+  toQueryString({ page: p.page, q: p.q, category: p.category }, { page: 1 })
 
 // ---------------- Users
 
-export type AdminUser = {
-  id: string
-  name: string | null
-  email: string
-  username: string | null
-  displayUsername: string | null
-  image: string | null
-  createdAt: string
-  isVerified: boolean
-  isCommunityLeader: boolean
-  isModerator: boolean
-  isAdmin: boolean
-  isBanned: boolean
-  buildCount: number
-}
-
-export type AdminUserFlag =
-  | "isVerified"
-  | "isCommunityLeader"
-  | "isModerator"
-  | "isAdmin"
-  | "isBanned"
-
-export type AdminUsersResponse = {
-  users: AdminUser[]
-  total: number
-  page: number
-  limit: number
-}
-
 export const adminUsersQuery = (params: { page: number; q: string }) =>
   queryOptions({
-    queryKey: ["admin", "users", params],
+    queryKey: [...adminKeys.users, params],
     queryFn: () =>
       adminCall<AdminUsersResponse>(`/admin/users${listQuery(params)}`),
   })
@@ -91,7 +58,7 @@ export function useAdminPatchUser() {
         json: input.patch,
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin", "users"] })
+      qc.invalidateQueries({ queryKey: adminKeys.users })
     },
   })
 }
@@ -104,54 +71,17 @@ export function useAdminDeleteUser() {
         method: "DELETE",
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin", "users"] })
-      qc.invalidateQueries({ queryKey: ["admin", "stats"] })
+      qc.invalidateQueries({ queryKey: adminKeys.users })
+      qc.invalidateQueries({ queryKey: adminKeys.stats })
     },
   })
 }
 
 // ---------------- Builds (admin view)
 
-export type AdminBuildRow = {
-  id: string
-  slug: string
-  name: string
-  visibility: "PUBLIC" | "PRIVATE" | "UNLISTED"
-  likeCount: number
-  bookmarkCount: number
-  viewCount: number
-  createdAt: string
-  updatedAt: string
-  item: { name: string; imageName: string | null; category: string }
-  user: {
-    id: string
-    name: string | null
-    username: string | null
-    displayUsername: string | null
-    image: string | null
-  }
-  organization: {
-    id: string
-    name: string
-    slug: string
-    image: string | null
-  } | null
-}
-
-export type AdminBuildsResponse = {
-  builds: AdminBuildRow[]
-  total: number
-  page: number
-  limit: number
-}
-
-export const adminBuildsQuery = (params: {
-  page: number
-  q: string
-  category?: string
-}) =>
+export const adminBuildsQuery = (params: AdminListParams) =>
   queryOptions({
-    queryKey: ["admin", "builds", params],
+    queryKey: [...adminKeys.builds, params],
     queryFn: () =>
       adminCall<AdminBuildsResponse>(`/admin/builds${listQuery(params)}`),
   })
@@ -164,9 +94,9 @@ export function useAdminDeleteBuild() {
         method: "DELETE",
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin", "builds"] })
-      qc.invalidateQueries({ queryKey: ["admin", "stats"] })
-      qc.invalidateQueries({ queryKey: ["builds"] })
+      qc.invalidateQueries({ queryKey: adminKeys.builds })
+      qc.invalidateQueries({ queryKey: adminKeys.stats })
+      qc.invalidateQueries({ queryKey: buildKeys.lists })
     },
   })
 }
@@ -174,45 +104,26 @@ export function useAdminDeleteBuild() {
 export function useAdminSetBuildVisibility(slug: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (visibility: AdminBuildRow["visibility"]) =>
+    mutationFn: (visibility: BuildVisibility) =>
       adminCall(`/admin/builds/${encodeURIComponent(slug)}`, {
         method: "PATCH",
         json: { visibility },
       }),
     onSuccess: () => {
-      // The viewer reads this build under ["build", slug]; refresh it so the
+      // The viewer reads this build under buildKeys.detail; refresh it so the
       // header visibility badge tracks the change without a manual reload.
-      qc.invalidateQueries({ queryKey: ["build", slug] })
-      qc.invalidateQueries({ queryKey: ["admin", "builds"] })
-      qc.invalidateQueries({ queryKey: ["builds"] })
+      qc.invalidateQueries({ queryKey: buildKeys.detail(slug) })
+      qc.invalidateQueries({ queryKey: adminKeys.builds })
+      qc.invalidateQueries({ queryKey: buildKeys.lists })
     },
   })
 }
 
 // ---------------- Orgs
 
-export type AdminOrg = {
-  id: string
-  name: string
-  slug: string
-  image: string | null
-  description: string | null
-  verified: boolean
-  createdAt: string
-  memberCount: number
-  buildCount: number
-}
-
-export type AdminOrgsResponse = {
-  orgs: AdminOrg[]
-  total: number
-  page: number
-  limit: number
-}
-
 export const adminOrgsQuery = (params: { page: number; q: string }) =>
   queryOptions({
-    queryKey: ["admin", "orgs", params],
+    queryKey: [...adminKeys.orgs, params],
     queryFn: () =>
       adminCall<AdminOrgsResponse>(`/admin/orgs${listQuery(params)}`),
   })
@@ -232,12 +143,12 @@ export function useAdminSetOrgVerified() {
     // takes seconds on a cold Worker, and with no immediate feedback the
     // toggle reads as broken (and invites mis-clicks on other rows).
     onMutate: async (input) => {
-      await qc.cancelQueries({ queryKey: ["admin", "orgs"] })
+      await qc.cancelQueries({ queryKey: adminKeys.orgs })
       const snapshots = qc.getQueriesData<AdminOrgsResponse>({
-        queryKey: ["admin", "orgs"],
+        queryKey: adminKeys.orgs,
       })
       qc.setQueriesData<AdminOrgsResponse>(
-        { queryKey: ["admin", "orgs"] },
+        { queryKey: adminKeys.orgs },
         (old) =>
           old
             ? {
@@ -267,7 +178,7 @@ export function useAdminSetOrgVerified() {
     // pattern regardless, so it stays.
     onSuccess: (data, input) => {
       qc.setQueriesData<AdminOrgsResponse>(
-        { queryKey: ["admin", "orgs"] },
+        { queryKey: adminKeys.orgs },
         (old) =>
           old
             ? {
@@ -284,9 +195,9 @@ export function useAdminSetOrgVerified() {
       // pre-write row into an eager refetch; with caching disabled there's no
       // stale window to dodge, so a plain invalidate is correct and also
       // updates any of these that happen to be mounted.
-      qc.invalidateQueries({ queryKey: ["org", input.slug.toLowerCase()] })
-      qc.invalidateQueries({ queryKey: ["orgs"] })
-      qc.invalidateQueries({ queryKey: ["builds"] })
+      qc.invalidateQueries({ queryKey: orgKeys.detail(input.slug) })
+      qc.invalidateQueries({ queryKey: orgKeys.all })
+      qc.invalidateQueries({ queryKey: buildKeys.lists })
     },
   })
 }
@@ -299,26 +210,16 @@ export function useAdminDeleteOrg() {
         method: "DELETE",
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin", "orgs"] })
-      qc.invalidateQueries({ queryKey: ["admin", "stats"] })
+      qc.invalidateQueries({ queryKey: adminKeys.orgs })
+      qc.invalidateQueries({ queryKey: adminKeys.stats })
     },
   })
 }
 
 // ---------------- Stats
 
-export type AdminStats = {
-  userCount: number
-  orgCount: number
-  buildCount: number
-  buildsDay: number
-  buildsWeek: number
-  buildsMonth: number
-  buildsByCategory: Array<{ category: string; count: number }>
-}
-
 export const adminStatsQuery = () =>
   queryOptions({
-    queryKey: ["admin", "stats"],
+    queryKey: adminKeys.stats,
     queryFn: () => adminCall<AdminStats>(`/admin/stats`),
   })

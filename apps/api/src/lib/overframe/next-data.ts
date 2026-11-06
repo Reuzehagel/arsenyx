@@ -1,8 +1,4 @@
-import type { OverframeBuildSource } from "./types"
-
-export interface ExtractedOverframeData {
-  source: OverframeBuildSource
-  nextData?: unknown
+interface ExtractedOverframeData {
   buildString?: string
   slots?: unknown
   itemName?: string
@@ -152,15 +148,8 @@ function findFirstHelminthAbility(obj: unknown): {
  */
 export function extractOverframeData(
   nextData: unknown,
-  source: OverframeBuildSource,
 ): ExtractedOverframeData {
-  if (!nextData) {
-    return {
-      source,
-      nextData: undefined,
-      buildString: undefined,
-    }
-  }
+  if (!nextData) return {}
 
   const buildStringRes = findFirstString(nextData, (k, v) => {
     if (!k) return false
@@ -223,8 +212,6 @@ export function extractOverframeData(
   const helminthAbilityRes = findFirstHelminthAbility(nextData)
 
   return {
-    source,
-    nextData,
     buildString: buildStringRes?.value,
     slots: slotsRes?.value,
     itemName: itemNameRes?.value,

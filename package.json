@@ -27,6 +27,7 @@
     "data:patch": "bun run scripts/patch-catalog.ts",
     "data:ab": "bun run scripts/data-ab.ts",
     "data:diff": "bun run scripts/catalog-diff.ts",
+    "test": "bun --filter=arsenyx-web --filter=arsenyx-api --filter=@arsenyx/shared run test && bun test scripts/",
     "typecheck": "bun run --filter '*' typecheck && bun run typecheck:scripts",
     "typecheck:scripts": "bun run --cwd=apps/web tsgo --noEmit -p ../../scripts/tsconfig.json",
     "lint": "oxlint apps/web/src apps/web/worker apps/api/src packages/shared/src scripts data/curated",

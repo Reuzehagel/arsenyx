@@ -1,27 +1,18 @@
-import type {
-  BuildListItemResponse,
-  BuildListResponse,
-} from "@arsenyx/shared/api/build-dto"
-import { LIST_LIMIT, type ListSort } from "@arsenyx/shared/warframe/build-list"
-import { keepPreviousData, queryOptions } from "@tanstack/react-query"
+import type { BuildListResponse } from "@arsenyx/shared/api/build-dto"
+import {
+  LIST_DEFAULT_SORTS,
+  type ListScope,
+  type ListSort,
+} from "@arsenyx/shared/api/build-list"
+import { queryOptions } from "@tanstack/react-query"
 
-import { apiFetch, loaderError } from "@/lib/util/api-client"
+import { apiCall, toQueryString } from "@/lib/util/api-client"
 
-/** Mirrors LIST_LIMIT in the api. Skeleton bone counts use this so the
- *  placeholder grid matches the loaded grid. */
-export const LIST_PAGE_SIZE = LIST_LIMIT
-
-export type BuildListSort = ListSort
-
-/** Canonical wire shapes live in `@arsenyx/shared/api/build-dto`; re-exported
- *  under their historical names so existing consumers keep importing them
- *  here. */
-export type BuildListItem = BuildListItemResponse
-export type { BuildListResponse }
+import { buildKeys } from "./build-query"
 
 export type BuildListParams = {
   page: number
-  sort: BuildListSort
+  sort: ListSort
   q?: string
   category?: string
   item?: string
@@ -30,70 +21,55 @@ export type BuildListParams = {
   hasShards?: boolean
 }
 
-/** Optional fields a caller can drop from the emitted query string. Routes
- *  that never filter by `item`/`limit` (org, profile) or by guide/shard facets
- *  (profile) pass these so their request URLs stay exactly as before. */
-type OmitParam = "item" | "limit" | "hasGuide" | "hasShards"
+export type BuildListScope = "public" | "mine" | "bookmarks"
 
-export function buildQueryString(
-  params: BuildListParams,
-  defaultSort: BuildListSort,
-  omit?: readonly OmitParam[],
-) {
-  const skip = new Set<OmitParam>(omit)
-  const q = new URLSearchParams()
-  if (params.page > 1) q.set("page", String(params.page))
-  if (params.sort !== defaultSort) q.set("sort", params.sort)
-  if (params.q) q.set("q", params.q)
-  if (params.category) q.set("category", params.category)
-  if (params.item && !skip.has("item")) q.set("item", params.item)
-  if (params.limit && !skip.has("limit")) q.set("limit", String(params.limit))
-  if (params.hasGuide && !skip.has("hasGuide")) q.set("hasGuide", "1")
-  if (params.hasShards && !skip.has("hasShards")) q.set("hasShards", "1")
-  const str = q.toString()
-  return str ? `?${str}` : ""
+/** Query string for every build-list endpoint — all parse the same filters
+ *  (api `parseListQuery`). Keys are listed in wire order. */
+export function listQueryString(p: BuildListParams, scope: ListScope): string {
+  return toQueryString(
+    {
+      page: p.page,
+      sort: p.sort,
+      q: p.q,
+      category: p.category,
+      item: p.item,
+      limit: p.limit,
+      hasGuide: p.hasGuide,
+      hasShards: p.hasShards,
+    },
+    { page: 1, sort: LIST_DEFAULT_SORTS[scope] },
+  )
 }
 
-async function loadBuilds(
-  path: string,
-  authRequired: boolean,
-): Promise<BuildListResponse> {
-  try {
-    return await apiFetch<BuildListResponse>(path)
-  } catch (err) {
-    throw loaderError(
-      err,
-      "failed to load builds",
-      authRequired ? "unauthorized" : undefined,
-    )
-  }
+const LIST_ENDPOINTS: Record<
+  BuildListScope,
+  { path: string; authRequired: boolean }
+> = {
+  public: { path: "/builds", authRequired: false },
+  mine: { path: "/builds/mine", authRequired: true },
+  bookmarks: { path: "/builds/bookmarks", authRequired: true },
+}
+
+function listQuery(scope: BuildListScope, params: BuildListParams) {
+  const { path, authRequired } = LIST_ENDPOINTS[scope]
+  return queryOptions({
+    queryKey: buildKeys.list(scope, params),
+    queryFn: () =>
+      apiCall<BuildListResponse>(`${path}${listQueryString(params, scope)}`, {
+        codes: {
+          ...(authRequired && { 401: "unauthorized" }),
+          default: "failed to load builds",
+        },
+      }),
+    ...(authRequired && { retry: false }),
+  })
 }
 
 export const publicBuildsQuery = (params: BuildListParams) =>
-  queryOptions({
-    queryKey: ["builds", "public", params],
-    queryFn: () =>
-      loadBuilds(`/builds${buildQueryString(params, "newest")}`, false),
-    placeholderData: keepPreviousData,
-  })
+  listQuery("public", params)
 
 export const myBuildsQuery = (params: BuildListParams) =>
-  queryOptions({
-    queryKey: ["builds", "mine", params],
-    queryFn: () =>
-      loadBuilds(`/builds/mine${buildQueryString(params, "updated")}`, true),
-    placeholderData: keepPreviousData,
-    retry: false,
-  })
+  listQuery("mine", params)
 
 export const bookmarkedBuildsQuery = (params: BuildListParams) =>
-  queryOptions({
-    queryKey: ["builds", "bookmarks", params],
-    queryFn: () =>
-      loadBuilds(
-        `/builds/bookmarks${buildQueryString(params, "newest")}`,
-        true,
-      ),
-    placeholderData: keepPreviousData,
-    retry: false,
-  })
+  listQuery("bookmarks", params)

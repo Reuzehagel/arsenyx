@@ -1,13 +1,24 @@
-import { describe, expect, it } from "vitest"
+import type { BuildDetailResponse } from "@arsenyx/shared/api/build-dto"
+import { Hono } from "hono"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
-  embedFromSnapshot,
-  isAnonVisible,
+  detailCachePaths,
+  detailVariant,
+  metaFromSnapshot,
+  invalidateBuilds,
   SNAPSHOT_TTL,
   snapshotKey,
   writeSnapshot,
   type Snapshot,
 } from "./_build-snapshot"
+
+// No database: a refresh's reload finds nothing (the build was deleted or
+// went PRIVATE), so it must drop the key.
+vi.mock("../db", () => ({
+  prisma: { build: { findUnique: async () => null } },
+  registerBackgroundWork: (p: Promise<unknown>) => void p.catch(() => {}),
+}))
 
 function fakeKv() {
   const store = new Map<string, { value: string; opts: unknown }>()
@@ -61,15 +72,64 @@ describe("writeSnapshot", () => {
   })
 })
 
-describe("isAnonVisible", () => {
-  it("only PUBLIC and UNLISTED", () => {
-    expect(isAnonVisible("PUBLIC")).toBe(true)
-    expect(isAnonVisible("UNLISTED")).toBe(true)
-    expect(isAnonVisible("PRIVATE")).toBe(false)
+describe("detail variants", () => {
+  // The purge list and the handler's dispatch come from one table: every URL
+  // invalidateBuilds evicts must be a variant the handler serves, and every
+  // variant must be evicted. `meta` twice: the legacy `?embed=1` alias.
+  it("purges every URL the handler serves a variant on", () => {
+    const served = detailCachePaths("abc").map((path) => {
+      const url = new URL(path, "http://api.test")
+      expect(url.pathname).toBe("/builds/abc")
+      return detailVariant({
+        req: { query: (k: string) => url.searchParams.get(k) ?? undefined },
+      } as never)
+    })
+    expect(served.sort()).toEqual(["full", "meta", "meta", "noView"])
   })
 })
 
-describe("embedFromSnapshot", () => {
+describe("invalidateBuilds", () => {
+  afterEach(() => {
+    delete (globalThis as { caches?: unknown }).caches
+  })
+
+  it("evicts every detail variant and drops the snapshot of a build that's gone", async () => {
+    const evicted: string[] = []
+    ;(globalThis as { caches?: unknown }).caches = {
+      default: {
+        delete: async (req: Request) => {
+          evicted.push(req.url)
+          return true
+        },
+      },
+    }
+    const { kv, deleted } = fakeKv()
+    const app = new Hono()
+    app.post("/x", (c) => {
+      invalidateBuilds(c, ["abc", "abc"])
+      return c.body(null, 204)
+    })
+    await app.request(
+      "http://api.test/x",
+      { method: "POST" },
+      {
+        BUILD_SNAPSHOTS: kv,
+      },
+    )
+
+    expect(evicted.sort()).toEqual(
+      [
+        "http://api.test/builds/abc",
+        "http://api.test/builds/abc?embed=1",
+        "http://api.test/builds/abc?meta=1",
+        "http://api.test/builds/abc?view=0",
+      ].sort(),
+    )
+    await vi.waitFor(() => expect(deleted).toEqual([snapshotKey("abc")]))
+  })
+})
+
+describe("metaFromSnapshot", () => {
   const full = {
     id: "id1",
     slug: "abc",
@@ -97,21 +157,21 @@ describe("embedFromSnapshot", () => {
     },
     guide: { summary: "s", description: "long", updatedAt: "t" },
     partners: [],
-  }
+  } as unknown as BuildDetailResponse
 
-  it("matches the old slim query's shape", () => {
-    expect(embedFromSnapshot(full)).toEqual({
+  it("keeps the unfurl fields and drops the loadout, guide body and author id", () => {
+    const e = metaFromSnapshot(full)
+    expect(e).toMatchObject({
       name: "Build",
-      description: "d",
-      visibility: "PUBLIC",
-      hideAuthor: false,
       likeCount: 3,
-      viewCount: 9,
-      item: full.item,
       user: { name: "N", username: "nick", displayUsername: "Nick" },
       organization: { name: "Org", verified: true },
       guide: { summary: "s" },
     })
+    const json = JSON.stringify(e)
+    for (const leaked of ["big", "long", "u1", "x.png", "partners"]) {
+      expect(json).not.toContain(leaked)
+    }
   })
 
   it("keeps a redacted author redacted", () => {
@@ -122,12 +182,12 @@ describe("embedFromSnapshot", () => {
       displayUsername: null,
       image: null,
     }
-    const e = embedFromSnapshot({ ...full, hideAuthor: true, user: hidden })
+    const e = metaFromSnapshot({ ...full, hideAuthor: true, user: hidden })
     expect(e.user).toEqual(hidden)
   })
 
   it("null org and guide", () => {
-    const e = embedFromSnapshot({ ...full, organization: null, guide: null })
+    const e = metaFromSnapshot({ ...full, organization: null, guide: null })
     expect(e.organization).toBeNull()
     expect(e.guide).toBeNull()
   })

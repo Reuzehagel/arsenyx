@@ -1,3 +1,7 @@
+import {
+  CATALOG_FILES,
+  catalogUrl,
+} from "@arsenyx/shared/warframe/catalog-files"
 import { isRivenMod } from "@arsenyx/shared/warframe/rivens"
 import type { Mod } from "@arsenyx/shared/warframe/types"
 import { useQuery } from "@tanstack/react-query"
@@ -13,9 +17,8 @@ import { staticDataQuery } from "./static-data-query"
  * detail popover without pulling the ~1.35 MB mods-all.json. DE ships no
  * tradability for mods, so the source is wiki `Mods_data.Tradable`.
  */
-export const modTradableQuery = staticDataQuery<string[]>(
-  ["mod-tradable"],
-  "/data/mod-tradable.json",
+const modTradableQuery = staticDataQuery<string[]>(
+  catalogUrl(CATALOG_FILES.modTradable),
   "failed to load mod tradability",
 )
 

@@ -1,4 +1,8 @@
-import { usernameClient } from "better-auth/client/plugins"
+import { BUILD_VISIBILITIES } from "@arsenyx/shared/api/build-dto"
+import {
+  inferAdditionalFields,
+  usernameClient,
+} from "better-auth/client/plugins"
 import { createAuthClient } from "better-auth/react"
 
 import { API_URL } from "@/lib/util/constants"
@@ -6,7 +10,18 @@ import { API_URL } from "@/lib/util/constants"
 export const authClient = createAuthClient({
   baseURL: `${API_URL}/auth`,
   fetchOptions: { credentials: "include" },
-  plugins: [usernameClient()],
+  plugins: [
+    usernameClient(),
+    // Type-only: mirrors user.additionalFields in apps/api/src/auth.ts.
+    inferAdditionalFields({
+      user: {
+        isAdmin: { type: "boolean", input: false },
+        defaultBuildVisibility: {
+          type: [...BUILD_VISIBILITIES],
+        },
+      },
+    }),
+  ],
   // Better Auth refetches /auth/get-session on every tab refocus by default
   // (refetchOnWindowFocus). For our largely logged-out audience that call
   // always returns null — pure waste that fans out across the API Worker
@@ -18,3 +33,6 @@ export const authClient = createAuthClient({
   // up session changes on its next request/navigation instead of on refocus.
   sessionOptions: { refetchOnWindowFocus: false },
 })
+
+/** The signed-in user as `useSession()` / `getSession()` return it. */
+export type SessionUser = typeof authClient.$Infer.Session.user

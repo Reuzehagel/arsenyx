@@ -17,16 +17,23 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { authClient } from "@/lib/auth-client"
-import { downloadMyBuildsExport } from "@/lib/queries/me-query"
+import { downloadApiFile } from "@/lib/util/download"
 import { authorName } from "@/lib/util/user-display"
 
-import { extras, SignedOutNotice } from "./shared"
+import { SignedOutNotice } from "./shared"
 
 export function AdvancedPanel() {
   const { data: session } = authClient.useSession()
   const user = session?.user
 
-  const exportAction = useMutation({ mutationFn: downloadMyBuildsExport })
+  const exportAction = useMutation({
+    mutationFn: () =>
+      downloadApiFile(
+        "/me/builds/export",
+        "arsenyx-builds.json",
+        "failed to export builds",
+      ),
+  })
   const revokeAction = useMutation({
     mutationFn: async () => {
       const res = await authClient.revokeOtherSessions()
@@ -118,7 +125,7 @@ export function AdvancedPanel() {
       <DeleteAccountDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        expected={authorName(extras(user), user.email)}
+        expected={authorName(user, user.email)}
       />
     </FieldGroup>
   )

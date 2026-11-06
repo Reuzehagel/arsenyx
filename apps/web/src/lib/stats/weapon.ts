@@ -31,7 +31,11 @@ import {
   type WeaponStats,
 } from "./types"
 
-export interface WeaponCalcInput {
+/** The catalog's name for a weapon's primary attack mode; modular weapons and
+ *  synthesized single-mode weapons use it too. */
+const NORMAL_ATTACK = "Normal Attack"
+
+interface WeaponCalcInput {
   weapon: Gun | Melee | Weapon
   mods: PlacedModInput[]
   arcanes: PlacedArcaneInput[]
@@ -86,7 +90,7 @@ export function calculateWeaponStats(input: WeaponCalcInput): WeaponStats {
     return stats.filter((s) => !s.attackScope || s.attackScope === scope)
   }
 
-  const multishot = calcStat("multishot", 1, statsFor("Normal Attack"))
+  const multishot = calcStat("multishot", 1, statsFor(NORMAL_ATTACK))
   const hasAttacks = Boolean(weapon.attacks && weapon.attacks.length > 0)
   const attackModes: AttackModeStats[] = []
 
@@ -94,7 +98,7 @@ export function calculateWeaponStats(input: WeaponCalcInput): WeaponStats {
     attackModes.push(
       buildAttackMode(
         {
-          name: "Normal Attack",
+          name: NORMAL_ATTACK,
           damage: weapon.damage,
           totalDamage: weapon.totalDamage,
           crit: ratioToPercent(weapon.criticalChance),
@@ -103,14 +107,14 @@ export function calculateWeaponStats(input: WeaponCalcInput): WeaponStats {
           fireRate: weapon.fireRate,
         },
         weapon,
-        statsFor("Normal Attack"),
+        statsFor(NORMAL_ATTACK),
       ),
     )
   }
 
   if (hasAttacks) {
     for (const attack of weapon.attacks!) {
-      if (attack.name === "Normal Attack" && attackModes.length > 0) continue
+      if (attack.name === NORMAL_ATTACK && attackModes.length > 0) continue
       const damage =
         typeof attack.damage === "object" ? (attack.damage ?? {}) : {}
       const totalDamage = sumDamage(damage)

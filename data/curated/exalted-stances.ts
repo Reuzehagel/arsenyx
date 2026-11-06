@@ -116,3 +116,11 @@ export const EXALTED_STANCES: Record<string, ExaltedStance> = {
     wikiImage: "BladeStorm130(xWhite).png",
   },
 }
+
+/** Exalted melees with a *free* (editable) stance rather than a locked one —
+ *  the documented exception above. The build warns on any other exalted melee
+ *  that has a stance slot but no EXALTED_STANCES entry. */
+export const FREE_STANCE_EXALTED_MELEES: ReadonlySet<string> = new Set([
+  "Garuda Talons",
+  "Garuda Prime Talons",
+])

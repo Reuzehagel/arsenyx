@@ -1,4 +1,5 @@
 import type {
+  BuildDetailResponse,
   BuildListItemResponse,
   BuildUserSummary,
 } from "@arsenyx/shared/api/build-dto"
@@ -6,22 +7,33 @@ import {
   LIST_LIMIT,
   LIST_SORTS,
   type ListSort,
-} from "@arsenyx/shared/warframe/build-list"
+} from "@arsenyx/shared/api/build-list"
+import { BUILD_SEARCH_Q_MAX } from "@arsenyx/shared/api/limits"
 import { isValidCategory } from "@arsenyx/shared/warframe/categories"
 
 import { prisma, sql } from "../db"
 import { Prisma } from "../generated/prisma/client"
 import { parseBool, parsePage, trimQ } from "./_query"
 
-/** The user columns behind `BuildUserSummary` on the wire. Anywhere a build
- *  row carries a person — author, org member, revision editor — selects this,
- *  so a field added to the shared type has one place to be added here. */
+/** The user columns behind `BuildUserSummary` on the wire. Every response
+ *  that carries a person — build author, org member, revision editor, profile
+ *  and admin user rows — selects this, so a field added to the shared type
+ *  has one place to be added here. */
 export const BUILD_USER_SELECT = {
   id: true,
   name: true,
   username: true,
   displayUsername: true,
   image: true,
+} as const
+
+/** The org columns behind `BuildOrganizationSummary` on the wire. */
+const BUILD_ORG_SELECT = {
+  id: true,
+  name: true,
+  slug: true,
+  image: true,
+  verified: true,
 } as const
 
 const HIDDEN_AUTHOR: BuildUserSummary = {
@@ -61,18 +73,14 @@ export const LIST_SELECT = {
   itemImageName: true,
   itemCategory: true,
   user: { select: BUILD_USER_SELECT },
-  organization: {
-    select: { id: true, name: true, slug: true, image: true, verified: true },
-  },
+  organization: { select: BUILD_ORG_SELECT },
 } as const
 
 export type ListRow = Prisma.BuildGetPayload<{ select: typeof LIST_SELECT }>
 
 export const DETAIL_INCLUDE = {
   user: { select: BUILD_USER_SELECT },
-  organization: {
-    select: { id: true, name: true, slug: true, image: true, verified: true },
-  },
+  organization: { select: BUILD_ORG_SELECT },
   buildGuide: {
     select: { summary: true, description: true, updatedAt: true },
   },
@@ -89,15 +97,23 @@ export type ViewerState = {
   hasBookmarked: boolean
 }
 
-// Single source of truth for the build-detail JSON shape, used by the
-// `GET /builds/:slug` route. Pass `viewer` for viewer-specific fields
-// (like/bookmark state); omit for anonymous/cacheable responses.
+export const ANON_VIEWER: ViewerState = {
+  isOwner: false,
+  hasLiked: false,
+  hasDisliked: false,
+  hasBookmarked: false,
+}
+
+export type BuildDetailBody = Omit<BuildDetailResponse, "partners">
+
+// Single source of truth for the build-detail JSON shape (`GET /builds/:slug`,
+// live and snapshotted). Anonymous viewers pass ANON_VIEWER.
 export function serializeBuildDetail(
   b: DetailRow,
-  viewer: ViewerState | null,
+  viewer: ViewerState,
   revealAuthor = false,
-) {
-  const base = {
+): BuildDetailBody {
+  return {
     id: b.id,
     slug: b.slug,
     name: b.name,
@@ -118,15 +134,14 @@ export function serializeBuildDetail(
     bookmarkCount: b.bookmarkCount,
     viewCount: b.viewCount,
     formaCount: b.formaCount,
-    createdAt: b.createdAt,
-    updatedAt: b.updatedAt,
+    createdAt: b.createdAt.toISOString(),
+    updatedAt: b.updatedAt.toISOString(),
     user: visibleAuthor(b, revealAuthor),
     organization: b.organization,
-    guide: b.buildGuide,
-  }
-  if (!viewer) return base
-  return {
-    ...base,
+    guide: b.buildGuide && {
+      ...b.buildGuide,
+      updatedAt: b.buildGuide.updatedAt.toISOString(),
+    },
     isOwner: viewer.isOwner,
     viewerHasLiked: viewer.hasLiked,
     viewerHasDisliked: viewer.hasDisliked,
@@ -186,10 +201,10 @@ export function parseListQuery(c: {
   )
     ? (sortRaw as ListSort)
     : undefined
-  const q = trimQ(c.req.query("q"), 200)
+  const q = trimQ(c.req.query("q"), BUILD_SEARCH_Q_MAX)
   const catRaw = c.req.query("category")
   const category = catRaw && isValidCategory(catRaw) ? catRaw : undefined
-  const item = trimQ(c.req.query("item"), 200)
+  const item = trimQ(c.req.query("item"), BUILD_SEARCH_Q_MAX)
   const limitRaw = parseInt(c.req.query("limit") ?? "", 10)
   const limit =
     Number.isFinite(limitRaw) && limitRaw > 0
@@ -200,10 +215,6 @@ export function parseListQuery(c: {
   return { page, limit, sort, q, category, item, hasGuide, hasShards }
 }
 
-/**
- * Search path: tsvector match ordered by ts_rank (with sort as tiebreaker).
- * Returns the paginated ID list + total match count.
- */
 function tiebreakerSql(sort: ListSort) {
   switch (sort) {
     case "updated":
@@ -243,12 +254,7 @@ const TRENDING_JOIN = Prisma.sql`
 
 // Shared raw-SQL fragment for the optional list filters (category / item /
 // guide / shards). Each clause is `AND …`, so it appends to an existing WHERE.
-function listFiltersSql(f: {
-  category: string | undefined
-  item: string | undefined
-  hasGuide: boolean | undefined
-  hasShards: boolean | undefined
-}) {
+function listFiltersSql(f: ListFilters) {
   // The boolean clauses branch on `!== undefined`, not truthiness — `false` is
   // a real filter ("only builds WITHOUT a guide"), not an absent one.
   return Prisma.sql`
@@ -259,28 +265,18 @@ function listFiltersSql(f: {
   `
 }
 
-async function searchBuildIds(params: {
-  q: string
-  category: string | undefined
-  item: string | undefined
-  hasGuide: boolean | undefined
-  hasShards: boolean | undefined
-  baseFilter: Prisma.Sql
-  sort: ListSort
-  skip: number
-  take: number
-}): Promise<{ ids: string[]; total: number }> {
-  const {
-    q,
-    category,
-    item,
-    hasGuide,
-    hasShards,
-    baseFilter,
-    sort,
-    skip,
-    take,
-  } = params
+/**
+ * Search path: tsvector match ordered by ts_rank (with sort as tiebreaker).
+ * Returns the paginated ID list + total match count.
+ */
+async function searchBuildIds(
+  q: string,
+  filters: ListFilters,
+  baseFilter: Prisma.Sql,
+  sort: ListSort,
+): Promise<{ ids: string[]; total: number }> {
+  const take = filters.limit
+  const skip = (filters.page - 1) * take
   // Cap at 8 tokens × 64 chars to bound query work on pathological input.
   // `[a-z0-9]+` already strips punctuation that would break to_tsquery syntax.
   const tokens = (q.toLowerCase().match(/[a-z0-9]+/g) ?? [])
@@ -308,7 +304,7 @@ async function searchBuildIds(params: {
     " AND ",
   )})`
   const matchFilter = Prisma.sql`("searchVector" @@ ${query} OR ("searchVector" IS NULL AND ${ilikeMatch}))`
-  const filtersSql = listFiltersSql({ category, item, hasGuide, hasShards })
+  const filtersSql = listFiltersSql(filters)
   const tiebreaker = tiebreakerSql(sort)
   // The trending tiebreaker references `tv.s`; only join the window when used.
   const trendingJoin = sort === "trending" ? TRENDING_JOIN : Prisma.empty
@@ -379,22 +375,12 @@ export async function runList({
   /** Admin moderation only: show authors of hideAuthor org builds. */
   revealAuthor?: boolean
 }) {
-  const { page, limit, q, category, item, hasGuide, hasShards } = filters
+  const { page, limit, q } = filters
   const sort: ListSort = filters.sort ?? defaultSort
   const skip = (page - 1) * limit
 
   if (q) {
-    const { ids, total } = await searchBuildIds({
-      q,
-      category,
-      item,
-      hasGuide,
-      hasShards,
-      baseFilter,
-      sort,
-      skip,
-      take: limit,
-    })
+    const { ids, total } = await searchBuildIds(q, filters, baseFilter, sort)
     return fetchOrdered(ids, total, page, limit, revealAuthor)
   }
 
@@ -402,7 +388,7 @@ export async function runList({
   // (client construction + query compile dominate a cache miss's CPU).
   // Sequential on purpose: in parallel the pool opens a second connection,
   // and connection setup costs more CPU than the extra round trip.
-  const filtersSql = listFiltersSql({ category, item, hasGuide, hasShards })
+  const filtersSql = listFiltersSql(filters)
   const rows = await sql<ListRow>(Prisma.sql`
     SELECT ${LIST_COLUMNS_SQL}
     FROM builds

@@ -10,38 +10,52 @@
  *   DE weapon record (uniqueName + name + productCategory + raw stats)
  *   Wiki record by name (Class, Slot, Family, Polarities, ExilusPolarity,
  *                        Traits, Mastery)
- *   Curated overrides (mod-pool routing, wiki stubs for new weapons)
+ *   Curated overrides (mod-pool routing, wiki aliases)
  *
  * Outputs:
  *   MergedWeapon — what the per-item detail file emits.
  *
  * Fail-loud assertions:
  *   - DE productCategory not in KNOWN_PRODUCT_CATEGORIES
- *   - Wiki Class not in KNOWN_WIKI_CLASSES (built from class-pools.ts keys)
- *   - Computed modPool member not in KNOWN_MOD_POOLS
+ *   - Wiki Class not a key of CLASS_DEFAULT_POOLS (class-pools.ts)
+ *   - A curated or routed pool not in KNOWN_MOD_POOLS (validateCuratedPools,
+ *     once at build start)
  *
  * Soft-loud assertions (logged warnings, not throws):
  *   - DE weapon with no wiki match — `displayClass` is null and most
  *     wiki-sourced fields (polarities, traits, attacks) are empty. If DE has
  *     given it a riven disposition (a real playable weapon), it still gets a
- *     generic per-slot mod pool by productCategory (see PRODUCT_CATEGORY_POOL)
+ *     generic per-slot mod pool by productCategory (see
+ *     WIKILESS_PRODUCT_CATEGORIES in categorize.ts)
  *     so it stays MODDABLE until the wiki documents it; otherwise modPools is
  *     just its own name and `categorizeWeapon` drops it as noise.
  */
 
 import {
+  BEAST_CLAW_CLASS,
+  BEAST_CLAW_POOL,
+} from "@arsenyx/shared/warframe/mods"
+import { PLEXUS_POOL } from "@arsenyx/shared/warframe/plexus"
+import { LICH_PREFIXES } from "@arsenyx/shared/warframe/types"
+
+import { BEAST_CLAW_USER_POOLS } from "../../data/curated/beast-claws"
+import { CLASS_DEFAULT_POOLS } from "../../data/curated/class-pools"
+import { MOD_POOL_OVERRIDES } from "../../data/curated/mod-pools"
+import { WIKI_ALIASES } from "../../data/curated/wiki-aliases"
+import { WIKILESS_PRODUCT_CATEGORIES } from "./categorize"
+import type { DeWeapon } from "./de-types"
+import {
   buildDamageBlock,
   damageFromDePerShot,
   type AttackOut,
 } from "./merge-damage"
-import { cleanDeName } from "./names"
+import { ATMOSPHERE_SLOT, atmosphereVariantName, cleanDeName } from "./names"
 import { normalizePolarity, normalizePolarities } from "./polarity"
-import type { CuratedData } from "./read-curated"
-import { KNOWN_PRODUCT_CATEGORIES, type DeWeapon } from "./read-de"
+import { KNOWN_PRODUCT_CATEGORIES } from "./read-de"
 
 /** Closed set of mod pools the build will route to. Asserted on; extend
  *  here when you also extend `CLASS_DEFAULT_POOLS` or `mod-pools.ts`. */
-export const KNOWN_MOD_POOLS = new Set<string>([
+const KNOWN_MOD_POOLS = new Set<string>([
   // Generic per-slot pools
   "Rifle",
   "Shotgun",
@@ -106,11 +120,11 @@ export const KNOWN_MOD_POOLS = new Set<string>([
   "Kavat Claws",
   "Kubrow Claws",
   "Helminth Claws",
-  "BeastClaws",
+  BEAST_CLAW_POOL,
   // Operator / modular / synthetic
   "Necramech",
   "Parazon",
-  "Plexus",
+  PLEXUS_POOL,
   "Amp",
   "K-Drive",
   // Frame umbrella (matched by warframe items, not weapons — kept here so a
@@ -120,26 +134,6 @@ export const KNOWN_MOD_POOLS = new Set<string>([
   "ANY",
 ])
 
-/** Generic per-slot mod pool keyed by DE productCategory. The fallback that
- *  keeps a brand-new weapon — present in DE but not yet documented on the wiki
- *  (so no Class → no class pool) — MODDABLE until the wiki catches up. Applied
- *  only to weapons DE has assigned a riven disposition (`omegaAttenuation`),
- *  which it does for real playable weapons, so DE's internal/unreleased noise
- *  stays out. */
-const PRODUCT_CATEGORY_POOL: Record<string, string> = {
-  LongGuns: "Rifle",
-  Pistols: "Pistol",
-  Melee: "Melee",
-  SpaceGuns: "Archgun",
-  SpaceMelee: "Archmelee",
-  // NOTE: keep in sync with the wikiless `productCategory` switch in
-  // `categorizeWeapon` (categorize.ts). A category that routes there but is
-  // missing here emits a wikiless weapon with no generic pool (own name only).
-  // `SentinelWeapons` is deliberately absent: which generic pool sentinel
-  // weapons accept is a game-mechanic fact we won't guess — add it (with a
-  // verified pool) the day a wikiless sentinel weapon actually ships.
-}
-
 export interface MergedWeapon {
   uniqueName: string
   name: string
@@ -148,7 +142,7 @@ export interface MergedWeapon {
   /** DE compatNames this weapon's mod pool accepts. May include the weapon's
    *  own name to match weapon-specific augment mods. */
   modPools: readonly string[]
-  /** Polarity abbreviations for the eight upgrade slots, e.g. ["D","V","R"].
+  /** Lowercase polarity names for the upgrade slots, e.g. ["madurai"].
    *  Empty array means wiki doesn't have polarities for this weapon. */
   polarities: readonly string[]
   /** Exilus polarity, or null if none. */
@@ -266,17 +260,76 @@ export function addSlotWidePools(pools: Set<string>): void {
 
 /** Strip the Coda / Kuva / Tenet prefix from a variant name to recover the
  *  base weapon name (for augment-mod matching). */
-const VARIANT_PREFIXES = ["Coda ", "Kuva ", "Tenet "] as const
-
 function baseWeaponName(name: string): string | null {
-  for (const p of VARIANT_PREFIXES) {
+  for (const p of LICH_PREFIXES) {
     if (name.startsWith(p)) return name.slice(p.length)
   }
   return null
 }
 
+/** Wiki Class → displayClass, failing loud on a Class with no pool routing. */
+function wikiClass(cls: string | undefined, context: string): string | null {
+  if (cls && !(cls in CLASS_DEFAULT_POOLS)) {
+    throw new Error(
+      `Unknown wiki Class "${cls}" on ${context}. ` +
+        `Add to data/curated/class-pools.ts.`,
+    )
+  }
+  return cls ?? null
+}
+
+/** Extra pools a beast claw gets from the companion wielding it. */
+function beastClawPools(user: string): string[] {
+  return BEAST_CLAW_USER_POOLS.filter(
+    (r) => r.suffixes?.some((s) => user.endsWith(s)) || r.users?.includes(user),
+  ).flatMap((r) => r.pools)
+}
+
+/**
+ * A weapon's modPools. The base list is the first of:
+ *   1. per-name override (mod-pools.ts) — REPLACES class default
+ *   2. archwing slot pool — every arch-gun routes to Archgun and every
+ *      arch-melee to Archmelee, even when the wiki Class is a *ground* class
+ *      (Arbucep, an Arch-gun the wiki labels "Launcher", would otherwise
+ *      inherit "Rifle" and show primary mods)
+ *   3. class default (class-pools.ts)
+ *   4. `wikilessPool` — a brand-new real weapon not yet on the wiki
+ *      (WIKILESS_PRODUCT_CATEGORIES)
+ * then the weapon's own name (augment matching), its base name if it's a
+ * Coda/Kuva/Tenet variant, `extra`, and the No-Aoe / slot-wide pools.
+ */
+function computeModPools(opts: {
+  name: string
+  displayClass: string | null
+  slot: string | null
+  wikilessPool?: string
+  extra?: readonly string[]
+  compatTags: readonly unknown[] | undefined
+}): string[] {
+  const { name, displayClass, slot } = opts
+  const archPool =
+    slot === "Archgun" || slot === ATMOSPHERE_SLOT
+      ? "Archgun"
+      : slot === "Archmelee"
+        ? "Archmelee"
+        : null
+  const baseList =
+    MOD_POOL_OVERRIDES[name] ??
+    (archPool ? [archPool] : undefined) ??
+    (displayClass ? CLASS_DEFAULT_POOLS[displayClass] : undefined) ??
+    (opts.wikilessPool ? [opts.wikilessPool] : undefined) ??
+    []
+  const pools = new Set<string>(baseList)
+  pools.add(name)
+  const base = baseWeaponName(name)
+  if (base) pools.add(base)
+  for (const p of opts.extra ?? []) pools.add(p)
+  addNoAoePools(pools, opts.compatTags)
+  addSlotWidePools(pools)
+  return [...pools]
+}
+
 export interface MergeWeaponOpts {
-  curated: CuratedData
   /** Wiki record keyed by weapon name (after alias resolution). */
   wikiByName: Map<string, WikiWeapon>
   /** Tracks DE weapons with no wiki match — populated by mergeWeapon. */
@@ -294,88 +347,27 @@ export function mergeWeapon(de: DeWeapon, opts: MergeWeaponOpts): MergedWeapon {
   // Strip the `<ARCHWING> ` prefix DE puts on archwing weapons so wiki
   // lookup (which uses bare names) matches.
   const cleanName = cleanDeName(de.name)
-  const alias = opts.curated.wikiAliases[cleanName]
+  const alias = WIKI_ALIASES[cleanName]
   const wiki: WikiWeapon | undefined =
     opts.wikiByName.get(alias ?? cleanName) ??
     // Try base name (Coda Bubonico → Bubonico)
     opts.wikiByName.get(baseWeaponName(cleanName) ?? "")
-  const stub = opts.curated.wikiStubs[de.uniqueName]
+  if (!wiki) opts.unmatched.add(cleanName)
 
-  if (!wiki && !stub) {
-    opts.unmatched.add(cleanName)
-  }
-
-  const displayClass =
-    (wiki?.Class as string | undefined) ?? stub?.displayClass ?? null
-  const slot = (wiki?.Slot as string | undefined) ?? null
-
-  if (displayClass && !(displayClass in opts.curated.classPools)) {
-    throw new Error(
-      `Unknown wiki Class "${displayClass}" on ${de.name}. ` +
-        `Add to data/curated/class-pools.ts.`,
-    )
-  }
-
-  // Archwing weapons whose wiki Class is a *ground*-weapon class — e.g.
-  // Arbucep, an Arch-gun the wiki labels "Launcher" — would otherwise
-  // inherit the ground pool ("Rifle") and show primary mods. The slot is
-  // authoritative: route every arch-gun to the Archgun pool and every
-  // arch-melee to Archmelee, regardless of the class label. (For a normal
-  // arch-gun, Class="Archgun" already resolves to ["Archgun"], so this is a
-  // no-op there.)
-  const archPool =
-    slot === "Archgun" || slot === "Archgun (Atmosphere)"
-      ? "Archgun"
-      : slot === "Archmelee"
-        ? "Archmelee"
-        : null
-
-  // Compute modPools:
-  //   1. per-name override (mod-pools.ts) — REPLACES class default
-  //   2. curated wiki stub pools
-  //   3. archwing slot pool (overrides a misleading ground class label)
-  //   4. class default (from class-pools.ts)
-  //   5. weapon's own name (for augment matching)
-  //   6. base name if it's a Coda/Kuva/Tenet variant
-  //   7. wiki-less fallback: a brand-new real weapon (has a riven disposition)
-  //      not yet on the wiki gets a generic per-slot pool by DE productCategory
-  //      so it's still moddable. See PRODUCT_CATEGORY_POOL.
-  const wikilessPool =
-    de.omegaAttenuation !== undefined
-      ? PRODUCT_CATEGORY_POOL[de.productCategory]
-      : undefined
-  const baseList =
-    opts.curated.modPoolOverrides[cleanName] ??
-    stub?.modPools ??
-    (archPool ? [archPool] : undefined) ??
-    (displayClass ? opts.curated.classPools[displayClass] : undefined) ??
-    (wikilessPool ? [wikilessPool] : undefined) ??
-    []
-  const modPoolsSet = new Set<string>(baseList)
-  modPoolsSet.add(cleanName)
-  const base = baseWeaponName(cleanName)
-  if (base) modPoolsSet.add(base)
-  addNoAoePools(modPoolsSet, wiki?.CompatibilityTags)
-  addSlotWidePools(modPoolsSet)
-  const modPools = [...modPoolsSet]
-
-  // Fail loud only on the "structural" pool buckets — weapon-name pool
-  // entries are dynamically added per-item and are deliberately not in
-  // KNOWN_MOD_POOLS (every augmented weapon would need to be enumerated).
-  for (const p of baseList) {
-    if (!KNOWN_MOD_POOLS.has(p)) {
-      throw new Error(
-        `Unknown modPool "${p}" routed from ${de.name} (Class=${displayClass}). ` +
-          `Add to KNOWN_MOD_POOLS in scripts/build/merge-weapons.ts.`,
-      )
-    }
-  }
-
-  const polarities = normalizePolarities(
-    wiki?.Polarities ?? stub?.polarities ?? [],
-  )
-  const exilus = normalizePolarity(wiki?.ExilusPolarity ?? stub?.exilusPolarity)
-  const stance = normalizePolarity(wiki?.StancePolarity)
+  const displayClass = wikiClass(wiki?.Class, de.name)
+  const slot = wiki?.Slot ?? null
+  const modPools = computeModPools({
+    name: cleanName,
+    displayClass,
+    slot,
+    // Only weapons DE gave a riven disposition — real playable ones — so
+    // DE's internal/unreleased noise stays out.
+    wikilessPool:
+      de.omegaAttenuation !== undefined
+        ? WIKILESS_PRODUCT_CATEGORIES[de.productCategory]?.pool
+        : undefined,
+    compatTags: wiki?.CompatibilityTags,
+  })
 
   // Damage shape: wiki Attacks is the rich source. Fall back to DE
   // damagePerShot[20] when the wiki has no attacks (railjack, modular).
@@ -389,7 +381,7 @@ export function mergeWeapon(de: DeWeapon, opts: MergeWeaponOpts): MergedWeapon {
   // (`Foo (Atmosphere)`) with different damage tables. Fold those into
   // atmospheric* fields on the base weapon so the browse list stays
   // consolidated; the editor toggles between presentations.
-  const atmosWiki = opts.wikiByName.get(`${cleanName} (Atmosphere)`)
+  const atmosWiki = opts.wikiByName.get(atmosphereVariantName(cleanName))
   const atmosDmg = atmosWiki?.Attacks
     ? buildDamageBlock(atmosWiki.Attacks)
     : null
@@ -399,10 +391,10 @@ export function mergeWeapon(de: DeWeapon, opts: MergeWeaponOpts): MergedWeapon {
     name: cleanName,
     displayClass,
     modPools,
-    polarities,
-    exilusPolarity: exilus,
-    stancePolarity: stance,
-    family: (wiki?.Family as string | undefined) ?? stub?.family ?? null,
+    polarities: normalizePolarities(wiki?.Polarities ?? []),
+    exilusPolarity: normalizePolarity(wiki?.ExilusPolarity),
+    stancePolarity: normalizePolarity(wiki?.StancePolarity),
+    family: wiki?.Family ?? null,
     slot,
     traits: (wiki?.Traits as readonly string[] | undefined) ?? [],
     masteryReq: (wiki?.Mastery ?? de.masteryReq ?? 0) as number,
@@ -440,91 +432,39 @@ export function mergeWikiOnlyWeapon(
     InternalName?: string
     Users?: readonly string[]
   },
-  curated: CuratedData,
 ): MergedWeapon {
-  const displayClass = (wiki.Class as string | undefined) ?? null
-  if (displayClass && !(displayClass in curated.classPools)) {
-    throw new Error(
-      `Unknown wiki Class "${displayClass}" on wiki-only entry ${name}. ` +
-        `Add to data/curated/class-pools.ts.`,
-    )
-  }
+  const displayClass = wikiClass(wiki.Class, `wiki-only entry ${name}`)
+  const isBeastClaw = displayClass === BEAST_CLAW_CLASS
+  const user = isBeastClaw ? wiki.Users?.[0] : undefined
+  const modPools = computeModPools({
+    name,
+    displayClass,
+    slot: wiki.Slot ?? null,
+    extra: user === undefined ? [] : beastClawPools(user),
+    compatTags: wiki.CompatibilityTags,
+  })
 
-  const baseList =
-    curated.modPoolOverrides[name] ??
-    (displayClass ? curated.classPools[displayClass] : undefined) ??
-    []
-  for (const p of baseList) {
-    if (!KNOWN_MOD_POOLS.has(p)) {
-      throw new Error(
-        `Unknown modPool "${p}" routed from wiki-only ${name}. ` +
-          `Add to KNOWN_MOD_POOLS.`,
-      )
-    }
-  }
-  const modPoolsSet = new Set<string>(baseList)
-  modPoolsSet.add(name)
-  // Beast claws: derive Kavat/Kubrow pools from the wiki Users[0] field
-  // (e.g. "Adarza Kavat", "Sahasa Kubrow"). Routes Swipe-style class-
-  // specific claws mods (compat "Kavat Claws" / "Kubrow Claws") and
-  // per-pet mods (compat "Adarza Kavat") to the right weapons.
-  if (displayClass === "Claws (Beast)" && wiki.Users && wiki.Users.length > 0) {
-    const user = wiki.Users[0]!
-    // Vulpaphyla are infested catbrows and Predasites infested kubrows, so
-    // their claws share the Kavat/Kubrow claw pools (e.g. Swipe — "Kavat
-    // Claws" — equips on Sly/Crescent/Panzer Claws in-game; the wiki groups
-    // the category as "Kavat Claws (Vulpaphyla Claws)"). Venari (Khora's
-    // built-in Kavat) and its Prime are Kavat Claws too, but the wiki lists
-    // them under `Users` as bare "Venari" / "Venari Prime" (no " Kavat"
-    // suffix), so match them explicitly.
-    if (
-      user.endsWith(" Kavat") ||
-      user.endsWith(" Vulpaphyla") ||
-      user === "Venari" ||
-      user === "Venari Prime"
-    ) {
-      modPoolsSet.add("Kavat Claws")
-    }
-    if (user.endsWith(" Kubrow") || user.endsWith(" Predasite")) {
-      modPoolsSet.add("Kubrow Claws")
-    }
-    if (user === "Helminth Charger") {
-      modPoolsSet.add("Helminth Claws")
-      modPoolsSet.add("Kubrow Claws")
-    }
-    // The pet name itself (Sahasa Kubrow etc.) is what per-pet mods
-    // target — but those mods are pet-side, not claws-side. We don't
-    // add them here; companion modPools handle that.
-  }
-  addNoAoePools(modPoolsSet, wiki.CompatibilityTags)
-  addSlotWidePools(modPoolsSet)
-  const modPools = [...modPoolsSet]
-
-  const polarities = normalizePolarities(wiki.Polarities ?? [])
-  const exilus = normalizePolarity(wiki.ExilusPolarity)
   // Beast claws equip a Posture (stance) mod in a slot that is permanently
   // Penjaga — DE/wiki don't emit a StancePolarity for them, so default it here
   // so the editor surfaces the stance slot and a maxed Posture mod earns the
   // doubled +10 capacity. (wiki.warframe.com/w/Companion: "Beast Claw Stance
   // Mods and Slots all use the Penjaga Polarity".)
   const stance =
-    normalizePolarity(wiki.StancePolarity) ??
-    (displayClass === "Claws (Beast)" ? "penjaga" : null)
+    normalizePolarity(wiki.StancePolarity) ?? (isBeastClaw ? "penjaga" : null)
   const dmg = buildDamageBlock(wiki.Attacks)
   return {
     // Wiki InternalName is DE's uniqueName when present; otherwise synthesize
     // one off the weapon's name.
     uniqueName:
-      (wiki.InternalName as string | undefined) ??
-      `/Lotus/WikiOnly/${name.replace(/\s+/g, "")}`,
+      wiki.InternalName ?? `/Lotus/WikiOnly/${name.replace(/\s+/g, "")}`,
     name,
     displayClass,
     modPools,
-    polarities,
-    exilusPolarity: exilus,
+    polarities: normalizePolarities(wiki.Polarities ?? []),
+    exilusPolarity: normalizePolarity(wiki.ExilusPolarity),
     stancePolarity: stance,
-    family: (wiki.Family as string | undefined) ?? null,
-    slot: (wiki.Slot as string | undefined) ?? null,
+    family: wiki.Family ?? null,
+    slot: wiki.Slot ?? null,
     traits: (wiki.Traits as readonly string[] | undefined) ?? [],
     masteryReq: (wiki.Mastery ?? 0) as number,
     productCategory: "Wiki-Only",
@@ -534,23 +474,29 @@ export function mergeWikiOnlyWeapon(
   }
 }
 
-/** Validate the curated data shape. Run once at build start so config
- *  errors fail fast rather than mid-loop. */
-export function validateCuratedAgainstKnown(curated: CuratedData): void {
-  for (const pool of curated.allMentionedPools) {
-    if (!KNOWN_MOD_POOLS.has(pool)) {
-      throw new Error(
-        `class-pools.ts mentions pool "${pool}" not in KNOWN_MOD_POOLS. ` +
-          `Either add it to KNOWN_MOD_POOLS in merge-weapons.ts or fix the typo.`,
-      )
-    }
-  }
-  for (const [_name, pools] of Object.entries(curated.modPoolOverrides)) {
+/** Fail fast at build start on a curated or routed pool KNOWN_MOD_POOLS
+ *  doesn't list, rather than mid-loop. */
+export function validateCuratedPools(): void {
+  const sources: Array<[string, readonly string[]]> = [
+    ["class-pools.ts", Object.values(CLASS_DEFAULT_POOLS).flat()],
+    ...Object.entries(MOD_POOL_OVERRIDES).map(
+      ([name, pools]) =>
+        [`mod-pools.ts override for "${name}"`, pools] as [string, string[]],
+    ),
+    ["beast-claws.ts", BEAST_CLAW_USER_POOLS.flatMap((r) => r.pools)],
+    [
+      "WIKILESS_PRODUCT_CATEGORIES (categorize.ts)",
+      Object.values(WIKILESS_PRODUCT_CATEGORIES).flatMap((c) =>
+        c.pool ? [c.pool] : [],
+      ),
+    ],
+  ]
+  for (const [where, pools] of sources) {
     for (const pool of pools) {
       if (!KNOWN_MOD_POOLS.has(pool)) {
         throw new Error(
-          `mod-pools.ts override for "${_name}" mentions pool "${pool}" ` +
-            `not in KNOWN_MOD_POOLS.`,
+          `${where} mentions pool "${pool}" not in KNOWN_MOD_POOLS. ` +
+            `Either add it to KNOWN_MOD_POOLS in merge-weapons.ts or fix the typo.`,
         )
       }
     }

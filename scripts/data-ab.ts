@@ -26,10 +26,14 @@ import {
 } from "node:fs"
 import { resolve } from "node:path"
 
-const ROOT = resolve(import.meta.dirname, "..")
+import {
+  CATALOG_DIR,
+  WIKI_IMAGE_CACHE as IMAGE_CACHE,
+  REPO_ROOT as ROOT,
+} from "./build/paths"
+
 const AB = resolve(ROOT, "data/ab")
 const WT = resolve(AB, "wt")
-const IMAGE_CACHE = resolve(ROOT, "data/curated/wiki-image-urls.json")
 
 const args = process.argv.slice(2)
 const verbose = args.includes("--verbose")
@@ -62,7 +66,7 @@ try {
   run("bun", ["install", "--frozen-lockfile"], WT)
   // No CATALOG_OUT_DIR here: an older ref's build may not read it.
   run("bun", ["run", "build:items"], WT)
-  cpSync(resolve(WT, "apps/web/public/data"), resolve(AB, "base"), {
+  cpSync(resolve(WT, CATALOG_DIR), resolve(AB, "base"), {
     recursive: true,
   })
   // Fixed: the working tree as it is.

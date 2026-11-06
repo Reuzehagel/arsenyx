@@ -189,27 +189,6 @@
         "fetchedAt": "2026-09-25T17:24:32.389Z"
       },
       {
-        "module": "Stances/data",
-        "file": "Stances_data.lua",
-        "sha256": "f76f18130f51f882b48108c18f3d752bc36e1a85e35f0a28d56179b61db1cc37",
-        "bytes": 222823,
-        "fetchedAt": "2026-09-25T17:24:32.442Z"
-      },
-      {
-        "module": "Focus/data",
-        "file": "Focus_data.lua",
-        "sha256": "66ad581d552df63838117cf2f002b37e211ba337e19168df657a2f206d806e5d",
-        "bytes": 108934,
-        "fetchedAt": "2026-09-25T17:24:32.507Z"
-      },
-      {
-        "module": "Avionics/data",
-        "file": "Avionics_data.lua",
-        "sha256": "f5c792ba771b05d74bf9d7c2d3160d8b12ad64892bdbbe6d529d7f52e72ec3ef",
-        "bytes": 13931,
-        "fetchedAt": "2026-09-25T17:24:32.560Z"
-      },
-      {
         "module": "Modular/data",
         "file": "Modular_data.lua",
         "sha256": "d8d24a13d7124c1a6c430727e45138f9a03324f5bd5f5fc5dc6e7ce2d6147eb2",

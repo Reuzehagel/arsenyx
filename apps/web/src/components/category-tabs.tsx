@@ -1,20 +1,20 @@
+import type { BrowseFilter } from "@arsenyx/shared/seo/browse-meta"
+
 import { TabScroller } from "@/components/tab-scroller"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { CATEGORIES } from "@/lib/warframe"
+import { CATEGORIES } from "@/lib/catalog"
 
-/** Shared category tab bar. Renders an "All" tab plus one tab per category.
- *  The active value and onChange use the raw tab string ("all" included);
- *  callers that model "all" as `undefined` adapt at the boundary. */
+/** Category tab bar: an "All" tab plus one tab per category. */
 export function CategoryTabs({
   value,
   onChange,
 }: {
-  value: string
-  onChange: (value: string) => void
+  value: BrowseFilter
+  onChange: (value: BrowseFilter) => void
 }) {
   return (
     <TabScroller activeKey={value}>
-      <Tabs value={value} onValueChange={(v) => onChange(v)}>
+      <Tabs value={value} onValueChange={(v) => onChange(v as BrowseFilter)}>
         <TabsList>
           <TabsTrigger value="all">All</TabsTrigger>
           {CATEGORIES.map((c) => (

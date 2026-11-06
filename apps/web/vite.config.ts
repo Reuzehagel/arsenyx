@@ -1,10 +1,28 @@
 import { readFileSync } from "node:fs"
 import path from "node:path"
 
+import {
+  extractBuildSlug,
+  getItemUrl,
+  INDEXABLE_PAGE_PATHS,
+  isEmbedParam,
+  SITE_URL,
+} from "@arsenyx/shared/seo/site"
+import {
+  CATALOG_FILES,
+  catalogUrl,
+  dataVersionFromMeta,
+} from "@arsenyx/shared/warframe/catalog-files"
 import tailwindcss from "@tailwindcss/vite"
 import { TanStackRouterVite } from "@tanstack/router-plugin/vite"
 import react from "@vitejs/plugin-react"
 import { defineConfig, type Plugin } from "vite"
+
+import {
+  homePreloadScript,
+  themeInitScript,
+  versionedDataUrl,
+} from "./src/lib/html-head.ts"
 
 /** Stamp the static-data version into the bundle so `/data/` fetches can append
  * `?v=` and the CDN can cache them `immutable` (see lib/queries/static-data-query.ts
@@ -12,19 +30,16 @@ import { defineConfig, type Plugin } from "vite"
  * only changes when the data pipeline regenerates — a frontend-only rebuild keeps
  * the same version and doesn't needlessly bust the cache. */
 function dataVersion(): string {
+  let meta: string | undefined
   try {
-    const meta = JSON.parse(
-      readFileSync(
-        path.resolve(import.meta.dirname, "public/data/meta.json"),
-        "utf8",
-      ),
-    ) as { generatedAt?: string }
-    const ts = Date.parse(meta.generatedAt ?? "")
-    if (!Number.isNaN(ts)) return String(ts)
+    meta = readFileSync(
+      path.resolve(import.meta.dirname, "public/data", CATALOG_FILES.meta),
+      "utf8",
+    )
   } catch {
     // meta.json absent on a fresh checkout before build:items has run.
   }
-  return "0"
+  return dataVersionFromMeta(meta)
 }
 
 /** Emit /sitemap.xml at build time from the committed catalog. Item pages are
@@ -34,19 +49,6 @@ function dataVersion(): string {
  * build pages are intentionally absent — they live in Postgres, not the
  * catalog; crawlers reach them through on-site links. */
 function sitemap(): Plugin {
-  const SITE_URL = "https://www.arsenyx.com"
-  const STATIC_PATHS = [
-    "/",
-    "/builds",
-    "/orgs",
-    "/users",
-    "/about",
-    "/docs",
-    "/docs/api",
-    "/changelog",
-    "/privacy",
-    "/terms",
-  ]
   return {
     name: "arsenyx:sitemap",
     apply: "build",
@@ -56,7 +58,11 @@ function sitemap(): Plugin {
       try {
         index = JSON.parse(
           readFileSync(
-            path.resolve(import.meta.dirname, "public/data/items-index.json"),
+            path.resolve(
+              import.meta.dirname,
+              "public/data",
+              CATALOG_FILES.itemsIndex,
+            ),
             "utf8",
           ),
         )
@@ -66,7 +72,7 @@ function sitemap(): Plugin {
         // Fresh checkout before build:items — ship the static URLs only.
       }
 
-      const urls: string[] = STATIC_PATHS.map(
+      const urls: string[] = INDEXABLE_PAGE_PATHS.map(
         (p) => `<url><loc>${SITE_URL}${p}</loc></url>`,
       )
       for (const [category, items] of Object.entries(index)) {
@@ -79,7 +85,7 @@ function sitemap(): Plugin {
         for (const item of items) {
           const mod = lastmod ? `<lastmod>${lastmod}</lastmod>` : ""
           urls.push(
-            `<url><loc>${SITE_URL}/browse/${category}/${item.slug}</loc>${mod}</url>`,
+            `<url><loc>${SITE_URL}${getItemUrl(category, item.slug)}</loc>${mod}</url>`,
           )
         }
       }
@@ -142,6 +148,28 @@ function versionFile(): Plugin {
   }
 }
 
+/** Serve embed.html for `/builds/<slug>?embed=1`, as the edge Worker does in
+ * production, so dev and `vite preview` reach the same router-less entry. The
+ * URL is rewritten server-side, so embed-main still reads the slug from the
+ * path. */
+function embedRewrite(): Plugin {
+  const rewrite = (req: { url?: string }, _res: unknown, next: () => void) => {
+    const url = new URL(req.url ?? "/", "http://dev")
+    if (
+      extractBuildSlug(url.pathname) &&
+      isEmbedParam(url.searchParams.get("embed"))
+    ) {
+      req.url = `/embed.html${url.search}`
+    }
+    next()
+  }
+  return {
+    name: "arsenyx:embed-rewrite",
+    configureServer: (server) => void server.middlewares.use(rewrite),
+    configurePreviewServer: (server) => void server.middlewares.use(rewrite),
+  }
+}
+
 export default defineConfig({
   define: {
     __DATA_VERSION__: JSON.stringify(dataVersion()),
@@ -152,10 +180,33 @@ export default defineConfig({
     tailwindcss(),
     sitemap(),
     versionFile(),
+    embedRewrite(),
     {
-      name: "arsenyx:data-version-html",
-      transformIndexHtml: (html) =>
-        html.replaceAll("__DATA_VERSION__", dataVersion()),
+      name: "arsenyx:head-scripts",
+      transformIndexHtml: (html, ctx) => ({
+        html,
+        tags: [
+          {
+            tag: "script",
+            children: themeInitScript(),
+            injectTo: "head-prepend",
+          },
+          ...(path.basename(ctx.filename) === "index.html"
+            ? [
+                {
+                  tag: "script",
+                  children: homePreloadScript(
+                    versionedDataUrl(
+                      catalogUrl(CATALOG_FILES.itemsIndex),
+                      dataVersion(),
+                    ),
+                  ),
+                  injectTo: "head" as const,
+                },
+              ]
+            : []),
+        ],
+      }),
     },
   ],
   resolve: {

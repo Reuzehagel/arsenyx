@@ -1,10 +1,11 @@
-// SSRF-hardened fetch shared by the image proxy and the Overframe scraper.
-// Both need the same defence: a wall-clock timeout, manual redirect handling
-// that re-validates every hop's target against an allowlist (so a 3xx chain
-// can't escape to a private host the initial URL avoided), and a declared
-// Content-Length pre-check. The body is returned intact — each caller applies
-// its own streaming vs. buffering strategy and its own hard byte cap while
-// reading it.
+// SSRF-hardened fetch for the image proxy (routes/img.ts): a wall-clock
+// timeout, a DoH check that each hop's hostname doesn't resolve to a private
+// address, manual redirect handling that re-validates every hop's target
+// against an allowlist (so a 3xx chain can't escape to a private host the
+// initial URL avoided), and a declared Content-Length pre-check. The body is
+// returned intact — the caller enforces its own hard byte cap while reading.
+
+import { isPrivateIp } from "./validate"
 
 export type SafeFetchErrorCode =
   | "fetch_failed"
@@ -25,7 +26,8 @@ export class SafeFetchError extends Error {
 }
 
 export interface SafeFetchOptions {
-  /** Gate for the initial URL and every redirect target. */
+  /** Gate for every redirect target. The initial URL is the caller's to
+   *  validate before calling. */
   isAllowed: (url: URL) => boolean
   /** Reject up front if the upstream declares a Content-Length over this. */
   maxBytes?: number
@@ -33,44 +35,8 @@ export interface SafeFetchOptions {
   /** Max redirects to follow (each re-validated). Default 0 = none. */
   maxRedirects?: number
   headers?: Record<string, string>
-  /** Cloudflare-specific request init (cacheTtl, cacheEverything). Opaque. */
+  /** Cloudflare-specific request init (cacheTtl, cacheEverything). */
   cf?: Record<string, unknown>
-  /**
-   * Resolve each target hostname via DoH and reject answers in
-   * private/loopback/link-local/CGNAT/ULA ranges. Defends against DNS names
-   * that point at internal IPs.
-   */
-  blockPrivateDns?: boolean
-}
-
-/**
- * Returns true if `ip` is in a private, loopback, link-local, CGNAT, or ULA
- * range and therefore must never be reachable through the proxy.
- */
-export function isPrivateIp(ip: string): boolean {
-  // IPv4 dotted-quad.
-  const v4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(ip)
-  if (v4) {
-    const a = Number(v4[1])
-    const b = Number(v4[2])
-    if (a === 0 || a === 10 || a === 127) return true
-    if (a === 169 && b === 254) return true // link-local
-    if (a === 192 && b === 168) return true
-    if (a === 172 && b >= 16 && b <= 31) return true
-    if (a === 100 && b >= 64 && b <= 127) return true // CGNAT 100.64.0.0/10
-    return false
-  }
-
-  // IPv6 (expects lowercase).
-  const v6 = ip.toLowerCase()
-  if (v6 === "::1" || v6 === "::") return true
-  if (v6.startsWith("fe80")) return true // link-local
-  if (v6.startsWith("fc") || v6.startsWith("fd")) return true // ULA fc00::/7
-  // IPv4-mapped IPv6: ::ffff:a.b.c.d — recurse into the embedded IPv4.
-  const mapped = /^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/.exec(v6)
-  if (mapped) return isPrivateIp(mapped[1])
-
-  return false
 }
 
 interface DohAnswer {
@@ -134,15 +100,7 @@ export async function safeFetch(
   url: string,
   opts: SafeFetchOptions,
 ): Promise<Response> {
-  const {
-    isAllowed,
-    maxBytes,
-    timeoutMs,
-    maxRedirects = 0,
-    headers,
-    cf,
-    blockPrivateDns = false,
-  } = opts
+  const { isAllowed, maxBytes, timeoutMs, maxRedirects = 0, headers, cf } = opts
 
   const fetchOnce = async (target: string): Promise<Response> => {
     const ctrl = new AbortController()
@@ -165,16 +123,16 @@ export async function safeFetch(
 
   let current = url
 
-  // Resolve the hostname before the first fetch. By this point the host is
-  // always a DNS name (the caller's allowlist / validateExternalUrl rejects IP
-  // literals); the point is to catch names whose A/AAAA records resolve to
-  // internal addresses.
-  if (blockPrivateDns) {
-    const hostname = new URL(current).hostname
-    if (await hostnameResolvesToPrivate(hostname, timeoutMs)) {
+  // Checked before every fetch. DoH can't screen an IP-literal host — that's
+  // the caller's validation and isAllowed's job; this catches DNS names whose
+  // A/AAAA records point inside.
+  const assertPublicHost = async (target: string) => {
+    if (await hostnameResolvesToPrivate(new URL(target).hostname, timeoutMs)) {
       throw new SafeFetchError("private_host")
     }
   }
+
+  await assertPublicHost(current)
 
   let res = await fetchOnce(current)
 
@@ -189,12 +147,7 @@ export async function safeFetch(
       throw new SafeFetchError("invalid_redirect")
     }
     if (!isAllowed(new URL(next))) throw new SafeFetchError("invalid_redirect")
-    if (blockPrivateDns) {
-      const nextHostname = new URL(next).hostname
-      if (await hostnameResolvesToPrivate(nextHostname, timeoutMs)) {
-        throw new SafeFetchError("private_host")
-      }
-    }
+    await assertPublicHost(next)
     hops += 1
     current = next
     res = await fetchOnce(current)

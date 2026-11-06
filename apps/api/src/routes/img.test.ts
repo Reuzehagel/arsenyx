@@ -7,7 +7,7 @@ import { img } from "./img"
 // attacker-controlled SVG — a scriptable document — from the origin that holds
 // the session cookies. These tests pin that behaviour.
 
-// safeFetch resolves the host over DoH before fetching (blockPrivateDns), so
+// safeFetch resolves the host over DoH before fetching, so
 // the stub has to answer both the 1.1.1.1 lookup and the image request.
 function stubUpstream(contentType: string, body = "binary-ish") {
   vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {

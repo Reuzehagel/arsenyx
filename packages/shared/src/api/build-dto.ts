@@ -9,17 +9,21 @@
 // though the in-memory serializer rows hold `Date` objects.
 
 import type { BuildChange } from "../warframe/build-diff"
+import type { PublicUser } from "./users"
 
-export type BuildVisibility = "PUBLIC" | "PRIVATE" | "UNLISTED"
+export const BUILD_VISIBILITIES = ["PUBLIC", "PRIVATE", "UNLISTED"] as const
+
+export type BuildVisibility = (typeof BUILD_VISIBILITIES)[number]
+
+export function isBuildVisibility(v: unknown): v is BuildVisibility {
+  return (
+    typeof v === "string" &&
+    (BUILD_VISIBILITIES as readonly string[]).includes(v)
+  )
+}
 
 /** Author summary embedded in build detail/list rows. */
-export type BuildUserSummary = {
-  id: string
-  name: string | null
-  username: string | null
-  displayUsername: string | null
-  image: string | null
-}
+export type BuildUserSummary = PublicUser
 
 /** Organization summary embedded in build detail/list rows. */
 export type BuildOrganizationSummary = {
@@ -75,7 +79,28 @@ export type BuildDetailResponse = {
   viewerHasBookmarked: boolean
   /** The partner strip, same rows as `GET /builds/:slug/partners`. Absent on
    *  embed loads (`?view=0`), which never render it. */
-  partners?: (BuildListItemResponse & { variant?: number })[]
+  partners?: PartnerBuild[]
+}
+
+/** A partner-strip row (`GET /builds/:slug/partners`, detail `partners`): a
+ *  list item plus the owner's saved variant target (`?v=` index on the
+ *  partner build). Omitted / 0 = default variant. */
+export type PartnerBuild = BuildListItemResponse & { variant?: number }
+
+/** Response shape of `GET /builds/:slug?meta=1`: the slim payload the web
+ *  edge Worker reads to inject unfurl meta (apps/web/worker/index.ts). */
+export type BuildMetaResponse = {
+  name: string
+  description: string | null
+  visibility: BuildVisibility
+  hideAuthor: boolean
+  likeCount: number
+  viewCount: number
+  item: BuildItemSummary
+  /** A redacted (hideAuthor) author keeps its full placeholder shape. */
+  user: Pick<BuildUserSummary, "name" | "username" | "displayUsername">
+  organization: { name: string; verified: boolean } | null
+  guide: { summary: string | null } | null
 }
 
 /** One entry in a build's edit log (`GET /builds/:slug/revisions`). Consecutive
