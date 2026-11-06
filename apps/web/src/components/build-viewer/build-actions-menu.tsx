@@ -1,3 +1,4 @@
+import type { BuildVisibility } from "@arsenyx/shared/api/build-dto"
 import { useNavigate } from "@tanstack/react-router"
 import {
   Code2,
@@ -38,13 +39,11 @@ import {
   useAdminDeleteBuild,
   useAdminSetBuildVisibility,
 } from "@/lib/queries/admin-actions"
-import { useDeleteBuild, useForkBuild } from "@/lib/queries/build-actions"
-import type { BuildDetail } from "@/lib/queries/build-query"
+import { useDeleteBuild, useForkBuild } from "@/lib/queries/build-query"
 import { copyToClipboard } from "@/lib/util/clipboard"
 import { formatVisibility } from "@/lib/util/user-display"
 
-type Visibility = BuildDetail["visibility"]
-const VISIBILITIES: Visibility[] = ["PUBLIC", "UNLISTED", "PRIVATE"]
+const VISIBILITIES: BuildVisibility[] = ["PUBLIC", "UNLISTED", "PRIVATE"]
 
 /**
  * "More actions" overflow menu for the viewer header: Fork (anyone signed
@@ -61,11 +60,10 @@ export function BuildActionsMenu({
   slug: string
   name: string
   isOwner: boolean
-  visibility: Visibility
+  visibility: BuildVisibility
 }) {
   const { data: session } = authClient.useSession()
-  const isAdmin =
-    (session?.user as { isAdmin?: boolean } | undefined)?.isAdmin === true
+  const isAdmin = session?.user?.isAdmin === true
   const navigate = useNavigate()
   const fork = useForkBuild(slug)
   const del = useDeleteBuild(slug)
@@ -164,7 +162,7 @@ export function BuildActionsMenu({
                       value={visibility}
                       onValueChange={(v) => {
                         if (v === visibility) return
-                        adminSetVisibility.mutate(v as Visibility)
+                        adminSetVisibility.mutate(v as BuildVisibility)
                       }}
                     >
                       {VISIBILITIES.map((v) => (

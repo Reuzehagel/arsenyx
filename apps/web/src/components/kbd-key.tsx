@@ -17,7 +17,7 @@ const ARROW_ICONS: Record<
  * Resolves the `mod` / `shift` tokens in a hotkey label to the platform-correct
  * symbol (⌘ ⇧ on Apple, Ctrl / Shift elsewhere). Anything else is literal.
  */
-function platformLabel(label: string): string {
+export function platformLabel(label: string): string {
   return label
     .split(" ")
     .map((token) => {

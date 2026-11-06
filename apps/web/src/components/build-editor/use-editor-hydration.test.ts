@@ -1,52 +1,99 @@
+import { encodeBuildDoc } from "@arsenyx/shared/warframe/build-codec"
+import type { SavedBuildData } from "@arsenyx/shared/warframe/build-data"
+import type { BuildDoc } from "@arsenyx/shared/warframe/build-doc"
 import { describe, expect, it } from "vitest"
 
-import type { SavedBuildData } from "@/lib/queries/build-query"
+import { loadBuildData } from "@/lib/codec/build-codec-adapter"
 
-import { resolveSavedDataAll } from "./use-editor-hydration"
+import { hydrateShare, resolveSavedDataAll } from "./use-editor-hydration"
 
-const tag = (name: string) => ({ tag: name }) as unknown as SavedBuildData
-const normalize = (raw: unknown) =>
-  ({ normalized: raw }) as unknown as SavedBuildData
-const none = {
+const normalize = (raw: unknown) => loadBuildData(raw, {})
+const build = (hasReactor: boolean, extra: Partial<SavedBuildData> = {}) =>
+  ({ version: 1, slots: {}, hasReactor, ...extra }) as SavedBuildData
+
+const sources = {
   importDraft: null,
   localDraft: null,
   savedBuild: null,
   share: null,
 }
 
-describe("resolveSavedDataAll", () => {
-  it("prefers import draft, then local draft, saved build, share", () => {
-    const all = {
-      importDraft: tag("import"),
-      localDraft: { raw: "local" },
-      savedBuild: { raw: "saved" },
-      share: tag("share"),
-    }
-    expect(resolveSavedDataAll(all, normalize)).toEqual({ tag: "import" })
-    expect(
-      resolveSavedDataAll({ ...all, importDraft: null }, normalize),
-    ).toEqual({ normalized: "local" })
-    expect(
-      resolveSavedDataAll(
-        { ...all, importDraft: null, localDraft: null },
-        normalize,
-      ),
-    ).toEqual({ normalized: "saved" })
-    expect(
-      resolveSavedDataAll({ ...none, share: tag("share") }, normalize),
-    ).toEqual({ tag: "share" })
+describe("what the editor starts from", () => {
+  it("an Overframe import beats a draft, the saved build and a share link", () => {
+    const result = resolveSavedDataAll(
+      {
+        importDraft: build(false, { operatorAmp: "import" }),
+        localDraft: { raw: build(true) },
+        savedBuild: { raw: build(true) },
+        share: build(true),
+      },
+      normalize,
+    )
+    expect(result.operatorAmp).toBe("import")
   })
 
-  it("a saved build with empty buildData still beats a share link", () => {
-    expect(
-      resolveSavedDataAll(
-        { ...none, savedBuild: { raw: null }, share: tag("share") },
-        normalize,
-      ),
-    ).toEqual({ normalized: null })
+  it("an autosaved draft overrides the saved build", () => {
+    const result = resolveSavedDataAll(
+      {
+        ...sources,
+        localDraft: { raw: build(false, { focusSchool: "draft" }) },
+        savedBuild: { raw: build(true, { focusSchool: "saved" }) },
+      },
+      normalize,
+    )
+    expect(result.focusSchool).toBe("draft")
   })
 
-  it("falls back to an empty build", () => {
-    expect(resolveSavedDataAll(none, normalize)).toEqual({})
+  it("editing a saved build ignores a share link, even when its data is empty", () => {
+    const result = resolveSavedDataAll(
+      {
+        ...sources,
+        savedBuild: { raw: null },
+        share: build(false, { focusSchool: "share" }),
+      },
+      normalize,
+    )
+    expect(result.focusSchool).toBeUndefined()
+  })
+
+  it("a share link seeds a new build", () => {
+    const shared = build(false, { focusSchool: "share" })
+    expect(resolveSavedDataAll({ ...sources, share: shared }, normalize)).toBe(
+      shared,
+    )
+  })
+
+  it("a new build starts blank", () => {
+    expect(resolveSavedDataAll(sources, normalize)).toEqual({})
+  })
+})
+
+describe("hydrateShare", () => {
+  const doc = (buildName?: string): BuildDoc => ({
+    itemUniqueName: "/Lotus/Powersuits/Excalibur/Excalibur",
+    itemName: "Excalibur",
+    itemCategory: "warframes",
+    hasReactor: true,
+    buildName,
+    variants: [
+      {
+        id: "v0",
+        label: "Main",
+        auraSlots: [{ id: "aura-0", type: "aura" }],
+        normalSlots: [],
+        arcaneSlots: [],
+        shardSlots: [],
+      },
+    ],
+  })
+
+  it("carries the share link's build name", () => {
+    expect(
+      hydrateShare(encodeBuildDoc(doc("Slash Cali")), [], [])?.buildName,
+    ).toBe("Slash Cali")
+  })
+
+  it("is null for a link that doesn't decode", () => {
+    expect(hydrateShare("not-a-build", [], [])).toBeNull()
   })
 })

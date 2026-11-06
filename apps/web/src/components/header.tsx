@@ -13,8 +13,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { UserMenu } from "@/components/user-menu"
-import { useHotkey } from "@/lib/hooks/hotkeys"
-import { SITE_CONFIG, NAV_ITEMS, ROUTES } from "@/lib/util/constants"
+import { HOTKEYS, useHotkey } from "@/lib/hooks/hotkeys"
+import { SITE_CONFIG, NAV_ITEMS } from "@/lib/util/constants"
 import { isMac } from "@/lib/util/platform"
 
 const CommandPalette = lazy(() =>
@@ -27,7 +27,9 @@ export function Header() {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
-  useHotkey("mod+k", () => setPaletteOpen((v) => !v), { allowInEditable: true })
+  useHotkey(HOTKEYS.palette, () => setPaletteOpen((v) => !v), {
+    allowInEditable: true,
+  })
 
   return (
     <header className="bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 w-full border-b backdrop-blur">
@@ -68,7 +70,7 @@ export function Header() {
             </SheetContent>
           </Sheet>
 
-          <Link href={ROUTES.home} className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2">
             <span className="text-lg font-bold tracking-tight md:text-xl">
               {SITE_CONFIG.name}
             </span>

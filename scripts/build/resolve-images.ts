@@ -11,15 +11,14 @@
  */
 
 import { ARCANE_INTERNALNAME_FIXES } from "../../data/curated/arcane-internalname-fixes"
+import type { DeManifestEntry } from "./de-types"
 import {
   buildDeImageLookup,
-  iterWikiImageEntries,
-  iterWikiRecords,
   readWikiImageCache,
   resolveWikiImageUrls,
   writeWikiImageCache,
 } from "./images"
-import type { DeManifestEntry } from "./read-de"
+import { iterWikiImageEntries, iterWikiRecords } from "./read-wiki"
 
 /**
  * Synthetic uniqueName for an exalted-stance card image (Serene Storm, Primal

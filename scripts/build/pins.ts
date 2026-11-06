@@ -1,20 +1,34 @@
-import { writeFile } from "node:fs/promises"
-import { resolve } from "node:path"
+import { existsSync } from "node:fs"
+import { readFile, writeFile } from "node:fs/promises"
 
-const PINS_PATH = resolve(import.meta.dirname, "../../data/PINS.json")
+import { PINS_PATH } from "./paths"
+
+/** One mirrored wiki module, as sync-wiki.ts records it. */
+export interface WikiPin {
+  module: string
+  file: string
+  sha256: string
+  bytes: number
+  fetchedAt: string
+}
+
+interface Pins {
+  de?: unknown
+  wiki?: { fetchedAt?: string; modules?: WikiPin[] }
+}
+
+/** data/PINS.json, or `{}` before the first sync has written it. */
+export async function readPins(): Promise<Pins> {
+  if (!existsSync(PINS_PATH)) return {}
+  return JSON.parse(await readFile(PINS_PATH, "utf8")) as Pins
+}
 
 /** Replace one section of data/PINS.json, keeping the half the other sync
  *  script (sync-de.ts / sync-wiki.ts) wrote. */
 export async function writePinsSection(
-  key: "de" | "wiki",
+  key: keyof Pins,
   section: unknown,
 ): Promise<void> {
-  let existing: Record<string, unknown> = {}
-  try {
-    existing = JSON.parse(await Bun.file(PINS_PATH).text())
-  } catch {
-    // First run, no PINS.json yet.
-  }
-  const merged = { ...existing, [key]: section }
+  const merged = { ...(await readPins()), [key]: section }
   await writeFile(PINS_PATH, JSON.stringify(merged, null, 2) + "\n", "utf8")
 }

@@ -1,36 +1,61 @@
+import { LIST_DEFAULT_SORTS } from "@arsenyx/shared/api/build-list"
+import type {
+  Profile,
+  ProfileDirectoryItem,
+  ProfileOrg,
+  ProfileStats,
+} from "@arsenyx/shared/api/users"
 import { Hono } from "hono"
 
 import { prisma, sql } from "../db"
 import { Prisma } from "../generated/prisma/client"
 import { enforceAnonSearchLimit } from "../middleware/rate-limit"
-import { parseListQuery, runList } from "./_build-list"
+import { BUILD_USER_SELECT, parseListQuery, runList } from "./_build-list"
 import { AUTHORED_PUBLIC_BUILD, userPublicScope } from "./_build-visibility"
-import { parsePage, trimQ } from "./_query"
+import { directoryPage, directoryQuery, matchAny } from "./_query"
 
 export const users = new Hono()
 
 const DIRECTORY_PAGE = 20
 
-const PROFILE_COLUMNS_SQL = Prisma.sql`id, name, username, "displayUsername",
-  image, bio, "createdAt", "isVerified", "isCommunityLeader", "isModerator",
-  "isAdmin", "isBanned"`
+/** The user columns behind a public profile card. The SQL column list below
+ *  is generated from these keys (compile-time literals), so the plain-SQL
+ *  profile read and the Prisma directory read can't drift. */
+const PROFILE_SELECT = {
+  ...BUILD_USER_SELECT,
+  bio: true,
+  createdAt: true,
+  isVerified: true,
+  isCommunityLeader: true,
+  isModerator: true,
+  isAdmin: true,
+} as const
 
-type Profile = Prisma.UserGetPayload<{
-  select: {
-    id: true
-    name: true
-    username: true
-    displayUsername: true
-    image: true
-    bio: true
-    createdAt: true
-    isVerified: true
-    isCommunityLeader: true
-    isModerator: true
-    isAdmin: true
-    isBanned: true
+type ProfileRow = Prisma.UserGetPayload<{ select: typeof PROFILE_SELECT }>
+
+const PROFILE_COLUMNS_SQL = Prisma.raw(
+  Object.keys(PROFILE_SELECT)
+    .map((k) => `"${k}"`)
+    .join(", "),
+)
+
+function toProfileCard(u: ProfileRow) {
+  return {
+    id: u.id,
+    name: u.name,
+    username: u.username,
+    displayUsername: u.displayUsername,
+    image: u.image,
+    bio: u.bio,
+    joinedAt: u.createdAt.toISOString(),
+    badges: {
+      verified: u.isVerified,
+      communityLeader: u.isCommunityLeader,
+      moderator: u.isModerator,
+      admin: u.isAdmin,
+    },
   }
-}>
+}
 
 // Public profile directory. Lives on the router root rather than a named
 // sibling like /users/public: `username` has no reserved-word list of its own
@@ -38,13 +63,11 @@ type Profile = Prisma.UserGetPayload<{
 // path here would shadow a real profile that happens to hold that handle.
 // The root path can't collide with /:username at all.
 users.get("/", async (c) => {
-  const page = parsePage(c.req.query("page"))
-  const q = trimQ(c.req.query("q"))
-  const skip = (page - 1) * DIRECTORY_PAGE
+  const dir = directoryQuery(c, DIRECTORY_PAGE)
 
   // Only charge the tighter search bucket when a query is actually present —
   // plain directory paging stays on the ANON_READ_LIMITER the router applies.
-  if (q) {
+  if (dir.q) {
     const blocked = await enforceAnonSearchLimit(c, "/users?q=")
     if (blocked) return blocked
   }
@@ -68,15 +91,7 @@ users.get("/", async (c) => {
     isBanned: false,
     username: { not: null },
     builds: { some: AUTHORED_PUBLIC_BUILD },
-    ...(q
-      ? {
-          OR: [
-            { username: { contains: q, mode: "insensitive" } },
-            { displayUsername: { contains: q, mode: "insensitive" } },
-            { name: { contains: q, mode: "insensitive" } },
-          ],
-        }
-      : {}),
+    ...matchAny(dir.q, ["username", "displayUsername", "name"]),
   }
 
   const [rows, total] = await Promise.all([
@@ -89,20 +104,10 @@ users.get("/", async (c) => {
         { isCommunityLeader: "desc" },
         { createdAt: "desc" },
       ],
-      skip,
-      take: DIRECTORY_PAGE,
+      skip: dir.skip,
+      take: dir.limit,
       select: {
-        id: true,
-        name: true,
-        username: true,
-        displayUsername: true,
-        image: true,
-        bio: true,
-        createdAt: true,
-        isVerified: true,
-        isCommunityLeader: true,
-        isModerator: true,
-        isAdmin: true,
+        ...PROFILE_SELECT,
         // Same predicate as the `some` filter above and as the profile
         // page's own aggregate, so a card's count matches the profile it
         // links to. Every listed user therefore has a count of at least 1.
@@ -112,27 +117,11 @@ users.get("/", async (c) => {
     prisma.user.count({ where }),
   ])
 
-  return c.json({
-    users: rows.map((u) => ({
-      id: u.id,
-      name: u.name,
-      username: u.username,
-      displayUsername: u.displayUsername,
-      image: u.image,
-      bio: u.bio,
-      joinedAt: u.createdAt.toISOString(),
-      badges: {
-        verified: u.isVerified,
-        communityLeader: u.isCommunityLeader,
-        moderator: u.isModerator,
-        admin: u.isAdmin,
-      },
-      buildCount: u._count.builds,
-    })),
-    total,
-    page,
-    limit: DIRECTORY_PAGE,
-  })
+  const items = rows.map((u): ProfileDirectoryItem => ({
+    ...toProfileCard(u),
+    buildCount: u._count.builds,
+  }))
+  return c.json(directoryPage("users", items, total, dir))
 })
 
 users.get("/:username", async (c) => {
@@ -142,25 +131,20 @@ users.get("/:username", async (c) => {
   }
 
   // Plain SQL rather than Prisma: no PrismaClient is built for a profile read.
-  const [user] = await sql<Profile>(Prisma.sql`
-    SELECT ${PROFILE_COLUMNS_SQL} FROM users WHERE username = ${username}
+  const [user] = await sql<ProfileRow & { isBanned: boolean }>(Prisma.sql`
+    SELECT ${PROFILE_COLUMNS_SQL}, "isBanned" FROM users WHERE username = ${username}
   `)
   if (!user || user.isBanned) return c.json({ error: "not_found" }, 404)
 
   // Sequential, not Promise.all: one connection beats a second connect.
-  const [agg] = await sql<{
-    buildCount: number
-    totalLikes: number
-    totalBookmarks: number
-    totalViews: number
-  }>(Prisma.sql`
+  const [agg] = await sql<ProfileStats>(Prisma.sql`
     SELECT COUNT(*)::int AS "buildCount",
       COALESCE(SUM("likeCount"), 0)::int AS "totalLikes",
       COALESCE(SUM("bookmarkCount"), 0)::int AS "totalBookmarks",
       COALESCE(SUM("viewCount"), 0)::int AS "totalViews"
     FROM builds WHERE ${userPublicScope(user.id).baseFilter}
   `)
-  const orgs = await sql<Record<string, unknown>>(Prisma.sql`
+  const orgs = await sql<ProfileOrg>(Prisma.sql`
     SELECT o.id, o.name, o.slug, o.image, o.verified, m.role
     FROM organization_members m
     JOIN organizations o ON o.id = m."organizationId"
@@ -169,22 +153,10 @@ users.get("/:username", async (c) => {
   `)
 
   return c.json({
-    id: user.id,
-    name: user.name,
-    username: user.username,
-    displayUsername: user.displayUsername,
-    image: user.image,
-    bio: user.bio,
-    joinedAt: user.createdAt.toISOString(),
-    badges: {
-      verified: user.isVerified,
-      communityLeader: user.isCommunityLeader,
-      moderator: user.isModerator,
-      admin: user.isAdmin,
-    },
+    ...toProfileCard(user),
     stats: agg,
     orgs,
-  })
+  } satisfies Profile)
 })
 
 users.get("/:username/builds", async (c) => {
@@ -197,7 +169,7 @@ users.get("/:username/builds", async (c) => {
   const result = await runList({
     filters: parseListQuery(c),
     ...userPublicScope(user.id),
-    defaultSort: "newest",
+    defaultSort: LIST_DEFAULT_SORTS.user,
   })
   return c.json(result)
 })

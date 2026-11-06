@@ -1,20 +1,26 @@
+import type {
+  BuildVisibility,
+  BuildDetailResponse,
+} from "@arsenyx/shared/api/build-dto"
 import {
   encodeBuild,
   encodeBuildDoc,
 } from "@arsenyx/shared/warframe/build-codec"
+import type { BrowseCategory } from "@arsenyx/shared/warframe/types"
 import { useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import { useState } from "react"
 import { toast } from "sonner"
 
 import { authClient } from "@/lib/auth-client"
+import type { DetailItem } from "@/lib/catalog"
 import {
   buildDocFromVariants,
-  savedDataToBuildState,
+  editorStateToBuildState,
 } from "@/lib/codec/build-codec-adapter"
-import { clearEditorDraft } from "@/lib/editor-draft"
-import { useHotkey } from "@/lib/hooks/hotkeys"
-import type { BuildDetail, SavedVariant } from "@/lib/queries/build-query"
+import { clearEditorDraft } from "@/lib/drafts"
+import { HOTKEYS, useHotkey } from "@/lib/hooks/hotkeys"
+import { buildKeys } from "@/lib/queries/build-query"
 import { apiErrorMessage, apiFetch } from "@/lib/util/api-client"
 import { copyToClipboard } from "@/lib/util/clipboard"
 import { EXTERNAL_LINKS } from "@/lib/util/constants"
@@ -22,14 +28,8 @@ import {
   hasShownDonationNudge,
   markDonationNudgeShown,
 } from "@/lib/util/donation-nudge"
-import type { BrowseCategory, DetailItem } from "@/lib/warframe"
 
-import { resetEditorCache } from "./editor-cache"
 import type { EditorCapture } from "./editor-capture"
-import type { PublishVisibility } from "./publish-dialog"
-import type { ArcaneSlotsState } from "./use-arcane-slots"
-import type { BuildSlotsState } from "./use-build-slots"
-import type { ItemExtras } from "./use-item-extras"
 import type { usePublishSettings } from "./use-publish-settings"
 
 /** Share-link copy, Save (button + Ctrl/Cmd+S), and the publish/update
@@ -46,17 +46,14 @@ export function useBuildSave({
   publish,
   formaCount,
   layout,
-  slots,
-  arcanes,
-  extras,
-  variants,
+  displayImageName,
   clampedActiveIndex,
   capture,
 }: {
   item: DetailItem
   category: BrowseCategory
   slug: string
-  existingBuild: BuildDetail | undefined
+  existingBuild: BuildDetailResponse | undefined
   isUpdate: boolean
   storeKey: string
   buildName: string
@@ -68,10 +65,7 @@ export function useBuildSave({
     auraSlotCount: number
     showStance: boolean
   }
-  slots: BuildSlotsState
-  arcanes: ArcaneSlotsState
-  extras: ItemExtras
-  variants: SavedVariant[]
+  displayImageName: string | undefined
   clampedActiveIndex: number
   capture: EditorCapture
 }) {
@@ -81,9 +75,8 @@ export function useBuildSave({
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving">("idle")
 
   const handleShare = () => {
-    // Build-wide fields + the active variant's per-variant slice. Both share
-    // paths (single + multi) and the BuildDoc projection in the adapter read
-    // from this one base.
+    // Build-wide fields + the active variant's live slice; the adapter
+    // handles the BuildDoc projection (build-wide/per-variant split).
     const base = {
       item: {
         uniqueName: item.uniqueName,
@@ -92,50 +85,28 @@ export function useBuildSave({
       },
       category,
       buildName: buildName.trim() || item.name,
-      hasReactor: extras.hasReactor,
-      slots: slots.placed,
-      formaPolarities: slots.formaPolarities,
-      arcanes: arcanes.placed,
-      shards: extras.shards,
-      helminth: extras.helminth,
-      zawComponents: extras.zawComponents,
-      kitgunComponents: extras.kitgunComponents,
-      lichBonusElement: extras.lichBonusElement ?? undefined,
-      incarnonEnabled: extras.incarnonEnabled,
-      incarnonPerks: extras.incarnonPerks,
-      deploymentContext: extras.deploymentContext,
-      operatorAmp: extras.operatorAmp,
-      focusSchool: extras.focusSchool,
+      ...capture.captureLive(),
       normalSlotCount: layout.normalSlotCount,
       auraSlotCount: layout.auraSlotCount,
       showStance: layout.showStance,
     }
-    let encoded: string
-    // Replace the active variant's slice with the live editor state so unsaved
-    // tweaks make it into the share URL; the adapter handles the BuildDoc
-    // projection (and the build-wide/per-variant field split).
-    const activeSnapshot = capture.captureActiveSnapshot()
-    const allVariants = variants.map((v, i) =>
-      i === clampedActiveIndex ? activeSnapshot : v,
-    )
+    const allVariants = capture.captureVariants()
     // A single twin-frame variant on a non-primary form still needs the v2 doc
     // encoder — v1 can't carry `formIndex`.
     const needsDoc =
       allVariants.length > 1 || Boolean(allVariants[0]?.formIndex)
-    if (needsDoc) {
-      encoded = encodeBuildDoc(
-        buildDocFromVariants(base, allVariants),
-        clampedActiveIndex,
-      )
-    } else {
-      encoded = encodeBuild(savedDataToBuildState(base))
-    }
+    const encoded = needsDoc
+      ? encodeBuildDoc(
+          buildDocFromVariants(base, allVariants),
+          clampedActiveIndex,
+        )
+      : encodeBuild(editorStateToBuildState(base))
     const url = `${window.location.origin}/create?item=${encodeURIComponent(slug)}&category=${encodeURIComponent(category)}&share=${encodeURIComponent(encoded)}`
     void copyToClipboard(url, "Build link copied")
   }
 
   const performSave = async (
-    nextVisibility: PublishVisibility,
+    nextVisibility: BuildVisibility,
     nextOrganizationId: string | null,
     nextHideAuthor: boolean,
   ) => {
@@ -143,7 +114,6 @@ export function useBuildSave({
       navigate({ to: "/auth/signin" })
       return
     }
-    publish.setDialogOpen(false)
     setSaveStatus("saving")
     try {
       const body = {
@@ -170,7 +140,7 @@ export function useBuildSave({
         // itemImageName tracks the incarnon toggle (and any future image
         // change), so update it on PATCH too. The identity fields
         // (itemUniqueName / itemCategory / itemName) stay create-only.
-        itemImageName: extras.displayImageName ?? null,
+        itemImageName: displayImageName ?? null,
         ...(isUpdate
           ? {}
           : {
@@ -184,19 +154,15 @@ export function useBuildSave({
         method: isUpdate ? "PATCH" : "POST",
         json: body,
       })
-      await queryClient.invalidateQueries({ queryKey: ["build", slug] })
-      // Every list that can surface this build — browse (`["builds","public"]`),
-      // my builds, bookmarks, profile — is keyed under the `["builds"]` prefix
-      // and inherits the default 30s staleTime. Without this, saving a rename
+      await queryClient.invalidateQueries({ queryKey: buildKeys.detail(slug) })
+      // Every list that can surface this build — browse, my builds,
+      // bookmarks, profile — is keyed under `buildKeys.lists` and inherits
+      // the default 30s staleTime. Without this, saving a rename
       // (or a new thumbnail / visibility flip) then navigating back to a list
       // shows the OLD row until that staleTime lapses, which reads to users as
-      // "my edit didn't save". Matches the delete/visibility paths in
-      // lib/queries/build-actions.ts, which already invalidate the prefix.
-      await queryClient.invalidateQueries({ queryKey: ["builds"] })
-      // Drop the in-memory variants cache so a follow-up edit re-hydrates
-      // from the persisted server state rather than stale local edits, and
-      // clear the autosaved draft — the saved state is now the source of truth.
-      resetEditorCache()
+      // "my edit didn't save".
+      await queryClient.invalidateQueries({ queryKey: buildKeys.lists })
+      // Clear the autosaved draft — the saved state is now the source of truth.
       clearEditorDraft(storeKey)
       toast.success(isUpdate ? "Build saved" : "Build published")
       // Moment-of-value donation ask: only after a *new* build is published
@@ -278,7 +244,7 @@ export function useBuildSave({
   // Ctrl/Cmd+S saves from anywhere in the editor, including while a text
   // field (name, guide) has focus — hence allowInEditable. preventDefault
   // (the default) stops the browser's own Save dialog.
-  useHotkey("mod+s", handleSaveClick, { allowInEditable: true })
+  useHotkey(HOTKEYS.save, handleSaveClick, { allowInEditable: true })
 
   return { handleShare, handleSaveClick, performSave, saveStatus }
 }

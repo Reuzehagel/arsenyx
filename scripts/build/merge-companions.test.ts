@@ -17,10 +17,10 @@ describe("subTypeOf", () => {
     }
   })
 
-  it("is case-insensitive and defaults unknown/undefined to beast", () => {
+  it("is case-insensitive and leaves unknown/undefined to the caller", () => {
     expect(subTypeOf("moa")).toBe("moa")
-    expect(subTypeOf(undefined)).toBe("beast")
-    expect(subTypeOf("???")).toBe("beast")
+    expect(subTypeOf(undefined)).toBeUndefined()
+    expect(subTypeOf("???")).toBeUndefined()
   })
 })
 

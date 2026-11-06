@@ -23,8 +23,8 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs"
 import { dirname } from "node:path"
 
+import type { DeManifestEntry } from "./de-types"
 import { fetchRetry } from "./http"
-import type { DeManifestEntry } from "./read-de"
 
 const DE_CDN_BASE = "https://content.warframe.com/PublicExport"
 
@@ -144,52 +144,4 @@ export function writeWikiImageCache(path: string, cache: WikiImageCache): void {
   const sorted: Record<string, string> = {}
   for (const k of Object.keys(cache.urls).sort()) sorted[k] = cache.urls[k]!
   writeFileSync(path, JSON.stringify({ urls: sorted }, null, 2), "utf8")
-}
-
-// ---------------------------------------------------------------------------
-// Wiki-module walker: pulls (InternalName, Image) pairs out of wiki Lua
-// module data. Tables are nested arbitrarily (Mods_data has a top-level
-// `DefaultUpgrades` subtable; Warframes_data has Warframes / Archwings /
-// Necramechs / Operators; per-slot Weapons_data_* are flat).
-// ---------------------------------------------------------------------------
-
-export function* iterWikiImageEntries(
-  obj: unknown,
-): Generator<{ internalName: string; image: string }> {
-  if (!obj || typeof obj !== "object") return
-  const rec = obj as Record<string, unknown>
-  const internalName = rec["InternalName"]
-  const image = rec["Image"]
-  if (
-    typeof internalName === "string" &&
-    internalName.length > 0 &&
-    typeof image === "string" &&
-    image.length > 0
-  ) {
-    yield { internalName, image }
-    // Don't recurse: a record that has InternalName is itself an item.
-    return
-  }
-  for (const v of Object.values(rec)) {
-    if (v && typeof v === "object") yield* iterWikiImageEntries(v)
-  }
-}
-
-/**
- * Walk a wiki module blob and yield every record that has an InternalName.
- * The whole record is yielded so callers can pluck arbitrary fields
- * (IsExilus, Polarity, etc.) without re-walking. */
-export function* iterWikiRecords(
-  obj: unknown,
-): Generator<{ internalName: string; record: Record<string, unknown> }> {
-  if (!obj || typeof obj !== "object") return
-  const rec = obj as Record<string, unknown>
-  const internalName = rec["InternalName"]
-  if (typeof internalName === "string" && internalName.length > 0) {
-    yield { internalName, record: rec }
-    return
-  }
-  for (const v of Object.values(rec)) {
-    if (v && typeof v === "object") yield* iterWikiRecords(v)
-  }
 }

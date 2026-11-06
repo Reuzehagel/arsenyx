@@ -1,3 +1,7 @@
+import {
+  CATALOG_FILES,
+  catalogUrl,
+} from "@arsenyx/shared/warframe/catalog-files"
 import type { ModConflictMap } from "@arsenyx/shared/warframe/mods"
 
 import { staticDataQuery } from "./static-data-query"
@@ -11,7 +15,6 @@ import { staticDataQuery } from "./static-data-query"
  * ~1.2 MB mods-all.json download.
  */
 export const modConflictsQuery = staticDataQuery<ModConflictMap>(
-  ["mod-conflicts"],
-  "/data/mod-conflicts.json",
+  catalogUrl(CATALOG_FILES.modConflicts),
   "failed to load mod conflicts",
 )

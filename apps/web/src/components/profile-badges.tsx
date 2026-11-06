@@ -1,5 +1,6 @@
+import type { ProfileBadges as Badges } from "@arsenyx/shared/api/users"
+
 import { Badge } from "@/components/ui/badge"
-import type { ProfileBadges as Badges } from "@/lib/queries/profile-query"
 
 // Ordered most- to least-privileged; a user holding several shows them all in
 // this order. Shared by the profile page and the profile directory so the two

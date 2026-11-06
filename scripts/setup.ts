@@ -14,6 +14,13 @@ import { existsSync } from "node:fs"
 import { readFile, writeFile } from "node:fs/promises"
 import { basename, resolve } from "node:path"
 
+import {
+  isDevDbUrl,
+  isComposeDbUrl,
+  localDbUrl as containerDbUrl,
+  pinIpv4,
+} from "./lib/dev-db"
+
 const REPO = resolve(import.meta.dirname, "..")
 const API_DIR = resolve(REPO, "apps/api")
 const API_ENV = resolve(API_DIR, ".env")
@@ -66,23 +73,13 @@ function looksLikeRealPostgresUrl(url: string | undefined): boolean {
   return true
 }
 
-// Dev DBs are Neon or local; anything else (e.g. *.psdb.cloud = prod) must
-// never get db:push or a seeded admin. Duplicated in apps/api/scripts/seed-admin.ts.
-function isDevDbHost(url: string): boolean {
-  const host = new URL(url).hostname
-  return (
-    host.endsWith(".neon.tech") ||
-    ["localhost", "127.0.0.1", "::1", "[::1]"].includes(host)
-  )
-}
-
 // One database per checkout, so parallel worktrees never share state.
 function localDbUrl(): string {
   const slug = basename(REPO)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
   const db = `arsenyx_${slug}`.slice(0, 63)
-  return `postgresql://postgres:postgres@localhost:54320/${db}?sslmode=disable`
+  return containerDbUrl(db)
 }
 
 async function run(
@@ -148,7 +145,7 @@ async function main() {
   } else {
     console.log("✓ DATABASE_URL kept")
   }
-  if (!isDevDbHost(dbUrl!)) {
+  if (!isDevDbUrl(dbUrl)) {
     throw new Error(
       `DATABASE_URL host "${new URL(dbUrl!).hostname}" is not a dev database ` +
         `(*.neon.tech or localhost) — refusing to db:push / seed against it.`,
@@ -176,19 +173,17 @@ async function main() {
   const nextValues = new Map(existing)
   nextValues.set("NODE_ENV", "development")
   nextValues.set("DATABASE_URL", dbUrl!)
-  // The local Worker reaches the DB through this, not DATABASE_URL. workerd
-  // (wrangler ≥4.157) tries ::1 first for "localhost" and stalls ~2 s per
-  // connection before falling back, so pin IPv4.
+  // The local Worker reaches the DB through this, not DATABASE_URL.
   nextValues.set(
     "CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE",
-    dbUrl!.replace("@localhost:", "@127.0.0.1:"),
+    pinIpv4(dbUrl!),
   )
   nextValues.set("BETTER_AUTH_SECRET", secret)
   const rendered = renderEnv(template, nextValues)
   await writeFile(API_ENV, rendered, "utf8")
   console.log("✓ apps/api/.env written")
 
-  if (new URL(dbUrl!).hostname === "localhost") {
+  if (isComposeDbUrl(dbUrl)) {
     await run(["bun", "scripts/dev-db.ts", "ensure"], REPO)
   }
 
@@ -223,7 +218,7 @@ async function main() {
     SEED_ADMIN_PASSWORD: adminPassword,
   })
 
-  if (new URL(dbUrl!).hostname === "localhost") {
+  if (isComposeDbUrl(dbUrl)) {
     console.log("\n› sample data\n")
     await run(["bun", "run", "scripts/seed-sample.ts"], API_DIR, {
       DATABASE_URL: dbUrl!,

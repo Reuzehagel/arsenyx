@@ -1,10 +1,10 @@
+import type { BuildDetailResponse } from "@arsenyx/shared/api/build-dto"
 import { useNavigate } from "@tanstack/react-router"
 import { Bookmark, Heart, ThumbsDown } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { authClient } from "@/lib/auth-client"
-import type { BuildDetail } from "@/lib/queries/build-query"
-import { useSetLike, useToggleBookmark } from "@/lib/queries/build-social"
+import { useSetLike, useToggleBookmark } from "@/lib/queries/build-query"
 import { cn } from "@/lib/util/utils"
 
 /**
@@ -12,7 +12,7 @@ import { cn } from "@/lib/util/utils"
  * /auth/signin for anonymous users); owners can't like or dislike their own
  * build.
  */
-export function SocialActions({ build }: { build: BuildDetail }) {
+export function SocialActions({ build }: { build: BuildDetailResponse }) {
   const { data: session } = authClient.useSession()
   const navigate = useNavigate()
   const like = useSetLike(build.slug)

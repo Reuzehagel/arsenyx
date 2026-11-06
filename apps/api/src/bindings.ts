@@ -21,7 +21,7 @@ export interface Bindings {
   // the Prisma pg adapter in db.ts. Configured under [[hyperdrive]].
   HYPERDRIVE: Hyperdrive
 
-  // Anonymous build-detail snapshots (routes/_build-snapshot.ts). Optional:
-  // without it, anonymous detail reads take the live Prisma path.
-  BUILD_SNAPSHOTS?: KVNamespace
+  // Anonymous build-detail snapshots (routes/_build-snapshot.ts). Configured
+  // under [[kv_namespaces]].
+  BUILD_SNAPSHOTS: KVNamespace
 }

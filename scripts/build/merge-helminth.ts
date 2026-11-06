@@ -4,108 +4,34 @@
  * The Helminth system lets players replace a warframe's 3rd ability slot
  * with either (a) one of the four Helminth-native abilities or (b) a
  * subsumed ability from another warframe. Each frame contributes exactly
- * one "subsumable" ability, listed in `SUBSUMABLE_ABILITIES` below.
- *
- * Output shape matches the existing helminth-abilities.json so the UI's
- * Helminth picker doesn't need changes.
+ * one "subsumable" ability, listed in data/curated/subsumable-abilities.ts.
  */
 
+import type { HelminthAbility } from "@arsenyx/shared/warframe/build-data"
+
+import { SUBSUMABLE_ABILITIES } from "../../data/curated/subsumable-abilities"
+import type { DeFrame } from "./de-types"
 import type { MergedFrame } from "./merge-frames"
-import type { DeFrame } from "./read-de"
 
-/** Warframe → subsumed ability name. Mirrors the legacy table in
- *  scripts/build-items-index.ts (preserved verbatim to avoid drift). */
-const SUBSUMABLE_ABILITIES: Record<string, string> = {
-  Ash: "Shuriken",
-  Atlas: "Petrify",
-  Banshee: "Silence",
-  Baruuk: "Lull",
-  Caliban: "Sentient Wrath",
-  Citrine: "Fractured Blast",
-  Chroma: "Elemental Ward",
-  "Cyte-09": "Evade",
-  Dagath: "Wyrd Scythes",
-  Dante: "Dark Verse",
-  Ember: "Fire Blast",
-  Equinox: "Rest & Rage",
-  Excalibur: "Radial Blind",
-  Frost: "Ice Wave",
-  Gara: "Spectrorage",
-  Garuda: "Blood Altar",
-  Gauss: "Thermal Sunder",
-  Grendel: "Nourish",
-  Gyre: "Coil Horizon",
-  Harrow: "Condemn",
-  Hildryn: "Pillage",
-  Hydroid: "Tempest Barrage",
-  Inaros: "Desiccation",
-  Ivara: "Quiver",
-  Jade: "Ophanim Eyes",
-  Khora: "Ensnare",
-  Koumei: "Omamori",
-  Kullervo: "Wrathful Advance",
-  Lavos: "Vial Rush",
-  Limbo: "Banish",
-  Loki: "Decoy",
-  Mag: "Pull",
-  Mesa: "Shooting Gallery",
-  Mirage: "Eclipse",
-  Nekros: "Terrify",
-  Nezha: "Fire Walker",
-  Nidus: "Larva",
-  Nokko: "Brightbonnet",
-  Nova: "Null Star",
-  Nyx: "Mind Control",
-  Oberon: "Smite",
-  Octavia: "Resonator",
-  Oraxia: "Webbed Embrace",
-  "Orion & Sirius": "Astral Shell",
-  Protea: "Dispensary",
-  Qorvex: "Chyrinka Pillar",
-  Revenant: "Reave",
-  Rhino: "Roar",
-  Saryn: "Molt",
-  Sevagoth: "Gloom",
-  "Sirius & Orion": "Jade Stars",
-  Styanax: "Tharros Strike",
-  Temple: "Pyrotechnics",
-  Titania: "Spellbind",
-  Trinity: "Well of Life",
-  Uriel: "Remedium",
-  Valkyr: "Warcry",
-  Vauban: "Tesla Nervos",
-  Volt: "Shock",
-  Voruna: "Lycath's Hunt",
-  Wisp: "Breach Surge",
-  Wukong: "Defy",
-  Xaku: "Xata's Whisper",
-  Yareli: "Aquablades",
-  Zephyr: "Airburst",
-}
-
-export interface HelminthAbility {
-  uniqueName: string
-  name: string
-  imageName?: string
-  description: string
-  /** "Helminth" for Helminth-native abilities, or the source warframe name. */
-  source: string
-}
+/** A catalog Helminth entry before ability stats are attached. */
+type HelminthAbilityBase = Omit<HelminthAbility, "stats">
 
 /** DE ships Helminth-native abilities in a sibling `ExportAbilities` array
  *  (not as a warframe entry), with the same field shape as warframe
  *  abilities (`abilityUniqueName`, `abilityName`, `description`). */
 type RawAbility = NonNullable<DeFrame["abilities"]>[number]
 
+/** `misses` collects SUBSUMABLE_ABILITIES entries that matched no ability. */
 export function deriveHelminthAbilities(
   frames: readonly MergedFrame[],
   exportAbilities: readonly RawAbility[],
-): HelminthAbility[] {
+  misses: string[] = [],
+): HelminthAbilityBase[] {
   // Index twin-frame forms by their own name so each twin (e.g. "Orion & Sirius") resolves like a frame.
   const byName = new Map<string, Pick<MergedFrame, "abilities">>()
   for (const f of frames)
     for (const form of f.forms ?? [f]) byName.set(form.name, form)
-  const out: HelminthAbility[] = []
+  const out: HelminthAbilityBase[] = []
 
   for (const a of exportAbilities) {
     out.push({
@@ -129,6 +55,8 @@ export function deriveHelminthAbilities(
         description: a.description,
         source: frame,
       })
+    } else {
+      misses.push(`${frame}: ${abilityName}`)
     }
   }
 

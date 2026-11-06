@@ -1,25 +1,22 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
 
-// Deep imports (not the build-editor barrel) so this stays safe to pull into
-// the embed bundle — same rule as build-viewer-body.
+// Deep imports (not barrels) so this stays safe to pull into the embed
+// bundle — same rule as build-viewer-body.
 import {
   BuildItemDetail,
   DetailLinks,
-} from "@/components/build-editor/item-detail"
-import { ModCard } from "@/components/build-editor/mod-card"
-import {
-  arcaneMaxRank,
-  arcaneStatsAt,
-} from "@/components/build-editor/slot-ranks"
+} from "@/components/build-loadout/item-detail"
+import { ModCard } from "@/components/build-loadout/mod-card"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { arcaneMaxRank, arcaneStatsAt } from "@/lib/build/slot-ranks"
 import type { GuideRefTarget } from "@/lib/guide-refs"
+import { ARCANE_PLACEHOLDER_URL, getImageUrl } from "@/lib/image-url"
 import { DISPLAY_SIZE } from "@/lib/mod-card-config"
 import { useModMarketHref } from "@/lib/queries/mod-tradable-query"
-import { getArcaneImageUrl } from "@/lib/util/arcane-images"
 import { marketUrl, wikiUrl } from "@/lib/util/warframe-links"
 
 const HOVER_OPEN_MS = 150
@@ -106,7 +103,10 @@ export function GuideRefLink({
         ) : (
           <BuildItemDetail
             name={name}
-            imageUrl={getArcaneImageUrl(target.arcane.imageName)}
+            imageUrl={getImageUrl(
+              target.arcane.imageName,
+              ARCANE_PLACEHOLDER_URL,
+            )}
             meta={target.arcane.type}
             rank={arcaneMaxRank(target.arcane)}
             maxRank={arcaneMaxRank(target.arcane)}

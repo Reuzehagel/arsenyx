@@ -20,13 +20,15 @@ import { spawnSync } from "node:child_process"
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
 
-const REPO_ROOT = resolve(import.meta.dirname, "..")
+import { CATALOG_FILES } from "@arsenyx/shared/warframe/catalog-files"
+
+import { CATALOG_DIR as DATA, REPO_ROOT } from "./build/paths"
+
 // An explicit base (CI sets DATA_VERSION_BASE) means the caller wants
 // enforcement — a missing ref there is a setup error, not a reason to skip.
 // The local default is a convenience, so skip gracefully if it's absent.
 const explicitBase = process.env.DATA_VERSION_BASE
 const BASE = explicitBase ?? "origin/main"
-const DATA = "apps/web/public/data"
 
 function git(args: string[]) {
   return spawnSync("git", args, { cwd: REPO_ROOT, encoding: "utf8" })
@@ -65,8 +67,8 @@ const dataChanged =
     FORK,
     "--",
     DATA,
-    `:(exclude)${DATA}/meta.json`,
-    `:(exclude)${DATA}/_report.json`,
+    `:(exclude)${DATA}/${CATALOG_FILES.meta}`,
+    `:(exclude)${DATA}/${CATALOG_FILES.report}`,
   ]).status !== 0
 
 if (!dataChanged) {
@@ -74,13 +76,15 @@ if (!dataChanged) {
   process.exit(0)
 }
 
-const baseShow = git(["show", `${FORK}:${DATA}/meta.json`])
+const baseShow = git(["show", `${FORK}:${DATA}/${CATALOG_FILES.meta}`])
 const baseGen =
   baseShow.status === 0
     ? (JSON.parse(baseShow.stdout) as { generatedAt?: string }).generatedAt
     : undefined
 const curGen = (
-  JSON.parse(readFileSync(resolve(REPO_ROOT, DATA, "meta.json"), "utf8")) as {
+  JSON.parse(
+    readFileSync(resolve(REPO_ROOT, DATA, CATALOG_FILES.meta), "utf8"),
+  ) as {
     generatedAt?: string
   }
 ).generatedAt

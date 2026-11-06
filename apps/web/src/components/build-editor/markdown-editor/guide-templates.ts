@@ -1,3 +1,5 @@
+import { STORAGE_KEYS, storageGet, storageSet } from "@/lib/util/storage"
+
 export interface GuideTemplate {
   id: string
   name: string
@@ -65,7 +67,7 @@ The damage/survivability story against level-cap enemies.
   },
 ]
 
-const STORAGE_KEY = "arsenyx:guide-templates:v1"
+const STORAGE_KEY = STORAGE_KEYS.guideTemplates
 
 function safeParse(raw: string | null): GuideTemplate[] {
   if (!raw) return []
@@ -86,13 +88,11 @@ function safeParse(raw: string | null): GuideTemplate[] {
 
 /** User-saved templates (this browser only). DB-backed sync is a later phase. */
 export function loadUserTemplates(): GuideTemplate[] {
-  if (typeof localStorage === "undefined") return []
-  return safeParse(localStorage.getItem(STORAGE_KEY))
+  return safeParse(storageGet(STORAGE_KEY) ?? null)
 }
 
 function persist(templates: GuideTemplate[]): void {
-  if (typeof localStorage === "undefined") return
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(templates))
+  storageSet(STORAGE_KEY, JSON.stringify(templates))
 }
 
 export function saveUserTemplate(name: string, body: string): GuideTemplate[] {

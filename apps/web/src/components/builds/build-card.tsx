@@ -1,3 +1,5 @@
+import type { BuildListItemResponse } from "@arsenyx/shared/api/build-dto"
+import { getCategoryLabel } from "@arsenyx/shared/warframe/categories"
 import { Link } from "@tanstack/react-router"
 import { Eye, Heart } from "lucide-react"
 
@@ -7,16 +9,15 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import type { BuildListItem } from "@/lib/queries/builds-list-query"
-import { useItemImage } from "@/lib/use-item-image"
+import { useItemImage } from "@/lib/hooks/use-item-image"
+import { getImageUrl } from "@/lib/image-url"
 import { formatAbsoluteTime, relativeTime } from "@/lib/util/relative-time"
 import { authorName } from "@/lib/util/user-display"
-import { getCategoryLabel, getImageUrl } from "@/lib/warframe"
 
 /** Shared per-card derivation: relative timestamp and the current catalog
  *  image URL resolved from the build's item. (Author is derived in
  *  BuildByline, the only place it's rendered.) */
-function useBuildCardData(build: BuildListItem) {
+function useBuildCardData(build: BuildListItemResponse) {
   const itemImage = useItemImage()
   return {
     timeAgo: relativeTime(build.updatedAt),
@@ -33,7 +34,7 @@ function BuildByline({
   build,
   variant,
 }: {
-  build: BuildListItem
+  build: BuildListItemResponse
   variant: "card" | "row"
 }) {
   const author = authorName(build.user)
@@ -117,13 +118,13 @@ function FormaStat({
 
 /** Item name under the build title — or its category when the build is just
  *  named after the item, so cards don't read "Furis / Furis". */
-function itemSubtitle(build: BuildListItem): string {
+function itemSubtitle(build: BuildListItemResponse): string {
   return build.name.trim() === build.item.name
     ? getCategoryLabel(build.item.category)
     : build.item.name
 }
 
-export function BuildCard({ build }: { build: BuildListItem }) {
+export function BuildCard({ build }: { build: BuildListItemResponse }) {
   const { timeAgo, imageUrl } = useBuildCardData(build)
 
   return (
@@ -182,7 +183,7 @@ export function BuildCard({ build }: { build: BuildListItem }) {
   )
 }
 
-export function BuildRow({ build }: { build: BuildListItem }) {
+export function BuildRow({ build }: { build: BuildListItemResponse }) {
   const { timeAgo, imageUrl } = useBuildCardData(build)
 
   return (

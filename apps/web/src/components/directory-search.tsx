@@ -6,7 +6,7 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group"
 import { Kbd } from "@/components/ui/kbd"
-import { useHotkey } from "@/lib/hooks/hotkeys"
+import { HOTKEYS, useSearchHotkey } from "@/lib/hooks/hotkeys"
 import { useUrlSearchInput } from "@/lib/hooks/use-url-search-input"
 
 /**
@@ -30,10 +30,7 @@ export function DirectorySearch({
   const inputRef = useRef<HTMLInputElement>(null)
   const [local, setLocal] = useUrlSearchInput(value, onSearch)
 
-  useHotkey("/", () => {
-    inputRef.current?.focus()
-    inputRef.current?.select()
-  })
+  useSearchHotkey(HOTKEYS.directorySearch, inputRef)
 
   return (
     <InputGroup>

@@ -164,7 +164,7 @@ export function validateArcanes(
     // getArcanesForSlot matches only arcanes with a truthy slotType, so one
     // missing it lands in NO slot picker and vanishes from browse — silently,
     // with no error. It's filled in at emit time from the wiki slot map
-    // (build-items-index.ts ~L396); an empty one means upstream/wiki drift, so
+    // (resolve-images.ts); an empty one means upstream/wiki drift, so
     // fail the build here rather than ship an un-routable, invisible arcane.
     for (const field of ["uniqueName", "name", "slotType"]) {
       if (!isNonEmptyString(a[field])) {

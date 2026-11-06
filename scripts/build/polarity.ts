@@ -3,20 +3,11 @@
  * Single source of truth so the known-polarity set can't drift between them.
  */
 
-/** Canonical Warframe polarity names (lowercase long-form). The UI codec
- *  abbreviates these downstream; the build keeps the long form. */
-export const POLARITY_SET = new Set<string>([
-  "madurai",
-  "vazarin",
-  "naramon",
-  "zenurik",
-  "unairu",
-  "penjaga",
-  "umbra",
-  "exilus",
-  "universal",
-  "any",
-])
+import { POLARITIES } from "@arsenyx/shared/warframe/polarities"
+
+/** Polarity names the wiki may write: every shared polarity, plus "exilus"
+ *  (a wiki-only value with no counterpart in the app's polarity set). */
+const POLARITY_SET = new Set<string>([...POLARITIES, "exilus"])
 
 /** Wiki spellings that mean the Universal ("Any"/Omni) polarity — the
  *  `Any_Pol` glyph. `Module:Warframes/data` and `Module:Weapons/data` write it

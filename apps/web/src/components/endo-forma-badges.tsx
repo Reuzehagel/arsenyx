@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge"
 
 /**
  * Endo cost + (conditional) forma count badges shown in the build viewer and
- * create-editor headers. Renders as a fragment so each header can supply its
+ * build editor headers. Renders as a fragment so each header can supply its
  * own wrapping flex container.
  */
 export function EndoFormaBadges({

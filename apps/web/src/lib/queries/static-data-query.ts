@@ -1,25 +1,23 @@
-import { type QueryKey, queryOptions } from "@tanstack/react-query"
+import { queryOptions } from "@tanstack/react-query"
 import { notFound } from "@tanstack/react-router"
 
+import { versionedDataUrl } from "@/lib/html-head"
+
 /**
- * Factory for the static-data queries served from `apps/web/public/data/`.
- * These files are precomputed at build time and never change at runtime, so
- * every query caches forever (`staleTime`/`gcTime: Infinity`).
- *
- * Each request carries a `?v=<data-version>` stamp (baked in at build time —
- * see vite.config.ts) so the CDN can serve `/data/*` as `immutable` while a
- * data-pipeline regeneration cleanly busts the cache via a fresh URL.
+ * Query options for a file served from `apps/web/public/data/`. These are
+ * precomputed at build time and never change at runtime, so every query
+ * caches forever. The key is the path, so one file is one cache entry.
  */
 export function staticDataQuery<T>(
-  queryKey: QueryKey,
   path: string,
   errMsg: string,
   options?: { notFoundOn404?: boolean },
 ) {
-  // index.html preloads items-index.json by this exact URL; keep the shapes in sync.
-  const url = `${path}${path.includes("?") ? "&" : "?"}v=${__DATA_VERSION__}`
+  // Stamped with the build's data version. index.html preloads
+  // items-index.json via the same versionedDataUrl, so the preload is reused.
+  const url = versionedDataUrl(path, __DATA_VERSION__)
   return queryOptions({
-    queryKey,
+    queryKey: ["data", path],
     queryFn: async (): Promise<T> => {
       const r = await fetch(url)
       if (options?.notFoundOn404 && r.status === 404) throw notFound()

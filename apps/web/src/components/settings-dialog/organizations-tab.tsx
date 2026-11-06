@@ -1,3 +1,9 @@
+import {
+  MAX_ORGS_PER_USER,
+  ORG_DESCRIPTION_MAX,
+  ORG_NAME_MAX,
+  ORG_SLUG_MAX,
+} from "@arsenyx/shared/api/limits"
 import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import * as React from "react"
@@ -13,11 +19,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { UserAvatar } from "@/components/user-avatar"
 import { authClient } from "@/lib/auth-client"
-import { useCreateOrg } from "@/lib/queries/org-actions"
-import { myOrgsQuery } from "@/lib/queries/org-query"
-
-// Mirrors MAX_ORGS_PER_USER in apps/api/src/routes/orgs.ts.
-const MAX_ORGS_PER_USER = 3
+import { myOrgsQuery, useCreateOrg } from "@/lib/queries/org-query"
 
 export function OrganizationsPanel({ onClose }: { onClose: () => void }) {
   const { data: session } = authClient.useSession()
@@ -161,7 +163,7 @@ function CreateOrgForm({ onClose }: { onClose: () => void }) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Organization name"
-          maxLength={32}
+          maxLength={ORG_NAME_MAX}
         />
       </Field>
       <Field>
@@ -173,7 +175,7 @@ function CreateOrgForm({ onClose }: { onClose: () => void }) {
             setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))
           }
           placeholder="org-slug"
-          maxLength={30}
+          maxLength={ORG_SLUG_MAX}
         />
       </Field>
       <Field>
@@ -183,7 +185,7 @@ function CreateOrgForm({ onClose }: { onClose: () => void }) {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Optional"
-          maxLength={200}
+          maxLength={ORG_DESCRIPTION_MAX}
         />
       </Field>
       {error ? <p className="text-destructive text-sm">{error}</p> : null}

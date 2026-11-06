@@ -12,12 +12,11 @@
  */
 
 import { readFileSync } from "node:fs"
-import { relative, resolve } from "node:path"
+import { relative } from "node:path"
 
-import { findJsonFiles, sourceUrlRe } from "./build/image-hosts"
-
-const REPO_ROOT = resolve(import.meta.dirname, "..")
-const DATA_DIR = resolve(REPO_ROOT, "apps/web/public/data")
+import { sourceUrlRe } from "./build/image-hosts"
+import { CATALOG_OUT_DIR as DATA_DIR, REPO_ROOT } from "./build/paths"
+import { findJsonFiles } from "./lib/json-records"
 const UPSTREAM_RE = sourceUrlRe()
 
 let offenders = 0

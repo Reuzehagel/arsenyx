@@ -17,6 +17,15 @@
  * inside one variant cancel out (see `cancelMoves`).
  */
 
+import {
+  asRecord,
+  type PlacedArcane,
+  type PlacedMod,
+  type SavedBuildData,
+  type SavedVariant,
+  type Untrusted,
+} from "./build-data"
+
 export type BuildChangeOp = "add" | "remove" | "modify" | "info"
 
 export interface BuildChange {
@@ -33,6 +42,9 @@ export interface BuildChange {
  *  loadout) can touch everything at once; past this the list stops being read
  *  and starts being a JSON column that grows without bound. */
 const MAX_CHANGES = 40
+
+/** The `info` label a save that moved nothing gets. Readers filter on it. */
+export const NO_CHANGES_LABEL = "No loadout changes"
 
 /** Per-field length cap on stored changes. Labels, scopes and details echo
  *  user strings (variant labels, mod names) and a variant's label is stamped
@@ -54,18 +66,13 @@ function clipChange(c: BuildChange): BuildChange {
 }
 
 // ---------------------------------------------------------------------------
-// Defensive readers over the persisted shape (apps/web SavedBuildData). That
-// type lives in apps/web and can't be imported here (api must not reach into
-// web), so this module reads the subset it needs structurally.
+// Defensive readers over the persisted shape (SavedBuildData). Field names are
+// checked against the real types; every value is still treated as unknown.
 // ---------------------------------------------------------------------------
 
-type Json = Record<string, unknown>
+type DocJson = Untrusted<SavedBuildData>
 
-function obj(v: unknown): Json | null {
-  return typeof v === "object" && v !== null && !Array.isArray(v)
-    ? (v as Json)
-    : null
-}
+const obj = asRecord<Record<string, unknown>>
 
 function arr(v: unknown): unknown[] {
   return Array.isArray(v) ? v : []
@@ -86,16 +93,16 @@ interface Placed {
 }
 
 function placedMod(v: unknown): Placed | null {
-  const o = obj(v)
+  const o: Untrusted<PlacedMod> | null = obj(v)
   if (!o) return null
   const name = str(obj(o.mod)?.name)
   return name ? { name, rank: num(o.rank) } : null
 }
 
 function placedArcane(v: unknown): Placed | null {
-  const o = obj(v)
+  const o: Untrusted<PlacedArcane> | null = obj(v)
   if (!o) return null
-  const name = str(o.name)
+  const name = str(obj(o.arcane)?.name)
   return name ? { name, rank: num(o.rank) } : null
 }
 
@@ -132,11 +139,11 @@ function helminthNames(v: unknown): string[] {
     .filter(Boolean)
 }
 
-function readVariant(v: unknown, index: number, fallback: Json): Variant {
-  const o = obj(v) ?? {}
+function readVariant(v: unknown, index: number, fallback: DocJson): Variant {
+  const o: Untrusted<SavedVariant> = obj(v) ?? {}
   // Legacy single-loadout documents have no `variants`; their loadout lives on
   // the top-level fields, which is what `fallback` carries.
-  const src = Object.keys(o).length > 0 ? o : fallback
+  const src: Untrusted<SavedVariant> = Object.keys(o).length > 0 ? o : fallback
   return {
     key: str(o.id) ?? `#${index}`,
     label: str(o.label) ?? "",
@@ -159,7 +166,7 @@ function readVariant(v: unknown, index: number, fallback: Json): Variant {
   }
 }
 
-function readVariants(doc: Json): Variant[] {
+function readVariants(doc: DocJson): Variant[] {
   const list = arr(doc.variants)
   if (list.length === 0) return [readVariant(null, 0, doc)]
   return list.map((v, i) => readVariant(v, i, doc))
@@ -277,7 +284,7 @@ function diffVariant(before: Variant, after: Variant): BuildChange[] {
   return out.map((c) => (after.label ? { ...c, scope: after.label } : c))
 }
 
-function diffBuildWide(before: Json, after: Json): BuildChange[] {
+function diffBuildWide(before: DocJson, after: DocJson): BuildChange[] {
   const out: BuildChange[] = []
 
   if (before.hasReactor !== after.hasReactor) {
@@ -372,7 +379,7 @@ export function diffBuildData(before: unknown, after: unknown): BuildChange[] {
 
   out.push(...diffBuildWide(a, b))
 
-  if (out.length === 0) return [{ op: "info", label: "No loadout changes" }]
+  if (out.length === 0) return [{ op: "info", label: NO_CHANGES_LABEL }]
   if (out.length > MAX_CHANGES) {
     const kept = out.slice(0, MAX_CHANGES).map(clipChange)
     kept.push({
@@ -406,7 +413,7 @@ export function mergeChanges(lists: BuildChange[][]): BuildChange[] {
       // Informational lines aren't stateful — one "Guide updated" for the
       // whole burst, no matter how many saves touched it.
       if (c.op === "info") {
-        if (c.label === "No loadout changes") continue
+        if (c.label === NO_CHANGES_LABEL) continue
         merged.set(`info|${c.scope ?? ""}|${c.label}`, c)
         continue
       }
@@ -421,5 +428,5 @@ export function mergeChanges(lists: BuildChange[][]): BuildChange[] {
     }
   }
   const out = [...merged.values()]
-  return out.length > 0 ? out : [{ op: "info", label: "No loadout changes" }]
+  return out.length > 0 ? out : [{ op: "info", label: NO_CHANGES_LABEL }]
 }

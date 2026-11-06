@@ -1,4 +1,5 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import type { BuildVisibility } from "@arsenyx/shared/api/build-dto"
+import { useMutation } from "@tanstack/react-query"
 
 import {
   Field,
@@ -16,7 +17,7 @@ import {
 } from "@/components/ui/select"
 import { authClient } from "@/lib/auth-client"
 
-import { type BuildVisibility, extras, SignedOutNotice } from "./shared"
+import { SignedOutNotice } from "./shared"
 
 const VISIBILITY_OPTIONS: ReadonlyArray<{
   value: BuildVisibility
@@ -43,7 +44,6 @@ const VISIBILITY_OPTIONS: ReadonlyArray<{
 export function PrivacyPanel() {
   const { data: session } = authClient.useSession()
   const user = session?.user
-  const queryClient = useQueryClient()
 
   const update = useMutation({
     mutationFn: async (visibility: BuildVisibility) => {
@@ -54,16 +54,13 @@ export function PrivacyPanel() {
         throw new Error(res.error.message ?? "Failed to update preference.")
       }
     },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["session"] })
-    },
   })
 
   if (!user) {
     return <SignedOutNotice message="Sign in to manage privacy preferences." />
   }
 
-  const current = extras(user).defaultBuildVisibility ?? "PUBLIC"
+  const current = user.defaultBuildVisibility ?? "PUBLIC"
   const effective = update.isPending ? update.variables : current
 
   return (

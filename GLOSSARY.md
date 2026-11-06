@@ -20,7 +20,7 @@ _Avoid_: Loadout, Setup (those refer to a single Variant, not the whole shareabl
 
 **Variant**:
 One concrete loadout within a Build — its mods, arcanes, shards, forma, incarnon, and
-helminth choices. A Build has 1–5 Variants; the Variant is the thing the editor edits.
+helminth choices. A Build has 1–5 Variants per form (twin frames have two forms); the Variant is the thing the editor edits.
 _Avoid_: Build (the container, not the loadout), Loadout. Also note: a Warframe Prime/Wraith/Prisma
 "variant" is **not** a Variant here — those are modeled as separate **Items** in the catalog.
 

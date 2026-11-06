@@ -1,176 +1,262 @@
-import type { BuildDetailResponse } from "@arsenyx/shared/api/build-dto"
 import type {
-  DeploymentContext,
-  LichBonusElement,
-  Polarity,
-} from "@arsenyx/shared/warframe/types"
-import { queryOptions } from "@tanstack/react-query"
-import { notFound } from "@tanstack/react-router"
+  BuildDetailResponse,
+  BuildRevisionsResponse,
+} from "@arsenyx/shared/api/build-dto"
+import {
+  queryOptions,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query"
 
-import type { PlacedArcane, PlacedMod, SlotId } from "@/components/build-editor"
-import type { GuideRefs } from "@/lib/guide-refs"
-import type { HelminthAbility } from "@/lib/queries/helminth-query"
-import type { PlacedShard } from "@/lib/shards"
-import { apiFetch, ApiError } from "@/lib/util/api-client"
+import { isLegacyBuildData } from "@/lib/codec/build-codec-adapter"
+import { apiCall } from "@/lib/util/api-client"
 
-/**
- * Per-variant slice stored inside `SavedBuildData.variants`. When the
- * `variants` array is present (length >= 1), the per-variant fields here
- * supersede the legacy top-level `slots`/`arcanes`/`incarnon*`/
- * `deploymentContext` fields. Top-level fields stay populated for the
- * active variant so old clients that ignore `variants` still render the
- * default loadout — graceful degradation, not a hard cutover.
- */
-export type SavedVariant = {
-  id: string
-  label: string
-  slots: Partial<Record<SlotId, PlacedMod>>
-  arcanes: (PlacedArcane | null)[]
-  /** This variant's Archon Shards. Per-variant: each loadout installs its own
-   *  set. Absent on builds saved before per-variant shards — load resolves it
-   *  from the legacy top-level `shards`/`formShards` (copy-on-load), so an old
-   *  build's single set shows on every variant until one is edited. */
-  shards?: (PlacedShard | null)[]
-  helminth?: Record<number, HelminthAbility>
-  incarnonEnabled?: boolean
-  incarnonPerks?: (string | null)[]
-  deploymentContext?: DeploymentContext
-  operatorAmp?: string
-  focusSchool?: string
-  /** Twin-frame (Sirius & Orion) form this variant builds — indexes the
-   *  catalog item's `forms` array (0 = primary). Absent for normal frames. */
-  formIndex?: number
-  /** Optional per-variant guide. When absent, the viewer falls back to
-   *  the build-wide guide from BuildDetail.guide. Stored inside
-   *  `buildData.variants[i]` (JSON column) — no separate DB row. */
-  guideSummary?: string
-  guideDescription?: string
-}
-
-/** Shape stored in `Build.buildData` (Prisma JSON). */
-export type SavedBuildData = {
-  version?: number
-  slots?: Partial<Record<SlotId, PlacedMod>>
-  formaPolarities?: Partial<Record<SlotId, Polarity>>
-  arcanes?: (PlacedArcane | null)[]
-  /** Top-level mirror of the active variant's Archon Shards (per-variant; see
-   *  `SavedVariant.shards`). Kept populated for legacy clients that ignore the
-   *  `variants` array, and it's the sole shard set for synthetic single-variant
-   *  builds. Pre-per-variant builds stored their only set here. */
-  shards?: (PlacedShard | null)[]
-  /** @deprecated Legacy twin-frame per-form shards (the short-lived per-form
-   *  model), keyed by form index. Read-only for copy-on-load when a variant has
-   *  no `shards` of its own; new saves write per-variant `SavedVariant.shards`
-   *  instead and never emit this. */
-  formShards?: Record<number, (PlacedShard | null)[]>
-  hasReactor?: boolean
-  helminth?: Record<number, HelminthAbility>
-  zawComponents?: { grip: string; link: string }
-  kitgunComponents?: { grip: string; loader: string }
-  lichBonusElement?: LichBonusElement
-  incarnonEnabled?: boolean
-  incarnonPerks?: (string | null)[]
-  deploymentContext?: DeploymentContext
-  operatorAmp?: string
-  focusSchool?: string
-  /** Top-level mirror of the active variant's `formIndex` (per-variant data;
-   *  see `PerVariantDataField`). */
-  formIndex?: number
-
-  // Multi-variant support (added 2026-05-23). When present, length >= 1
-  // and the top-level mod/arcane fields mirror variants[0] for legacy
-  // viewer compatibility.
-  variants?: SavedVariant[]
-
-  /** Snapshots of mods/arcanes referenced from guide text via
-   *  `[Name](mod:…)` links — see lib/guide-refs.ts. Build-wide (covers the
-   *  build guide and every per-variant guide), recomputed on each save. */
-  guideRefs?: GuideRefs
-}
+import { arcanesQuery } from "./arcanes-query"
+import type { BuildListParams, BuildListScope } from "./builds-list-query"
+import { helminthQuery } from "./helminth-query"
+import { modsQuery } from "./mods-query"
 
 /**
- * The per-variant *data* fields — the ones that differ between variants and are
- * mirrored on top-level `SavedBuildData` for legacy clients. Derived from
- * `SavedVariant` by excluding identity (`id`/`label`), the structural loadout
- * (`slots`/`arcanes`, always present with a default), and the separately-handled
- * per-variant guide. Deriving by exclusion makes the set self-maintaining: a new
- * `SavedVariant` field automatically becomes a per-variant data field, and
- * `pickPerVariantData` (build-codec-adapter.ts) — the single point every
- * converter threads these through — then fails to compile until it's handled, so
- * no converter can silently drop it. (Adding a field that's genuinely *not*
- * per-variant data just means listing it in the exclusion below.)
+ * Query keys for builds. A build's partners and revisions nest under its
+ * detail key on purpose: invalidating `detail(slug)` (a save, an admin
+ * visibility change) prefix-matches both, so the history sheet and the
+ * related-builds strip refresh with the build. `removeQueries(detail)` on
+ * delete drops them too. Every list lives under `lists`, which mutations that
+ * change what any list shows (save, delete, fork, admin, org) invalidate.
  */
-export type PerVariantDataField = Exclude<
-  keyof SavedVariant,
-  | "id"
-  | "label"
-  | "slots"
-  | "arcanes"
-  | "shards"
-  | "guideSummary"
-  | "guideDescription"
->
-
-/** Canonical wire shape lives in `@arsenyx/shared/api/build-dto`; re-exported
- *  under the historical name so existing consumers keep importing it here. */
-export type BuildDetail = BuildDetailResponse
-
-/**
- * Resolves the guide content GuideDisplay would render for a given view: a
- * per-variant guide (if the active variant has one) supersedes the build-wide
- * guide wholesale — we don't mix fields. Trimmed so whitespace-only guides
- * read as empty. Lives here (not in guide-display.tsx) so the build viewer can
- * reserve layout space for the guide's lazy chunk without statically importing
- * react-markdown into the embed bundle. The component and the space-reservation
- * stay in sync because both go through this.
- */
-export function resolveGuide(
-  build: Pick<BuildDetail, "guide">,
-  activeVariant: SavedVariant | undefined,
-): { summary: string; description: string } {
-  const variantSummary = activeVariant?.guideSummary?.trim()
-  const variantDescription = activeVariant?.guideDescription?.trim()
-  if (variantSummary || variantDescription) {
-    return {
-      summary: variantSummary ?? "",
-      description: variantDescription ?? "",
-    }
-  }
-  return {
-    summary: build.guide?.summary?.trim() ?? "",
-    description: build.guide?.description?.trim() ?? "",
-  }
+export const buildKeys = {
+  detail: (slug: string) => ["build", slug] as const,
+  partners: (slug: string) => ["build", slug, "partners"] as const,
+  revisions: (slug: string) => ["build", slug, "revisions"] as const,
+  lists: ["builds"] as const,
+  // List keys share one (non-literal) type so the list routes can hand any
+  // of their queries to the same list view.
+  scope: (scope: BuildListScope) => ["builds", scope] as const,
+  list: (scope: BuildListScope, params: BuildListParams) => [
+    "builds",
+    scope,
+    params,
+  ],
+  orgList: (slug: string, params: BuildListParams) => [
+    "builds",
+    "org",
+    slug.toLowerCase(),
+    params,
+  ],
+  profileList: (username: string, params: BuildListParams) => [
+    "builds",
+    "profile",
+    username.toLowerCase(),
+    params,
+  ],
+  partnerSearch: (q: string) => ["builds", "search", "mine", q] as const,
 }
 
-/** Whether {@link resolveGuide} yields any content — i.e. whether GuideDisplay
- *  will render something for this view. */
-export function hasGuideContent(
-  build: Pick<BuildDetail, "guide">,
-  activeVariant: SavedVariant | undefined,
-): boolean {
-  const { summary, description } = resolveGuide(build, activeVariant)
-  return Boolean(summary || description)
-}
+const buildPath = (slug: string) => `/builds/${encodeURIComponent(slug)}`
+
+const fetchBuild = (slug: string, opts?: { countView?: boolean }) =>
+  apiCall<BuildDetailResponse>(
+    `${buildPath(slug)}${opts?.countView === false ? "?view=0" : ""}`,
+    { notFoundOn404: true },
+  )
 
 /**
  * @param countView when `false`, fetches `/builds/:slug?view=0` so the server
  *   skips the view-count bump (and its per-view cookie) and serves a
  *   browser-cacheable response. Used by the embed entry — embed impressions
  *   are not build views. The payload is identical either way, so the query key
- *   stays `["build", slug]` (full page and embed never coexist in one document).
+ *   stays the same (full page and embed never coexist in one document).
  */
 export const buildQuery = (slug: string, opts?: { countView?: boolean }) =>
   queryOptions({
-    queryKey: ["build", slug],
-    queryFn: async (): Promise<BuildDetail> => {
-      const qs = opts?.countView === false ? "?view=0" : ""
-      try {
-        return await apiFetch<BuildDetail>(
-          `/builds/${encodeURIComponent(slug)}${qs}`,
-        )
-      } catch (err) {
-        if (err instanceof ApiError && err.status === 404) throw notFound()
-        throw err
+    queryKey: buildKeys.detail(slug),
+    queryFn: () => fetchBuild(slug, opts),
+  })
+
+/** The build being edited, or null for a new build — so the editor can
+ *  suspend on it unconditionally. Shares `buildQuery`'s cache entry. */
+export const editedBuildQuery = (slug: string | undefined) =>
+  queryOptions({
+    queryKey: buildKeys.detail(slug ?? ""),
+    queryFn: () => (slug ? fetchBuild(slug) : null),
+  })
+
+/**
+ * The full catalogs a build's viewer needs, or `null` when it needs none.
+ * Only legacy BuildState-shape builds rebuild their mods from uniqueNames
+ * (~1.35 MB); new-format builds carry mod/arcane objects inline and refresh
+ * their images from image-map.json instead. Shared by the route loader (warm)
+ * and the viewer body (suspend).
+ */
+export function catalogQueriesFor(buildData: unknown) {
+  return isLegacyBuildData(buildData)
+    ? ([modsQuery, arcanesQuery, helminthQuery] as const)
+    : null
+}
+
+/**
+ * A build's edit log. Session-gated and permission-gated server-side (the same
+ * check that governs editing), so this is only ever fetched for a viewer the
+ * detail payload already marked `isOwner`.
+ *
+ * `enabled: false` by default — the history lives behind a button, and fetching
+ * it on every build page view would spend a query nobody asked for. The sheet
+ * enables it on open.
+ */
+export const buildRevisionsQuery = (slug: string, enabled: boolean) =>
+  queryOptions({
+    queryKey: buildKeys.revisions(slug),
+    queryFn: () =>
+      apiCall<BuildRevisionsResponse>(`${buildPath(slug)}/revisions`, {
+        codes: { default: "failed_load_revisions" },
+      }),
+    enabled,
+    // The log only changes when someone saves the build, which is rare next to
+    // opening the sheet. Re-opening inside the window reuses the cached list.
+    staleTime: 60_000,
+  })
+
+export function useDeleteBuild(slug: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    meta: { errorToast: "Couldn't delete the build" },
+    mutationFn: () =>
+      apiCall<void>(buildPath(slug), {
+        method: "DELETE",
+        codes: {
+          401: "unauthorized",
+          403: "forbidden",
+          default: "failed_delete",
+        },
+      }),
+    onSuccess: () => {
+      qc.removeQueries({ queryKey: buildKeys.detail(slug) })
+      qc.invalidateQueries({ queryKey: buildKeys.lists })
+    },
+  })
+}
+
+export function useForkBuild(slug: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    meta: { errorToast: "Couldn't fork the build" },
+    mutationFn: () =>
+      apiCall<{ id: string; slug: string }>(`${buildPath(slug)}/fork`, {
+        method: "POST",
+        codes: {
+          401: "unauthorized",
+          404: "not_found",
+          default: "failed_fork",
+        },
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: buildKeys.lists })
+    },
+  })
+}
+
+type LikeResponse = {
+  hasLiked: boolean
+  hasDisliked: boolean
+  likeCount: number
+  dislikeCount: number
+}
+type BookmarkResponse = { hasBookmarked: boolean; bookmarkCount: number }
+
+function sendSocial<T>(
+  slug: string,
+  kind: "like" | "dislike" | "bookmark",
+  method: "POST" | "DELETE",
+): Promise<T> {
+  return apiCall<T>(`${buildPath(slug)}/${kind}`, {
+    method,
+    codes: { 401: "unauthorized", default: `failed_${kind}` },
+  })
+}
+
+/** 1 = Like, -1 = Dislike, 0 = neither. The two are exclusive per viewer. */
+type LikeState = 1 | -1 | 0
+
+export function useSetLike(slug: string) {
+  const qc = useQueryClient()
+  const key = buildKeys.detail(slug)
+  return useMutation({
+    meta: { errorToast: "Couldn't update like" },
+    mutationFn: (next: LikeState): Promise<LikeResponse> =>
+      next === 0
+        ? sendSocial<LikeResponse>(slug, "like", "DELETE")
+        : sendSocial<LikeResponse>(
+            slug,
+            next === 1 ? "like" : "dislike",
+            "POST",
+          ),
+    onMutate: async (next) => {
+      await qc.cancelQueries({ queryKey: key })
+      const prev = qc.getQueryData<BuildDetailResponse>(key)
+      if (prev) {
+        const was = prev.viewerHasLiked ? 1 : prev.viewerHasDisliked ? -1 : 0
+        const delta = (v: LikeState) =>
+          (next === v ? 1 : 0) - (was === v ? 1 : 0)
+        qc.setQueryData<BuildDetailResponse>(key, {
+          ...prev,
+          viewerHasLiked: next === 1,
+          viewerHasDisliked: next === -1,
+          likeCount: prev.likeCount + delta(1),
+          dislikeCount: prev.dislikeCount + delta(-1),
+        })
+      }
+      return { prev }
+    },
+    onError: (_err, _next, ctx) => {
+      if (ctx?.prev) qc.setQueryData(key, ctx.prev)
+    },
+    onSuccess: (data) => {
+      const cur = qc.getQueryData<BuildDetailResponse>(key)
+      if (cur) {
+        qc.setQueryData<BuildDetailResponse>(key, {
+          ...cur,
+          viewerHasLiked: data.hasLiked,
+          viewerHasDisliked: data.hasDisliked,
+          likeCount: data.likeCount,
+          dislikeCount: data.dislikeCount,
+        })
       }
     },
   })
+}
+
+export function useToggleBookmark(slug: string) {
+  const qc = useQueryClient()
+  const key = buildKeys.detail(slug)
+  return useMutation({
+    meta: { errorToast: "Couldn't update bookmark" },
+    mutationFn: (next: boolean): Promise<BookmarkResponse> =>
+      sendSocial<BookmarkResponse>(slug, "bookmark", next ? "POST" : "DELETE"),
+    onMutate: async (next) => {
+      await qc.cancelQueries({ queryKey: key })
+      const prev = qc.getQueryData<BuildDetailResponse>(key)
+      if (prev) {
+        qc.setQueryData<BuildDetailResponse>(key, {
+          ...prev,
+          viewerHasBookmarked: next,
+          bookmarkCount: prev.bookmarkCount + (next ? 1 : -1),
+        })
+      }
+      return { prev }
+    },
+    onError: (_err, _next, ctx) => {
+      if (ctx?.prev) qc.setQueryData(key, ctx.prev)
+    },
+    onSuccess: (data) => {
+      const cur = qc.getQueryData<BuildDetailResponse>(key)
+      if (cur) {
+        qc.setQueryData<BuildDetailResponse>(key, {
+          ...cur,
+          viewerHasBookmarked: data.hasBookmarked,
+          bookmarkCount: data.bookmarkCount,
+        })
+      }
+      qc.invalidateQueries({ queryKey: buildKeys.scope("bookmarks") })
+    },
+  })
+}

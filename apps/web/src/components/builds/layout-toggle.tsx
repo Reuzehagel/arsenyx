@@ -1,7 +1,7 @@
 import { LayoutGrid, Rows3 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { useBuildLayout, type BuildLayout } from "@/lib/hooks/use-build-layout"
+import { useBuildLayout } from "@/lib/hooks/use-build-layout"
 import { cn } from "@/lib/util/utils"
 
 export function BuildsLayoutToggle() {
@@ -50,10 +50,4 @@ function ToggleButton({
       {children}
     </Button>
   )
-}
-
-export function buildLayoutClass(layout: BuildLayout) {
-  return layout === "rows"
-    ? "flex flex-col gap-2"
-    : "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
 }

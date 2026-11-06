@@ -5,7 +5,7 @@
  *
  *   - BuildDoc / BuildVariant (@arsenyx/shared/warframe/build-doc) — the compact
  *     share-link wire format (v1/v2 base64). Optimized for URL size.
- *   - SavedBuildData / SavedVariant (@/lib/queries/build-query) — the DB JSON
+ *   - SavedBuildData / SavedVariant (@arsenyx/shared/warframe/build-data) — the DB JSON
  *     column + editor state. Flat Record<SlotId,…> for keyed editor lookups;
  *     keeps top-level fields mirroring the active variant for legacy clients.
  *   - BuildState (@arsenyx/shared/warframe/types) — the in-memory lingua franca
@@ -14,21 +14,36 @@
  * Conversion graph (→ = function that crosses the boundary):
  *
  *   share link ─decodeBuildDoc→ BuildDoc ─savedDataFromBuildDoc→ SavedBuildData → editor
- *   DB JSON ─normalizeBuildData→ SavedBuildData ─savedDataToBuildState→ BuildState
+ *   DB JSON ─loadBuildData→ SavedBuildData ─editorStateToBuildState→ BuildState
  *   editor ─captureBuildData→ SavedBuildData ─stripPersistedImages→ DB JSON
  *   editor ─buildDocFromVariants→ BuildDoc ─encodeBuildDoc→ share link (multi)
  *   BuildState ─encodeBuild→ share link (single variant)
  *
  * Within SavedBuildData, getVariants / selectVariant move between the top-level
  * mirror and a chosen variant; per-variant data is threaded through the single
- * pickPerVariantData choke point below. The codec itself (build-codec.ts) shares
+ * pickPerVariantData choke point (build-data.ts). The codec itself (build-codec.ts) shares
  * one slot/meta primitive set across v1 and v2, so the wire formats can't drift.
  */
 import {
+  auraSlotId,
+  normalSlotId,
+  pickPerVariantData,
+  type HelminthAbility,
+  type SavedBuildData,
+  type SavedVariant,
+  type PlacedArcane,
+  type PlacedMod,
+  type SlotId,
+} from "@arsenyx/shared/warframe/build-data"
+import {
+  clampVariantIndex,
   projectVariant,
   type BuildDoc,
 } from "@arsenyx/shared/warframe/build-doc"
-import { RIVEN_IMAGE_NAME } from "@arsenyx/shared/warframe/rivens"
+import {
+  createSyntheticRiven,
+  RIVEN_IMAGE_NAME,
+} from "@arsenyx/shared/warframe/rivens"
 import type {
   Arcane,
   BrowseCategory,
@@ -37,19 +52,11 @@ import type {
   LichBonusElement,
   Mod,
   ModSlot,
-  PlacedArcane as SharedPlacedArcane,
-  PlacedMod as SharedPlacedMod,
+  PlacedShard,
+  BuildStateArcane as SharedPlacedArcane,
+  BuildStateMod as SharedPlacedMod,
   Polarity,
 } from "@arsenyx/shared/warframe/types"
-
-import type { PlacedArcane, PlacedMod, SlotId } from "@/components/build-editor"
-import type {
-  PerVariantDataField,
-  SavedBuildData,
-  SavedVariant,
-} from "@/lib/queries/build-query"
-import type { HelminthAbility } from "@/lib/queries/helminth-query"
-import type { PlacedShard } from "@/lib/shards"
 
 type EditorState = {
   item: { uniqueName: string; name: string; imageName?: string }
@@ -108,17 +115,16 @@ function toEditorPlacedMod(
   // rifle-riven-mod-e05c5519f1.png) that the upstream CDN no longer hosts — pin to the
   // current RIVEN_IMAGE_NAME so they self-heal on next render.
   if (shared.rivenStats) {
+    const riven = createSyntheticRiven()
     const mod: Mod = {
+      ...riven,
       uniqueName: shared.uniqueName,
-      name: shared.name || "Riven Mod",
-      imageName: RIVEN_IMAGE_NAME,
+      name: shared.name || riven.name,
       polarity: shared.polarity,
-      rarity: "Riven",
       baseDrain: shared.baseDrain,
-      fusionLimit: shared.fusionLimit || 8,
+      fusionLimit: shared.fusionLimit || riven.fusionLimit,
       compatName: shared.compatName,
       type: shared.type ?? "",
-      tradable: false,
       rivenStats: shared.rivenStats,
     }
     return { mod, rank: shared.rank }
@@ -140,11 +146,13 @@ function buildSlot(
   return slot
 }
 
-export function savedDataToBuildState(state: EditorState): BuildState {
+/** Live editor state (or a saved build projected onto it) as the BuildState
+ *  the stat engines and the single-variant share codec speak. */
+export function editorStateToBuildState(state: EditorState): BuildState {
   const auraSlots: ModSlot[] = Array.from(
     { length: state.auraSlotCount },
     (_, i) => {
-      const id = `aura-${i}` as SlotId
+      const id = auraSlotId(i)
       return buildSlot(id, "aura", state.slots[id], state.formaPolarities[id])
     },
   )
@@ -165,13 +173,8 @@ export function savedDataToBuildState(state: EditorState): BuildState {
   const normalSlots: ModSlot[] = Array.from(
     { length: state.normalSlotCount },
     (_, i) => {
-      const id = `normal-${i}` as SlotId
-      return buildSlot(
-        `normal-${i}`,
-        "normal",
-        state.slots[id],
-        state.formaPolarities[id],
-      )
+      const id = normalSlotId(i)
+      return buildSlot(id, "normal", state.slots[id], state.formaPolarities[id])
     },
   )
 
@@ -228,7 +231,7 @@ export function savedDataToBuildState(state: EditorState): BuildState {
   }
 }
 
-export function buildStateToSavedData(
+function buildStateToSavedData(
   state: Partial<BuildState>,
   mods: Mod[],
   arcanes: Arcane[],
@@ -251,10 +254,10 @@ export function buildStateToSavedData(
   // Pre-Jade builds stored a singular auraSlot. Newer builds store an array.
   const auraFallback = (state as { auraSlot?: ModSlot }).auraSlot
   const auraSlotsIn = state.auraSlots ?? (auraFallback ? [auraFallback] : [])
-  auraSlotsIn.forEach((s, i) => assign(`aura-${i}` as SlotId, s))
+  auraSlotsIn.forEach((s, i) => assign(auraSlotId(i), s))
   assign("exilus", state.exilusSlot)
   assign("stance", state.stanceSlot)
-  state.normalSlots?.forEach((s, i) => assign(`normal-${i}` as SlotId, s))
+  state.normalSlots?.forEach((s, i) => assign(normalSlotId(i), s))
 
   const arcanesOut: (PlacedArcane | null)[] = (state.arcaneSlots ?? []).map(
     (a) => {
@@ -297,15 +300,6 @@ export function buildStateToSavedData(
   }
 }
 
-/**
- * Re-resolve every placed mod/arcane/helminth `imageName` from the current
- * catalog by its stable `uniqueName`. New-format builds carry full mod objects
- * inline (so the viewer skips the ~1.2 MB mod catalog), but those inline
- * `imageName`s were frozen at save time and rot across image-scheme changes.
- * Patching against the compact `image-map.json` self-heals them without the
- * full catalog. Legacy builds already get fresh images via `toEditorPlacedMod`,
- * so this is a no-op for them. Falls back to the stored value on a map miss.
- */
 /** Apply `fn` to every mod/arcane snapshot in an optional `guideRefs` —
  *  shared by the image refresh (below) and strip (stripPersistedImages)
  *  passes so the two can't drift. The casts are safe: `fn` only adds or
@@ -343,11 +337,18 @@ function mapPlacedMods(
   return next
 }
 
-export function refreshImagesFromMap(
+/**
+ * Re-resolve every placed mod/arcane/helminth `imageName` by its stable
+ * `uniqueName`: stored `imageName`s were frozen at save time (current saves
+ * drop them entirely) and rot across image-scheme changes. Falls back to the
+ * stored value on a map miss. File-private: {@link loadBuildData} is the one
+ * entry point.
+ */
+function refreshImagesFromMap(
   data: SavedBuildData,
-  imageMap: Record<string, string> | undefined,
+  imageMap: Record<string, string>,
 ): SavedBuildData {
-  if (!imageMap || Object.keys(imageMap).length === 0) return data
+  if (Object.keys(imageMap).length === 0) return data
   const url = (uniqueName?: string): string | undefined =>
     uniqueName ? imageMap[uniqueName] : undefined
 
@@ -401,8 +402,8 @@ export function refreshImagesFromMap(
 /**
  * Drop the denormalized `imageName` from every placed mod/arcane/helminth
  * before a build is persisted. Images are re-resolved at render time by stable
- * `uniqueName` — the viewer via `image-map.json` (refreshImagesFromMap), the
- * editor via the full catalog (normalizeBuildData) — so the stored copy is dead
+ * `uniqueName` by loadBuildData — the viewer from `image-map.json`, the
+ * editor from the full catalog — so the stored copy is dead
  * weight that also rots whenever the image-naming/hosting scheme changes.
  * `name` and stats stay for snapshot fidelity (vaulted entities still render).
  *
@@ -466,31 +467,38 @@ export function isLegacyBuildData(raw: unknown): boolean {
   )
 }
 
-export function normalizeBuildData(
+/** What {@link loadBuildData} resolves a stored build against. Every field is
+ *  optional: the editor passes the full catalogs; the viewer passes only the
+ *  compact `image-map.json`, plus the catalogs for a legacy build (see
+ *  `catalogQueriesFor`). */
+export interface BuildCatalogs {
+  mods?: Mod[]
+  arcanes?: Arcane[]
+  helminth?: HelminthAbility[]
+  /** `uniqueName → imageName`; wins over the catalogs' own images. */
+  imageMap?: Record<string, string>
+}
+
+/**
+ * The one way a stored build (DB JSON, possibly a legacy shape) becomes
+ * `SavedBuildData`. Legacy BuildState-shape builds rebuild their mods and
+ * arcanes from the catalogs (an absent catalog drops them, so pass them for
+ * any build `isLegacyBuildData` flags); every build then gets its images
+ * re-resolved by `uniqueName` from the catalogs and `imageMap`.
+ */
+export function loadBuildData(
   raw: unknown,
-  mods: Mod[],
-  arcanes: Arcane[],
-  helminthAbilities: HelminthAbility[] = [],
+  { mods = [], arcanes = [], helminth = [], imageMap }: BuildCatalogs,
 ): SavedBuildData {
   const r = (raw ?? {}) as LegacyOrSaved
   const base = isLegacyBuildData(r)
     ? buildStateToSavedData(r, mods, arcanes).data
     : migrateLegacyAuraKey(r as SavedBuildData)
-  const withHelminth = refreshHelminthImage(base, helminthAbilities)
-
-  // Builds no longer persist mod/arcane `imageName` (see stripPersistedImages),
-  // so re-resolve it by `uniqueName`. When a catalog is supplied — the editor
-  // loads the full mods/arcanes — derive a map from it and patch. The viewer
-  // passes empty catalogs to skip the ~1.2 MB download and instead calls
-  // refreshImagesFromMap with the compact image-map.json after this. Legacy
-  // builds already carry fresh images from buildStateToSavedData; this is an
-  // idempotent confirmation for them.
-  if (mods.length === 0 && arcanes.length === 0) return withHelminth
-  const catalogMap: Record<string, string> = {}
-  for (const m of mods) if (m.imageName) catalogMap[m.uniqueName] = m.imageName
-  for (const a of arcanes)
-    if (a.imageName) catalogMap[a.uniqueName] = a.imageName
-  return refreshImagesFromMap(withHelminth, catalogMap)
+  const images: Record<string, string> = {}
+  for (const entry of [...mods, ...arcanes, ...helminth]) {
+    if (entry.imageName) images[entry.uniqueName] = entry.imageName
+  }
+  return refreshImagesFromMap(base, { ...images, ...imageMap })
 }
 
 // Synthetic single-variant identity used when a legacy / single-loadout build
@@ -501,34 +509,6 @@ export const SYNTHETIC_VARIANT_LABEL = "Main"
 
 export function isSyntheticVariant(v: SavedVariant): boolean {
   return v.id === SYNTHETIC_VARIANT_ID && v.label === SYNTHETIC_VARIANT_LABEL
-}
-
-/**
- * The per-variant data slice, copied from any source that carries these fields
- * (top-level `SavedBuildData`, a `SavedVariant`, or live editor state). The
- * single choke point that every per-variant data emission routes through:
- * getVariants (synthesize from top-level), selectVariant (project a variant
- * back), and the editor's variant capture all call this, so they can't disagree
- * on what "per-variant" means or forget a field.
- *
- * Written as an explicit object (not a spread or a loop) typed to
- * `PerVariantDataField` on both sides — so adding a per-variant field to
- * `SavedVariant` makes this fail to compile until it's listed here, and requires
- * the matching top-level mirror on `SavedBuildData` (the param `Pick`). Fields
- * absent on the source stay `undefined`, exactly as the prior inline code did.
- */
-export function pickPerVariantData(
-  src: Pick<SavedBuildData, PerVariantDataField>,
-): Pick<SavedVariant, PerVariantDataField> {
-  return {
-    helminth: src.helminth,
-    incarnonEnabled: src.incarnonEnabled,
-    incarnonPerks: src.incarnonPerks,
-    deploymentContext: src.deploymentContext,
-    operatorAmp: src.operatorAmp,
-    focusSchool: src.focusSchool,
-    formIndex: src.formIndex,
-  }
 }
 
 /**
@@ -596,13 +576,18 @@ export function selectVariant(
   index: number,
 ): SavedBuildData {
   const variants = getVariants(data)
-  const clamped =
-    index < 0
-      ? 0
-      : index >= variants.length
-        ? variants.length - 1
-        : Math.floor(index)
-  const v = variants[clamped]
+  return projectSavedVariant(
+    data,
+    variants[clampVariantIndex({ variants }, index)],
+  )
+}
+
+/** `v` projected onto `data`'s build-wide fields — `selectVariant` for a
+ *  variant the caller already holds (the editor's in-memory array). */
+export function projectSavedVariant(
+  data: SavedBuildData,
+  v: SavedVariant,
+): SavedBuildData {
   // Per-variant fields come from `v` verbatim. No fallback to top-level —
   // top-level mirrors whichever variant was active at save time, so falling
   // back would leak that variant's state into other variants that happen to
@@ -613,8 +598,8 @@ export function selectVariant(
     slots: v.slots,
     arcanes: v.arcanes,
     ...pickPerVariantData(v),
-    // `v` came through getVariants, which already resolved copy-on-load for
-    // legacy builds, so `v.shards` is set. formaPolarities, hasReactor, zaw,
+    // getVariants already resolved copy-on-load for legacy builds, so
+    // `v.shards` is set. formaPolarities, hasReactor, zaw,
     // kitgun, lich, buildName are shared across variants and stay as-is.
     shards: v.shards ?? [],
   }
@@ -622,24 +607,21 @@ export function selectVariant(
 
 /**
  * Project the live editor state + its variants array into a share-link
- * `BuildDoc`. `base` carries the build-wide fields (and the active variant's
- * slots/arcanes/per-variant fields, used as the fallback for any variant that
- * leaves a per-variant field undefined); `variants` is the in-memory variants
- * array with the active slot already replaced by the live snapshot.
+ * `BuildDoc`. `base` carries the build-wide fields; `variants` is the
+ * in-memory variants array with the active slot already replaced by the live
+ * snapshot.
  *
- * The shared doc fields come from one `savedDataToBuildState(base)` pass, and
- * each `BuildVariant` is the slot/arcane projection of that variant overlaid on
- * the shared base. NOTE the asymmetry this must preserve: `helminthAbility` is
- * build-wide (doc top-level only — `BuildVariant` has no helminth), the inverse
- * of `projectVariant`. Do NOT route the per-variant list through
- * `pickPerVariantData` here — that treats helminth as per-variant and would
- * double-encode it.
+ * Each variant's per-variant data comes from that variant alone, through
+ * `pickPerVariantData` — never falling back to `base`, which mirrors the
+ * active variant — so a share link decodes to what `selectVariant` shows for
+ * the saved build. `helminthAbility` stays build-wide (doc top-level only;
+ * `BuildVariant` has no helminth field), the inverse of `projectVariant`.
  */
 export function buildDocFromVariants(
-  base: Parameters<typeof savedDataToBuildState>[0],
+  base: EditorState,
   variants: SavedVariant[],
 ): BuildDoc {
-  const shared = savedDataToBuildState(base)
+  const shared = editorStateToBuildState(base)
   return {
     itemUniqueName: shared.itemUniqueName,
     itemName: shared.itemName,
@@ -652,22 +634,16 @@ export function buildDocFromVariants(
     lichBonusElement: shared.lichBonusElement,
     buildName: shared.buildName,
     variants: variants.map((sv) => {
-      // Reuse the shared base; the expensive ModSlot[] reconstruction happens
-      // via savedDataToBuildState with this variant's slots/arcanes overlaid.
-      // Forma is build-wide, so base.formaPolarities (the active variant's) is
-      // intentionally applied to every variant's projection.
-      const vs = savedDataToBuildState({
+      // Forma is build-wide, so base.formaPolarities is intentionally applied
+      // to every variant's projection. The variant's helminth rides along in
+      // the overlay but is unread: only `shared` emits helminthAbility.
+      const vs = editorStateToBuildState({
         ...base,
         slots: sv.slots,
         arcanes: sv.arcanes,
-        // Per-variant shards: the captured active variant carries the live
-        // set; others carry their own (copy-on-load resolved at load).
         shards: sv.shards ?? [],
-        incarnonEnabled: sv.incarnonEnabled ?? base.incarnonEnabled,
-        incarnonPerks: sv.incarnonPerks ?? base.incarnonPerks,
-        deploymentContext: sv.deploymentContext ?? base.deploymentContext,
-        operatorAmp: sv.operatorAmp ?? base.operatorAmp,
-        focusSchool: sv.focusSchool ?? base.focusSchool,
+        ...pickPerVariantData(sv),
+        helminth: base.helminth,
       })
       return {
         id: sv.id,
@@ -683,8 +659,7 @@ export function buildDocFromVariants(
         deploymentContext: vs.deploymentContext,
         operatorAmp: vs.operatorAmp,
         focusSchool: vs.focusSchool,
-        // formIndex lives only on the saved variant (not threaded through
-        // BuildState), so carry it straight across — twin-frame share links
+        // formIndex isn't threaded through BuildState; twin-frame share links
         // depend on it to pick the right form.
         formIndex: sv.formIndex,
       }
@@ -732,45 +707,6 @@ export function savedDataFromBuildDoc(
     }
   })
   return { ...activeData, variants }
-}
-
-// Older builds were saved when the upstream CDN shipped content-hashed image
-// filenames (e.g. `roar-e206197372.png`); the newer naming uses canonical
-// names and the upstream CDN no longer maps the old hashed slugs. Mods and
-// arcanes are already re-resolved via `toEditorPlacedMod` upstream, but
-// `buildStateToSavedData` copies helminth fields verbatim — so refresh just
-// the imageName from `helminthAbilities` to self-heal stale legacy rows.
-function refreshHelminthImage(
-  data: SavedBuildData,
-  helminthAbilities: HelminthAbility[],
-): SavedBuildData {
-  if (helminthAbilities.length === 0) return data
-  const byUnique = new Map(helminthAbilities.map((h) => [h.uniqueName, h]))
-  const refreshOne = (
-    helminth: Record<number, HelminthAbility>,
-  ): Record<number, HelminthAbility> => {
-    const next: Record<number, HelminthAbility> = {}
-    for (const [slotIndex, ability] of Object.entries(helminth)) {
-      const fresh = byUnique.get(ability.uniqueName)
-      next[Number(slotIndex)] = fresh
-        ? { ...ability, imageName: fresh.imageName }
-        : ability
-    }
-    return next
-  }
-  let result = data
-  if (data.helminth) {
-    result = { ...result, helminth: refreshOne(data.helminth) }
-  }
-  if (data.variants && data.variants.length > 0) {
-    result = {
-      ...result,
-      variants: data.variants.map((v) =>
-        v.helminth ? { ...v, helminth: refreshOne(v.helminth) } : v,
-      ),
-    }
-  }
-  return result
 }
 
 /**

@@ -1,15 +1,17 @@
 import { SortSelect } from "@/components/sort-select"
+import type { SortOption } from "@/lib/items-index"
 
-const SORT_ITEMS = [
-  { value: "name-asc", label: "Name A-Z" },
-  { value: "name-desc", label: "Name Z-A" },
-  { value: "date-desc", label: "Newest First" },
-  { value: "date-asc", label: "Oldest First" },
-] as const
+const SORT_LABELS: Record<SortOption, string> = {
+  "name-asc": "Name A-Z",
+  "name-desc": "Name Z-A",
+  "date-desc": "Newest First",
+  "date-asc": "Oldest First",
+}
 
-export type SortOption = (typeof SORT_ITEMS)[number]["value"]
-
-export const SORT_VALUES: SortOption[] = SORT_ITEMS.map((i) => i.value)
+const SORT_ITEMS = (Object.keys(SORT_LABELS) as SortOption[]).map((value) => ({
+  value,
+  label: SORT_LABELS[value],
+}))
 
 interface SortDropdownProps {
   value: SortOption

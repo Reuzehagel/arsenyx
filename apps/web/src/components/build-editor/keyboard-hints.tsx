@@ -4,9 +4,10 @@ import { useState } from "react"
 import { openHotkeyCheatSheet } from "@/components/hotkey-cheat-sheet"
 import { KbdKey } from "@/components/kbd-key"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
+import { STORAGE_KEYS, storageGet, storageSet } from "@/lib/util/storage"
 import { cn } from "@/lib/util/utils"
 
-const STORAGE_KEY = "arsenyx.hotkeyHintDismissed"
+const STORAGE_KEY = STORAGE_KEYS.hotkeyHintDismissed
 
 /**
  * Persistent, low-contrast strip that surfaces the build-editor hotkeys.
@@ -61,11 +62,7 @@ export function KeyboardHintBanner() {
   if (dismissed) return null
 
   const dismiss = () => {
-    try {
-      localStorage.setItem(STORAGE_KEY, "1")
-    } catch {
-      /* private mode — banner just won't persist, fine */
-    }
+    storageSet(STORAGE_KEY, "1")
     setDismissed(true)
   }
 
@@ -88,10 +85,9 @@ export function KeyboardHintBanner() {
   )
 }
 
+/** Unavailable storage counts as dismissed: the banner couldn't stay
+ *  dismissed there anyway. */
 function readDismissed(): boolean {
-  try {
-    return localStorage.getItem(STORAGE_KEY) === "1"
-  } catch {
-    return true
-  }
+  const v = storageGet(STORAGE_KEY)
+  return v === undefined || v === "1"
 }

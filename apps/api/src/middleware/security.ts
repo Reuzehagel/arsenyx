@@ -1,9 +1,13 @@
-import type { MiddlewareHandler } from "hono"
+import type { Context, MiddlewareHandler } from "hono"
 
 import { webOrigins } from "../env"
 import { getFreshSession } from "../lib/session"
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"])
+
+/** Reads that can't change state: skipped by the mutation guards and the
+ *  mutation rate limiter. */
+export const isSafeMethod = (c: Context) => SAFE_METHODS.has(c.req.method)
 
 // Baseline hardening for every API response. Nothing served from this origin
 // should ever be treated as a live document — it's the one holding the session
@@ -43,7 +47,7 @@ function safeOrigin(value: string | undefined): string | null {
 // web origin. Better Auth handles its own /auth/* CSRF; this guards the rest
 // of the Hono routes that rely on session cookies.
 export const originGuard: MiddlewareHandler = async (c, next) => {
-  if (SAFE_METHODS.has(c.req.method)) return next()
+  if (isSafeMethod(c)) return next()
 
   const origin = c.req.header("origin") ?? safeOrigin(c.req.header("referer"))
   if (!origin || !webOrigins.includes(origin)) {
@@ -55,7 +59,7 @@ export const originGuard: MiddlewareHandler = async (c, next) => {
 // Reject mutating requests from banned users. Result is cached on the context
 // so the downstream route's own getSession() call reuses it.
 export const banGuard: MiddlewareHandler = async (c, next) => {
-  if (SAFE_METHODS.has(c.req.method)) return next()
+  if (isSafeMethod(c)) return next()
 
   // Fresh read so a ban (and its deleted sessions) applies immediately rather
   // than after the cookie cache expires. Mutations only, so reads stay cheap.

@@ -1,34 +1,42 @@
+import type {
+  BuildDetailResponse,
+  PartnerBuild,
+} from "@arsenyx/shared/api/build-dto"
 import {
+  type QueryClient,
   queryOptions,
   useMutation,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query"
 
-import { apiFetch, remapApiError } from "@/lib/util/api-client"
+import { apiCall } from "@/lib/util/api-client"
 
-import type { BuildListItem } from "./builds-list-query"
+import { buildKeys } from "./build-query"
 
-/** A partner row is a plain list item plus the owner's saved variant target
- *  (`?v=` index on the partner build). Omitted / 0 = default variant. Only
- *  the partners endpoint populates it — search rows never carry one. */
-export type PartnerBuild = BuildListItem & { variant?: number }
+export type { PartnerBuild }
 
 type PartnersResponse = { builds: PartnerBuild[] }
 
+const partnersPath = (slug: string) =>
+  `/builds/${encodeURIComponent(slug)}/partners`
+
+/** Partner writes need the owner's session and mutual ownership. */
+const writeCodes = (fallback: string) => ({
+  401: "unauthorized",
+  403: "forbidden",
+  default: fallback,
+})
+
 export const partnerBuildsQuery = (slug: string) =>
   queryOptions({
-    queryKey: ["build", slug, "partners"] as const,
-    queryFn: async (): Promise<PartnerBuild[]> => {
-      try {
-        const data = await apiFetch<PartnersResponse>(
-          `/builds/${encodeURIComponent(slug)}/partners`,
-        )
-        return data.builds
-      } catch (err) {
-        throw new Error("failed_load_partners", { cause: err })
-      }
-    },
+    queryKey: buildKeys.partners(slug),
+    queryFn: async (): Promise<PartnerBuild[]> =>
+      (
+        await apiCall<PartnersResponse>(partnersPath(slug), {
+          codes: { default: "failed_load_partners" },
+        })
+      ).builds,
     // Seeded from the build detail payload, so don't refetch on a timer: the
     // always-mounted strip would otherwise hit /partners on every revisit and
     // refocus. Partner mutations invalidate this key, which still refetches.
@@ -36,22 +44,42 @@ export const partnerBuildsQuery = (slug: string) =>
     staleTime: Infinity,
   })
 
+/**
+ * Seed the partners query from the build detail payload, which already
+ * carries the strip, instead of a second API request (each API cache miss pays
+ * a fixed Worker CPU cost). Skipped when the payload has no partners or the
+ * cache already holds a newer copy (e.g. refetched after an editor mutation).
+ * Returns whether it seeded, so the caller fetches otherwise.
+ */
+export function seedPartnersFromBuild(
+  qc: QueryClient,
+  slug: string,
+  build: Pick<BuildDetailResponse, "partners">,
+): boolean {
+  if (build.partners == null) return false
+  const key = buildKeys.partners(slug)
+  const buildUpdatedAt =
+    qc.getQueryState(buildKeys.detail(slug))?.dataUpdatedAt ?? 0
+  if ((qc.getQueryState(key)?.dataUpdatedAt ?? 0) >= buildUpdatedAt) {
+    return false
+  }
+  qc.setQueryData(key, build.partners, { updatedAt: buildUpdatedAt })
+  return true
+}
+
 /** Typeahead for the partner picker. `mine=1` scopes results to builds the
  *  requester can mutate (own + org) — linking requires mutual ownership, so
  *  anything else in the list would be un-linkable anyway. */
 export function useBuildSearch(q: string) {
   return useQuery({
-    queryKey: ["builds", "search", "mine", q] as const,
-    queryFn: async (): Promise<PartnerBuild[]> => {
-      try {
-        const data = await apiFetch<PartnersResponse>(
+    queryKey: buildKeys.partnerSearch(q),
+    queryFn: async (): Promise<PartnerBuild[]> =>
+      (
+        await apiCall<PartnersResponse>(
           `/builds/search?q=${encodeURIComponent(q)}&mine=1`,
+          { codes: { default: "failed_search" } },
         )
-        return data.builds
-      } catch (err) {
-        throw new Error("failed_search", { cause: err })
-      }
-    },
+      ).builds,
     enabled: q.trim().length >= 2,
     staleTime: 30_000,
   })
@@ -59,24 +87,15 @@ export function useBuildSearch(q: string) {
 
 export function useLinkPartner(ownerSlug: string) {
   const qc = useQueryClient()
+  const key = buildKeys.partners(ownerSlug)
   return useMutation({
     meta: { errorToast: "Couldn't link the build" },
-    mutationFn: async (partner: PartnerBuild): Promise<void> => {
-      try {
-        await apiFetch<void>(
-          `/builds/${encodeURIComponent(ownerSlug)}/partners/${encodeURIComponent(partner.slug)}`,
-          { method: "PUT" },
-        )
-      } catch (err) {
-        throw remapApiError(err, {
-          401: "unauthorized",
-          403: "forbidden",
-          default: "failed_link",
-        })
-      }
-    },
+    mutationFn: (partner: PartnerBuild) =>
+      apiCall<void>(
+        `${partnersPath(ownerSlug)}/${encodeURIComponent(partner.slug)}`,
+        { method: "PUT", codes: writeCodes("failed_link") },
+      ),
     onMutate: async (partner) => {
-      const key = ["build", ownerSlug, "partners"] as const
       await qc.cancelQueries({ queryKey: key })
       const prev = qc.getQueryData<PartnerBuild[]>(key) ?? []
       if (!prev.some((p) => p.slug === partner.slug)) {
@@ -85,45 +104,32 @@ export function useLinkPartner(ownerSlug: string) {
       return { prev }
     },
     onError: (_e, _v, ctx) => {
-      if (ctx?.prev) qc.setQueryData(["build", ownerSlug, "partners"], ctx.prev)
+      if (ctx?.prev) qc.setQueryData(key, ctx.prev)
     },
     // Reconcile against the server once the write settles, so the optimistic
     // entry is corrected if the server normalized anything (ordering, computed
     // fields) rather than being trusted as final. Same for the three partner
-    // mutations below.
-    //
-    // These invalidates were previously omitted: Hyperdrive served pre-write
-    // reads for ~60s, so an eager refetch returned the stale list and wiped the
-    // optimistic entry. Query caching is now disabled on the Hyperdrive config
-    // (see apps/api/wrangler.toml), so the refetch reads through.
-    // The link is symmetric, so the partner's own strip changes too.
+    // mutations below. The link is symmetric, so the partner's own strip
+    // changes too.
     onSettled: (_d, _e, partner) => {
-      qc.invalidateQueries({ queryKey: ["build", ownerSlug, "partners"] })
-      qc.invalidateQueries({ queryKey: ["build", partner.slug, "partners"] })
+      qc.invalidateQueries({ queryKey: key })
+      qc.invalidateQueries({ queryKey: buildKeys.partners(partner.slug) })
     },
   })
 }
 
 export function useReorderPartners(ownerSlug: string) {
   const qc = useQueryClient()
-  const key = ["build", ownerSlug, "partners"] as const
+  const key = buildKeys.partners(ownerSlug)
   return useMutation({
     meta: { errorToast: "Couldn't reorder linked builds" },
     // `next` is the fully-reordered partner list; we send just the ids.
-    mutationFn: async (next: PartnerBuild[]): Promise<void> => {
-      try {
-        await apiFetch<void>(
-          `/builds/${encodeURIComponent(ownerSlug)}/partners/order`,
-          { method: "PUT", json: { order: next.map((p) => p.id) } },
-        )
-      } catch (err) {
-        throw remapApiError(err, {
-          401: "unauthorized",
-          403: "forbidden",
-          default: "failed_reorder",
-        })
-      }
-    },
+    mutationFn: (next: PartnerBuild[]) =>
+      apiCall<void>(`${partnersPath(ownerSlug)}/order`, {
+        method: "PUT",
+        json: { order: next.map((p) => p.id) },
+        codes: writeCodes("failed_reorder"),
+      }),
     onMutate: async (next) => {
       await qc.cancelQueries({ queryKey: key })
       const prev = qc.getQueryData<PartnerBuild[]>(key)
@@ -141,27 +147,19 @@ export function useReorderPartners(ownerSlug: string) {
 
 export function useSetPartnerVariant(ownerSlug: string) {
   const qc = useQueryClient()
-  const key = ["build", ownerSlug, "partners"] as const
+  const key = buildKeys.partners(ownerSlug)
   return useMutation({
     meta: { errorToast: "Couldn't change the linked variant" },
-    mutationFn: async (input: {
-      partnerSlug: string
-      variant: number
-    }): Promise<void> => {
-      try {
-        await apiFetch<void>(
-          `/builds/${encodeURIComponent(ownerSlug)}/partners/${encodeURIComponent(input.partnerSlug)}/variant`,
+    mutationFn: (input: { partnerSlug: string; variant: number }) =>
+      apiCall<void>(
+        `${partnersPath(ownerSlug)}/${encodeURIComponent(input.partnerSlug)}/variant`,
+        {
+          method: "PUT",
           // 0 (default variant) clears the stored target server-side.
-          { method: "PUT", json: { variant: input.variant || null } },
-        )
-      } catch (err) {
-        throw remapApiError(err, {
-          401: "unauthorized",
-          403: "forbidden",
-          default: "failed_set_variant",
-        })
-      }
-    },
+          json: { variant: input.variant || null },
+          codes: writeCodes("failed_set_variant"),
+        },
+      ),
     onMutate: async ({ partnerSlug, variant }) => {
       await qc.cancelQueries({ queryKey: key })
       const prev = qc.getQueryData<PartnerBuild[]>(key)
@@ -183,20 +181,15 @@ export function useSetPartnerVariant(ownerSlug: string) {
 
 export function useUnlinkPartner(ownerSlug: string) {
   const qc = useQueryClient()
+  const key = buildKeys.partners(ownerSlug)
   return useMutation({
     meta: { errorToast: "Couldn't unlink the build" },
-    mutationFn: async (partnerSlug: string): Promise<void> => {
-      try {
-        await apiFetch<void>(
-          `/builds/${encodeURIComponent(ownerSlug)}/partners/${encodeURIComponent(partnerSlug)}`,
-          { method: "DELETE" },
-        )
-      } catch (err) {
-        throw new Error("failed_unlink", { cause: err })
-      }
-    },
+    mutationFn: (partnerSlug: string) =>
+      apiCall<void>(
+        `${partnersPath(ownerSlug)}/${encodeURIComponent(partnerSlug)}`,
+        { method: "DELETE", codes: writeCodes("failed_unlink") },
+      ),
     onMutate: async (partnerSlug) => {
-      const key = ["build", ownerSlug, "partners"] as const
       await qc.cancelQueries({ queryKey: key })
       const prev = qc.getQueryData<PartnerBuild[]>(key) ?? []
       qc.setQueryData<PartnerBuild[]>(
@@ -206,11 +199,11 @@ export function useUnlinkPartner(ownerSlug: string) {
       return { prev }
     },
     onError: (_e, _v, ctx) => {
-      if (ctx?.prev) qc.setQueryData(["build", ownerSlug, "partners"], ctx.prev)
+      if (ctx?.prev) qc.setQueryData(key, ctx.prev)
     },
     onSettled: (_d, _e, partnerSlug) => {
-      qc.invalidateQueries({ queryKey: ["build", ownerSlug, "partners"] })
-      qc.invalidateQueries({ queryKey: ["build", partnerSlug, "partners"] })
+      qc.invalidateQueries({ queryKey: key })
+      qc.invalidateQueries({ queryKey: buildKeys.partners(partnerSlug) })
     },
   })
 }

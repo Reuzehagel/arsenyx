@@ -18,6 +18,36 @@ export const CHANGELOG: ChangelogEntry[] = [
         description:
           "Item, mod and arcane images download faster. Most of them now use a smaller image format, so Browse and build pages fill in sooner, especially on slow connections.",
       },
+      {
+        type: "fix",
+        description:
+          "The Has guide and Has archon shards filters now work on profile and organization pages.",
+      },
+      {
+        type: "fix",
+        description:
+          "Adding or switching a variant now saves your draft right away. Share links open with the build's name, and opening one no longer silently replaces your own unsaved draft: you get a toast to restore it.",
+      },
+      {
+        type: "fix",
+        description:
+          "Build pages show innate Incarnon weapons with Incarnon on, matching the editor, and zaw and kitgun builds without saved parts show their default parts.",
+      },
+      {
+        type: "fix",
+        description:
+          "Arcane changes now show up in a build's edit history, and partner links to a twin-frame's second form work.",
+      },
+      {
+        type: "fix",
+        description:
+          "Overframe imports put weapon slots in the right place and no longer turn unknown polarities into Universal Forma.",
+      },
+      {
+        type: "refactor",
+        description:
+          "A large cleanup under the hood: the header no longer reloads on every page change, and link previews show the same titles and descriptions as the page.",
+      },
     ],
   },
   {

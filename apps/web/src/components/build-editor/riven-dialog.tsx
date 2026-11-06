@@ -1,4 +1,4 @@
-import { clamp } from "@arsenyx/shared"
+import { clamp } from "@arsenyx/shared/util/math"
 import {
   RIVEN_DEFAULT_DRAIN,
   RIVEN_MAX_DRAIN,
@@ -14,6 +14,7 @@ import type {
 } from "@arsenyx/shared/warframe/types"
 import { useCallback, useMemo, useState } from "react"
 
+import { PolarityIcon } from "@/components/build-loadout/polarity"
 import { Button } from "@/components/ui/button"
 import {
   Combobox,
@@ -33,8 +34,6 @@ import {
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-
-import { PolarityIcon } from "./polarity"
 
 interface StatRowState {
   stat: string | null

@@ -5,9 +5,10 @@ Allow: /
 # edge Worker serves them with <meta name="robots" content="noindex">, and
 # Google can only honor that noindex if it's allowed to crawl the page. A
 # Disallow would block the crawl, hide the noindex, and let the URL still get
-# indexed URL-only. See worker/index.ts NOINDEX_PATHS.
+# indexed URL-only. The noindex list is PAGE_META + NOINDEX_PATTERNS in
+# packages/shared/src/seo/site.ts; worker/index.test.ts pins this file to it.
 # Embed iframes are duplicates of /builds/:slug; keep crawl budget on the real
-# page (the canonical points at the non-embed URL, so indexing is unaffected).
+# page.
 Disallow: /*?*embed=
 
 Sitemap: https://www.arsenyx.com/sitemap.xml

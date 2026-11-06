@@ -1,25 +1,23 @@
+import type {
+  SavedVariant,
+  PlacedMod,
+  SlotId,
+} from "@arsenyx/shared/warframe/build-data"
 import { useEffect, useMemo, useState } from "react"
 
-import type { SavedVariant } from "@/lib/queries/build-query"
-
-import type { BuildDerived, BuildLayout } from "./build-derived"
+import type { BuildDerived } from "@/components/build-loadout/use-build-derived"
 import {
   computeMultiVariantPlan,
   computeReactiveAutoFormaPlan,
   type FullAutoFormaPlan,
-} from "./multi-variant-auto-forma"
-import {
-  dropOrphanSlots,
-  type BuildSlotsState,
-  type PlacedMod,
-  type SlotId,
-} from "./use-build-slots"
+} from "@/lib/build/auto-forma"
+import type { BuildLayout } from "@/lib/build/layout"
+import { dropOrphanSlots } from "@/lib/build/slot-order"
+import type { SetVariants } from "@/lib/build/variants"
 
-type SetVariants = (
-  next: SavedVariant[] | ((prev: SavedVariant[]) => SavedVariant[]),
-) => void
+import type { BuildSlotsState } from "./use-build-slots"
 
-export interface AutoFormaPlanner {
+interface AutoFormaPlanner {
   /** Cheap stage-1 plan, recomputed every render; null when under capacity. */
   reactiveAutoFormaPlan: FullAutoFormaPlan | null
   /** Every variant's active slot placement, for the planner + preview dialog. */
@@ -42,7 +40,7 @@ export interface AutoFormaPlanner {
  * the button/dialog handlers. Forma is build-wide in Warframe, so the planner
  * overlays the active variant's live slots onto the saved `variants[]` set and
  * considers them all together. The plan *computation* lives in
- * multi-variant-auto-forma.ts; this hook is the editor-side state + wiring.
+ * lib/build/auto-forma; this hook is the editor-side state + wiring.
  */
 export function useAutoFormaPlanner(opts: {
   variants: SavedVariant[]
@@ -69,8 +67,8 @@ export function useAutoFormaPlanner(opts: {
   const allVariantSlots = useMemo(
     () =>
       variants.map((v, i) =>
-        // The active variant's `placed` is already orphan-stripped by
-        // useBuildSlots. Inactive variants come straight from the saved doc, so
+        // The active variant's `placed` was orphan-stripped when it was seeded
+        // (loadoutFromSaved). Inactive variants come straight from the doc, so
         // strip them here too — otherwise a mod left in a slot this item no
         // longer has (e.g. an Exilus mod on a legacy companion-weapon build)
         // still feeds the auto-forma planner's capacity math and inflates that
@@ -124,8 +122,8 @@ export function useAutoFormaPlanner(opts: {
 
   // "No fix found" feedback — flips true briefly after a fruitless click so
   // the button can hint at the result instead of looking broken. The timer
-  // lives in an effect so we clear it on unmount (variant switch, route
-  // change) and avoid setState on a dead component.
+  // lives in an effect so unmount clears it instead of setting state on a
+  // dead component.
   const [noFixFound, setNoFixFound] = useState(false)
   useEffect(() => {
     if (!noFixFound) return

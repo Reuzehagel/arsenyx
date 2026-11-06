@@ -1,18 +1,12 @@
 import type { Context, MiddlewareHandler } from "hono"
 
+import { registerBackgroundWork } from "../db"
 import { getSession } from "./session"
 
 // Best-effort edge caching for anonymous public reads, using the Cloudflare
-// Cache API (`caches.default`). Every cache HIT is a request that never touches
-// Postgres (nor Hyperdrive).
-//
-// This originally existed to stay under the Hyperdrive Free-plan daily query
-// cap. That cap no longer applies (Workers Paid bills no Hyperdrive queries),
-// so the reasons to keep it are now: (a) PlanetScale compute — Hyperdrive is
-// just the pool, every miss is still a real Postgres query; (b) latency — a
-// colo hit skips the DB round-trip for anonymous browsing and Discord/embed
-// traffic, which is most of the load. Both are quality/cost wins rather than a
-// hard ceiling, so TTLs here can be tuned down freely if freshness matters more.
+// Cache API (`caches.default`). A cache HIT never runs the handler, so it
+// constructs no PrismaClient and opens no Postgres connection — the bulk of a
+// miss's Worker CPU (docs/usage-analytics.md) — and skips the DB round-trip.
 //
 // Correctness invariant — we ONLY cache responses for requests with no VALID
 // session. Authenticated detail/list responses are personalized (isOwner /
@@ -64,16 +58,6 @@ function cacheKey(url: URL): Request {
   return new Request(url.toString(), { method: "GET" })
 }
 
-function runInBackground(c: Context, p: Promise<unknown>): void {
-  try {
-    c.executionCtx.waitUntil(p)
-  } catch {
-    // No executionCtx (e.g. unit tests via app.request()) — swallow so a
-    // missing background context never surfaces as a request error.
-    void p.catch(() => {})
-  }
-}
-
 // Cache anonymous 200 GET responses at the edge for `maxAge` seconds. Apply as
 // route middleware on public read endpoints only.
 export function edgeCache(opts: { maxAge: number }): MiddlewareHandler {
@@ -116,40 +100,25 @@ export function edgeCache(opts: { maxAge: number }): MiddlewareHandler {
       statusText: cloned.statusText,
       headers,
     })
-    runInBackground(c, cache.put(key, stored))
+    registerBackgroundWork(cache.put(key, stored), "edge cache put")
   }
 }
 
-// Best-effort eviction of a cached path. Cache API deletes are colo-local, so
-// this only evicts where the mutating request landed; other colos expire via
-// the short TTL above. Authenticated editors bypass the cache entirely, so they
-// always see their own writes immediately regardless of this.
+// Best-effort eviction of cached URLs (`path` plus its exact query string).
+// Cache API deletes are colo-local, so this only evicts where the mutating
+// request landed; other colos expire via the TTL. Authenticated editors bypass
+// the cache entirely, so they always see their own writes regardless.
 //
-// Scope note: callers purge the build DETAIL path only. The `GET /builds` LIST
-// (and the `/:slug/partners` strip) are also edge-cached (LIST_TTL in builds.ts) but are
-// NOT purged here — their entries are keyed by every filter/sort/page param
-// combination, and the Cache API has no wildcard delete, so there's no
-// tractable key to evict. Consequence: when a build flips PUBLIC->PRIVATE or is
-// deleted, its title/summary can linger in cached listings for up to that
-// TTL. Accepted as a bounded, best-effort window (the detail payload — the
-// sensitive surface — is purged precisely).
-export function purgeEdge(c: Context, path: string): void {
+// List-shaped routes (`GET /builds`, `/:slug/partners`) are never purged:
+// their entries are keyed by every filter/sort/page combination and the Cache
+// API has no wildcard delete, so their TTL is their only staleness bound.
+export function purgeEdge(c: Context, paths: string[]): void {
   const cache = defaultCache()
   if (!cache) return
-  const base = new URL(c.req.url)
-  base.pathname = path
-  // The detail route caches three separate entries under distinct keys: the
-  // bare path (full payload), `?embed=1` (slim link-unfurl payload for anonymous
-  // scrapers), and `?view=0` (full payload for the embed viewer — same body,
-  // browser-cacheable, no view bump). Evict all three, or a build set
-  // PRIVATE/deleted keeps leaking its name/description/loadout through whichever
-  // variant is missed until TTL expiry.
-  for (const search of ["", "?embed=1", "?view=0"]) {
-    const url = new URL(base.toString())
-    url.search = search
-    // Build the delete key through the same cacheKey() the store path uses, so
-    // param normalization (searchParams.sort()) can never drift between the two
-    // and leave an un-evicted entry.
-    runInBackground(c, cache.delete(cacheKey(url)))
+  for (const path of paths) {
+    // Through the same cacheKey() the store path uses, so param normalization
+    // can never drift between the two and leave an un-evicted entry.
+    const url = new URL(path, c.req.url)
+    registerBackgroundWork(cache.delete(cacheKey(url)), "edge cache purge")
   }
 }

@@ -1,9 +1,13 @@
-import { clamp } from "@arsenyx/shared"
+import { clamp } from "@arsenyx/shared/util/math"
 import { isFlatRivenStat } from "@arsenyx/shared/warframe/rivens"
 import type { Arcane, Mod, RivenStats } from "@arsenyx/shared/warframe/types"
 
-import type { ConditionLabel, ParsedStat, StatType } from "./types"
-import { DAMAGE_TYPE_COLORS } from "./types"
+import {
+  type ConditionLabel,
+  type ParsedStat,
+  type StatType,
+  DAMAGE_TYPE_COLORS,
+} from "./types"
 
 type ConditionInfo =
   | { isConditional?: undefined }
@@ -376,7 +380,7 @@ export interface SourcedStat extends ParsedStat {
   innate?: boolean
 }
 
-export interface CollectOptions {
+interface CollectOptions {
   setMultiplierFor?: (modName: string) => number
   /** When true, conditional stats apply at full stacks (maxStacks × value).
    * When false (default), conditional stats are omitted from the running

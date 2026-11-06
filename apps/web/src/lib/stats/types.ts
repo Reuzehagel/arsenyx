@@ -1,3 +1,5 @@
+import type { DamageTypes } from "@arsenyx/shared/warframe/types"
+
 export type StatType =
   | "health"
   | "shield"
@@ -47,26 +49,11 @@ export type StatType =
   | "slide_attack"
   | "channeling"
 
-export type DamageType =
-  | "impact"
-  | "puncture"
-  | "slash"
-  | "heat"
-  | "cold"
-  | "electricity"
-  | "toxin"
-  | "blast"
-  | "radiation"
-  | "gas"
-  | "magnetic"
-  | "viral"
-  | "corrosive"
-  | "void"
-  | "tau"
+export type DamageType = keyof DamageTypes
 
 /** `base_add` raises the weapon's base value before mods multiply it
  *  (Incarnon "+X Base …" perks). */
-export type StatOperation = "flat_add" | "percent_add" | "base_add"
+type StatOperation = "flat_add" | "percent_add" | "base_add"
 
 export interface ParsedStat {
   type: StatType
@@ -218,41 +205,4 @@ export const DAMAGE_TYPE_LABELS: Record<DamageType, string> = {
   corrosive: "Corrosive",
   void: "Void",
   tau: "Tau",
-}
-
-export const DAMAGE_TYPE_STYLE: Record<
-  DamageType,
-  { text: string; bg: string }
-> = {
-  impact: { text: "text-wf-impact", bg: "bg-wf-impact" },
-  puncture: { text: "text-wf-puncture", bg: "bg-wf-puncture" },
-  slash: { text: "text-wf-slash", bg: "bg-wf-slash" },
-  heat: { text: "text-wf-heat", bg: "bg-wf-heat" },
-  cold: { text: "text-wf-cold", bg: "bg-wf-cold" },
-  electricity: { text: "text-wf-electricity", bg: "bg-wf-electricity" },
-  toxin: { text: "text-wf-toxin", bg: "bg-wf-toxin" },
-  blast: { text: "text-wf-blast", bg: "bg-wf-blast" },
-  radiation: { text: "text-wf-radiation", bg: "bg-wf-radiation" },
-  gas: { text: "text-wf-gas", bg: "bg-wf-gas" },
-  magnetic: { text: "text-wf-magnetic", bg: "bg-wf-magnetic" },
-  viral: { text: "text-wf-viral", bg: "bg-wf-viral" },
-  corrosive: { text: "text-wf-corrosive", bg: "bg-wf-corrosive" },
-  void: { text: "text-wf-void", bg: "bg-wf-void" },
-  tau: { text: "text-wf-tau", bg: "bg-wf-tau" },
-}
-
-export const DAMAGE_TYPE_ICON: Partial<Record<DamageType, string>> = {
-  impact: "/icons/damage/ImpactSymbol.png",
-  puncture: "/icons/damage/PunctureSymbol.png",
-  slash: "/icons/damage/SlashSymbol.png",
-  heat: "/icons/damage/HeatSymbol.png",
-  cold: "/icons/damage/ColdSymbol.png",
-  electricity: "/icons/damage/ElectricitySymbol.png",
-  toxin: "/icons/damage/ToxinSymbol.png",
-  blast: "/icons/damage/BlastSymbol.png",
-  radiation: "/icons/damage/RadiationSymbol.png",
-  gas: "/icons/damage/GasSymbol.png",
-  magnetic: "/icons/damage/MagneticSymbol.png",
-  viral: "/icons/damage/ViralSymbol.png",
-  corrosive: "/icons/damage/CorrosiveSymbol.png",
 }

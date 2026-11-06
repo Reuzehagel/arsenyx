@@ -1,16 +1,11 @@
-import {
-  SHARD_COLORS,
-  SHARD_STATS,
-  getStatIndex,
-  type ShardColor,
-  type ShardStat,
-  type PlacedShard,
-} from "@arsenyx/shared/warframe"
+import { SHARD_STATS, shardValue } from "@arsenyx/shared/warframe/shards"
+import type {
+  PlacedShard,
+  ShardColor,
+  ShardStat,
+} from "@arsenyx/shared/warframe/types"
 
-import { formatStat } from "./warframe"
-
-export { SHARD_COLORS, SHARD_STATS, getStatIndex }
-export type { ShardColor, ShardStat, PlacedShard }
+import { formatStat } from "@/lib/util/format"
 
 export const SHARD_COLOR_NAMES: Record<ShardColor, string> = {
   crimson: "Crimson",
@@ -63,14 +58,8 @@ export const SHARD_SLOT_COUNT = 5
 
 export function padShards(
   saved: (PlacedShard | null)[] | undefined,
-  length = SHARD_SLOT_COUNT,
 ): (PlacedShard | null)[] {
-  const out: (PlacedShard | null)[] = Array.from({ length }, () => null)
-  const input = saved ?? []
-  for (let i = 0; i < Math.min(length, input.length); i++) {
-    out[i] = input[i] ?? null
-  }
-  return out
+  return Array.from({ length: SHARD_SLOT_COUNT }, (_, i) => saved?.[i] ?? null)
 }
 
 export function getShardImageUrl(
@@ -88,6 +77,5 @@ export function findShardStat(
 }
 
 export function formatStatValue(stat: ShardStat, tauforged: boolean): string {
-  const v = tauforged ? stat.tauforgedValue : stat.baseValue
-  return `+${formatStat(v, 1)}${stat.unit}`
+  return `+${formatStat(shardValue(stat, tauforged), 1)}${stat.unit}`
 }

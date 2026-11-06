@@ -1,6 +1,6 @@
 /**
  * Bump `apps/web/public/data/meta.json`'s `generatedAt` to now and recompute its
- * record counts.
+ * record counts (honors CATALOG_OUT_DIR, like build:items).
  *
  * The catalog under `apps/web/public/data/` is served `immutable, max-age=1yr`
  * under stable URLs; the app cache-busts via `?v=<generatedAt>` (see
@@ -11,32 +11,26 @@
  * edit. `check:data-version` enforces it in CI.
  */
 
-import { readFileSync, writeFileSync } from "node:fs"
+import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
 
-const DATA = resolve(import.meta.dirname, "../apps/web/public/data")
-const META = resolve(DATA, "meta.json")
+import { CATALOG_FILES } from "@arsenyx/shared/warframe/catalog-files"
+
+import { countsFromCatalog, writeMeta } from "./build/meta"
+import { CATALOG_OUT_DIR as DATA } from "./build/paths"
+
 const read = (f: string) => JSON.parse(readFileSync(resolve(DATA, f), "utf8"))
 
-const meta = read("meta.json") as {
-  generatedAt: string
-  itemCount: number
-  modCount: number
-  arcaneCount: number
-  perCategory: Record<string, number>
-}
-const prev = meta.generatedAt
-meta.generatedAt = new Date().toISOString()
+const prev = (read(CATALOG_FILES.meta) as { generatedAt: string }).generatedAt
 // data:patch skips meta.json, so a patch that adds or drops records leaves the
 // counts stale — recompute them from the emitted files.
-const index = read("items-index.json") as Record<string, unknown[]>
-for (const [cat, items] of Object.entries(index))
-  meta.perCategory[cat] = items.length
-meta.itemCount = Object.values(meta.perCategory).reduce((a, b) => a + b, 0)
-meta.modCount = read("mods-all.json").length
-meta.arcaneCount = read("arcanes-all.json").length
-// Match build-items-index.ts exactly: 2-space indent, no trailing newline —
-// otherwise the stamp introduces a spurious whitespace diff.
-writeFileSync(META, JSON.stringify(meta, null, 2))
+const meta = await writeMeta(
+  DATA,
+  countsFromCatalog(
+    read(CATALOG_FILES.itemsIndex),
+    read(CATALOG_FILES.mods),
+    read(CATALOG_FILES.arcanes),
+  ),
+)
 
 console.log(`✓ data:stamp — generatedAt ${prev} → ${meta.generatedAt}`)

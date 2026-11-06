@@ -1,16 +1,20 @@
+import type {
+  HelminthAbility,
+  SavedBuildData,
+  SavedVariant,
+  PlacedArcane,
+  PlacedMod,
+  SlotId,
+} from "@arsenyx/shared/warframe/build-data"
 import { RIVEN_IMAGE_NAME } from "@arsenyx/shared/warframe/rivens"
 import type { Arcane, Mod } from "@arsenyx/shared/warframe/types"
 import { describe, expect, it } from "vitest"
 
-import type { PlacedArcane, PlacedMod, SlotId } from "@/components/build-editor"
-import type { SavedBuildData, SavedVariant } from "@/lib/queries/build-query"
-import type { HelminthAbility } from "@/lib/queries/helminth-query"
-
 import {
   buildDocFromVariants,
-  normalizeBuildData,
-  refreshImagesFromMap,
+  loadBuildData,
   savedDataFromBuildDoc,
+  selectVariant,
   stripPersistedImages,
 } from "./build-codec-adapter"
 
@@ -154,6 +158,56 @@ describe("buildDocFromVariants ⇄ savedDataFromBuildDoc round trip", () => {
     expect(saved.hasReactor).toBe(true)
     expect(saved.lichBonusElement).toBe("Heat")
   })
+
+  it("encodes each variant's own per-variant fields, never the active one's", () => {
+    const own: SavedVariant[] = [
+      {
+        ...variants[0]!,
+        deploymentContext: "atmospheric",
+        operatorAmp: "amp-a",
+        focusSchool: "zenurik",
+        formIndex: 1,
+      },
+      // Leaves every per-variant field undefined: it must decode undefined,
+      // not inherit the active variant's values from `base`.
+      { id: "v1", label: "Alt", slots: {}, arcanes: [] },
+    ]
+    const doc = buildDocFromVariants(
+      { ...base, deploymentContext: "atmospheric", operatorAmp: "amp-a" },
+      own,
+    )
+    const saved = savedDataFromBuildDoc(doc, catalog, arcaneCatalog)
+    const [v0, v1] = saved.variants ?? []
+    expect(v0).toMatchObject({
+      incarnonEnabled: true,
+      incarnonPerks: ["perk-a"],
+      deploymentContext: "atmospheric",
+      operatorAmp: "amp-a",
+      focusSchool: "zenurik",
+      formIndex: 1,
+    })
+    expect(v1?.incarnonEnabled).toBeUndefined()
+    expect(v1?.deploymentContext).toBeUndefined()
+    expect(v1?.operatorAmp).toBeUndefined()
+    // Same answer the saved-build path gives for that variant.
+    const fromSaved = selectVariant({ version: 1, variants: own }, 1)
+    expect(fromSaved.operatorAmp).toBe(v1?.operatorAmp)
+    expect(fromSaved.incarnonEnabled).toBe(v1?.incarnonEnabled)
+  })
+})
+
+describe("selectVariant", () => {
+  it("falls back to the first variant for a non-finite index", () => {
+    const data: SavedBuildData = {
+      version: 1,
+      variants: [
+        { id: "a", label: "A", slots: {}, arcanes: [] },
+        { id: "b", label: "B", slots: {}, arcanes: [], operatorAmp: "x" },
+      ],
+    }
+    expect(selectVariant(data, Number.NaN).operatorAmp).toBeUndefined()
+    expect(selectVariant(data, 9).operatorAmp).toBe("x")
+  })
 })
 
 describe("stripPersistedImages", () => {
@@ -219,11 +273,13 @@ describe("strip → re-resolve round trip", () => {
     arcanes: [placedArcane("/Arcanes/Avenger", "old-avenger.png")],
   }
 
-  it("refreshImagesFromMap restores images by uniqueName after strip", () => {
+  it("loadBuildData restores images from the image map after strip (viewer path)", () => {
     const stripped = stripPersistedImages(data)
-    const resolved = refreshImagesFromMap(stripped, {
-      "/Mods/Serration": "https://img.arsenyx.com/Serration-abc.png",
-      "/Arcanes/Avenger": "https://img.arsenyx.com/Avenger-def.png",
+    const resolved = loadBuildData(stripped, {
+      imageMap: {
+        "/Mods/Serration": "https://img.arsenyx.com/Serration-abc.png",
+        "/Arcanes/Avenger": "https://img.arsenyx.com/Avenger-def.png",
+      },
     })
     expect(resolved.slots?.["normal-0"]?.mod.imageName).toBe(
       "https://img.arsenyx.com/Serration-abc.png",
@@ -233,13 +289,16 @@ describe("strip → re-resolve round trip", () => {
     )
   })
 
-  it("normalizeBuildData re-resolves images from a supplied catalog (editor path)", () => {
+  it("loadBuildData re-resolves images from a supplied catalog (editor path)", () => {
     const stripped = stripPersistedImages(data)
-    const normalized = normalizeBuildData(
-      stripped,
-      [mod("/Mods/Serration", "https://img.arsenyx.com/Serration-abc.png")],
-      [arcane("/Arcanes/Avenger", "https://img.arsenyx.com/Avenger-def.png")],
-    )
+    const normalized = loadBuildData(stripped, {
+      mods: [
+        mod("/Mods/Serration", "https://img.arsenyx.com/Serration-abc.png"),
+      ],
+      arcanes: [
+        arcane("/Arcanes/Avenger", "https://img.arsenyx.com/Avenger-def.png"),
+      ],
+    })
     expect(normalized.slots?.["normal-0"]?.mod.imageName).toBe(
       "https://img.arsenyx.com/Serration-abc.png",
     )
@@ -248,21 +307,53 @@ describe("strip → re-resolve round trip", () => {
     )
   })
 
-  it("normalizeBuildData leaves images unresolved when no catalog is supplied (viewer path)", () => {
+  it("loadBuildData leaves images unresolved when nothing resolves them", () => {
     const stripped = stripPersistedImages(data)
-    const normalized = normalizeBuildData(stripped, [], [])
-    // Viewer resolves separately via refreshImagesFromMap + image-map.json.
+    const normalized = loadBuildData(stripped, {})
     expect(normalized.slots?.["normal-0"]?.mod.imageName).toBeUndefined()
+  })
+
+  it("loadBuildData refreshes helminth images from the helminth catalog", () => {
+    const resolved = loadBuildData(
+      {
+        version: 1,
+        helminth: {
+          0: {
+            uniqueName: "/Roar",
+            name: "Roar",
+            source: "Rhino",
+            description: "",
+            imageName: "old.png",
+          },
+        },
+      },
+      {
+        helminth: [
+          {
+            uniqueName: "/Roar",
+            name: "Roar",
+            source: "Rhino",
+            description: "",
+            imageName: "new.png",
+          },
+        ],
+      },
+    )
+    expect(resolved.helminth?.[0]?.imageName).toBe("new.png")
   })
 
   it("pins rivens to RIVEN_IMAGE_NAME, healing a stale/dead stored image", () => {
     // Rivens have a stub uniqueName that's never in the map, and old builds
     // stored a now-dead image (the bare "OmegaMod.png"). Render must override
     // it with the current constant rather than fall back to the dead value.
-    const resolved = refreshImagesFromMap(
+    const resolved = loadBuildData(
       { version: 1, slots: { "normal-0": rivenPlaced("OmegaMod.png") } },
       // Non-empty map (riven absent) so the early no-op return doesn't apply.
-      { "/Mods/Serration": "https://img.arsenyx.com/Serration-abc.png" },
+      {
+        imageMap: {
+          "/Mods/Serration": "https://img.arsenyx.com/Serration-abc.png",
+        },
+      },
     )
     expect(resolved.slots?.["normal-0"]?.mod.imageName).toBe(RIVEN_IMAGE_NAME)
   })
@@ -335,14 +426,13 @@ describe("Alternate mods persist through the save/load pipeline", () => {
     const persisted = JSON.parse(
       JSON.stringify(stripPersistedImages(withAlternates)),
     ) as unknown
-    const reloaded = refreshImagesFromMap(
-      normalizeBuildData(persisted, [], []),
-      {
+    const reloaded = loadBuildData(persisted, {
+      imageMap: {
         "/Mods/PointBlank": "https://img/pb.png",
         "/Mods/Blaze": "https://img/blaze.png",
         "/Mods/PrimedPointBlank": "https://img/ppb.png",
       },
-    )
+    })
     const v0 = reloaded.variants?.[0]?.slots["normal-0" as SlotId]
     const v1 = reloaded.variants?.[1]?.slots["normal-0" as SlotId]
     expect(v0?.mod.rivenStats).toBeDefined()
@@ -358,11 +448,9 @@ describe("Alternate mods persist through the save/load pipeline", () => {
   })
 
   it("re-resolves Alternate images from the editor catalog", () => {
-    const normalized = normalizeBuildData(
-      stripPersistedImages(withAlternates),
-      [mod("/Mods/PointBlank", "https://img/pb.png")],
-      [],
-    )
+    const normalized = loadBuildData(stripPersistedImages(withAlternates), {
+      mods: [mod("/Mods/PointBlank", "https://img/pb.png")],
+    })
     expect(normalized.slots?.["normal-0"]?.alternate?.mod.imageName).toBe(
       "https://img/pb.png",
     )
@@ -373,10 +461,9 @@ describe("Alternate mods persist through the save/load pipeline", () => {
       version: 1,
       slots: { "normal-0": placedMod("/Mods/Serration") },
     }
-    const reloaded = normalizeBuildData(
+    const reloaded = loadBuildData(
       JSON.parse(JSON.stringify(stripPersistedImages(plain))) as unknown,
-      [],
-      [],
+      {},
     )
     expect(reloaded).toEqual(plain)
     expect("alternate" in (reloaded.slots?.["normal-0"] ?? {})).toBe(false)

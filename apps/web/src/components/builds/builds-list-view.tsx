@@ -1,20 +1,17 @@
-import { useQuery } from "@tanstack/react-query"
+import { LIST_LIMIT } from "@arsenyx/shared/api/build-list"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { SearchX } from "lucide-react"
-import { useCallback, useRef, type ReactNode } from "react"
+import { useRef, type ReactNode } from "react"
 
 import {
-  BuildCard,
-  BuildCardSkeleton,
-  BuildRow,
-  BuildRowSkeleton,
-} from "@/components/builds/build-card"
-import { BuildsCategoryTabs } from "@/components/builds/builds-category-tabs"
+  BuildCollection,
+  BuildCollectionSkeleton,
+} from "@/components/builds/build-collection"
 import { BuildsEmptyState } from "@/components/builds/builds-empty-state"
+import type { ListViewParams } from "@/components/builds/builds-list-route"
 import { BuildsSortDropdown } from "@/components/builds/builds-sort-dropdown"
-import {
-  BuildsLayoutToggle,
-  buildLayoutClass,
-} from "@/components/builds/layout-toggle"
+import { BuildsLayoutToggle } from "@/components/builds/layout-toggle"
+import { CategoryTabs } from "@/components/category-tabs"
 import { FilterPopoverTrigger } from "@/components/filter-popover-trigger"
 import { Pagination } from "@/components/pagination"
 import {
@@ -26,108 +23,12 @@ import { Kbd } from "@/components/ui/kbd"
 import { Popover, PopoverContent } from "@/components/ui/popover"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
-import { useHotkey } from "@/lib/hooks/hotkeys"
-import { useBuildLayout } from "@/lib/hooks/use-build-layout"
+import { HOTKEYS, useSearchHotkey } from "@/lib/hooks/hotkeys"
 import { useUrlSearchInput } from "@/lib/hooks/use-url-search-input"
-import {
-  LIST_PAGE_SIZE,
-  publicBuildsQuery,
-  type BuildListSort,
-} from "@/lib/queries/builds-list-query"
+import type { publicBuildsQuery } from "@/lib/queries/builds-list-query"
 import { cn } from "@/lib/util/utils"
-import { isValidCategory, type BrowseCategory } from "@/lib/warframe"
-
-import { SORT_VALUES } from "./builds-sort-dropdown"
 
 type BuildsQuery = ReturnType<typeof publicBuildsQuery>
-
-export type BuildsListSearch = {
-  page?: number
-  sort?: BuildListSort
-  q?: string
-  category?: string
-  hasGuide?: boolean
-  hasShards?: boolean
-}
-
-/** URL → typed search. Identical for every list route; the route's own
- *  validateSearch just calls this. */
-export function parseBuildsListSearch(search: Record<string, unknown>): {
-  page?: number
-  sort?: BuildListSort
-  q?: string
-  category?: BrowseCategory
-  hasGuide?: boolean
-  hasShards?: boolean
-} {
-  const rawPage =
-    typeof search.page === "string"
-      ? parseInt(search.page, 10)
-      : typeof search.page === "number"
-        ? search.page
-        : NaN
-  const page = Number.isFinite(rawPage) && rawPage > 1 ? rawPage : undefined
-  const sort =
-    typeof search.sort === "string" &&
-    (SORT_VALUES as string[]).includes(search.sort)
-      ? (search.sort as BuildListSort)
-      : undefined
-  const q =
-    typeof search.q === "string" && search.q.length > 0
-      ? search.q.slice(0, 200)
-      : undefined
-  const category =
-    typeof search.category === "string" && isValidCategory(search.category)
-      ? (search.category as BrowseCategory)
-      : undefined
-  const hasGuide = search.hasGuide === true || undefined
-  const hasShards = search.hasShards === true || undefined
-  return { page, sort, q, category, hasGuide, hasShards }
-}
-
-/** Fully-resolved list params: every field defaulted, ready for the query and
- *  the list view. */
-export type BuildsListParams = {
-  page: number
-  sort: BuildListSort
-  q: string
-  category: BrowseCategory | undefined
-  hasGuide: boolean
-  hasShards: boolean
-}
-
-/** Materialize the loader deps every builds-list route needs, filling in the
- *  defaults the list component will use anyway. */
-export function buildsListLoaderDeps(
-  search: BuildsListSearch,
-  defaultSort: BuildListSort,
-): BuildsListParams {
-  return {
-    page: search.page ?? 1,
-    sort: search.sort ?? defaultSort,
-    q: search.q ?? "",
-    category: search.category as BrowseCategory | undefined,
-    hasGuide: search.hasGuide ?? false,
-    hasShards: search.hasShards ?? false,
-  }
-}
-
-/** Strip defaults from `next` so the URL stays clean. */
-export function nextBuildsListSearch(
-  next: BuildsListSearch,
-  defaultSort: BuildListSort,
-) {
-  return {
-    page: next.page && next.page > 1 ? next.page : undefined,
-    sort: next.sort && next.sort !== defaultSort ? next.sort : undefined,
-    q: next.q || undefined,
-    category: (next.category as BrowseCategory | undefined) || undefined,
-    hasGuide: next.hasGuide || undefined,
-    hasShards: next.hasShards || undefined,
-  }
-}
-
-export const BUILDS_GRID_CLASS = buildLayoutClass("cards")
 
 export function BuildsListView({
   title,
@@ -136,58 +37,24 @@ export function BuildsListView({
   params,
   onUpdateSearch,
   emptyState,
-  showFilters,
 }: {
   title?: string
   description?: string
   query: BuildsQuery
-  params: BuildsListParams
-  onUpdateSearch: (next: BuildsListSearch) => void
+  params: ListViewParams
+  onUpdateSearch: (next: ListViewParams) => void
   emptyState: ReactNode
-  showFilters: boolean
 }) {
   const { page, sort, q, category, hasGuide, hasShards } = params
 
-  // Merge `next` over current search state, then normalize the optional fields
-  // the URL wants stripped: q/hasGuide/hasShards collapse falsy → undefined and
-  // page resets unless explicitly carried over.
-  const patch = useCallback(
-    (next: Partial<BuildsListSearch>) => {
-      const merged = {
-        sort,
-        q,
-        category,
-        hasGuide,
-        hasShards,
-        page: undefined as number | undefined,
-        ...next,
-      }
-      onUpdateSearch({
-        sort: merged.sort,
-        q: merged.q || undefined,
-        category: merged.category,
-        hasGuide: merged.hasGuide || undefined,
-        hasShards: merged.hasShards || undefined,
-        page: merged.page,
-      })
-    },
-    [sort, q, category, hasGuide, hasShards, onUpdateSearch],
-  )
+  // Any change but paging starts over at page 1.
+  const patch = (next: Partial<ListViewParams>) =>
+    onUpdateSearch({ ...params, page: 1, ...next })
 
   const [qLocal, setQLocal] = useUrlSearchInput(q, (next) => patch({ q: next }))
 
-  // Backs the `/` hotkey and the Kbd chip on the search input. Only bound when
-  // the input is actually rendered — routes that hide the filter bar
-  // (showFilters=false) have nothing to focus.
   const searchRef = useRef<HTMLInputElement>(null)
-  useHotkey(
-    "/",
-    () => {
-      searchRef.current?.focus()
-      searchRef.current?.select()
-    },
-    { enabled: showFilters },
-  )
+  useSearchHotkey(HOTKEYS.buildListSearch, searchRef)
 
   const activeFilterCount = (hasGuide ? 1 : 0) + (hasShards ? 1 : 0)
   // A search, category tab, or toggle is narrowing the list. Zero results then
@@ -209,62 +76,56 @@ export function BuildsListView({
       ) : null}
 
       <div className="flex flex-col gap-3 sm:flex-row">
-        {showFilters ? (
-          <InputGroup className="flex-1">
-            <InputGroupInput
-              ref={searchRef}
-              placeholder="Search builds…"
-              value={qLocal}
-              onChange={(e) => setQLocal(e.target.value)}
-            />
-            {!qLocal && (
-              <InputGroupAddon align="inline-end">
-                <Kbd>/</Kbd>
-              </InputGroupAddon>
-            )}
-          </InputGroup>
-        ) : (
-          <div className="flex-1" />
-        )}
+        <InputGroup className="flex-1">
+          <InputGroupInput
+            ref={searchRef}
+            placeholder="Search builds…"
+            value={qLocal}
+            onChange={(e) => setQLocal(e.target.value)}
+          />
+          {!qLocal && (
+            <InputGroupAddon align="inline-end">
+              <Kbd>/</Kbd>
+            </InputGroupAddon>
+          )}
+        </InputGroup>
         <div className="flex gap-3">
           <BuildsLayoutToggle />
           <BuildsSortDropdown
             value={sort}
             onChange={(value) => patch({ sort: value })}
           />
-          {showFilters ? (
-            <Popover>
-              <FilterPopoverTrigger count={activeFilterCount} />
-              <PopoverContent align="end" className="w-56 gap-3">
-                <FilterToggle
-                  label="Has guide"
-                  checked={hasGuide}
-                  onChange={(v) => patch({ hasGuide: v })}
-                />
-                <FilterToggle
-                  label="Has archon shards"
-                  checked={hasShards}
-                  onChange={(v) => patch({ hasShards: v })}
-                />
-              </PopoverContent>
-            </Popover>
-          ) : null}
+          <Popover>
+            <FilterPopoverTrigger count={activeFilterCount} />
+            <PopoverContent align="end" className="w-56 gap-3">
+              <FilterToggle
+                label="Has guide"
+                checked={hasGuide}
+                onChange={(v) => patch({ hasGuide: v })}
+              />
+              <FilterToggle
+                label="Has archon shards"
+                checked={hasShards}
+                onChange={(v) => patch({ hasShards: v })}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
-      {showFilters ? (
-        <BuildsCategoryTabs
-          value={category}
-          onChange={(next) => patch({ category: next })}
-        />
-      ) : null}
+      <CategoryTabs
+        value={category ?? "all"}
+        onChange={(next) =>
+          patch({ category: next === "all" ? undefined : next })
+        }
+      />
 
       <Results
         query={query}
         page={page}
         q={q}
         isFiltered={isFiltered}
-        onPage={(p) => patch({ page: p > 1 ? p : undefined })}
+        onPage={(p) => patch({ page: p })}
         emptyState={emptyState}
       />
     </div>
@@ -286,10 +147,26 @@ function Results({
   onPage: (p: number) => void
   emptyState: ReactNode
 }) {
-  const { data, isPending, isFetching } = useQuery(query)
-  const [layout] = useBuildLayout()
+  // Keep the current page on screen (dimmed) while the next one loads.
+  const { data, isPending, isFetching } = useQuery({
+    ...query,
+    placeholderData: keepPreviousData,
+  })
 
-  if (isPending || !data) return <ResultsSkeleton />
+  if (isPending || !data) {
+    return (
+      <div
+        role="status"
+        aria-busy="true"
+        aria-live="polite"
+        className="flex flex-col gap-6"
+      >
+        <span className="sr-only">Loading builds…</span>
+        <Skeleton className="h-4 w-32" />
+        <BuildCollectionSkeleton count={LIST_LIMIT} />
+      </div>
+    )
+  }
 
   const totalPages = Math.max(1, Math.ceil(data.total / data.limit))
 
@@ -313,22 +190,11 @@ function Results({
           )}
         </div>
       ) : (
-        <div
+        <BuildCollection
+          builds={data.builds}
           aria-busy={isFetching}
-          className={cn(
-            buildLayoutClass(layout),
-            "transition-opacity",
-            isFetching && "opacity-60",
-          )}
-        >
-          {data.builds.map((b) =>
-            layout === "rows" ? (
-              <BuildRow key={b.id} build={b} />
-            ) : (
-              <BuildCard key={b.id} build={b} />
-            ),
-          )}
-        </div>
+          className={cn("transition-opacity", isFetching && "opacity-60")}
+        />
       )}
 
       {totalPages > 1 ? (
@@ -342,76 +208,6 @@ function Results({
         </div>
       ) : null}
     </>
-  )
-}
-
-function ResultsSkeleton() {
-  const [layout] = useBuildLayout()
-  return (
-    <div
-      role="status"
-      aria-busy="true"
-      aria-live="polite"
-      className="flex flex-col gap-6"
-    >
-      <span className="sr-only">Loading builds…</span>
-      <Skeleton className="h-4 w-32" />
-      <div className={buildLayoutClass(layout)}>
-        {Array.from({ length: LIST_PAGE_SIZE }).map((_, i) =>
-          layout === "rows" ? (
-            <BuildRowSkeleton key={i} />
-          ) : (
-            <BuildCardSkeleton key={i} />
-          ),
-        )}
-      </div>
-    </div>
-  )
-}
-
-/** Full-page builds list skeleton (chrome + results). */
-export function BuildsListSkeleton({
-  showFilters = true,
-  showHeader = true,
-}: {
-  showFilters?: boolean
-  showHeader?: boolean
-}) {
-  const [layout] = useBuildLayout()
-  return (
-    <div
-      role="status"
-      aria-busy="true"
-      aria-live="polite"
-      className="flex flex-col gap-6"
-    >
-      <span className="sr-only">Loading builds…</span>
-      {showHeader && (
-        <div className="flex flex-col gap-2">
-          <Skeleton className="h-9 w-64" />
-          <Skeleton className="h-5 w-80" />
-        </div>
-      )}
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <Skeleton className="h-9 flex-1" />
-        <div className="flex gap-3">
-          <Skeleton className="h-9 w-20" />
-          <Skeleton className="h-9 w-32" />
-          {showFilters && <Skeleton className="h-9 w-24" />}
-        </div>
-      </div>
-      {showFilters && <Skeleton className="h-8 w-full max-w-md" />}
-      <Skeleton className="h-4 w-32" />
-      <div className={buildLayoutClass(layout)}>
-        {Array.from({ length: LIST_PAGE_SIZE }).map((_, i) =>
-          layout === "rows" ? (
-            <BuildRowSkeleton key={i} />
-          ) : (
-            <BuildCardSkeleton key={i} />
-          ),
-        )}
-      </div>
-    </div>
   )
 }
 

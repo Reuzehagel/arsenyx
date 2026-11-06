@@ -1,17 +1,16 @@
+import type { BuildVisibility } from "@arsenyx/shared/api/build-dto"
 import { useState } from "react"
-
-import type { PublishVisibility } from "./publish-dialog"
 
 /** The three publish/attribution settings, edited together in the PublishDialog
  *  and sent together on save. */
-export interface PublishSettings {
-  visibility: PublishVisibility
+interface PublishSettings {
+  visibility: BuildVisibility
   organizationId: string | null
   hideAuthor: boolean
 }
 
-export interface PublishSettingsState extends PublishSettings {
-  /** Set all three at once — the PublishDialog confirms them as a unit. */
+interface PublishSettingsState extends PublishSettings {
+  /** Set all three at once and close the dialog — it confirms them as a unit. */
   apply: (next: PublishSettings) => void
   /** Whether the PublishDialog is open. */
   dialogOpen: boolean
@@ -37,6 +36,7 @@ export function usePublishSettings(
     setVisibility(next.visibility)
     setOrganizationId(next.organizationId)
     setHideAuthor(next.hideAuthor)
+    setDialogOpen(false)
   }
 
   return {

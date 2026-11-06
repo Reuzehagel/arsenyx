@@ -1,4 +1,5 @@
 import type { Context } from "hono"
+import { HTTPException } from "hono/http-exception"
 import { describe, expect, it } from "vitest"
 
 import {
@@ -48,37 +49,56 @@ function streamOfSize(bytes: number): ReadableStream<Uint8Array> {
   })
 }
 
+/** The JSON error a rejected parseJsonBody carries. */
+async function rejection(p: Promise<unknown>) {
+  const err = await p.then(
+    () => {
+      throw new Error("expected a rejection")
+    },
+    (e: unknown) => e,
+  )
+  expect(err).toBeInstanceOf(HTTPException)
+  const res = (err as HTTPException).getResponse()
+  const body = (await res.json()) as { error: string }
+  return { status: res.status, error: body.error }
+}
+
 describe("parseJsonBody", () => {
   it("accepts a well-formed JSON object", async () => {
     const c = fakeContext({ body: JSON.stringify({ hello: "world" }) })
-    const r = await parseJsonBody(c)
-    expect(r.ok).toBe(true)
-    if (r.ok) expect(r.value).toEqual({ hello: "world" })
+    expect(await parseJsonBody(c)).toEqual({ hello: "world" })
+  })
+
+  it("decodes multi-byte UTF-8 split across chunks", async () => {
+    const bytes = new TextEncoder().encode(JSON.stringify({ n: "Ætherial ✓" }))
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        // Split inside the 3-byte check mark.
+        controller.enqueue(bytes.slice(0, bytes.length - 3))
+        controller.enqueue(bytes.slice(bytes.length - 3))
+        controller.close()
+      },
+    })
+    expect(await parseJsonBody(fakeContext({ body }))).toEqual({
+      n: "Ætherial ✓",
+    })
   })
 
   it("rejects malformed JSON with invalid_json", async () => {
     const c = fakeContext({ body: "{not json" })
-    const r = await parseJsonBody(c)
-    expect(r.ok).toBe(false)
-    if (!r.ok) expect(r.response.status).toBe(400)
+    expect(await rejection(parseJsonBody(c))).toEqual({
+      status: 400,
+      error: "invalid_json",
+    })
   })
 
-  it("rejects JSON arrays with invalid_body", async () => {
-    const c = fakeContext({ body: "[1,2,3]" })
-    const r = await parseJsonBody(c)
-    expect(r.ok).toBe(false)
-    if (!r.ok) {
-      expect(r.response.status).toBe(400)
-      const body = (await r.response.json()) as { error: string }
-      expect(body.error).toBe("invalid_body")
+  it("rejects JSON arrays and primitives with invalid_body", async () => {
+    for (const body of ["[1,2,3]", "null", "3"]) {
+      expect(await rejection(parseJsonBody(fakeContext({ body })))).toEqual({
+        status: 400,
+        error: "invalid_body",
+      })
     }
-  })
-
-  it("rejects JSON null/primitives with invalid_body", async () => {
-    const c = fakeContext({ body: "null" })
-    const r = await parseJsonBody(c)
-    expect(r.ok).toBe(false)
-    if (!r.ok) expect(r.response.status).toBe(400)
   })
 
   it("rejects bodies declared larger than max via Content-Length", async () => {
@@ -86,56 +106,47 @@ describe("parseJsonBody", () => {
       body: "{}",
       contentLength: String(MAX_JSON_BYTES + 1),
     })
-    const r = await parseJsonBody(c)
-    expect(r.ok).toBe(false)
-    if (!r.ok) {
-      expect(r.response.status).toBe(413)
-      const body = (await r.response.json()) as { error: string }
-      expect(body.error).toBe("body_too_large")
-    }
+    expect(await rejection(parseJsonBody(c))).toEqual({
+      status: 413,
+      error: "body_too_large",
+    })
   })
 
   it("accepts a body exactly at the cap", async () => {
     const max = 256
-    // 254 spaces wrapped in `{"a":"..."}` → < 256 once the envelope is added.
-    const padding = "x".repeat(max - 10)
-    const json = JSON.stringify({ a: padding })
-    expect(json.length).toBeLessThanOrEqual(max)
+    const json = JSON.stringify({ a: "x".repeat(max - 8) })
+    expect(json.length).toBe(max)
     const c = fakeContext({ body: json })
-    const r = await parseJsonBody(c, { maxBytes: max })
-    expect(r.ok).toBe(true)
+    expect(await parseJsonBody(c, { maxBytes: max })).toEqual(JSON.parse(json))
   })
 
   it("rejects a body one byte over the cap (no Content-Length)", async () => {
     const max = 64
-    const oversized = `{"a":"${"x".repeat(max)}"}`
-    expect(oversized.length).toBeGreaterThan(max)
+    const oversized = `{"a":"${"x".repeat(max - 7)}"}`
+    expect(oversized.length).toBe(max + 1)
     const c = fakeContext({ body: oversized })
-    const r = await parseJsonBody(c, { maxBytes: max })
-    expect(r.ok).toBe(false)
-    if (!r.ok) {
-      expect(r.response.status).toBe(413)
-      const body = (await r.response.json()) as { error: string }
-      expect(body.error).toBe("body_too_large")
-    }
+    expect(await rejection(parseJsonBody(c, { maxBytes: max }))).toEqual({
+      status: 413,
+      error: "body_too_large",
+    })
   })
 
   it("aborts mid-stream when an undeclared body exceeds the cap", async () => {
     const max = 1024
     // 4× the cap, no Content-Length set — limiter must abort the stream.
     const c = fakeContext({ body: streamOfSize(max * 4) })
-    const r = await parseJsonBody(c, { maxBytes: max })
-    expect(r.ok).toBe(false)
-    if (!r.ok) expect(r.response.status).toBe(413)
+    expect((await rejection(parseJsonBody(c, { maxBytes: max }))).status).toBe(
+      413,
+    )
   })
 
   it("rejects non-UTF-8 bytes with invalid_body", async () => {
     // 0xFF is never valid UTF-8 on its own.
-    const bad = new Uint8Array([0xff, 0xfe, 0xfd])
-    const c = fakeContext({ body: bad })
-    const r = await parseJsonBody(c)
-    expect(r.ok).toBe(false)
-    if (!r.ok) expect(r.response.status).toBe(400)
+    const c = fakeContext({ body: new Uint8Array([0xff, 0xfe, 0xfd]) })
+    expect(await rejection(parseJsonBody(c))).toEqual({
+      status: 400,
+      error: "invalid_body",
+    })
   })
 })
 

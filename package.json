@@ -17,6 +17,7 @@
     "check:data-version": "bun run scripts/check-data-version.ts",
     "check:changelog": "bun run scripts/check-changelog.ts",
     "check:native-button": "bun run scripts/check-native-button.ts",
+    "check:layering": "bun run scripts/check-layering.ts",
     "check:wrangler": "bun run scripts/check-wrangler.ts",
     "cf:usage": "bun run scripts/cf-usage.ts",
     "cf:profile": "bun run scripts/cf-profile.ts",
@@ -27,12 +28,13 @@
     "data:patch": "bun run scripts/patch-catalog.ts",
     "data:ab": "bun run scripts/data-ab.ts",
     "data:diff": "bun run scripts/catalog-diff.ts",
+    "test": "bun --filter=arsenyx-web --filter=arsenyx-api --filter=@arsenyx/shared run test && bun test scripts/",
     "typecheck": "bun run --filter '*' typecheck && bun run typecheck:scripts",
-    "typecheck:scripts": "bun run --cwd=apps/web tsgo --noEmit -p ../../scripts/tsconfig.json",
-    "lint": "oxlint apps/web/src apps/web/worker apps/api/src packages/shared/src scripts data/curated",
-    "lint:fix": "oxlint --fix apps/web/src apps/web/worker apps/api/src packages/shared/src scripts data/curated",
-    "fmt": "oxfmt --write apps/web/src apps/web/worker apps/api/src packages/shared/src scripts data/curated '!**/generated/**' '!**/*.gen.ts' '!**/components/ui/**' '!data/curated/*.json' '!data/curated/*.md'",
-    "fmt:check": "oxfmt --check apps/web/src apps/web/worker apps/api/src packages/shared/src scripts data/curated '!**/generated/**' '!**/*.gen.ts' '!**/components/ui/**' '!data/curated/*.json' '!data/curated/*.md'"
+    "typecheck:scripts": "bun run --cwd=apps/web tsgo --noEmit -p ../../scripts/tsconfig.json && bun run --cwd=apps/web tsgo --noEmit -p scripts/tsconfig.json && bun run --cwd=apps/web tsgo --noEmit -p ../api/scripts/tsconfig.json",
+    "lint": "oxlint apps/web/src apps/web/worker apps/web/scripts apps/api/src apps/api/scripts packages/shared/src scripts data/curated",
+    "lint:fix": "oxlint --fix apps/web/src apps/web/worker apps/web/scripts apps/api/src apps/api/scripts packages/shared/src scripts data/curated",
+    "fmt": "oxfmt --write apps/web/src apps/web/worker apps/web/scripts apps/api/src apps/api/scripts packages/shared/src scripts data/curated '!**/generated/**' '!**/*.gen.ts' '!**/components/ui/**' '!data/curated/*.json' '!data/curated/*.md'",
+    "fmt:check": "oxfmt --check apps/web/src apps/web/worker apps/web/scripts apps/api/src apps/api/scripts packages/shared/src scripts data/curated '!**/generated/**' '!**/*.gen.ts' '!**/components/ui/**' '!data/curated/*.json' '!data/curated/*.md'"
   },
   "dependencies": {
     "@arsenyx/shared": "workspace:*",

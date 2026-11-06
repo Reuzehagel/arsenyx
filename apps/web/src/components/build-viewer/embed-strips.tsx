@@ -1,3 +1,4 @@
+import type { HelminthAbility } from "@arsenyx/shared/warframe/build-data"
 import {
   findIncarnonEvolution,
   getIncarnonPerkDescription,
@@ -7,30 +8,56 @@ import {
   FOCUS_SCHOOLS,
   operatorAmpLabel,
 } from "@arsenyx/shared/warframe/operator-loadout"
-import type { Ability, LichBonusElement } from "@arsenyx/shared/warframe/types"
-import { isZawStrike } from "@arsenyx/shared/warframe/zaw-data"
+import type {
+  Ability,
+  LichBonusElement,
+  PlacedShard,
+} from "@arsenyx/shared/warframe/types"
+import { isZawItem } from "@arsenyx/shared/warframe/zaw-data"
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
 import { ExternalLink, Zap } from "lucide-react"
 import { type ReactNode, Suspense } from "react"
 
-import { AbilityStatList } from "@/components/build-editor/ability-icon"
-import { ShardSlot } from "@/components/build-editor/shard-controls"
+import { AbilityStatList } from "@/components/build-loadout/ability-icon"
+import { DAMAGE_TYPE_ICON } from "@/components/build-loadout/damage-style"
+import { ShardSlot } from "@/components/build-loadout/shard-controls"
 import { TapPopover } from "@/components/tap-popover"
-import type { HelminthAbility } from "@/lib/queries/helminth-query"
+import type { ExtrasState } from "@/lib/build/extras"
+import { getImageUrl } from "@/lib/image-url"
 import { incarnonEvolutionsQuery } from "@/lib/queries/incarnon-query"
 import { kitgunImagesQuery } from "@/lib/queries/kitgun-images-query"
 import { zawImagesQuery } from "@/lib/queries/zaw-images-query"
-import type { PlacedShard } from "@/lib/shards"
+import { SHARD_SLOT_COUNT } from "@/lib/shards"
 import type { AbilityTotals } from "@/lib/stats/ability-stats"
-import { DAMAGE_TYPE_ICON, type DamageType } from "@/lib/stats/types"
+import { type DamageType } from "@/lib/stats/types"
 import { cn } from "@/lib/util/utils"
-import { getImageUrl } from "@/lib/warframe"
 
 import { StatText } from "../stat-text"
 
+type StripItem = { category: string; itemName: string }
+
+// One predicate per strip so the "no strip applies" fallback below agrees
+// with each strip's own render gate.
+const showsWarframeStrip = (
+  { category }: StripItem,
+  abilities: Ability[],
+  shards: ExtrasState["shards"],
+) => category === "warframes" && (abilities.length > 0 || shards.some(Boolean))
+const showsZawStrip = ({ category, itemName }: StripItem, e: ExtrasState) =>
+  category === "melee" && isZawItem({ name: itemName }) && !!e.zawComponents
+const showsKitgunStrip = ({ category }: StripItem, e: ExtrasState) =>
+  (category === "primary" || category === "secondary") && !!e.kitgunComponents
+// Optimistic: EmbedIncarnonStrip can still bail after its query (no
+// choosable tiers) — we'd rather omit the header than render it twice.
+const showsIncarnonStrip = (e: ExtrasState) =>
+  e.incarnonEnabled && e.incarnonPerks.some(Boolean)
+const showsLichStrip = (e: ExtrasState) => e.lichBonusElement !== null
+const showsOperatorStrip = ({ category }: StripItem, e: ExtrasState) =>
+  category === "operators" && Boolean(e.operatorAmp)
+
 /**
- * Picks which embed strip(s) to render above the loadout for the given
- * category and build state in `?embed=1` mode.
+ * The embed strip(s) above the loadout in `?embed=1` mode, or a bare header
+ * bar (item icon + name + "View on Arsenyx") when none applies.
  */
 export function EmbedStrips({
   category,
@@ -38,15 +65,7 @@ export function EmbedStrips({
   itemImageName,
   abilities,
   abilityTotals,
-  helminth,
-  shards,
-  zawComponents,
-  kitgunComponents,
-  incarnonEnabled,
-  incarnonPerks,
-  lichBonusElement,
-  operatorAmp,
-  focusSchool,
+  extras,
   slug,
 }: {
   category: string
@@ -55,35 +74,26 @@ export function EmbedStrips({
   abilities: Ability[]
   /** The build's ability totals; stats are hidden without them. */
   abilityTotals?: AbilityTotals
-  helminth: Record<number, HelminthAbility>
-  shards: (PlacedShard | null)[]
-  zawComponents: { grip: string; link: string } | undefined
-  kitgunComponents: { grip: string; loader: string } | undefined
-  incarnonEnabled: boolean
-  incarnonPerks: (string | null)[]
-  lichBonusElement: LichBonusElement | null
-  operatorAmp?: string
-  focusSchool?: string
+  extras: ExtrasState
   slug: string
 }) {
-  // Which curated strip (if any) applies. Each flag mirrors that strip's own
-  // render gate so we can tell synchronously whether ANY strip will show — and,
-  // if not, fall back to a bare header bar (item icon + name + "View on
-  // Arsenyx") so a plain weapon/archwing embed isn't left chrome-less. The
-  // warframe flag mirrors EmbedWarframeStrip's `hasAbilities || hasShards`.
-  // The incarnon flag is optimistic: EmbedIncarnonStrip can still bail after its
-  // async query (no choosable tiers), a rare data edge where we'd rather omit
-  // the header than risk rendering it twice.
-  const showWarframeStrip =
-    category === "warframes" && (abilities.length > 0 || shards.some(Boolean))
-  const showZawStrip =
-    category === "melee" && isZawStrike(itemName) && Boolean(zawComponents)
-  const showKitgunStrip =
-    (category === "primary" || category === "secondary") &&
-    Boolean(kitgunComponents)
-  const showIncarnonStrip = incarnonEnabled && incarnonPerks.some(Boolean)
-  const showLichStrip = lichBonusElement !== null
-  const showOperatorStrip = category === "operators" && Boolean(operatorAmp)
+  const {
+    helminth,
+    shards,
+    zawComponents,
+    kitgunComponents,
+    incarnonPerks,
+    lichBonusElement,
+    operatorAmp,
+    focusSchool,
+  } = extras
+  const it = { category, itemName }
+  const showWarframeStrip = showsWarframeStrip(it, abilities, shards)
+  const showZawStrip = showsZawStrip(it, extras)
+  const showKitgunStrip = showsKitgunStrip(it, extras)
+  const showIncarnonStrip = showsIncarnonStrip(extras)
+  const showLichStrip = showsLichStrip(extras)
+  const showOperatorStrip = showsOperatorStrip(it, extras)
   const showAnyStrip =
     showOperatorStrip ||
     showWarframeStrip ||
@@ -133,7 +143,7 @@ export function EmbedStrips({
           />
         </Suspense>
       )}
-      {showLichStrip && (
+      {showLichStrip && lichBonusElement && (
         <EmbedLichStrip
           element={lichBonusElement}
           itemName={itemName}
@@ -270,8 +280,6 @@ function EmbedWarframeStrip({
   itemImageName?: string
 }) {
   const hasAbilities = abilities.length > 0
-  const hasShards = shards.some(Boolean)
-  if (!hasAbilities && !hasShards) return null
 
   return (
     <EmbedStripFrame
@@ -305,8 +313,8 @@ function EmbedWarframeStrip({
           </div>
         )}
         <div className="flex shrink-0 items-center gap-1.5">
-          {shards.slice(0, 5).map((shard, i) => (
-            <ShardSlot key={i} shard={shard} onPick={() => {}} readOnly />
+          {shards.slice(0, SHARD_SLOT_COUNT).map((shard, i) => (
+            <ShardSlot key={i} shard={shard} />
           ))}
         </div>
       </div>

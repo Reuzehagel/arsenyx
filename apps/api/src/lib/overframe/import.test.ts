@@ -1,17 +1,11 @@
-import type { Context } from "hono"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 
-// The raw route handler is now sign-in-gated; stub getSession so handler tests
-// can simulate signed-in (default) and signed-out callers without Better Auth.
-vi.mock("../../lib/session", () => ({ getSession: vi.fn() }))
-
-import { getSession } from "../../lib/session"
 import { parseOverframeBuildUrl, scrapeOverframeFromNextData } from "./import"
 
-const BUILD_URL = "https://overframe.gg/build/1005502/saryn-prime"
+export const BUILD_URL = "https://overframe.gg/build/1005502/saryn-prime"
 
 // __NEXT_DATA__ shaped like a real Overframe build page.
-function makeNextData() {
+export function makeNextData() {
   return {
     props: {
       pageProps: {
@@ -29,8 +23,6 @@ function makeNextData() {
     },
   }
 }
-
-afterEach(() => vi.clearAllMocks())
 
 describe("parseOverframeBuildUrl", () => {
   it("accepts overframe build URLs and rejects everything else", () => {
@@ -165,76 +157,24 @@ describe("scrapeOverframeFromNextData", () => {
   it("warns instead of throwing on empty/garbage data", () => {
     const res = scrapeOverframeFromNextData(null, BUILD_URL)
     expect(res.slots).toHaveLength(0)
-    expect(res.warnings.map((w) => w.type)).toContain("next_data_missing")
-  })
-})
-
-// The raw route handler is thin glue over parseJsonBody + scrapeOverframeFromNextData.
-// Test it with a fake Context (same shim style as validate.test.ts) so we cover
-// the request validation without standing up Hono / the DB-backed rate limiter.
-async function importHandler() {
-  return (await import("../../routes/imports")).handleOverframeRawImport
-}
-
-function fakeJsonContext(body: unknown): {
-  c: Context
-  captured: { body: unknown; status: number }
-} {
-  const raw = new Request("https://test.local/", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  })
-  const captured = { body: undefined as unknown, status: 200 }
-  const c = {
-    req: { header: (n: string) => raw.headers.get(n) ?? undefined, raw },
-    json: (b: unknown, status = 200) => {
-      captured.body = b
-      captured.status = status
-      return new Response(JSON.stringify(b), { status })
-    },
-  } as unknown as Context
-  return { c, captured }
-}
-
-describe("handleOverframeRawImport", () => {
-  // Default to a signed-in caller; the 401 case overrides per-test.
-  beforeEach(() => {
-    vi.mocked(getSession).mockResolvedValue({
-      user: { id: "u1" },
-    } as never)
+    expect(res.warnings.map((w) => w.type)).toContain("buildstring_missing")
   })
 
-  it("401s when the caller isn't signed in", async () => {
-    vi.mocked(getSession).mockResolvedValue(null as never)
-    const handle = await importHandler()
-    const { c, captured } = fakeJsonContext({
-      source: "arsenyx-overframe",
-      url: BUILD_URL,
-      nextData: makeNextData(),
+  it("sends buildstring slots with their positional type, for the client to place by category", () => {
+    // 9 entries decode as exilus + 8 normal; slot_id alone would be the
+    // warframe encoding, which a weapon reads as an arcane.
+    const entries = Array.from({ length: 9 }, (_, i) => [String(100 + i), 5])
+    const buildString = Buffer.from(JSON.stringify(entries)).toString("base64")
+    const res = scrapeOverframeFromNextData(
+      { props: { pageProps: { data: { buildString } } } },
+      BUILD_URL,
+    )
+    expect(res.slots).toHaveLength(9)
+    expect(res.slots[0]).toMatchObject({
+      overframeId: "100",
+      slotType: "exilus",
+      slotIndex: 0,
     })
-    await handle(c)
-    expect(captured.status).toBe(401)
-    expect(captured.body).toMatchObject({ error: "unauthorized" })
-  })
-
-  it("400s when nextData is missing", async () => {
-    const handle = await importHandler()
-    const { c, captured } = fakeJsonContext({ url: BUILD_URL })
-    await handle(c)
-    expect(captured.status).toBe(400)
-    expect(captured.body).toMatchObject({ error: "missing_next_data" })
-  })
-
-  it("returns a scrape response for a valid paste", async () => {
-    const handle = await importHandler()
-    const { c, captured } = fakeJsonContext({
-      source: "arsenyx-overframe",
-      url: BUILD_URL,
-      nextData: makeNextData(),
-    })
-    await handle(c)
-    expect(captured.status).toBe(200)
-    expect(captured.body).toMatchObject({ itemName: "Saryn Prime" })
+    expect(res.slots[8]).toMatchObject({ slotType: "normal", slotIndex: 7 })
   })
 })

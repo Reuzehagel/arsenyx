@@ -1,3 +1,5 @@
+import type { BuildVisibility } from "@arsenyx/shared/api/build-dto"
+import type { OrgSummary } from "@arsenyx/shared/api/orgs"
 import { Check, Globe, Link2, Lock, Users, type LucideIcon } from "lucide-react"
 import { useEffect, useState, type ReactNode } from "react"
 
@@ -12,14 +14,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { UserAvatar } from "@/components/user-avatar"
-import type { BuildDetail } from "@/lib/queries/build-query"
-import type { OrgSummary } from "@/lib/queries/org-query"
+import { formatVisibility } from "@/lib/util/user-display"
 import { cn } from "@/lib/util/utils"
 
-export type PublishVisibility = BuildDetail["visibility"]
-
-export type PublishDialogValues = {
-  visibility: PublishVisibility
+type PublishDialogValues = {
+  visibility: BuildVisibility
   organizationId: string | null
   hideAuthor: boolean
 }
@@ -27,7 +26,7 @@ export type PublishDialogValues = {
 type PublishDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  initialVisibility: PublishVisibility
+  initialVisibility: BuildVisibility
   initialOrganizationId: string | null
   initialHideAuthor: boolean
   owner: {
@@ -41,26 +40,22 @@ type PublishDialogProps = {
 }
 
 const VISIBILITY_OPTIONS: {
-  value: PublishVisibility
-  label: string
+  value: BuildVisibility
   description: string
   Icon: LucideIcon
 }[] = [
   {
     value: "PUBLIC",
-    label: "Public",
     description: "Anyone can find and view this build in listings and search.",
     Icon: Globe,
   },
   {
     value: "UNLISTED",
-    label: "Unlisted",
     description: "Only people with the link can view. Hidden from listings.",
     Icon: Link2,
   },
   {
     value: "PRIVATE",
-    label: "Private",
     description: "Only you (and org members) can view this build.",
     Icon: Lock,
   },
@@ -78,7 +73,7 @@ export function PublishDialog({
   onConfirm,
 }: PublishDialogProps) {
   const [visibility, setVisibility] =
-    useState<PublishVisibility>(initialVisibility)
+    useState<BuildVisibility>(initialVisibility)
   const [organizationId, setOrganizationId] = useState<string | null>(
     initialOrganizationId,
   )
@@ -120,7 +115,7 @@ export function PublishDialog({
 
         <div className="flex flex-col gap-4">
           <Section label="Visibility">
-            {VISIBILITY_OPTIONS.map(({ value, label, description, Icon }) => (
+            {VISIBILITY_OPTIONS.map(({ value, description, Icon }) => (
               <OptionCard
                 key={value}
                 selected={visibility === value}
@@ -132,7 +127,7 @@ export function PublishDialog({
                   // entries (avatars in "Publish as") via items-center.
                   <Icon className="mt-0.5 size-4 shrink-0 self-start" />
                 }
-                title={label}
+                title={formatVisibility(value)}
                 subtitle={description}
               />
             ))}

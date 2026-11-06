@@ -5,7 +5,7 @@ import { Suspense, useEffect, useState, type ReactNode } from "react"
  * flash when a Suspense boundary resolves from cache in <200ms — the user
  * sees nothing instead of a loading state that immediately disappears.
  */
-export function DelayedFallback({
+function DelayedFallback({
   delayMs = 200,
   children,
 }: {

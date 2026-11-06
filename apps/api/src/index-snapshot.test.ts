@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { auth } from "./auth"
 import app from "./index"
 import { getSession } from "./lib/session"
-import { invalidateBuilds, snapshotSlugs } from "./routes/builds"
+import { invalidateBuilds, snapshotSlugs } from "./routes/_build-snapshot"
 
 // Pins the account-change middleware in src/index.ts. Registered after the
 // /auth/* handler, Hono would skip it silently and a deleted user's builds
@@ -14,8 +14,8 @@ vi.mock("./auth", async (orig) => {
   return { ...m, auth: { ...m.auth, handler: vi.fn() } }
 })
 vi.mock("./lib/session", () => ({ getSession: vi.fn() }))
-vi.mock("./routes/builds", async (orig) => ({
-  ...(await orig<typeof import("./routes/builds")>()),
+vi.mock("./routes/_build-snapshot", async (orig) => ({
+  ...(await orig<typeof import("./routes/_build-snapshot")>()),
   invalidateBuilds: vi.fn(),
   snapshotSlugs: vi.fn(),
 }))

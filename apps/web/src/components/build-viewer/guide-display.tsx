@@ -1,7 +1,9 @@
+import type { BuildDetailResponse } from "@arsenyx/shared/api/build-dto"
+import type { SavedVariant } from "@arsenyx/shared/warframe/build-data"
+
 import { MarkdownBody } from "@/components/markdown-body"
+import { resolveGuide } from "@/lib/guide"
 import type { GuideRefResolver } from "@/lib/guide-refs"
-import type { BuildDetail, SavedVariant } from "@/lib/queries/build-query"
-import { resolveGuide } from "@/lib/queries/build-query"
 
 /**
  * Renders the build guide below the loadout. Per-variant guide content
@@ -19,7 +21,7 @@ export function GuideDisplay({
   activeVariant,
   resolveGuideRef,
 }: {
-  build: Pick<BuildDetail, "guide">
+  build: Pick<BuildDetailResponse, "guide">
   activeVariant: SavedVariant | undefined
   /** Resolves `[Name](mod:…)` references against the build's stored
    *  snapshots — see lib/guide-refs.ts. */

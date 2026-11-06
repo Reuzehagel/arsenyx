@@ -1,49 +1,20 @@
-import { useQuery } from "@tanstack/react-query"
-import { ChevronDown, Link2, TriangleAlert, X } from "lucide-react"
+import { GUIDE_SUMMARY_EDITOR_MAX } from "@arsenyx/shared/api/limits"
+import { ChevronDown, Link2, TriangleAlert } from "lucide-react"
 import { lazy, Suspense, useEffect, useMemo, useState } from "react"
 
+import { VariantTab } from "@/components/build-loadout/variant-tab"
+import { PartnerBuildsField } from "@/components/partner-builds/partner-builds-field"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Field, FieldLabel, FieldDescription } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
-import { buildQuery, type SavedBuildData } from "@/lib/queries/build-query"
-import {
-  partnerBuildsQuery,
-  useBuildSearch,
-  useLinkPartner,
-  useReorderPartners,
-  useSetPartnerVariant,
-  useUnlinkPartner,
-  type PartnerBuild,
-} from "@/lib/queries/partner-builds-query"
+import { variantDisplayLabel } from "@/lib/build/variants"
 import { cn } from "@/lib/util/utils"
-import { getImageUrl } from "@/lib/warframe"
 
-import { VariantTab } from "../build-viewer/variant-tab"
-import { usePartnerReorder } from "./use-partner-reorder"
+import type { GuideEditorProps } from "./use-guide-state"
 
 // CodeMirror lives behind this lazy boundary so it code-splits out of the main
 // route chunk (and never reaches the read-only embed bundle).
@@ -52,10 +23,6 @@ const MarkdownEditor = lazy(() =>
     default: m.MarkdownEditor,
   })),
 )
-
-const SUMMARY_MAX = 160
-
-export type GuideScope = { kind: "build" } | { kind: "variant"; index: number }
 
 export function GuideEditor({
   summary,
@@ -68,61 +35,28 @@ export function GuideEditor({
   onScopeChange,
   seedVariantFromBuild,
   formNames,
-}: {
-  summary: string
-  onSummaryChange: (v: string) => void
-  description: string
-  onDescriptionChange: (v: string) => void
-  /**
-   * If provided, the editor renders the partner-builds picker bound to
-   * this slug. Omitted for unsaved builds — partners can only be linked
-   * after the build exists server-side.
-   */
+}: GuideEditorProps & {
+  /** Binds the partner-builds picker. Unsaved builds can't link partners. */
   buildSlug?: string
-  /**
-   * Variant scopes available for per-variant guides. When omitted (or
-   * length <= 1), the chip row is hidden and the editor behaves as a
-   * single build-wide guide editor.
-   */
-  scopes?: {
-    id: string
-    label: string
-    hasContent: boolean
-    formIndex?: number
-  }[]
-  /**
-   * Currently-edited scope. `build` edits the build-wide guide;
-   * `variant` edits the per-variant guide at the given index.
-   */
-  activeScope?: GuideScope
-  onScopeChange?: (scope: GuideScope) => void
-  seedVariantFromBuild?: (index: number) => void
-  /**
-   * Twin-frames (Sirius & Orion): form names. When present, the per-variant
-   * guide chips are grouped under their form so identically-labeled variants
-   * across forms (e.g. two "Variant 2") are distinguishable.
-   */
+  /** Twin-frames: per-variant chips are grouped under their form so
+   *  identically-labeled variants across forms stay distinguishable. */
   formNames?: string[]
 }) {
-  const hasMultipleVariants =
-    scopes !== undefined &&
-    scopes.length > 1 &&
-    activeScope !== undefined &&
-    onScopeChange !== undefined
+  const hasMultipleVariants = scopes.length > 1
   // Auto-on if any variant already has guide content, or if we land on the
   // editor with a variant scope active — otherwise default to off so single-
   // guide authors don't see chips they don't need.
-  const anyVariantHasContent = scopes?.some((s) => s.hasContent) ?? false
+  const anyVariantHasContent = scopes.some((s) => s.hasContent)
   const [perVariantEnabled, setPerVariantEnabled] = useState<boolean>(
-    () => anyVariantHasContent || activeScope?.kind === "variant",
+    () => anyVariantHasContent || activeScope.kind === "variant",
   )
   // Remember the last variant index the user was editing so toggling the
   // switch off and on returns to it (instead of always snapping to 0).
   const [lastVariantIndex, setLastVariantIndex] = useState<number>(() =>
-    activeScope?.kind === "variant" ? activeScope.index : 0,
+    activeScope.kind === "variant" ? activeScope.index : 0,
   )
   useEffect(() => {
-    if (activeScope?.kind === "variant") setLastVariantIndex(activeScope.index)
+    if (activeScope.kind === "variant") setLastVariantIndex(activeScope.index)
   }, [activeScope])
   const showScopeChips = hasMultipleVariants && perVariantEnabled
 
@@ -133,12 +67,10 @@ export function GuideEditor({
     if (
       perVariantEnabled &&
       hasMultipleVariants &&
-      activeScope?.kind === "build" &&
-      scopes &&
-      scopes.length > 0
+      activeScope.kind === "build"
     ) {
       const idx = Math.min(lastVariantIndex, scopes.length - 1)
-      onScopeChange?.({ kind: "variant", index: Math.max(0, idx) })
+      onScopeChange({ kind: "variant", index: Math.max(0, idx) })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -174,7 +106,7 @@ export function GuideEditor({
                 )
                 // Seed the landing variant from the build-wide guide so the
                 // text the user was just looking at doesn't appear to vanish.
-                seedVariantFromBuild?.(idx)
+                seedVariantFromBuild(idx)
                 onScopeChange({ kind: "variant", index: idx })
               }}
             />
@@ -228,7 +160,7 @@ export function GuideEditor({
                           {row.items.map(({ s, i }) => (
                             <ScopeChip
                               key={s.id || i}
-                              label={s.label || `Variant ${i + 1}`}
+                              label={variantDisplayLabel(s, i)}
                               active={
                                 activeScope.kind === "variant" &&
                                 activeScope.index === i
@@ -256,11 +188,11 @@ export function GuideEditor({
           id="guide-summary"
           placeholder="One-line pitch — what makes this build tick?"
           value={summary}
-          maxLength={SUMMARY_MAX}
+          maxLength={GUIDE_SUMMARY_EDITOR_MAX}
           onChange={(e) => onSummaryChange(e.target.value)}
         />
         <FieldDescription className="tabular-nums">
-          {summary.length}/{SUMMARY_MAX}
+          {summary.length}/{GUIDE_SUMMARY_EDITOR_MAX}
         </FieldDescription>
       </Field>
 
@@ -271,7 +203,7 @@ export function GuideEditor({
             value={description}
             onChange={onDescriptionChange}
             docKey={
-              activeScope?.kind === "variant"
+              activeScope.kind === "variant"
                 ? `variant-${activeScope.index}`
                 : "build"
             }
@@ -335,209 +267,6 @@ function ScopeChip({
         />
       ) : null}
     </VariantTab>
-  )
-}
-
-function PartnerBuildsField({ buildSlug }: { buildSlug: string }) {
-  const { data: partners = [] } = useQuery(partnerBuildsQuery(buildSlug))
-  const link = useLinkPartner(buildSlug)
-  const unlink = useUnlinkPartner(buildSlug)
-  const reorder = useReorderPartners(buildSlug)
-  const setVariant = useSetPartnerVariant(buildSlug)
-  const { ghost, rowProps } = usePartnerReorder(partners, reorder.mutate)
-  const canReorder = partners.length > 1
-  const [open, setOpen] = useState(false)
-  const [q, setQ] = useState("")
-  const search = useBuildSearch(q)
-
-  const linkedSlugs = new Set(partners.map((p) => p.slug))
-  const candidates = (search.data ?? []).filter(
-    (b) => b.slug !== buildSlug && !linkedSlugs.has(b.slug),
-  )
-
-  return (
-    <div className="flex flex-col gap-2">
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger
-          render={
-            <Button
-              type="button"
-              variant="outline"
-              className="h-9 w-full justify-between font-normal"
-            />
-          }
-        >
-          <span className="inline-flex items-center gap-2">
-            <Link2 />
-            Search builds to link…
-          </span>
-          <ChevronDown className="opacity-50" />
-        </PopoverTrigger>
-        <PopoverContent className="w-[var(--anchor-width)] p-0" align="start">
-          <Command shouldFilter={false}>
-            <CommandInput
-              placeholder="Type a build or item name…"
-              value={q}
-              onValueChange={setQ}
-            />
-            <CommandList>
-              {q.trim().length < 2 ? (
-                <CommandEmpty>Type at least 2 characters.</CommandEmpty>
-              ) : search.isLoading ? (
-                <CommandEmpty>Searching…</CommandEmpty>
-              ) : candidates.length === 0 ? (
-                <CommandEmpty>No matches.</CommandEmpty>
-              ) : (
-                <CommandGroup>
-                  {candidates.map((b) => (
-                    <CommandItem
-                      key={b.id}
-                      value={b.id}
-                      onSelect={() => {
-                        link.mutate(b)
-                        setOpen(false)
-                        setQ("")
-                      }}
-                    >
-                      <PartnerThumb build={b} />
-                      <div className="flex min-w-0 flex-col">
-                        <span className="truncate text-sm">{b.name}</span>
-                        <span className="text-muted-foreground truncate text-xs">
-                          {b.item.name}
-                        </span>
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
-
-      {partners.length > 0 && (
-        <>
-          {canReorder && (
-            <p className="text-muted-foreground text-xs">
-              Drag to reorder how they appear on the build.
-            </p>
-          )}
-          <ul className="flex flex-wrap gap-2">
-            {partners.map((p, i) => (
-              <li key={p.id} {...(canReorder ? rowProps(i) : {})}>
-                <PartnerChip
-                  build={p}
-                  onRemove={() => unlink.mutate(p.slug)}
-                  onSetVariant={(variant) =>
-                    setVariant.mutate({ partnerSlug: p.slug, variant })
-                  }
-                />
-              </li>
-            ))}
-          </ul>
-          {ghost}
-        </>
-      )}
-    </div>
-  )
-}
-
-function PartnerThumb({ build }: { build: PartnerBuild }) {
-  const src = build.item.imageName ? getImageUrl(build.item.imageName) : null
-  return (
-    <div className="bg-muted flex size-6 shrink-0 items-center justify-center overflow-hidden rounded">
-      {src ? (
-        <img src={src} alt="" className="size-full object-cover" />
-      ) : (
-        <Link2 className="text-muted-foreground size-4" />
-      )}
-    </div>
-  )
-}
-
-function PartnerChip({
-  build,
-  onRemove,
-  onSetVariant,
-}: {
-  build: PartnerBuild
-  onRemove: () => void
-  onSetVariant: (variant: number) => void
-}) {
-  return (
-    <span className="bg-muted/40 inline-flex items-center gap-2 rounded-full border py-1 pr-1 pl-2 text-xs">
-      <PartnerThumb build={build} />
-      <span className="max-w-[14ch] truncate">{build.name}</span>
-      <PartnerVariantPicker build={build} onSetVariant={onSetVariant} />
-      <button
-        type="button"
-        aria-label={`Unlink ${build.name}`}
-        onClick={onRemove}
-        className="hover:bg-accent text-muted-foreground hover:text-accent-foreground flex size-5 items-center justify-center rounded-full"
-      >
-        <X className="size-3" />
-      </button>
-    </span>
-  )
-}
-
-/**
- * Which variant of the partner build the related-builds chip should open
- * (issue #302). Renders nothing for single-variant partners — most builds —
- * so the chip stays clean. The variant list comes from the partner's own
- * detail payload (`?view=0`: browser-cacheable, no view-count bump); the
- * search endpoint deliberately doesn't carry variants.
- */
-function PartnerVariantPicker({
-  build,
-  onSetVariant,
-}: {
-  build: PartnerBuild
-  onSetVariant: (variant: number) => void
-}) {
-  const { data } = useQuery({
-    ...buildQuery(build.slug, { countView: false }),
-    staleTime: 60_000,
-  })
-  const variants = (data?.buildData as SavedBuildData | undefined)?.variants
-  if (!variants || variants.length < 2) return null
-
-  // Clamp a stale stored target (the partner may have deleted variants since
-  // this was saved) so the trigger never shows an empty label — mirrors the
-  // viewer's own `?v=` clamping.
-  const active = Math.min(build.variant ?? 0, variants.length - 1)
-  const label = (i: number) => variants[i]?.label || `Variant ${i + 1}`
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <button
-            type="button"
-            title="Which variant the link opens"
-            className="bg-muted text-muted-foreground hover:text-foreground inline-flex max-w-[12ch] items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[11px] transition-colors"
-          />
-        }
-      >
-        <span className="truncate">{label(active)}</span>
-        <ChevronDown className="size-3 shrink-0" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start">
-        <DropdownMenuRadioGroup
-          value={String(active)}
-          onValueChange={(v) => {
-            const next = Number(v)
-            if (next !== active) onSetVariant(next)
-          }}
-        >
-          {variants.map((v, i) => (
-            <DropdownMenuRadioItem key={v.id || i} value={String(i)}>
-              {label(i)}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
   )
 }
 

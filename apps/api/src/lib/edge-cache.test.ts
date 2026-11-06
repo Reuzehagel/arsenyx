@@ -46,9 +46,9 @@ afterEach(() => {
   delete (globalThis as unknown as { caches?: unknown }).caches
 })
 
-// Drive a request through app.fetch with a real ExecutionContext so the
-// middleware's waitUntil-backed cache.put() (runInBackground) is captured and
-// awaited — otherwise the store would race the assertions.
+// Drive a request through app.fetch. Outside withPrisma the middleware's
+// background cache.put()/delete() just run; the fake cache applies them
+// synchronously, so the store never races the assertions.
 async function run(
   app: Hono,
   url: string,
@@ -206,26 +206,23 @@ describe("edgeCache", () => {
     expect(await reordered.json()).toEqual({ n: 1 })
   })
 
-  it("purgeEdge evicts the detail path and its embed/view variants", async () => {
+  it("purgeEdge evicts exactly the URLs it is given", async () => {
     let calls = 0
     const app = new Hono()
     app.get("/builds/:slug", edgeCache({ maxAge: 300 }), (c) => {
       calls++
       return c.json({ n: calls })
     })
-    // Mounted so purgeEdge (which mutates the request URL's pathname) can run
-    // against a real context.
     app.get("/purge/:slug", (c) => {
-      purgeEdge(c, `/builds/${c.req.param("slug")}`)
+      purgeEdge(c, [`/builds/${c.req.param("slug")}?view=0&a=1`])
       return c.body(null, 204)
     })
 
-    await run(app, "http://api.test/builds/x") // populate
-    await run(app, "http://api.test/builds/x") // hit
-    expect(calls).toBe(1)
-
+    await run(app, "http://api.test/builds/x?a=1&view=0") // populate
+    await run(app, "http://api.test/builds/x") // populate the bare path
     await run(app, "http://api.test/purge/x")
-    await run(app, "http://api.test/builds/x") // miss again post-purge
-    expect(calls).toBe(2)
+    await run(app, "http://api.test/builds/x?a=1&view=0") // miss post-purge
+    await run(app, "http://api.test/builds/x") // still a hit
+    expect(calls).toBe(3)
   })
 })

@@ -118,36 +118,35 @@ describe("describeEdit", () => {
   }
 
   it("records a rename that touched no slots", () => {
-    expect(describeEdit(existing, { name: "New name" }, null)).toEqual([
+    expect(describeEdit(existing, { name: "New name" })).toEqual([
       { op: "modify", label: "Renamed", detail: "Old name → New name" },
     ])
   })
 
   it("records a visibility change", () => {
-    expect(describeEdit(existing, { visibility: "PRIVATE" }, null)).toEqual([
+    expect(describeEdit(existing, { visibility: "PRIVATE" })).toEqual([
       { op: "modify", label: "Visibility", detail: "PUBLIC → PRIVATE" },
     ])
   })
 
   it("drops the no-op placeholder when a real change rode along", () => {
-    const changes = describeEdit(
-      existing,
-      { buildData: existing.buildData, name: "New name" },
-      null,
-    )
+    const changes = describeEdit(existing, {
+      buildData: existing.buildData,
+      name: "New name",
+    })
     expect(changes).toEqual([
       { op: "modify", label: "Renamed", detail: "Old name → New name" },
     ])
   })
 
   it("keeps the no-op line when genuinely nothing changed", () => {
-    expect(
-      describeEdit(existing, { buildData: existing.buildData }, null),
-    ).toEqual([{ op: "info", label: "No loadout changes" }])
+    expect(describeEdit(existing, { buildData: existing.buildData })).toEqual([
+      { op: "info", label: "No loadout changes" },
+    ])
   })
 
   it("falls back to a generic line for an edit it can't describe", () => {
-    expect(describeEdit(existing, { hasShards: true }, null)).toEqual([
+    expect(describeEdit(existing, { hasShards: true })).toEqual([
       { op: "info", label: "Updated" },
     ])
   })
@@ -155,42 +154,38 @@ describe("describeEdit", () => {
   // The editor sends `guide` on every save, so presence means nothing.
   it("ignores a guide resent unchanged", () => {
     expect(
-      describeEdit(
-        existing,
-        { buildData: existing.buildData },
-        { summary: "s", description: "d" },
-      ),
+      describeEdit(existing, {
+        buildData: existing.buildData,
+        guide: { summary: "s", description: "d" },
+      }),
     ).toEqual([{ op: "info", label: "No loadout changes" }])
   })
 
   it("records a guide whose content actually moved", () => {
     expect(
-      describeEdit(
-        existing,
-        { buildData: existing.buildData },
-        { summary: "s", description: "rewritten" },
-      ),
+      describeEdit(existing, {
+        buildData: existing.buildData,
+        guide: { summary: "s", description: "rewritten" },
+      }),
     ).toEqual([{ op: "info", label: "Guide updated" }])
   })
 
   // Same trap as the guide: the editor sends organizationId on every save.
   it("ignores an organizationId resent unchanged", () => {
     expect(
-      describeEdit(
-        existing,
-        { buildData: existing.buildData, organizationId: null },
-        null,
-      ),
+      describeEdit(existing, {
+        buildData: existing.buildData,
+        organizationId: null,
+      }),
     ).toEqual([{ op: "info", label: "No loadout changes" }])
   })
 
   it("records an organization that actually moved", () => {
     expect(
-      describeEdit(
-        existing,
-        { buildData: existing.buildData, organizationId: "org_1" },
-        null,
-      ),
+      describeEdit(existing, {
+        buildData: existing.buildData,
+        organizationId: "org_1",
+      }),
     ).toEqual([{ op: "info", label: "Organization changed" }])
   })
 
@@ -204,7 +199,7 @@ describe("describeEdit", () => {
         },
       ],
     }
-    expect(describeEdit(existing, { buildData: after }, null)).toEqual([
+    expect(describeEdit(existing, { buildData: after })).toEqual([
       { op: "add", scope: "A", label: "Serration", detail: "rank 10" },
     ])
   })

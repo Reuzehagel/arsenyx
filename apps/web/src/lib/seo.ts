@@ -3,34 +3,26 @@
 // canonical origin is fixed (www) so indexed URLs never split across the
 // apex/www duplicate hosts — the Worker 301s apex → www to match.
 
-export const SITE_URL = "https://www.arsenyx.com"
-export const SITE_NAME = "Arsenyx"
-const IMAGE_CDN = "https://img.arsenyx.com/"
-
-// Absolutize an item image for og:image/twitter:image. Current catalog data
-// ships absolute https://img.arsenyx.com/… URLs, but denormalized/legacy values
-// (e.g. a build's stored item.imageName) may be bare filenames, which crawlers
-// can't resolve against a relative og:image. Pass http(s) URLs through; prepend
-// the CDN root for bare names. Mirrors the edge Worker's imageUrl()
-// (worker/index.ts) so the server- and client-rendered cards match. Lives here
-// so every seo() caller is defended by one implementation.
-function absoluteImage(image: string | undefined): string | undefined {
-  if (!image) return undefined
-  if (/^https?:\/\//i.test(image)) return image
-  try {
-    return new URL(image.replace(/^\/+/, ""), IMAGE_CDN).toString()
-  } catch {
-    return undefined
-  }
-}
-
-export const DEFAULT_TITLE = "Arsenyx — Warframe Build Planner"
-export const DEFAULT_DESCRIPTION =
-  "Open-source Warframe build planner. Fast, keyboard-first, and community-driven."
+import type { BuildVisibility } from "@arsenyx/shared/api/build-dto"
+import {
+  buildMetaDescription,
+  buildMetaTitle,
+  buildOgType,
+  type BuildTitleInput,
+} from "@arsenyx/shared/seo/build-meta"
+import {
+  absoluteImage,
+  DEFAULT_DESCRIPTION,
+  PAGE_META,
+  pageTitle,
+  SITE_NAME,
+  SITE_URL,
+  type PagePath,
+} from "@arsenyx/shared/seo/site"
 
 type AnyMeta = Record<string, string | undefined>
 
-export interface SeoOptions {
+interface SeoOptions {
   /** Page title without the site suffix; `seo()` appends " — Arsenyx". */
   title?: string
   description?: string
@@ -53,7 +45,7 @@ export interface SeoOptions {
 }
 
 export function seo(opts: SeoOptions = {}) {
-  const title = opts.title ? `${opts.title} — ${SITE_NAME}` : DEFAULT_TITLE
+  const title = pageTitle(opts.title)
   const description = opts.description ?? DEFAULT_DESCRIPTION
   const canonical = opts.canonicalPath
     ? `${SITE_URL}${opts.canonicalPath}`
@@ -85,4 +77,41 @@ export function seo(opts: SeoOptions = {}) {
     meta,
     links: canonical ? [{ rel: "canonical", href: canonical }] : [],
   }
+}
+
+/** Head for a static page listed in PAGE_META (shared with the edge Worker
+ *  and the sitemap): its title/description/noindex, self-canonical unless
+ *  noindexed. */
+export function pageSeo(path: PagePath) {
+  const meta: { title?: string; description?: string; noindex?: boolean } =
+    PAGE_META[path]
+  return seo({
+    title: meta.title,
+    description: meta.description,
+    noindex: meta.noindex,
+    canonicalPath: meta.noindex ? undefined : path,
+  })
+}
+
+/** Head for a build page (routes/_app/builds.$slug.tsx). Mirrors the Worker's
+ *  buildMeta except og:description, which the edge enriches with live
+ *  like/view stats for unfurls. Canonical/og:url/og:image only for PUBLIC
+ *  builds, where the edge emits them too. */
+export function buildPageSeo(
+  build: BuildTitleInput &
+    Parameters<typeof buildMetaDescription>[0] & {
+      visibility: BuildVisibility
+    },
+  slug: string,
+  ogImage: string | null,
+) {
+  const isPublic = build.visibility === "PUBLIC"
+  return seo({
+    title: buildMetaTitle(build),
+    description: buildMetaDescription(build),
+    canonicalPath: isPublic ? `/builds/${slug}` : undefined,
+    image: isPublic ? (ogImage ?? undefined) : undefined,
+    ogType: buildOgType(build.visibility),
+    noindex: !isPublic,
+  })
 }

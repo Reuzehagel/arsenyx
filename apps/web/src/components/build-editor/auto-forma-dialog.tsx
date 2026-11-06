@@ -1,6 +1,8 @@
+import type { PlacedMod, SlotId } from "@arsenyx/shared/warframe/build-data"
 import type { Polarity } from "@arsenyx/shared/warframe/types"
 import { ArrowRight, Sparkle } from "lucide-react"
 
+import { PolarityIcon } from "@/components/build-loadout/polarity"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -10,23 +12,24 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import type { FullAutoFormaPlan } from "@/lib/build/auto-forma"
+import { slotIndex, slotKind } from "@/lib/build/slot-id"
 import { capitalize } from "@/lib/util/utils"
-
-import type { FullAutoFormaPlan } from "./multi-variant-auto-forma"
-import { PolarityIcon } from "./polarity"
-import type { PlacedMod, SlotId } from "./use-build-slots"
 
 /** Human-readable slot name for the dialog. `aura-2` → "Aura 3" (one-based,
  * matching how the game numbers slots). Stance/exilus get their kind name;
  * normal slots get "Slot N" with one-based indexing. */
 function slotLabel(id: SlotId): string {
-  if (id === "exilus") return "Exilus"
-  if (id === "stance") return "Stance"
-  const aura = /^aura-(\d+)$/.exec(id)
-  if (aura) return `Aura ${Number(aura[1]) + 1}`
-  const normal = /^normal-(\d+)$/.exec(id)
-  if (normal) return `Slot ${Number(normal[1]) + 1}`
-  return id
+  switch (slotKind(id)) {
+    case "exilus":
+      return "Exilus"
+    case "stance":
+      return "Stance"
+    case "aura":
+      return `Aura ${slotIndex(id) + 1}`
+    case "normal":
+      return `Slot ${slotIndex(id) + 1}`
+  }
 }
 
 function polarityLabel(p: Polarity): string {

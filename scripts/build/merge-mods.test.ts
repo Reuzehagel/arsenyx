@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test"
 
+import type { DeUpgrade } from "./de-types"
 import { mergeMods } from "./merge-mods"
-import type { DeUpgrade } from "./read-de"
 
 // Minimal DE upgrade record — mergeMods only needs a mappable polarity/rarity
 // and a name plus compatName (so `shouldKeep` retains it).
@@ -32,7 +32,10 @@ describe("mergeMods exilus inheritance", () => {
     new Map(mods.map((m) => [m.name, m.isExilus]))
 
   it("propagates the base mod's exilus flag to its Primed variant", () => {
-    const { mods } = mergeMods([base, primed], [], new Map(), wikiExilus)
+    const { mods } = mergeMods({
+      upgrades: [base, primed],
+      wiki: { exilus: wikiExilus },
+    })
     const ex = byName(mods)
     expect(ex.get("Steady Hands")).toBe(true)
     expect(ex.get("Primed Steady Hands")).toBe(true)
@@ -41,12 +44,7 @@ describe("mergeMods exilus inheritance", () => {
   it("does not invent exilus when the base isn't exilus", () => {
     const plainBase = upgrade("/Mods/Fury", "Fury")
     const plainPrimed = upgrade("/Mods/PrimedFury", "Primed Fury")
-    const { mods } = mergeMods(
-      [plainBase, plainPrimed],
-      [],
-      new Map(),
-      new Map(),
-    )
+    const { mods } = mergeMods({ upgrades: [plainBase, plainPrimed] })
     const ex = byName(mods)
     expect(ex.get("Fury")).toBe(false)
     expect(ex.get("Primed Fury")).toBe(false)
@@ -54,12 +52,10 @@ describe("mergeMods exilus inheritance", () => {
 
   it("never clears a flag the variant already carries", () => {
     // Base missing/non-exilus, but the variant itself is flagged — keep it.
-    const { mods } = mergeMods(
-      [base, primed],
-      [],
-      new Map(),
-      new Map([[primed.uniqueName, true]]),
-    )
+    const { mods } = mergeMods({
+      upgrades: [base, primed],
+      wiki: { exilus: new Map([[primed.uniqueName, true]]) },
+    })
     expect(byName(mods).get("Primed Steady Hands")).toBe(true)
   })
 
@@ -67,7 +63,7 @@ describe("mergeMods exilus inheritance", () => {
     // "Umbral Fiber" derives from Steel Fiber, not a mod literally named
     // "Fiber", so name-stripping finds no base and inherits nothing.
     const umbral = upgrade("/Mods/UmbralFiber", "Umbral Fiber")
-    const { mods } = mergeMods([umbral], [], new Map(), new Map())
+    const { mods } = mergeMods({ upgrades: [umbral] })
     expect(byName(mods).get("Umbral Fiber")).toBe(false)
   })
 })

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import { decodeBuild, encodeBuild } from "./build-codec"
 import { getModsForItem } from "./mods"
-import type { BuildState, Mod, ModSlot, PlacedMod } from "./types"
+import type { BuildState, Mod, ModSlot, BuildStateMod } from "./types"
 
 function modFixture(overrides: Partial<Mod>): Mod {
   return {
@@ -18,7 +18,7 @@ function modFixture(overrides: Partial<Mod>): Mod {
   }
 }
 
-function placedModFixture(overrides: Partial<PlacedMod>): PlacedMod {
+function placedModFixture(overrides: Partial<BuildStateMod>): BuildStateMod {
   return {
     uniqueName: "/Lotus/Mods/Stances/BleedingWillow",
     name: "Bleeding Willow",
@@ -96,9 +96,7 @@ describe("build-codec stance slot round-trip", () => {
 // shapes the build pipeline emits — verified against the per-item JSON in
 // apps/web/public/data/items/. Stance compat lives in `modPools` directly
 // ("Polearms" is added to Orthos's pool, "Swords" to Exalted Blade's), so
-// pool membership alone gates the mod. `meleeClass` is only consulted as
-// an extra narrowing step when a wider pool overlaps multiple stance
-// classes (rare under the modern emitter).
+// pool membership alone gates the mod.
 describe("getModsForItem stance filtering", () => {
   const polearmStance = modFixture({
     uniqueName: "/Lotus/Mods/Stances/BleedingWillow",
@@ -130,31 +128,6 @@ describe("getModsForItem stance filtering", () => {
     expect(result).toContain(polearmStance)
     expect(result).not.toContain(heavyBladeStance)
     expect(result).toContain(meleeMod)
-  })
-
-  it("narrows further by meleeClass when supplied", () => {
-    // Synthetic item with two stance pools — meleeClass forces the
-    // polearm-only pick. Real items don't ship this shape today, but the
-    // refinement is the documented contract for future multi-stance pools
-    // (e.g. a wide curated override).
-    const widePool = ["Melee", "Polearms", "Heavy Blade"]
-    const result = getModsForItem(
-      { modPools: widePool, meleeClass: "Polearms" },
-      mods,
-    )
-    expect(result).toContain(polearmStance)
-    expect(result).not.toContain(heavyBladeStance)
-    expect(result).toContain(meleeMod)
-  })
-
-  it("matches meleeClass case-insensitively", () => {
-    const widePool = ["Melee", "Polearms", "Heavy Blade"]
-    const result = getModsForItem(
-      { modPools: widePool, meleeClass: "polearms" },
-      mods,
-    )
-    expect(result).toContain(polearmStance)
-    expect(result).not.toContain(heavyBladeStance)
   })
 
   it("admits sword stances on Exalted Blade (Swords is in its pool)", () => {

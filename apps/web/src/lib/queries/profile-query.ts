@@ -1,106 +1,52 @@
+import type { BuildListResponse } from "@arsenyx/shared/api/build-dto"
+import type {
+  Profile,
+  ProfileDirectoryResponse,
+} from "@arsenyx/shared/api/users"
 import { queryOptions } from "@tanstack/react-query"
-import { notFound } from "@tanstack/react-router"
 
-import {
-  type BuildListParams,
-  type BuildListResponse,
-  buildQueryString,
-} from "@/lib/queries/builds-list-query"
-import {
-  directoryQueryString,
-  type DirectoryEnvelope,
-} from "@/lib/queries/directory-query"
-import type { OrgRole, OrgSummary } from "@/lib/queries/org-query"
-import { apiFetch, ApiError, loaderError } from "@/lib/util/api-client"
+import { apiCall } from "@/lib/util/api-client"
+import { directoryQueryString } from "@/lib/util/directory-search"
 
-export type ProfileBadges = {
-  verified: boolean
-  communityLeader: boolean
-  moderator: boolean
-  admin: boolean
+import { buildKeys } from "./build-query"
+import { type BuildListParams, listQueryString } from "./builds-list-query"
+
+/** Usernames are case-insensitive, so keys lowercase them: `/u/Foo` and
+ *  `/u/foo` share one cache entry. */
+const profileKeys = {
+  directory: (page: number, q?: string) =>
+    ["profiles", "directory", page, q ?? ""] as const,
+  detail: (username: string) => ["profile", username.toLowerCase()] as const,
 }
 
-export type ProfileStats = {
-  buildCount: number
-  totalLikes: number
-  totalBookmarks: number
-  totalViews: number
-}
-
-export type ProfileOrg = Omit<OrgSummary, "description"> & { role: OrgRole }
-
-export type Profile = {
-  id: string
-  name: string | null
-  username: string | null
-  displayUsername: string | null
-  image: string | null
-  bio: string | null
-  joinedAt: string
-  badges: ProfileBadges
-  stats: ProfileStats
-  orgs: ProfileOrg[]
-}
-
-export type ProfileDirectoryItem = {
-  id: string
-  name: string | null
-  username: string | null
-  displayUsername: string | null
-  image: string | null
-  bio: string | null
-  joinedAt: string
-  badges: ProfileBadges
-  buildCount: number
-}
-
-export type ProfileDirectoryResponse = DirectoryEnvelope & {
-  users: ProfileDirectoryItem[]
-}
+const userPath = (username: string) => `/users/${encodeURIComponent(username)}`
 
 export const profilesDirectoryQuery = (page: number, q?: string) =>
   queryOptions({
-    queryKey: ["profiles", "directory", page, q ?? ""],
-    queryFn: async (): Promise<ProfileDirectoryResponse> => {
-      try {
-        return await apiFetch<ProfileDirectoryResponse>(
-          `/users${directoryQueryString(page, q)}`,
-        )
-      } catch (err) {
-        throw loaderError(err, "failed to load profiles")
-      }
-    },
+    queryKey: profileKeys.directory(page, q),
+    queryFn: () =>
+      apiCall<ProfileDirectoryResponse>(
+        `/users${directoryQueryString(page, q)}`,
+        { codes: { default: "failed to load profiles" } },
+      ),
   })
 
 export const profileQuery = (username: string) =>
   queryOptions({
-    queryKey: ["profile", username.toLowerCase()],
-    queryFn: async (): Promise<Profile> => {
-      try {
-        return await apiFetch<Profile>(`/users/${encodeURIComponent(username)}`)
-      } catch (err) {
-        if (err instanceof ApiError && err.status === 404) throw notFound()
-        throw loaderError(err, "failed to load profile")
-      }
-    },
+    queryKey: profileKeys.detail(username),
+    queryFn: () =>
+      apiCall<Profile>(userPath(username), {
+        notFoundOn404: true,
+        codes: { default: "failed to load profile" },
+      }),
   })
 
 export const profileBuildsQuery = (username: string, params: BuildListParams) =>
   queryOptions({
-    queryKey: ["builds", "profile", username.toLowerCase(), params],
-    queryFn: async (): Promise<BuildListResponse> => {
-      const qs = buildQueryString(params, "newest", [
-        "item",
-        "limit",
-        "hasGuide",
-        "hasShards",
-      ])
-      try {
-        return await apiFetch<BuildListResponse>(
-          `/users/${encodeURIComponent(username)}/builds${qs}`,
-        )
-      } catch (err) {
-        throw loaderError(err, "failed to load builds")
-      }
-    },
+    queryKey: buildKeys.profileList(username, params),
+    queryFn: () =>
+      apiCall<BuildListResponse>(
+        `${userPath(username)}/builds${listQueryString(params, "user")}`,
+        { codes: { default: "failed to load builds" } },
+      ),
   })

@@ -8,19 +8,48 @@
 // and get default head meta, which the client replaces with the same values
 // (see isBrowserNavigation).
 //
-// Titles/canonicals/og tags here mirror the client-side route heads
-// (src/routes/*.tsx `head` options + src/lib/seo.ts) — keep them in sync. Build
-// title/og:type are single-sourced via @arsenyx/shared/seo/build-meta so they
-// can't drift. Build og:description intentionally does NOT mirror the client:
-// this edge layer enriches it with live like/view stats for unfurls.
-//
-// Build-page title/author/og:type are derived from the SAME shared module the
-// client route uses (@arsenyx/shared/seo/build-meta) so the two head layers
-// can't drift. wrangler bundles this import inline (the api Worker imports the
-// shared package the same way), so the file stays free of heavy/runtime deps.
+// Values must equal the client route heads; both derive from
+// @arsenyx/shared/seo and index.test.ts pins the parity. Public-build
+// og:description is the one deliberate difference: it appends live like/view
+// stats for unfurls.
 
-import { buildMetaTitle, buildOgType } from "@arsenyx/shared/seo/build-meta"
-import { itemMetaDescription } from "@arsenyx/shared/seo/item-meta"
+import type { BuildMetaResponse } from "@arsenyx/shared/api/build-dto"
+import {
+  browseMeta,
+  coerceBrowseCategory,
+} from "@arsenyx/shared/seo/browse-meta"
+import {
+  buildMetaDescription,
+  buildMetaTitle,
+  buildOgType,
+  resolveBuildImage,
+} from "@arsenyx/shared/seo/build-meta"
+import {
+  itemMetaDescription,
+  itemMetaTitle,
+} from "@arsenyx/shared/seo/item-meta"
+import {
+  absoluteImage,
+  API_ORIGIN,
+  DEFAULT_DESCRIPTION,
+  DEFAULT_TITLE,
+  extractBuildSlug,
+  getItemUrl,
+  isEmbedParam,
+  isPagePath,
+  MAX_SLUG_LENGTH,
+  NOINDEX_PATTERNS,
+  PAGE_META,
+  pageTitle,
+  SITE_NAME,
+  SITE_URL,
+  type PageMeta,
+} from "@arsenyx/shared/seo/site"
+import {
+  CATALOG_FILES,
+  catalogUrl,
+  itemDetailUrl,
+} from "@arsenyx/shared/warframe/catalog-files"
 import {
   getCategoryLabel,
   isValidCategory,
@@ -35,24 +64,9 @@ interface Env {
   CF_VERSION_METADATA?: { id: string }
 }
 
-// Minimal shape of the Workers ExecutionContext — we only use waitUntil, to let
-// a cache write finish after the response has been returned. (The full
-// @cloudflare types aren't a dep of apps/web; this file is bundled by wrangler.)
 interface ExecutionCtx {
   waitUntil(promise: Promise<unknown>): void
 }
-
-const API_BASE = "https://api.arsenyx.com"
-const SITE_URL = "https://www.arsenyx.com"
-const SITE_NAME = "Arsenyx"
-const DEFAULT_DESCRIPTION =
-  "Open-source Warframe build planner. Fast, keyboard-first, and community-driven."
-
-const RESERVED_BUILD_SUBPATHS = new Set(["mine", "bookmarks", "new"])
-// Real slugs are nanoid(10) from a 56-char alphabet; 64 is a generous
-// upper bound that still cheaply rejects amplification attempts that try to
-// pin Postgres findUnique with megabyte-sized strings.
-const MAX_SLUG_LENGTH = 64
 
 // Per-colo Cache API TTL for fully-rewritten PUBLIC build-page HTML. One hot
 // slug dominates traffic, so caching the rendered shell lets repeat hits in a
@@ -70,81 +84,6 @@ const BUILD_HTML_TTL = 300
 // apps/api/src/routes/builds.ts), so worst-case meta staleness is
 // ~BUILD_HTML_TTL + BUILD_META_TTL + DETAIL_TTL (~16 min).
 const BUILD_META_TTL = 60
-
-// Sync with the `head` options in src/routes/*.tsx.
-const STATIC_META: Record<string, { title: string; description?: string }> = {
-  "/": { title: `${SITE_NAME} — Warframe Build Planner` },
-  "/builds": {
-    title: `Community Builds — ${SITE_NAME}`,
-    description:
-      "Browse community-made Warframe builds — filter by frame, weapon, and category, and share your own.",
-  },
-  "/orgs": {
-    title: `Organizations — ${SITE_NAME}`,
-    description:
-      "Warframe clans and communities publishing builds together on Arsenyx.",
-  },
-  "/users": {
-    title: `Profiles — ${SITE_NAME}`,
-    description:
-      "Find Warframe build authors on Arsenyx — search profiles by name or username.",
-  },
-  "/about": {
-    title: `About — ${SITE_NAME}`,
-    description:
-      "What Arsenyx is, who builds it, and why it's open source. A fast, community-driven Warframe build planner.",
-  },
-  "/docs": {
-    title: `Docs — ${SITE_NAME}`,
-    description:
-      "Documentation for Arsenyx — embedding builds, the public API, and integrating with the Warframe build planner.",
-  },
-  "/docs/api": {
-    title: `API Reference — ${SITE_NAME}`,
-    description:
-      "Public API reference for Arsenyx — endpoints for builds, items, and embeds.",
-  },
-  "/changelog": {
-    title: `Changelog — ${SITE_NAME}`,
-    description:
-      "What's new on Arsenyx — features, fixes, and improvements to the Warframe build planner.",
-  },
-  "/privacy": { title: `Privacy Policy — ${SITE_NAME}` },
-  "/terms": { title: `Terms of Service — ${SITE_NAME}` },
-}
-
-// Tool/account pages: serve a noindex hint in the initial HTML so crawlers
-// don't have to render JS to learn it. robots.txt blocks most of these too.
-const NOINDEX_PATHS = new Set([
-  "/admin",
-  "/create",
-  "/import",
-  "/bookmarks",
-  "/builds/mine",
-  "/profile",
-])
-
-type BuildSummary = {
-  name: string
-  description: string | null
-  visibility: "PUBLIC" | "PRIVATE" | "UNLISTED"
-  hideAuthor: boolean
-  item: {
-    name: string
-    category: string
-    uniqueName: string
-    imageName: string | null
-  }
-  user: {
-    displayUsername: string | null
-    username: string | null
-    name: string | null
-  }
-  organization: { name: string } | null
-  guide: { summary: string | null } | null
-  likeCount: number
-  viewCount: number
-}
 
 export default {
   async fetch(
@@ -203,24 +142,15 @@ async function handleBuildPage(
   // the whole app once per iframe. embed.html reads the slug from the path
   // (the iframe URL is unchanged), so we just serve its body for this URL.
   //
-  // Static Assets' html_handling rewrites `/embed.html` → `/embed` with a
-  // redirect (same as `/index.html` → `/`). We must NOT pass that redirect
-  // back to the iframe — it would bounce to `/embed` and hit the SPA
-  // fallback. So request the clean `/embed` path (served 200) and, defensively,
-  // follow a redirect once if the binding still returns one.
-  if (isEmbedRequest(url)) {
-    let res = await env.ASSETS.fetch(
-      new Request(new URL("/embed", url).toString(), request),
+  // html_handling (pinned in wrangler.toml) redirects `/embed.html` → `/embed`;
+  // passing that redirect to the iframe would bounce it to the SPA fallback,
+  // so ask for the clean `/embed` path, which is served 200.
+  if (isEmbedParam(url.searchParams.get("embed"))) {
+    return allowPartnerFraming(
+      await env.ASSETS.fetch(
+        new Request(new URL("/embed", url).toString(), request),
+      ),
     )
-    if (res.status >= 300 && res.status < 400) {
-      const loc = res.headers.get("location")
-      if (loc) {
-        res = await env.ASSETS.fetch(
-          new Request(new URL(loc, url).toString(), request),
-        )
-      }
-    }
-    return allowPartnerFraming(res)
   }
 
   // Per-colo edge cache for the rendered PUBLIC build shell. The injected meta
@@ -292,9 +222,6 @@ async function handleBuildPage(
     return rewriteMeta(shellRes, { noindex: true })
   }
 
-  // Re-resolve the OG image by the item's stable uniqueName (the denormalized
-  // build imageName rots across image-scheme changes — see sync-images.ts),
-  // awaiting the map kicked off above; falls back to the stored value on a miss.
   const res = rewriteMeta(
     shellRes,
     buildMeta(build, slug, await imageMapPromise),
@@ -345,33 +272,18 @@ export function isBrowserNavigation(request: Request): boolean {
   return !BOT_UA.test(request.headers.get("user-agent") ?? "")
 }
 
-function extractBuildSlug(pathname: string): string | null {
-  if (!pathname.startsWith("/builds/")) return null
-  const rest = pathname.slice("/builds/".length)
-  const slug = rest.split("/")[0]
-  if (!slug || slug.length > MAX_SLUG_LENGTH) return null
-  if (RESERVED_BUILD_SUBPATHS.has(slug)) return null
-  return slug
-}
-
-// Mirrors the SPA's `validateSearch` truthiness for `embed` (routes/
-// builds.$slug.tsx) so the Worker and client agree on what counts as an embed.
-function isEmbedRequest(url: URL): boolean {
-  const embed = url.searchParams.get("embed")
-  return embed === "1" || embed === "true"
-}
-
 async function fetchBuild(
   slug: string,
-): Promise<BuildSummary | "not-found" | null> {
+): Promise<BuildMetaResponse | "not-found" | null> {
   try {
-    // `embed=1` tells the API to return a slim payload and skip
-    // maybeIncrementView — otherwise every page load would bump viewCount
-    // (the Worker never forwards the vw_<slug> cookie).
-    // The 2.5s abort keeps a slow API from blocking the page's TTFB — on
-    // timeout we fall back to the generic shell.
+    // The slim payload, and no view count (the Worker never forwards the
+    // vw_<slug> cookie, so every unfurl would count). The 2.5s abort keeps a
+    // slow API from blocking TTFB; on timeout, default meta.
+    // shortcut: still the legacy `?embed=1` name, which old and new APIs both
+    // read, so the two Workers deploy in either order. Switch to `?meta=1` in a
+    // later release, then drop LEGACY_META_QUERY from _build-snapshot.ts.
     const res = await fetch(
-      `${API_BASE}/builds/${encodeURIComponent(slug)}?embed=1`,
+      `${API_ORIGIN}/builds/${encodeURIComponent(slug)}?embed=1`,
       {
         headers: { accept: "application/json" },
         signal: AbortSignal.timeout(2500),
@@ -392,39 +304,26 @@ async function fetchBuild(
     )
     if (res.status === 404) return "not-found"
     if (!res.ok) return null
-    return (await res.json()) as BuildSummary
+    return (await res.json()) as BuildMetaResponse
   } catch {
     return null
   }
 }
 
-function buildMeta(
-  b: BuildSummary,
+// Head meta for a PUBLIC build. Exported for the parity test.
+export function buildMeta(
+  b: BuildMetaResponse,
   slug: string,
   imageMap: Record<string, string> | null,
 ): Meta {
-  // Title/author/og:type come from the shared module so this layer and the
-  // client route (builds.$slug.tsx) can't disagree. This Worker only enriches
-  // PUBLIC builds (handleBuildPage returns early otherwise), so og:type is
-  // always "article" here, but route it through buildOgType for one source.
-  const title = collapseWs(`${buildMetaTitle(b)} — ${SITE_NAME}`)
-
-  const summary = collapseWs(b.guide?.summary ?? b.description ?? "")
+  const description = buildMetaDescription(b)
   const stats = `${formatCount(b.likeCount)} likes · ${formatCount(b.viewCount)} views`
-  const category = prettyCategory(b.item.category)
-
-  const description = summary
-    ? clamp(`${summary} · ${stats}`, 280)
-    : `${b.item.name} (${category}) build on Arsenyx · ${stats}`
-
-  const resolvedImage =
-    (imageMap && b.item.uniqueName ? imageMap[b.item.uniqueName] : null) ??
-    b.item.imageName
   return {
-    title,
+    title: pageTitle(buildMetaTitle(b)),
     description,
+    ogDescription: `${description} · ${stats}`,
     canonical: `${SITE_URL}/builds/${slug}`,
-    image: imageUrl(resolvedImage),
+    image: absoluteImage(resolveBuildImage(b, imageMap)),
     ogType: buildOgType(b.visibility),
   }
 }
@@ -470,10 +369,10 @@ async function handleItemPage(
   const description = itemMetaDescription(item, label)
 
   return rewriteMeta(shellRes, {
-    title: `${item.name} Builds — ${SITE_NAME}`,
+    title: pageTitle(itemMetaTitle(item.name)),
     description,
-    canonical: `${SITE_URL}/browse/${category}/${slug}`,
-    image: imageUrl(item.imageName ?? null),
+    canonical: `${SITE_URL}${getItemUrl(category, slug)}`,
+    image: absoluteImage(item.imageName),
   })
 }
 
@@ -492,11 +391,13 @@ async function fetchItem(
 > {
   try {
     const req = new Request(
-      new URL(`/data/items/${category}/${slug}.json`, base).toString(),
+      new URL(itemDetailUrl(category, slug), base).toString(),
     )
     const res = await env.ASSETS.fetch(req)
+    // A 5xx is an asset-server blip, not a dead link: default meta, no 404.
+    if (!res.ok) return res.status === 404 ? "not-found" : null
     const type = res.headers.get("content-type") ?? ""
-    if (!res.ok || !type.includes("json")) return "not-found"
+    if (!type.includes("json")) return "not-found"
     return (await res.json()) as {
       name: string
       description?: string
@@ -520,50 +421,48 @@ async function handleGenericPage(
   const contentType = shellRes.headers.get("content-type") ?? ""
   if (!shellRes.ok || !contentType.includes("text/html")) return shellRes
 
+  return rewriteMeta(shellRes, genericPageMeta(url))
+}
+
+// Head meta for every page that isn't a build or item detail. Pure, so the
+// parity test can compare it with the client route heads. Exported for tests.
+export function genericPageMeta(url: URL): Meta {
   const path = stripTrailingSlash(url.pathname)
 
-  if (
-    NOINDEX_PATHS.has(path) ||
-    path.startsWith("/auth/") ||
-    /^\/org\/[^/]+\/settings$/.test(path)
-  ) {
-    return rewriteMeta(shellRes, { noindex: true })
-  }
-
   if (path === "/browse") {
-    // Mirror the SPA's validateSearch coercion (routes/browse.tsx): "all" is a
-    // valid pseudo-category; any other unknown value collapses to "warframes".
-    // Without matching it here the client canonical (?category=warframes) and
-    // the edge canonical (bare /browse) disagree for junk category values.
-    const raw = url.searchParams.get("category")
-    const category =
-      raw === "all" || (raw && isValidCategory(raw)) ? raw : "warframes"
-    const label = category === "all" ? "All Items" : getCategoryLabel(category)
-    return rewriteMeta(shellRes, {
-      title: `Browse ${label} — ${SITE_NAME}`,
-      // Filtered/sorted/search variants collapse onto the category canonical.
-      canonical: `${SITE_URL}/browse?category=${category}`,
-    })
+    // Same coercion as the SPA's validateSearch (routes/_app/browse.tsx), so
+    // the client and edge canonicals agree for junk category values.
+    const m = browseMeta(coerceBrowseCategory(url.searchParams.get("category")))
+    return {
+      title: pageTitle(m.title),
+      description: m.description,
+      canonical: `${SITE_URL}${m.canonicalPath}`,
+    }
   }
 
-  const staticMeta = STATIC_META[path]
-  if (staticMeta) {
-    return rewriteMeta(shellRes, {
-      title: staticMeta.title,
-      description: staticMeta.description,
-      canonical: `${SITE_URL}${path === "/" ? "/" : path}`,
-    })
-  }
+  if (isPagePath(path)) return staticMeta(PAGE_META[path], path)
+
+  const pattern = NOINDEX_PATTERNS.find((p) => p.pattern.test(path))
+  if (pattern) return staticMeta(pattern.meta, path)
 
   // Dynamic pages we can't cheaply resolve at the edge (profiles, orgs):
   // self-canonical with the query stripped; the client route head fills in
   // the real title for rendering crawlers.
   if (/^\/(profile|org)\/[^/]+$/.test(path)) {
-    return rewriteMeta(shellRes, { canonical: `${SITE_URL}${path}` })
+    return { canonical: `${SITE_URL}${path}` }
   }
 
   // Unknown SPA route: default meta so the raw HTML still carries a title.
-  return rewriteMeta(shellRes, {})
+  return {}
+}
+
+// Mirrors the client's pageSeo(): self-canonical unless noindexed.
+function staticMeta(m: PageMeta, path: string): Meta {
+  return {
+    title: pageTitle(m.title),
+    description: m.description,
+    ...(m.noindex ? { noindex: true } : { canonical: `${SITE_URL}${path}` }),
+  }
 }
 
 function stripTrailingSlash(pathname: string): string {
@@ -591,10 +490,7 @@ export function buildPageCacheKeyUrl(
   return `${url.origin}${url.pathname}?__v=${encodeURIComponent(version ?? "dev")}`
 }
 
-// Per-colo Cache API handle. `caches.default` is a workerd global; we cast it
-// the same way we cast HTMLRewriter rather than pulling in the full CF types.
-// Returns null if absent (e.g. a non-workerd test runtime) so callers fall back
-// to the uncached path.
+// Null outside workerd (e.g. the vitest runtime): callers skip the cache.
 function edgeCache(): EdgeCache | null {
   const c = (globalThis as { caches?: { default?: EdgeCache } }).caches
   return c?.default ?? null
@@ -625,23 +521,12 @@ function cacheStore(
   return out
 }
 
-// Compact `uniqueName → current imageName` map emitted by
-// scripts/build-items-index.ts and served from Static Assets. Fetched through
-// the ASSETS binding only on the build-page path.
-// Memoized for the isolate's lifetime. The map is ~290 KB and `buildMeta` reads
-// exactly ONE key out of it, so parsing it per cache-miss was the largest pure-
-// CPU cost on the build-page path (JSON.parse has no I/O wait to hide behind).
-// An isolate serves many requests, so this turns N parses into 1.
-//
-// Staleness is a non-issue: the map is emitted at build time by
-// scripts/build-items-index.ts and a deploy starts fresh isolates, so a
-// regenerated map can never be older than the deploy that shipped it.
-//
-// We memoize the resolved VALUE, not the promise: a shared pending promise would
-// have one request await I/O owned by another, which Workers can cancel when
-// that request ends (leaving the waiter hung). Concurrent cold misses each do
-// their own cheap ASSETS fetch instead. A failed load (null) isn't cached, so
-// one transient blip doesn't pin missing OG images for the isolate's life.
+// `uniqueName → imageName` map (~290 KB), memoized per isolate: buildMeta reads
+// one key, and re-parsing it per cache miss was the build path's largest CPU
+// cost. A deploy starts fresh isolates, so it's never staler than the deploy.
+// The VALUE is memoized, not the promise: awaiting another request's pending
+// I/O can hang when Workers cancels it with that request. Failures (null) are
+// not cached.
 let imageMapCache: Record<string, string> | null = null
 
 async function fetchImageMap(
@@ -654,8 +539,7 @@ async function fetchImageMap(
   return map
 }
 
-// Never rejects — resolves to null on any failure, which is why fetchImageMap
-// can chain with a bare .then and callers can leave it unawaited.
+// Never rejects, so handleBuildPage may leave it unawaited on early returns.
 async function loadImageMap(
   env: Env,
   base: URL,
@@ -664,34 +548,12 @@ async function loadImageMap(
     // The ASSETS binding is an in-isolate service binding; it never consults
     // Cloudflare's edge cache, so `cf: { cacheTtl, ... }` would be silently
     // ignored here (those directives only apply to global `fetch()`).
-    const req = new Request(new URL("/data/image-map.json", base).toString())
+    const req = new Request(
+      new URL(catalogUrl(CATALOG_FILES.imageMap), base).toString(),
+    )
     const res = await env.ASSETS.fetch(req)
     if (!res.ok) return null
     return (await res.json()) as Record<string, string>
-  } catch {
-    return null
-  }
-}
-
-// Collapse all whitespace (including embedded newlines / tabs) to single
-// spaces. Authored build names and guide summaries can contain literal
-// newlines; some unfurl scrapers split on those when reading a `content="…"`
-// attribute, mangling the preview.
-function collapseWs(s: string): string {
-  return s.replace(/\s+/g, " ").trim()
-}
-
-function imageUrl(imageName: string | null): string | null {
-  if (!imageName) return null
-  // Newer catalog data ships absolute `https://img.arsenyx.com/...` URLs
-  // (see scripts/sync-images.ts). Pass those through unchanged. Legacy
-  // saved builds may still carry a bare filename — fall back to our own
-  // CDN root so the OG card resolves to something hosted by us instead
-  // of the upstream CDN we no longer use.
-  if (/^https?:\/\//i.test(imageName)) return imageName
-  const clean = imageName.replace(/^\/+/, "")
-  try {
-    return new URL(clean, "https://img.arsenyx.com/").toString()
   } catch {
     return null
   }
@@ -704,53 +566,30 @@ function formatCount(n: number): string {
   return String(n)
 }
 
-function prettyCategory(c: string): string {
-  if (!c) return ""
-  return c.charAt(0).toUpperCase() + c.slice(1).toLowerCase()
-}
-
-function clamp(s: string, max: number): string {
-  // Iterate by code point so we never split a UTF-16 surrogate pair
-  // (emoji, supplementary-plane CJK) and leave a lone surrogate before the
-  // ellipsis — some unfurl clients render that as U+FFFD.
-  const chars = Array.from(s)
-  if (chars.length <= max) return s
-  return `${chars
-    .slice(0, max - 1)
-    .join("")
-    .trimEnd()}…`
-}
-
-type Meta = {
+export type Meta = {
   title?: string
   description?: string
+  /** Defaults to `description`. */
+  ogDescription?: string
   canonical?: string
-  image?: string | null
+  image?: string
   ogType?: string
   noindex?: boolean
 }
 
-// index.html ships with NO static <title>/<meta description> — this is the
-// single server-side source of them, so it always injects both (falling back
-// to the site defaults). Non-JS crawlers and unfurl bots read ONLY this
-// server-injected set. Client-side, React/<HeadContent /> renders its own
-// copies on hydration and navigation; those values are kept in step with this
-// Worker (see src/lib/seo.ts), except og:description, which this layer enriches
-// with live like/view stats. A JS-rendering crawler therefore sees both sets —
-// they must agree (see the og:type note in seo.ts) since duplicate-but-
-// conflicting tags are resolved unpredictably.
+// index.html has no static <title>/<meta description>, so this always injects
+// both (site defaults when `meta` has none). Non-JS crawlers read only these.
 function rewriteMeta(res: Response, meta: Meta): Response {
-  const title = escapeAttr(
-    meta.title ?? `${SITE_NAME} — Warframe Build Planner`,
-  )
+  const title = escapeAttr(meta.title ?? DEFAULT_TITLE)
   const desc = escapeAttr(meta.description ?? DEFAULT_DESCRIPTION)
+  const ogDesc = meta.ogDescription ? escapeAttr(meta.ogDescription) : desc
   const parts: string[] = [
     `<title>${title}</title>`,
     `<meta name="description" content="${desc}" />`,
     `<meta property="og:site_name" content="${SITE_NAME}" />`,
     `<meta property="og:type" content="${meta.ogType ?? "website"}" />`,
     `<meta property="og:title" content="${title}" />`,
-    `<meta property="og:description" content="${desc}" />`,
+    `<meta property="og:description" content="${ogDesc}" />`,
     `<meta name="twitter:card" content="summary" />`,
     `<meta name="twitter:title" content="${title}" />`,
     `<meta name="twitter:description" content="${desc}" />`,
@@ -769,9 +608,7 @@ function rewriteMeta(res: Response, meta: Meta): Response {
     )
   }
 
-  // `HTMLRewriter` is a workerd global; we don't pull in the full types here
-  // to keep this file dependency-free.
-  const Rewriter = (globalThis as { HTMLRewriter: HTMLRewriterCtor })
+  const Rewriter = (globalThis as unknown as { HTMLRewriter: HTMLRewriterCtor })
     .HTMLRewriter
   return new Rewriter()
     .on("head", {
@@ -790,13 +627,11 @@ function escapeAttr(s: string): string {
     .replace(/>/g, "&gt;")
 }
 
-// Minimal local typings for the HTMLRewriter we use. The full @cloudflare
-// types package isn't a dependency of apps/web — this file is bundled by
-// wrangler at deploy time, not by Vite.
+// Local typings for the workerd globals used here; @cloudflare/workers-types
+// isn't a dependency of apps/web.
 interface HTMLRewriterCtor {
   new (): HTMLRewriterInst
 }
-// Subset of the workerd Cache API surface we touch (caches.default).
 interface EdgeCache {
   match(request: Request): Promise<Response | undefined>
   put(request: Request, response: Response): Promise<void>
@@ -809,7 +644,5 @@ interface ElementHandlers {
   element?(element: RewriterElement): void
 }
 interface RewriterElement {
-  setInnerContent(content: string, opts?: { html?: boolean }): RewriterElement
-  setAttribute(name: string, value: string): RewriterElement
   append(content: string, opts?: { html?: boolean }): RewriterElement
 }
