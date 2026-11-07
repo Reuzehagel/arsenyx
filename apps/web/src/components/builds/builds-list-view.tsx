@@ -199,7 +199,12 @@ function Results({
         <BuildCollection
           builds={data.builds}
           aria-busy={isFetching}
-          className={cn("transition-opacity", isFetching && "opacity-60")}
+          className={cn(
+            "transition-opacity duration-150",
+            // Dim only once a fetch outlasts 150ms, so fast pages do not flash;
+            // restoring is immediate.
+            isFetching && "opacity-60 delay-150",
+          )}
         />
       )}
 

@@ -16,7 +16,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "fix",
         description:
-          "Build cards hold up better with long names and big numbers: long build, author and org names end in … with the full name on hover, like and view counts are shortened (1.3K, 12M), removed items show a placeholder instead of a broken image, and stats stay on one line.",
+          "Build cards hold up better with long names and big numbers: long build, author and org names end in … with the full name on hover, like and view counts are shortened (1.3K, 12M), removed items show a placeholder instead of a broken image, and stats stay on one line. Cards also give a little press feedback, and the list no longer flickers when a page loads quickly.",
       },
       {
         type: "fix",

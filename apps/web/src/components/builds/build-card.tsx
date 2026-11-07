@@ -182,7 +182,7 @@ export function BuildCard({ build }: { build: BuildListItemResponse }) {
     <Link
       to="/builds/$slug"
       params={{ slug: build.slug }}
-      className="bg-card hover:bg-card/80 block overflow-hidden rounded-lg border transition-colors"
+      className="bg-card hover:bg-card/80 ease-snappy block overflow-hidden rounded-lg border transition-[background-color,scale] duration-150 active:scale-[0.98] motion-reduce:active:scale-100"
     >
       <div className="bg-muted/20 relative aspect-video">
         <ItemImage
@@ -205,7 +205,7 @@ export function BuildCard({ build }: { build: BuildListItemResponse }) {
                 <span className="shrink-0 whitespace-nowrap">{timeAgo}</span>
               }
             />
-            <TooltipContent>
+            <TooltipContent className="data-instant:animate-none!">
               Updated {formatAbsoluteTime(build.updatedAt)}
             </TooltipContent>
           </Tooltip>
@@ -236,7 +236,7 @@ export function BuildRow({ build }: { build: BuildListItemResponse }) {
     <Link
       to="/builds/$slug"
       params={{ slug: build.slug }}
-      className="bg-card hover:bg-card/80 flex items-center gap-3 overflow-hidden rounded-lg border p-2 transition-colors sm:gap-4 sm:p-3"
+      className="bg-card hover:bg-card/80 ease-snappy flex items-center gap-3 overflow-hidden rounded-lg border p-2 transition-[background-color,scale] duration-150 active:scale-[0.99] motion-reduce:active:scale-100 sm:gap-4 sm:p-3"
     >
       <div className="bg-muted/20 relative size-14 shrink-0 overflow-hidden rounded-md sm:size-16">
         <ItemImage
@@ -283,7 +283,7 @@ export function BuildRow({ build }: { build: BuildListItemResponse }) {
               </span>
             }
           />
-          <TooltipContent>
+          <TooltipContent className="data-instant:animate-none!">
             Updated {formatAbsoluteTime(build.updatedAt)}
           </TooltipContent>
         </Tooltip>
