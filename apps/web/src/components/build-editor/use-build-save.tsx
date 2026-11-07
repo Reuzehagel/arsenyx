@@ -224,8 +224,7 @@ export function useBuildSave({
       }
       navigate({ to: "/builds/$slug", params: { slug } })
     } catch (err) {
-      // Re-enable the Save button and surface the failure as a toast. The
-      // draft is untouched (it's only cleared on success), so nothing's lost.
+      // The draft is untouched (it's only cleared on success), so nothing's lost.
       setSaveStatus("idle")
       const { message, retry, signIn } = saveErrorText(
         err,

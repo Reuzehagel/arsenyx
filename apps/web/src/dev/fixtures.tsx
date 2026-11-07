@@ -1,4 +1,4 @@
-// DEV-ONLY stress fixtures (break-ui skill). `?data=worst|empty|one|many`
+// DEV-ONLY stress fixtures. `?data=worst|empty|one|many`
 // swaps a list or profile response at the data boundary. Every export is
 // picked on import.meta.env.DEV at definition and all data is built lazily,
 // so a prod build gets pass-throughs and tree-shakes the fixtures away.
@@ -127,10 +127,10 @@ const user = (displayUsername: string | null, username: string | null) => ({
   image: null,
 })
 
-const worstBuilds = (): BuildListItemResponse[] => [
-  // 120 chars: the API's MAX_NAME (apps/api/src/routes/builds.ts:86).
+export const worstBuilds = (): BuildListItemResponse[] => [
+  // BUILD_NAME_MAX long (fixtures.test.ts pins every limit-length string).
   build(1, {
-    name: "Wisp Prime — Steel Path Survival / Mirror Defense / Netracells (no Helminth, budget, works without Archon Shards!!) v3",
+    name: "Wisp Prime — Steel Path Survival / Mirror Defense / Netracells (no Helminth, budget, works without Archon Shards!!) v3.1",
     likeCount: 1284,
     viewCount: 1_000_000,
     formaCount: 47,
@@ -154,7 +154,7 @@ const worstBuilds = (): BuildListItemResponse[] => [
     },
     user: user("Christopher_Montgomery_the_Third", "chris-montgomery-iii"),
   }),
-  // One-letter name, named after the item, no forma, zero everything.
+  // Two-letter author, build named after its item, no forma, zero everything.
   build(3, {
     name: "Gram Prime",
     item: ITEMS.gram,
@@ -172,7 +172,7 @@ const worstBuilds = (): BuildListItemResponse[] => [
     formaCount: 8,
     user: user("👩🏽‍💻 Priya", "priya"),
   }),
-  // RTL author + CJK build name, org with hidden author.
+  // RTL org name + CJK build name, author hidden.
   build(5, {
     name: "王秀英的毒伤配置",
     item: ITEMS.wisp,
@@ -193,11 +193,11 @@ const worstBuilds = (): BuildListItemResponse[] => [
     user: user(null, null),
     updatedAt: ago(-5 * 60_000), // client clock behind the server
   }),
-  // 30-char username (USERNAME_MAX, apps/api/src/auth.ts:58), no display name.
+  // USERNAME_MAX-long username, no display name.
   build(7, {
     name: "Konstantin Oberhauser-Wettstein",
     item: ITEMS.bramma,
-    user: user(null, "konstantin.oberhauser-wettst"),
+    user: user(null, "konstantin.oberhauser-wettstei"),
     likeCount: 12,
     viewCount: 4_096,
   }),
@@ -272,7 +272,6 @@ const NO_BADGES = {
   moderator: false,
   admin: false,
 }
-// An avatar URL that 404s.
 const DEAD_AVATAR = "https://img.arsenyx.com/missing-avatar-00000000.webp"
 const BIO_URL =
   "Endo farming & Steel Path guides: https://example.com/arsenyx/guides/steel-path/endurance/survival-netracells?ref=profile-bio-link"
@@ -295,7 +294,7 @@ function profileItem(
   }
 }
 
-const worstProfiles = (): ProfileDirectoryItem[] => [
+export const worstProfiles = (): ProfileDirectoryItem[] => [
   profileItem(1, {
     displayUsername: "Aleksandra Wiśniewska-Kowalczyk-Nowakowska-Zielińs", // 50 = DISPLAY_USERNAME_MAX
     username: "aleksandra.wisniewska-kowalczy", // 30 = USERNAME_MAX
@@ -347,7 +346,7 @@ function orgItem(i: number, over: Partial<OrgDirectoryItem>): OrgDirectoryItem {
   }
 }
 
-const worstOrgs = (): OrgDirectoryItem[] => [
+export const worstOrgs = (): OrgDirectoryItem[] => [
   orgItem(1, {
     name: "Steel Path Endurance Collective!", // 32 = ORG_NAME_MAX
     slug: "steel-path-endurance-collectiv", // 30 = ORG_SLUG_MAX

@@ -7,6 +7,7 @@ export const ORG_SLUG_MAX = 30
 export const ORG_DESCRIPTION_MAX = 200
 
 export const DISPLAY_USERNAME_MAX = 50
+export const USERNAME_MAX = 30
 
 /** Build name; the editor input mirrors it as `maxLength`. */
 export const BUILD_NAME_MAX = 120
