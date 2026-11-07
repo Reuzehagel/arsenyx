@@ -16,6 +16,11 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "fix",
         description:
+          "Long links in build guides now wrap instead of running off the side of the page on phones.",
+      },
+      {
+        type: "fix",
+        description:
           "The build editor is harder to trip up. Enter in an empty mod search no longer places a random mod, the mod Enter will place is outlined, and a search with no results says so (and offers to reset filters). When a mod can't go anywhere you're told instead of nothing happening. Escape on a search result or mid-drag no longer also deselects your slot, scrolling mid-drag drops into the right slot, slots that won't take a dragged mod turn red, and +/- after a drag ranks the mod you dropped. Moving a mod keeps its Alternate only where that's allowed.",
       },
       {

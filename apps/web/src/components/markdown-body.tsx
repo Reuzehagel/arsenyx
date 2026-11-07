@@ -9,6 +9,7 @@ import remarkGfm from "remark-gfm"
 import { GuideRefLink } from "@/components/guide-ref-link"
 import { parseGuideRefHref, type GuideRefResolver } from "@/lib/guide-refs"
 import { proxyImage } from "@/lib/util/image-proxy"
+import { cn } from "@/lib/util/utils"
 import { getVideoEmbed } from "@/lib/util/video-embed"
 import { wikiUrl } from "@/lib/util/warframe-links"
 
@@ -38,8 +39,10 @@ export function MarkdownBody({
     () => ({ ...components, a: makeAnchorRenderer(resolveGuideRef) }),
     [resolveGuideRef],
   )
+  // `wrap-anywhere` lets long unbroken tokens (pasted URLs especially) break
+  // mid-word instead of running off the card on narrow screens.
   return (
-    <div className={className}>
+    <div className={cn("wrap-anywhere", className)}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkBreaks]}
         components={mergedComponents}
