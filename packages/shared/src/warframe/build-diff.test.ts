@@ -262,7 +262,10 @@ describe("diffBuildData", () => {
   })
 
   it("reports independent forma per variant", () => {
-    const before = doc({ formaPolarities: { n0: "madurai" } })
+    const before = doc(
+      { formaPolarities: { n0: "madurai" } },
+      { variantMode: "independent" },
+    )
     const after = doc(
       { formaPolarities: { n0: "naramon" } },
       { variantMode: "independent" },
@@ -275,6 +278,64 @@ describe("diffBuildData", () => {
         scope: "Steel Path",
       },
     ])
+  })
+
+  const twoVariants = (
+    mode: string | undefined,
+    second: Record<string, unknown>,
+  ) => ({
+    ...(mode && { variantMode: mode }),
+    formaPolarities: { n0: "madurai" },
+    variants: [
+      { id: "a", label: "A", formaPolarities: { n0: "madurai" } },
+      { id: "b", label: "B", ...second },
+    ],
+  })
+
+  it("reports a switch to shared and the forma and shards it overwrote", () => {
+    const before = twoVariants("independent", {
+      formaPolarities: { n0: "naramon" },
+      shards: [{ color: "crimson", stat: "x" }],
+    })
+    const after = twoVariants("linked", {
+      formaPolarities: { n0: "madurai" },
+    })
+    expect(diffBuildData(before, after)).toEqual([
+      { op: "modify", label: "Forma & shards", detail: "now shared" },
+      {
+        op: "modify",
+        scope: "B",
+        label: "Archon Shards",
+        detail: "1 of 1 changed",
+      },
+      { op: "modify", scope: "B", label: "Forma", detail: "1 slot changed" },
+    ])
+  })
+
+  it("reports a switch to per variant even when nothing was overwritten", () => {
+    const same = { formaPolarities: { n0: "madurai" } }
+    expect(
+      diffBuildData(
+        twoVariants("linked", same),
+        twoVariants("independent", same),
+      ),
+    ).toEqual([
+      { op: "modify", label: "Forma & shards", detail: "now per variant" },
+    ])
+  })
+
+  it("infers the mode of builds saved before it was stored", () => {
+    const same = { formaPolarities: { n0: "madurai" } }
+    expect(
+      diffBuildData(twoVariants(undefined, same), twoVariants("linked", same)),
+    ).toEqual([{ op: "info", label: "No loadout changes" }])
+    const differ = { formaPolarities: { n0: "naramon" } }
+    expect(
+      diffBuildData(
+        twoVariants(undefined, differ),
+        twoVariants("independent", differ),
+      ),
+    ).toEqual([{ op: "info", label: "No loadout changes" }])
   })
 })
 

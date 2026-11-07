@@ -164,6 +164,10 @@ export function ModSlot({
   // open-state to `selected` lets arrow-key nav implicitly close the popover
   // on the previously-clicked slot without a separate close effect.
   const popoverOpen = pickerOpen && !!selected
+  // Deselecting (Escape, arrow keys, click-outside) closes the picker without
+  // going through onOpenChange, so drop the latch too — otherwise the stale
+  // `true` reopens it the next time this slot is selected.
+  if (!selected && pickerOpen) setPickerOpen(false)
 
   // Rank hotkeys are owned by a single listener in editor-shell (hovered ??
   // selected). This slot only advertises itself as the hovered target while

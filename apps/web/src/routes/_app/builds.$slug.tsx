@@ -116,6 +116,8 @@ function BuildViewer() {
       to: ".",
       params: true,
       search: (s) => (i === 0 ? { ...s, v: undefined } : { ...s, v: i }),
+      // Keep history state (e.g. `buildFrom`, the related-builds back link).
+      state: (prev) => prev,
       replace: true,
     })
 

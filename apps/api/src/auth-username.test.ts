@@ -272,3 +272,34 @@ describe("upstream username plugin (the behaviour the fix works around)", () => 
     ).resolves.toBeTruthy()
   })
 })
+
+// Issue #466: /update-user always hands the hook `name` and `image` keys, set
+// to undefined when the client didn't send them. A display-name-only save must
+// leave the stored avatar alone, not null it.
+describe("user.update hook", () => {
+  const before = (
+    auth.options.databaseHooks as unknown as {
+      user: {
+        update: {
+          before: (
+            d: Record<string, unknown>,
+          ) => Promise<{ data: Record<string, unknown> }>
+        }
+      }
+    }
+  ).user.update.before
+
+  it("keeps an undefined image undefined", async () => {
+    const { data } = await before({
+      name: undefined,
+      image: undefined,
+      displayUsername: "Renamed",
+    })
+    expect(data.image).toBeUndefined()
+  })
+
+  it("still clears an explicit empty image", async () => {
+    const { data } = await before({ image: "" })
+    expect(data.image).toBeNull()
+  })
+})
