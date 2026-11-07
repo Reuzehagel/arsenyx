@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { UserAvatar } from "@/components/user-avatar"
+import { useProfilesFixture } from "@/dev/fixtures"
 import { profilesDirectoryQuery } from "@/lib/queries/profile-query"
 import { pageSeo } from "@/lib/seo"
 import {
@@ -51,8 +52,8 @@ function ProfilesDirectoryPage() {
 
 function Results() {
   const search = Route.useSearch()
-  const { data } = useSuspenseQuery(
-    profilesDirectoryQuery(search.page ?? 1, search.q),
+  const data = useProfilesFixture(
+    useSuspenseQuery(profilesDirectoryQuery(search.page ?? 1, search.q)).data,
   )
   return (
     <DirectoryGrid
@@ -63,12 +64,21 @@ function Results() {
       items={data.users}
       total={data.total}
       limit={data.limit}
-      renderItem={(user) => <ProfileCard user={user} />}
+      renderItem={(user) => (
+        <ProfileCard user={user} showBio={data.users.some((u) => u.bio)} />
+      )}
     />
   )
 }
 
-function ProfileCard({ user }: { user: ProfileDirectoryItem }) {
+function ProfileCard({
+  user,
+  showBio,
+}: {
+  user: ProfileDirectoryItem
+  /** Any card on this page has a bio — reserve the slot on all of them. */
+  showBio: boolean
+}) {
   // The directory only lists users that have a username (the API filters the
   // rest out), so the profile link is always resolvable.
   const handle = user.username ?? ""
@@ -77,26 +87,35 @@ function ProfileCard({ user }: { user: ProfileDirectoryItem }) {
   return (
     <Link
       href={`/profile/${handle}`}
-      className="focus-visible:ring-ring block h-full rounded-xl focus:outline-none focus-visible:ring-2"
+      className="focus-visible:ring-ring ease-snappy block h-full rounded-xl transition-[scale] duration-150 focus:outline-none focus-visible:ring-2 active:scale-[0.98] motion-reduce:active:scale-100"
     >
       <Card className="hover:bg-muted/30 h-full transition-colors">
         <CardHeader className="flex flex-row items-center gap-3">
           <UserAvatar src={user.image} fallback={title} size={10} />
           <div className="flex min-w-0 flex-col gap-1">
-            <CardTitle className="truncate">{title}</CardTitle>
-            <p className="text-muted-foreground truncate text-xs">@{handle}</p>
-            <ProfileBadges badges={user.badges} compact />
+            <CardTitle className="truncate" title={title}>
+              {title}
+            </CardTitle>
+            {/* Badge shares the handle line so every header is the same height. */}
+            <div className="flex min-w-0 items-center gap-2">
+              <p className="text-muted-foreground min-w-0 truncate text-xs">
+                @{handle}
+              </p>
+              <ProfileBadges badges={user.badges} compact />
+            </div>
           </div>
         </CardHeader>
-        {user.bio ? (
+        {/* Fixed two-line slot, filled either way when any card on the page has
+            a bio, so all cards are the same height with no empty gap. */}
+        {showBio ? (
           <CardContent>
-            <p className="text-muted-foreground line-clamp-3 text-sm">
-              {user.bio}
+            <p
+              className={`line-clamp-2 min-h-10 text-sm wrap-anywhere ${user.bio ? "text-muted-foreground" : "text-muted-foreground/60 italic"}`}
+            >
+              {user.bio ?? "No bio yet."}
             </p>
           </CardContent>
         ) : null}
-        {/* mt-auto pins the stats row to the card bottom so rows align across
-            cards with and without a bio. */}
         <CardFooter className="text-muted-foreground mt-auto justify-between text-xs">
           <span>
             <span className="text-foreground font-semibold tabular-nums">

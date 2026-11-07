@@ -1,4 +1,5 @@
 import type { BuildVisibility } from "@arsenyx/shared/api/build-dto"
+import { BUILD_NAME_MAX } from "@arsenyx/shared/api/limits"
 import { getCategoryLabel } from "@arsenyx/shared/warframe/categories"
 import { hasModCapacity } from "@arsenyx/shared/warframe/slot-layout"
 import type { BrowseCategory } from "@arsenyx/shared/warframe/types"
@@ -122,6 +123,7 @@ export function EditorHeader({
               {editing ? (
                 <Input
                   autoFocus
+                  maxLength={BUILD_NAME_MAX}
                   onFocus={(e) => e.currentTarget.select()}
                   value={buildName}
                   onChange={(e) => onBuildNameChange(e.target.value)}

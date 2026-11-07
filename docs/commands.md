@@ -67,6 +67,19 @@ bun --cwd apps/api run db:studio   # Prisma Studio GUI
 bun --cwd apps/api run db:generate # regenerate Prisma client
 ```
 
+### Sign in as the dev admin
+
+`just setup` seeds `admin@local.dev` and keeps its password in `apps/api/.env`
+(`SEED_ADMIN_PASSWORD`, gitignored, local DB only). An older checkout without it:
+run `just setup` once.
+
+- **Browser** (you or an agent in the browser pane): open `/auth/signin` and
+  click **Sign in**. The dev form is prefilled from
+  `apps/web/.env.development.local`, which setup writes and Vite loads only
+  under `vite dev`.
+- **API / curl**: `curl -H "$(just dev-login)" http://localhost:8787/auth/get-session`.
+  For a second worktree's API port: `API_URL=http://localhost:8788 just dev-login`.
+
 **Upgrading Prisma:** `@prisma/client` carries a bun patch
 ([patches/](../patches/), `patchedDependencies` in the root `package.json`) that
 shares the query compiler, plan cache and parameterization graph across the

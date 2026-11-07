@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { UserAvatar } from "@/components/user-avatar"
+import { useOrgsFixture } from "@/dev/fixtures"
 import { orgsDirectoryQuery } from "@/lib/queries/org-query"
 import { pageSeo } from "@/lib/seo"
 import {
@@ -50,8 +51,8 @@ function OrgsDirectoryPage() {
 
 function Results() {
   const search = Route.useSearch()
-  const { data } = useSuspenseQuery(
-    orgsDirectoryQuery(search.page ?? 1, search.q),
+  const data = useOrgsFixture(
+    useSuspenseQuery(orgsDirectoryQuery(search.page ?? 1, search.q)).data,
   )
   return (
     <DirectoryGrid
@@ -62,16 +63,28 @@ function Results() {
       items={data.orgs}
       total={data.total}
       limit={data.limit}
-      renderItem={(org) => <OrgCard org={org} />}
+      renderItem={(org) => (
+        <OrgCard
+          org={org}
+          showDescription={data.orgs.some((o) => o.description)}
+        />
+      )}
     />
   )
 }
 
-function OrgCard({ org }: { org: OrgDirectoryItem }) {
+function OrgCard({
+  org,
+  showDescription,
+}: {
+  org: OrgDirectoryItem
+  /** Any card on this page has a description — reserve the slot on all. */
+  showDescription: boolean
+}) {
   return (
     <Link
       href={`/org/${org.slug}`}
-      className="focus-visible:ring-ring block h-full rounded-xl focus:outline-none focus-visible:ring-2"
+      className="focus-visible:ring-ring ease-snappy block h-full rounded-xl transition-[scale] duration-150 focus:outline-none focus-visible:ring-2 active:scale-[0.98] motion-reduce:active:scale-100"
     >
       <Card className="hover:bg-muted/30 h-full transition-colors">
         <CardHeader className="flex flex-row items-center gap-3">
@@ -84,7 +97,9 @@ function OrgCard({ org }: { org: OrgDirectoryItem }) {
           <div className="flex min-w-0 flex-col gap-0.5">
             <CardTitle
               className={`truncate ${org.verified ? "text-wf-org" : ""}`}
-              title={org.verified ? "Verified organization" : undefined}
+              title={
+                org.verified ? `${org.name} · Verified organization` : org.name
+              }
             >
               {org.name}
             </CardTitle>
@@ -93,15 +108,17 @@ function OrgCard({ org }: { org: OrgDirectoryItem }) {
             </CardDescription>
           </div>
         </CardHeader>
-        {org.description ? (
+        {/* Fixed two-line slot, filled either way when any card on the page has
+            text, so all cards are the same height with no empty gap. */}
+        {showDescription ? (
           <CardContent>
-            <p className="text-muted-foreground line-clamp-3 text-sm">
-              {org.description}
+            <p
+              className={`line-clamp-2 min-h-10 text-sm wrap-anywhere ${org.description ? "text-muted-foreground" : "text-muted-foreground/60 italic"}`}
+            >
+              {org.description ?? "No description yet."}
             </p>
           </CardContent>
         ) : null}
-        {/* mt-auto pins the stats row to the card bottom so rows align
-            across cards with and without a description. */}
         <CardFooter className="text-muted-foreground mt-auto justify-between text-xs">
           <span>
             <span className="text-foreground font-semibold tabular-nums">

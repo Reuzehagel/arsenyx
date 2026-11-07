@@ -23,6 +23,28 @@ import { modMaxRank } from "@/lib/build/slot-ranks"
 
 type PlacedMap = Partial<Record<SlotId, PlacedMod>>
 
+/** Swap two slots' entries (or move into an empty one). Same map when the
+ *  move is illegal. A mod's Alternate travels with it only where that
+ *  Alternate is legal (the rule placeAt applies); otherwise it's dropped. */
+export function withSwap(prev: PlacedMap, from: SlotId, to: SlotId): PlacedMap {
+  if (from === to) return prev
+  const a = prev[from]
+  const b = prev[to]
+  if (!a) return prev
+  if (!canPlaceIn(a.mod, to)) return prev
+  if (b && !canPlaceIn(b.mod, from)) return prev
+  const moved = (e: NonNullable<typeof a>, id: SlotId) =>
+    e.alternate && !canBeAlternate(e.alternate.mod, id)
+      ? { mod: e.mod, rank: e.rank }
+      : e
+  // Annotated: spreading a Record keyed by template-literal SlotIds
+  // widens to only the literal keys.
+  const next: PlacedMap = { ...prev, [to]: moved(a, to) }
+  if (b) next[from] = moved(b, from)
+  else delete next[from]
+  return next
+}
+
 /** Set slot `id`'s Alternate. No-op (same map) on an empty slot or an illegal
  *  Alternate. Rank defaults to the mod's max and is clamped to it. */
 export function withAlternate(
@@ -99,7 +121,8 @@ export interface BuildSlotsState {
   usedNames: Set<string>
   selected: SlotId | null
   formaPolarities: Partial<Record<SlotId, Polarity>>
-  place: (mod: Mod) => void
+  /** False when no slot can take the mod (nothing changes). */
+  place: (mod: Mod) => boolean
   /** Stamp a mod into a specific slot, overwriting it. Used for rivens and
    *  drag-drop; skips the dedupe check and doesn't move the cursor. */
   placeAt: (id: SlotId, mod: Mod, rank?: number) => void
@@ -140,9 +163,10 @@ export function useBuildSlots(
   const place = useCallback(
     (mod: Mod) => {
       const target = placementTarget(placed, mod, selected, layout, conflictMap)
-      if (!target) return
+      if (!target) return false
       setPlaced({ ...placed, [target]: { mod, rank: modMaxRank(mod) } })
       setSelected(getNextEmptySlot(target, layout, placed))
+      return true
     },
     [placed, selected, layout, conflictMap],
   )
@@ -183,20 +207,7 @@ export function useBuildSlots(
   }, [])
 
   const swap = useCallback((from: SlotId, to: SlotId) => {
-    if (from === to) return
-    setPlaced((prev) => {
-      const a = prev[from]
-      const b = prev[to]
-      if (!a) return prev
-      if (!canPlaceIn(a.mod, to)) return prev
-      if (b && !canPlaceIn(b.mod, from)) return prev
-      // Annotated: spreading a Record keyed by template-literal SlotIds
-      // widens to only the literal keys.
-      const next: PlacedMap = { ...prev, [to]: a }
-      if (b) next[from] = b
-      else delete next[from]
-      return next
-    })
+    setPlaced((prev) => withSwap(prev, from, to))
   }, [])
 
   const select = useCallback((id: SlotId | null) => {

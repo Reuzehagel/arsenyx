@@ -7,6 +7,7 @@ import {
   withAlternate,
   withAlternateRank,
   withoutAlternate,
+  withSwap,
 } from "./use-build-slots"
 
 function mod(name: string): PlacedMod {
@@ -76,5 +77,40 @@ describe("alternate slot operations", () => {
       withAlternateRank(next, "normal-0", -3)["normal-0"]?.alternate?.rank,
     ).toBe(0)
     expect(withAlternateRank(next, "normal-1", 1)).toBe(next)
+  })
+})
+
+describe("moving a mod between slots", () => {
+  const exilusCapable = (name: string): PlacedMod => {
+    const p = mod(name)
+    return { ...p, mod: { ...p.mod, isUtility: true } }
+  }
+
+  it("keeps an Alternate that's legal in the new slot", () => {
+    const placed = withAlternate(
+      { "normal-0": mod("Primed Point Blank") },
+      "normal-0",
+      mod("Point Blank").mod,
+    )
+    const next = withSwap(placed, "normal-0", "normal-3")
+    expect(next["normal-0"]).toBeUndefined()
+    expect(next["normal-3"]?.alternate?.mod.name).toBe("Point Blank")
+  })
+
+  it("drops an Alternate that isn't allowed in the new slot", () => {
+    // The mod itself fits Exilus; its Alternate doesn't.
+    const placed = withAlternate(
+      { "normal-0": exilusCapable("Handspring") },
+      "normal-0",
+      mod("Blaze").mod,
+    )
+    const next = withSwap(placed, "normal-0", "exilus")
+    expect(next.exilus?.mod.name).toBe("Handspring")
+    expect(next.exilus?.alternate).toBeUndefined()
+  })
+
+  it("refuses a move the mod can't make", () => {
+    const placed = { "normal-0": mod("Blaze") }
+    expect(withSwap(placed, "normal-0", "exilus")).toBe(placed)
   })
 })

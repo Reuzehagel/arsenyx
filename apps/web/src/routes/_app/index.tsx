@@ -54,7 +54,7 @@ function Home() {
                   src={getImageUrl(hero.imageName)}
                   alt={hero.name}
                   fetchPriority="high"
-                  className="h-[220px] w-auto object-contain transition-transform duration-700 ease-out hover:scale-[1.02] md:h-[280px]"
+                  className="h-[220px] w-auto object-contain transition-[scale] duration-700 ease-out hover:scale-[1.02] motion-reduce:hover:scale-100 md:h-[280px]"
                   draggable={false}
                 />
                 <div className="text-muted-foreground mt-5 flex items-baseline justify-between gap-3 text-[11px] tracking-[0.22em] uppercase">
@@ -193,7 +193,7 @@ function Home() {
             Open the arsenal
             <ArrowRight
               aria-hidden
-              className="size-5 self-center transition-transform duration-300 group-hover:translate-x-1 md:size-6"
+              className="ease-snappy size-5 self-center transition-[translate] duration-300 group-hover:translate-x-1 motion-reduce:group-hover:translate-x-0 md:size-6"
             />
           </Link>
         </div>

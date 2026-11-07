@@ -25,6 +25,9 @@ const REPO = resolve(import.meta.dirname, "..")
 const API_DIR = resolve(REPO, "apps/api")
 const API_ENV = resolve(API_DIR, ".env")
 const API_ENV_EXAMPLE = resolve(API_DIR, ".env.example")
+// Vite loads this only under `vite dev` (mode "development"), never in a
+// production build, so the dev sign-in form can be prefilled from it.
+const WEB_DEV_ENV = resolve(REPO, "apps/web/.env.development.local")
 const NODE_MODULES = resolve(REPO, "node_modules")
 const SEARCH_MIGRATION = "scripts/migrations/2026-08-04_build_search_vector.sql"
 
@@ -170,8 +173,24 @@ async function main() {
   // a .dev.vars — wrangler treats its presence as an override that suppresses
   // .env entirely. NODE_ENV=development enables the dev-only email+password
   // sign-in path; wrangler.toml's [vars] overrides it to "production" on deploy.
+  // The dev admin's password is generated once and then kept, so agents and
+  // the prefilled sign-in form can always sign in. It sits beside
+  // BETTER_AUTH_SECRET in this gitignored file and only opens the local DB.
+  const adminEmail = existing.get("SEED_ADMIN_EMAIL") || "admin@local.dev"
+  const adminUsername = "admin"
+  let adminPassword = existing.get("SEED_ADMIN_PASSWORD") ?? ""
+  if (!adminPassword) {
+    const { customAlphabet } = await import("nanoid")
+    adminPassword = customAlphabet(
+      "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789",
+      20,
+    )()
+  }
+
   const nextValues = new Map(existing)
   nextValues.set("NODE_ENV", "development")
+  nextValues.set("SEED_ADMIN_EMAIL", adminEmail)
+  nextValues.set("SEED_ADMIN_PASSWORD", adminPassword)
   nextValues.set("DATABASE_URL", dbUrl!)
   // The local Worker reaches the DB through this, not DATABASE_URL.
   nextValues.set(
@@ -182,6 +201,11 @@ async function main() {
   const rendered = renderEnv(template, nextValues)
   await writeFile(API_ENV, rendered, "utf8")
   console.log("✓ apps/api/.env written")
+  await writeWebDevEnv({
+    VITE_DEV_ADMIN_EMAIL: adminEmail,
+    VITE_DEV_ADMIN_PASSWORD: adminPassword,
+  })
+  console.log("✓ apps/web/.env.development.local written (dev login prefill)")
 
   if (isComposeDbUrl(dbUrl)) {
     await run(["bun", "scripts/dev-db.ts", "ensure"], REPO)
@@ -199,16 +223,6 @@ async function main() {
   )
 
   console.log("\n› seeding admin user\n")
-  // Generate fresh credentials per setup so the seeded admin never has the
-  // historical hardcoded "admin/admin" defaults. Printed once; not persisted.
-  const adminEmail = "admin@local.dev"
-  const adminUsername = "admin"
-  const { customAlphabet } = await import("nanoid")
-  const genPw = customAlphabet(
-    "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789",
-    20,
-  )
-  const adminPassword = genPw()
   await run(["bun", "run", "scripts/seed-admin.ts"], API_DIR, {
     DATABASE_URL: dbUrl!,
     BETTER_AUTH_SECRET: secret,
@@ -227,11 +241,23 @@ async function main() {
 
   console.log(`
 All set — run \`just dev\`.
-Sign in at http://localhost:5173 with:
-  email:    ${adminEmail}
-  password: ${adminPassword}
-(Re-run \`just setup\` to rotate; not stored anywhere.)
+Sign in at http://localhost:5173/auth/signin: the dev login form is prefilled
+as ${adminEmail}. \`just dev-login\` prints a Cookie header for curl.
+(To rotate: clear SEED_ADMIN_PASSWORD in apps/api/.env, re-run setup.)
 `)
+}
+
+/** Set `values` in apps/web/.env.development.local, keeping its other lines. */
+async function writeWebDevEnv(values: Record<string, string>): Promise<void> {
+  const lines = existsSync(WEB_DEV_ENV)
+    ? (await readFile(WEB_DEV_ENV, "utf8")).split(/\r?\n/)
+    : []
+  const kept = lines.filter((line) => {
+    const key = line.match(/^\s*([A-Z0-9_]+)\s*=/)?.[1]
+    return line.trim() !== "" && !(key && key in values)
+  })
+  const set = Object.entries(values).map(([k, v]) => `${k}="${v}"`)
+  await writeFile(WEB_DEV_ENV, [...kept, ...set, ""].join("\n"), "utf8")
 }
 
 main().catch((err) => {

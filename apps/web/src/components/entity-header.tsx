@@ -35,10 +35,15 @@ export function EntityHeader({
       {avatar}
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="truncate text-2xl font-bold tracking-tight">{name}</h1>
+          <h1
+            className="max-w-full min-w-0 truncate text-2xl font-bold tracking-tight"
+            title={name}
+          >
+            {name}
+          </h1>
           {nameExtras}
         </div>
-        {bio ? <p className="text-sm">{bio}</p> : null}
+        {bio ? <p className="text-sm wrap-anywhere">{bio}</p> : null}
         {children}
         <span className="text-muted-foreground text-xs">
           {dateLabel} {when}

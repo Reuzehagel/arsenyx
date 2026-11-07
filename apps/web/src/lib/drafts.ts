@@ -98,8 +98,19 @@ function otherDraftKeysOldestFirst(keep: string): string[] {
 /** Draft slot holding the draft a share link or import replaced. */
 export const replacedDraftKey = (storeKey: string) => `${storeKey}::replaced`
 
+// When each draft was last cleared (this page session). A debounced write
+// still pending when the editor unmounts must not bring back a draft that was
+// cleared after that write was scheduled (save succeeded, draft discarded).
+const clearedAt = new Map<string, number>()
+
 export function clearEditorDraft(storeKey: string): void {
   storageRemove(`${EDITOR_PREFIX}${storeKey}`)
+  clearedAt.set(storeKey, performance.now())
+}
+
+/** `performance.now()` of the last clear of this draft, or -Infinity. */
+export function editorDraftClearedAt(storeKey: string): number {
+  return clearedAt.get(storeKey) ?? -Infinity
 }
 
 // ---------------- Import hand-off (sessionStorage)

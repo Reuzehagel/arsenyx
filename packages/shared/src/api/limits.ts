@@ -8,6 +8,9 @@ export const ORG_DESCRIPTION_MAX = 200
 
 export const DISPLAY_USERNAME_MAX = 50
 
+/** Build name; the editor input mirrors it as `maxLength`. */
+export const BUILD_NAME_MAX = 120
+
 /** Free-text `?q=` search terms on the user/org/admin directories. */
 export const SEARCH_Q_MAX = 100
 /** Free-text `?q=` / `?item=` on the build lists and typeahead. */

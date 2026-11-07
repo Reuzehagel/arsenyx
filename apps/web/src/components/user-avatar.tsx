@@ -1,3 +1,5 @@
+import { useState } from "react"
+
 import { proxyImage } from "@/lib/util/image-proxy"
 import { cn } from "@/lib/util/utils"
 
@@ -20,6 +22,16 @@ const SHAPE_CLASSES: Record<AvatarShape, string> = {
   rounded: "rounded-md",
 }
 
+const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" })
+
+/** First letter or digit of a name ("🦊 Fox Den" → "F"), falling back to the
+ *  first whole grapheme (never half an emoji), then "?". */
+export function initialOf(name: string): string {
+  const parts = Array.from(graphemes.segment(name.trim()), (s) => s.segment)
+  const letter = parts.find((g) => /[\p{L}\p{N}]/u.test(g))
+  return (letter ?? parts[0] ?? "?").toUpperCase()
+}
+
 export function UserAvatar({
   src,
   fallback,
@@ -33,8 +45,11 @@ export function UserAvatar({
   shape?: AvatarShape
   className?: string
 }) {
-  const initial = fallback.charAt(0).toUpperCase()
+  const initial = initialOf(fallback)
   const proxied = proxyImage(src)
+  // Keyed on the URL so a new image gets a fresh attempt.
+  const [failedSrc, setFailedSrc] = useState<string | null>(null)
+  const showImage = proxied && failedSrc !== proxied
   return (
     <div
       className={cn(
@@ -44,8 +59,13 @@ export function UserAvatar({
         className,
       )}
     >
-      {proxied ? (
-        <img src={proxied} alt="" className="h-full w-full object-cover" />
+      {showImage ? (
+        <img
+          src={proxied}
+          alt=""
+          className="h-full w-full object-cover"
+          onError={() => setFailedSrc(proxied)}
+        />
       ) : (
         <span>{initial}</span>
       )}

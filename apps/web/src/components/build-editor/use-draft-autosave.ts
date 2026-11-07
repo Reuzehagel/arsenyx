@@ -9,6 +9,7 @@ import type { ExtrasState } from "@/lib/build/extras"
 import {
   clearEditorDraft,
   clearImportDraft,
+  editorDraftClearedAt,
   loadEditorDraft,
   replacedDraftKey,
   saveEditorDraft,
@@ -101,20 +102,45 @@ export function useDraftAutosave({
   // first run" flag isn't enough: StrictMode re-runs mount effects with the ref
   // already set, which saved a draft for an untouched editor.
   const lastDepsRef = useRef(deps)
+  // For the leave flush below: the latest snapshot, and when the write still
+  // waiting on the debounce was scheduled (null when none is).
+  const snapshotRef = useRef(snapshot)
+  snapshotRef.current = snapshot
+  const pendingSinceRef = useRef<number | null>(null)
 
   useEffect(() => {
     const changed = deps.some((d, i) => !Object.is(d, lastDepsRef.current[i]))
     lastDepsRef.current = deps
     if (!changed) return
+    pendingSinceRef.current = performance.now()
     const handle = window.setTimeout(() => {
       // Capture + serialize inside the debounce so a burst of edits costs one
       // snapshot per idle window, not one per keystroke.
+      pendingSinceRef.current = null
       saveEditorDraft(storeKey, snapshot())
       setHasDraft(true)
     }, 600)
     return () => window.clearTimeout(handle)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps)
+
+  // Leaving inside the 600ms window (a nav link, Cancel, closing the tab)
+  // would drop the last edits, so write the pending draft right away — unless
+  // the draft was cleared after it was scheduled (saved or discarded since).
+  useEffect(() => {
+    const flush = () => {
+      const since = pendingSinceRef.current
+      if (since === null) return
+      pendingSinceRef.current = null
+      if (editorDraftClearedAt(storeKey) > since) return
+      saveEditorDraft(storeKey, snapshotRef.current())
+    }
+    window.addEventListener("pagehide", flush)
+    return () => {
+      window.removeEventListener("pagehide", flush)
+      flush()
+    }
+  }, [storeKey])
 
   // Clear the draft, then have the owner re-create the session so it
   // re-hydrates from the saved build (or a blank new build).
@@ -166,6 +192,9 @@ export function useDraftAutosave({
       action: {
         label: "Restore it",
         onClick: () => {
+          // Drop any pending write first: the leave flush on the reseed would
+          // otherwise overwrite the draft being restored here.
+          pendingSinceRef.current = null
           saveEditorDraft(storeKey, replaced)
           clearEditorDraft(backupKey)
           onResetToSaved()

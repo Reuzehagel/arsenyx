@@ -5,6 +5,7 @@ import type {
   VariantMode,
 } from "@arsenyx/shared/warframe/build-data"
 import { useEffect, useMemo, useState } from "react"
+import { toast } from "sonner"
 
 import type { BuildDerived } from "@/components/build-loadout/use-build-derived"
 import {
@@ -15,6 +16,7 @@ import {
 import type { BuildLayout } from "@/lib/build/layout"
 import { dropOrphanSlots } from "@/lib/build/slot-order"
 import type { SetVariants } from "@/lib/build/variants"
+import { capitalize } from "@/lib/util/utils"
 
 import type { BuildSlotsState } from "./use-build-slots"
 
@@ -146,6 +148,7 @@ export function useAutoFormaPlanner(opts: {
     // variant UX where the button always applies forma-only improvements.
     if (reactiveAutoFormaPlan && reactiveAutoFormaPlan.steps.length > 0) {
       applyAutoFormaPlan(reactiveAutoFormaPlan)
+      announceForma(reactiveAutoFormaPlan)
       return
     }
     // Reactive plan empty — run the full stages 1→2→3 cascade on click.
@@ -161,8 +164,9 @@ export function useAutoFormaPlanner(opts: {
     }
     if (plan.stage === 1) {
       // Cascade found a stage-1 plan that the cheap reactive path missed
-      // (different search semantics — DFS vs greedy). Apply silently.
+      // (different search semantics — DFS vs greedy). No preview needed.
       applyAutoFormaPlan(plan)
+      announceForma(plan)
       return
     }
     // Stages 2/3 move user mods or burn Omni Forma — show the preview.
@@ -189,4 +193,20 @@ export function useAutoFormaPlanner(opts: {
     handleAutoForma,
     applyPendingPlan,
   }
+}
+
+/** Forma applied without a preview still gets named, so the player knows
+ *  what changed and that Undo takes it back. */
+function announceForma(plan: FullAutoFormaPlan): void {
+  const counts = new Map<string, number>()
+  for (const step of plan.steps)
+    counts.set(step.polarity, (counts.get(step.polarity) ?? 0) + 1)
+  const parts = [...counts].map(
+    ([polarity, n]) => `${n} ${capitalize(polarity)}`,
+  )
+  const total = plan.steps.length
+  toast(`Applied ${total} forma`, {
+    id: "auto-forma",
+    description: `${parts.join(", ")}. Undo takes it back.`,
+  })
 }

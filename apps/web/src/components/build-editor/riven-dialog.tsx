@@ -67,13 +67,31 @@ function emptyNegative(init?: RivenStats): StatRowState {
   return { stat: n?.stat ?? null, value: n ? String(n.value) : "" }
 }
 
-/** Magnitude of a single riven stat roll, as a percentage. The dialog's number
- *  inputs accept anything, so this keeps NaN/Infinity and absurd values out of
- *  the stat engine — the real roll ranges are far narrower than the cap. */
+/** Parses a typed stat value, accepting a comma decimal ("12,5"). NaN when
+ *  it isn't a number. */
+function parseStat(raw: string): number {
+  return Number(raw.trim().replace(",", "."))
+}
+
+/** Magnitude of a single riven stat roll, as a percentage. Keeps absurd
+ *  values out of the stat engine — real roll ranges are far narrower than the
+ *  cap. The sign comes from the row (positive or negative), not the input. */
 function clampStatMagnitude(raw: string): number {
-  const n = Math.abs(parseFloat(raw))
+  const n = Math.abs(parseStat(raw))
   if (!Number.isFinite(n)) return 0
   return clamp(n, 0, RIVEN_MAX_STAT_MAGNITUDE)
+}
+
+type RowStatus = "empty" | "complete" | "incomplete"
+
+/** A row counts only with both a stat and a number; half-filled rows block
+ *  Confirm instead of being silently dropped. */
+function rowStatus(r: StatRowState): RowStatus {
+  const hasValue = r.value.trim() !== ""
+  if (!r.stat && !hasValue) return "empty"
+  return r.stat && hasValue && Number.isFinite(parseStat(r.value))
+    ? "complete"
+    : "incomplete"
 }
 
 const RIVEN_MAX_STAT_MAGNITUDE = 999
@@ -128,20 +146,28 @@ export function RivenDialog({
     [],
   )
 
+  const statuses = [...positives, negative].map(rowStatus)
+  const anyIncomplete = statuses.includes("incomplete")
+  const anyComplete = statuses.includes("complete")
+  const canConfirm = anyComplete && !anyIncomplete
+  // Once something's typed, a stray click outside mustn't throw it away
+  // (Escape and Cancel still close).
+  const dirty = statuses.some((st) => st !== "empty")
+
   const handleConfirm = useCallback(() => {
     const drainNum = clampDrain(drain)
     const stats: RivenStats = {
       positives: positives
-        .filter((r) => r.stat && r.value)
+        .filter((r) => rowStatus(r) === "complete")
         .map((r) => ({
           stat: r.stat!,
           value: clampStatMagnitude(r.value),
         })),
       negatives:
-        negative.stat && negative.value
+        rowStatus(negative) === "complete"
           ? [
               {
-                stat: negative.stat,
+                stat: negative.stat!,
                 value: -clampStatMagnitude(negative.value),
               },
             ]
@@ -151,105 +177,136 @@ export function RivenDialog({
   }, [positives, negative, drain, polarity, onConfirm])
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+      disablePointerDismissal={dirty}
+    >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Configure Riven Mod</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4">
-          <div className="flex gap-3">
-            <Field className="flex-1">
-              <FieldLabel className="text-xs">Polarity</FieldLabel>
-              <ToggleGroup
-                value={[polarity]}
-                onValueChange={(v) => {
-                  const next = v[0]
-                  if (next) setPolarity(next as Polarity)
-                }}
-                variant="outline"
-                size="sm"
-                className="flex gap-1"
-              >
-                {RIVEN_POLARITIES.map((p) => (
-                  <ToggleGroupItem
-                    key={p}
-                    value={p}
-                    className="data-pressed:border-primary/60 data-pressed:ring-primary/60 h-8 flex-1 capitalize data-pressed:ring-1"
-                  >
-                    <PolarityIcon polarity={p} className="size-3.5" />
-                    {p}
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
-            </Field>
-            <Field className="w-24">
-              <FieldLabel className="text-xs" htmlFor="riven-drain">
-                Drain
+        {/* A form so Enter in any field confirms. */}
+        <form
+          className="flex flex-col gap-4"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (canConfirm) handleConfirm()
+          }}
+        >
+          <div className="flex flex-col gap-4">
+            <div className="flex gap-3">
+              <Field className="flex-1">
+                <FieldLabel className="text-xs">Polarity</FieldLabel>
+                <ToggleGroup
+                  value={[polarity]}
+                  onValueChange={(v) => {
+                    const next = v[0]
+                    if (next) setPolarity(next as Polarity)
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="flex gap-1"
+                >
+                  {RIVEN_POLARITIES.map((p) => (
+                    <ToggleGroupItem
+                      key={p}
+                      value={p}
+                      className="data-pressed:border-primary/60 data-pressed:ring-primary/60 h-8 flex-1 capitalize data-pressed:ring-1"
+                    >
+                      <PolarityIcon polarity={p} className="size-3.5" />
+                      {p}
+                    </ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
+              </Field>
+              <Field className="w-24">
+                <FieldLabel className="text-xs" htmlFor="riven-drain">
+                  Drain
+                </FieldLabel>
+                <Input
+                  id="riven-drain"
+                  type="number"
+                  value={drain}
+                  onChange={(e) => setDrain(e.target.value)}
+                  onBlur={() => setDrain(String(clampDrain(drain)))}
+                  min={RIVEN_MIN_DRAIN}
+                  max={RIVEN_MAX_DRAIN}
+                  className="h-8 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+              </Field>
+            </div>
+
+            <Field>
+              <FieldLabel className="block text-xs text-green-400">
+                Positives
               </FieldLabel>
-              <Input
-                id="riven-drain"
-                type="number"
-                value={drain}
-                onChange={(e) => setDrain(e.target.value)}
-                onBlur={() => setDrain(String(clampDrain(drain)))}
-                min={RIVEN_MIN_DRAIN}
-                max={RIVEN_MAX_DRAIN}
-                className="h-8 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              <div className="flex flex-col gap-2">
+                {positives.map((row, i) => (
+                  <StatRow
+                    key={i}
+                    label={`Positive ${i + 1}`}
+                    autoFocus={i === 0}
+                    row={row}
+                    options={statOptions}
+                    allSelected={allSelected}
+                    onChangeStat={(s) => updatePositive(i, { stat: s })}
+                    onChangeValue={(v) => updatePositive(i, { value: v })}
+                  />
+                ))}
+              </div>
+            </Field>
+
+            <Field>
+              <FieldLabel className="block text-xs text-red-400">
+                Negative
+              </FieldLabel>
+              <StatRow
+                label="Negative"
+                row={negative}
+                options={negativeOptions}
+                allSelected={allSelected}
+                onChangeStat={(s) => setNegative((p) => ({ ...p, stat: s }))}
+                onChangeValue={(v) => setNegative((p) => ({ ...p, value: v }))}
               />
             </Field>
           </div>
 
-          <Field>
-            <FieldLabel className="block text-xs text-green-400">
-              Positives
-            </FieldLabel>
-            <div className="flex flex-col gap-2">
-              {positives.map((row, i) => (
-                <StatRow
-                  key={i}
-                  row={row}
-                  options={statOptions}
-                  allSelected={allSelected}
-                  onChangeStat={(s) => updatePositive(i, { stat: s })}
-                  onChangeValue={(v) => updatePositive(i, { value: v })}
-                />
-              ))}
-            </div>
-          </Field>
-
-          <Field>
-            <FieldLabel className="block text-xs text-red-400">
-              Negative
-            </FieldLabel>
-            <StatRow
-              row={negative}
-              options={negativeOptions}
-              allSelected={allSelected}
-              onChangeStat={(s) => setNegative((p) => ({ ...p, stat: s }))}
-              onChangeValue={(v) => setNegative((p) => ({ ...p, value: v }))}
-            />
-          </Field>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleConfirm}>Confirm</Button>
-        </DialogFooter>
+          <DialogFooter className="items-center">
+            {anyIncomplete ? (
+              <p className="text-muted-foreground mr-auto text-xs">
+                Each stat needs both a name and a number.
+              </p>
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!canConfirm}>
+              Confirm
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   )
 }
 
 function StatRow({
+  label,
+  autoFocus,
   row,
   options,
   allSelected,
   onChangeStat,
   onChangeValue,
 }: {
+  label: string
+  autoFocus?: boolean
   row: StatRowState
   options: readonly string[]
   allSelected: Set<string>
@@ -257,15 +314,20 @@ function StatRow({
   onChangeValue: (v: string) => void
 }) {
   const visible = options.filter((s) => s === row.stat || !allSelected.has(s))
+  const invalid = rowStatus(row) === "incomplete"
   return (
     <div className="flex gap-2">
+      {/* Text, not number: a number input silently empties on "12,5". */}
       <Input
-        type="number"
+        type="text"
+        inputMode="decimal"
+        autoFocus={autoFocus}
+        aria-label={`${label} value`}
+        aria-invalid={invalid || undefined}
         value={row.value}
         onChange={(e) => onChangeValue(e.target.value)}
         placeholder="0"
-        step="0.1"
-        className="h-8 w-24 shrink-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        className="h-8 w-24 shrink-0"
       />
       <Combobox
         items={visible}
@@ -273,6 +335,8 @@ function StatRow({
         onValueChange={(v) => onChangeStat((v as string | null) ?? null)}
       >
         <ComboboxInput
+          aria-label={`${label} stat`}
+          aria-invalid={invalid || undefined}
           placeholder="Select stat…"
           className="h-8 flex-1"
           showClear={!!row.stat}

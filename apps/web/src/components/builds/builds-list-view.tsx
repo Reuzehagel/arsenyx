@@ -23,6 +23,7 @@ import { Kbd } from "@/components/ui/kbd"
 import { Popover, PopoverContent } from "@/components/ui/popover"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
+import { useBuildListFixture } from "@/dev/fixtures"
 import { HOTKEYS, useSearchHotkey } from "@/lib/hooks/hotkeys"
 import { useUrlSearchInput } from "@/lib/hooks/use-url-search-input"
 import type { publicBuildsQuery } from "@/lib/queries/builds-list-query"
@@ -70,7 +71,7 @@ export function BuildsListView({
             <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
           ) : null}
           {description ? (
-            <p className="text-muted-foreground">{description}</p>
+            <p className="text-muted-foreground wrap-anywhere">{description}</p>
           ) : null}
         </div>
       ) : null}
@@ -148,10 +149,13 @@ function Results({
   emptyState: ReactNode
 }) {
   // Keep the current page on screen (dimmed) while the next one loads.
-  const { data, isPending, isFetching } = useQuery({
+  const res = useQuery({
     ...query,
     placeholderData: keepPreviousData,
   })
+  const data = useBuildListFixture(res.data)
+  const isFetching = res.isFetching
+  const isPending = res.isPending && !data
 
   if (isPending || !data) {
     return (
@@ -173,7 +177,8 @@ function Results({
   return (
     <>
       <div className="text-muted-foreground text-sm">
-        {data.total} {data.total === 1 ? "build" : "builds"}
+        {data.total.toLocaleString("en-US")}{" "}
+        {data.total === 1 ? "build" : "builds"}
         {q ? ` matching "${q}"` : ""}
       </div>
 
@@ -193,7 +198,12 @@ function Results({
         <BuildCollection
           builds={data.builds}
           aria-busy={isFetching}
-          className={cn("transition-opacity", isFetching && "opacity-60")}
+          className={cn(
+            "transition-opacity duration-150",
+            // Dim only once a fetch outlasts 150ms, so fast pages do not flash;
+            // restoring is immediate.
+            isFetching && "opacity-60 delay-150",
+          )}
         />
       )}
 

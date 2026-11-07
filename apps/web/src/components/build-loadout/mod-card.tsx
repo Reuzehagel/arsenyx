@@ -258,6 +258,7 @@ function CompactModCard({
       {isMaxRank && (
         <RankCompleteLine
           rarity={rarity}
+          reveal
           className="absolute -bottom-[28px] left-1/2 z-25 w-[calc(100%-8px)] -translate-x-1/2"
         />
       )}
@@ -608,13 +609,13 @@ export function ModCard({
       {/* Expanded — portaled to <body> so it escapes the horizontal-scroll
           parent's clipping. Positioned with `fixed` at the compact card's
           viewport-center; scroll listener closes hover so stale coords
-          don't matter. 150ms scale-in keyframe matches legacy's behavior. */}
+          don't matter. Grows in via `.animate-mod-card-expand` (globals.css). */}
       {effectiveHover &&
         hoverCenter.current &&
         typeof document !== "undefined" &&
         createPortal(
           <div
-            className="pointer-events-none fixed z-50"
+            className="animate-mod-card-expand pointer-events-none fixed z-50"
             style={{
               top: hoverCenter.current.y,
               left: hoverCenter.current.x,
@@ -622,8 +623,6 @@ export function ModCard({
               height: DISPLAY_SIZE.expanded.height,
               transform: "translate(-50%, -50%)",
               transformOrigin: "center center",
-              animation:
-                "mod-card-expand 150ms cubic-bezier(0.4, 0, 0.2, 1) forwards",
               filter: "drop-shadow(0 0 20px rgba(0,0,0,0.8))",
             }}
           >

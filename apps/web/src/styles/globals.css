@@ -24,6 +24,8 @@ body {
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /* Strong ease-out for UI feedback; Tailwind's default ease-out is too soft. */
+  --ease-snappy: cubic-bezier(0.23, 1, 0.32, 1);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -211,6 +213,8 @@ body {
   contain-intrinsic-size: 200px 80px;
 }
 
+/* Mod hover card: grows out of the compact card it enlarges (0.225 is roughly
+ * compact/expanded), so it reads as the same card getting bigger. */
 @keyframes mod-card-expand {
   from {
     transform: translate(-50%, -50%) scale(0.225);
@@ -222,53 +226,55 @@ body {
   }
 }
 
-@keyframes rankReveal {
-  0% {
+.animate-mod-card-expand {
+  animation: mod-card-expand 150ms var(--ease-snappy) both;
+}
+
+/* Max-rank line sweeping open from the centre. `both` holds the closed state
+ * until it starts; with the animation off it simply shows open. */
+@keyframes rank-reveal {
+  from {
     mask-size: 0% 100%;
     -webkit-mask-size: 0% 100%;
   }
-  100% {
-    mask-size: 200% 100%;
-    -webkit-mask-size: 200% 100%;
-  }
+}
+
+.animate-rank-reveal {
+  animation: rank-reveal 300ms var(--ease-snappy) both;
 }
 
 /* Drop settle: a placed/swapped mod card eases from 96% to rest so the action
- * reads as landing rather than snapping in. Distinct from `mod-card-expand`,
- * which scales from 0 for a first appearance. */
+ * reads as landing rather than snapping in. No overshoot: drops happen dozens
+ * of times per edit, and a bounce gets old fast. */
 @keyframes drop-settle {
-  0% {
+  from {
     transform: scale(0.96);
-  }
-  60% {
-    transform: scale(1.02);
-  }
-  100% {
-    transform: scale(1);
   }
 }
 
 .animate-drop-settle {
-  animation: drop-settle 180ms ease-out;
+  animation: drop-settle 160ms var(--ease-snappy);
 }
 
 /* Drop flash: a white wash over the destination slot that fades out, making a
  * mod landing unmistakable. Paired with the subtler drop-settle scale. */
 @keyframes drop-flash {
-  0% {
+  from {
     opacity: 0.2;
   }
-  100% {
+  to {
     opacity: 0;
   }
 }
 
 .animate-drop-flash {
-  animation: drop-flash 320ms ease-out;
+  animation: drop-flash 200ms ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-pulse,
+  .animate-mod-card-expand,
+  .animate-rank-reveal,
   .animate-drop-settle,
   .animate-drop-flash {
     animation: none;

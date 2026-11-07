@@ -143,11 +143,16 @@ export function RankDots({
   )
 }
 
+/** The max-rank line under a mod. `reveal` sweeps it open from the centre;
+ *  only the compact card uses it (it mounts when a maxed mod lands). The hover
+ *  card remounts on every hover, so it shows the line already open. */
 export function RankCompleteLine({
   rarity,
+  reveal = false,
   className,
 }: {
   rarity: ModRarity
+  reveal?: boolean
   className?: string
 }) {
   return (
@@ -155,19 +160,18 @@ export function RankCompleteLine({
       <img
         src={getModAssetUrl(rarity, "RankCompleteLine")}
         alt=""
-        className="w-full"
+        className={cn("w-full", reveal && "animate-rank-reveal")}
         style={{
           maskImage:
             "linear-gradient(90deg, transparent 0%, white 50%, transparent 100%)",
-          maskSize: "0% 100%",
+          maskSize: "200% 100%",
           maskPosition: "center",
           maskRepeat: "no-repeat",
           WebkitMaskImage:
             "linear-gradient(90deg, transparent 0%, white 50%, transparent 100%)",
-          WebkitMaskSize: "0% 100%",
+          WebkitMaskSize: "200% 100%",
           WebkitMaskPosition: "center",
           WebkitMaskRepeat: "no-repeat",
-          animation: "rankReveal 0.4s ease-out forwards",
         }}
       />
     </div>
