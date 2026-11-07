@@ -286,20 +286,41 @@ export function useDragGesture<TSource, TTarget>(
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && activeRef.current) {
+        // Escape cancels the drag and nothing else: without this the
+        // editor's window-level Escape also deselects the slot.
+        e.stopImmediatePropagation()
         disarmClickSwallow()
         cleanup()
       }
     }
 
+    // Wheel-scrolling mid-drag moves the page under a still pointer, so the
+    // target has to be re-read or the drop lands where the cursor used to be.
+    const onScroll = () => {
+      if (!activeRef.current || pendingMove) return
+      pendingMove = true
+      rafId = requestAnimationFrame(flushMove)
+    }
+
     window.addEventListener("pointermove", onPointerMove, { passive: true })
     window.addEventListener("pointerup", onPointerUp)
     window.addEventListener("pointercancel", onPointerCancel)
-    window.addEventListener("keydown", onKeyDown)
+    // Capture phase so the cancel runs before (and can stop) the editor's
+    // own window keydown listeners.
+    window.addEventListener("keydown", onKeyDown, { capture: true })
+    window.addEventListener("scroll", onScroll, {
+      capture: true,
+      passive: true,
+    })
+    // Alt-tabbing mid-drag may never send pointercancel; treat it as one.
+    window.addEventListener("blur", onPointerCancel)
     return () => {
       window.removeEventListener("pointermove", onPointerMove)
       window.removeEventListener("pointerup", onPointerUp)
       window.removeEventListener("pointercancel", onPointerCancel)
-      window.removeEventListener("keydown", onKeyDown)
+      window.removeEventListener("keydown", onKeyDown, { capture: true })
+      window.removeEventListener("scroll", onScroll, { capture: true })
+      window.removeEventListener("blur", onPointerCancel)
       if (rafId) cancelAnimationFrame(rafId)
     }
   }, [cleanup, armClickSwallow, disarmClickSwallow])

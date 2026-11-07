@@ -99,7 +99,8 @@ export interface BuildSlotsState {
   usedNames: Set<string>
   selected: SlotId | null
   formaPolarities: Partial<Record<SlotId, Polarity>>
-  place: (mod: Mod) => void
+  /** False when no slot can take the mod (nothing changes). */
+  place: (mod: Mod) => boolean
   /** Stamp a mod into a specific slot, overwriting it. Used for rivens and
    *  drag-drop; skips the dedupe check and doesn't move the cursor. */
   placeAt: (id: SlotId, mod: Mod, rank?: number) => void
@@ -140,9 +141,10 @@ export function useBuildSlots(
   const place = useCallback(
     (mod: Mod) => {
       const target = placementTarget(placed, mod, selected, layout, conflictMap)
-      if (!target) return
+      if (!target) return false
       setPlaced({ ...placed, [target]: { mod, rank: modMaxRank(mod) } })
       setSelected(getNextEmptySlot(target, layout, placed))
+      return true
     },
     [placed, selected, layout, conflictMap],
   )
@@ -190,10 +192,16 @@ export function useBuildSlots(
       if (!a) return prev
       if (!canPlaceIn(a.mod, to)) return prev
       if (b && !canPlaceIn(b.mod, from)) return prev
+      // A mod moves with its Alternate only where that Alternate is legal
+      // (the same rule placeAt applies); otherwise the Alternate is dropped.
+      const moved = (e: NonNullable<typeof a>, id: SlotId) =>
+        e.alternate && !canBeAlternate(e.alternate.mod, id)
+          ? { mod: e.mod, rank: e.rank }
+          : e
       // Annotated: spreading a Record keyed by template-literal SlotIds
       // widens to only the literal keys.
-      const next: PlacedMap = { ...prev, [to]: a }
-      if (b) next[from] = b
+      const next: PlacedMap = { ...prev, [to]: moved(a, to) }
+      if (b) next[from] = moved(b, from)
       else delete next[from]
       return next
     })

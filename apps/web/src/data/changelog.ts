@@ -16,6 +16,16 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "fix",
         description:
+          "The build editor is harder to trip up. Enter in an empty mod search no longer places a random mod, the mod Enter will place is outlined, and a search with no results says so (and offers to reset filters). When a mod can't go anywhere you're told instead of nothing happening. Escape on a search result or mid-drag no longer also deselects your slot, scrolling mid-drag drops into the right slot, slots that won't take a dragged mod turn red, and +/- after a drag ranks the mod you dropped. Moving a mod keeps its Alternate only where that's allowed.",
+      },
+      {
+        type: "fix",
+        description:
+          "Riven entry: Enter confirms, a stray click outside no longer throws away your stats, \"12,5\" works, half-filled stats are flagged instead of silently dropped, and fixing a riven's stats keeps its rank. Saving: Retry after a failed save saves your current build (and can't post it twice), errors are plain sentences instead of codes, signing in from Save brings you back to the editor, and edits made just before leaving the page or closing the tab are kept in your draft. The visibility dialog resets when reopened, waits for your orgs to load, and is clear that changes apply when you save. Capacity shows how far over you are, auto-forma says what it changed, and the variant tabs got a cleaner look.",
+      },
+      {
+        type: "fix",
+        description:
           "Build pages feel snappier: like and bookmark no longer flash when pressed, the mod hover card pops in faster, the max-rank line no longer replays every time you hover a mod, and the page shows a skeleton while loading. Your own build's like button now explains why it's greyed out, and long build names show in full on hover. Mod drops in the editor land without the bounce, and the Warframes, Operators and Necramechs tabs on Browse drop the label that just repeated the tab name.",
       },
       {

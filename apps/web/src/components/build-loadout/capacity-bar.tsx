@@ -46,9 +46,20 @@ export function CapacityBar({
           )}
         >
           {used} / {max}
+          {over ? ` · ${used - max} over` : null}
         </span>
       </div>
-      <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
+      <div
+        role="meter"
+        aria-label="Mod capacity"
+        aria-valuemin={0}
+        aria-valuemax={max}
+        aria-valuenow={used}
+        aria-valuetext={
+          over ? `${used} of ${max}, ${used - max} over` : `${used} of ${max}`
+        }
+        className="bg-muted h-1.5 w-full overflow-hidden rounded-full"
+      >
         <div
           // scaleX, not width: same look, but no layout work per frame.
           className={cn(

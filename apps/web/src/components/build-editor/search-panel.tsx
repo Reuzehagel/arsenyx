@@ -43,7 +43,8 @@ export function SearchPanel({
   /** uniqueNames of mods mutually exclusive with an equipped mod — dimmed in
    *  the picker. */
   conflictUniqueNames: Set<string>
-  onSelect: (mod: Mod) => void
+  /** Returns false when the mod couldn't be placed. */
+  onSelect: (mod: Mod) => boolean
   selectedSlotKind?: ModSlotKind
   /** Active slot id (or null). Drives the tab auto-sync — depending on
    * the id (not the derived group) lets us re-sync when the user moves

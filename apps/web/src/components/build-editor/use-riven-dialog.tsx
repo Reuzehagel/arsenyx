@@ -27,7 +27,8 @@ export function useRivenDialog({
   normalSlotCount: number
   category: BrowseCategory
 }): {
-  openForPlacement: () => void
+  /** False when there's no free slot for a Riven. */
+  openForPlacement: () => boolean
   openForEdit: (slotId: SlotId) => void
   dialog: ReactElement | null
 } {
@@ -35,8 +36,9 @@ export function useRivenDialog({
 
   const openForPlacement = () => {
     const target = rivenTarget(slots, normalSlotCount)
-    if (!target) return
+    if (!target) return false
     setRivenEdit({ slotId: target, initial: undefined })
+    return true
   }
 
   const openForEdit = (slotId: SlotId) => {
@@ -61,10 +63,15 @@ export function useRivenDialog({
       baseDrain: values.drain,
       rivenStats: values.rivenStats,
     }
-    slots.placeAt(rivenEdit.slotId, mod, base.fusionLimit)
-    // placeAt doesn't move the cursor; advance past the placed riven so the
-    // next mod click lands in an empty slot instead of overwriting it.
-    slots.selectNextEmpty(rivenEdit.slotId)
+    const editing = rivenEdit.initial ? slots.placed[rivenEdit.slotId] : null
+    // Editing keeps the riven's rank (fixing a typo shouldn't max it) and the
+    // cursor where it is; a new riven starts maxed and moves the cursor on.
+    slots.placeAt(
+      rivenEdit.slotId,
+      mod,
+      editing ? Math.min(editing.rank, base.fusionLimit) : base.fusionLimit,
+    )
+    if (!editing) slots.selectNextEmpty(rivenEdit.slotId)
     setRivenEdit(null)
   }
 

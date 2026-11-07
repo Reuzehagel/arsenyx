@@ -28,6 +28,16 @@ export function apiErrorMessage(err: unknown, fallback: string): string {
   return err.body?.message ?? err.body?.error ?? err.body?.details ?? fallback
 }
 
+/** HTTP status and `error` code of a failed API call; both null when the
+ *  request never got an answer (offline, CORS, DNS). */
+export function apiErrorInfo(err: unknown): {
+  status: number | null
+  code: string | null
+} {
+  if (!(err instanceof ApiError)) return { status: null, code: null }
+  return { status: err.status, code: err.body?.error ?? null }
+}
+
 export interface ApiFetchInit extends Omit<RequestInit, "body"> {
   /** JSON-stringified into the request body with the right content-type. */
   json?: unknown

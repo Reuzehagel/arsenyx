@@ -43,6 +43,8 @@ type StartFn = (source: Source, e: ReactPointerEvent) => void
 
 const StartContext = createContext<StartFn | null>(null)
 const TargetContext = createContext<SlotId | null>(null)
+/** Whether a drop on the current target would actually do something. */
+const TargetValidContext = createContext<boolean>(false)
 const SourceSlotContext = createContext<SlotId | null>(null)
 const DraggingContext = createContext<boolean>(false)
 
@@ -52,6 +54,22 @@ interface DropTargetSlots {
   usedNames: Set<string>
   placeAt: (id: SlotId, mod: Mod) => void
   swap: (from: SlotId, to: SlotId) => void
+}
+
+/** The one rule for whether a drop lands. Also drives the target's
+ *  valid/invalid highlight, so what the slot shows is what the drop does. */
+function canDrop(s: DropTargetSlots, source: Source, target: SlotId): boolean {
+  if (!canPlaceIn(source.mod, target)) return false
+  const existing = s.placed[target]
+  if (source.kind === "pool") {
+    return (
+      existing?.mod.name !== source.mod.name &&
+      !s.usedNames.has(source.mod.name)
+    )
+  }
+  if (source.slotId === target) return false
+  // A swap also has to fit the displaced mod back into the source slot.
+  return !existing || canPlaceIn(existing.mod, source.slotId)
 }
 
 export function DragController({
@@ -75,19 +93,15 @@ export function DragController({
         : null
     },
     onCommit: (source, targetSlot) => {
-      const s = slots
-      if (source.kind === "pool") {
-        if (!canPlaceIn(source.mod, targetSlot)) return
-        const existing = s.placed[targetSlot]
-        if (existing?.mod.name === source.mod.name) return
-        if (s.usedNames.has(source.mod.name)) return
-        s.placeAt(targetSlot, source.mod)
-        return
-      }
-      if (source.slotId === targetSlot) return
-      s.swap(source.slotId, targetSlot)
+      if (!canDrop(slots, source, targetSlot)) return
+      if (source.kind === "pool") slots.placeAt(targetSlot, source.mod)
+      else slots.swap(source.slotId, targetSlot)
     },
   })
+  const targetValid =
+    activeSource != null && target != null
+      ? canDrop(slots, activeSource, target)
+      : false
 
   const activeSourceSlot =
     activeSource?.kind === "slot" ? activeSource.slotId : null
@@ -98,19 +112,23 @@ export function DragController({
       <DraggingContext.Provider value={isAnyDragging}>
         <SourceSlotContext.Provider value={activeSourceSlot}>
           <TargetContext.Provider value={target}>
-            {children}
-            {activeSource &&
-              typeof document !== "undefined" &&
-              createPortal(
-                <DragGhost
-                  ghostRef={ghostRef}
-                  mod={activeSource.mod}
-                  rank={
-                    activeSource.kind === "slot" ? activeSource.rank : undefined
-                  }
-                />,
-                document.body,
-              )}
+            <TargetValidContext.Provider value={targetValid}>
+              {children}
+              {activeSource &&
+                typeof document !== "undefined" &&
+                createPortal(
+                  <DragGhost
+                    ghostRef={ghostRef}
+                    mod={activeSource.mod}
+                    rank={
+                      activeSource.kind === "slot"
+                        ? activeSource.rank
+                        : undefined
+                    }
+                  />,
+                  document.body,
+                )}
+            </TargetValidContext.Provider>
           </TargetContext.Provider>
         </SourceSlotContext.Provider>
       </DraggingContext.Provider>
@@ -152,6 +170,11 @@ export function useStartDrag() {
 export function useIsDropTarget(slotId: SlotId | undefined): boolean {
   const target = useContext(TargetContext)
   return slotId != null && target === slotId
+}
+
+/** True when the slot is the current drop target and the drop would land. */
+export function useIsDropTargetValid(): boolean {
+  return useContext(TargetValidContext)
 }
 
 export function useIsDragSourceSlot(slotId: SlotId | undefined): boolean {

@@ -10,12 +10,12 @@ The editor needs only the web dev server (`preview_start` name `web`, :5173). Th
 
 Drafts autosave to localStorage and come back on reload. A leftover mod from an earlier run looks just like a bug. Before every scenario, click **Discard draft** in the header (it's only there while a draft exists), or run `localStorage.clear()` and reload.
 
-Drafts live under `arsenyx:editor-draft:<storeKey>`: the build slug for a saved build, `__new_build__:<category>:<slug>` for a new one. Read one with `JSON.parse(localStorage[key]).payload.buildData`. A draft is written 600 ms after the last edit; switching Variants inside that window cancels the write, and the new mount writes nothing until the next edit. So a missing draft right after a switch is expected, not a bug.
+Drafts live under `arsenyx:editor-draft:<storeKey>`: the build slug for a saved build, `__new_build__:<category>:<slug>` for a new one. Read one with `JSON.parse(localStorage[key]).payload.buildData`. A draft is written 600 ms after the last edit, or at once when the editor unmounts or the page hides with a write still pending (unless the draft was cleared since: a save or Discard). A draft that appears right after you navigate away is that flush, not a bug.
 
 ## Forma a slot and add Variants
 
 - The first click on a slot selects it; a second click opens its polarity picker: buttons `[aria-label="Apply <polarity> polarity"]` and `Clear polarity`. At the default pane size the picker opens below the fold, so `resize_window` to 1280×1000 first, or click the button through `javascript_tool`. The header's forma count is the quickest readout.
-- The Variant bar (tabs, the forma & shards mode toggle) only renders with two or more Variants. Start with **+ Copy**.
+- The Variant bar (tabs, the forma & shards mode toggle) only renders with two or more Variants. Start with **Copy** (the button next to **Variant**).
 
 Opening a `?share=` or `?draft=` (import) link writes it as that item's draft and drops the param from the URL, so a refresh restores it. A draft it replaced is offered back by a "Replaced your unsaved draft" toast (Restore it).
 

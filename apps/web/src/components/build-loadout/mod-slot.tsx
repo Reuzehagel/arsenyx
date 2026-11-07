@@ -32,6 +32,7 @@ import {
   useIsAnyDragActive,
   useIsDragSourceSlot,
   useIsDropTarget,
+  useIsDropTargetValid,
   useStartDrag,
 } from "./drag-controller"
 import { DetailLinks } from "./item-detail"
@@ -132,8 +133,22 @@ export function ModSlot({
   // re-renders at most twice per drag (becoming over, leaving over).
   const startDrag = useStartDrag()
   const isOver = useIsDropTarget(slotId)
+  const dropValid = useIsDropTargetValid()
   const isDragging = useIsDragSourceSlot(slotId)
   const isAnyDragging = useIsAnyDragActive()
+  // Hover enter/leave is unbound mid-drag (pointer capture swallows it
+  // anyway), so hand the `-`/`+` rank target over by hand: the source slot
+  // lets go when the drag starts, the slot the drop lands on takes it.
+  const wasOverRef = useRef(false)
+  if (isAnyDragging) wasOverRef.current = isOver
+  useEffect(() => {
+    if (!rankHover || !slotId || readOnly) return
+    if (isDragging) rankHover.clear({ kind: "mod", id: slotId })
+    else if (!isAnyDragging && wasOverRef.current) {
+      wasOverRef.current = false
+      rankHover.set({ kind: "mod", id: slotId })
+    }
+  }, [isAnyDragging, isDragging, rankHover, slotId, readOnly])
   const canDrag = !readOnly && !!mod && !!slotId && kind !== "aura"
   // Drop settle (issue #188), gated for prefers-reduced-motion: a one-shot
   // scale when a mod lands. Driven by a state flag cleared on animationend —
@@ -329,9 +344,13 @@ export function ModSlot({
             // While this slot is the drag source, hide the mod card behind
             // a dashed "ghost" so it reads as a vacated slot (matches how
             // an empty slot looks). The drag overlay carries the real card.
+            // Distinct from the white "selected" ring, and red when the drop
+            // would be refused, so a release never silently does nothing.
             isOver &&
               !isDragging &&
-              "ring-dashed rounded-md ring-2 ring-white/60",
+              (dropValid
+                ? "ring-primary bg-primary/10 rounded-md ring-2"
+                : "ring-destructive/70 bg-destructive/10 rounded-md ring-2"),
           )}
         >
           {mod && !isDragging ? (

@@ -1,7 +1,7 @@
 import { FormToggle } from "@/components/form-toggle"
 import { variantDisplayLabel } from "@/lib/build/variants"
 
-import { VariantTab } from "./variant-tab"
+import { VARIANT_TRACK, VariantTab } from "./variant-tab"
 
 /**
  * Read-only tab bar for switching between a build's variants in the
@@ -30,7 +30,7 @@ export function VariantTabs({
   onSelectForm?: (formIndex: number) => void
 }) {
   return (
-    <div className="flex flex-col items-center gap-1.5 pb-1">
+    <div className="flex flex-col items-center gap-1.5 pb-2">
       {formNames && onSelectForm ? (
         <FormToggle
           formNames={formNames}
@@ -38,17 +38,12 @@ export function VariantTabs({
           onSelect={onSelectForm}
         />
       ) : null}
-      <div
-        role="tablist"
-        aria-label="Build variants"
-        className="flex flex-wrap items-center justify-center gap-1.5"
-      >
+      <div role="tablist" aria-label="Build variants" className={VARIANT_TRACK}>
         {variants.map((v, i) => (
           <VariantTab
             key={v.id || i}
             active={i === activeIndex}
             onClick={() => onSelect(i)}
-            className="rounded-md px-3 py-1 text-sm"
           >
             {variantDisplayLabel(v, i)}
           </VariantTab>
