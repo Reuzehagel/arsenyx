@@ -24,6 +24,7 @@ import {
   type SavedBuildData,
   type SavedVariant,
   type Untrusted,
+  type VariantMode,
 } from "./build-data"
 
 export type BuildChangeOp = "add" | "remove" | "modify" | "info"
@@ -45,6 +46,10 @@ const MAX_CHANGES = 40
 
 /** The `info` label a save that moved nothing gets. Readers filter on it. */
 export const NO_CHANGES_LABEL = "No loadout changes"
+
+/** Label of the Variant mode switch. The mode has two values, so a second
+ *  switch in one burst always undoes the first — `mergeChanges` cancels them. */
+const MODE_LABEL = "Forma & shards"
 
 /** Per-field length cap on stored changes. Labels, scopes and details echo
  *  user strings (variant labels, mod names) and a variant's label is stamped
@@ -109,6 +114,8 @@ function placedArcane(v: unknown): Placed | null {
 interface Variant {
   key: string
   label: string
+  /** Twin-frame form index; 0 for normal frames. */
+  form: number
   mods: Placed[]
   arcanes: Placed[]
   shards: string[]
@@ -148,6 +155,7 @@ function readVariant(v: unknown, index: number, fallback: DocJson): Variant {
   return {
     key: str(o.id) ?? `#${index}`,
     label: str(o.label) ?? "",
+    form: num(o.formIndex) ?? 0,
     mods: Object.values(obj(src.slots) ?? {})
       .map(placedMod)
       .filter((m): m is Placed => m !== null),
@@ -167,6 +175,22 @@ function readVariant(v: unknown, index: number, fallback: DocJson): Variant {
     incarnonEnabled: src.incarnonEnabled === true,
     incarnonPerks: arr(src.incarnonPerks).map((p) => str(p) ?? ""),
   }
+}
+
+/** The stored mode, or for builds saved before it existed, "independent" when
+ *  two variants of the same form disagree on forma or shards — the same
+ *  inference the editor's `resolveVariantMode` makes on load. */
+function variantModeOf(doc: DocJson, variants: Variant[]): VariantMode {
+  if (doc.variantMode === "linked" || doc.variantMode === "independent")
+    return doc.variantMode
+  const seen = new Map<number, string>()
+  for (const v of variants) {
+    const sig = `${stamp(v.forma)}|${v.shards.join(";")}`
+    const prior = seen.get(v.form)
+    if (prior !== undefined && prior !== sig) return "independent"
+    seen.set(v.form, sig)
+  }
+  return "linked"
 }
 
 function readVariants(doc: DocJson): Variant[] {
@@ -351,13 +375,25 @@ export function diffBuildData(before: unknown, after: unknown): BuildChange[] {
   const beforeVariants = readVariants(a)
   const afterVariants = readVariants(b)
   const byKey = new Map(beforeVariants.map((v) => [v.key, v]))
-  // Twin-frame forms each have their own forma even when linked, so a build
-  // spanning forms reports forma per variant too.
+  const modeBefore = variantModeOf(a, beforeVariants)
+  const modeAfter = variantModeOf(b, afterVariants)
+  // Forma goes per variant when either side is independent: switching to
+  // shared overwrites the other variants' forma, which a build-wide compare of
+  // the active set can't see. Twin-frame forms each have their own forma even
+  // when linked, so a build spanning forms reports forma per variant too.
   const independent =
-    b.variantMode === "independent" ||
-    new Set(arr(b.variants).map((v) => obj(v)?.formIndex ?? 0)).size > 1
+    modeBefore === "independent" ||
+    modeAfter === "independent" ||
+    new Set(afterVariants.map((v) => v.form)).size > 1
 
   const out: BuildChange[] = []
+  if (modeBefore !== modeAfter) {
+    out.push({
+      op: "modify",
+      label: MODE_LABEL,
+      detail: modeAfter === "linked" ? "now shared" : "now per variant",
+    })
+  }
 
   afterVariants.forEach((av, i) => {
     // Match on the variant's stable id. Position is only a fallback for
@@ -458,7 +494,11 @@ export function mergeChanges(lists: BuildChange[][]): BuildChange[] {
       const key = `${c.scope ?? ""}|${c.label}`
       const prior = merged.get(key)
       // In then out (or out then in) across the burst = nothing happened.
-      if (prior && CANCELS[prior.op] === c.op) {
+      if (
+        prior &&
+        (CANCELS[prior.op] === c.op ||
+          (c.label === MODE_LABEL && prior.detail !== c.detail))
+      ) {
         merged.delete(key)
         continue
       }

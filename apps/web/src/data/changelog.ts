@@ -11,6 +11,31 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-11-07",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Changing your display name no longer removes your profile picture. If yours disappeared, sign out and back in to get it back.",
+      },
+      {
+        type: "fix",
+        description:
+          'Switching a build between shared and per-variant forma now shows up in its edit history, along with the forma and Archon Shards it replaced, instead of "No loadout changes".',
+      },
+      {
+        type: "fix",
+        description:
+          "Switching variants on a build page no longer drops the back link in Related builds.",
+      },
+      {
+        type: "fix",
+        description:
+          "The polarity picker no longer pops back open by itself after you press Escape and select the slot again.",
+      },
+    ],
+  },
+  {
     date: "2026-11-06",
     changes: [
       {

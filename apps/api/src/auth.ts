@@ -158,9 +158,11 @@ function sanitizeUserData(
     if (trimmed.length > 0) out = { ...out, name: trimmed }
   }
 
-  if ("image" in out) {
+  // `undefined` means "not changing it": /update-user always passes an `image`
+  // key, so a display-name-only save would otherwise null the avatar (#466).
+  if (out.image !== undefined) {
     const v = out.image
-    if (v == null || v === "") {
+    if (v === null || v === "") {
       out = { ...out, image: null }
     } else if (typeof v === "string") {
       const validated = validateExternalUrl(v)
