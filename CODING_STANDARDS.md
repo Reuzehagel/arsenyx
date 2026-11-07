@@ -30,6 +30,10 @@ In `apps/web`, an API call goes through `apiCall` and maps errors with its `code
 
 `components/build-loadout/` renders for both the viewer and the editor. The viewer passes plain values (derived with `loadoutFromSaved` / `extrasFromSaved`); the editor adds an optional `edit` object of handlers. Flag a no-op callback or a `readOnly` flag passed to make a component work in the viewer, or an editor hook run only to read data.
 
+## A comment's claims match the code
+
+A comment carries the why the code can't show. Every factual claim in an added or moved comment (a length or limit, a named constant, flag or guard, a file pointer) is checked against the code it names. Flag a false claim, a comment that now sits on code it doesn't describe, and one that narrates the next line or recounts the edit. False ones have shipped: #469's fixtures cited a constant the same PR deleted and lengths two short of the limits they named. The `comment-rot` skill runs the full pass.
+
 ## Game rules come from the catalog
 
 A Warframe rule (which mods conflict, fit a slot, stack, trade; ability or item behaviour) is read from `apps/web/public/data/` ([index](docs/commands.md#what-the-built-catalog-holds)) or cites a wiki page. Flag a hand-written list or regex of mod/item names that encodes such a rule: it drifts with every game update. Example: `mod-conflicts.json`, never a `/^(Primed|Umbral…)/` name filter.

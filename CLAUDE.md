@@ -52,4 +52,4 @@ Game data is static, user data is dynamic. If something is read-heavy and rarely
 
 ## Keeping docs fresh
 
-These files (`CLAUDE.md`, `apps/*/CLAUDE.md`, `docs/*.md`) are infrastructure — a stale line cascades into bad plans. **If you notice something here is wrong, out of date, or missing, update it directly** in the same session. Prefer deleting stale content over leaving it to rot. Prefer pointers (`file:line`) over embedded snippets.
+These files (`CLAUDE.md`, `apps/*/CLAUDE.md`, `docs/*.md`) are infrastructure — a stale line cascades into bad plans. **If you notice something here is wrong, out of date, or missing, update it directly** in the same session. Prefer deleting stale content over leaving it to rot. Prefer pointers (file + symbol) over embedded snippets; line numbers go stale.

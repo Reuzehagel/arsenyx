@@ -19,6 +19,7 @@
     "check:native-button": "bun run scripts/check-native-button.ts",
     "check:layering": "bun run scripts/check-layering.ts",
     "check:wrangler": "bun run scripts/check-wrangler.ts",
+    "check:dev-leak": "bun run scripts/check-dev-leak.ts",
     "cf:usage": "bun run scripts/cf-usage.ts",
     "cf:profile": "bun run scripts/cf-profile.ts",
     "bundle:report": "bun run scripts/bundle-report.ts",
