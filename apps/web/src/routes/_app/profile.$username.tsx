@@ -10,6 +10,7 @@ import { Link } from "@/components/link"
 import { ProfileBadges } from "@/components/profile-badges"
 import { RouteNotFound } from "@/components/route-not-found"
 import { UserAvatar } from "@/components/user-avatar"
+import { useProfileFixture } from "@/dev/fixtures"
 import { profileBuildsQuery, profileQuery } from "@/lib/queries/profile-query"
 import { seo } from "@/lib/seo"
 import { authorName } from "@/lib/util/user-display"
@@ -61,7 +62,9 @@ function ProfileContent() {
   const { username } = Route.useParams()
   const { params, onUpdateSearch } = list.useListSearch(Route.useSearch())
 
-  const { data: profile } = useSuspenseQuery(profileQuery(username))
+  const profile = useProfileFixture(
+    useSuspenseQuery(profileQuery(username)).data,
+  )
 
   return (
     <>
@@ -122,8 +125,10 @@ function ProfileOrgs({ orgs }: { orgs: Profile["orgs"] }) {
         <Link
           key={org.id}
           href={`/org/${org.slug}`}
-          className="bg-muted/50 hover:bg-muted flex items-center gap-1.5 rounded-full border py-0.5 pr-2.5 pl-1 text-xs transition-colors"
-          title={org.verified ? "Verified organization" : undefined}
+          className="bg-muted/50 hover:bg-muted ease-snappy flex items-center gap-1.5 rounded-full border py-0.5 pr-2.5 pl-1 text-xs transition-[background-color,scale] duration-150 active:scale-[0.97] motion-reduce:active:scale-100"
+          title={
+            org.verified ? `${org.name} · Verified organization` : org.name
+          }
         >
           <UserAvatar
             src={org.image}

@@ -16,6 +16,11 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "fix",
         description:
+          "Profiles and organizations hold up better too: avatars that fail to load fall back to an initial, names starting with an emoji get a proper initial, long links in bios and descriptions wrap instead of running off the card, and long names show in full on hover. Cards on Browse, Profiles and Organizations also respond when pressed.",
+      },
+      {
+        type: "fix",
+        description:
           "Build cards hold up better with long names and big numbers: long build, author and org names end in … with the full name on hover, like and view counts are shortened (1.3K, 12M), removed items show a placeholder instead of a broken image, and stats stay on one line. Cards also give a little press feedback, and the list no longer flickers when a page loads quickly.",
       },
       {

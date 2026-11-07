@@ -16,7 +16,7 @@ export function ItemCard({ item }: ItemCardProps) {
   return (
     <Link
       href={getItemUrl(item.category, item.slug)}
-      className="group focus-visible:ring-ring rounded-xl outline-none [contain-intrinsic-size:auto_280px] [content-visibility:auto] focus-visible:ring-2 focus-visible:ring-offset-2"
+      className="group focus-visible:ring-ring ease-snappy rounded-xl transition-[scale] duration-150 outline-none [contain-intrinsic-size:auto_280px] [content-visibility:auto] focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98] motion-reduce:active:scale-100"
     >
       <Card className="hover:border-primary/50 group-focus-visible:border-primary/50 relative h-full gap-0 overflow-hidden py-0 transition-[box-shadow,border-color] duration-200 hover:shadow-md">
         {item.vaulted && (
@@ -34,7 +34,7 @@ export function ItemCard({ item }: ItemCardProps) {
             alt={item.name}
             loading="lazy"
             className={cn(
-              "absolute inset-0 h-full w-full object-cover transition-transform duration-200 group-hover:scale-110",
+              "ease-snappy absolute inset-0 h-full w-full object-cover transition-[scale] duration-200 group-hover:scale-105 motion-reduce:group-hover:scale-100",
               // Operator renders are full-body portraits; anchor to the head, not the torso
               item.category === "operators" && "object-top",
               !item.imageName && "opacity-50",

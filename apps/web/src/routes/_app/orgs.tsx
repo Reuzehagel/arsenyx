@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { UserAvatar } from "@/components/user-avatar"
+import { useOrgsFixture } from "@/dev/fixtures"
 import { orgsDirectoryQuery } from "@/lib/queries/org-query"
 import { pageSeo } from "@/lib/seo"
 import {
@@ -50,8 +51,8 @@ function OrgsDirectoryPage() {
 
 function Results() {
   const search = Route.useSearch()
-  const { data } = useSuspenseQuery(
-    orgsDirectoryQuery(search.page ?? 1, search.q),
+  const data = useOrgsFixture(
+    useSuspenseQuery(orgsDirectoryQuery(search.page ?? 1, search.q)).data,
   )
   return (
     <DirectoryGrid
@@ -71,7 +72,7 @@ function OrgCard({ org }: { org: OrgDirectoryItem }) {
   return (
     <Link
       href={`/org/${org.slug}`}
-      className="focus-visible:ring-ring block h-full rounded-xl focus:outline-none focus-visible:ring-2"
+      className="focus-visible:ring-ring ease-snappy block h-full rounded-xl transition-[scale] duration-150 focus:outline-none focus-visible:ring-2 active:scale-[0.98] motion-reduce:active:scale-100"
     >
       <Card className="hover:bg-muted/30 h-full transition-colors">
         <CardHeader className="flex flex-row items-center gap-3">
@@ -84,7 +85,9 @@ function OrgCard({ org }: { org: OrgDirectoryItem }) {
           <div className="flex min-w-0 flex-col gap-0.5">
             <CardTitle
               className={`truncate ${org.verified ? "text-wf-org" : ""}`}
-              title={org.verified ? "Verified organization" : undefined}
+              title={
+                org.verified ? `${org.name} · Verified organization` : org.name
+              }
             >
               {org.name}
             </CardTitle>
@@ -95,7 +98,7 @@ function OrgCard({ org }: { org: OrgDirectoryItem }) {
         </CardHeader>
         {org.description ? (
           <CardContent>
-            <p className="text-muted-foreground line-clamp-3 text-sm">
+            <p className="text-muted-foreground line-clamp-3 text-sm wrap-anywhere">
               {org.description}
             </p>
           </CardContent>

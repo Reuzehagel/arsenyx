@@ -1,10 +1,19 @@
-// DEV-ONLY stress fixture for the build lists (break-ui skill). Swaps the
-// `/builds` list response at the data boundary when `?data=` is set; the
-// toggle and the swap are both gated on import.meta.env.DEV.
+// DEV-ONLY stress fixtures (break-ui skill). `?data=worst|empty|one|many`
+// swaps a list or profile response at the data boundary; the toggle and the
+// swap are both gated on import.meta.env.DEV.
 import type {
   BuildListItemResponse,
   BuildListResponse,
 } from "@arsenyx/shared/api/build-dto"
+import type {
+  OrgDirectoryItem,
+  OrgDirectoryResponse,
+} from "@arsenyx/shared/api/orgs"
+import type {
+  Profile,
+  ProfileDirectoryItem,
+  ProfileDirectoryResponse,
+} from "@arsenyx/shared/api/users"
 import { useSyncExternalStore } from "react"
 
 const STATES = ["demo", "worst", "empty", "one", "many"] as const
@@ -14,7 +23,7 @@ const LABELS: Record<DataState, string> = {
   worst: "Worst case",
   empty: "Empty",
   one: "One",
-  many: "1,284 builds",
+  many: "Many",
 }
 
 const EVENT = "worst-case-data"
@@ -227,16 +236,177 @@ function fixture(state: DataState): BuildListResponse | null {
   }
 }
 
-/** The real list response, or the fixture when `?data=` picks one (dev only). */
+/** `real`, or the fixture for the `?data=` state when one is given (dev only).
+ *  Swap at the data boundary: right where the query result is read. */
+export function useFixture<T>(
+  real: T,
+  fixtures: Partial<Record<DataState, () => T>>,
+): T {
+  const state = useSyncExternalStore(subscribe, read, () => "demo" as const)
+  if (!import.meta.env.DEV) return real
+  return fixtures[state]?.() ?? real
+}
+
 export function useWorstCaseList<T extends BuildListResponse | undefined>(
   real: T,
 ): T | BuildListResponse {
-  const state = useSyncExternalStore(subscribe, read, () => "demo" as const)
-  if (!import.meta.env.DEV) return real
-  return fixture(state) ?? real
+  return useFixture<T | BuildListResponse>(real, {
+    worst: () => fixture("worst")!,
+    empty: () => fixture("empty")!,
+    one: () => fixture("one")!,
+    many: () => fixture("many")!,
+  })
 }
 
-export function WorstCaseToggle() {
+// --- Profiles / orgs ---------------------------------------------------------
+
+const NO_BADGES = {
+  verified: false,
+  communityLeader: false,
+  moderator: false,
+  admin: false,
+}
+// An avatar URL that 404s.
+const DEAD_AVATAR = "https://img.arsenyx.com/missing-avatar-00000000.webp"
+const BIO_URL =
+  "Endo farming & Steel Path guides: https://example.com/arsenyx/guides/steel-path/endurance/survival-netracells?ref=profile-bio-link"
+
+function profileItem(
+  i: number,
+  over: Partial<ProfileDirectoryItem>,
+): ProfileDirectoryItem {
+  return {
+    id: `p${i}`,
+    name: null,
+    username: `tenno${i}`,
+    displayUsername: `tenno${i}`,
+    image: null,
+    bio: null,
+    joinedAt: ago(200 * DAY),
+    badges: NO_BADGES,
+    buildCount: 3,
+    ...over,
+  }
+}
+
+const WORST_PROFILES: ProfileDirectoryItem[] = [
+  profileItem(1, {
+    displayUsername: "Aleksandra Wiśniewska-Kowalczyk-Nowakowska-Zielińs", // 50 = DISPLAY_USERNAME_MAX
+    username: "aleksandra.wisniewska-kowalczy", // 30 = USERNAME_MAX
+    bio: BIO_URL,
+    badges: { ...NO_BADGES, admin: true, moderator: true, verified: true },
+    buildCount: 1284,
+  }),
+  profileItem(2, {
+    displayUsername: "👩🏽‍💻 Priya",
+    username: "priya",
+    image: DEAD_AVATAR,
+    buildCount: 1,
+    joinedAt: ago(0),
+  }),
+  profileItem(3, {
+    displayUsername: "Jo",
+    username: "jo-",
+    bio: "Đặng Thị Ngọc Hân — Wisp main. ".repeat(12),
+    buildCount: 0,
+  }),
+  profileItem(4, {
+    displayUsername: "نور الهدى عبد الرحمن",
+    username: "nour",
+    badges: { ...NO_BADGES, communityLeader: true },
+  }),
+  profileItem(5, {
+    displayUsername: null,
+    username: "dana",
+    buildCount: 99_999,
+  }),
+  profileItem(6, {
+    displayUsername: "SP_Eidolon_Hunter_Christopher_Montgomery_the_Third",
+    username: "chris",
+  }),
+]
+
+function orgItem(i: number, over: Partial<OrgDirectoryItem>): OrgDirectoryItem {
+  return {
+    id: `o${i}`,
+    name: "Tenno Union",
+    slug: `org-${i}`,
+    image: null,
+    description: null,
+    verified: false,
+    createdAt: ago(100 * DAY),
+    memberCount: 4,
+    buildCount: 12,
+    ...over,
+  }
+}
+
+const WORST_ORGS: OrgDirectoryItem[] = [
+  orgItem(1, {
+    name: "Steel Path Endurance Collective!", // 32 = ORG_NAME_MAX
+    slug: "steel-path-endurance-collectiv", // 30 = ORG_SLUG_MAX
+    description:
+      "We run 4h+ Steel Path survivals, Netracells and Archon hunts every weekend. Builds here are tested in real runs. Ask in our Discord before copying.", // ~150 of 200
+    verified: true,
+    memberCount: 1284,
+    buildCount: 1,
+  }),
+  orgItem(2, {
+    name: "王秀英公会",
+    image: DEAD_AVATAR,
+    memberCount: 1,
+    buildCount: 0,
+    description:
+      "https://example.com/discord/invite/aVeryLongInviteCodeThatDoesNotBreak1234567890",
+  }),
+  orgItem(3, { name: "🦊 Fox Den", memberCount: 0 }),
+  orgItem(4, { name: "J", slug: "j-j" }),
+]
+
+const envelope = { page: 1, limit: 24 }
+
+export function useProfilesFixture(real: ProfileDirectoryResponse) {
+  return useFixture(real, {
+    worst: () => ({ ...envelope, users: WORST_PROFILES, total: 6 }),
+    empty: () => ({ ...envelope, users: [], total: 0 }),
+    one: () => ({ ...envelope, users: [WORST_PROFILES[1]!], total: 1 }),
+  })
+}
+
+export function useOrgsFixture(real: OrgDirectoryResponse) {
+  return useFixture(real, {
+    worst: () => ({ ...envelope, orgs: WORST_ORGS, total: 4 }),
+    empty: () => ({ ...envelope, orgs: [], total: 0 }),
+    one: () => ({ ...envelope, orgs: [WORST_ORGS[1]!], total: 1 }),
+  })
+}
+
+export function useProfileFixture(real: Profile) {
+  const p = WORST_PROFILES[0]!
+  return useFixture(real, {
+    worst: () => ({
+      ...real,
+      ...p,
+      image: DEAD_AVATAR,
+      displayUsername: "SP_Eidolon_Hunter_Christopher_Montgomery_the_Third",
+      badges: {
+        verified: true,
+        communityLeader: true,
+        moderator: true,
+        admin: true,
+      },
+      stats: {
+        buildCount: 1284,
+        totalLikes: 99_999,
+        totalBookmarks: 1,
+        totalViews: 12_345_678,
+      },
+      orgs: WORST_ORGS.map((o) => ({ ...o, role: "MEMBER" as const })),
+    }),
+  })
+}
+
+export function FixtureToggle() {
   const state = useSyncExternalStore(subscribe, read, () => "demo" as const)
   if (!import.meta.env.DEV) return null
   return (

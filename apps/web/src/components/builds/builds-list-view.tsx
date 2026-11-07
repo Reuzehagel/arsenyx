@@ -23,7 +23,7 @@ import { Kbd } from "@/components/ui/kbd"
 import { Popover, PopoverContent } from "@/components/ui/popover"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
-import { useWorstCaseList, WorstCaseToggle } from "@/dev/worst-case-builds"
+import { useWorstCaseList } from "@/dev/fixtures"
 import { HOTKEYS, useSearchHotkey } from "@/lib/hooks/hotkeys"
 import { useUrlSearchInput } from "@/lib/hooks/use-url-search-input"
 import type { publicBuildsQuery } from "@/lib/queries/builds-list-query"
@@ -71,7 +71,7 @@ export function BuildsListView({
             <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
           ) : null}
           {description ? (
-            <p className="text-muted-foreground">{description}</p>
+            <p className="text-muted-foreground wrap-anywhere">{description}</p>
           ) : null}
         </div>
       ) : null}
@@ -176,7 +176,6 @@ function Results({
 
   return (
     <>
-      <WorstCaseToggle />
       <div className="text-muted-foreground text-sm">
         {data.total.toLocaleString("en-US")}{" "}
         {data.total === 1 ? "build" : "builds"}

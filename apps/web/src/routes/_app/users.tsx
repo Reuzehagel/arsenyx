@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { UserAvatar } from "@/components/user-avatar"
+import { useProfilesFixture } from "@/dev/fixtures"
 import { profilesDirectoryQuery } from "@/lib/queries/profile-query"
 import { pageSeo } from "@/lib/seo"
 import {
@@ -51,8 +52,8 @@ function ProfilesDirectoryPage() {
 
 function Results() {
   const search = Route.useSearch()
-  const { data } = useSuspenseQuery(
-    profilesDirectoryQuery(search.page ?? 1, search.q),
+  const data = useProfilesFixture(
+    useSuspenseQuery(profilesDirectoryQuery(search.page ?? 1, search.q)).data,
   )
   return (
     <DirectoryGrid
@@ -77,20 +78,22 @@ function ProfileCard({ user }: { user: ProfileDirectoryItem }) {
   return (
     <Link
       href={`/profile/${handle}`}
-      className="focus-visible:ring-ring block h-full rounded-xl focus:outline-none focus-visible:ring-2"
+      className="focus-visible:ring-ring ease-snappy block h-full rounded-xl transition-[scale] duration-150 focus:outline-none focus-visible:ring-2 active:scale-[0.98] motion-reduce:active:scale-100"
     >
       <Card className="hover:bg-muted/30 h-full transition-colors">
         <CardHeader className="flex flex-row items-center gap-3">
           <UserAvatar src={user.image} fallback={title} size={10} />
           <div className="flex min-w-0 flex-col gap-1">
-            <CardTitle className="truncate">{title}</CardTitle>
+            <CardTitle className="truncate" title={title}>
+              {title}
+            </CardTitle>
             <p className="text-muted-foreground truncate text-xs">@{handle}</p>
             <ProfileBadges badges={user.badges} compact />
           </div>
         </CardHeader>
         {user.bio ? (
           <CardContent>
-            <p className="text-muted-foreground line-clamp-3 text-sm">
+            <p className="text-muted-foreground line-clamp-3 text-sm wrap-anywhere">
               {user.bio}
             </p>
           </CardContent>

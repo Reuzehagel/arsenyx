@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
+import { FixtureToggle } from "@/dev/fixtures"
 
 /** Site header + footer around a page. Rendered once by the `_app` layout
  *  route so the header survives navigation; the root not-found/error pages,
@@ -12,6 +13,7 @@ export function AppChrome({ children }: { children: ReactNode }) {
       <Header />
       <main className="flex flex-1 flex-col">{children}</main>
       <Footer />
+      <FixtureToggle />
     </div>
   )
 }
