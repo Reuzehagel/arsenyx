@@ -23,6 +23,7 @@ import { Kbd } from "@/components/ui/kbd"
 import { Popover, PopoverContent } from "@/components/ui/popover"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
+import { useWorstCaseList, WorstCaseToggle } from "@/dev/worst-case-builds"
 import { HOTKEYS, useSearchHotkey } from "@/lib/hooks/hotkeys"
 import { useUrlSearchInput } from "@/lib/hooks/use-url-search-input"
 import type { publicBuildsQuery } from "@/lib/queries/builds-list-query"
@@ -148,10 +149,13 @@ function Results({
   emptyState: ReactNode
 }) {
   // Keep the current page on screen (dimmed) while the next one loads.
-  const { data, isPending, isFetching } = useQuery({
+  const res = useQuery({
     ...query,
     placeholderData: keepPreviousData,
   })
+  const data = useWorstCaseList(res.data)
+  const isFetching = res.isFetching
+  const isPending = res.isPending && !data
 
   if (isPending || !data) {
     return (
@@ -172,8 +176,10 @@ function Results({
 
   return (
     <>
+      <WorstCaseToggle />
       <div className="text-muted-foreground text-sm">
-        {data.total} {data.total === 1 ? "build" : "builds"}
+        {data.total.toLocaleString("en-US")}{" "}
+        {data.total === 1 ? "build" : "builds"}
         {q ? ` matching "${q}"` : ""}
       </div>
 

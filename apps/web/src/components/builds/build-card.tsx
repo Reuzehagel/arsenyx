@@ -14,6 +14,44 @@ import { getImageUrl } from "@/lib/image-url"
 import { formatAbsoluteTime, relativeTime } from "@/lib/util/relative-time"
 import { authorName } from "@/lib/util/user-display"
 
+const compactFormat = new Intl.NumberFormat("en-US", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+})
+
+/** Like/view count: compact ("1.3K") so big numbers don't crowd the title;
+ *  the exact figure is in the tooltip. */
+function Count({ value }: { value: number }) {
+  return (
+    <span className="tabular-nums" title={value.toLocaleString("en-US")}>
+      {compactFormat.format(value)}
+    </span>
+  )
+}
+
+/** Item image that falls back to the placeholder when the URL 404s (e.g. a
+ *  removed item whose stored image is gone). */
+function ItemImage({
+  src,
+  alt,
+  className,
+}: {
+  src: string
+  alt: string
+  className: string
+}) {
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      onError={(e) => {
+        e.currentTarget.src = getImageUrl()
+      }}
+    />
+  )
+}
+
 /** Shared per-card derivation: relative timestamp and the current catalog
  *  image URL resolved from the build's item. (Author is derived in
  *  BuildByline, the only place it's rendered.) */
@@ -42,7 +80,10 @@ function BuildByline({
   if (variant === "card") {
     return (
       <>
-        <p className="text-muted-foreground line-clamp-1 text-xs">
+        <p
+          className="text-muted-foreground truncate text-xs"
+          title={build.organization?.name ?? `by ${author}`}
+        >
           {build.organization ? (
             <span className={build.organization.verified ? "text-wf-org" : ""}>
               {build.organization.name}
@@ -52,7 +93,10 @@ function BuildByline({
           )}
         </p>
         <p
-          className="text-muted-foreground line-clamp-1 text-xs"
+          className="text-muted-foreground truncate text-xs"
+          title={
+            build.organization && !build.hideAuthor ? `by ${author}` : undefined
+          }
           aria-hidden={!build.organization || build.hideAuthor}
         >
           {build.organization && !build.hideAuthor ? (
@@ -68,19 +112,26 @@ function BuildByline({
   return build.organization ? (
     <>
       <span
-        className={`line-clamp-1 ${build.organization.verified ? "text-wf-org" : ""}`}
+        className={`min-w-0 truncate ${build.organization.verified ? "text-wf-org" : ""}`}
+        title={build.organization.name}
       >
         {build.organization.name}
       </span>
       {!build.hideAuthor && (
         <>
-          <span aria-hidden>·</span>
-          <span className="line-clamp-1">by {author}</span>
+          <span aria-hidden className="shrink-0">
+            ·
+          </span>
+          <span className="min-w-0 truncate" title={`by ${author}`}>
+            by {author}
+          </span>
         </>
       )}
     </>
   ) : (
-    <span className="line-clamp-1">by {author}</span>
+    <span className="min-w-0 truncate" title={`by ${author}`}>
+      by {author}
+    </span>
   )
 }
 
@@ -134,39 +185,20 @@ export function BuildCard({ build }: { build: BuildListItemResponse }) {
       className="bg-card hover:bg-card/80 block overflow-hidden rounded-lg border transition-colors"
     >
       <div className="bg-muted/20 relative aspect-video">
-        <img
+        <ItemImage
           src={imageUrl}
           alt={build.item.name}
           className="absolute inset-0 h-full w-full object-contain p-2"
         />
       </div>
       <div className="flex flex-col gap-1 p-3">
-        <h3 className="line-clamp-1 text-sm font-semibold" title={build.name}>
+        <h3 className="truncate text-sm font-semibold" title={build.name}>
           {build.name}
         </h3>
-        <p className="text-muted-foreground line-clamp-1 text-xs">
-          {itemSubtitle(build)}
-        </p>
-        <BuildByline build={build} variant="card" />
+        {/* The date shares the item line so the stats row below has room for
+            likes, views and forma on one line even at worst-case counts. */}
         <div className="text-muted-foreground flex items-center justify-between gap-x-2 text-xs">
-          {/* Stats wrap as a group when a long view count would otherwise crowd
-              the date — keeps the date on one line (it's shrink-0/nowrap below)
-              instead of breaking "1d ago" across two rows. */}
-          <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-            <span className="flex items-center gap-1">
-              <Heart className="size-3" />
-              <span className="tabular-nums">{build.likeCount}</span>
-            </span>
-            <span className="flex items-center gap-1">
-              <Eye className="size-3" />
-              <span className="tabular-nums">
-                {build.viewCount.toLocaleString("en-US")}
-              </span>
-            </span>
-            {/* Divider sets forma (a build property) apart from likes/views
-                (social signals) without the noise of a thumbnail overlay. */}
-            <FormaStat count={build.formaCount} withDivider />
-          </span>
+          <span className="min-w-0 truncate">{itemSubtitle(build)}</span>
           <Tooltip>
             <TooltipTrigger
               render={
@@ -177,6 +209,20 @@ export function BuildCard({ build }: { build: BuildListItemResponse }) {
               Updated {formatAbsoluteTime(build.updatedAt)}
             </TooltipContent>
           </Tooltip>
+        </div>
+        <BuildByline build={build} variant="card" />
+        <div className="text-muted-foreground flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
+          <span className="flex items-center gap-1">
+            <Heart className="size-3" />
+            <Count value={build.likeCount} />
+          </span>
+          <span className="flex items-center gap-1">
+            <Eye className="size-3" />
+            <Count value={build.viewCount} />
+          </span>
+          {/* Divider sets forma (a build property) apart from likes/views
+              (social signals) without the noise of a thumbnail overlay. */}
+          <FormaStat count={build.formaCount} withDivider />
         </div>
       </div>
     </Link>
@@ -193,30 +239,40 @@ export function BuildRow({ build }: { build: BuildListItemResponse }) {
       className="bg-card hover:bg-card/80 flex items-center gap-3 overflow-hidden rounded-lg border p-2 transition-colors sm:gap-4 sm:p-3"
     >
       <div className="bg-muted/20 relative size-14 shrink-0 overflow-hidden rounded-md sm:size-16">
-        <img
+        <ItemImage
           src={imageUrl}
           alt={build.item.name}
           className="absolute inset-0 h-full w-full object-contain p-1"
         />
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <h3 className="line-clamp-1 text-sm font-semibold sm:text-base">
+        <h3
+          className="truncate text-sm font-semibold sm:text-base"
+          title={build.name}
+        >
           {build.name}
         </h3>
-        <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs">
-          <span className="line-clamp-1">{itemSubtitle(build)}</span>
-          <span aria-hidden>·</span>
+        {/* One line: each part truncates instead of wrapping, so a "·" is
+            never stranded at a line start. */}
+        <div className="text-muted-foreground flex min-w-0 items-center gap-x-2 text-xs">
+          <span className="max-w-[40%] shrink-0 truncate">
+            {itemSubtitle(build)}
+          </span>
+          <span aria-hidden className="shrink-0">
+            ·
+          </span>
           <BuildByline build={build} variant="row" />
         </div>
       </div>
       <div className="text-muted-foreground flex shrink-0 items-center gap-3 text-xs">
         <span className="flex items-center gap-1">
           <Heart className="size-3" />
-          <span className="tabular-nums">{build.likeCount}</span>
+          <Count value={build.likeCount} />
         </span>
-        <span className="flex items-center gap-1">
+        {/* Views drop on phones: likes and forma matter more there. */}
+        <span className="hidden items-center gap-1 sm:flex">
           <Eye className="size-3" />
-          <span className="tabular-nums">{build.viewCount}</span>
+          <Count value={build.viewCount} />
         </span>
         <FormaStat count={build.formaCount} />
         <Tooltip>
@@ -259,13 +315,13 @@ export function BuildCardSkeleton() {
       <Skeleton className="aspect-video w-full rounded-none" />
       <div className="flex flex-col gap-1 p-3">
         <Skeleton className="h-[1.125rem] w-3/4" />
-        <Skeleton className="h-[0.875rem] w-1/2" />
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-[0.875rem] w-1/2" />
+          <Skeleton className="h-[0.875rem] w-10" />
+        </div>
         <Skeleton className="h-[0.875rem] w-2/5" />
         <Skeleton className="h-[0.875rem] w-1/3" />
-        <div className="flex items-center justify-between pt-0.5">
-          <Skeleton className="h-3 w-16" />
-          <Skeleton className="h-3 w-10" />
-        </div>
+        <Skeleton className="mt-0.5 h-3 w-24" />
       </div>
     </div>
   )

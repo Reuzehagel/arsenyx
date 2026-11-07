@@ -1,6 +1,7 @@
 import { isBuildVisibility } from "@arsenyx/shared/api/build-dto"
 import { LIST_DEFAULT_SORTS } from "@arsenyx/shared/api/build-list"
 import {
+  BUILD_NAME_MAX,
   BUILD_SEARCH_Q_MAX,
   GUIDE_SUMMARY_MAX,
 } from "@arsenyx/shared/api/limits"
@@ -83,7 +84,6 @@ import {
 
 export const builds = new Hono()
 
-const MAX_NAME = 120
 const MAX_DESCRIPTION = 2000
 const MAX_GUIDE_DESCRIPTION = 50_000
 
@@ -223,7 +223,7 @@ builds.post("/", rateLimitUser("mutate"), async (c) => {
   if (!isValidCategory(itemCategory))
     return c.json({ error: "invalid_category" }, 400)
   if (!itemName) return c.json({ error: "missing_item_name" }, 400)
-  if (!name || name.length > MAX_NAME)
+  if (!name || name.length > BUILD_NAME_MAX)
     return c.json({ error: "invalid_name" }, 400)
   if (!b.buildData || typeof b.buildData !== "object") {
     return c.json({ error: "invalid_build_data" }, 400)
@@ -298,7 +298,7 @@ builds.patch("/:slug", rateLimitUser("mutate"), async (c) => {
   const patch: BuildPatch = {}
   if (typeof b.name === "string") {
     const name = b.name.trim()
-    if (!name || name.length > MAX_NAME)
+    if (!name || name.length > BUILD_NAME_MAX)
       return c.json({ error: "invalid_name" }, 400)
     patch.name = name
   }
@@ -445,7 +445,7 @@ builds.post("/:slug/fork", rateLimitUser("mutate"), async (c) => {
       itemCategory: source.itemCategory,
       itemName: source.itemName,
       itemImageName: source.itemImageName,
-      name: `Fork of ${source.name}`.slice(0, MAX_NAME),
+      name: `Fork of ${source.name}`.slice(0, BUILD_NAME_MAX),
       visibility: "PRIVATE",
       buildData: source.buildData as InputJsonValue,
       hasShards: source.hasShards,

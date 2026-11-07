@@ -16,6 +16,16 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "fix",
         description:
+          "Build cards hold up better with long names and big numbers: long build, author and org names end in … with the full name on hover, like and view counts are shortened (1.3K, 12M), removed items show a placeholder instead of a broken image, and stats stay on one line.",
+      },
+      {
+        type: "fix",
+        description:
+          "The build name field in the editor now stops at 120 characters, the most a build can save, instead of failing when you save.",
+      },
+      {
+        type: "fix",
+        description:
           "Secondary kitguns (Catchmoon, Gaze, Rattleguts, Sporelacer, Tombfinger, Vermisplicer) show their real crit, status, fire rate and damage in the build editor again, instead of all zeros.",
       },
       {
