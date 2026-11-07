@@ -127,8 +127,8 @@ const user = (displayUsername: string | null, username: string | null) => ({
   image: null,
 })
 
-const worstBuilds = (): BuildListItemResponse[] => [
-  // 120 chars: BUILD_NAME_MAX (packages/shared/src/api/limits.ts).
+export const worstBuilds = (): BuildListItemResponse[] => [
+  // BUILD_NAME_MAX long (fixtures.test.ts pins every limit-length string).
   build(1, {
     name: "Wisp Prime — Steel Path Survival / Mirror Defense / Netracells (no Helminth, budget, works without Archon Shards!!) v3.1",
     likeCount: 1284,
@@ -193,7 +193,7 @@ const worstBuilds = (): BuildListItemResponse[] => [
     user: user(null, null),
     updatedAt: ago(-5 * 60_000), // client clock behind the server
   }),
-  // 30-char username (USERNAME_MAX in apps/api/src/auth.ts), no display name.
+  // USERNAME_MAX-long username, no display name.
   build(7, {
     name: "Konstantin Oberhauser-Wettstein",
     item: ITEMS.bramma,
@@ -294,7 +294,7 @@ function profileItem(
   }
 }
 
-const worstProfiles = (): ProfileDirectoryItem[] => [
+export const worstProfiles = (): ProfileDirectoryItem[] => [
   profileItem(1, {
     displayUsername: "Aleksandra Wiśniewska-Kowalczyk-Nowakowska-Zielińs", // 50 = DISPLAY_USERNAME_MAX
     username: "aleksandra.wisniewska-kowalczy", // 30 = USERNAME_MAX
@@ -346,7 +346,7 @@ function orgItem(i: number, over: Partial<OrgDirectoryItem>): OrgDirectoryItem {
   }
 }
 
-const worstOrgs = (): OrgDirectoryItem[] => [
+export const worstOrgs = (): OrgDirectoryItem[] => [
   orgItem(1, {
     name: "Steel Path Endurance Collective!", // 32 = ORG_NAME_MAX
     slug: "steel-path-endurance-collectiv", // 30 = ORG_SLUG_MAX

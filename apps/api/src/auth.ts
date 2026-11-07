@@ -1,5 +1,5 @@
 import { isBuildVisibility } from "@arsenyx/shared/api/build-dto"
-import { DISPLAY_USERNAME_MAX } from "@arsenyx/shared/api/limits"
+import { DISPLAY_USERNAME_MAX, USERNAME_MAX } from "@arsenyx/shared/api/limits"
 import { betterAuth } from "better-auth"
 import { prismaAdapter } from "better-auth/adapters/prisma"
 import { APIError } from "better-auth/api"
@@ -55,7 +55,6 @@ function isReservedUsername(value: string): boolean {
 // (1–39 chars) inside them.
 const USERNAME_PATTERN = /^[a-zA-Z0-9_.-]+$/
 const USERNAME_MIN = 3
-const USERNAME_MAX = 30
 
 // Fires for /sign-up/email, /update-user, /is-username-available,
 // /sign-in/username, AND inside the plugin's user.create database hook on the
