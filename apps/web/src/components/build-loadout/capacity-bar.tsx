@@ -50,11 +50,12 @@ export function CapacityBar({
       </div>
       <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
         <div
+          // scaleX, not width: same look, but no layout work per frame.
           className={cn(
-            "h-full transition-[width,background-color]",
+            "ease-snappy h-full w-full origin-left transition-[transform,background-color] duration-200",
             over ? "bg-destructive" : "bg-primary",
           )}
-          style={{ width: `${pctVal}%` }}
+          style={{ transform: `scaleX(${pctVal / 100})` }}
         />
       </div>
       {showAutoForma && (

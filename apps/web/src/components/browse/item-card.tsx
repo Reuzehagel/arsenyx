@@ -10,9 +10,11 @@ import { cn } from "@/lib/util/utils"
 
 interface ItemCardProps {
   item: BrowseItem
+  /** False when every item in the view shares one class (it'd echo the tab). */
+  showClass?: boolean
 }
 
-export function ItemCard({ item }: ItemCardProps) {
+export function ItemCard({ item, showClass = true }: ItemCardProps) {
   return (
     <Link
       href={getItemUrl(item.category, item.slug)}
@@ -46,8 +48,10 @@ export function ItemCard({ item }: ItemCardProps) {
           <h3 className="group-hover:text-primary line-clamp-2 text-sm leading-tight font-medium transition-colors">
             {item.name}
           </h3>
-          <div className="text-muted-foreground flex items-center justify-between text-xs">
-            {item.displayClass && (
+          {/* Collapses to nothing on single-class tabs (none of those items
+              carry an MR either), so the card ends at the name. */}
+          <div className="text-muted-foreground flex items-center justify-between text-xs empty:hidden">
+            {showClass && item.displayClass && (
               <span className="max-w-[60%] truncate">{item.displayClass}</span>
             )}
             {item.masteryReq !== undefined && item.masteryReq > 0 && (

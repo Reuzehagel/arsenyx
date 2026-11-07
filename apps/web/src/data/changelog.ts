@@ -16,6 +16,11 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "fix",
         description:
+          "Build pages feel snappier: like and bookmark no longer flash when pressed, the mod hover card pops in faster, the max-rank line no longer replays every time you hover a mod, and the page shows a skeleton while loading. Your own build's like button now explains why it's greyed out, and long build names show in full on hover. Mod drops in the editor land without the bounce, and the Warframes, Operators and Necramechs tabs on Browse drop the label that just repeated the tab name.",
+      },
+      {
+        type: "fix",
+        description:
           "Profiles and organizations hold up better too: avatars that fail to load fall back to an initial, names starting with an emoji get a proper initial, long links in bios and descriptions wrap instead of running off the card, and long names show in full on hover, and every card on the page is the same height. Cards on Browse, Profiles and Organizations also respond when pressed.",
       },
       {

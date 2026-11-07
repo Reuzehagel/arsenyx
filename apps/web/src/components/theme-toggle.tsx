@@ -19,8 +19,8 @@ export function ThemeToggle() {
           <Button variant="ghost" size="icon" aria-label="Toggle theme" />
         }
       >
-        <Sun className="size-4 scale-100 rotate-0 transition-transform dark:scale-0 dark:-rotate-90" />
-        <Moon className="absolute size-4 scale-0 rotate-90 transition-transform dark:scale-100 dark:rotate-0" />
+        <Sun className="ease-snappy size-4 scale-100 rotate-0 transition-[scale,rotate,opacity] duration-200 dark:scale-50 dark:-rotate-90 dark:opacity-0" />
+        <Moon className="ease-snappy absolute size-4 scale-50 rotate-90 opacity-0 transition-[scale,rotate,opacity] duration-200 dark:scale-100 dark:rotate-0 dark:opacity-100" />
         <span className="sr-only">Toggle theme</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
