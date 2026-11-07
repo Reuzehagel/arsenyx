@@ -2,7 +2,10 @@ import { GUIDE_SUMMARY_EDITOR_MAX } from "@arsenyx/shared/api/limits"
 import { ChevronDown, Link2, TriangleAlert } from "lucide-react"
 import { lazy, Suspense, useEffect, useMemo, useState } from "react"
 
-import { VariantTab } from "@/components/build-loadout/variant-tab"
+import {
+  VARIANT_TRACK,
+  VariantTab,
+} from "@/components/build-loadout/variant-tab"
 import { PartnerBuildsField } from "@/components/partner-builds/partner-builds-field"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -12,7 +15,6 @@ import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import { variantDisplayLabel } from "@/lib/build/variants"
-import { cn } from "@/lib/util/utils"
 
 import type { GuideEditorProps } from "./use-guide-state"
 
@@ -148,8 +150,6 @@ export function GuideEditor({
                       row.items.length === 0 ? null : (
                         <div
                           key={row.key}
-                          role="tablist"
-                          aria-label={row.ariaLabel}
                           className="flex flex-wrap items-center gap-1.5"
                         >
                           {row.label !== undefined && (
@@ -157,20 +157,26 @@ export function GuideEditor({
                               {row.label}
                             </span>
                           )}
-                          {row.items.map(({ s, i }) => (
-                            <ScopeChip
-                              key={s.id || i}
-                              label={variantDisplayLabel(s, i)}
-                              active={
-                                activeScope.kind === "variant" &&
-                                activeScope.index === i
-                              }
-                              hasContent={s.hasContent}
-                              onClick={() =>
-                                onScopeChange({ kind: "variant", index: i })
-                              }
-                            />
-                          ))}
+                          <div
+                            role="tablist"
+                            aria-label={row.ariaLabel}
+                            className={VARIANT_TRACK}
+                          >
+                            {row.items.map(({ s, i }) => (
+                              <ScopeChip
+                                key={s.id || i}
+                                label={variantDisplayLabel(s, i)}
+                                active={
+                                  activeScope.kind === "variant" &&
+                                  activeScope.index === i
+                                }
+                                hasContent={s.hasContent}
+                                onClick={() =>
+                                  onScopeChange({ kind: "variant", index: i })
+                                }
+                              />
+                            ))}
+                          </div>
                         </div>
                       ),
                     )}
@@ -251,20 +257,10 @@ function ScopeChip({
   onClick: () => void
 }) {
   return (
-    <VariantTab
-      active={active}
-      onClick={onClick}
-      className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs"
-    >
+    <VariantTab active={active} onClick={onClick} className="px-2.5 text-xs">
       <span>{label}</span>
       {hasContent ? (
-        <span
-          aria-hidden
-          className={cn(
-            "size-1.5 rounded-full",
-            active ? "bg-primary-foreground/80" : "bg-emerald-500",
-          )}
-        />
+        <span aria-hidden className="size-1.5 rounded-full bg-emerald-500" />
       ) : null}
     </VariantTab>
   )

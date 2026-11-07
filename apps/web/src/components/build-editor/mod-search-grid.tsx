@@ -179,7 +179,8 @@ interface ModSearchGridProps {
    *  equipped (e.g. a second Serration variant). Dimmed and non-selectable,
    *  like used mods, but with a distinct tooltip. */
   conflictUniqueNames?: Set<string>
-  onSelect?: (mod: Mod) => void
+  /** Returns false when the mod couldn't be placed; the query is then kept. */
+  onSelect?: (mod: Mod) => boolean | void
   /**
    * When set, mods incompatible with this slot kind are dimmed (aura-only for
    * the aura slot, exilus/utility-only for exilus). `"normal"` or undefined
@@ -314,6 +315,30 @@ export function ModSearchGrid({
     [displayed, matches, usedModNames, conflictUniqueNames],
   )
 
+  // Enter and Tab rank against the live query, not the deferred one: a key
+  // that lands before the deferred render catches up would otherwise act on
+  // the top of the stale (often unfiltered) list.
+  const firstLiveActionable = () => {
+    const live =
+      query === deferredQuery
+        ? { displayed, matches }
+        : searchMods(hardFiltered, query, searchIndex, selectedSlotKind)
+    return live.displayed.find((m) =>
+      isActionable(m, live.matches, usedModNames, conflictUniqueNames),
+    )
+  }
+  // The card Enter would place, marked so the pick is never a surprise.
+  const defaultName =
+    onSelect && deferredQuery.trim() ? focusableOrder[0] : undefined
+
+  const filtersActive =
+    rarity !== "All" || polarity !== "All" || gameMode !== "PvE"
+  const resetFilters = () => {
+    setRarity("All")
+    setPolarity("All")
+    setGameMode("PvE")
+  }
+
   // Grid is 2 rows, column-flow: displayed[i] sits at row = i % 2, col = i / 2.
   // Navigate in visual 2D, skipping dimmed/used cards by continuing in the
   // same direction until a focusable card is found (or clamp at the edge).
@@ -425,13 +450,16 @@ export function ModSearchGrid({
         case " ":
           if (!onSelectRef.current) return
           e.preventDefault()
-          onSelectRef.current(mod)
-          // Clear so the user can type the next mod straight away (#397).
-          setQuery("")
+          // Clear so the user can type the next mod straight away (#397) —
+          // unless it wasn't placed, so they can see what they asked for.
+          if (onSelectRef.current(mod) !== false) setQuery("")
           focusInput()
           break
         case "Escape":
           e.preventDefault()
+          // Escape here only means "back to the search box"; don't let it
+          // reach the editor's window-level deselect too.
+          e.stopPropagation()
           focusInput()
           break
       }
@@ -459,31 +487,14 @@ export function ModSearchGrid({
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                if (!onSelect) return
-                // Rank against the live query, not the deferred one: an Enter
-                // that lands before the deferred render catches up would
-                // otherwise place the top of the stale (often unfiltered) list.
-                const live =
-                  query === deferredQuery
-                    ? { displayed, matches }
-                    : searchMods(
-                        hardFiltered,
-                        query,
-                        searchIndex,
-                        selectedSlotKind,
-                      )
-                const first = live.displayed.find((m) =>
-                  isActionable(
-                    m,
-                    live.matches,
-                    usedModNames,
-                    conflictUniqueNames,
-                  ),
-                )
+                // An empty box matches everything, so Enter would place the
+                // top-drain mod — a stray second Enter, or a held key, would
+                // fill slots nobody asked for.
+                if (!onSelect || !query.trim()) return
+                const first = firstLiveActionable()
                 if (!first) return
                 e.preventDefault()
-                onSelect(first)
-                setQuery("")
+                if (onSelect(first) !== false) setQuery("")
                 return
               }
               if (e.key === "Tab" && !e.shiftKey) {
@@ -494,20 +505,27 @@ export function ModSearchGrid({
                 // keyboard handler, so focusing it strands the user on a card
                 // that ignores Enter, arrows and Escape. With nothing
                 // focusable, let the browser move focus normally.
-                const firstName = focusableOrder[0]
-                if (!firstName) return
-                const el = cardRefs.current.get(firstName)
+                const first = firstLiveActionable()
+                const el = first && cardRefs.current.get(first.uniqueName)
                 if (!el) return
                 e.preventDefault()
                 el.focus()
               }
             }}
           />
-          {query.length > 0 ? (
-            <InputGroupAddon align="inline-end">
-              <span className="text-muted-foreground text-xs tabular-nums">
-                {matches.size} / {hardFiltered.length}
-              </span>
+          <InputGroupAddon align="inline-end">
+            <span
+              className="text-muted-foreground text-xs tabular-nums"
+              aria-hidden
+            >
+              {matches.size} / {hardFiltered.length}
+            </span>
+            <span className="sr-only" aria-live="polite">
+              {deferredQuery.trim()
+                ? `${focusableOrder.length} ${focusableOrder.length === 1 ? "mod" : "mods"} available`
+                : ""}
+            </span>
+            {query.length > 0 ? (
               <InputGroupButton
                 size="icon-xs"
                 onClick={() => setQuery("")}
@@ -515,15 +533,10 @@ export function ModSearchGrid({
               >
                 <X />
               </InputGroupButton>
-            </InputGroupAddon>
-          ) : (
-            <InputGroupAddon align="inline-end">
-              <span className="text-muted-foreground text-xs tabular-nums">
-                {matches.size} / {hardFiltered.length}
-              </span>
+            ) : (
               <Kbd>/</Kbd>
-            </InputGroupAddon>
-          )}
+            )}
+          </InputGroupAddon>
         </InputGroup>
 
         <div className="grid grid-cols-2 gap-2 sm:flex">
@@ -555,9 +568,29 @@ export function ModSearchGrid({
         </div>
       </div>
 
+      {deferredQuery.trim() && focusableOrder.length === 0 ? (
+        <p className="text-muted-foreground text-sm">
+          No mods you can place match “{deferredQuery.trim()}”.
+          {filtersActive ? (
+            <>
+              {" "}
+              Filters are hiding some mods.{" "}
+              <button
+                type="button"
+                className="text-foreground underline underline-offset-2"
+                onClick={resetFilters}
+              >
+                Reset filters
+              </button>
+            </>
+          ) : null}
+        </p>
+      ) : null}
+
       {/* Positions stay stable under filters: non-matches dim but keep their
           slot so the eye doesn't lose its spot. */}
       <div
+        aria-label="Mod results"
         {...{ [MOD_SEARCH_GRID_ATTR]: true }}
         className="grid max-w-full content-start gap-x-2 gap-y-4 overflow-x-auto px-1 pt-2 pb-6"
         style={{
@@ -586,6 +619,7 @@ export function ModSearchGrid({
                 isConflict,
               )}
               draggable={!!onSelect}
+              isDefault={defaultName === mod.uniqueName}
               registerRef={registerCardRef}
               onSelect={cellOnSelect}
               onKeyDown={handlePoolKeyDown}
@@ -606,7 +640,9 @@ interface PoolCardCellProps {
   reason: string | null
   draggable: boolean
   registerRef: (uniqueName: string, el: HTMLDivElement | null) => void
-  onSelect?: (mod: Mod) => void
+  /** The card Enter in the search box would place; marked with a ring. */
+  isDefault: boolean
+  onSelect?: (mod: Mod) => boolean | void
   onKeyDown: (mod: Mod, e: React.KeyboardEvent<HTMLDivElement>) => void
 }
 
@@ -617,6 +653,7 @@ const PoolCardCell = memo(function PoolCardCell({
   isFocusable,
   reason,
   draggable,
+  isDefault,
   registerRef,
   onSelect,
   onKeyDown,
@@ -652,9 +689,15 @@ const PoolCardCell = memo(function PoolCardCell({
       // native drag-and-drop on by default. We suppress that here so our
       // pointer-based drag controller owns the gesture cleanly.
       onDragStart={(e) => e.preventDefault()}
+      aria-label={isFocusable ? mod.name : undefined}
       className={cn(
         "outline-none",
-        isFocusable && "focus-visible:brightness-125",
+        // Rings go on the compact card itself: the cell is taller (it holds
+        // the hover overhang), so a ring here would float below the card.
+        isDefault &&
+          "[&_[data-mod-compact]]:ring-primary/70 [&_[data-mod-compact]]:rounded-md [&_[data-mod-compact]]:ring-2",
+        isFocusable &&
+          "focus-visible:brightness-125 focus-visible:[&_[data-mod-compact]]:rounded-md focus-visible:[&_[data-mod-compact]]:ring-2 focus-visible:[&_[data-mod-compact]]:ring-white/80",
         // Drag source styling is applied by the drag controller via the
         // `is-drag-source` class on this element — see globals.css. Using
         // a class avoids the re-render storm that came with subscribing
@@ -665,8 +708,9 @@ const PoolCardCell = memo(function PoolCardCell({
       <ModCard
         mod={mod}
         onClick={onSelect && !isUsed ? handleClick : undefined}
+        // No opacity transition: this re-dims on every keystroke, and a fade
+        // there smears the grid while the matches have already jumped.
         className={cn(
-          "transition-opacity duration-150",
           !isMatch && "pointer-events-none opacity-20 saturate-0",
           isUsed && "pointer-events-none opacity-30 grayscale",
         )}

@@ -46,15 +46,28 @@ export function CapacityBar({
           )}
         >
           {used} / {max}
+          {over ? ` · ${used - max} over` : null}
         </span>
       </div>
-      <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
+      <div
+        role="meter"
+        aria-label="Mod capacity"
+        aria-valuemin={0}
+        // A meter's value can't exceed its max; the text carries the overage.
+        aria-valuemax={Math.max(max, used)}
+        aria-valuenow={used}
+        aria-valuetext={
+          over ? `${used} of ${max}, ${used - max} over` : `${used} of ${max}`
+        }
+        className="bg-muted h-1.5 w-full overflow-hidden rounded-full"
+      >
         <div
+          // scaleX, not width: same look, but no layout work per frame.
           className={cn(
-            "h-full transition-[width,background-color]",
+            "ease-snappy h-full w-full origin-left transition-[transform,background-color] duration-200",
             over ? "bg-destructive" : "bg-primary",
           )}
-          style={{ width: `${pctVal}%` }}
+          style={{ transform: `scaleX(${pctVal / 100})` }}
         />
       </div>
       {showAutoForma && (

@@ -16,6 +16,36 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "fix",
         description:
+          "The build editor is harder to trip up. Enter in an empty mod search no longer places a random mod, the mod Enter will place is outlined, and a search with no results says so (and offers to reset filters). When a mod can't go anywhere you're told instead of nothing happening. Escape on a search result or mid-drag no longer also deselects your slot, scrolling mid-drag drops into the right slot, slots that won't take a dragged mod turn red, and +/- after a drag ranks the mod you dropped. Moving a mod keeps its Alternate only where that's allowed.",
+      },
+      {
+        type: "fix",
+        description:
+          "Riven entry: Enter confirms, a stray click outside no longer throws away your stats, \"12,5\" works, half-filled stats are flagged instead of silently dropped, and fixing a riven's stats keeps its rank. Saving: Retry after a failed save saves your current build (and can't post it twice), errors are plain sentences instead of codes, signing in from Save brings you back to the editor, and edits made just before leaving the page or closing the tab are kept in your draft. The visibility dialog resets when reopened, waits for your orgs to load, and is clear that changes apply when you save. Capacity shows how far over you are, auto-forma says what it changed, and the variant tabs got a cleaner look.",
+      },
+      {
+        type: "fix",
+        description:
+          "Build pages feel snappier: like and bookmark no longer flash when pressed, the mod hover card pops in faster, the max-rank line no longer replays every time you hover a mod, and the page shows a skeleton while loading. Your own build's like button now explains why it's greyed out, and long build names show in full on hover. Mod drops in the editor land without the bounce, and the Warframes, Operators and Necramechs tabs on Browse drop the label that just repeated the tab name.",
+      },
+      {
+        type: "fix",
+        description:
+          "Profiles and organizations hold up better too: avatars that fail to load fall back to an initial, names starting with an emoji get a proper initial, long links in bios and descriptions wrap instead of running off the card, and long names show in full on hover, and every card on the page is the same height. Cards on Browse, Profiles and Organizations also respond when pressed.",
+      },
+      {
+        type: "fix",
+        description:
+          "Build cards hold up better with long names and big numbers: long build, author and org names end in … with the full name on hover, like and view counts are shortened (1.3K, 12M), removed items show a placeholder instead of a broken image, and stats stay on one line. Cards also give a little press feedback, and the list no longer flickers when a page loads quickly.",
+      },
+      {
+        type: "fix",
+        description:
+          "The build name field in the editor now stops at 120 characters, the most a build can save, instead of failing when you save.",
+      },
+      {
+        type: "fix",
+        description:
           "Secondary kitguns (Catchmoon, Gaze, Rattleguts, Sporelacer, Tombfinger, Vermisplicer) show their real crit, status, fire rate and damage in the build editor again, instead of all zeros.",
       },
       {

@@ -3,9 +3,13 @@ import type {
   VariantMode,
 } from "@arsenyx/shared/warframe/build-data"
 import { MAX_VARIANTS } from "@arsenyx/shared/warframe/build-doc"
+import { Plus, Settings2 } from "lucide-react"
 import { useState } from "react"
 
-import { VariantTab } from "@/components/build-loadout/variant-tab"
+import {
+  VARIANT_TRACK,
+  VariantTab,
+} from "@/components/build-loadout/variant-tab"
 import { FormToggle } from "@/components/form-toggle"
 import { Button } from "@/components/ui/button"
 import { Field, FieldLabel } from "@/components/ui/field"
@@ -25,12 +29,6 @@ import {
   normalizeVariantLabel,
   variantDisplayLabel,
 } from "@/lib/build/variants"
-import { cn } from "@/lib/util/utils"
-
-/** Shared styling for the collapsed single-variant affordances, so restyling
- *  one can't leave the other behind. */
-const COLLAPSED_AFFORDANCE =
-  "text-muted-foreground hover:text-foreground hover:bg-muted/40 rounded-md border border-dashed px-2 py-1 text-xs"
 
 /**
  * Editor's per-variant tab bar with add / rename / duplicate / delete
@@ -80,14 +78,16 @@ export function EditorVariantBar({
         <Tooltip>
           <TooltipTrigger
             render={
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => onDuplicate()}
-                className={COLLAPSED_AFFORDANCE}
+                className="text-muted-foreground"
               />
             }
           >
-            + Copy
+            <Plus data-icon="inline-start" />
+            Copy
           </TooltipTrigger>
           <TooltipContent>
             Add a variant that starts as a copy of this build
@@ -96,14 +96,16 @@ export function EditorVariantBar({
         <Tooltip>
           <TooltipTrigger
             render={
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={onAdd}
-                className={COLLAPSED_AFFORDANCE}
+                className="text-muted-foreground"
               />
             }
           >
-            + Variant
+            <Plus data-icon="inline-start" />
+            Variant
           </TooltipTrigger>
           <TooltipContent>Add an empty build variant</TooltipContent>
         </Tooltip>
@@ -175,7 +177,7 @@ function EditorVariantBarMulti({
     onRename(normalized)
   }
   return (
-    <div className="flex flex-col items-center gap-1.5 pb-1">
+    <div className="flex flex-col items-center gap-1.5 pb-2">
       {formNames && onSwitchForm ? (
         <FormToggle
           formNames={formNames}
@@ -184,148 +186,141 @@ function EditorVariantBarMulti({
         />
       ) : null}
       <div className="flex flex-wrap items-center justify-center gap-1.5">
-        {variants.map((v, i) => {
-          const isActive = i === activeIndex
-          return (
-            <div key={v.id || i} className="flex items-center gap-0.5">
-              <VariantTab
-                active={isActive}
-                onClick={() => onSwitch(i)}
-                className={cn(
-                  "px-3 py-1 text-sm",
-                  isActive ? "rounded-l-md" : "rounded-md",
-                )}
-              >
-                {variantDisplayLabel(v, i)}
-              </VariantTab>
-              {isActive ? (
-                <Popover
-                  open={settingsOpen}
-                  onOpenChange={(o) => {
-                    setSettingsOpen(o)
-                    if (o) setLabelDraft(active.label)
+        <div
+          role="tablist"
+          aria-label="Build variants"
+          className={VARIANT_TRACK}
+        >
+          {variants.map((v, i) => (
+            <VariantTab
+              key={v.id || i}
+              active={i === activeIndex}
+              onClick={() => onSwitch(i)}
+            >
+              {variantDisplayLabel(v, i)}
+            </VariantTab>
+          ))}
+        </div>
+        {/* One options button for the active variant, outside the track, so
+            every tab keeps the same shape. */}
+        <Popover
+          open={settingsOpen}
+          onOpenChange={(o) => {
+            setSettingsOpen(o)
+            if (o) setLabelDraft(active.label)
+          }}
+        >
+          <PopoverTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                title={`Rename, duplicate or delete “${variantDisplayLabel(active, activeIndex)}”`}
+                aria-label="Variant options"
+              />
+            }
+          >
+            <Settings2 />
+          </PopoverTrigger>
+          <PopoverContent side="bottom" align="center" className="w-64 p-3">
+            <Field>
+              <FieldLabel htmlFor="variant-name" className="text-xs">
+                Name
+              </FieldLabel>
+              <Input
+                id="variant-name"
+                autoFocus
+                onFocus={(e) => e.currentTarget.select()}
+                value={labelDraft}
+                maxLength={MAX_VARIANT_LABEL}
+                onChange={(e) => setLabelDraft(e.target.value)}
+                onBlur={commitRename}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    commitRename()
+                    setSettingsOpen(false)
+                  } else if (e.key === "Escape") {
+                    setSettingsOpen(false)
+                  }
+                }}
+                className="h-8 text-sm"
+              />
+              <div className="mt-1 flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    // Pass the pending label: a rename queued in the same
+                    // click would be overwritten by the duplicate.
+                    onDuplicate(normalizeVariantLabel(labelDraft, activeIndex))
+                    setSettingsOpen(false)
                   }}
+                  disabled={atCap}
+                  title={
+                    atCap
+                      ? `Maximum of ${MAX_VARIANTS} variants per build`
+                      : "Duplicate this variant"
+                  }
+                  className="flex-1"
                 >
-                  <PopoverTrigger
-                    render={
-                      <button
-                        type="button"
-                        title="Variant settings"
-                        aria-label="Variant settings"
-                        className="border-primary bg-primary text-primary-foreground rounded-r-md border border-l-0 px-1.5 py-1 text-sm"
-                      >
-                        ⚙
-                      </button>
-                    }
-                  />
-                  <PopoverContent
-                    side="bottom"
-                    align="center"
-                    className="w-64 p-3"
-                  >
-                    <Field>
-                      <FieldLabel htmlFor="variant-name" className="text-xs">
-                        Name
-                      </FieldLabel>
-                      <Input
-                        id="variant-name"
-                        autoFocus
-                        onFocus={(e) => e.currentTarget.select()}
-                        value={labelDraft}
-                        maxLength={MAX_VARIANT_LABEL}
-                        onChange={(e) => setLabelDraft(e.target.value)}
-                        onBlur={commitRename}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            commitRename()
-                            setSettingsOpen(false)
-                          } else if (e.key === "Escape") {
-                            setSettingsOpen(false)
-                          }
-                        }}
-                        className="h-8 text-sm"
-                      />
-                      <div className="mt-1 flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            // Pass the pending label: a rename queued in the same
-                            // click would be overwritten by the duplicate.
-                            onDuplicate(
-                              normalizeVariantLabel(labelDraft, activeIndex),
-                            )
-                            setSettingsOpen(false)
-                          }}
-                          disabled={atCap}
-                          title={
-                            atCap
-                              ? `Maximum of ${MAX_VARIANTS} variants per build`
-                              : "Duplicate this variant"
-                          }
-                          className="flex-1"
-                        >
-                          Duplicate
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => {
-                            onDelete()
-                            setSettingsOpen(false)
-                          }}
-                          disabled={variants.length <= 1}
-                          title={
-                            variants.length <= 1
-                              ? "Each form keeps at least one variant"
-                              : "Delete this variant"
-                          }
-                          className="flex-1"
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </Field>
-                  </PopoverContent>
-                </Popover>
-              ) : null}
-            </div>
-          )
-        })}
-        <button
-          type="button"
+                  Duplicate
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => {
+                    onDelete()
+                    setSettingsOpen(false)
+                  }}
+                  disabled={variants.length <= 1}
+                  title={
+                    variants.length <= 1
+                      ? "Each form keeps at least one variant"
+                      : "Delete this variant"
+                  }
+                  className="flex-1"
+                >
+                  Delete
+                </Button>
+              </div>
+            </Field>
+          </PopoverContent>
+        </Popover>
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={onAdd}
           disabled={atCap}
           title={
             atCap
               ? `Maximum of ${MAX_VARIANTS} variants per build`
-              : "Add a build variant"
+              : "Add an empty build variant"
           }
-          className={cn(
-            "rounded-md border border-dashed px-2.5 py-1 text-sm",
-            atCap
-              ? "border-muted-foreground/20 text-muted-foreground/40 cursor-not-allowed"
-              : "border-muted-foreground/40 text-muted-foreground hover:bg-muted/40 hover:text-foreground",
-          )}
+          className="text-muted-foreground"
         >
-          + Variant
-        </button>
+          <Plus data-icon="inline-start" />
+          Variant
+        </Button>
+        <span aria-hidden className="bg-border mx-0.5 h-4 w-px" />
         <Tooltip>
           <TooltipTrigger
             render={
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground font-normal"
                 onClick={() =>
                   onVariantModeChange(
                     variantMode === "linked" ? "independent" : "linked",
                   )
                 }
-                className={cn(COLLAPSED_AFFORDANCE, "ml-1")}
               />
             }
           >
             Forma &amp; shards:{" "}
-            {variantMode === "linked" ? "shared" : "per variant"}
+            <span className="text-foreground font-medium">
+              {variantMode === "linked" ? "shared" : "per variant"}
+            </span>
           </TooltipTrigger>
           <TooltipContent className="max-w-64">
             {variantMode === "linked"

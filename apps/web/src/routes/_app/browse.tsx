@@ -128,6 +128,13 @@ function BrowseContent() {
     if (category !== "all") return data[category] ?? []
     return allItems(data)
   }, [data, category])
+  // A class every item shares ("Warframe" on the Warframes tab) just repeats
+  // the tab. Judged on the whole category, not the filtered view, so the line
+  // doesn't flicker in and out while typing a search.
+  const showClass = useMemo(
+    () => new Set(items.map((i) => i.displayClass)).size > 1,
+    [items],
+  )
 
   const visible = useMemo(
     () =>
@@ -220,7 +227,11 @@ function BrowseContent() {
             // Atmosphere arch-gun variants share `uniqueName` with their base
             // (e.g. Mausolon / Mausolon (Atmosphere)), so include the slug to
             // keep React keys unique within a category.
-            <ItemCard key={`${item.uniqueName}|${item.slug}`} item={item} />
+            <ItemCard
+              key={`${item.uniqueName}|${item.slug}`}
+              item={item}
+              showClass={showClass}
+            />
           ))}
         </div>
       )}

@@ -6,3 +6,4 @@
 // (see embed-main.tsx / build-viewer-body.tsx).
 export { BuildNotFound } from "./build-not-found"
 export { BuildViewerBody } from "./build-viewer-body"
+export { ViewerHeaderSkeleton } from "./viewer-header-skeleton"

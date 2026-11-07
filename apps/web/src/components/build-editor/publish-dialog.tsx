@@ -35,7 +35,11 @@ type PublishDialogProps = {
     image: string | null
   }
   organizations: OrgSummary[]
-  confirmLabel?: string
+  /** The org list is still loading — don't claim the user has none. */
+  organizationsLoading?: boolean
+  /** Editing an already-saved build: the dialog only sets what the next Save
+   *  will use, so it says so instead of promising a save. */
+  settingsOnly?: boolean
   onConfirm: (values: PublishDialogValues) => void
 }
 
@@ -69,7 +73,8 @@ export function PublishDialog({
   initialHideAuthor,
   owner,
   organizations,
-  confirmLabel = "Save build",
+  organizationsLoading = false,
+  settingsOnly = false,
   onConfirm,
 }: PublishDialogProps) {
   const [visibility, setVisibility] =
@@ -92,24 +97,29 @@ export function PublishDialog({
     )
   }, [organizationId, initialOrganizationId, initialHideAuthor])
 
-  const handleOpenChange = (o: boolean) => {
-    if (o) {
-      setVisibility(initialVisibility)
-      setOrganizationId(initialOrganizationId)
-      setShowAuthor(!initialHideAuthor)
-    }
-    onOpenChange(o)
-  }
+  // Start from the build's current settings every time the dialog opens, so
+  // a choice backed out of with Cancel doesn't come back. (The parent opens
+  // it by prop, so onOpenChange never sees the open.)
+  useEffect(() => {
+    if (!open) return
+    setVisibility(initialVisibility)
+    setOrganizationId(initialOrganizationId)
+    setShowAuthor(!initialHideAuthor)
+  }, [open, initialVisibility, initialOrganizationId, initialHideAuthor])
 
   const ownerHandle = owner.username ? `@${owner.username}` : owner.name
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Save build</DialogTitle>
+          <DialogTitle>
+            {settingsOnly ? "Build settings" : "Save build"}
+          </DialogTitle>
           <DialogDescription>
-            Choose who can see this build and where to publish it.
+            {settingsOnly
+              ? "Choose who can see this build. Changes take effect when you save the build."
+              : "Choose who can see this build and where to publish it."}
           </DialogDescription>
         </DialogHeader>
 
@@ -143,7 +153,16 @@ export function PublishDialog({
               title={owner.name}
               subtitle={`${ownerHandle} · Yourself`}
             />
-            {organizations.length === 0 ? (
+            {organizationsLoading ? (
+              <OptionCard
+                disabled
+                leading={
+                  <div className="bg-muted size-7 shrink-0 rounded-full" />
+                }
+                title="Loading organizations…"
+                subtitle="Checking which orgs you can publish for"
+              />
+            ) : organizations.length === 0 ? (
               <OptionCard
                 disabled
                 leading={
@@ -216,7 +235,7 @@ export function PublishDialog({
               })
             }
           >
-            {confirmLabel}
+            {settingsOnly ? "Apply" : "Save build"}
           </Button>
         </DialogFooter>
       </DialogContent>

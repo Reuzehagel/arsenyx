@@ -64,11 +64,17 @@ export function ViewerHeader({
                   // Operator portraits are full-body busts; centering crops to the chest.
                   category === "operators" && "object-top",
                 )}
+                onError={(e) => {
+                  e.currentTarget.src = getImageUrl()
+                }}
               />
             ) : null}
           </div>
           <div className="flex min-w-0 flex-col justify-center gap-2">
-            <h1 className="truncate text-[clamp(1.25rem,2vw,1.5rem)] leading-tight font-bold tracking-tight">
+            <h1
+              className="truncate text-[clamp(1.25rem,2vw,1.5rem)] leading-tight font-bold tracking-tight"
+              title={build.name}
+            >
               {build.name}
             </h1>
             <span className="text-muted-foreground text-sm">

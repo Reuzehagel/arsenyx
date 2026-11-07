@@ -234,15 +234,18 @@ export function EditorShell({
     hideAuthor: existingBuild?.hideAuthor ?? false,
   })
 
-  const { data: myOrgs } = useQuery({
+  // Fetched up front (it's small) so the publish dialog never opens on a
+  // false "No organizations" while the list loads.
+  const { data: myOrgs, isPending: orgsPending } = useQuery({
     ...myOrgsQuery(),
-    enabled: !!session?.user && publish.dialogOpen,
+    enabled: !!session?.user,
   })
   const organizations = myOrgs?.memberships.map((m) => m.organization) ?? []
 
   const riven = useRivenDialog({ slots, normalSlotCount, category })
 
-  const handleModSelect = (mod: Mod) => {
+  // Returns whether the pick landed, so the search keeps the query on a miss.
+  const handleModSelect = (mod: Mod): boolean => {
     if (alternateFor) {
       if (!canBeAlternate(mod, alternateFor)) {
         toast.error(
@@ -250,17 +253,19 @@ export function EditorShell({
             ? "A Riven can't be an Alternate"
             : "That mod doesn't fit this slot",
         )
-        return
+        return false
       }
       slots.setAlternate(alternateFor, mod)
       setAlternateFor(null)
-      return
+      return true
     }
-    if (isRivenMod(mod)) {
-      riven.openForPlacement()
-      return
+    const placed = isRivenMod(mod) ? riven.openForPlacement() : slots.place(mod)
+    if (!placed) {
+      toast.error(`No free slot for ${mod.name}. Remove a mod first.`, {
+        id: "no-free-slot",
+      })
     }
-    slots.place(mod)
+    return placed
   }
 
   const {
@@ -477,7 +482,8 @@ export function EditorShell({
           image: session?.user?.image ?? null,
         }}
         organizations={organizations}
-        confirmLabel={isUpdate ? "Update settings" : "Save build"}
+        organizationsLoading={!!session?.user && orgsPending}
+        settingsOnly={isUpdate}
         onConfirm={({
           visibility: next,
           organizationId: nextOrgId,

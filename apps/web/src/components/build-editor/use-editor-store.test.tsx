@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { DetailItem } from "@/lib/catalog"
 import {
+  clearEditorDraft,
   editorStoreKey,
   loadEditorDraft,
   loadImportDraft,
@@ -161,6 +162,22 @@ describe("build editor session", () => {
     expect(store.variants).toHaveLength(2)
     expect(modIn(store.slots.placed)).toBe("Serration")
     expect(modIn(store.variants[1].slots)).toBe("Hornet Strike")
+  })
+
+  it("keeps an edit made just before leaving the editor", () => {
+    const editor = openEditor()
+    act(() => store.slots.placeAt("normal-0", mod("Serration")))
+    // Unmount inside the 600ms autosave window.
+    editor.unmount()
+    expect(modIn(loadEditorDraft(STORE_KEY)?.buildData.slots)).toBe("Serration")
+  })
+
+  it("doesn't bring back a draft cleared before leaving (a save)", () => {
+    const editor = openEditor()
+    act(() => store.slots.placeAt("normal-0", mod("Serration")))
+    clearEditorDraft(STORE_KEY)
+    editor.unmount()
+    expect(loadEditorDraft(STORE_KEY)).toBeNull()
   })
 
   it("reset to saved drops the draft and starts the session over", async () => {

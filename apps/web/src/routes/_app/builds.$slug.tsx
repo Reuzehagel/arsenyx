@@ -5,7 +5,11 @@ import { useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { Suspense } from "react"
 
-import { BuildNotFound, BuildViewerBody } from "@/components/build-viewer"
+import {
+  BuildNotFound,
+  BuildViewerBody,
+  ViewerHeaderSkeleton,
+} from "@/components/build-viewer"
 import { buildQuery, catalogQueriesFor } from "@/lib/queries/build-query"
 import { imageMapQuery } from "@/lib/queries/image-map-query"
 import { itemQuery } from "@/lib/queries/item-query"
@@ -93,8 +97,8 @@ function BuildPage() {
 // re-suspends.
 function BuildViewerFallback() {
   return (
-    <div className="flex min-h-[70vh] items-start justify-center pt-16">
-      <p className="text-muted-foreground">Loading build…</p>
+    <div className="min-h-[70vh]" role="status" aria-label="Loading build">
+      <ViewerHeaderSkeleton />
     </div>
   )
 }

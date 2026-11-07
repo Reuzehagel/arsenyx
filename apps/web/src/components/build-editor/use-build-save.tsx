@@ -2,14 +2,16 @@ import type {
   BuildVisibility,
   BuildDetailResponse,
 } from "@arsenyx/shared/api/build-dto"
+import { BUILD_NAME_MAX } from "@arsenyx/shared/api/limits"
 import {
   encodeBuild,
   encodeBuildDoc,
 } from "@arsenyx/shared/warframe/build-codec"
+import { MAX_VARIANTS } from "@arsenyx/shared/warframe/build-doc"
 import type { BrowseCategory } from "@arsenyx/shared/warframe/types"
 import { useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { toast } from "sonner"
 
 import { authClient } from "@/lib/auth-client"
@@ -22,7 +24,7 @@ import {
 import { clearEditorDraft } from "@/lib/drafts"
 import { HOTKEYS, useHotkey } from "@/lib/hooks/hotkeys"
 import { buildKeys } from "@/lib/queries/build-query"
-import { apiErrorMessage, apiFetch } from "@/lib/util/api-client"
+import { apiErrorInfo, apiFetch } from "@/lib/util/api-client"
 import { copyToClipboard } from "@/lib/util/clipboard"
 import { EXTERNAL_LINKS } from "@/lib/util/constants"
 import {
@@ -106,15 +108,23 @@ export function useBuildSave({
     void copyToClipboard(url, "Build link copied")
   }
 
+  // A ref, not `saveStatus`: a Retry toast or hotkey can hold a closure from
+  // before the save started, and must still see it's in flight.
+  const savingRef = useRef(false)
+
   const performSave = async (
     nextVisibility: BuildVisibility,
     nextOrganizationId: string | null,
     nextHideAuthor: boolean,
   ) => {
     if (!session?.user) {
-      navigate({ to: "/auth/signin" })
+      goSignIn()
       return
     }
+    if (savingRef.current) return
+    savingRef.current = true
+    // A stale failure toast's Retry would otherwise fire a second save later.
+    toast.dismiss(SAVE_ERROR_TOAST)
     setSaveStatus("saving")
     try {
       const buildData = capture.captureBuildData()
@@ -214,26 +224,47 @@ export function useBuildSave({
       }
       navigate({ to: "/builds/$slug", params: { slug } })
     } catch (err) {
-      // Re-enable the Save button and surface the failure as a toast with a
-      // Retry action. This is the only place a save can fail (API down), so
-      // there's no longer a need for the inline error text in the header.
+      // Re-enable the Save button and surface the failure as a toast. The
+      // draft is untouched (it's only cleared on success), so nothing's lost.
       setSaveStatus("idle")
-      toast.error(apiErrorMessage(err, "Couldn't save the build"), {
+      const { message, retry, signIn } = saveErrorText(
+        err,
+        nextOrganizationId != null,
+      )
+      toast.error(message, {
+        id: SAVE_ERROR_TOAST,
         // A failed save is important enough to stay until the user acts on it,
         // rather than auto-dismissing after a few seconds.
         duration: Infinity,
-        action: {
-          label: "Retry",
-          onClick: () =>
-            void performSave(
-              nextVisibility,
-              nextOrganizationId,
-              nextHideAuthor,
-            ),
-        },
+        // Retry only where it can work, and through the latest performSave so
+        // it saves the build as it is now, not as it was when this failed.
+        action: signIn
+          ? { label: "Sign in", onClick: goSignIn }
+          : retry
+            ? {
+                label: "Retry",
+                onClick: () =>
+                  void performSaveRef.current(
+                    nextVisibility,
+                    nextOrganizationId,
+                    nextHideAuthor,
+                  ),
+              }
+            : undefined,
       })
+    } finally {
+      savingRef.current = false
     }
   }
+  const performSaveRef = useRef(performSave)
+  performSaveRef.current = performSave
+
+  // Back to this editor after signing in; the draft is still in storage.
+  const goSignIn = () =>
+    navigate({
+      to: "/auth/signin",
+      search: { redirect: window.location.pathname + window.location.search },
+    })
 
   const handleSaveClick = () => {
     // Guard re-entry: the Save button is disabled while saving, but the
@@ -241,7 +272,7 @@ export function useBuildSave({
     // concurrent saves (duplicate POST, double navigate/toast).
     if (saveStatus === "saving") return
     if (!session?.user) {
-      navigate({ to: "/auth/signin" })
+      goSignIn()
       return
     }
     if (!isUpdate) {
@@ -261,4 +292,51 @@ export function useBuildSave({
   useHotkey(HOTKEYS.save, handleSaveClick, { allowInEditable: true })
 
   return { handleShare, handleSaveClick, performSave, saveStatus }
+}
+
+const SAVE_ERROR_TOAST = "build-save-error"
+
+/** What a failed save tells the player, and whether retrying could help.
+ *  The API answers with bare codes ("invalid_name"); never show those. */
+function saveErrorText(
+  err: unknown,
+  hasOrg: boolean,
+): { message: string; retry: boolean; signIn?: boolean } {
+  const { status, code } = apiErrorInfo(err)
+  if (status === null)
+    return {
+      message: "Couldn't reach Arsenyx. Check your connection and retry.",
+      retry: true,
+    }
+  if (status === 401)
+    return {
+      message: "You've been signed out. Sign in again; your draft is kept.",
+      retry: false,
+      signIn: true,
+    }
+  if (status === 403)
+    return {
+      message: hasOrg
+        ? "You're no longer a member of that organization. Pick another or publish under your name."
+        : "You can't edit this build anymore.",
+      retry: false,
+    }
+  if (status === 404)
+    return { message: "This build no longer exists.", retry: false }
+  if (code === "invalid_name")
+    return {
+      message: `Build names must be 1 to ${BUILD_NAME_MAX} characters.`,
+      retry: false,
+    }
+  if (code === "too_many_variants")
+    return {
+      message: `A build can have at most ${MAX_VARIANTS} variants. Delete one and save again.`,
+      retry: false,
+    }
+  if (status >= 500)
+    return { message: "Couldn't save the build. Try again.", retry: true }
+  return {
+    message: "Couldn't save the build: some of its data wasn't accepted.",
+    retry: false,
+  }
 }

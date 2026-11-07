@@ -86,13 +86,17 @@ function SignInPage() {
 }
 
 // Dev-only email+password form. Tree-shaken out of prod builds via
-// `import.meta.env.DEV`. Paired with `just setup`, which seeds
-// admin@local.dev with a random password printed to the terminal
-// (re-run `just setup` to rotate it if lost).
+// `import.meta.env.DEV`. Prefilled with the admin `just setup` seeds (it
+// writes the login to apps/web/.env.development.local), so signing in locally
+// is one click for people and agents alike.
 function DevSignInForm({ redirect }: { redirect: string | undefined }) {
   const navigate = useNavigate()
-  const [email, setEmail] = useState("admin@local.dev")
-  const [password, setPassword] = useState("")
+  const [email, setEmail] = useState(
+    import.meta.env.VITE_DEV_ADMIN_EMAIL ?? "admin@local.dev",
+  )
+  const [password, setPassword] = useState(
+    import.meta.env.VITE_DEV_ADMIN_PASSWORD ?? "",
+  )
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 

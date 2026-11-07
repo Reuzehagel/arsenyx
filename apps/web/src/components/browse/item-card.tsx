@@ -10,13 +10,15 @@ import { cn } from "@/lib/util/utils"
 
 interface ItemCardProps {
   item: BrowseItem
+  /** False when every item in the view shares one class (it'd echo the tab). */
+  showClass?: boolean
 }
 
-export function ItemCard({ item }: ItemCardProps) {
+export function ItemCard({ item, showClass = true }: ItemCardProps) {
   return (
     <Link
       href={getItemUrl(item.category, item.slug)}
-      className="group focus-visible:ring-ring rounded-xl outline-none [contain-intrinsic-size:auto_280px] [content-visibility:auto] focus-visible:ring-2 focus-visible:ring-offset-2"
+      className="group focus-visible:ring-ring ease-snappy rounded-xl transition-[scale] duration-150 outline-none [contain-intrinsic-size:auto_280px] [content-visibility:auto] focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98] motion-reduce:active:scale-100"
     >
       <Card className="hover:border-primary/50 group-focus-visible:border-primary/50 relative h-full gap-0 overflow-hidden py-0 transition-[box-shadow,border-color] duration-200 hover:shadow-md">
         {item.vaulted && (
@@ -34,7 +36,7 @@ export function ItemCard({ item }: ItemCardProps) {
             alt={item.name}
             loading="lazy"
             className={cn(
-              "absolute inset-0 h-full w-full object-cover transition-transform duration-200 group-hover:scale-110",
+              "ease-snappy absolute inset-0 h-full w-full object-cover transition-[scale] duration-200 group-hover:scale-105 motion-reduce:group-hover:scale-100",
               // Operator renders are full-body portraits; anchor to the head, not the torso
               item.category === "operators" && "object-top",
               !item.imageName && "opacity-50",
@@ -46,8 +48,10 @@ export function ItemCard({ item }: ItemCardProps) {
           <h3 className="group-hover:text-primary line-clamp-2 text-sm leading-tight font-medium transition-colors">
             {item.name}
           </h3>
-          <div className="text-muted-foreground flex items-center justify-between text-xs">
-            {item.displayClass && (
+          {/* Collapses to nothing on single-class tabs (none of those items
+              carry an MR either), so the card ends at the name. */}
+          <div className="text-muted-foreground flex items-center justify-between text-xs empty:hidden">
+            {showClass && item.displayClass && (
               <span className="max-w-[60%] truncate">{item.displayClass}</span>
             )}
             {item.masteryReq !== undefined && item.masteryReq > 0 && (
