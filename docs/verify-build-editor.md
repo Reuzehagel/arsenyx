@@ -14,10 +14,14 @@ Drafts live under `arsenyx:editor-draft:<storeKey>`: the build slug for a saved 
 
 ## Forma a slot and add Variants
 
-- Clicking a slot opens its polarity picker: buttons `[aria-label="Apply <polarity> polarity"]` and `Clear polarity`. The header's forma count is the quickest readout.
+- The first click on a slot selects it; a second click opens its polarity picker: buttons `[aria-label="Apply <polarity> polarity"]` and `Clear polarity`. At the default pane size the picker opens below the fold, so `resize_window` to 1280×1000 first, or click the button through `javascript_tool`. The header's forma count is the quickest readout.
 - The Variant bar (tabs, the forma & shards mode toggle) only renders with two or more Variants. Start with **+ Copy**.
 
 Opening a `?share=` or `?draft=` (import) link writes it as that item's draft and drops the param from the URL, so a refresh restores it. A draft it replaced is offered back by a "Replaced your unsaved draft" toast (Restore it).
+
+## Judge open/closed state
+
+Run `tabs_context` first. A hidden pane runs the page as a background tab, so a closed Base UI popover or dialog stays in the DOM through its exit animation for seconds. Read its `data-open` / `data-closed` attribute, not whether the element exists. To see what closed it, log `onOpenChange`'s second argument: its `reason` is `escape-key`, `trigger-press`, `outside-press`, and so on.
 
 ## Read toasts and isolate a regression
 

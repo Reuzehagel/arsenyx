@@ -8,6 +8,7 @@ Non-obvious pitfalls. Add to this file when you hit one.
 - **`gh issue view N` can print nothing and still exit 0** on this machine. Read issues with `gh issue view N --json title,body,comments,state`.
 - **Git Bash rewrites arguments that start with `/`** into Windows paths (`/` → `C:/Program Files/Git/`), so `bun script.ts /builds/x` receives garbage. Prefix the command with `MSYS_NO_PATHCONV=1` when passing URL paths.
 - **PowerShell doesn't support `<` redirection** — wrap in `bash -c '...'` for Docker stdin (e.g. piping SQL into `psql`).
+- **Reading a dependency's source:** Bun's isolated install puts packages at `node_modules/.bun/<pkg>@<ver>/node_modules/<pkg>/`, not `node_modules/<pkg>/`. `es <file>` finds them fastest.
 - **`bun add` fails with `InstallFailed extracting tarball` while dev servers run.** They hold files in `node_modules` open on Windows. Stop them (`just stop`, or `preview_stop`), install, restart.
 - **"Unrecognized extension value in extension set"** (guide editor crash, `markdown-commands.test.ts` red) means two copies of a CodeMirror package. `just deps` (run by `just test`/`just check`) catches it via [check-singleton-deps.ts](../scripts/check-singleton-deps.ts). Two causes:
   - A stale install: after a dependency bump, an older worktree's `node_modules` can keep old store links while `bun.lock` is clean. `bun install --force` relinks; a plain or `--frozen-lockfile` install does not.
