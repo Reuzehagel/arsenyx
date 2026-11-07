@@ -97,7 +97,9 @@ export function DirectoryGrid<T extends { id: string }>({
 
   return (
     <>
-      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/* auto-rows-fr: every row matches the tallest card on the page, so a
+          row without bios is not shorter than one with them. */}
+      <ul className="grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => (
           <li key={item.id}>{renderItem(item)}</li>
         ))}

@@ -16,7 +16,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "fix",
         description:
-          "Profiles and organizations hold up better too: avatars that fail to load fall back to an initial, names starting with an emoji get a proper initial, long links in bios and descriptions wrap instead of running off the card, and long names show in full on hover. Cards on Browse, Profiles and Organizations also respond when pressed.",
+          "Profiles and organizations hold up better too: avatars that fail to load fall back to an initial, names starting with an emoji get a proper initial, long links in bios and descriptions wrap instead of running off the card, and long names show in full on hover, and every card on the page is the same height. Cards on Browse, Profiles and Organizations also respond when pressed.",
       },
       {
         type: "fix",
