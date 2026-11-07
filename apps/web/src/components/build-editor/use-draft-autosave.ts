@@ -192,6 +192,9 @@ export function useDraftAutosave({
       action: {
         label: "Restore it",
         onClick: () => {
+          // Drop any pending write first: the leave flush on the reseed would
+          // otherwise overwrite the draft being restored here.
+          pendingSinceRef.current = null
           saveEditorDraft(storeKey, replaced)
           clearEditorDraft(backupKey)
           onResetToSaved()

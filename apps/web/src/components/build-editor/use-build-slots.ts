@@ -23,6 +23,28 @@ import { modMaxRank } from "@/lib/build/slot-ranks"
 
 type PlacedMap = Partial<Record<SlotId, PlacedMod>>
 
+/** Swap two slots' entries (or move into an empty one). Same map when the
+ *  move is illegal. A mod's Alternate travels with it only where that
+ *  Alternate is legal (the rule placeAt applies); otherwise it's dropped. */
+export function withSwap(prev: PlacedMap, from: SlotId, to: SlotId): PlacedMap {
+  if (from === to) return prev
+  const a = prev[from]
+  const b = prev[to]
+  if (!a) return prev
+  if (!canPlaceIn(a.mod, to)) return prev
+  if (b && !canPlaceIn(b.mod, from)) return prev
+  const moved = (e: NonNullable<typeof a>, id: SlotId) =>
+    e.alternate && !canBeAlternate(e.alternate.mod, id)
+      ? { mod: e.mod, rank: e.rank }
+      : e
+  // Annotated: spreading a Record keyed by template-literal SlotIds
+  // widens to only the literal keys.
+  const next: PlacedMap = { ...prev, [to]: moved(a, to) }
+  if (b) next[from] = moved(b, from)
+  else delete next[from]
+  return next
+}
+
 /** Set slot `id`'s Alternate. No-op (same map) on an empty slot or an illegal
  *  Alternate. Rank defaults to the mod's max and is clamped to it. */
 export function withAlternate(
@@ -185,26 +207,7 @@ export function useBuildSlots(
   }, [])
 
   const swap = useCallback((from: SlotId, to: SlotId) => {
-    if (from === to) return
-    setPlaced((prev) => {
-      const a = prev[from]
-      const b = prev[to]
-      if (!a) return prev
-      if (!canPlaceIn(a.mod, to)) return prev
-      if (b && !canPlaceIn(b.mod, from)) return prev
-      // A mod moves with its Alternate only where that Alternate is legal
-      // (the same rule placeAt applies); otherwise the Alternate is dropped.
-      const moved = (e: NonNullable<typeof a>, id: SlotId) =>
-        e.alternate && !canBeAlternate(e.alternate.mod, id)
-          ? { mod: e.mod, rank: e.rank }
-          : e
-      // Annotated: spreading a Record keyed by template-literal SlotIds
-      // widens to only the literal keys.
-      const next: PlacedMap = { ...prev, [to]: moved(a, to) }
-      if (b) next[from] = moved(b, from)
-      else delete next[from]
-      return next
-    })
+    setPlaced((prev) => withSwap(prev, from, to))
   }, [])
 
   const select = useCallback((id: SlotId | null) => {

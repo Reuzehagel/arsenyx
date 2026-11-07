@@ -227,7 +227,10 @@ export function useBuildSave({
       // Re-enable the Save button and surface the failure as a toast. The
       // draft is untouched (it's only cleared on success), so nothing's lost.
       setSaveStatus("idle")
-      const { message, retry } = saveErrorText(err, nextOrganizationId != null)
+      const { message, retry, signIn } = saveErrorText(
+        err,
+        nextOrganizationId != null,
+      )
       toast.error(message, {
         id: SAVE_ERROR_TOAST,
         // A failed save is important enough to stay until the user acts on it,
@@ -235,17 +238,19 @@ export function useBuildSave({
         duration: Infinity,
         // Retry only where it can work, and through the latest performSave so
         // it saves the build as it is now, not as it was when this failed.
-        action: retry
-          ? {
-              label: "Retry",
-              onClick: () =>
-                void performSaveRef.current(
-                  nextVisibility,
-                  nextOrganizationId,
-                  nextHideAuthor,
-                ),
-            }
-          : undefined,
+        action: signIn
+          ? { label: "Sign in", onClick: goSignIn }
+          : retry
+            ? {
+                label: "Retry",
+                onClick: () =>
+                  void performSaveRef.current(
+                    nextVisibility,
+                    nextOrganizationId,
+                    nextHideAuthor,
+                  ),
+              }
+            : undefined,
       })
     } finally {
       savingRef.current = false
@@ -296,7 +301,7 @@ const SAVE_ERROR_TOAST = "build-save-error"
 function saveErrorText(
   err: unknown,
   hasOrg: boolean,
-): { message: string; retry: boolean } {
+): { message: string; retry: boolean; signIn?: boolean } {
   const { status, code } = apiErrorInfo(err)
   if (status === null)
     return {
@@ -307,6 +312,7 @@ function saveErrorText(
     return {
       message: "You've been signed out. Sign in again; your draft is kept.",
       retry: false,
+      signIn: true,
     }
   if (status === 403)
     return {

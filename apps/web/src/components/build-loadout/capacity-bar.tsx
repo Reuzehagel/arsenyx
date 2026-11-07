@@ -53,7 +53,8 @@ export function CapacityBar({
         role="meter"
         aria-label="Mod capacity"
         aria-valuemin={0}
-        aria-valuemax={max}
+        // A meter's value can't exceed its max; the text carries the overage.
+        aria-valuemax={Math.max(max, used)}
         aria-valuenow={used}
         aria-valuetext={
           over ? `${used} of ${max}, ${used - max} over` : `${used} of ${max}`
