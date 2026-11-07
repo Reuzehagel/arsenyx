@@ -16,6 +16,11 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "fix",
         description:
+          "Secondary kitguns (Catchmoon, Gaze, Rattleguts, Sporelacer, Tombfinger, Vermisplicer) show their real crit, status, fire rate and damage in the build editor again, instead of all zeros.",
+      },
+      {
+        type: "fix",
+        description:
           "Changing your display name no longer removes your profile picture. If yours disappeared, sign out and back in to get it back.",
       },
       {

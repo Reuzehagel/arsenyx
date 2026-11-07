@@ -235,8 +235,20 @@ export function mergeModular(
   modular: Raw,
   wikiWeaponsByName: Map<string, Raw>,
 ): ModularData {
-  const secondary = (modular.Kitgun as Raw | undefined) ?? {}
+  const secondary = (modular.KitgunSecondary as Raw | undefined) ?? {}
   const primary = (modular.KitgunPrimary as Raw | undefined) ?? {}
+  // The wiki once renamed `Kitgun` → `KitgunSecondary` and a refresh silently
+  // shipped zero-stat secondary kitguns; fail the build instead.
+  for (const [key, cls] of [
+    ["KitgunPrimary", primary],
+    ["KitgunSecondary", secondary],
+  ] as const) {
+    if (Object.keys((cls.Chamber as Raw | undefined) ?? {}).length === 0) {
+      throw new Error(
+        `[merge-modular] Module:Modular/data has no ${key}.Chamber entries — did the wiki rename the table?`,
+      )
+    }
+  }
 
   return {
     kitgun: {

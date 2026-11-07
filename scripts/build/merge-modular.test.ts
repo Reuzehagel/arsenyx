@@ -37,13 +37,36 @@ const MODULAR = {
       },
     },
   },
-  Kitgun: { Chamber: {}, Loader: {} },
+  KitgunSecondary: {
+    Chamber: {
+      Catchmoon: {
+        CritChance: 0.21,
+        CritMultiplier: 2,
+        StatusChance: 0.21,
+        Magazine: { High: 11, Med: 9 },
+        Damage: {
+          Gibber: { Heat: 119, Impact: 41 },
+          Haymaker: { Heat: 269, Impact: 191 },
+        },
+        FireRate: { Gibber: 3.17, Haymaker: 1.17 },
+      },
+    },
+    Loader: {},
+  },
   Zaw: { Strike: {}, Grip: {}, Link: {} },
 }
 
 // Catalog weapon entries carry the attack-mode structure (zeroed damage, but
 // the damage-type keys reveal which type belongs to which mode).
 const WIKI = new Map<string, Record<string, unknown>>([
+  [
+    "Catchmoon (Secondary)",
+    {
+      Attacks: [
+        { AttackName: "Normal Attack", Damage: { Heat: 0, Impact: 0 } },
+      ],
+    },
+  ],
   [
     "Sporelacer (Primary)",
     {
@@ -95,6 +118,20 @@ describe("mergeModular", () => {
     expect(tf.attacks).toEqual([
       { name: "Normal Attack", damage: { impact: 69, radiation: 47 } },
     ])
+  })
+
+  it("reads secondary chambers from KitgunSecondary", () => {
+    const cm = data.kitgun.secondary.Catchmoon!
+    expect(cm.critChance).toBe(0.21)
+    expect(cm.grips.Gibber).toEqual({
+      fireRate: 3.17,
+      attacks: [{ name: "Normal Attack", damage: { heat: 119, impact: 41 } }],
+    })
+  })
+
+  it("throws when a kitgun class table is missing", () => {
+    const { KitgunSecondary: _, ...rest } = MODULAR
+    expect(() => mergeModular(rest, WIKI)).toThrow(/KitgunSecondary/)
   })
 
   it("emits loaders with additive modifiers and magazine tier", () => {
