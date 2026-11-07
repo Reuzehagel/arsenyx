@@ -63,12 +63,24 @@ function Results() {
       items={data.orgs}
       total={data.total}
       limit={data.limit}
-      renderItem={(org) => <OrgCard org={org} />}
+      renderItem={(org) => (
+        <OrgCard
+          org={org}
+          showDescription={data.orgs.some((o) => o.description)}
+        />
+      )}
     />
   )
 }
 
-function OrgCard({ org }: { org: OrgDirectoryItem }) {
+function OrgCard({
+  org,
+  showDescription,
+}: {
+  org: OrgDirectoryItem
+  /** Any card on this page has a description — reserve the slot on all. */
+  showDescription: boolean
+}) {
   return (
     <Link
       href={`/org/${org.slug}`}
@@ -96,15 +108,17 @@ function OrgCard({ org }: { org: OrgDirectoryItem }) {
             </CardDescription>
           </div>
         </CardHeader>
-        {org.description ? (
+        {/* Fixed two-line slot, filled either way when any card on the page has
+            text, so all cards are the same height with no empty gap. */}
+        {showDescription ? (
           <CardContent>
-            <p className="text-muted-foreground line-clamp-3 text-sm wrap-anywhere">
-              {org.description}
+            <p
+              className={`line-clamp-2 min-h-10 text-sm wrap-anywhere ${org.description ? "text-muted-foreground" : "text-muted-foreground/60 italic"}`}
+            >
+              {org.description ?? "No description yet."}
             </p>
           </CardContent>
         ) : null}
-        {/* mt-auto pins the stats row to the card bottom so rows align
-            across cards with and without a description. */}
         <CardFooter className="text-muted-foreground mt-auto justify-between text-xs">
           <span>
             <span className="text-foreground font-semibold tabular-nums">

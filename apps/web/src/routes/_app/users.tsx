@@ -64,12 +64,21 @@ function Results() {
       items={data.users}
       total={data.total}
       limit={data.limit}
-      renderItem={(user) => <ProfileCard user={user} />}
+      renderItem={(user) => (
+        <ProfileCard user={user} showBio={data.users.some((u) => u.bio)} />
+      )}
     />
   )
 }
 
-function ProfileCard({ user }: { user: ProfileDirectoryItem }) {
+function ProfileCard({
+  user,
+  showBio,
+}: {
+  user: ProfileDirectoryItem
+  /** Any card on this page has a bio — reserve the slot on all of them. */
+  showBio: boolean
+}) {
   // The directory only lists users that have a username (the API filters the
   // rest out), so the profile link is always resolvable.
   const handle = user.username ?? ""
@@ -87,19 +96,26 @@ function ProfileCard({ user }: { user: ProfileDirectoryItem }) {
             <CardTitle className="truncate" title={title}>
               {title}
             </CardTitle>
-            <p className="text-muted-foreground truncate text-xs">@{handle}</p>
-            <ProfileBadges badges={user.badges} compact />
+            {/* Badge shares the handle line so every header is the same height. */}
+            <div className="flex min-w-0 items-center gap-2">
+              <p className="text-muted-foreground min-w-0 truncate text-xs">
+                @{handle}
+              </p>
+              <ProfileBadges badges={user.badges} compact />
+            </div>
           </div>
         </CardHeader>
-        {user.bio ? (
+        {/* Fixed two-line slot, filled either way when any card on the page has
+            a bio, so all cards are the same height with no empty gap. */}
+        {showBio ? (
           <CardContent>
-            <p className="text-muted-foreground line-clamp-3 text-sm wrap-anywhere">
-              {user.bio}
+            <p
+              className={`line-clamp-2 min-h-10 text-sm wrap-anywhere ${user.bio ? "text-muted-foreground" : "text-muted-foreground/60 italic"}`}
+            >
+              {user.bio ?? "No bio yet."}
             </p>
           </CardContent>
         ) : null}
-        {/* mt-auto pins the stats row to the card bottom so rows align across
-            cards with and without a bio. */}
         <CardFooter className="text-muted-foreground mt-auto justify-between text-xs">
           <span>
             <span className="text-foreground font-semibold tabular-nums">
