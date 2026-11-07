@@ -9,7 +9,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { KbdGroup } from "@/components/ui/kbd"
-import { HOTKEYS, HOTKEY_SCOPES, useHotkey } from "@/lib/hooks/hotkeys"
+import {
+  HOTKEYS,
+  HOTKEY_LIST,
+  HOTKEY_SCOPES,
+  useHotkey,
+} from "@/lib/hooks/hotkeys"
 
 const OPEN_EVENT = "arsenyx:open-cheat-sheet"
 
@@ -24,12 +29,7 @@ const OPEN_EVENT = "arsenyx:open-cheat-sheet"
 export function HotkeyCheatSheet() {
   const [open, setOpen] = useState(false)
 
-  // `?` is a shifted printable on most layouts; matching `e.key === "?"`
-  // works regardless of which physical key produced it.
-  useHotkey(
-    (e) => e.key === "?",
-    () => setOpen(true),
-  )
+  useHotkey(HOTKEYS.cheatSheet, () => setOpen(true))
 
   useEffect(() => {
     const onOpen = () => setOpen(true)
@@ -49,7 +49,7 @@ export function HotkeyCheatSheet() {
 
         <div className="flex flex-col gap-5 pt-1">
           {HOTKEY_SCOPES.map((scope) => {
-            const rows = HOTKEYS.filter((h) => h.scope === scope)
+            const rows = HOTKEY_LIST.filter((h) => h.scope === scope)
             if (rows.length === 0) return null
             return (
               <section key={scope} className="flex flex-col gap-2">

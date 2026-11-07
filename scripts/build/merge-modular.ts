@@ -8,7 +8,7 @@
  * the per-grip damage + fire-rate tables, and the per-loader crit/status/
  * reload/magazine modifiers (and the equivalent zaw tables). We parse it into
  * the consumer-shaped `ModularData` and emit `/data/modular.json`, which the
- * stat panel reconstructs from at runtime (see apps/web/src/lib/kitgun-stats.ts).
+ * stat panel reconstructs from at runtime (see apps/web/src/lib/stats/modular.ts).
  *
  * The one wrinkle is damage: the wiki gives a single flat `Damage[grip]` map
  * per chamber, but a chamber can have several attack modes (Sporelacer's Toxin

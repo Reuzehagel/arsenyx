@@ -12,6 +12,13 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
 
+import {
+  LOCAL_DB_HOST,
+  LOCAL_DB_PORT,
+  isComposeDbUrl,
+  pinHyperdriveIpv4,
+} from "./lib/dev-db"
+
 const REPO = resolve(import.meta.dirname, "..")
 const API_ENV = resolve(REPO, "apps/api/.env")
 
@@ -52,26 +59,13 @@ function checkoutDb(): string {
   if (!raw)
     throw new Error("no DATABASE_URL in apps/api/.env — run `just setup`")
   const url = new URL(raw)
-  if (url.hostname !== "localhost" || url.port !== "54320") {
+  if (!isComposeDbUrl(raw)) {
     throw new Error(
       `DATABASE_URL host "${url.hostname}:${url.port}" is not the local dev container ` +
-        `(localhost:54320) — refusing to touch it. Run \`just setup\` to repoint this checkout.`,
+        `(${LOCAL_DB_HOST}:${LOCAL_DB_PORT}) — refusing to touch it. Run \`just setup\` to repoint this checkout.`,
     )
   }
   return url.pathname.slice(1)
-}
-
-// Repoint .env files written before setup.ts pinned IPv4: under wrangler ≥4.157
-// workerd tries ::1 first for "localhost" and every request stalls ~2 s.
-function pinHyperdriveIpv4() {
-  const env = readFileSync(API_ENV, "utf8")
-  const fixed = env.replace(
-    /^(CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE\s*=\s*"?postgres(?:ql)?:\/\/[^@\s"]*)@localhost:/m,
-    "$1@127.0.0.1:",
-  )
-  if (fixed === env) return
-  writeFileSync(API_ENV, fixed, "utf8")
-  console.log("✓ apps/api/.env: Hyperdrive local string → 127.0.0.1")
 }
 
 async function main() {
@@ -80,7 +74,13 @@ async function main() {
     throw new Error("usage: bun scripts/dev-db.ts ensure|reset")
   }
   const db = checkoutDb()
-  pinHyperdriveIpv4()
+  // Old .env files: under wrangler ≥4.157 workerd tries ::1 first for "localhost" and stalls ~2 s.
+  const env = readFileSync(API_ENV, "utf8")
+  const pinned = pinHyperdriveIpv4(env)
+  if (pinned !== env) {
+    writeFileSync(API_ENV, pinned, "utf8")
+    console.log("✓ apps/api/.env: Hyperdrive local string → 127.0.0.1")
+  }
   await run(["docker", "compose", "up", "-d", "--wait", "--quiet-pull"])
   if (cmd === "reset")
     await psql(`DROP DATABASE IF EXISTS "${db}" WITH (FORCE)`)

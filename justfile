@@ -94,18 +94,17 @@ check: gen && test
     bun run lint
     bun run fmt:check
     bun run check:native-button
+    bun run check:layering
 
 # Auto-fix lint + format.
 fix:
     bun run lint:fix
     bun run fmt
 
-# Run vitest across all workspaces with tests, plus the build-pipeline tests
-# under scripts/ (run via `bun test`). Keep in sync with the Test steps in
-# .github/workflows/ci.yml when adding a workspace.
+# Vitest across the workspaces plus the scripts/ tests (bun test) — the
+# root `test` script, which CI runs too.
 test: deps
-    bun --filter=arsenyx-web --filter=arsenyx-api --filter=@arsenyx/shared run test
-    bun test scripts/build/
+    bun run test
 
 # After merging PRs: list orphan .claude/worktrees folders and branches whose
 # remote is gone. Pass --go to delete them.

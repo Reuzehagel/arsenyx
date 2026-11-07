@@ -65,3 +65,24 @@ describe("Umbral set bonuses", () => {
     expect(stats.abilityStrength.modified).toBe(177) // +77%
   })
 })
+
+describe("Archon shards", () => {
+  it("adds flat stats, percent stats, and ignores display-only shard stats", () => {
+    const stats = calculateWarframeStats({
+      warframe: FRAME,
+      mods: [],
+      arcanes: [],
+      shards: [
+        { color: "azure", stat: "Health", tauforged: false },
+        { color: "crimson", stat: "Ability Strength", tauforged: true },
+        { color: "amber", stat: "Parkour Velocity", tauforged: false },
+        { color: "azure", stat: "Health Regen", tauforged: false },
+      ],
+      skipRankUpBonus: true,
+    })
+    expect(stats.health.modified).toBe(250) // 100 + 150 flat
+    expect(stats.abilityStrength.modified).toBe(115) // +15% tauforged
+    expect(stats.sprintSpeed.modified).toBe(1.15) // +15%
+    expect(stats.shield.modified).toBe(100)
+  })
+})

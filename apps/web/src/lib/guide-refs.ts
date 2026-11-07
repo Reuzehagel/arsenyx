@@ -1,3 +1,4 @@
+import type { GuideRefs } from "@arsenyx/shared/warframe/build-data"
 import type { Arcane, Mod } from "@arsenyx/shared/warframe/types"
 
 /**
@@ -17,16 +18,8 @@ import type { Arcane, Mod } from "@arsenyx/shared/warframe/types"
  * mods-all.json — renders cards from data already in the build payload.
  * Snapshots follow the same rules as placed slots: `imageName` is stripped on
  * persist and re-resolved by uniqueName at render (see build-codec-adapter's
- * stripPersistedImages / refreshImagesFromMap).
+ * stripPersistedImages / loadBuildData).
  */
-
-/** Snapshots of every mod/arcane referenced in any of a build's guide texts
- *  (build-wide + per-variant), deduped by uniqueName. Stored inside
- *  `Build.buildData` (opaque JSON to the API). */
-export type GuideRefs = {
-  mods?: Mod[]
-  arcanes?: Arcane[]
-}
 
 export type GuideRefTarget =
   | { kind: "mod"; mod: Mod }

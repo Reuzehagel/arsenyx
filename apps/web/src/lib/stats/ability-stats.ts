@@ -1,6 +1,7 @@
 import type { AbilityStat } from "@arsenyx/shared/warframe/types"
 
-import { formatStat } from "../warframe"
+import { formatStat } from "@/lib/util/format"
+
 import type { WarframeStats } from "./types"
 
 export type AbilityTotals = Pick<
@@ -8,7 +9,7 @@ export type AbilityTotals = Pick<
   "abilityStrength" | "abilityDuration" | "abilityRange" | "abilityEfficiency"
 >
 
-export interface AbilityStatRow {
+interface AbilityStatRow {
   text: string
   /** Sub-heading row (e.g. one part of a multi-mode ability), no value. */
   heading?: boolean

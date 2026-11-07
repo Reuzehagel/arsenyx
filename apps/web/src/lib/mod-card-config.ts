@@ -1,14 +1,6 @@
-import type { Polarity } from "@arsenyx/shared/warframe/types"
+import type { Mod, Polarity } from "@arsenyx/shared/warframe/types"
 
-export type ModRarity =
-  | "Common"
-  | "Uncommon"
-  | "Rare"
-  | "Legendary"
-  | "Peculiar"
-  | "Riven"
-  | "Amalgam"
-  | "Galvanized"
+export type ModRarity = Mod["rarity"]
 
 interface RarityConfig {
   folder: string
@@ -16,7 +8,7 @@ interface RarityConfig {
   textColor: string
 }
 
-export const RARITY_CONFIG: Record<ModRarity, RarityConfig> = {
+const RARITY_CONFIG: Record<ModRarity, RarityConfig> = {
   Common: {
     folder: "common",
     prefix: "Bronze",
@@ -134,7 +126,7 @@ export function getPolarityIconUrl(polarity: Polarity): string {
 
 export type SlotBadgeKind = "aura" | "exilus" | "stance"
 
-// Wiki CDN paths — same approach as arcane-images.ts. We render via
+// Wiki CDN paths (no R2/local copy exists yet). We render via
 // CSS mask-image so the icons take any color (rarity-tinted).
 const SLOT_BADGE_URL: Record<SlotBadgeKind, string> = {
   // IconAura(xWhite) / IconStance(xWhite) — solid white silhouettes.

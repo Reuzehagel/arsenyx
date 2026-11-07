@@ -14,10 +14,10 @@ export async function requireUser() {
 }
 
 /** Resolve the current session user and assert admin, or throw a redirect to
- *  the home page. Mirrors the admin route's gate (non-admins go to "/"). */
+ *  the home page. */
 export async function requireAdmin() {
   const session = await authClient.getSession()
-  const user = session.data?.user as { isAdmin?: boolean } | undefined
+  const user = session.data?.user
   if (!user || user.isAdmin !== true) {
     throw redirect({ to: "/" })
   }

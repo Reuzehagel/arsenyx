@@ -1,25 +1,24 @@
+import type {
+  SavedVariant,
+  PlacedMod,
+  SlotId,
+  VariantMode,
+} from "@arsenyx/shared/warframe/build-data"
 import { useEffect, useMemo, useState } from "react"
 
-import type { SavedVariant } from "@/lib/queries/build-query"
-
-import type { BuildDerived, BuildLayout } from "./build-derived"
+import type { BuildDerived } from "@/components/build-loadout/use-build-derived"
 import {
   computeMultiVariantPlan,
   computeReactiveAutoFormaPlan,
   type FullAutoFormaPlan,
-} from "./multi-variant-auto-forma"
-import {
-  dropOrphanSlots,
-  type BuildSlotsState,
-  type PlacedMod,
-  type SlotId,
-} from "./use-build-slots"
+} from "@/lib/build/auto-forma"
+import type { BuildLayout } from "@/lib/build/layout"
+import { dropOrphanSlots } from "@/lib/build/slot-order"
+import type { SetVariants } from "@/lib/build/variants"
 
-type SetVariants = (
-  next: SavedVariant[] | ((prev: SavedVariant[]) => SavedVariant[]),
-) => void
+import type { BuildSlotsState } from "./use-build-slots"
 
-export interface AutoFormaPlanner {
+interface AutoFormaPlanner {
   /** Cheap stage-1 plan, recomputed every render; null when under capacity. */
   reactiveAutoFormaPlan: FullAutoFormaPlan | null
   /** Every variant's active slot placement, for the planner + preview dialog. */
@@ -39,12 +38,13 @@ export interface AutoFormaPlanner {
 /**
  * Owns the editor's auto-forma planning: the reactive (cheap) plan recomputed
  * each render, the heavy (stages 2/3) plan held for preview confirmation, and
- * the button/dialog handlers. Forma is build-wide in Warframe, so the planner
- * overlays the active variant's live slots onto the saved `variants[]` set and
- * considers them all together. The plan *computation* lives in
- * multi-variant-auto-forma.ts; this hook is the editor-side state + wiring.
+ * the button/dialog handlers. In linked mode the variants of one form share
+ * forma, so the planner overlays the active variant's live slots onto those
+ * saved variants and considers them together. The plan *computation* lives in
+ * lib/build/auto-forma; this hook is the editor-side state + wiring.
  */
 export function useAutoFormaPlanner(opts: {
+  variantMode: VariantMode
   variants: SavedVariant[]
   clampedActiveIndex: number
   layout: BuildLayout
@@ -57,6 +57,7 @@ export function useAutoFormaPlanner(opts: {
   setVariants: SetVariants
 }): AutoFormaPlanner {
   const {
+    variantMode,
     variants,
     clampedActiveIndex,
     layout,
@@ -69,17 +70,24 @@ export function useAutoFormaPlanner(opts: {
   const allVariantSlots = useMemo(
     () =>
       variants.map((v, i) =>
-        // The active variant's `placed` is already orphan-stripped by
-        // useBuildSlots. Inactive variants come straight from the saved doc, so
+        // The active variant's `placed` was orphan-stripped when it was seeded
+        // (loadoutFromSaved). Inactive variants come straight from the doc, so
         // strip them here too — otherwise a mod left in a slot this item no
         // longer has (e.g. an Exilus mod on a legacy companion-weapon build)
         // still feeds the auto-forma planner's capacity math and inflates that
         // variant's `used`, producing phantom forma recommendations.
         i === clampedActiveIndex
           ? slots.placed
-          : dropOrphanSlots(v.slots ?? {}, layout),
+          : // Variants with their own forma (independent mode, or another
+            // twin-frame form) are planned alone. An empty variant is always
+            // feasible and never moved.
+            variantMode === "independent" ||
+              (v.formIndex ?? 0) !==
+                (variants[clampedActiveIndex]?.formIndex ?? 0)
+            ? {}
+            : dropOrphanSlots(v.slots ?? {}, layout),
       ),
-    [variants, clampedActiveIndex, slots.placed, layout],
+    [variants, clampedActiveIndex, slots.placed, layout, variantMode],
   )
 
   const reactiveAutoFormaPlan = useMemo<FullAutoFormaPlan | null>(() => {
@@ -124,8 +132,8 @@ export function useAutoFormaPlanner(opts: {
 
   // "No fix found" feedback — flips true briefly after a fruitless click so
   // the button can hint at the result instead of looking broken. The timer
-  // lives in an effect so we clear it on unmount (variant switch, route
-  // change) and avoid setState on a dead component.
+  // lives in an effect so unmount clears it instead of setting state on a
+  // dead component.
   const [noFixFound, setNoFixFound] = useState(false)
   useEffect(() => {
     if (!noFixFound) return

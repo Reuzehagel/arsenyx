@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest"
 
 import {
   buildAuthor,
+  buildMetaDescription,
   buildMetaTitle,
-  buildOgType,
+  resolveBuildImage,
   type BuildTitleInput,
 } from "./build-meta"
 
@@ -82,12 +83,51 @@ describe("buildMetaTitle", () => {
   it("omits the 'by …' clause when there is no author", () => {
     expect(buildMetaTitle(base)).toBe("Frumentarius Build")
   })
+
+  it("collapses whitespace in authored names", () => {
+    expect(
+      buildMetaTitle({ ...base, organization: { name: "Profit\n  Taker" } }),
+    ).toBe("Frumentarius Build by Profit Taker")
+  })
 })
 
-describe("buildOgType", () => {
-  it("is article only for PUBLIC builds", () => {
-    expect(buildOgType("PUBLIC")).toBe("article")
-    expect(buildOgType("UNLISTED")).toBe("website")
-    expect(buildOgType("PRIVATE")).toBe("website")
+describe("buildMetaDescription", () => {
+  const b = {
+    name: "Frumentarius",
+    description: null,
+    item: { name: "Frumentarius" },
+    guide: null,
+  }
+
+  it("falls back to a generic line, with no lead when name = item", () => {
+    expect(buildMetaDescription(b)).toBe(
+      "Frumentarius build with mods, arcanes, and stats.",
+    )
+  })
+
+  it("leads with a custom name and prefers the guide summary", () => {
+    expect(
+      buildMetaDescription({
+        ...b,
+        name: "Eidolon\nsniper",
+        description: "desc",
+        guide: { summary: "Guide  text" },
+      }),
+    ).toBe("Eidolon sniper. Guide text")
+  })
+})
+
+describe("resolveBuildImage", () => {
+  const build = { item: { uniqueName: "/Lotus/Frume", imageName: "old.png" } }
+
+  it("prefers the catalog's current image for the item", () => {
+    expect(resolveBuildImage(build, { "/Lotus/Frume": "new.png" })).toBe(
+      "new.png",
+    )
+  })
+
+  it("falls back to the stored image on a map miss or no map", () => {
+    expect(resolveBuildImage(build, {})).toBe("old.png")
+    expect(resolveBuildImage(build, null)).toBe("old.png")
   })
 })

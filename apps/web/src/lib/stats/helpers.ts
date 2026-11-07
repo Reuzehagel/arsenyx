@@ -1,4 +1,4 @@
-import { formatStat } from "@/lib/warframe"
+import { formatStat } from "@/lib/util/format"
 
 import type { SourcedStat } from "./parser"
 import type { StatContribution, StatType } from "./types"

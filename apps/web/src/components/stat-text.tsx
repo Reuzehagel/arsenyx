@@ -1,11 +1,10 @@
 import { Fragment } from "react"
 
 import {
-  DAMAGE_TYPE_COLORS,
   DAMAGE_TYPE_ICON,
-  DAMAGE_TYPE_LABELS,
   DAMAGE_TYPE_STYLE,
-} from "@/lib/stats/types"
+} from "@/components/build-loadout/damage-style"
+import { DAMAGE_TYPE_COLORS, DAMAGE_TYPE_LABELS } from "@/lib/stats/types"
 import { cn } from "@/lib/util/utils"
 
 // In-game stat strings embed inline tokens from the UI:

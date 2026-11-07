@@ -1,9 +1,12 @@
+import { getItemUrl } from "@arsenyx/shared/seo/site"
+import type { BrowseItem } from "@arsenyx/shared/warframe/types"
+
 import { Link } from "@/components/link"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { getImageUrl } from "@/lib/image-url"
 import { cn } from "@/lib/util/utils"
-import { getImageUrl, getItemUrl, type BrowseItem } from "@/lib/warframe"
 
 interface ItemCardProps {
   item: BrowseItem

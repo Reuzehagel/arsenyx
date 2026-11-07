@@ -1,5 +1,6 @@
+import { CANONICAL_POLARITIES } from "@arsenyx/shared/warframe/polarities"
 import { isRivenMod } from "@arsenyx/shared/warframe/rivens"
-import type { Mod, Polarity } from "@arsenyx/shared/warframe/types"
+import type { Mod } from "@arsenyx/shared/warframe/types"
 import { Search, X } from "lucide-react"
 import {
   memo,
@@ -12,6 +13,8 @@ import {
   type PointerEvent,
 } from "react"
 
+import { useStartDrag } from "@/components/build-loadout/drag-controller"
+import { ModCard } from "@/components/build-loadout/mod-card"
 import {
   InputGroup,
   InputGroupAddon,
@@ -32,7 +35,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { useHotkey } from "@/lib/hooks/hotkeys"
+import type { ModSlotKind } from "@/lib/build/slot-id"
+import { HOTKEYS, useHotkey } from "@/lib/hooks/hotkeys"
 import {
   BASE_ELEMENTS,
   DAMAGE_TYPE_COLORS,
@@ -41,10 +45,12 @@ import {
 } from "@/lib/stats/types"
 import { capitalize, cn } from "@/lib/util/utils"
 
-import { useStartDrag } from "./drag-controller"
-import { ModCard } from "./mod-card"
-import { isActionable, searchMods, slotKindPredicate } from "./mod-search"
-import type { ModSlotKind } from "./mod-slot"
+import {
+  isActionable,
+  MOD_SEARCH_GRID_ATTR,
+  searchMods,
+  slotKindPredicate,
+} from "./mod-search"
 import { DIR_BY_KEY, type Dir } from "./use-keyboard-nav"
 
 const SORT_OPTIONS = ["Drain", "Name", "Rarity"] as const
@@ -55,16 +61,7 @@ const RARITY_OPTIONS = [
   "Rare",
   "Legendary",
 ] as const
-const POLARITY_OPTIONS = [
-  "All",
-  "madurai",
-  "vazarin",
-  "naramon",
-  "zenurik",
-  "unairu",
-  "penjaga",
-  "umbra",
-] as const satisfies readonly ("All" | Polarity)[]
+const POLARITY_OPTIONS = ["All", ...CANONICAL_POLARITIES] as const
 // PvE is the default — Conclave (PvP) mods are flagged with `isConclave`
 // at build time (see scripts/build/merge-mods.ts) and hidden unless the
 // user explicitly opts into the Conclave view.
@@ -238,7 +235,7 @@ export function ModSearchGrid({
     searchRef.current?.select()
   }
 
-  useHotkey("/", focusInput)
+  useHotkey(HOTKEYS.modSearch, focusInput)
 
   // Stable ordering: computed from `mods` + `sort` only. Filters dim instead
   // of remove, so positions don't shift when search/rarity/polarity narrow
@@ -561,7 +558,7 @@ export function ModSearchGrid({
       {/* Positions stay stable under filters: non-matches dim but keep their
           slot so the eye doesn't lose its spot. */}
       <div
-        data-mod-search-grid
+        {...{ [MOD_SEARCH_GRID_ATTR]: true }}
         className="grid max-w-full content-start gap-x-2 gap-y-4 overflow-x-auto px-1 pt-2 pb-6"
         style={{
           gridTemplateRows: "repeat(2, min-content)",

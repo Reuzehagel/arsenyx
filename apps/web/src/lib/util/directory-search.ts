@@ -2,24 +2,20 @@
 // Both take `?page` + `?q`; both drop the defaults from the URL so the bare
 // path stays canonical.
 
-export type DirectorySearchParams = { page?: number; q?: string }
+import { toQueryString } from "./api-client"
+import { searchPage, searchText } from "./search-params"
 
-// Matches the API's own cap (`trimQ` in apps/api/src/routes/_query.ts) so the
-// value in the URL is the value the server actually searched on. Capping here
-// too means the input's committed text and the results can't disagree.
-const MAX_Q = 100
+export type DirectorySearchParams = { page?: number; q?: string }
 
 export function parseDirectorySearch(search: unknown): DirectorySearchParams {
   const raw = search as { page?: unknown; q?: unknown }
-
-  const n =
-    typeof raw.page === "number"
-      ? raw.page
-      : parseInt(String(raw.page ?? ""), 10)
-  const page = Number.isFinite(n) && n > 1 ? n : undefined
-
-  const qRaw = typeof raw.q === "string" ? raw.q.trim().slice(0, MAX_Q) : ""
-  const q = qRaw.length > 0 ? qRaw : undefined
-
+  const page = searchPage(raw.page)
+  const q = searchText(raw.q)
   return { ...(q ? { q } : {}), ...(page ? { page } : {}) }
+}
+
+/** API query string for a directory page — the inverse of
+ *  {@link parseDirectorySearch} (page 1 and an empty `q` are dropped). */
+export function directoryQueryString(page: number, q?: string): string {
+  return toQueryString({ page, q: q?.trim() }, { page: 1 })
 }

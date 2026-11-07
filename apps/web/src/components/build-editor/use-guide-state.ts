@@ -1,12 +1,10 @@
+import type { SavedVariant } from "@arsenyx/shared/warframe/build-data"
 import { useState } from "react"
 
-import type { SavedVariant } from "@/lib/queries/build-query"
+import type { SetVariants } from "@/lib/build/variants"
 
-import type { GuideScope } from "./guide-editor"
-
-type SetVariants = (
-  next: SavedVariant[] | ((prev: SavedVariant[]) => SavedVariant[]),
-) => void
+/** Which guide the editor is writing: the build-wide one or a variant's. */
+type GuideScope = { kind: "build" } | { kind: "variant"; index: number }
 
 /** The scope-aware props the GuideEditor consumes. */
 export interface GuideEditorProps {
@@ -29,13 +27,17 @@ export interface GuideEditorProps {
   seedVariantFromBuild: (index: number) => void
 }
 
-export interface GuideState {
-  /** Build-wide guide — persisted to buildData on save / autosave and mirrored
-   *  into the shared editor cache. (Per-variant guides live in `variants[i]`.) */
+interface GuideState {
+  /** Build-wide guide — persisted to buildData on save / autosave.
+   *  (Per-variant guides live in `variants[i]`.) */
   buildSummary: string
   buildDescription: string
   /** Ready-made GuideEditor props, scoped to the build or the active variant. */
   editorProps: GuideEditorProps
+  /** Keep a variant scope on the same variant when the array is about to
+   *  become `next` (indices shift on add/delete); a deleted one falls back to
+   *  the first variant. */
+  followVariants: (next: SavedVariant[]) => void
 }
 
 /**
@@ -43,11 +45,8 @@ export interface GuideState {
  * edit scope (build-wide vs a specific variant), and the scope-aware read/write
  * dispatch the GuideEditor needs. Per-variant guides live in `variants[i]` and
  * are written through `setVariants`; the build-wide guide is local state,
- * surfaced via `buildSummary`/`buildDescription` for the save / autosave /
- * shared-cache paths.
- *
- * Scope resets to "build" on mount: EditorShell remounts on a variant switch,
- * so switching variants never silently changes which guide you're editing.
+ * surfaced via `buildSummary`/`buildDescription` for the save / share /
+ * autosave paths.
  */
 export function useGuideState(opts: {
   initialSummary: string
@@ -125,9 +124,22 @@ export function useGuideState(opts: {
     ),
   }))
 
+  const followVariants = (next: SavedVariant[]): void => {
+    if (scope.kind !== "variant") return
+    const id = variants[scope.index]?.id
+    setScope({
+      kind: "variant",
+      index: Math.max(
+        0,
+        next.findIndex((v) => v.id === id),
+      ),
+    })
+  }
+
   return {
     buildSummary,
     buildDescription,
+    followVariants,
     editorProps: {
       summary,
       onSummaryChange,

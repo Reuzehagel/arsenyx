@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { isPrivateIp, SafeFetchError, safeFetch } from "./safe-fetch"
+import { SafeFetchError, safeFetch } from "./safe-fetch"
+import { isPrivateIp } from "./validate"
 
 const realFetch = globalThis.fetch
 
@@ -9,10 +10,17 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-// Queue stub: each fetch() call returns the next queued Response.
-function queueFetch(responses: Response[]) {
+const isDoh = (input: unknown) => String(input).includes("/dns-query")
+
+// Queue stub: each fetch() call returns the next queued Response. DoH lookups
+// answer with `dns` (no records by default) and don't consume the queue.
+function queueFetch(
+  responses: Response[],
+  dns: { type: number; data: string }[] = [],
+) {
   let i = 0
-  globalThis.fetch = vi.fn(async () => {
+  globalThis.fetch = vi.fn(async (input: unknown) => {
+    if (isDoh(input)) return Response.json({ Answer: dns })
     const r = responses[i++]
     if (!r) throw new Error("no more queued responses")
     return r
@@ -76,6 +84,16 @@ describe("safeFetch", () => {
         maxBytes: 1024,
       }),
     ).rejects.toMatchObject({ code: "too_large" })
+  })
+
+  it("throws private_host when the hostname resolves to a private address", async () => {
+    queueFetch([new Response("ok")], [{ type: 1, data: "10.0.0.5" }])
+    await expect(
+      safeFetch("https://good.com/x", {
+        isAllowed: allowGood,
+        timeoutMs: 1000,
+      }),
+    ).rejects.toMatchObject({ code: "private_host" })
   })
 
   it("throws upstream_status on a non-ok response", async () => {

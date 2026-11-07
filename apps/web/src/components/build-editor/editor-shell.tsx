@@ -1,105 +1,94 @@
+import type { SlotId, VariantMode } from "@arsenyx/shared/warframe/build-data"
 import { getBlockedByConflict } from "@arsenyx/shared/warframe/mods"
 import { isRivenMod } from "@arsenyx/shared/warframe/rivens"
-import { hasModSlots } from "@arsenyx/shared/warframe/slot-layout"
 import type { Mod } from "@arsenyx/shared/warframe/types"
 import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 
-import { EditorHeader } from "@/components/create-editor/editor-header"
-import { SearchPanel } from "@/components/create-editor/search-panel"
-import { useRivenDialog } from "@/components/create-editor/use-riven-dialog"
-import { authClient } from "@/lib/auth-client"
-import { useHotkey } from "@/lib/hooks/hotkeys"
-import { myOrgsQuery } from "@/lib/queries/org-query"
-import { cn } from "@/lib/util/utils"
-import { getCategoryLabel, type BrowseCategory } from "@/lib/warframe"
-
-import { AutoFormaDialog } from "./auto-forma-dialog"
-import { useBuildDerived, getBuildLayout } from "./build-derived"
-import { BuildSurface } from "./build-surface"
-import { DragController } from "./drag-controller"
-import { bumpVariantEpoch } from "./editor-cache"
-import { makeEditorCapture } from "./editor-capture"
-import { EditorVariantBar } from "./editor-variant-bar"
-import { GuideEditor } from "./guide-editor"
-import { KeyboardHintBanner } from "./keyboard-hints"
-import { getPlexusGroupForIndex } from "./layout"
-import { resolveInitialArcanes } from "./layout"
-import { PublishDialog } from "./publish-dialog"
+import { BuildSurface } from "@/components/build-loadout/build-surface"
+import { DragController } from "@/components/build-loadout/drag-controller"
 import {
   RankHoverProvider,
   rankTargetsEqual,
   type RankHoverApi,
   type RankHoverTarget,
-} from "./rank-hover"
-import { useArcaneSlots } from "./use-arcane-slots"
+} from "@/components/build-loadout/rank-hover"
+import { useBuildDerived } from "@/components/build-loadout/use-build-derived"
+import { authClient } from "@/lib/auth-client"
+import { plexusPickerState } from "@/lib/build/plexus"
+import { slotKind } from "@/lib/build/slot-id"
+import { canBeAlternate } from "@/lib/build/slot-kind"
+import { HOTKEYS, useHotkey } from "@/lib/hooks/hotkeys"
+import { myOrgsQuery } from "@/lib/queries/org-query"
+import { cn } from "@/lib/util/utils"
+
+import { AutoFormaDialog } from "./auto-forma-dialog"
+import { EditorHeader } from "./editor-header"
+import { EditorVariantBar } from "./editor-variant-bar"
+import { GuideEditor } from "./guide-editor"
+import { KeyboardHintBanner, KeyboardHintsStrip } from "./keyboard-hints"
+import { PublishDialog } from "./publish-dialog"
+import { SearchPanel } from "./search-panel"
 import { useAutoFormaPlanner } from "./use-auto-forma-planner"
 import { useBuildSave } from "./use-build-save"
-import {
-  canBeAlternate,
-  useBuildSlots,
-  slotKind,
-  type SlotId,
-} from "./use-build-slots"
-import { useDraftAutosave } from "./use-draft-autosave"
-import { useEditorHydration } from "./use-editor-hydration"
-import { useEditorUndo } from "./use-editor-undo"
-import { useEditorVariants } from "./use-editor-variants"
-import { useGuideState } from "./use-guide-state"
-import { useItemExtras } from "./use-item-extras"
+import { useEditorStore, type EditorShellSearch } from "./use-editor-store"
 import { useSlotKeyboardNav } from "./use-keyboard-nav"
 import { usePublishSettings } from "./use-publish-settings"
-import { useRankHotkey } from "./use-rank-hotkey"
-import { useVariantActions } from "./use-variant-actions"
+import { useRivenDialog } from "./use-riven-dialog"
+import { VariantModeDialog } from "./variant-mode-dialog"
 
-export interface EditorShellSearch {
-  item: string
-  category: BrowseCategory
-  build?: string
-  draft?: string
-  share?: string
-  /** Active variant index for multi-variant builds. 0 (or undefined) =
-   *  first variant. */
-  v?: number
-}
+export type { EditorShellSearch }
 
 /**
- * Composition root for the build editor: wires the hydration, variant,
- * slot, extras, undo, save and autosave hooks together and renders the
- * editor surface. State lives in the hooks; this file only connects them.
+ * Composition root for the build editor: renders the editor surface over the
+ * session state in `useEditorStore`, plus the save / publish / auto-forma /
+ * hotkey wiring that needs the router, the session or derived capacity.
+ *
+ * The caller keys this on the build being edited; `onResetToSaved` asks it to
+ * re-key (a fresh session) after the draft is discarded.
  */
-export function EditorShell({ search }: { search: EditorShellSearch }) {
-  const {
-    item: slug,
-    category,
-    build: buildSlug,
-    draft: draftId,
-    share: shareEncoded,
-    v: activeVariantIndex = 0,
-  } = search
+export function EditorShell({
+  search,
+  onResetToSaved,
+}: {
+  search: EditorShellSearch
+  onResetToSaved: () => void
+}) {
+  const navigate = useNavigate()
+  // Alternate mode: the picker sets this slot's Alternate instead of placing
+  // a mod. Derived to null once the slot empties (removed, swapped away), so a
+  // stale target can't swallow the next pick.
+  const [alternateForRaw, setAlternateFor] = useState<SlotId | null>(null)
+  const store = useEditorStore({
+    search,
+    onResetToSaved,
+    onActivate: (i) => {
+      setAlternateFor(null)
+      void navigate({
+        to: ".",
+        search: (s) => ({ ...s, v: i === 0 ? undefined : i }),
+        replace: true,
+      })
+    },
+    onAdopted: () =>
+      void navigate({
+        to: ".",
+        search: (s) => ({ ...s, share: undefined, draft: undefined }),
+        replace: true,
+      }),
+  })
   const {
     item,
-    existingBuild,
-    allMods,
-    allArcanes,
-    incarnonAdapterImages,
-    conflictMap,
-    draft,
-    storeKey,
-    storedDraft,
-    localDraft,
-    savedDataAll,
-  } = useEditorHydration({
-    slug,
     category,
+    slug,
     buildSlug,
-    draftId,
-    shareEncoded,
-  })
-
-  const {
+    existingBuild,
+    allArcanes,
+    conflictMap,
+    storeKey,
+    isUpdate,
     variants,
     setVariants,
     clampedActiveIndex,
@@ -111,56 +100,42 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
       formActiveLocalIndex,
     },
     effectiveItem,
-    savedData,
-    cachedShared,
-    writeShared,
-  } = useEditorVariants({ storeKey, savedDataAll, item, activeVariantIndex })
-
-  const categoryLabel = getCategoryLabel(category)
-
-  const layout = useMemo(
-    () => getBuildLayout(effectiveItem, category),
-    [effectiveItem, category],
-  )
-  const {
-    isCompanion,
-    normalSlotCount,
-    auraSlotCount,
-    arcaneCount,
-    showExilus,
-    showStance,
-    stanceLocked,
-  } = layout
-  const slots = useBuildSlots(normalSlotCount, {
-    placed: savedData.slots,
-    // Forma is build-wide (shared across variants); use the cached
-    // override so unsaved forma edits survive variant switches.
-    formaPolarities: cachedShared?.formaPolarities ?? savedData.formaPolarities,
-    auraSlotCount,
-    showExilus,
-    showStance,
-    stanceLocked,
-    conflictMap,
-  })
-  useSlotKeyboardNav({
+    layout,
     slots,
-    layout: {
-      normalSlotCount,
-      auraSlotCount,
-      showExilus,
-      showStance,
-      stanceLocked,
-    },
-  })
-  const arcanes = useArcaneSlots(
-    arcaneCount,
-    resolveInitialArcanes(item, category, savedData.arcanes),
-  )
+    arcanes,
+    extras,
+    setExtras,
+    displayImageName,
+    buildName,
+    setBuildName,
+    guide,
+    history,
+    capture,
+    hasDraft,
+    resetToSaved,
+    variantActions,
+    variantMode,
+    applyVariantMode,
+  } = store
 
-  // Alternate mode: the picker sets this slot's Alternate instead of placing
-  // a mod. Derived to null once the slot empties (removed, swapped away), so a
-  // stale target can't swallow the next pick.
-  const [alternateForRaw, setAlternateFor] = useState<SlotId | null>(null)
+  // Mode switch awaiting confirmation; null = no dialog.
+  const [pendingVariantMode, setPendingVariantMode] =
+    useState<VariantMode | null>(null)
+  const changeVariantMode = (next: VariantMode) => {
+    // Confirm only once some variant has forma or shards to affect.
+    const hasForma = capture
+      .captureVariants()
+      .some(
+        (v) =>
+          Object.values(v.formaPolarities ?? {}).some(Boolean) ||
+          (v.shards ?? []).some(Boolean),
+      )
+    if (hasForma) setPendingVariantMode(next)
+    else applyVariantMode(next)
+  }
+  const { normalSlotCount, auraSlotCount } = layout
+  useSlotKeyboardNav({ slots, layout })
+
   const alternateFor =
     alternateForRaw && slots.placed[alternateForRaw] ? alternateForRaw : null
   // The slot the picker filters for: the Alternate's slot in alternate mode.
@@ -188,14 +163,12 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     [slots.placed, conflictMap],
   )
 
-  // Escape deselects the active mod/arcane slot, mirroring the
-  // click-outside behavior. Skip when a dialog/popover is open (base-ui
-  // closes those via its own Escape handler) or when typing in a field
-  // (useHotkey's editable-target guard handles the latter).
+  // Escape deselects the active mod/arcane slot, mirroring click-outside.
+  // An open Base UI dialog consumes its own Escape before it reaches this
+  // window listener; the editable-target guard in useHotkey covers text fields.
   useHotkey(
-    "Escape",
+    HOTKEYS.deselect,
     () => {
-      if (document.querySelector("[data-state='open'][role='dialog']")) return
       if (alternateFor) {
         setAlternateFor(null)
         return
@@ -206,13 +179,10 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     { preventDefault: false },
   )
 
-  // ─── Rank hotkey (single owner) ─────────────────────────────────────
-  // One window listener for `-`/`+`, instead of one per slot/arcane card.
-  // Cards report which one the pointer is over via RankHoverProvider; this
-  // owner ranks `hovered ?? selected mod`. Routing through a single target is
-  // what fixes the multi-fire: a selected slot and a separately hovered slot
-  // used to each rank on one keypress. Arcanes rank on hover only (no
-  // selection fallback), preserving the prior per-card behavior.
+  // One `-`/`+` listener for the whole editor: cards report the hovered one
+  // via RankHoverProvider and this ranks `hovered ?? selected mod`, so a
+  // selected slot and a separately hovered one can't both rank on one press.
+  // Arcanes rank on hover only.
   const hoveredRankRef = useRef<RankHoverTarget | null>(null)
   const rankHover = useMemo<RankHoverApi>(
     () => ({
@@ -230,44 +200,33 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     }),
     [],
   )
-  useRankHotkey({
-    enabled: true,
-    onDelta: (delta) => {
-      const hovered = hoveredRankRef.current
-      if (hovered?.kind === "alternate") {
-        const alt = slots.placed[hovered.id]?.alternate
-        if (alt) slots.setAlternateRank(hovered.id, alt.rank + delta)
-        return
-      }
-      if (hovered?.kind === "mod") {
-        const placed = slots.placed[hovered.id]
-        if (placed) slots.setRank(hovered.id, placed.rank + delta)
-        return
-      }
-      if (hovered?.kind === "arcane") {
-        const placed = arcanes.placed[hovered.index]
-        if (placed) arcanes.setRank(hovered.index, placed.rank + delta)
-        return
-      }
-      // Nothing hovered → act on the selected mod slot (keyboard-nav path).
-      if (slots.selected) {
-        const placed = slots.placed[slots.selected]
-        if (placed) slots.setRank(slots.selected, placed.rank + delta)
-      }
-    },
+  // `-`/`+` (shifted or not) step the hovered (or selected) rank.
+  useHotkey(HOTKEYS.rank, (e) => {
+    const delta = e.key === "-" || e.key === "_" ? -1 : 1
+    const hovered = hoveredRankRef.current
+    if (hovered?.kind === "alternate") {
+      const alt = slots.placed[hovered.id]?.alternate
+      if (alt) slots.setAlternateRank(hovered.id, alt.rank + delta)
+      return
+    }
+    if (hovered?.kind === "mod") {
+      const placed = slots.placed[hovered.id]
+      if (placed) slots.setRank(hovered.id, placed.rank + delta)
+      return
+    }
+    if (hovered?.kind === "arcane") {
+      const placed = arcanes.placed[hovered.index]
+      if (placed) arcanes.setRank(hovered.index, placed.rank + delta)
+      return
+    }
+    // Nothing hovered → act on the selected mod slot (keyboard-nav path).
+    if (slots.selected) {
+      const placed = slots.placed[slots.selected]
+      if (placed) slots.setRank(slots.selected, placed.rank + delta)
+    }
   })
 
-  const navigate = useNavigate()
   const { data: session } = authClient.useSession()
-
-  const [buildName, setBuildName] = useState(
-    () =>
-      cachedShared?.buildName ??
-      localDraft?.buildName ??
-      existingBuild?.name ??
-      draft?.buildName ??
-      item.name,
-  )
 
   const publish = usePublishSettings({
     visibility: existingBuild?.visibility ?? "PUBLIC",
@@ -280,14 +239,6 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     enabled: !!session?.user && publish.dialogOpen,
   })
   const organizations = myOrgs?.memberships.map((m) => m.organization) ?? []
-
-  const extras = useItemExtras({
-    item,
-    category,
-    savedData,
-    cachedShared,
-    incarnonAdapterImages,
-  })
 
   const riven = useRivenDialog({ slots, normalSlotCount, category })
 
@@ -312,60 +263,6 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     slots.place(mod)
   }
 
-  // Guide state (build-wide summary/description + per-variant scope dispatch).
-  // Scope resets to "build" on remount (variant switches) so switching variants
-  // doesn't silently change which guide you're editing.
-  const guide = useGuideState({
-    initialSummary:
-      cachedShared?.guideSummary ??
-      localDraft?.guideSummary ??
-      existingBuild?.guide?.summary ??
-      "",
-    initialDescription:
-      cachedShared?.guideDescription ??
-      localDraft?.guideDescription ??
-      existingBuild?.guide?.description ??
-      draft?.guideDescription ??
-      "",
-    variants,
-    setVariants,
-  })
-
-  // Sync shared field edits into the module cache so they survive the
-  // EditorShell remount on every variant switch. Per-variant fields
-  // (slots/arcanes/incarnon/dc/helminth) live in the variants array;
-  // this only mirrors build-wide state. One effect with a fresh patch
-  // each render — React shallow-compares deps, so unchanged fields
-  // no-op cheaply.
-  useEffect(() => {
-    writeShared({
-      hasReactor: extras.hasReactor,
-      zawComponents: extras.zawComponents,
-      kitgunComponents: extras.kitgunComponents,
-      lichBonusElement: extras.lichBonusElement,
-      buildName,
-      guideSummary: guide.buildSummary,
-      guideDescription: guide.buildDescription,
-      formaPolarities: slots.formaPolarities,
-    })
-    // writeShared closes over storeKey; intentionally excluded — storeKey
-    // changes trigger a full EditorShell remount, not a re-sync.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    extras.hasReactor,
-    extras.zawComponents,
-    extras.kitgunComponents,
-    extras.lichBonusElement,
-    buildName,
-    guide.buildSummary,
-    guide.buildDescription,
-    slots.formaPolarities,
-  ])
-
-  const history = useEditorUndo({ slots, arcanes, extras })
-
-  // Innates, endo/forma totals, capacity, and arcane picker config — same
-  // computation for view (`/builds/$slug`) and edit (`/create`).
   const {
     arcaneConfig,
     totalEndoCost,
@@ -376,15 +273,16 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     item: effectiveItem,
     category,
     layout,
-    slots,
+    placed: slots.placed,
+    formaPolarities: slots.formaPolarities,
     allArcanes,
     hasReactor: extras.hasReactor,
   })
 
-  // Auto-forma planning (cheap reactive plan + heavy preview cascade). Forma is
-  // build-wide in Warframe, so the planner considers every variant's slots
-  // together; the computation lives in multi-variant-auto-forma.ts.
+  // In linked mode the planner considers every variant of the active form
+  // together (they share forma).
   const autoForma = useAutoFormaPlanner({
+    variantMode,
     variants,
     clampedActiveIndex,
     layout,
@@ -392,19 +290,6 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     capacity,
     capacitySharedInputs,
     setVariants,
-  })
-
-  const isUpdate = !!existingBuild && existingBuild.isOwner
-
-  const capture = makeEditorCapture({
-    variants,
-    clampedActiveIndex,
-    slots,
-    arcanes,
-    extras,
-    buildDescription: guide.buildDescription,
-    allMods,
-    allArcanes,
   })
 
   const save = useBuildSave({
@@ -419,65 +304,9 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
     publish,
     formaCount,
     layout,
-    slots,
-    arcanes,
-    extras,
-    variants,
+    displayImageName,
     clampedActiveIndex,
     capture,
-  })
-
-  // Filled-vs-total counts per Plexus group for the picker's tab labels.
-  // Aura is bundled into Integrated since it lives in that section.
-  const plexusFillCounts = useMemo(() => {
-    if (category !== "railjack") return undefined
-    const counts = {
-      battle: { filled: 0, total: 0 },
-      tactical: { filled: 0, total: 0 },
-      integrated: { filled: 0, total: 0 },
-    }
-    for (let i = 0; i < normalSlotCount; i++) {
-      const group = getPlexusGroupForIndex(category, i)
-      if (!group) continue
-      counts[group].total += 1
-      if (slots.placed[`normal-${i}` as keyof typeof slots.placed])
-        counts[group].filled += 1
-    }
-    // The Aura slot is part of Integrated.
-    for (let i = 0; i < auraSlotCount; i++) {
-      counts.integrated.total += 1
-      if (slots.placed[`aura-${i}` as keyof typeof slots.placed])
-        counts.integrated.filled += 1
-    }
-    return counts
-  }, [category, normalSlotCount, auraSlotCount, slots.placed])
-
-  const { hasDraft, resetToSaved } = useDraftAutosave({
-    storeKey,
-    storedDraft,
-    localDraft,
-    isUpdate,
-    capture,
-    buildName,
-    guide,
-    slots,
-    arcanes,
-    extras,
-    variants,
-    clampedActiveIndex,
-  })
-
-  // Variant CRUD handlers. The variants state + module cache + epoch stay in
-  // useEditorVariants / editor-cache; this just sequences snapshot → mutate →
-  // navigate.
-  const variantActions = useVariantActions({
-    variants,
-    setVariants,
-    clampedActiveIndex,
-    captureActiveSnapshot: capture.captureActiveSnapshot,
-    navigate,
-    bumpVariantEpoch,
-    activeFormIndex,
   })
 
   return (
@@ -487,11 +316,10 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
         category={category}
         slug={slug}
         buildSlug={buildSlug}
-        categoryLabel={categoryLabel}
         totalEndoCost={totalEndoCost}
         formaCount={formaCount}
         buildName={buildName}
-        displayImageName={extras.displayImageName}
+        displayImageName={displayImageName}
         onBuildNameChange={setBuildName}
         onSave={save.handleSaveClick}
         saveStatus={save.saveStatus}
@@ -529,54 +357,31 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
           via `select-text` so the markdown textarea behaves normally.
         */}
         <div className="flex flex-col gap-4 select-none">
-          {hasModSlots(category) && <KeyboardHintBanner />}
+          <KeyboardHintBanner />
           <BuildSurface
-            mode="edit"
             item={effectiveItem}
             category={category}
-            isCompanion={isCompanion}
-            normalSlotCount={normalSlotCount}
-            auraSlotCount={auraSlotCount}
-            showExilus={showExilus}
-            showStance={showStance}
-            arcaneCount={arcaneCount}
-            slots={slots}
-            arcanes={arcanes}
+            layout={layout}
+            loadout={{
+              placed: slots.placed,
+              formaPolarities: slots.formaPolarities,
+              arcanes: arcanes.placed,
+            }}
             arcaneConfig={arcaneConfig}
             sidebarProps={{
               item,
               category,
-              capacityUsed: capacity.used,
-              capacityMax: capacity.max,
-              autoFormaCount:
-                autoForma.reactiveAutoFormaPlan?.steps.length ?? 0,
-              autoFormaNoFix: autoForma.noFixFound,
-              onAutoForma: autoForma.handleAutoForma,
-              hasReactor: extras.hasReactor,
-              onToggleReactor: () => extras.setHasReactor((v) => !v),
-              shards: extras.shards,
-              onSetShard: extras.setShard,
-              helminth: extras.helminth,
-              onSetHelminth: extras.setHelminthAt,
-              zawComponents: extras.zawComponents,
-              onSetZawComponents: extras.setZawComponents,
-              kitgunComponents: extras.kitgunComponents,
-              onSetKitgunComponents: extras.setKitgunComponents,
-              lichBonusElement: extras.lichBonusElement,
-              onSetLichBonusElement: extras.setLichBonusElement,
-              incarnonEnabled: extras.incarnonEnabled,
-              onToggleIncarnon: () => extras.setIncarnonEnabled((v) => !v),
-              incarnonPerks: extras.incarnonPerks,
-              onSetIncarnonPerk: extras.setIncarnonPerkAt,
-              deploymentContext: extras.deploymentContext,
-              onSetDeploymentContext: extras.setDeploymentContext,
-              operatorAmp: extras.operatorAmp,
-              onSetOperatorAmp: extras.setOperatorAmp,
-              focusSchool: extras.focusSchool,
-              onSetFocusSchool: extras.setFocusSchool,
-              placedMods: slots.placed,
-              placedArcanes: arcanes.placed,
+              extras,
+              capacity,
               formAbilities,
+              edit: {
+                update: setExtras,
+                autoForma: {
+                  count: autoForma.reactiveAutoFormaPlan?.steps.length ?? 0,
+                  noFix: autoForma.noFixFound,
+                  onClick: autoForma.handleAutoForma,
+                },
+              },
             }}
             topBarLayout="row"
             topBar={
@@ -593,63 +398,62 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
                 formNames={formNames}
                 activeFormIndex={activeFormIndex}
                 onSwitchForm={variantActions.switchForm}
+                variantMode={variantMode}
+                onVariantModeChange={changeVariantMode}
               />
             }
-            onEditRiven={riven.openForEdit}
-            onAddAlternate={startAlternatePick}
+            edit={{
+              slots,
+              arcanes,
+              onEditRiven: riven.openForEdit,
+              onAddAlternate: startAlternatePick,
+            }}
+            footer={<KeyboardHintsStrip className="mt-auto" />}
             conflicts={conflictMap}
           />
 
-          {hasModSlots(category) && (
-            <div
-              ref={searchPanelRef}
-              className={cn(
-                "bg-card scroll-mt-4 rounded-lg border p-4",
-                alternateFor && "border-primary/60",
-              )}
-            >
-              <SearchPanel
-                item={item}
-                category={category}
-                usedModNames={slots.usedNames}
-                conflictUniqueNames={conflictUniqueNames}
-                onSelect={handleModSelect}
-                helminth={extras.helminth}
-                selectedSlotKind={
-                  // Plexus slot pools are governed by `selectedPlexusGroup`,
-                  // not by the generic aura/exilus/stance predicates — those
-                  // would dim every Plexus mod (none carry compatName=AURA).
-                  category === "railjack"
-                    ? undefined
-                    : pickerSlot
-                      ? slotKind(pickerSlot)
-                      : undefined
-                }
-                selectedSlot={pickerSlot}
-                selectedPlexusGroup={(() => {
-                  if (category !== "railjack" || !pickerSlot) return undefined
-                  // Aura slot lives inside the Integrated tab.
-                  if (pickerSlot.startsWith("aura-")) return "integrated"
-                  const m = /^normal-(\d+)$/.exec(pickerSlot)
-                  if (!m) return undefined
-                  const idx = Number(m[1])
-                  return getPlexusGroupForIndex(category, idx) ?? undefined
-                })()}
-                plexusFillCounts={plexusFillCounts}
-                selectedIsPlexusAura={
-                  category === "railjack" && !!pickerSlot?.startsWith("aura-")
-                }
-                alternateMode={
-                  alternateFor
-                    ? {
-                        forModName: slots.placed[alternateFor]!.mod.name,
-                        onCancel: () => setAlternateFor(null),
-                      }
-                    : undefined
-                }
-              />
-            </div>
-          )}
+          <div
+            ref={searchPanelRef}
+            className={cn(
+              "bg-card scroll-mt-4 rounded-lg border p-4",
+              alternateFor && "border-primary/60",
+            )}
+          >
+            <SearchPanel
+              item={item}
+              category={category}
+              usedModNames={slots.usedNames}
+              conflictUniqueNames={conflictUniqueNames}
+              onSelect={handleModSelect}
+              helminth={extras.helminth}
+              // Plexus pools are governed by the group tabs, not the generic
+              // aura/exilus/stance predicates (no Plexus mod is an AURA).
+              selectedSlotKind={
+                category !== "railjack" && pickerSlot
+                  ? slotKind(pickerSlot)
+                  : undefined
+              }
+              selectedSlot={pickerSlot}
+              plexus={
+                category === "railjack"
+                  ? plexusPickerState(
+                      pickerSlot,
+                      slots.placed,
+                      normalSlotCount,
+                      auraSlotCount,
+                    )
+                  : undefined
+              }
+              alternateMode={
+                alternateFor
+                  ? {
+                      forModName: slots.placed[alternateFor]!.mod.name,
+                      onCancel: () => setAlternateFor(null),
+                    }
+                  : undefined
+              }
+            />
+          </div>
 
           <div className="bg-card rounded-lg border p-4 select-text">
             <GuideEditor
@@ -669,9 +473,7 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
         initialHideAuthor={publish.hideAuthor}
         owner={{
           name: session?.user?.name ?? "You",
-          username:
-            (session?.user as { username?: string | null } | undefined)
-              ?.username ?? null,
+          username: session?.user?.username ?? null,
           image: session?.user?.image ?? null,
         }}
         organizations={organizations}
@@ -686,12 +488,22 @@ export function EditorShell({ search }: { search: EditorShellSearch }) {
             organizationId: nextOrgId,
             hideAuthor: nextHideAuthor,
           })
-          publish.setDialogOpen(false)
           if (!isUpdate) void save.performSave(next, nextOrgId, nextHideAuthor)
         }}
       />
 
       {riven.dialog}
+
+      <VariantModeDialog
+        target={pendingVariantMode}
+        activeLabel={variants[clampedActiveIndex]?.label ?? "this variant"}
+        twinFrame={(formNames?.length ?? 0) > 1}
+        onCancel={() => setPendingVariantMode(null)}
+        onConfirm={() => {
+          if (pendingVariantMode) applyVariantMode(pendingVariantMode)
+          setPendingVariantMode(null)
+        }}
+      />
 
       {autoForma.pendingHeavyPlan && (
         <AutoFormaDialog

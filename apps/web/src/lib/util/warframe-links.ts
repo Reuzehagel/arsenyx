@@ -30,7 +30,7 @@ export function wikiUrl(name: string): string {
  * apostrophes, "&" → "and", collapse separators) but joins with "_" instead
  * of "-".
  */
-export function marketSlug(name: string): string {
+function marketSlug(name: string): string {
   return slugify(name).replace(/-/g, "_")
 }
 

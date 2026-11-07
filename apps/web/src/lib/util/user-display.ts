@@ -1,6 +1,4 @@
-import type { BuildDetail } from "@/lib/queries/build-query"
-
-import { titleCaseWord } from "./utils"
+import type { BuildDetailResponse } from "@arsenyx/shared/api/build-dto"
 
 type UserLike = {
   name?: string | null
@@ -12,6 +10,7 @@ export function authorName(user: UserLike, fallback = "Anonymous"): string {
   return user.displayUsername ?? user.username ?? user.name ?? fallback
 }
 
-export function formatVisibility(v: BuildDetail["visibility"]): string {
-  return titleCaseWord(v)
+/** "PUBLIC" → "Public". */
+export function formatVisibility(v: BuildDetailResponse["visibility"]): string {
+  return v.charAt(0) + v.slice(1).toLowerCase()
 }

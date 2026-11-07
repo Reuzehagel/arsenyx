@@ -1,16 +1,15 @@
-import { isStanceMod } from "@arsenyx/shared/warframe/mods"
 import type { Mod } from "@arsenyx/shared/warframe/types"
 
+import type { ModSlotKind } from "@/lib/build/slot-id"
+import { fitsKind } from "@/lib/build/slot-kind"
 import { fuzzyRank } from "@/lib/fuzzy"
 
-import type { ModSlotKind } from "./mod-slot"
-import { isAuraMod, isExilusCompatible } from "./use-build-slots"
+/** Marks the picker grid, which owns its own arrow-key handling. */
+export const MOD_SEARCH_GRID_ATTR = "data-mod-search-grid"
 
 export function slotKindPredicate(kind: ModSlotKind | undefined) {
   if (!kind || kind === "normal") return null
-  if (kind === "aura") return (m: Mod) => isAuraMod(m)
-  if (kind === "stance") return (m: Mod) => isStanceMod(m)
-  return (m: Mod) => !isAuraMod(m) && !isStanceMod(m) && isExilusCompatible(m)
+  return (m: Mod) => fitsKind(m, kind)
 }
 
 // Soft-filter pass: which of `hardFiltered` match the query + slot kind, and

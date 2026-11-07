@@ -15,7 +15,7 @@
  * The build warns when DE ships one of these again; delete the entry then.
  */
 
-import type { DeUpgrade } from "../../scripts/build/read-de"
+import type { DeUpgrade } from "../../scripts/build/de-types"
 
 const quickThinking = (pct: number) =>
   `Drains Energy to stop Lethal Damage with +${pct}% Efficiency.`

@@ -1,6 +1,7 @@
+import { BEAST_CLAW_CLASS } from "./mods"
 import type { BrowseCategory, Mod, Polarity } from "./types"
 
-export const RIVEN_UNIQUE_NAME = "/riven"
+const RIVEN_UNIQUE_NAME = "/riven"
 // Rivens are excluded from the catalog (no per-mod image in the pipeline), so
 // this is a bundled local icon under apps/web/public/ — DE's generic riven card
 // art (`OmegaMod.png`). A local `/img/` path is what `getImageUrl` trusts; the
@@ -113,7 +114,7 @@ export const MELEE_RIVEN_STATS = [
  *  https://wiki.warframe.com/w/Riven_Mods): a Riven Splicer merges two rolled
  *  stats into one of these. Spliced stats are always positive, so they never
  *  appear in the negative row. */
-export const SPLICED_RIVEN_STATS: ReadonlySet<string> = new Set([
+const SPLICED_RIVEN_STATS: ReadonlySet<string> = new Set([
   ...SPLICED_ELEMENT_STATS,
   ...SPLICED_SHARED_STATS,
   "Ammo Efficiency",
@@ -147,7 +148,7 @@ export function isFlatRivenStat(stat: string): boolean {
   return Object.hasOwn(RIVEN_FLAT_STAT_UNITS, stat)
 }
 
-export const RIVEN_ELIGIBLE_CATEGORIES = new Set<BrowseCategory>([
+const RIVEN_ELIGIBLE_CATEGORIES = new Set<BrowseCategory>([
   "primary",
   "secondary",
   "melee",
@@ -166,7 +167,7 @@ export function isRivenEligible(
   item: { displayClass?: string },
 ): boolean {
   if (RIVEN_ELIGIBLE_CATEGORIES.has(category)) {
-    return item.displayClass !== "Claws (Beast)"
+    return item.displayClass !== BEAST_CLAW_CLASS
   }
   if (category === "archwing" && item.displayClass === "Archgun") return true
   return false

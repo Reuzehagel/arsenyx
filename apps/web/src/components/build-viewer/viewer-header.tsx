@@ -1,4 +1,7 @@
+import type { BuildDetailResponse } from "@arsenyx/shared/api/build-dto"
+import { getCategoryLabel } from "@arsenyx/shared/warframe/categories"
 import { hasModCapacity } from "@arsenyx/shared/warframe/slot-layout"
+import type { BrowseCategory } from "@arsenyx/shared/warframe/types"
 import { Link as RouterLink } from "@tanstack/react-router"
 import { Pencil } from "lucide-react"
 
@@ -11,11 +14,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import type { BuildDetail } from "@/lib/queries/build-query"
+import { getImageUrl } from "@/lib/image-url"
 import { formatAbsoluteTime, relativeTime } from "@/lib/util/relative-time"
 import { formatVisibility } from "@/lib/util/user-display"
 import { cn } from "@/lib/util/utils"
-import { getImageUrl, type BrowseCategory } from "@/lib/warframe"
 
 import { BuildActionsMenu } from "./build-actions-menu"
 import { BuildHistorySheet } from "./build-history-sheet"
@@ -28,7 +30,6 @@ import { SocialActions } from "./social-actions"
  */
 export function ViewerHeader({
   build,
-  categoryLabel,
   author,
   totalEndoCost,
   formaCount,
@@ -36,8 +37,7 @@ export function ViewerHeader({
   itemSlug,
   itemImageName,
 }: {
-  build: BuildDetail
-  categoryLabel: string
+  build: BuildDetailResponse
   author: string
   totalEndoCost: number
   formaCount: number
@@ -48,6 +48,7 @@ export function ViewerHeader({
    *  image-scheme changes. */
   itemImageName?: string
 }) {
+  const categoryLabel = getCategoryLabel(category)
   const headerImage = itemImageName ?? build.item.imageName ?? undefined
   return (
     <div className="bg-card mb-4 rounded-lg border p-4">

@@ -2,9 +2,11 @@
 // the web consumer can't drift (they previously kept separate copies, and the
 // web `type` field had silently widened to `string`).
 
+import type { OverframeSlotType } from "./overframe-slots"
+import type { Polarity } from "./polarities"
+
 export interface OverframeImportWarning {
   type:
-    | "next_data_missing"
     | "build_data_missing"
     | "buildstring_missing"
     | "buildstring_decode_failed"
@@ -23,12 +25,18 @@ export interface OverframeImportWarning {
  */
 export interface OverframeRawSlot {
   slot_id: number
+  /** Set on slots decoded from a buildstring, whose position gives a slot
+   *  type but no category: the client re-encodes these against the matched
+   *  item's category (`encodeOverframeSlotId`) instead of reading `slot_id`,
+   *  which then is only the warframe encoding. */
+  slotType?: OverframeSlotType
+  slotIndex?: number
   overframeId: string | null
   overframeName?: string
   rank: number
   polarityCode: number
-  /** Mapped Polarity string when the code is known, else undefined. */
-  polarity?: string
+  /** Mapped polarity when the code is known, else undefined. */
+  polarity?: Polarity
 }
 
 /**

@@ -13,9 +13,9 @@ import "./lib/scram-cache"
 // unchanged.
 //
 // The connection string comes from the Hyperdrive binding
-// (`env.HYPERDRIVE.connectionString`), threaded in through `withPrisma`.
-// Unlike the old Neon `DATABASE_URL`, it can't be read from `process.env` —
-// it's a runtime binding with a dynamically-allocated local port. Hyperdrive
+// (`env.HYPERDRIVE.connectionString`), threaded in through `withPrisma`. It
+// can't be read from `process.env` — it's a runtime binding with a
+// dynamically-allocated local port. Hyperdrive
 // owns the upstream pool, but the per-request client still costs: creation,
 // the pg connection and query planning are ~half of a cache miss's CPU.
 
@@ -121,30 +121,36 @@ export function withPrisma<T>(
   })
 }
 
-// Register a promise to be awaited before the request's Prisma client is
-// disconnected. Callers can use this to schedule fire-and-forget writes
-// (e.g. lastUsedAt bumps) that still need a live client to complete.
-export function registerBackgroundWork(promise: Promise<unknown>): void {
+/** The one way to run work after the response: kept alive (ctx.waitUntil)
+ *  until it settles, and the request's pool stays open for it. A failure is
+ *  logged under `label`, never thrown. Outside a request (unit tests) the work
+ *  just runs. */
+export function registerBackgroundWork(
+  promise: Promise<unknown>,
+  label = "background work",
+): void {
+  const wrapped = promise.catch((err) => console.error(`${label} failed`, err))
   const scope = als.getStore()
-  if (!scope) {
-    promise.catch(() => {})
-    return
-  }
-  const wrapped = promise.catch(() => {})
+  if (!scope) return
   scope.pending.add(wrapped)
-  wrapped.finally(() => scope.pending.delete(wrapped))
+  void wrapped.finally(() => scope.pending.delete(wrapped))
 }
 
-// Fire-and-forget SQL that must not force a PrismaClient into existence: it
-// runs on the request's pg Pool (shared with the client when one exists).
-// Used for view counting on the anonymous snapshot path, which otherwise never
-// touches Postgres.
-export function backgroundSql(text: string, values: unknown[]): void {
-  registerBackgroundWork(
-    currentPool()
-      .query(text, values)
-      .catch((err) => console.error("background sql failed", err)),
-  )
+/** Background work run on a `probability` sample of calls — the
+ *  opportunistic prunes that keep bounded tables bounded without a cron. */
+export function sometimesInBackground(
+  probability: number,
+  label: string,
+  work: () => Promise<unknown>,
+): void {
+  if (Math.random() < probability) registerBackgroundWork(work(), label)
+}
+
+/** A raw write on the request's pg Pool that must not force a PrismaClient
+ *  into existence (view counting on the anonymous snapshot path, which
+ *  otherwise never touches Postgres). */
+export function poolQuery(text: string, values: unknown[] = []) {
+  return currentPool().query(text, values)
 }
 
 export const prisma = new Proxy({} as PrismaClient, {

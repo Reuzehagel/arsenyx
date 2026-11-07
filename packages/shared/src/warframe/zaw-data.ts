@@ -315,8 +315,10 @@ const strikeMap = new Map(ZAW_STRIKES.map((s) => [s.name, s]))
 const gripMap = new Map(ZAW_GRIPS.map((g) => [g.name, g]))
 const linkMap = new Map(ZAW_LINKS.map((l) => [l.name, l]))
 
-export function isZawStrike(name: string): boolean {
-  return strikeMap.has(name)
+/** A Zaw build is anchored to its strike, which the catalog emits as a melee
+ *  item named after the strike. */
+export function isZawItem(item: { name: string }): boolean {
+  return strikeMap.has(item.name)
 }
 
 export function getZawStrike(name: string): ZawStrike | undefined {

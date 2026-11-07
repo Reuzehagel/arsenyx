@@ -1,8 +1,11 @@
-import type { OverframeDecodedSlot, OverframeSlotType } from "./types"
+import type { OverframeSlotType } from "@arsenyx/shared/warframe/overframe-slots"
 
-export interface DecodedBuild {
-  slots: OverframeDecodedSlot[]
-  raw: unknown
+export interface OverframeDecodedSlot {
+  overframeId: string
+  rank: number
+  slotType: OverframeSlotType
+  /** Index within its type (normal: 0-7). */
+  slotIndex: number
 }
 
 function decodeBase64ToUtf8(input: string): string {
@@ -100,7 +103,9 @@ function assignSlotTypes(
   return decoded
 }
 
-export function decodeOverframeBuildString(buildString: string): DecodedBuild {
+export function decodeOverframeBuildString(
+  buildString: string,
+): OverframeDecodedSlot[] {
   // Try base64 -> utf8 -> JSON
   const text = decodeBase64ToUtf8(buildString)
 
@@ -123,9 +128,5 @@ export function decodeOverframeBuildString(buildString: string): DecodedBuild {
   }
 
   const coerced = coerceSlotArray(raw)
-  if (!coerced) {
-    return { slots: [], raw }
-  }
-
-  return { slots: assignSlotTypes(coerced), raw }
+  return coerced ? assignSlotTypes(coerced) : []
 }

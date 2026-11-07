@@ -1,9 +1,17 @@
-import { Hono, type Context } from "hono"
+import { LIST_DEFAULT_SORTS } from "@arsenyx/shared/api/build-list"
+import {
+  MAX_ORGS_PER_USER,
+  ORG_DESCRIPTION_MAX,
+  ORG_NAME_MAX,
+  ORG_SLUG_MAX,
+} from "@arsenyx/shared/api/limits"
+import type { OrgProfile } from "@arsenyx/shared/api/orgs"
+import { Hono } from "hono"
 
 import { prisma } from "../db"
-import { Prisma } from "../generated/prisma/client"
-import { BuildVisibility, OrgRole } from "../generated/prisma/enums"
-import { getSession } from "../lib/session"
+import type { Prisma } from "../generated/prisma/client"
+import type { OrgRole } from "../generated/prisma/enums"
+import { getSession, requireUser } from "../lib/session"
 import {
   hasPrismaCode,
   parseJsonBody,
@@ -11,26 +19,25 @@ import {
   validateExternalUrl,
 } from "../lib/validate"
 import { enforceAnonSearchLimit, rateLimitUser } from "../middleware/rate-limit"
-import { parseListQuery, runList } from "./_build-list"
-import { orgMemberScope, orgPublicScope } from "./_build-visibility"
-import { parsePage, trimQ } from "./_query"
-import { invalidateBuilds, snapshotSlugs } from "./builds"
+import { BUILD_USER_SELECT, parseListQuery, runList } from "./_build-list"
+import {
+  deleteOrganization,
+  invalidateBuilds,
+  snapshotSlugs,
+} from "./_build-snapshot"
+import { ORG_PUBLIC_BUILD, orgListScope } from "./_build-visibility"
+import { orgDirectorySelect, toOrgDirectoryItem } from "./_org-directory"
+import { directoryPage, directoryQuery, matchAny } from "./_query"
 
 export const orgs = new Hono()
 
 const SLUG_RE = /^[a-z0-9-]+$/
-// Tightened from 50 after someone used the name field as a billboard.
-const MAX_NAME = 32
-const MAX_SLUG = 30
-const MAX_DESCRIPTION = 200
 const MEMBERS_LIMIT = 200
 const DIRECTORY_PAGE = 20
-// Reserved because they collide with sibling paths on the /orgs router.
+// Reserved because they collide with sibling paths on the /orgs router
+// (`/orgs/public` is registered before `/:slug`; pinned by
+// route-order.test.ts).
 const RESERVED_SLUGS = new Set(["public"])
-// How many orgs one user may own (be ADMIN of). Raised per-user by hand if a
-// real community ever needs more — the limit exists because someone spun up
-// a pile of orgs to spam the directory.
-const MAX_ORGS_PER_USER = 3
 
 class OrgLimitError extends Error {}
 
@@ -69,20 +76,9 @@ async function assertNotLastAdmin(
   if (admins <= 1) throw new LastAdminError()
 }
 
-async function requireSessionUser(
-  c: Context,
-): Promise<{ id: string } | Response> {
-  const session = await getSession(c)
-  if (!session?.user)
-    return new Response(JSON.stringify({ error: "unauthorized" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    })
-  return { id: session.user.id }
-}
-
 // Loads the org by slug and the viewer's membership in a single round-trip.
-// Returns the org.id and the viewer's role (null if not a member).
+// Returns the org.id and the viewer's role (null if not a member). Org roles
+// are an org-admin concern, distinct from build access (_build-visibility.ts).
 async function loadOrgWithViewerRole(slug: string, viewerId: string) {
   const org = await prisma.organization.findUnique({
     where: { slug },
@@ -99,8 +95,7 @@ async function loadOrgWithViewerRole(slug: string, viewerId: string) {
 }
 
 orgs.get("/", async (c) => {
-  const user = await requireSessionUser(c)
-  if (user instanceof Response) return user
+  const user = await requireUser(c)
 
   const memberships = await prisma.organizationMember.findMany({
     where: { userId: user.id },
@@ -120,25 +115,17 @@ orgs.get("/", async (c) => {
     },
   })
 
-  return c.json({
-    memberships: memberships.map((m) => ({
-      role: m.role,
-      organization: m.organization,
-    })),
-  })
+  return c.json({ memberships })
 })
 
 orgs.post("/", rateLimitUser("mutate"), async (c) => {
-  const user = await requireSessionUser(c)
-  if (user instanceof Response) return user
+  const user = await requireUser(c)
 
-  const parsed = await parseJsonBody(c, { maxBytes: 8 * 1024 })
-  if (!parsed.ok) return parsed.response
-  const b = parsed.value
+  const b = await parseJsonBody(c, { maxBytes: 8 * 1024 })
 
-  const name = trimToMax(b.name, MAX_NAME)
-  const slugRaw = trimToMax(b.slug, MAX_SLUG)?.toLowerCase() ?? null
-  const description = trimToMax(b.description, MAX_DESCRIPTION)
+  const name = trimToMax(b.name, ORG_NAME_MAX)
+  const slugRaw = trimToMax(b.slug, ORG_SLUG_MAX)?.toLowerCase() ?? null
+  const description = trimToMax(b.description, ORG_DESCRIPTION_MAX)
   // Reject anything that's not a parseable absolute https:// URL with a
   // public hostname. A null/empty input is fine (no image); anything else
   // goes through validateExternalUrl, which enforces the 500-char cap —
@@ -197,69 +184,30 @@ orgs.post("/", rateLimitUser("mutate"), async (c) => {
 
 // Public directory — declared before /:slug so Hono doesn't capture "public" as a slug.
 orgs.get("/public", async (c) => {
-  const page = parsePage(c.req.query("page"))
-  const q = trimQ(c.req.query("q"))
-  const skip = (page - 1) * DIRECTORY_PAGE
+  const dir = directoryQuery(c, DIRECTORY_PAGE)
 
   // Only charge the tighter search bucket when a query is actually present —
   // plain directory paging stays on the ANON_READ_LIMITER the router applies.
-  if (q) {
+  if (dir.q) {
     const blocked = await enforceAnonSearchLimit(c, "/orgs/public?q=")
     if (blocked) return blocked
   }
 
-  const where: Prisma.OrganizationWhereInput = q
-    ? {
-        OR: [
-          { name: { contains: q, mode: "insensitive" } },
-          { slug: { contains: q, mode: "insensitive" } },
-        ],
-      }
-    : {}
-
+  const where = matchAny(dir.q, ["name", "slug"])
   const [rows, total] = await Promise.all([
     prisma.organization.findMany({
       where,
       // Verified (trusted) orgs lead the directory; within each group, newest
       // first.
       orderBy: [{ verified: "desc" }, { createdAt: "desc" }],
-      skip,
-      take: DIRECTORY_PAGE,
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        image: true,
-        description: true,
-        verified: true,
-        createdAt: true,
-        _count: {
-          select: {
-            members: true,
-            builds: { where: { visibility: BuildVisibility.PUBLIC } },
-          },
-        },
-      },
+      skip: dir.skip,
+      take: dir.limit,
+      select: orgDirectorySelect({ where: ORG_PUBLIC_BUILD }),
     }),
     prisma.organization.count({ where }),
   ])
 
-  return c.json({
-    orgs: rows.map((o) => ({
-      id: o.id,
-      name: o.name,
-      slug: o.slug,
-      image: o.image,
-      description: o.description,
-      verified: o.verified,
-      createdAt: o.createdAt.toISOString(),
-      memberCount: o._count.members,
-      buildCount: o._count.builds,
-    })),
-    total,
-    page,
-    limit: DIRECTORY_PAGE,
-  })
+  return c.json(directoryPage("orgs", rows.map(toOrgDirectoryItem), total, dir))
 })
 
 orgs.get("/:slug", async (c) => {
@@ -283,20 +231,12 @@ orgs.get("/:slug", async (c) => {
           select: {
             role: true,
             joinedAt: true,
-            user: {
-              select: {
-                id: true,
-                name: true,
-                username: true,
-                displayUsername: true,
-                image: true,
-              },
-            },
+            user: { select: BUILD_USER_SELECT },
           },
         },
         _count: {
           select: {
-            builds: { where: { visibility: BuildVisibility.PUBLIC } },
+            builds: { where: ORG_PUBLIC_BUILD },
           },
         },
       },
@@ -305,10 +245,10 @@ orgs.get("/:slug", async (c) => {
 
   if (!org) return c.json({ error: "not_found" }, 404)
 
-  const viewerId = session?.user.id ?? null
+  const viewerId = session?.user.id
   const viewerMembership = viewerId
-    ? (org.members.find((m) => m.user.id === viewerId) ?? null)
-    : null
+    ? org.members.find((m) => m.user.id === viewerId)
+    : undefined
 
   return c.json({
     id: org.id,
@@ -328,7 +268,7 @@ orgs.get("/:slug", async (c) => {
       role: viewerMembership?.role ?? null,
       isAdmin: viewerMembership?.role === "ADMIN",
     },
-  })
+  } satisfies OrgProfile)
 })
 
 orgs.get("/:slug/builds", async (c) => {
@@ -342,54 +282,38 @@ orgs.get("/:slug/builds", async (c) => {
   ])
   if (!org) return c.json({ error: "not_found" }, 404)
 
-  // Org members see every Build published under the org (PRIVATE and UNLISTED
-  // included), matching the per-Build rule in builds.ts; everyone else sees
-  // only PUBLIC (#274).
-  const viewerId = session?.user.id
-  const membership = viewerId
-    ? await prisma.organizationMember.findUnique({
-        where: {
-          organizationId_userId: { organizationId: org.id, userId: viewerId },
-        },
-        select: { userId: true },
-      })
-    : null
-
   const result = await runList({
     filters: parseListQuery(c),
-    ...(membership ? orgMemberScope(org.id) : orgPublicScope(org.id)),
-    defaultSort: "newest",
+    ...(await orgListScope(org.id, session?.user.id)),
+    defaultSort: LIST_DEFAULT_SORTS.org,
   })
   return c.json(result)
 })
 
 orgs.patch("/:slug", rateLimitUser("mutate"), async (c) => {
   const slug = c.req.param("slug").toLowerCase()
-  const user = await requireSessionUser(c)
-  if (user instanceof Response) return user
+  const user = await requireUser(c)
 
   const ctx = await loadOrgWithViewerRole(slug, user.id)
   if (!ctx) return c.json({ error: "not_found" }, 404)
   if (ctx.role !== "ADMIN") return c.json({ error: "forbidden" }, 403)
 
-  const parsed = await parseJsonBody(c, { maxBytes: 8 * 1024 })
-  if (!parsed.ok) return parsed.response
-  const b = parsed.value
+  const b = await parseJsonBody(c, { maxBytes: 8 * 1024 })
 
-  const data: Record<string, unknown> = {}
+  const data: Prisma.OrganizationUpdateInput = {}
   if (typeof b.name === "string") {
-    const n = trimToMax(b.name, MAX_NAME)
+    const n = trimToMax(b.name, ORG_NAME_MAX)
     if (!n) return c.json({ error: "invalid_name" }, 400)
     data.name = n
   }
   if (typeof b.slug === "string") {
-    const s = trimToMax(b.slug, MAX_SLUG)?.toLowerCase() ?? ""
+    const s = trimToMax(b.slug, ORG_SLUG_MAX)?.toLowerCase() ?? ""
     if (!s || !SLUG_RE.test(s)) return c.json({ error: "invalid_slug" }, 400)
     if (RESERVED_SLUGS.has(s)) return c.json({ error: "slug_taken" }, 409)
     data.slug = s
   }
   if (typeof b.description === "string" || b.description === null) {
-    data.description = trimToMax(b.description, MAX_DESCRIPTION)
+    data.description = trimToMax(b.description, ORG_DESCRIPTION_MAX)
   }
   if (typeof b.image === "string" || b.image === null) {
     // Validate before any truncation — see POST handler above for rationale.
@@ -424,32 +348,28 @@ orgs.patch("/:slug", rateLimitUser("mutate"), async (c) => {
 
 orgs.delete("/:slug", rateLimitUser("mutate"), async (c) => {
   const slug = c.req.param("slug").toLowerCase()
-  const user = await requireSessionUser(c)
-  if (user instanceof Response) return user
+  const user = await requireUser(c)
 
   const ctx = await loadOrgWithViewerRole(slug, user.id)
   if (!ctx) return c.json({ error: "not_found" }, 404)
   if (ctx.role !== "ADMIN") return c.json({ error: "forbidden" }, 403)
 
-  // Builds survive (organizationId → null) but their snapshots embed the org.
-  const slugs = await snapshotSlugs({ organizationId: ctx.id })
-  await prisma.organization.delete({ where: { id: ctx.id } })
-  invalidateBuilds(c, slugs)
+  await deleteOrganization(c, ctx.id)
   return c.body(null, 204)
 })
 
 orgs.post("/:slug/members", rateLimitUser("mutate"), async (c) => {
   const slug = c.req.param("slug").toLowerCase()
-  const user = await requireSessionUser(c)
-  if (user instanceof Response) return user
+  const user = await requireUser(c)
 
   const ctx = await loadOrgWithViewerRole(slug, user.id)
   if (!ctx) return c.json({ error: "not_found" }, 404)
   if (ctx.role !== "ADMIN") return c.json({ error: "forbidden" }, 403)
 
-  const parsed = await parseJsonBody(c, { maxBytes: 1024 })
-  if (!parsed.ok) return parsed.response
-  const username = trimToMax(parsed.value.username, 64)?.toLowerCase()
+  const username = trimToMax(
+    (await parseJsonBody(c, { maxBytes: 1024 })).username,
+    64,
+  )?.toLowerCase()
   if (!username) return c.json({ error: "invalid_username" }, 400)
 
   const target = await prisma.user.findUnique({
@@ -479,16 +399,13 @@ orgs.post("/:slug/members", rateLimitUser("mutate"), async (c) => {
 orgs.patch("/:slug/members/:userId", rateLimitUser("mutate"), async (c) => {
   const slug = c.req.param("slug").toLowerCase()
   const targetUserId = c.req.param("userId")
-  const user = await requireSessionUser(c)
-  if (user instanceof Response) return user
+  const user = await requireUser(c)
 
   const ctx = await loadOrgWithViewerRole(slug, user.id)
   if (!ctx) return c.json({ error: "not_found" }, 404)
   if (ctx.role !== "ADMIN") return c.json({ error: "forbidden" }, 403)
 
-  const parsed = await parseJsonBody(c, { maxBytes: 1024 })
-  if (!parsed.ok) return parsed.response
-  const role = parsed.value.role
+  const role = (await parseJsonBody(c, { maxBytes: 1024 })).role
   if (!isOrgRole(role)) return c.json({ error: "invalid_role" }, 400)
 
   try {
@@ -520,8 +437,7 @@ orgs.patch("/:slug/members/:userId", rateLimitUser("mutate"), async (c) => {
 orgs.delete("/:slug/members/:userId", rateLimitUser("mutate"), async (c) => {
   const slug = c.req.param("slug").toLowerCase()
   const targetUserId = c.req.param("userId")
-  const user = await requireSessionUser(c)
-  if (user instanceof Response) return user
+  const user = await requireUser(c)
 
   const ctx = await loadOrgWithViewerRole(slug, user.id)
   if (!ctx) return c.json({ error: "not_found" }, 404)

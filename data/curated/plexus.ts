@@ -3,6 +3,7 @@
  * we curate one here.
  */
 
+import { PLEXUS_POOL } from "@arsenyx/shared/warframe/plexus"
 import type { BrowseItem } from "@arsenyx/shared/warframe/types"
 
 const PLEXUS_UNIQUE_NAME = "/Lotus/Railjacks/Plexus"
@@ -29,7 +30,7 @@ export const PLEXUS_DETAIL = {
   category: "railjack",
   type: "Plexus",
   displayClass: "Plexus",
-  modPools: ["Plexus"],
+  modPools: [PLEXUS_POOL],
   // Resolved from DE manifest entry for /Lotus/Upgrades/Skins/RailJack/RailjackWrasseSkin.
   imageName:
     "https://content.warframe.com/PublicExport/Lotus/Interface/Icons/StoreIcons/PlayerShip/Ships/RailjackWrasseSkin.png!00_avatybGG8ADR-dgGnKJNkw",

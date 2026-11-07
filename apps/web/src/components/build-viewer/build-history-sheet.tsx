@@ -1,4 +1,7 @@
-import type { BuildChangeResponse } from "@arsenyx/shared/api/build-dto"
+import type {
+  BuildChangeResponse,
+  BuildRevisionResponse,
+} from "@arsenyx/shared/api/build-dto"
 import { useQuery } from "@tanstack/react-query"
 import { History } from "lucide-react"
 import { useMemo, useState } from "react"
@@ -13,10 +16,7 @@ import {
 } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import { UserAvatar } from "@/components/user-avatar"
-import {
-  buildRevisionsQuery,
-  type BuildRevision,
-} from "@/lib/queries/build-revisions-query"
+import { buildRevisionsQuery } from "@/lib/queries/build-query"
 import { formatAbsoluteTime, relativeTime } from "@/lib/util/relative-time"
 import { authorName } from "@/lib/util/user-display"
 import { cn } from "@/lib/util/utils"
@@ -113,10 +113,10 @@ function dayLabel(iso: string, now: Date, todayStart: number): string {
   return fmt.format(d)
 }
 
-function groupByDay(revisions: BuildRevision[]) {
+function groupByDay(revisions: BuildRevisionResponse[]) {
   const now = new Date()
   const todayStart = startOfDay(now)
-  const out: { label: string; items: BuildRevision[] }[] = []
+  const out: { label: string; items: BuildRevisionResponse[] }[] = []
   for (const r of revisions) {
     const label = dayLabel(r.at, now, todayStart)
     const last = out.at(-1)
@@ -126,7 +126,7 @@ function groupByDay(revisions: BuildRevision[]) {
   return out
 }
 
-function Entry({ revision }: { revision: BuildRevision }) {
+function Entry({ revision }: { revision: BuildRevisionResponse }) {
   // A deleted account leaves its entries behind (BuildRevision.editorId is
   // SetNull) — the history of who touched what shouldn't vanish with the user.
   const who = revision.editor

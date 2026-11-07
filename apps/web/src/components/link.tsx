@@ -2,11 +2,12 @@ import { Link as RouterLink } from "@tanstack/react-router"
 import type { AnchorHTMLAttributes } from "react"
 
 /**
- * Drop-in replacement for `next/link` that uses TanStack Router for internal
- * paths and a plain anchor tag for external URLs. Keeps ported components from
- * needing mass refactors during migration.
+ * Link for a runtime string `href` (nav tables, data-driven URLs): internal
+ * paths go through TanStack Router, external URLs (`http(s)://`, `//`,
+ * `mailto:`) render a plain anchor. For a fixed in-app route, prefer the
+ * router's own `Link` with a typed `to`.
  */
-export type LinkProps = {
+type LinkProps = {
   href: string
   children?: React.ReactNode
 } & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href">

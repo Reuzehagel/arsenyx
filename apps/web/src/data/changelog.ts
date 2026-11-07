@@ -11,7 +11,7 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    date: "2026-11-06",
+    date: "2026-11-07",
     changes: [
       {
         type: "fix",
@@ -21,7 +21,67 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "fix",
         description:
+          "Changing your display name no longer removes your profile picture. If yours disappeared, sign out and back in to get it back.",
+      },
+      {
+        type: "fix",
+        description:
+          'Switching a build between shared and per-variant forma now shows up in its edit history, along with the forma and Archon Shards it replaced, instead of "No loadout changes".',
+      },
+      {
+        type: "fix",
+        description:
+          "Switching variants on a build page no longer drops the back link in Related builds.",
+      },
+      {
+        type: "fix",
+        description:
+          "The polarity picker no longer pops back open by itself after you press Escape and select the slot again.",
+      },
+    ],
+  },
+  {
+    date: "2026-11-06",
+    changes: [
+      {
+        type: "fix",
+        description:
           "Item, mod and arcane images download faster. Most of them now use a smaller image format, so Browse and build pages fill in sooner, especially on slow connections.",
+      },
+      {
+        type: "fix",
+        description:
+          "The Has guide and Has archon shards filters now work on profile and organization pages.",
+      },
+      {
+        type: "fix",
+        description:
+          "Adding or switching a variant now saves your draft right away. Share links open with the build's name, and opening one no longer silently replaces your own unsaved draft: you get a toast to restore it.",
+      },
+      {
+        type: "fix",
+        description:
+          "Build pages show innate Incarnon weapons with Incarnon on, matching the editor, and zaw and kitgun builds without saved parts show their default parts.",
+      },
+      {
+        type: "fix",
+        description:
+          "Arcane changes now show up in a build's edit history, and partner links to a twin-frame's second form work.",
+      },
+      {
+        type: "fix",
+        description:
+          "Overframe imports put weapon slots in the right place and no longer turn unknown polarities into Universal Forma.",
+      },
+      {
+        type: "refactor",
+        description:
+          "A large cleanup under the hood: the header no longer reloads on every page change, and link previews show the same titles and descriptions as the page.",
+      },
+      {
+        type: "feat",
+        description:
+          'Variants can now each have their own forma and Archon Shards. In the editor, the "Forma & shards" button next to the variant tabs switches between "shared" (the default, like configs of one item in-game) and "per variant". A new variant then starts with no forma, and Auto Forma plans only the variant you\'re editing. Build cards show the highest forma count of any variant.',
       },
     ],
   },

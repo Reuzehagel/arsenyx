@@ -9,9 +9,9 @@
  * weapon-style "iterate DE, look up wiki".
  */
 
-import { primeFamily } from "./names"
+import type { DeSentinel } from "./de-types"
+import { isPrime, primeFamily } from "./names"
 import { normalizePolarities } from "./polarity"
-import type { DeSentinel } from "./read-de"
 
 export type CompanionCategory = "sentinel" | "beast" | "moa" | "hound"
 
@@ -63,8 +63,7 @@ export function modPoolsForCompanion(
   subType: CompanionCategory,
   wikiType: string | undefined,
 ): readonly string[] {
-  const pools = new Set<string>(["COMPANION", name])
-  if (name.endsWith(" Prime")) pools.add(name.slice(0, -" Prime".length))
+  const pools = new Set<string>(["COMPANION", name, primeFamily(name)])
   switch (subType) {
     case "sentinel":
       pools.add("Sentinel")
@@ -118,8 +117,10 @@ interface WikiCompanion {
   InternalName?: string
 }
 
-/** Map the wiki `Type` string to our subType enum. */
-export function subTypeOf(wikiType: string | undefined): CompanionCategory {
+/** Map the wiki `Type` string to our subType enum (undefined: unknown). */
+export function subTypeOf(
+  wikiType: string | undefined,
+): CompanionCategory | undefined {
   switch ((wikiType ?? "").toLowerCase()) {
     case "sentinel":
       return "sentinel"
@@ -132,10 +133,8 @@ export function subTypeOf(wikiType: string | undefined): CompanionCategory {
     case "vulpaphyla":
     case "predasite":
       return "beast"
-    default:
-      // Fallback: assume beast (most undocumented entries are beast breeds).
-      return "beast"
   }
+  return undefined
 }
 
 export interface MergeCompanionsOpts {
@@ -148,16 +147,24 @@ export interface MergeCompanionsOpts {
 export function mergeCompanions(opts: MergeCompanionsOpts): {
   companions: MergedCompanion[]
   unmatchedDeNames: string[]
+  /** Companions whose wiki `Type` subTypeOf doesn't know, routed as beasts. */
+  unknownTypes: string[]
 } {
   const companions: MergedCompanion[] = []
-  const seenInternalNames = new Set<string>()
+  const matchedDeNames = new Set<string>()
+  const unknownTypes: string[] = []
 
   for (const [name, wiki] of Object.entries(opts.wikiCompanions)) {
     const internal = (wiki.InternalName as string | undefined) ?? ""
     const de = opts.deByName.get(name)
-    if (de) seenInternalNames.add(de.name)
+    if (de) matchedDeNames.add(de.name)
 
-    const subType = subTypeOf(wiki.Type)
+    let subType = subTypeOf(wiki.Type)
+    if (!subType) {
+      // Most undocumented entries are beast breeds.
+      unknownTypes.push(`${name} (Type=${wiki.Type ?? "none"})`)
+      subType = "beast"
+    }
     companions.push({
       // Prefer DE's uniqueName (it's the canonical game ID and what the
       // game's RPC layer uses). The wiki InternalName for some Primes
@@ -176,17 +183,16 @@ export function mergeCompanions(opts: MergeCompanionsOpts): {
       power: (wiki.Energy as number | undefined) ?? de?.power,
       masteryReq: (wiki.Mastery as number | undefined) ?? de?.masteryReq ?? 0,
       polarities: normalizePolarities(wiki.Polarities ?? []),
-      isPrime: name.includes(" Prime"),
+      isPrime: isPrime(name),
       family: primeFamily(name),
       modPools: modPoolsForCompanion(name, subType, wiki.Type),
     })
   }
 
-  // Track DE records that didn't get matched in the wiki pass (probably
-  // SpecialItems-category entries like the standalone Venari we already see).
+  // DE records the wiki pass didn't match.
   const unmatched: string[] = []
   for (const [name] of opts.deByName) {
-    if (!seenInternalNames.has(name)) unmatched.push(name)
+    if (!matchedDeNames.has(name)) unmatched.push(name)
   }
-  return { companions, unmatchedDeNames: unmatched }
+  return { companions, unmatchedDeNames: unmatched, unknownTypes }
 }

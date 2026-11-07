@@ -3,22 +3,21 @@ import { useCallback, useReducer, useRef } from "react"
 /**
  * Generic undo/redo stack for a single editor mount.
  *
- * The build editor spreads its state across the slot/arcane hooks and a dozen
- * `useState`s, with no single source of truth — so history is modeled as full
- * snapshots rather than a command log. The owner is responsible for two halves:
+ * History is modeled as full snapshots rather than a command log. The owner is
+ * responsible for two halves:
  *
  *   - `apply(snapshot)` — write a snapshot back into all the live setters.
  *   - a debounced effect that calls `commit(currentSnapshot)` after edits.
  *
  * The effect must funnel restore-driven changes through `consumeApply` so an
  * undo/redo doesn't get re-recorded as a brand-new edit (which would corrupt
- * the stacks). Snapshots are scoped to one EditorShell mount — a variant switch
- * remounts and starts fresh, which keeps cross-variant complexity out of here.
+ * the stacks). History covers one variant: the owner calls `reset` on a
+ * variant switch, which keeps cross-variant complexity out of here.
  */
 
 const MAX_HISTORY = 100
 
-export interface EditorHistory<T> {
+interface EditorHistory<T> {
   /**
    * Record a new history point. Pushes the prior baseline onto the undo stack
    * and clears the redo stack. The caller debounces this so a burst of edits
@@ -33,6 +32,8 @@ export interface EditorHistory<T> {
   consumeApply: (snapshot: T) => boolean
   undo: () => void
   redo: () => void
+  /** Drop both stacks and take `snapshot` as the new baseline. */
+  reset: (snapshot: T) => void
   canUndo: boolean
   canRedo: boolean
 }
@@ -99,11 +100,20 @@ export function useEditorHistory<T>(
     bump()
   }, [apply])
 
+  const reset = useCallback((snapshot: T) => {
+    past.current = []
+    future.current = []
+    baseline.current = snapshot
+    applying.current = false
+    bump()
+  }, [])
+
   return {
     commit,
     consumeApply,
     undo,
     redo,
+    reset,
     canUndo: past.current.length > 0,
     canRedo: future.current.length > 0,
   }

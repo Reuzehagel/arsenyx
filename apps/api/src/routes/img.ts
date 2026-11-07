@@ -1,7 +1,7 @@
 import { Hono } from "hono"
 
 import { SafeFetchError, safeFetch } from "../lib/safe-fetch"
-import { validateExternalUrl } from "../lib/validate"
+import { readCapped, validateExternalUrl } from "../lib/validate"
 
 // Server-side image proxy. The browser hits api.arsenyx.com/img instead of
 // the original third-party URL, so an org/profile admin can't use a malicious
@@ -54,7 +54,6 @@ img.get("/", async (c) => {
       maxRedirects: 3,
       headers: { accept: "image/*" },
       cf: { cacheTtl: 86400, cacheEverything: true },
-      blockPrivateDns: true,
     })
   } catch (err) {
     if (err instanceof SafeFetchError) {
@@ -89,25 +88,15 @@ img.get("/", async (c) => {
     return c.json({ error: "not_image" }, 415)
   }
 
-  const reader = upstream.body?.getReader()
-  if (!reader) return c.json({ error: "empty_body" }, 502)
+  const body = upstream.body
+  if (!body) return c.json({ error: "empty_body" }, 502)
 
   const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>()
   const writer = writable.getWriter()
   void (async () => {
-    let total = 0
     try {
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        if (!value) continue
-        total += value.byteLength
-        if (total > MAX_BYTES) {
-          await writer.abort(new Error("too_large"))
-          void reader.cancel()
-          return
-        }
-        await writer.write(value)
+      for await (const chunk of readCapped(body, MAX_BYTES)) {
+        await writer.write(chunk)
       }
       await writer.close()
     } catch {

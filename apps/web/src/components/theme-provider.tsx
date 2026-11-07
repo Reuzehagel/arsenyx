@@ -1,16 +1,16 @@
 import { createContext, useContext, useEffect, useState } from "react"
 
+import { THEME_STORAGE_KEY } from "@/lib/html-head"
+import { storageGet, storageSet } from "@/lib/util/storage"
+
 type Theme = "light" | "dark" | "system"
 
 interface ThemeContextValue {
   theme: Theme
-  resolvedTheme: "light" | "dark"
   setTheme: (theme: Theme) => void
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
-
-const STORAGE_KEY = "arsenyx-theme"
 
 function getSystemTheme(): "light" | "dark" {
   return window.matchMedia("(prefers-color-scheme: dark)").matches
@@ -19,14 +19,8 @@ function getSystemTheme(): "light" | "dark" {
 }
 
 function readStoredTheme(): Theme {
-  try {
-    const stored = window.localStorage.getItem(STORAGE_KEY)
-    if (stored === "light" || stored === "dark" || stored === "system")
-      return stored
-  } catch {
-    // Blocked storage (privacy settings) must not white-screen the app.
-  }
-  return "system"
+  const stored = storageGet(THEME_STORAGE_KEY)
+  return stored === "light" || stored === "dark" ? stored : "system"
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
@@ -50,16 +44,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [resolvedTheme])
 
   const setTheme = (next: Theme) => {
-    try {
-      window.localStorage.setItem(STORAGE_KEY, next)
-    } catch {
-      // Blocked storage: the choice just won't persist.
-    }
+    storageSet(THEME_STORAGE_KEY, next)
     setThemeState(next)
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   )

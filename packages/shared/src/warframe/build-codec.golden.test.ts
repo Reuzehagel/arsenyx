@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest"
 
-import { decodeBuild, decodeBuildDoc } from "./build-codec"
+import {
+  decodeBuild,
+  decodeBuildDoc,
+  encodeBuild,
+  encodeBuildDoc,
+} from "./build-codec"
+import type { BuildVariant } from "./build-doc"
+import { SHARD_COLORS, SHARD_STATS } from "./shards"
+import type { BuildState } from "./types"
 
 // Backward-compatibility lock. These base64 strings were produced by the
 // encoder as it shipped before the codec rewrite — they stand in for share
@@ -108,5 +116,132 @@ describe("golden: existing v2 links still decode", () => {
   it("treats an omitted `ai` as activeIndex 0", () => {
     const d = decodeBuildDoc(GOLDEN.v2NoActive)!
     expect(d.activeIndex ?? 0).toBe(0)
+  })
+})
+
+// What real browsers have always emitted: btoa(encodeURIComponent(json)). The
+// encoder now produces this form in every runtime, byte for byte.
+const BROWSER_V1 =
+  "JTdCJTIydiUyMiUzQTElMkMlMjJpJTIyJTNBJTIyJTJGTG90dXMlMkZQb3dlcnN1aXRzJTJGRXhjYWxpYnVyJTJGRXhjYWxpYnVyJTIyJTJDJTIyYyUyMiUzQSUyMndhcmZyYW1lcyUyMiUyQyUyMnIlMjIlM0F0cnVlJTJDJTIycyUyMiUzQSU1QiU3QiUyMnAlMjIlM0ElMjJtYWR1cmFpJTIyJTdEJTVEJTJDJTIyc2glMjIlM0ElNUIyMyU1RCUyQyUyMm4lMjIlM0ElMjIlQzMlOEJ4Y2FsJTIwJUUyJTlBJTk0JTIwJUYwJTlGJTk4JTgwJTIyJTdE"
+
+describe("golden: browser-format links", () => {
+  const state = {
+    itemUniqueName: "/Lotus/Powersuits/Excalibur/Excalibur",
+    itemName: "",
+    itemCategory: "warframes",
+    hasReactor: true,
+    auraSlots: [],
+    normalSlots: [{ id: "normal-0", type: "normal", formaPolarity: "madurai" }],
+    arcaneSlots: [],
+    shardSlots: [
+      { color: "crimson", stat: "Ability Strength", tauforged: true },
+    ],
+    baseCapacity: 60,
+    currentCapacity: 60,
+    formaCount: 1,
+    buildName: "Ëxcal ⚔ 😀",
+  } satisfies BuildState
+
+  it("encodes to the exact browser string", () => {
+    expect(encodeBuild(state)).toBe(BROWSER_V1)
+  })
+  it("decodes non-ASCII text intact", () => {
+    const d = decodeBuild(BROWSER_V1)!
+    expect(d.buildName).toBe("Ëxcal ⚔ 😀")
+    expect(d.normalSlots?.[0].formaPolarity).toBe("madurai")
+  })
+})
+
+// Shard bytes are (colorIndex+1) << 4 | statIndex << 1 | tauforged, so the
+// order of SHARD_COLORS and of each color's stats is part of every link.
+describe("golden: shard color/stat indices", () => {
+  const ORDER = {
+    crimson: [
+      "Melee Critical Damage",
+      "Primary Status Chance",
+      "Secondary Critical Chance",
+      "Ability Strength",
+      "Ability Duration",
+    ],
+    amber: [
+      "Initial Energy",
+      "Health Orb Effectiveness",
+      "Energy Orb Effectiveness",
+      "Casting Speed",
+      "Parkour Velocity",
+    ],
+    azure: ["Health", "Shield Capacity", "Energy Max", "Armor", "Health Regen"],
+    topaz: [
+      "Blast Kill Health",
+      "Blast Kill Shields",
+      "Heat Kill Crit Chance",
+      "Radiation Ability Damage",
+    ],
+    violet: [
+      "Electricity Ability Damage",
+      "Primary Electricity Damage",
+      "Melee Critical Damage (Energy)",
+      "Orb Conversion",
+    ],
+    emerald: [
+      "Toxin Status Damage",
+      "Toxin Heal on Hit",
+      "Corrosion Ability Damage",
+      "Corrosion Max Stacks",
+    ],
+  } as const
+
+  const docWithShards = (shardSlots: BuildVariant["shardSlots"]) => ({
+    itemUniqueName: "x",
+    itemName: "",
+    itemCategory: "warframes" as const,
+    hasReactor: false,
+    variants: [
+      {
+        id: "v0",
+        label: "Main",
+        auraSlots: [],
+        normalSlots: [],
+        arcaneSlots: [],
+        shardSlots,
+      },
+    ],
+  })
+
+  it("keeps the wire order of colors and stats", () => {
+    expect(SHARD_COLORS).toEqual(Object.keys(ORDER))
+    for (const c of SHARD_COLORS) {
+      expect(SHARD_STATS[c].map((s) => s.name)).toEqual(ORDER[c])
+    }
+  })
+
+  it("pins the byte for a known shard", () => {
+    // 23 = crimson (1) << 4 | Ability Strength (3) << 1 | tauforged — the
+    // value v1Rich above carries in `sh`.
+    const doc = decodeBuild(GOLDEN.v1Rich)!
+    expect(doc.shardSlots?.[0]).toEqual({
+      color: "crimson",
+      stat: "Ability Strength",
+      tauforged: true,
+    })
+  })
+
+  it("round-trips every color/stat pair", () => {
+    const all = SHARD_COLORS.flatMap((color) =>
+      ORDER[color].map((stat) => ({ color, stat, tauforged: false })),
+    )
+    const doc = decodeBuildDoc(encodeBuildDoc(docWithShards(all)))!
+    expect(doc.variants[0].shardSlots).toEqual(all)
+  })
+
+  it("encodes an unknown stat as an empty slot, not the color's first stat", () => {
+    const doc = decodeBuildDoc(
+      encodeBuildDoc(
+        docWithShards([
+          { color: "crimson", stat: "Renamed Stat", tauforged: false },
+        ]),
+      ),
+    )!
+    expect(doc.variants[0].shardSlots).toEqual([null])
   })
 })

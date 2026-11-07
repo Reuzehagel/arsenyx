@@ -15,7 +15,8 @@
  * user-facing categories the existing UI uses.
  */
 
-import { type DeUpgrade, mapRarity, normalizeDescription } from "./read-de"
+import type { DeUpgrade } from "./de-types"
+import { mapRarity, normalizeDescription } from "./read-de"
 
 export interface MergedArcane {
   uniqueName: string

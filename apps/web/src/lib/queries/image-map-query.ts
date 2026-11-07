@@ -1,3 +1,8 @@
+import {
+  CATALOG_FILES,
+  catalogUrl,
+} from "@arsenyx/shared/warframe/catalog-files"
+
 import { staticDataQuery } from "./static-data-query"
 
 /**
@@ -8,7 +13,6 @@ import { staticDataQuery } from "./static-data-query"
  * so a build page can refresh every image without that download.
  */
 export const imageMapQuery = staticDataQuery<Record<string, string>>(
-  ["image-map"],
-  "/data/image-map.json",
+  catalogUrl(CATALOG_FILES.imageMap),
   "failed to load image map",
 )

@@ -1,6 +1,11 @@
+import type {
+  SavedVariant,
+  VariantMode,
+} from "@arsenyx/shared/warframe/build-data"
 import { MAX_VARIANTS } from "@arsenyx/shared/warframe/build-doc"
-import { useRef, useState } from "react"
+import { useState } from "react"
 
+import { VariantTab } from "@/components/build-loadout/variant-tab"
 import { FormToggle } from "@/components/form-toggle"
 import { Button } from "@/components/ui/button"
 import { Field, FieldLabel } from "@/components/ui/field"
@@ -15,10 +20,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import type { SavedVariant } from "@/lib/queries/build-query"
+import {
+  MAX_VARIANT_LABEL,
+  normalizeVariantLabel,
+  variantDisplayLabel,
+} from "@/lib/build/variants"
 import { cn } from "@/lib/util/utils"
-
-import { VariantTab } from "../build-viewer/variant-tab"
 
 /** Shared styling for the collapsed single-variant affordances, so restyling
  *  one can't leave the other behind. */
@@ -41,12 +48,17 @@ export function EditorVariantBar({
   formNames,
   activeFormIndex,
   onSwitchForm,
+  variantMode,
+  onVariantModeChange,
 }: {
+  /** Whether variants share one forma + shard set (build-wide). */
+  variantMode: VariantMode
+  onVariantModeChange: (mode: VariantMode) => void
   variants: SavedVariant[]
   activeIndex: number
   onSwitch: (index: number) => void
   onAdd: () => void
-  onDuplicate: () => void
+  onDuplicate: (label?: string) => void
   onDelete: () => void
   onRename: (label: string) => void
   /** Twin-frames (Sirius & Orion): the switchable form names. When present,
@@ -70,7 +82,7 @@ export function EditorVariantBar({
             render={
               <button
                 type="button"
-                onClick={onDuplicate}
+                onClick={() => onDuplicate()}
                 className={COLLAPSED_AFFORDANCE}
               />
             }
@@ -116,6 +128,8 @@ export function EditorVariantBar({
       formNames={formNames}
       activeFormIndex={activeFormIndex}
       onSwitchForm={onSwitchForm}
+      variantMode={variantMode}
+      onVariantModeChange={onVariantModeChange}
     />
   )
 }
@@ -133,6 +147,8 @@ function EditorVariantBarMulti({
   formNames,
   activeFormIndex = 0,
   onSwitchForm,
+  variantMode,
+  onVariantModeChange,
 }: {
   variants: SavedVariant[]
   activeIndex: number
@@ -140,22 +156,21 @@ function EditorVariantBarMulti({
   atCap: boolean
   onSwitch: (index: number) => void
   onAdd: () => void
-  onDuplicate: () => void
+  onDuplicate: (label?: string) => void
   onDelete: () => void
   onRename: (label: string) => void
   formNames?: string[]
   activeFormIndex?: number
   onSwitchForm?: (formIndex: number) => void
+  variantMode: VariantMode
+  onVariantModeChange: (mode: VariantMode) => void
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [labelDraft, setLabelDraft] = useState(active.label)
-  const inputRef = useRef<HTMLInputElement>(null)
-  // Mirror renameActive's fallback so the input shows the normalized value
-  // after blur — otherwise clearing the input and tabbing away leaves an
-  // empty draft in the popover while the underlying variant has "Variant N".
+  // Show the normalized value after blur, so clearing the input leaves
+  // "Variant N" in the popover, matching the variant.
   const commitRename = () => {
-    const normalized =
-      labelDraft.trim().slice(0, 24) || `Variant ${activeIndex + 1}`
+    const normalized = normalizeVariantLabel(labelDraft, activeIndex)
     if (normalized !== labelDraft) setLabelDraft(normalized)
     onRename(normalized)
   }
@@ -181,20 +196,14 @@ function EditorVariantBarMulti({
                   isActive ? "rounded-l-md" : "rounded-md",
                 )}
               >
-                {v.label || `Variant ${i + 1}`}
+                {variantDisplayLabel(v, i)}
               </VariantTab>
               {isActive ? (
                 <Popover
                   open={settingsOpen}
                   onOpenChange={(o) => {
                     setSettingsOpen(o)
-                    if (o) {
-                      setLabelDraft(active.label)
-                      requestAnimationFrame(() => {
-                        inputRef.current?.focus()
-                        inputRef.current?.select()
-                      })
-                    }
+                    if (o) setLabelDraft(active.label)
                   }}
                 >
                   <PopoverTrigger
@@ -220,9 +229,10 @@ function EditorVariantBarMulti({
                       </FieldLabel>
                       <Input
                         id="variant-name"
-                        ref={inputRef}
+                        autoFocus
+                        onFocus={(e) => e.currentTarget.select()}
                         value={labelDraft}
-                        maxLength={24}
+                        maxLength={MAX_VARIANT_LABEL}
                         onChange={(e) => setLabelDraft(e.target.value)}
                         onBlur={commitRename}
                         onKeyDown={(e) => {
@@ -240,8 +250,11 @@ function EditorVariantBarMulti({
                           size="sm"
                           variant="outline"
                           onClick={() => {
-                            commitRename()
-                            onDuplicate()
+                            // Pass the pending label: a rename queued in the same
+                            // click would be overwritten by the duplicate.
+                            onDuplicate(
+                              normalizeVariantLabel(labelDraft, activeIndex),
+                            )
                             setSettingsOpen(false)
                           }}
                           disabled={atCap}
@@ -297,6 +310,29 @@ function EditorVariantBarMulti({
         >
           + Variant
         </button>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <button
+                type="button"
+                onClick={() =>
+                  onVariantModeChange(
+                    variantMode === "linked" ? "independent" : "linked",
+                  )
+                }
+                className={cn(COLLAPSED_AFFORDANCE, "ml-1")}
+              />
+            }
+          >
+            Forma &amp; shards:{" "}
+            {variantMode === "linked" ? "shared" : "per variant"}
+          </TooltipTrigger>
+          <TooltipContent className="max-w-64">
+            {variantMode === "linked"
+              ? "Every variant uses the same forma and Archon Shards, like configs of one item in-game. Click to let each variant have its own."
+              : "Each variant has its own forma and Archon Shards. Click to make every variant use this variant's."}
+          </TooltipContent>
+        </Tooltip>
       </div>
     </div>
   )

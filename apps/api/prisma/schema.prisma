@@ -275,7 +275,7 @@ model BuildViewDay {
 // of buildData, which runs 5-80 KB per build and would dwarf the table.
 //
 // This is also the only place edit attribution exists: `canMutateBuild`
-// (routes/builds.ts) lets any member of the owning org edit an org build, and
+// (routes/_build-visibility.ts) lets any member of the owning org edit an org build, and
 // Build itself records only its author, so before this table an org build's
 // `updatedAt` could move with no record of who moved it.
 model BuildRevision {

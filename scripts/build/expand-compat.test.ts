@@ -21,7 +21,6 @@ const categoryByUniqueName = new Map<string, string>([
   [EXCAL_UMBRA, "warframes"],
   [EXALTED_BLADE, "exalted-weapons"],
 ])
-const knownItemUniqueNames = new Set(categoryByUniqueName.keys())
 
 // Weapons carry a `family`; frames do not (they route via the BaseSuit anchor).
 const weapons = [
@@ -36,7 +35,6 @@ const { familyKeyByUniqueName, familyMembers } = buildFamilyIndex(
   categoryByUniqueName,
 )
 const expandCompat = makeExpandCompat({
-  knownItemUniqueNames,
   categoryByUniqueName,
   familyKeyByUniqueName,
   familyMembers,

@@ -1,8 +1,14 @@
-import { readFileSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import { resolve } from "node:path"
 
+import type { SlotId } from "@arsenyx/shared/warframe/build-data"
+import {
+  CATALOG_FILES,
+  dataVersionFromMeta,
+  ITEM_DETAIL_DIR,
+} from "@arsenyx/shared/warframe/catalog-files"
 import { FORMA_CALC_VERSION } from "@arsenyx/shared/warframe/forma"
-import type { Polarity } from "@arsenyx/shared/warframe/types"
+import type { Polarity, BrowseCategory } from "@arsenyx/shared/warframe/types"
 /**
  * Recompute & backfill the denormalized `formaCount` on every build.
  *
@@ -34,13 +40,14 @@ import type { Polarity } from "@arsenyx/shared/warframe/types"
  */
 import { Client } from "pg"
 
-import { computeFormaCount } from "@/components/build-editor/forma-count"
-import type { SlotId } from "@/components/build-editor/use-build-slots"
-import type { BrowseCategory, DetailItem } from "@/lib/warframe"
+import { computeFormaCount } from "@/lib/build/forma-count"
+import type { DetailItem } from "@/lib/catalog"
+
+import { CATALOG_DIR, REPO_ROOT } from "../../../scripts/build/paths"
 
 const APPLY = process.argv.includes("--apply")
 const ALL = process.argv.includes("--all")
-const DATA_DIR = resolve(import.meta.dirname, "../public/data")
+const DATA_DIR = resolve(REPO_ROOT, CATALOG_DIR)
 
 const DATABASE_URL = process.env.DATABASE_URL
 if (!DATABASE_URL) {
@@ -52,28 +59,18 @@ if (!DATABASE_URL) {
 
 // --- catalog ---------------------------------------------------------------
 
-/** Mirrors apps/web/vite.config.ts `dataVersion()` so the `catalogVersion`
- *  stamp this script writes matches what the client (`__DATA_VERSION__`)
- *  writes on save. */
-function catalogVersion(): string {
-  try {
-    const meta = JSON.parse(
-      readFileSync(resolve(DATA_DIR, "meta.json"), "utf8"),
-    ) as { generatedAt?: string }
-    const ts = Date.parse(meta.generatedAt ?? "")
-    if (!Number.isNaN(ts)) return String(ts)
-  } catch {
-    // meta.json absent on a fresh checkout before build:items has run.
-  }
-  return "0"
-}
-const CATALOG_VERSION = catalogVersion()
+// Same derivation as vite.config.ts, so the stamp matches what the client
+// (`__DATA_VERSION__`) writes on save.
+const metaPath = resolve(DATA_DIR, CATALOG_FILES.meta)
+const CATALOG_VERSION = dataVersionFromMeta(
+  existsSync(metaPath) ? readFileSync(metaPath, "utf8") : undefined,
+)
 
 // uniqueName -> { category dir, slug } from the lightweight index, so we can
 // find each build's per-item detail JSON (which carries the innate polarities).
 type IndexItem = { uniqueName: string; slug: string }
 const index = JSON.parse(
-  readFileSync(resolve(DATA_DIR, "items-index.json"), "utf8"),
+  readFileSync(resolve(DATA_DIR, CATALOG_FILES.itemsIndex), "utf8"),
 ) as Record<string, IndexItem[]>
 const locator = new Map<string, { category: string; slug: string }>()
 for (const [category, items] of Object.entries(index)) {
@@ -91,7 +88,7 @@ function loadItem(uniqueName: string): DetailItem | null {
     try {
       item = JSON.parse(
         readFileSync(
-          resolve(DATA_DIR, "items", loc.category, `${loc.slug}.json`),
+          resolve(DATA_DIR, ITEM_DETAIL_DIR, loc.category, `${loc.slug}.json`),
           "utf8",
         ),
       ) as DetailItem
@@ -120,6 +117,18 @@ function extractFormaPolarities(
     delete out.aura
   }
   return out as Partial<Record<SlotId, Polarity>>
+}
+
+/** The twin-frame form whose innates the count is against — the editor's:
+ *  the top-level mirror of the variant active at save time. Docs saved before
+ *  the editor wrote that mirror fall back to the first variant's. */
+function extractFormIndex(buildData: unknown): number {
+  const data = buildData as {
+    formIndex?: unknown
+    variants?: { formIndex?: unknown }[]
+  } | null
+  const fi = data?.formIndex ?? data?.variants?.[0]?.formIndex
+  return typeof fi === "number" && Number.isInteger(fi) && fi >= 0 ? fi : 0
 }
 
 // --- run -------------------------------------------------------------------
@@ -180,10 +189,18 @@ for (const r of rows) {
   }
   let next: number
   try {
-    next = computeFormaCount(
-      item,
-      r.itemCategory as BrowseCategory,
-      extractFormaPolarities(r.buildData),
+    // Highest count across the top-level set and every variant's own set,
+    // each against its own twin-frame form (matches the editor save).
+    const variants = (r.buildData as { variants?: unknown } | null)?.variants
+    next = Math.max(
+      ...[r.buildData, ...(Array.isArray(variants) ? variants : [])].map((d) =>
+        computeFormaCount(
+          item,
+          r.itemCategory as BrowseCategory,
+          extractFormaPolarities(d),
+          extractFormIndex(d),
+        ),
+      ),
     )
   } catch {
     computeError++

@@ -14,13 +14,35 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 // the fix assumes, and that mapProfileToUser keeps `username` out of the
 // update for anyone who already has one.
 
-const accountFindUnique = vi.fn()
-const userFindUnique = vi.fn()
+// A two-table stand-in for Postgres: GitHub-linked accounts keyed by account
+// id, users keyed by email. The lookups answer from these, so the tests pin
+// which row a profile resolves to — not the shape of the Prisma call.
+const linkedAccounts = new Map<string, { username: string | null }>()
+const usersByEmail = new Map<string, { username: string | null }>()
+const emailLookups: string[] = []
 
 vi.mock("./db", () => ({
   prisma: {
-    account: { findUnique: accountFindUnique },
-    user: { findUnique: userFindUnique },
+    account: {
+      findUnique: async ({
+        where,
+      }: {
+        where: {
+          providerId_accountId: { providerId: string; accountId: string }
+        }
+      }) => {
+        const { providerId, accountId } = where.providerId_accountId
+        const user =
+          providerId === "github" ? linkedAccounts.get(accountId) : undefined
+        return user ? { user } : null
+      },
+    },
+    user: {
+      findUnique: async ({ where }: { where: { email: string } }) => {
+        emailLookups.push(where.email)
+        return usersByEmail.get(where.email) ?? null
+      },
+    },
   },
 }))
 
@@ -54,57 +76,50 @@ const ASSIGNED = {
 }
 
 beforeEach(() => {
-  accountFindUnique.mockReset().mockResolvedValue(null)
-  userFindUnique.mockReset().mockResolvedValue(null)
+  linkedAccounts.clear()
+  usersByEmail.clear()
+  emailLookups.length = 0
 })
 
 describe("github mapProfileToUser", () => {
   it("omits username for a returning user who already has one", async () => {
-    accountFindUnique.mockResolvedValue({ user: { username: "shinkokuna" } })
+    linkedAccounts.set("4242", { username: "shinkokuna" })
 
     // Nothing to replay into the update — this is what keeps the upstream
     // uniqueness hook from firing against the user's own row.
     expect(await mapProfileToUser(PROFILE)).toEqual({})
   })
 
-  it("resolves the linked account by provider and account id", async () => {
-    accountFindUnique.mockResolvedValue({ user: { username: "shinkokuna" } })
-    await mapProfileToUser(PROFILE)
-
-    expect(accountFindUnique).toHaveBeenCalledWith({
-      where: {
-        providerId_accountId: { providerId: "github", accountId: "4242" },
-      },
-      select: { user: { select: { username: true } } },
-    })
+  it("resolves the account linked to this GitHub id, not another's", async () => {
+    // Someone else's linked account holds a username; this profile's doesn't
+    // exist yet, so it's a first sign-in.
+    linkedAccounts.set("9999", { username: "someone-else" })
+    expect(await mapProfileToUser({ ...PROFILE, email: null })).toEqual(
+      ASSIGNED,
+    )
   })
 
   it("prefers the linked account over the email match", async () => {
     // The two can resolve to different rows once someone repoints their
     // GitHub primary email at an address another Arsenyx row already owns.
     // The linked account is the signing-in user; the email row is a stranger.
-    accountFindUnique.mockResolvedValue({ user: { username: "shinkokuna" } })
-    userFindUnique.mockResolvedValue({ username: null })
+    linkedAccounts.set("4242", { username: "shinkokuna" })
+    usersByEmail.set("shinkokuna@example.com", { username: null })
 
     expect(await mapProfileToUser(PROFILE)).toEqual({})
-    expect(userFindUnique).not.toHaveBeenCalled()
   })
 
-  it("falls back to email when no account is linked yet", async () => {
-    userFindUnique.mockResolvedValue({ username: "someone" })
+  it("falls back to email (case-folded) when no account is linked yet", async () => {
+    usersByEmail.set("shinkokuna@example.com", { username: "someone" })
 
     expect(await mapProfileToUser(PROFILE)).toEqual({})
-    expect(userFindUnique).toHaveBeenCalledWith({
-      where: { email: "shinkokuna@example.com" },
-      select: { username: true },
-    })
   })
 
   it("skips the email lookup when GitHub hides the address", async () => {
     expect(await mapProfileToUser({ ...PROFILE, email: null })).toEqual(
       ASSIGNED,
     )
-    expect(userFindUnique).not.toHaveBeenCalled()
+    expect(emailLookups).toEqual([])
   })
 
   it("assigns a username on first sign-in", async () => {
@@ -112,7 +127,7 @@ describe("github mapProfileToUser", () => {
   })
 
   it("backfills a row that predates the username plugin", async () => {
-    accountFindUnique.mockResolvedValue({ user: { username: null } })
+    linkedAccounts.set("4242", { username: null })
 
     expect(await mapProfileToUser(PROFILE)).toEqual(ASSIGNED)
   })
@@ -123,7 +138,7 @@ describe("github mapProfileToUser", () => {
     const first = await mapProfileToUser(reserved)
     // Second sign-in: the row now exists and carries the suffixed name, so
     // nothing is replayed into the update.
-    accountFindUnique.mockResolvedValue({ user: { username: "support-gh7" } })
+    linkedAccounts.set("7", { username: "support-gh7" })
     const second = await mapProfileToUser(reserved)
 
     expect(first).toEqual({
@@ -255,5 +270,36 @@ describe("upstream username plugin (the behaviour the fix works around)", () => 
     await expect(
       updateBefore({ name: "Shinkokuna" }, callbackCtx),
     ).resolves.toBeTruthy()
+  })
+})
+
+// Issue #466: /update-user always hands the hook `name` and `image` keys, set
+// to undefined when the client didn't send them. A display-name-only save must
+// leave the stored avatar alone, not null it.
+describe("user.update hook", () => {
+  const before = (
+    auth.options.databaseHooks as unknown as {
+      user: {
+        update: {
+          before: (
+            d: Record<string, unknown>,
+          ) => Promise<{ data: Record<string, unknown> }>
+        }
+      }
+    }
+  ).user.update.before
+
+  it("keeps an undefined image undefined", async () => {
+    const { data } = await before({
+      name: undefined,
+      image: undefined,
+      displayUsername: "Renamed",
+    })
+    expect(data.image).toBeUndefined()
+  })
+
+  it("still clears an explicit empty image", async () => {
+    const { data } = await before({ image: "" })
+    expect(data.image).toBeNull()
   })
 })

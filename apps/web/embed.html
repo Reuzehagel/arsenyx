@@ -2,21 +2,6 @@
 <html lang="en" style="color-scheme: light dark">
   <head>
     <meta charset="UTF-8" />
-    <script>
-      // Apply stored theme before React mounts to avoid a flash of the wrong theme.
-      // In an iframe this reads arsenyx.com's own localStorage, so the embed
-      // matches the theme the visitor picked on the site.
-      (function () {
-        try {
-          var t = localStorage.getItem("arsenyx-theme") || "system";
-          var isDark =
-            t === "dark" ||
-            (t === "system" &&
-              window.matchMedia("(prefers-color-scheme: dark)").matches);
-          if (isDark) document.documentElement.classList.add("dark");
-        } catch (e) {}
-      })();
-    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
     <title>Arsenyx build</title>
     <!-- Warm the connections the embed needs before first paint. -->

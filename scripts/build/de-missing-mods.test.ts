@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test"
 
 import { injectMissingDeMods } from "./de-missing-mods"
-import type { DeUpgrade } from "./read-de"
+import type { DeUpgrade } from "./de-types"
 
 const de = (uniqueName: string, name: string): DeUpgrade => ({
   uniqueName,

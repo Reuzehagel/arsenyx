@@ -12,7 +12,7 @@
  * }
  * ```
  *
- * Emitted shape (matches `apps/web/src/lib/warframe.ts` DetailItem):
+ * Emitted shape (matches `apps/web/src/lib/catalog.ts` DetailItem):
  * ```ts
  * attacks: [{
  *   name: "Normal Attack",

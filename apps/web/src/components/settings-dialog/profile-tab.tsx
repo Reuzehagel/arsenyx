@@ -1,4 +1,5 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { DISPLAY_USERNAME_MAX } from "@arsenyx/shared/api/limits"
+import { useMutation } from "@tanstack/react-query"
 import * as React from "react"
 
 import { Button } from "@/components/ui/button"
@@ -10,9 +11,9 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { UserAvatar } from "@/components/user-avatar"
-import { authClient } from "@/lib/auth-client"
+import { authClient, type SessionUser } from "@/lib/auth-client"
 
-import { extras, SignedOutNotice } from "./shared"
+import { SignedOutNotice } from "./shared"
 
 export function ProfilePanel() {
   const { data: session } = authClient.useSession()
@@ -25,13 +26,8 @@ export function ProfilePanel() {
   return <ProfileForm key={user.id} user={user} />
 }
 
-function ProfileForm({
-  user,
-}: {
-  user: NonNullable<ReturnType<typeof authClient.useSession>["data"]>["user"]
-}) {
-  const queryClient = useQueryClient()
-  const initial = extras(user).displayUsername ?? extras(user).username ?? ""
+function ProfileForm({ user }: { user: SessionUser }) {
+  const initial = user.displayUsername ?? user.username ?? ""
   const [displayUsername, setDisplayUsername] = React.useState(initial)
 
   const save = useMutation({
@@ -41,13 +37,10 @@ function ProfileForm({
         throw new Error(res.error.message ?? "Failed to update profile.")
       }
     },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["session"] })
-    },
   })
 
   const trimmed = displayUsername.trim()
-  const currentUsername = extras(user).username
+  const currentUsername = user.username
   const dirty = trimmed !== initial.trim() && trimmed.length > 0
 
   return (
@@ -87,7 +80,7 @@ function ProfileForm({
             id="display-username"
             value={displayUsername}
             onChange={(e) => setDisplayUsername(e.target.value)}
-            maxLength={50}
+            maxLength={DISPLAY_USERNAME_MAX}
             placeholder={currentUsername ?? "Display name"}
           />
         </Field>

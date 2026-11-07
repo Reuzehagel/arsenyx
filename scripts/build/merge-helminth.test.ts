@@ -22,10 +22,14 @@ describe("deriveHelminthAbilities", () => {
     }
     const twin = { ...sirius, forms: [sirius, orion] } as unknown as MergedFrame
 
-    const out = deriveHelminthAbilities([twin], [])
+    const misses: string[] = []
+    const out = deriveHelminthAbilities([twin], [], misses)
     expect(out.map((a) => [a.name, a.source])).toEqual([
       ["Astral Shell", "Orion & Sirius"],
       ["Jade Stars", "Sirius & Orion"],
     ])
+    // Every other curated frame is absent here, so reported as a miss.
+    expect(misses).toContain("Ash: Shuriken")
+    expect(misses.some((m) => m.startsWith("Sirius & Orion"))).toBe(false)
   })
 })

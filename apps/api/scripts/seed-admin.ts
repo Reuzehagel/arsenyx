@@ -13,6 +13,8 @@ import { hashPassword } from "better-auth/crypto"
 import { nanoid } from "nanoid"
 import { Client } from "pg"
 
+import { isDevDbUrl } from "../../../scripts/lib/dev-db"
+
 // Refuse to run outside local development. A misconfigured NODE_ENV in CI/prod
 // would otherwise create a known-credential admin account.
 if (process.env.NODE_ENV !== "development") {
@@ -23,14 +25,11 @@ if (process.env.NODE_ENV !== "development") {
 }
 
 // NODE_ENV alone isn't enough (setup.ts forces it): refuse non-dev DB hosts
-// (*.psdb.cloud = prod). Duplicated in scripts/setup.ts.
+// (*.psdb.cloud = prod).
 const dbHost = process.env.DATABASE_URL
   ? new URL(process.env.DATABASE_URL).hostname
   : ""
-if (
-  !dbHost.endsWith(".neon.tech") &&
-  !["localhost", "127.0.0.1", "::1", "[::1]"].includes(dbHost)
-) {
+if (!isDevDbUrl(process.env.DATABASE_URL)) {
   console.error(
     `seed-admin refuses to run against DATABASE_URL host "${dbHost}". Only *.neon.tech or localhost are allowed.`,
   )
@@ -64,7 +63,7 @@ async function main() {
   const client = makeClient()
   await client.connect()
 
-  // Tagged-template helper mirroring @neondatabase/serverless's `sql`: turns
+  // Tagged-template helper: turns
   // sql`… ${a} … ${b}` into a parameterised query ($1, $2, …) and returns rows.
   const sql = async (
     strings: TemplateStringsArray,

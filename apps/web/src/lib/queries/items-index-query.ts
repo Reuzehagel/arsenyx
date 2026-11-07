@@ -1,9 +1,13 @@
-import type { ItemsIndex } from "@/lib/warframe"
+import {
+  CATALOG_FILES,
+  catalogUrl,
+} from "@arsenyx/shared/warframe/catalog-files"
+
+import type { ItemsIndex } from "@/lib/catalog"
 
 import { staticDataQuery } from "./static-data-query"
 
 export const itemsIndexQuery = staticDataQuery<ItemsIndex>(
-  ["items-index"],
-  "/data/items-index.json",
+  catalogUrl(CATALOG_FILES.itemsIndex),
   "failed to load items index",
 )

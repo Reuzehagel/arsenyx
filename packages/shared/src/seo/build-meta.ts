@@ -1,14 +1,13 @@
-// Build-page SEO title / author / og:type derivation, shared by BOTH head
-// layers: the web client (apps/web/src/routes/builds.$slug.tsx `head()` →
-// seo()) and the edge Worker (apps/web/worker/index.ts `buildMeta`). A
-// JS-rendering crawler sees both layers' tags for the same URL, so the values
-// must agree. These were previously hand-duplicated in the two files and drifted
-// — that's what produced the og:type "website" vs "article" mismatch. Deriving
-// them once here makes drift impossible by construction. Pure and dependency-
-// free so the Worker can bundle it without pulling in anything heavy.
+// Build-page SEO values shared by both head layers: the client route
+// (apps/web/src/routes/_app/builds.$slug.tsx) and the edge Worker
+// (apps/web/worker/index.ts). A JS-rendering crawler sees both, so they must
+// agree. Dependency-free so the Worker bundles it cheaply.
 
-/** The author/org fields needed to credit a build. Both the web
- *  `BuildDetailResponse` and the Worker's local `BuildSummary` satisfy this. */
+import type { BuildVisibility } from "../api/build-dto"
+import { clampCodePoints, collapseWhitespace } from "./site"
+
+/** The author/org fields needed to credit a build. Both
+ *  `BuildDetailResponse` and `BuildMetaResponse` satisfy this. */
 export interface BuildAuthorInput {
   /** Org build → show the org, never the underlying user. */
   hideAuthor: boolean
@@ -40,13 +39,28 @@ export function buildAuthor(b: BuildAuthorInput): string | null {
 }
 
 /**
- * Build-page title WITHOUT the " — Arsenyx" site suffix. The web client appends
- * the suffix via seo(); the Worker appends " — <SITE_NAME>" itself. Both layers
- * then produce the identical final title.
+ * Build-page title WITHOUT the " — Arsenyx" site suffix (both layers add it via
+ * `pageTitle`). Whitespace is collapsed: author names can carry newlines.
  */
 export function buildMetaTitle(b: BuildTitleInput): string {
   const author = buildAuthor(b)
-  return author ? `${b.item.name} Build by ${author}` : `${b.item.name} Build`
+  return collapseWhitespace(
+    author ? `${b.item.name} Build by ${author}` : `${b.item.name} Build`,
+  )
+}
+
+/** Build-page meta description. The Worker appends live like/view stats to
+ *  og:description only; every other description tag is this exact string. */
+export function buildMetaDescription(b: {
+  name: string
+  description: string | null
+  item: { name: string }
+  guide: { summary: string | null } | null
+}): string {
+  const summary = collapseWhitespace(b.guide?.summary ?? b.description ?? "")
+  const lead = b.name === b.item.name ? "" : `${collapseWhitespace(b.name)}. `
+  const body = summary || `${b.item.name} build with mods, arcanes, and stats.`
+  return clampCodePoints(`${lead}${body}`, 280)
 }
 
 /**
@@ -56,7 +70,18 @@ export function buildMetaTitle(b: BuildTitleInput): string {
  * can pick the wrong one.
  */
 export function buildOgType(
-  visibility: "PUBLIC" | "PRIVATE" | "UNLISTED",
+  visibility: BuildVisibility,
 ): "article" | "website" {
   return visibility === "PUBLIC" ? "article" : "website"
+}
+
+/** og:image source for a build: the catalog's current image for its item (by
+ *  the stable uniqueName), else the build's stored imageName, which rots across
+ *  image-scheme changes. `imageMap` is CATALOG_FILES.imageMap; null while it's
+ *  unavailable. */
+export function resolveBuildImage(
+  b: { item: { uniqueName: string; imageName: string | null } },
+  imageMap: Record<string, string> | null | undefined,
+): string | null {
+  return imageMap?.[b.item.uniqueName] ?? b.item.imageName
 }

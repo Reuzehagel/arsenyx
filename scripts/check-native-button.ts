@@ -8,7 +8,7 @@
 import { readdirSync, readFileSync } from "node:fs"
 import { join, relative, resolve } from "node:path"
 
-import { findNativeButtonOffenders } from "./build/native-button"
+import { findNativeButtonOffenders } from "./lib/native-button"
 
 const REPO_ROOT = resolve(import.meta.dirname, "..")
 const SRC = resolve(REPO_ROOT, "apps/web/src")

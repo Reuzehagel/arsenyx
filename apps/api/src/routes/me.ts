@@ -1,19 +1,12 @@
-import { Hono, type Context } from "hono"
+import { Hono } from "hono"
 
 import { prisma } from "../db"
-import { getSession } from "../lib/session"
+import { requireUser } from "../lib/session"
 
 export const me = new Hono()
 
-async function requireSession(c: Context) {
-  const session = await getSession(c)
-  if (!session?.user) return null
-  return session.user
-}
-
 me.get("/builds/export", async (c) => {
-  const user = await requireSession(c)
-  if (!user) return c.json({ error: "unauthorized" }, 401)
+  const user = await requireUser(c)
 
   const builds = await prisma.build.findMany({
     where: { userId: user.id },

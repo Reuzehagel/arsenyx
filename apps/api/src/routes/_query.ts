@@ -1,5 +1,7 @@
 // Shared query-string parsers for paginated list routes.
 
+import { SEARCH_Q_MAX } from "@arsenyx/shared/api/limits"
+
 // Hard ceiling on `?page`. Pagination is OFFSET-based (`skip = (page-1) * limit`
 // in _build-list.ts), so an unbounded page number lets an anonymous caller ask
 // Postgres to walk and discard millions of rows per request — the cheapest way
@@ -14,7 +16,10 @@ export function parsePage(v: string | undefined): number {
   return Math.min(n, MAX_PAGE)
 }
 
-export function trimQ(v: string | undefined, max = 100): string | undefined {
+export function trimQ(
+  v: string | undefined,
+  max = SEARCH_Q_MAX,
+): string | undefined {
   const t = v?.trim()
   return t && t.length > 0 ? t.slice(0, max) : undefined
 }
@@ -40,4 +45,41 @@ export function parseBool(v: string | undefined): boolean | undefined {
   if (TRUE_VALUES.has(s)) return true
   if (FALSE_VALUES.has(s)) return false
   return undefined
+}
+
+/** `?page` / `?q` for an offset-paged directory (users, orgs, admin lists). */
+export function directoryQuery(
+  c: { req: { query: (k: string) => string | undefined } },
+  limit: number,
+) {
+  const page = parsePage(c.req.query("page"))
+  return { page, q: trimQ(c.req.query("q")), skip: (page - 1) * limit, limit }
+}
+
+/** The directory response: `{ [key]: items, total, page, limit }`. */
+export function directoryPage<K extends string, T>(
+  key: K,
+  items: T[],
+  total: number,
+  { page, limit }: { page: number; limit: number },
+) {
+  return { [key]: items, total, page, limit } as Record<K, T[]> & {
+    total: number
+    page: number
+    limit: number
+  }
+}
+
+/** Case-insensitive substring match of `q` on any of `fields`; no filter when
+ *  `q` is empty. */
+export function matchAny<F extends string>(q: string | undefined, fields: F[]) {
+  if (!q) return {}
+  return {
+    OR: fields.map(
+      (f) =>
+        ({ [f]: { contains: q, mode: "insensitive" } }) as {
+          [K in F]?: { contains: string; mode: "insensitive" }
+        },
+    ),
+  }
 }

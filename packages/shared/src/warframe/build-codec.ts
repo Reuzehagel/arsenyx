@@ -1,9 +1,9 @@
 import { clamp } from "../util/math"
 import type { BuildDoc, BuildVariant } from "./build-doc"
 import { projectVariant } from "./build-doc"
-import { normalizePolarity } from "./mods"
 import { parseFocusSchool, parseOperatorAmp } from "./operator-loadout"
-import { RIVEN_IMAGE_NAME, RIVEN_UNIQUE_NAME } from "./rivens"
+import { normalizePolarity } from "./polarities"
+import { createSyntheticRiven, isRivenMod } from "./rivens"
 import { SHARD_COLORS, SHARD_STATS, getStatIndex } from "./shards"
 import { DEFAULT_DEPLOYMENT_CONTEXT, LICH_BONUS_ELEMENTS } from "./types"
 import type {
@@ -12,8 +12,8 @@ import type {
   DeploymentContext,
   LichBonusElement,
   ModSlot,
-  PlacedArcane,
-  PlacedMod,
+  BuildStateArcane,
+  BuildStateMod,
   PlacedShard,
 } from "./types"
 
@@ -33,20 +33,24 @@ function parseLichBonusElement(raw: unknown): LichBonusElement | undefined {
     : undefined
 }
 
-declare const Buffer: {
-  from(data: string, encoding: string): { toString(encoding: string): string }
-}
-
+// Every runtime emits the form browsers always have: percent-encode the JSON
+// to ASCII, then btoa (links start "JTdC", the base64 of "%7B"). Before this
+// was unified, Node/Workers emitted base64 of the raw UTF-8 ("eyJ"…), so the
+// decoder accepts both.
 function toBase64(payload: unknown): string {
-  const json = JSON.stringify(payload)
-  if (typeof window !== "undefined") return btoa(encodeURIComponent(json))
-  return Buffer.from(json, "utf-8").toString("base64")
+  return btoa(encodeURIComponent(JSON.stringify(payload)))
 }
 
 function fromBase64(encoded: string): string {
-  if (typeof window !== "undefined") return decodeURIComponent(atob(encoded))
-  return Buffer.from(encoded, "base64").toString("utf-8")
+  const raw = atob(encoded)
+  if (raw.startsWith("%")) return decodeURIComponent(raw)
+  return new TextDecoder().decode(Uint8Array.from(raw, (c) => c.charCodeAt(0)))
 }
+
+/** Absolute in-game rank ceiling for any mod (Primed / Archon mods). */
+const MAX_MOD_RANK = 10
+/** Max arcane rank in arcanes-all.json (levelStats length 6). */
+const MAX_ARCANE_RANK = 5
 
 // =============================================================================
 // Wire shapes
@@ -190,20 +194,22 @@ function decodeSlot(
   const slot: ModSlot = { id, type }
   if (encoded.p) slot.formaPolarity = normalizePolarity(encoded.p)
   if (encoded.m) {
-    const isRiven = encoded.m.u === RIVEN_UNIQUE_NAME
-    const mod: PlacedMod = {
+    const riven = isRivenMod({ uniqueName: encoded.m.u })
+      ? createSyntheticRiven()
+      : null
+    const mod: BuildStateMod = {
       uniqueName: encoded.m.u,
-      name: isRiven ? "Riven Mod" : "",
-      imageName: isRiven ? RIVEN_IMAGE_NAME : undefined,
+      name: riven?.name ?? "",
+      imageName: riven?.imageName,
       polarity: normalizePolarity(encoded.m.rv?.pol),
       baseDrain: encoded.m.rv?.d ?? 0,
-      fusionLimit: isRiven ? 8 : 0,
+      fusionLimit: riven?.fusionLimit ?? 0,
       // Clamp to the absolute in-game rank ceiling. `fusionLimit` is 0 for
       // non-rivens at decode time (we don't have the mod's data here), so it
       // can't gate the rank — a crafted link must not be able to inject an
       // arbitrary rank into capacity / endo math downstream.
-      rank: clamp(Math.floor(encoded.m.r ?? 0), 0, 10),
-      rarity: isRiven ? "Riven" : "",
+      rank: clamp(Math.floor(encoded.m.r ?? 0), 0, MAX_MOD_RANK),
+      rarity: riven?.rarity ?? "",
     }
     if (encoded.m.rv) {
       mod.rivenStats = {
@@ -216,13 +222,20 @@ function decodeSlot(
   return slot
 }
 
-// Per slot: 0 = empty, or (colorIndex << 4) | (statIndex << 1) | tauforged
+// Per slot: 0 = empty, or (colorIndex << 4) | (statIndex << 1) | tauforged.
+// Wire format: the order of SHARD_COLORS and each color's SHARD_STATS is baked
+// into every shipped link (pinned by build-codec.golden.test.ts).
 function encodeShards(shards: (PlacedShard | null)[]): number[] {
   return shards.map((shard) => {
     if (!shard) return 0
-    const colorIndex = SHARD_COLORS.indexOf(shard.color) + 1
+    const colorIndex = SHARD_COLORS.indexOf(shard.color)
     const statIndex = getStatIndex(shard.color, shard.stat)
-    return (colorIndex << 4) | (statIndex << 1) | (shard.tauforged ? 1 : 0)
+    // An unknown color/stat (a renamed stat in an old save) encodes as empty
+    // rather than silently becoming that color's first stat.
+    if (colorIndex < 0 || statIndex < 0) return 0
+    return (
+      ((colorIndex + 1) << 4) | (statIndex << 1) | (shard.tauforged ? 1 : 0)
+    )
   })
 }
 
@@ -281,7 +294,7 @@ function encodeSlotGroup(target: EncodedSlotGroup, src: SlotGroupSource): void {
   if (src.stanceSlot?.mod || src.stanceSlot?.formaPolarity)
     target.st = encodeSlot(src.stanceSlot)
   const placed = (src.arcaneSlots ?? []).filter(
-    (a): a is PlacedArcane => a !== null,
+    (a): a is BuildStateArcane => a !== null,
   )
   if (placed.length > 0)
     target.ar = placed.map((a) => ({ u: a.uniqueName, r: a.rank }))
@@ -304,8 +317,7 @@ function decodeSlotGroup(g: EncodedSlotGroup): SlotGroupSource {
         ? g.ar.map((a) => ({
             uniqueName: a.u,
             name: "",
-            // Max arcane rank in arcanes-all.json is 5 (levelStats length 6).
-            rank: clamp(Math.floor(a.r ?? 0), 0, 5),
+            rank: clamp(Math.floor(a.r ?? 0), 0, MAX_ARCANE_RANK),
           }))
         : [],
   }
@@ -422,23 +434,26 @@ export function encodeBuild(state: BuildState): string {
 
 export function decodeBuild(base64String: string): Partial<BuildState> | null {
   try {
-    const encoded: EncodedBuild = JSON.parse(fromBase64(base64String))
-    if (encoded.v !== 1) return null
-    const state: Partial<BuildState> = {
-      itemUniqueName: encoded.i,
-      itemCategory: encoded.c as BrowseCategory,
-      hasReactor: encoded.r,
-      ...decodeSlotGroup(encoded),
-      ...decodeSharedMeta(encoded),
-    }
-    applyIncarnon(state, encoded.ic)
-    if (encoded.dc) state.deploymentContext = encoded.dc
-    state.operatorAmp = parseOperatorAmp(encoded.oa)
-    state.focusSchool = parseFocusSchool(encoded.fs)
-    return state
+    const encoded = JSON.parse(fromBase64(base64String)) as { v?: number }
+    return encoded.v === 1 ? decodeV1(encoded as EncodedBuild) : null
   } catch {
     return null
   }
+}
+
+function decodeV1(encoded: EncodedBuild): Partial<BuildState> {
+  const state: Partial<BuildState> = {
+    itemUniqueName: encoded.i,
+    itemCategory: encoded.c as BrowseCategory,
+    hasReactor: encoded.r,
+    ...decodeSlotGroup(encoded),
+    ...decodeSharedMeta(encoded),
+  }
+  applyIncarnon(state, encoded.ic)
+  if (encoded.dc) state.deploymentContext = encoded.dc
+  state.operatorAmp = parseOperatorAmp(encoded.oa)
+  state.focusSchool = parseFocusSchool(encoded.fs)
+  return state
 }
 
 // =============================================================================
@@ -537,10 +552,7 @@ export function encodeBuildDoc(doc: BuildDoc, activeIndex = 0): string {
 export function decodeBuildDoc(base64String: string): BuildDoc | null {
   try {
     const raw = JSON.parse(fromBase64(base64String)) as { v?: number }
-    if (raw.v === 1) {
-      const v1 = decodeBuild(base64String)
-      return v1 ? buildStateToBuildDoc(v1) : null
-    }
+    if (raw.v === 1) return buildStateToBuildDoc(decodeV1(raw as EncodedBuild))
     if (raw.v === 2) return decodeV2(raw as unknown as EncodedBuildV2)
     return null
   } catch {

@@ -8,6 +8,7 @@
  * lacks it is treated as un-routable (placed in no slot) rather than guessed at.
  */
 
+import { isKitgunChamber } from "./kitgun-data"
 import type { Arcane, BrowseCategory } from "./types"
 
 export type ArcaneSlotType =
@@ -16,7 +17,6 @@ export type ArcaneSlotType =
   | "primary"
   | "secondary"
   | "melee"
-  | "weapon"
 
 /** Exodia / Zaw-only arcane — lets callers split the melee pool into Exodia
  *  (Zaw) vs ordinary melee arcanes. */
@@ -24,12 +24,10 @@ export function isZawArcane(arcane: Arcane): boolean {
   return arcane.slotType === "Zaw"
 }
 
-/** Whether an arcane belongs in a modular weapon's dedicated *second* arcane
- *  slot — the Exodia slot for Zaws, the Pax/Residual slot for Kitguns. The
- *  single source for the Zaw-vs-Kitgun bucketing rule the editor uses both to
- *  build the per-slot option lists and to re-bucket saved/imported arcanes. */
-export function isSecondSlotArcane(arcane: Arcane, isZaw: boolean): boolean {
-  return isZaw ? isZawArcane(arcane) : arcane.slotType === "Kitgun"
+/** Pax / Residual — the arcanes for a Kitgun's dedicated second arcane slot
+ *  (the Zaw counterpart is `isZawArcane`). */
+export function isKitgunArcane(arcane: Arcane): boolean {
+  return arcane.slotType === "Kitgun"
 }
 
 /** Map the wiki `slotType` to one of our equip-slot buckets. Kitgun arcanes
@@ -52,24 +50,11 @@ function slotTypeMatches(slot: string, target: ArcaneSlotType): boolean {
       return slot === "Secondary" || slot === "Kitgun"
     case "melee":
       return slot === "Melee" || slot === "Zaw"
-    case "weapon":
-      return slot !== "Warframe" && !isOperatorSlot(slot)
   }
 }
 
 function isOperatorSlot(slot: string): boolean {
   return slot === "Operator" || slot === "Amp" || slot === "Tektolyst Artifacts"
-}
-
-/** Kitgun weapons (Catchmoon / Gaze / Rattleguts / Tombfinger / Vermisplicer
- *  / Sporelacer, built as primary OR secondary) — identified by their modular
- *  barrel `uniqueName` path. Primary kitguns report a normal weapon
- *  `displayClass` ("Shotgun"/"Rifle"/"Launcher") but aren't real shotguns/
- *  rifles, so they must be detected structurally, not by class. Kitguns are
- *  the only weapons that accept Kitgun arcanes (Pax / Residual). */
-export function isKitgunWeapon(weapon: { uniqueName?: string }): boolean {
-  const u = weapon.uniqueName ?? ""
-  return u.includes("SUModular") || u.includes("InfKitGun")
 }
 
 /** Arcanes equippable on a SPECIFIC primary/secondary weapon. Unlike
@@ -84,7 +69,9 @@ export function getArcanesForWeapon(
   category: "primary" | "secondary",
   weapon: { displayClass?: string; uniqueName?: string },
 ): Arcane[] {
-  const kitgun = isKitgunWeapon(weapon)
+  // Primary kitguns report a normal weapon displayClass ("Shotgun"/"Rifle"/
+  // "Launcher") but aren't real shotguns/rifles, so detect them structurally.
+  const kitgun = isKitgunChamber(weapon.uniqueName)
   const dc = weapon.displayClass
   return getArcanesForSlot(arcanes, category).filter((a) => {
     switch (a.slotType) {
@@ -121,11 +108,6 @@ export function getArcanesForCategory(
     case "warframes":
     case "necramechs":
       return getArcanesForSlot(arcanes, "warframe")
-    case "archwing":
-      return [
-        ...getArcanesForSlot(arcanes, "primary"),
-        ...getArcanesForSlot(arcanes, "secondary"),
-      ]
     case "primary":
       return getArcanesForSlot(arcanes, "primary")
     case "secondary":

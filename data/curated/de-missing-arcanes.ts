@@ -11,7 +11,7 @@
  * Description. The build warns when DE ships one again; delete the entry then.
  */
 
-import type { DeUpgrade } from "../../scripts/build/read-de"
+import type { DeUpgrade } from "../../scripts/build/de-types"
 
 const ranks = (fn: (r: number) => string[]) =>
   [1, 2, 3, 4, 5, 6].map((r) => ({ stats: fn(r) }))

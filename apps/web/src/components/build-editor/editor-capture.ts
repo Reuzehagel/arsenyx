@@ -1,18 +1,24 @@
+import {
+  pickPerVariantData,
+  type SavedBuildData,
+  type SavedVariant,
+  type VariantMode,
+} from "@arsenyx/shared/warframe/build-data"
 import type { Arcane, Mod } from "@arsenyx/shared/warframe/types"
 
+import { type ExtrasState, extrasToSaved } from "@/lib/build/extras"
+import { foldedVariants } from "@/lib/build/variants"
 import {
   isSyntheticVariant,
-  pickPerVariantData,
+  linkVariants,
   stripPersistedImages,
   SYNTHETIC_VARIANT_ID,
   SYNTHETIC_VARIANT_LABEL,
 } from "@/lib/codec/build-codec-adapter"
 import { collectGuideRefs } from "@/lib/guide-refs"
-import type { SavedBuildData, SavedVariant } from "@/lib/queries/build-query"
 
 import type { ArcaneSlotsState } from "./use-arcane-slots"
 import type { BuildSlotsState } from "./use-build-slots"
-import type { ItemExtras } from "./use-item-extras"
 
 export type EditorCapture = ReturnType<typeof makeEditorCapture>
 
@@ -27,58 +33,67 @@ export function makeEditorCapture({
   buildDescription,
   allMods,
   allArcanes,
+  variantMode,
 }: {
+  variantMode: VariantMode
   variants: SavedVariant[]
   clampedActiveIndex: number
-  slots: BuildSlotsState
-  arcanes: ArcaneSlotsState
-  extras: ItemExtras
+  slots: Pick<BuildSlotsState, "placed" | "formaPolarities">
+  arcanes: Pick<ArcaneSlotsState, "placed">
+  extras: ExtrasState
   buildDescription: string
   allMods: Mod[]
   allArcanes: Arcane[]
 }) {
-  // Switching captures the in-progress edits into `variants` and updates
-  // the URL ?v=N — the remount on the new key reinitializes hooks from
-  // the new variant's data. Unsaved per-variant edits live in `variants`
-  // until the next save.
+  /** The active variant's live loadout + extras, in persisted shape. */
+  const captureLive = () => ({
+    ...extrasToSaved(extras),
+    slots: slots.placed,
+    formaPolarities: slots.formaPolarities,
+    arcanes: arcanes.placed,
+  })
+
   const captureActiveSnapshot = (): SavedVariant => {
     const existing = variants[clampedActiveIndex]
+    const live = captureLive()
     return {
       id: existing?.id ?? SYNTHETIC_VARIANT_ID,
       label: existing?.label ?? SYNTHETIC_VARIANT_LABEL,
-      slots: slots.placed,
-      arcanes: arcanes.placed,
-      // Shards are per-variant — capture the live set into this variant.
-      shards: extras.shards,
-      ...pickPerVariantData({
-        helminth: extras.helminth,
-        incarnonEnabled: extras.incarnonEnabled,
-        incarnonPerks: extras.incarnonPerks,
-        deploymentContext: extras.deploymentContext,
-        operatorAmp: extras.operatorAmp,
-        focusSchool: extras.focusSchool,
-        // formIndex is a variant property (set via the form selector), not
-        // live editor state — preserve it from the existing variant.
-        formIndex: existing?.formIndex,
-      }),
-      // Per-variant guide fields are owned by `variants[i]` directly
-      // (GuideEditor writes through setVariants). Preserve them on
-      // snapshot so a save while editing build-wide doesn't wipe them.
+      slots: live.slots,
+      arcanes: live.arcanes,
+      // Shards and forma are stored per-variant: capture the live sets.
+      shards: live.shards,
+      formaPolarities: live.formaPolarities,
+      // formIndex is set by the form selector, not live editor state.
+      ...pickPerVariantData({ ...live, formIndex: existing?.formIndex }),
+      // Per-variant guides are written straight into `variants[i]` by the
+      // guide editor; keep them so a save while editing build-wide doesn't
+      // wipe them.
       guideSummary: existing?.guideSummary,
       guideDescription: existing?.guideDescription,
     }
   }
 
-  // The full persistable buildData for the current editor state, with the
-  // active variant's live edits folded back into the variants array.
-  const captureBuildData = (): SavedBuildData => {
-    const activeSnapshot = captureActiveSnapshot()
-    const nextVariants = variants.map((v, i) =>
-      i === clampedActiveIndex ? activeSnapshot : v,
+  /** Every variant, the active one replaced by its live snapshot. In linked
+   *  mode the active variant's shards (and its form's forma) are copied onto
+   *  the others. */
+  const captureVariants = () => {
+    const merged = foldedVariants(
+      variants,
+      clampedActiveIndex,
+      captureActiveSnapshot(),
     )
-    // Snapshot every mod/arcane referenced from guide text (build-wide +
-    // per-variant) so the viewer renders hover cards without the catalog —
-    // see lib/guide-refs.ts.
+    return variantMode === "linked"
+      ? linkVariants(merged, clampedActiveIndex)
+      : merged
+  }
+
+  // Every value read here must also be in useDraftAutosave's `deps`, or
+  // editing it alone never writes a draft.
+  const captureBuildData = (): SavedBuildData => {
+    const nextVariants = captureVariants()
+    // Snapshot every mod/arcane referenced from guide text so the viewer
+    // renders hover cards without the catalog — see lib/guide-refs.ts.
     const guideRefs = collectGuideRefs(
       [buildDescription, ...nextVariants.map((v) => v.guideDescription)],
       allMods,
@@ -86,22 +101,10 @@ export function makeEditorCapture({
     )
     return stripPersistedImages({
       version: 1,
-      slots: slots.placed,
-      formaPolarities: slots.formaPolarities,
-      arcanes: arcanes.placed,
-      // Top-level `shards` mirrors the active variant (per-variant sets live in
-      // `variants[i].shards`). Legacy `formShards` is intentionally not emitted.
-      shards: extras.shards,
-      hasReactor: extras.hasReactor,
-      helminth: extras.helminth,
-      zawComponents: extras.zawComponents,
-      kitgunComponents: extras.kitgunComponents,
-      lichBonusElement: extras.lichBonusElement ?? undefined,
-      incarnonEnabled: extras.incarnonEnabled,
-      incarnonPerks: extras.incarnonPerks,
-      deploymentContext: extras.deploymentContext,
-      operatorAmp: extras.operatorAmp,
-      focusSchool: extras.focusSchool,
+      variantMode,
+      // Top-level fields mirror the active variant for legacy readers.
+      ...captureLive(),
+      formIndex: variants[clampedActiveIndex]?.formIndex,
       guideRefs,
       // Emit `variants` whenever there's more than one OR the single
       // remaining variant has a user-assigned label/id — otherwise the
@@ -113,5 +116,10 @@ export function makeEditorCapture({
     })
   }
 
-  return { captureActiveSnapshot, captureBuildData }
+  return {
+    captureLive,
+    captureActiveSnapshot,
+    captureVariants,
+    captureBuildData,
+  }
 }

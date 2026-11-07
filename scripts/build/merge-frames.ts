@@ -21,9 +21,10 @@ import {
 import type { AbilityStat } from "@arsenyx/shared/warframe/types"
 
 import type { FramePolarityOverride } from "../../data/curated/frame-polarities"
-import { cleanDeName } from "./names"
+import { TWIN_FRAMES } from "../../data/curated/frames"
+import type { DeFrame } from "./de-types"
+import { cleanDeName, isPrime, primeFamily } from "./names"
 import { normalizePolarity, normalizePolarities } from "./polarity"
-import type { DeFrame } from "./read-de"
 
 type FrameCategory = "warframes" | "archwing" | "necramechs" | "operators"
 
@@ -175,9 +176,7 @@ function modPoolsForFrame(
 ): readonly string[] {
   switch (category) {
     case "warframes": {
-      const pools = new Set<string>(["WARFRAME", "AURA", name])
-      if (name.endsWith(" Prime")) pools.add(name.slice(0, -" Prime".length))
-      return [...pools]
+      return [...new Set(["WARFRAME", "AURA", name, primeFamily(name)])]
     }
     case "necramechs":
       return ["Necramech", name]
@@ -232,8 +231,7 @@ export function mergeFrame(de: DeFrame, opts: MergeFramesOpts): MergedFrame {
     passiveDescription: de.passiveDescription,
     exalted: de.exalted ?? [],
     modPools: modPoolsForFrame(cleanName, category),
-    // DE uses abilityUniqueName/abilityName; rename to match the existing
-    // BrowseableItem Ability shape the UI consumes.
+    // DE uses abilityUniqueName/abilityName; rename to the shared Ability shape.
     abilities: (de.abilities ?? []).map((a) => ({
       uniqueName: a.abilityUniqueName,
       name: a.abilityName,
@@ -243,22 +241,9 @@ export function mergeFrame(de: DeFrame, opts: MergeFramesOpts): MergedFrame {
     polarities,
     auraPolarity,
     exilusPolarity,
-    isPrime: cleanName.includes(" Prime"),
+    isPrime: isPrime(cleanName),
   }
 }
-
-/** Twin-frames that DE ships as two separate `ExportWarframes` rows sharing a
- *  uniqueName prefix (one codex-visible "Suits" row + one `excludeFromCodex`
- *  "SpecialItems" row). We collapse each pair into ONE catalog entity carrying
- *  both ability sets under `forms`. `primaryUnique` is the form players control
- *  by default and the one Helminth can infuse on — it becomes `forms[0]` and
- *  the top-level (back-compat) abilities/passive/exalted. */
-const TWIN_FRAMES: ReadonlyArray<{ prefix: string; primaryUnique: string }> = [
-  {
-    prefix: "/Lotus/Powersuits/SiriusOrion/",
-    primaryUnique: "/Lotus/Powersuits/SiriusOrion/SiriusSuit",
-  },
-]
 
 function toForm(f: MergedFrame): MergedFrameForm {
   return {
@@ -272,7 +257,8 @@ function toForm(f: MergedFrame): MergedFrameForm {
   }
 }
 
-/** Collapse known twin-frame pairs (see `TWIN_FRAMES`) into single entities.
+/** Collapse known twin-frame pairs (data/curated/frames.ts `TWIN_FRAMES`)
+ *  into single entities.
  *  Unmatched/solo rows pass through untouched, so this is safe to run over the
  *  full merged-frame list before any downstream consumer (browse index, detail
  *  emit, helminth derivation, exalted union). */
@@ -314,13 +300,17 @@ const RANK30_FIELDS = [
 export function rankUpDrift(
   frames: readonly MergedFrame[],
   wiki: FrameWikiTable,
+  table: {
+    rankUpFor: typeof rankUpFor
+    disputed: Readonly<Record<string, unknown>>
+  } = { rankUpFor, disputed: RANKUP_WIKI_DISPUTED },
 ): string[] {
   const out: string[] = []
   for (const f of frames) {
-    if (f.category !== "warframes" || f.name in RANKUP_WIKI_DISPUTED) continue
+    if (f.category !== "warframes" || f.name in table.disputed) continue
     const w = wiki.Warframes?.[f.name]
     if (!w) continue
-    const ours = rankUpFor(f.name)
+    const ours = table.rankUpFor(f.name)
     for (const [stat, baseKey, rank30Key] of RANK30_FIELDS) {
       const rank30 = w[rank30Key]
       if (!rank30) continue

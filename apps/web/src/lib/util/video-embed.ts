@@ -11,6 +11,12 @@ export type VideoEmbed = {
   aspect: "16/9" | "9/16"
 }
 
+/** Markdown that {@link getVideoEmbed} renders as a YouTube player: the bare
+ *  youtu.be URL on its own line. */
+export function videoEmbedMarkdown(youtubeId: string): string {
+  return `\n\nhttps://youtu.be/${youtubeId}\n\n`
+}
+
 export function getVideoEmbed(rawUrl: string): VideoEmbed | null {
   let url: URL
   try {

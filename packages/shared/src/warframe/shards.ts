@@ -29,8 +29,20 @@ export const SHARD_STATS: Record<ShardColor, ShardStat[]> = {
       tauforgedValue: 37.5,
       unit: "%",
     },
-    { name: "Ability Strength", baseValue: 10, tauforgedValue: 15, unit: "%" },
-    { name: "Ability Duration", baseValue: 10, tauforgedValue: 15, unit: "%" },
+    {
+      name: "Ability Strength",
+      baseValue: 10,
+      tauforgedValue: 15,
+      unit: "%",
+      stat: "ability_strength",
+    },
+    {
+      name: "Ability Duration",
+      baseValue: 10,
+      tauforgedValue: 15,
+      unit: "%",
+      stat: "ability_duration",
+    },
   ],
   amber: [
     { name: "Initial Energy", baseValue: 30, tauforgedValue: 45, unit: "%" },
@@ -52,13 +64,38 @@ export const SHARD_STATS: Record<ShardColor, ShardStat[]> = {
       baseValue: 15,
       tauforgedValue: 22.5,
       unit: "%",
+      stat: "sprint_speed",
     },
   ],
   azure: [
-    { name: "Health", baseValue: 150, tauforgedValue: 225, unit: "" },
-    { name: "Shield Capacity", baseValue: 150, tauforgedValue: 225, unit: "" },
-    { name: "Energy Max", baseValue: 50, tauforgedValue: 75, unit: "" },
-    { name: "Armor", baseValue: 150, tauforgedValue: 225, unit: "" },
+    {
+      name: "Health",
+      baseValue: 150,
+      tauforgedValue: 225,
+      unit: "",
+      stat: "health",
+    },
+    {
+      name: "Shield Capacity",
+      baseValue: 150,
+      tauforgedValue: 225,
+      unit: "",
+      stat: "shield",
+    },
+    {
+      name: "Energy Max",
+      baseValue: 50,
+      tauforgedValue: 75,
+      unit: "",
+      stat: "energy",
+    },
+    {
+      name: "Armor",
+      baseValue: 150,
+      tauforgedValue: 225,
+      unit: "",
+      stat: "armor",
+    },
     { name: "Health Regen", baseValue: 5, tauforgedValue: 7.5, unit: "/s" },
   ],
   topaz: [
@@ -126,9 +163,12 @@ export const SHARD_STATS: Record<ShardColor, ShardStat[]> = {
   ],
 }
 
+/** Index of `statName` within its color's stat list, or -1 when unknown. */
 export function getStatIndex(color: ShardColor, statName: string): number {
-  const stats = SHARD_STATS[color]
-  if (!stats) return 0
-  const index = stats.findIndex((s) => s.name === statName)
-  return index >= 0 ? index : 0
+  return SHARD_STATS[color]?.findIndex((s) => s.name === statName) ?? -1
+}
+
+/** A shard stat's bonus at the given tier. */
+export function shardValue(stat: ShardStat, tauforged: boolean): number {
+  return tauforged ? stat.tauforgedValue : stat.baseValue
 }

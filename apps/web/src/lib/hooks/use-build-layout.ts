@@ -1,23 +1,19 @@
 import { useSyncExternalStore } from "react"
 
+import { STORAGE_KEYS, storageGet, storageSet } from "@/lib/util/storage"
+
 export type BuildLayout = "cards" | "rows"
 
-const STORAGE_KEY = "arsenyx-build-layout"
+const STORAGE_KEY = STORAGE_KEYS.buildLayout
 const EVENT = "arsenyx:build-layout-change"
 const DEFAULT: BuildLayout = "cards"
 
 function read(): BuildLayout {
-  if (typeof window === "undefined") return DEFAULT
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-    return raw === "rows" || raw === "cards" ? raw : DEFAULT
-  } catch {
-    return DEFAULT
-  }
+  const raw = storageGet(STORAGE_KEY)
+  return raw === "rows" || raw === "cards" ? raw : DEFAULT
 }
 
 function subscribe(cb: () => void) {
-  if (typeof window === "undefined") return () => {}
   const onStorage = (e: StorageEvent) => {
     if (e.key === STORAGE_KEY) cb()
   }
@@ -32,11 +28,8 @@ function subscribe(cb: () => void) {
 export function useBuildLayout(): [BuildLayout, (next: BuildLayout) => void] {
   const layout = useSyncExternalStore(subscribe, read, () => DEFAULT)
   const set = (next: BuildLayout) => {
-    try {
-      window.localStorage.setItem(STORAGE_KEY, next)
-    } catch {
-      // Quota / disabled — same-tab listeners still fire below.
-    }
+    // Same-tab listeners fire even when the write fails.
+    storageSet(STORAGE_KEY, next)
     window.dispatchEvent(new Event(EVENT))
   }
   return [layout, set]

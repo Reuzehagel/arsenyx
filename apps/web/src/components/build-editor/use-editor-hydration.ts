@@ -1,23 +1,30 @@
 import { decodeBuildDoc } from "@arsenyx/shared/warframe/build-codec"
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
-import { useMemo, useState } from "react"
+import type { SavedBuildData } from "@arsenyx/shared/warframe/build-data"
+import type {
+  Arcane,
+  BrowseCategory,
+  Mod,
+} from "@arsenyx/shared/warframe/types"
+import { useSuspenseQuery } from "@tanstack/react-query"
+import { useState } from "react"
 
 import {
-  normalizeBuildData,
+  loadBuildData,
   savedDataFromBuildDoc,
 } from "@/lib/codec/build-codec-adapter"
-import { loadEditorDraft, type EditorDraftPayload } from "@/lib/editor-draft"
-import { consumeDraft } from "@/lib/import-draft"
+import {
+  editorStoreKey,
+  loadEditorDraft,
+  loadImportDraft,
+  type EditorDraftPayload,
+} from "@/lib/drafts"
 import { arcanesQuery } from "@/lib/queries/arcanes-query"
-import { buildQuery, type SavedBuildData } from "@/lib/queries/build-query"
+import { editedBuildQuery } from "@/lib/queries/build-query"
 import { helminthQuery } from "@/lib/queries/helminth-query"
 import { incarnonAdapterImagesQuery } from "@/lib/queries/incarnon-query"
 import { itemQuery } from "@/lib/queries/item-query"
 import { modConflictsQuery } from "@/lib/queries/mod-conflicts-query"
 import { modsQuery } from "@/lib/queries/mods-query"
-import type { BrowseCategory } from "@/lib/warframe"
-
-import { editorCache } from "./editor-cache"
 
 /** Which source seeds a fresh editor, in priority order. Pure so the order is
  *  testable; `normalize` re-resolves catalog images for persisted data. */
@@ -43,10 +50,28 @@ export function resolveSavedDataAll(
   return {} as SavedBuildData
 }
 
+/** A share link's editor data and the build name it carries, or null when it
+ *  doesn't decode. decodeBuildDoc handles both v1 (wrapped as single-variant
+ *  doc) and v2; savedDataFromBuildDoc owns the BuildDoc→editor projection (and
+ *  the per-variant/shared split) so it can't drift from the encode side. */
+export function hydrateShare(
+  encoded: string,
+  mods: Mod[],
+  arcanes: Arcane[],
+): { data: SavedBuildData; buildName: string | undefined } | null {
+  const doc = decodeBuildDoc(encoded)
+  return doc
+    ? {
+        data: savedDataFromBuildDoc(doc, mods, arcanes),
+        buildName: doc.buildName,
+      }
+    : null
+}
+
 /**
  * Loads the catalog + the build being edited, and decides what the editor
  * starts from: an import draft, an autosaved local draft, the saved build, a
- * share link, or blank. Everything here is read once per mount.
+ * share link, or blank. Everything here is read once per editor session.
  */
 export function useEditorHydration({
   slug,
@@ -62,10 +87,8 @@ export function useEditorHydration({
   shareEncoded?: string
 }) {
   const { data: item } = useSuspenseQuery(itemQuery(category, slug))
-  const { data: existingBuild } = useQuery({
-    ...buildQuery(buildSlug ?? ""),
-    enabled: !!buildSlug,
-  })
+  // Suspends like the catalog reads; a new build resolves to null at once.
+  const { data: existingBuild } = useSuspenseQuery(editedBuildQuery(buildSlug))
   const { data: allMods } = useSuspenseQuery(modsQuery)
   const { data: allArcanes } = useSuspenseQuery(arcanesQuery)
   const { data: helminthAbilities } = useSuspenseQuery(helminthQuery)
@@ -73,74 +96,60 @@ export function useEditorHydration({
     incarnonAdapterImagesQuery,
   )
   const { data: conflictMap } = useSuspenseQuery(modConflictsQuery)
-  const [draft] = useState(() => consumeDraft(draftId))
-  const [shareHydrated] = useState(() => {
-    if (!shareEncoded) return null
-    // decodeBuildDoc handles both v1 (wrapped as single-variant doc) and v2;
-    // savedDataFromBuildDoc owns the BuildDoc→editor projection (and the
-    // per-variant/shared split) so it can't drift from the encode side.
-    const doc = decodeBuildDoc(shareEncoded)
-    return doc
-      ? { data: savedDataFromBuildDoc(doc, allMods, allArcanes) }
-      : null
-  })
-  // Identity for the in-memory cache and the localStorage draft bucket.
-  // `buildSlug` for an existing build; item+category for a new one (the
-  // EditorShell isn't re-keyed on item change, but the lookup must still
-  // distinguish two consecutive new-build sessions on different items).
-  const storeKey = buildSlug ?? `__new_build__:${category}:${slug}`
-
-  // Whether a draft exists on disk for this build, read once at mount. Null
-  // when a share link or import is driving hydration — we don't surface a
-  // stale draft as "active" in that case.
-  const [storedDraft] = useState<EditorDraftPayload | null>(() =>
-    shareEncoded || draftId ? null : loadEditorDraft(storeKey),
+  const [draft] = useState(() => loadImportDraft(draftId))
+  const [shareHydrated] = useState(() =>
+    shareEncoded ? hydrateShare(shareEncoded, allMods, allArcanes) : null,
   )
-  // Hydrate the editor from the draft only on a *fresh* mount. A variant-switch
-  // remount keeps the in-memory cache, so re-applying the draft (and re-firing
-  // the restore toast) would be wrong — but the draft still exists on disk, so
-  // `storedDraft` stays non-null to keep the badge visible.
+  const storeKey = editorStoreKey(buildSlug, category, slug)
+
+  // A share link or import that resolved drives hydration and is then adopted
+  // as this item's draft (see useDraftAutosave), replacing any autosaved one —
+  // kept in `adoption.replaced` so the user can restore it.
+  const adopting = !!(draft || shareHydrated)
   const [localDraft] = useState<EditorDraftPayload | null>(() =>
-    editorCache.current && editorCache.current.key === storeKey
-      ? null
-      : storedDraft,
+    adopting ? null : loadEditorDraft(storeKey),
+  )
+  const [adoption] = useState(() =>
+    adopting
+      ? {
+          replaced: loadEditorDraft(storeKey),
+          importId: draft ? draftId : undefined,
+        }
+      : null,
   )
 
   // Full normalized saved data (all variants intact); used when persisting.
-  const savedDataAll: SavedBuildData = useMemo(
-    () =>
-      resolveSavedDataAll(
-        {
-          importDraft: draft?.data ?? null,
-          localDraft: localDraft ? { raw: localDraft.buildData } : null,
-          savedBuild: existingBuild ? { raw: existingBuild.buildData } : null,
-          share: shareHydrated?.data ?? null,
-        },
-        (data) =>
-          normalizeBuildData(data, allMods, allArcanes, helminthAbilities),
-      ),
-    [
-      draft,
-      localDraft,
-      existingBuild,
-      shareHydrated,
-      allMods,
-      allArcanes,
-      helminthAbilities,
-    ],
+  // Read once: a background refetch of the saved build must not change what a
+  // variant switch seeds from mid-session.
+  const [savedDataAll] = useState(() =>
+    resolveSavedDataAll(
+      {
+        importDraft: draft?.data ?? null,
+        localDraft: localDraft ? { raw: localDraft.buildData } : null,
+        savedBuild: existingBuild ? { raw: existingBuild.buildData } : null,
+        share: shareHydrated?.data ?? null,
+      },
+      (data) =>
+        loadBuildData(data, {
+          mods: allMods,
+          arcanes: allArcanes,
+          helminth: helminthAbilities,
+        }),
+    ),
   )
 
   return {
     item,
-    existingBuild,
+    existingBuild: existingBuild ?? undefined,
     allMods,
     allArcanes,
     incarnonAdapterImages,
     conflictMap,
     draft,
     storeKey,
-    storedDraft,
     localDraft,
+    adoption,
     savedDataAll,
+    shareBuildName: shareHydrated?.buildName,
   }
 }

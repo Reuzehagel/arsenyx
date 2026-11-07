@@ -1,22 +1,18 @@
+import { isBuildVisibility } from "@arsenyx/shared/api/build-dto"
+import { DISPLAY_USERNAME_MAX } from "@arsenyx/shared/api/limits"
 import { betterAuth } from "better-auth"
 import { prismaAdapter } from "better-auth/adapters/prisma"
 import { APIError } from "better-auth/api"
 import { username } from "better-auth/plugins"
 
 import { prisma } from "./db"
-import { webOrigins } from "./env"
+import { isHttps, webOrigins } from "./env"
+import { beforeUserDeletion } from "./lib/user-deletion"
 import { validateExternalUrl } from "./lib/validate"
-import { releaseUserSocial } from "./routes/_build-social"
-import { promoteOrgSuccessors } from "./routes/_org-succession"
-
-// Mirror of the BuildVisibility enum in prisma/schema.prisma. Inlined to
-// avoid pulling generated Prisma types into the auth bootstrap path.
-const VALID_BUILD_VISIBILITIES = new Set(["PUBLIC", "PRIVATE", "UNLISTED"])
 
 // Cap on the free-text display `name`. Comfortably above any real GitHub
 // profile name; see the clamp in sanitizeUserData for why it exists.
 const MAX_DISPLAY_NAME = 120
-const MAX_DISPLAY_USERNAME = 50
 
 // Usernames we won't let a regular user claim — `admin/support/security/...`
 // in `/profile/<name>` reads as official Arsenyx staff, which is a phishing
@@ -162,9 +158,11 @@ function sanitizeUserData(
     if (trimmed.length > 0) out = { ...out, name: trimmed }
   }
 
-  if ("image" in out) {
+  // `undefined` means "not changing it": /update-user always passes an `image`
+  // key, so a display-name-only save would otherwise null the avatar (#466).
+  if (out.image !== undefined) {
     const v = out.image
-    if (v == null || v === "") {
+    if (v === null || v === "") {
       out = { ...out, image: null }
     } else if (typeof v === "string") {
       const validated = validateExternalUrl(v)
@@ -181,7 +179,7 @@ function sanitizeUserData(
   // cookie-cached session can briefly hold the bogus value.
   if ("defaultBuildVisibility" in out) {
     const v = out.defaultBuildVisibility
-    if (typeof v !== "string" || !VALID_BUILD_VISIBILITIES.has(v)) {
+    if (!isBuildVisibility(v)) {
       // Strip rather than overwrite — leaves any existing DB value intact
       // on update, defaults to "PUBLIC" on create (Prisma default).
       const { defaultBuildVisibility: _drop, ...rest } = out
@@ -213,7 +211,7 @@ function sanitizeUserData(
       out = rest
     } else if (typeof v === "string") {
       // Same reason as `name` above; mirrors the settings input's maxLength.
-      out = { ...out, displayUsername: v.trim().slice(0, MAX_DISPLAY_USERNAME) }
+      out = { ...out, displayUsername: v.trim().slice(0, DISPLAY_USERNAME_MAX) }
     }
   }
 
@@ -227,11 +225,6 @@ if (!githubId || !githubSecret) {
     "auth: GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET missing — GitHub OAuth is disabled.",
   )
 }
-
-// Drive cookie flags off BETTER_AUTH_URL's scheme, not NODE_ENV. If NODE_ENV
-// were ever missing/unset in prod, the old check silently dropped Secure +
-// SameSite=None and cross-origin login broke. The scheme is always correct.
-const isHttps = process.env.BETTER_AUTH_URL?.startsWith("https://") === true
 
 // Email+password sign-in exists only for local dev — we have no email service
 // for verification/reset flows, so prod stays GitHub-OAuth-only.
@@ -323,10 +316,7 @@ export const auth = betterAuth({
         if (await isBanned(user.id)) {
           throw new APIError("FORBIDDEN", { message: "banned" })
         }
-        await prisma.$transaction([
-          ...releaseUserSocial(user.id),
-          promoteOrgSuccessors(user.id),
-        ])
+        await prisma.$transaction(beforeUserDeletion(user.id))
       },
     },
     additionalFields: {

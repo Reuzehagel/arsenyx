@@ -10,7 +10,18 @@ The editor needs only the web dev server (`preview_start` name `web`, :5173). Th
 
 Drafts autosave to localStorage and come back on reload. A leftover mod from an earlier run looks just like a bug. Before every scenario, click **Discard draft** in the header (it's only there while a draft exists), or run `localStorage.clear()` and reload.
 
-Drafts live under `arsenyx:editor-draft:<storeKey>`: the build slug for a saved build, `__new_build__:<category>:<slug>` for a new one.
+Drafts live under `arsenyx:editor-draft:<storeKey>`: the build slug for a saved build, `__new_build__:<category>:<slug>` for a new one. Read one with `JSON.parse(localStorage[key]).payload.buildData`. A draft is written 600 ms after the last edit; switching Variants inside that window cancels the write, and the new mount writes nothing until the next edit. So a missing draft right after a switch is expected, not a bug.
+
+## Forma a slot and add Variants
+
+- The first click on a slot selects it; a second click opens its polarity picker: buttons `[aria-label="Apply <polarity> polarity"]` and `Clear polarity`. At the default pane size the picker opens below the fold, so `resize_window` to 1280×1000 first, or click the button through `javascript_tool`. The header's forma count is the quickest readout.
+- The Variant bar (tabs, the forma & shards mode toggle) only renders with two or more Variants. Start with **+ Copy**.
+
+Opening a `?share=` or `?draft=` (import) link writes it as that item's draft and drops the param from the URL, so a refresh restores it. A draft it replaced is offered back by a "Replaced your unsaved draft" toast (Restore it).
+
+## Judge open/closed state
+
+Run `tabs_context` first. A hidden pane runs the page as a background tab, so a closed Base UI popover or dialog stays in the DOM through its exit animation for seconds. Read its `data-open` / `data-closed` attribute, not whether the element exists. To see what closed it, log `onOpenChange`'s second argument: its `reason` is `escape-key`, `trigger-press`, `outside-press`, and so on.
 
 ## Read toasts and isolate a regression
 

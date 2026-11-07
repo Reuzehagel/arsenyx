@@ -28,8 +28,5 @@ function parseItemsCsv(csv: string): Map<string, string> {
   return map
 }
 
-const overframeItemsMap = parseItemsCsv(OVERFRAME_ITEMS_CSV)
-
-export function getOverframeItemsMap(): Map<string, string> {
-  return overframeItemsMap
-}
+/** Overframe item id → display name. */
+export const OVERFRAME_ITEM_NAMES = parseItemsCsv(OVERFRAME_ITEMS_CSV)

@@ -4,7 +4,7 @@ import type {
   DeploymentContext,
   LichBonusElement,
   ModSlot,
-  PlacedArcane,
+  BuildStateArcane,
   PlacedShard,
 } from "./types"
 
@@ -12,13 +12,13 @@ export const MAX_VARIANTS = 5
 
 /**
  * Per-variant slice of a build. Mods/arcanes/incarnon perks/deployment
- * context/Archon Shards vary between variants; everything else (item, forma,
+ * context/Archon Shards/forma vary between variants; everything else (item,
  * reactor, helminth, lich element, guide, name) is shared across all
  * variants of one build.
  *
- * `formaPolarity` still lives on individual `ModSlot`s for backward
- * compatibility with `BuildState`; the editor must keep formaPolarity
- * synchronized across variants for the same slot id.
+ * Forma lives on each variant's `ModSlot.formaPolarity`. In a "linked" build
+ * the editor keeps it (and same-form shards) identical across variants; the
+ * mode itself isn't encoded — the web adapter infers it on decode.
  */
 export interface BuildVariant {
   id: string
@@ -27,7 +27,7 @@ export interface BuildVariant {
   exilusSlot?: ModSlot
   stanceSlot?: ModSlot
   normalSlots: ModSlot[]
-  arcaneSlots: (PlacedArcane | null)[]
+  arcaneSlots: (BuildStateArcane | null)[]
   /** This variant's Archon Shards. Per-variant: each loadout installs its own
    *  set (a twin-frame's two halves are just variants with different
    *  `formIndex`, so they get independent shards for free). */
@@ -49,7 +49,7 @@ export interface BuildVariant {
  * Top-level build document. Holds shared metadata + 1..MAX_VARIANTS
  * variants. Legacy single-loadout (v1) builds are wrapped as a one-entry
  * variants array by `decodeBuildDoc` (build-codec.ts); the web adapter
- * `savedDataToBuildState` (apps/web/src/lib/codec/build-codec-adapter.ts)
+ * `editorStateToBuildState` (apps/web/src/lib/codec/build-codec-adapter.ts)
  * bridges saved DB builds into a `BuildState`.
  */
 export interface BuildDoc {
@@ -113,7 +113,10 @@ export function projectVariant(doc: BuildDoc, index: number): BuildState {
  *  variant count via `clampVariantIndex`. */
 export const MAX_VARIANT_PARSE_INDEX = 50
 
-export function clampVariantIndex(doc: BuildDoc, index: number): number {
+export function clampVariantIndex(
+  doc: { variants: readonly unknown[] },
+  index: number,
+): number {
   if (!Number.isFinite(index)) return 0
   const n = Math.floor(index)
   if (n < 0) return 0

@@ -17,6 +17,9 @@
 
 import { deriveAbilityAugmentConflicts } from "@arsenyx/shared/warframe/mods"
 
+import { modVariantBase } from "./names"
+import type { WikiModFlags } from "./wiki-mod-flags"
+
 /** Minimal shape this module reads off an emitted mod. The augment fields feed
  *  the same-ability exclusivity derivation below. */
 interface NamedMod {
@@ -29,10 +32,7 @@ interface NamedMod {
 
 export function buildModConflicts(
   mergedMods: readonly NamedMod[],
-  /** Owning mod display Name → its `Incompatible` list (display Names). */
-  wikiIncompatByName: Map<string, string[]>,
-  /** Mod display Name → wiki InternalName (= DE uniqueName). */
-  wikiModUniqueNameByName: Map<string, string>,
+  wiki: Pick<WikiModFlags, "incompatByName" | "uniqueNameByName">,
 ): Record<string, string[]> {
   const emittedUniqueNames = new Set(mergedMods.map((m) => m.uniqueName))
   // Display Name → emitted DE uniqueName. The authoritative resolver: DE's
@@ -51,8 +51,8 @@ export function buildModConflicts(
   const resolveModName = (displayName: string): string | undefined => {
     const de = deNameToUniqueName.get(displayName)
     if (de) return de
-    const wiki = wikiModUniqueNameByName.get(displayName)
-    return wiki && emittedUniqueNames.has(wiki) ? wiki : undefined
+    const wikiKey = wiki.uniqueNameByName.get(displayName)
+    return wikiKey && emittedUniqueNames.has(wikiKey) ? wikiKey : undefined
   }
   const conflictGraph = new Map<string, Set<string>>()
   const addConflictEdge = (a: string, b: string): void => {
@@ -63,7 +63,7 @@ export function buildModConflicts(
     conflictGraph.get(a)!.add(b)
     conflictGraph.get(b)!.add(a)
   }
-  for (const [owningName, names] of wikiIncompatByName) {
+  for (const [owningName, names] of wiki.incompatByName) {
     const a = resolveModName(owningName)
     if (!a) continue
     for (const conflictingName of names) {
@@ -80,12 +80,11 @@ export function buildModConflicts(
   // and self-heals as new Primed mods ship instead of requiring a curated list.
   // Cross-stem families (Sacrificial Pressure ↔ Pressure Point, Galvanized ↔
   // base) don't share a name prefix and keep relying on the wiki edges above.
-  const VARIANT_PREFIXES = ["Primed ", "Umbral ", "Amalgam ", "Archon "]
   let derivedVariantEdges = 0
   for (const m of mergedMods) {
-    const prefix = VARIANT_PREFIXES.find((p) => m.name.startsWith(p))
-    if (!prefix) continue
-    const base = deNameToUniqueName.get(m.name.slice(prefix.length))
+    const baseName = modVariantBase(m.name)
+    if (baseName === undefined) continue
+    const base = deNameToUniqueName.get(baseName)
     if (base && !conflictGraph.get(m.uniqueName)?.has(base)) {
       addConflictEdge(m.uniqueName, base)
       derivedVariantEdges++

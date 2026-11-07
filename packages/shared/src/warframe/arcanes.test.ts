@@ -4,7 +4,6 @@ import {
   getArcanesForCategory,
   getArcanesForSlot,
   getArcanesForWeapon,
-  isKitgunWeapon,
   isZawArcane,
 } from "./arcanes"
 import type { Arcane } from "./types"
@@ -88,20 +87,6 @@ describe("getArcanesForSlot — routes by authoritative wiki slotType", () => {
     }
   })
 
-  it('"weapon" slot is every weapon arcane, no frame/operator arcanes', () => {
-    const w = namesIn("weapon")
-    expect(w).toEqual(
-      expect.arrayContaining([
-        "Cascadia Flare",
-        "Longbow Sharpshot",
-        "Pax Bolt",
-        "Exodia Force",
-      ]),
-    )
-    expect(w).not.toContain("Arcane Energize")
-    expect(w).not.toContain("Magus Aggress")
-  })
-
   it("places an arcane with no slotType in no slot (fail-closed)", () => {
     // Every catalog arcane carries a slotType; routing is purely slotType-based,
     // so a slotType-less arcane is un-routable rather than name-guessed.
@@ -111,7 +96,6 @@ describe("getArcanesForSlot — routes by authoritative wiki slotType", () => {
       "primary",
       "secondary",
       "melee",
-      "weapon",
       "operator",
     ] as const) {
       expect(getArcanesForSlot(orphan, slot)).toEqual([])
@@ -180,27 +164,6 @@ describe("getArcanesForWeapon — gates weapon sub-pools by class", () => {
   })
 })
 
-describe("isKitgunWeapon", () => {
-  it("detects SU and Infested modular barrels; rejects normal weapons", () => {
-    expect(
-      isKitgunWeapon({
-        uniqueName:
-          "/Lotus/Weapons/SolarisUnited/Secondary/SUModularSecondarySet1/Barrel/SUModularSecondaryBarrelAPart",
-      }),
-    ).toBe(true)
-    expect(
-      isKitgunWeapon({
-        uniqueName:
-          "/Lotus/Weapons/Infested/Pistols/InfKitGun/Barrels/InfBarrelEgg/InfModularBarrelEggPart",
-      }),
-    ).toBe(true)
-    expect(
-      isKitgunWeapon({ uniqueName: "/Lotus/Weapons/Tenno/LongGuns/Soma" }),
-    ).toBe(false)
-    expect(isKitgunWeapon({})).toBe(false)
-  })
-})
-
 describe("isZawArcane", () => {
   it("matches arcanes with the Zaw slotType", () => {
     expect(isZawArcane(arc("Exodia Force", "Zaw"))).toBe(true)
@@ -219,11 +182,5 @@ describe("getArcanesForCategory", () => {
     expect(
       getArcanesForCategory(ARCANES, "melee").map((a) => a.name),
     ).toContain("Exodia Force")
-  })
-
-  it("archwing → primary + secondary arcanes", () => {
-    const names = getArcanesForCategory(ARCANES, "archwing").map((a) => a.name)
-    expect(names).toContain("Longbow Sharpshot")
-    expect(names).toContain("Cascadia Flare")
   })
 })

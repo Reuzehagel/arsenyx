@@ -36,25 +36,20 @@ export function hasExilusSlot(category: BrowseCategory): boolean {
   )
 }
 
+/** Whether mods draw on a capacity pool: capacity bar, reactor, Forma,
+ *  polarities and the stats panel. Every category has mod slots; Operators'
+ *  Tektolyst Artifact (Antique) mods take no capacity and have no polarity
+ *  (wiki.warframe.com/w/Antique_Mods). */
+export function hasModCapacity(category: BrowseCategory): boolean {
+  return category !== "operators"
+}
+
 /** Warframes and necramechs are "warframe-shaped" for Overframe's base 8 mod
  *  slots (slot_id 8 → normal-0 … 1 → normal-7). Warframes then put aura at
  *  slot_id 9 and exilus at 10; necramechs instead have 4 more normal slots and
  *  no aura/exilus/arcane, so `decodeOverframeSlotId` special-cases them. This
  *  predicate keeps both OUT of the uniform all-normal path used by
  *  companions/archwing/railjack. */
-/** Whether the category is modded at all (mod grid, mod search, mod hotkey
- *  hints). */
-export function hasModSlots(category: BrowseCategory): boolean {
-  return getNormalSlotCount(category) > 0
-}
-
-/** Whether mods draw on a capacity pool: capacity bar, reactor, Forma,
- *  polarities and the stats panel. Operators' Tektolyst Artifact (Antique)
- *  mods take no capacity and have no polarity (wiki.warframe.com/w/Antique_Mods). */
-export function hasModCapacity(category: BrowseCategory): boolean {
-  return hasModSlots(category) && category !== "operators"
-}
-
 export function isWarframeLike(category: BrowseCategory): boolean {
   return category === "warframes" || category === "necramechs"
 }

@@ -14,14 +14,14 @@ export type RankUp = {
   energy: number
 }
 
-export const DEFAULT_RANKUP: RankUp = {
+const DEFAULT_RANKUP: RankUp = {
   health: 100,
   shield: 100,
   armor: 0,
   energy: 50,
 }
 
-export const RANKUP_BY_NAME: Record<string, RankUp> = {
+const RANKUP_BY_NAME: Record<string, RankUp> = {
   Baruuk: { health: 100, shield: 100, armor: 0, energy: 100 },
   "Baruuk Prime": { health: 100, shield: 100, armor: 0, energy: 100 },
   "Chroma Prime": { health: 100, shield: 100, armor: 0, energy: 100 },

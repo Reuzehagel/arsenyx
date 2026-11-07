@@ -20,9 +20,16 @@ _Avoid_: Loadout, Setup (those refer to a single Variant, not the whole shareabl
 
 **Variant**:
 One concrete loadout within a Build — its mods, arcanes, shards, forma, incarnon, and
-helminth choices. A Build has 1–5 Variants; the Variant is the thing the editor edits.
+helminth choices. A Build has 1–5 Variants per form (twin frames have two forms); the Variant is the thing the editor edits.
 _Avoid_: Build (the container, not the loadout), Loadout. Also note: a Warframe Prime/Wraith/Prisma
 "variant" is **not** a Variant here — those are modeled as separate **Items** in the catalog.
+
+**Variant mode**:
+A Build-wide setting (`variantMode`). **linked** (the default) means every Variant uses the
+same forma and Archon Shards, like configs of one item in-game. **independent** means each
+Variant has its own. Helminth is per Variant in both modes. Twin frames follow the game even when
+linked: Sirius & Orion share Archon Shards, but each form has its own forma.
+_Avoid_: Sync, Shared mode.
 
 **Guide**:
 Optional authored prose on a Build: a short summary (≤160 chars) and a longer description

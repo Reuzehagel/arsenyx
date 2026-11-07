@@ -2,35 +2,25 @@
  * Build the static catalog under `apps/web/public/data/` by merging
  * DE PublicExport + wiki Lua + curated overrides.
  *
- * Outputs:
- *   items-index.json            — flat per-category browse listing
- *   items/<cat>/<slug>.json     — per-item detail (weapons + frames +
- *                                 companions)
- *   mods-all.json               — all mods, post-normalization
- *   arcanes-all.json            — arcanes with image fill
- *   helminth-abilities.json     — Helminth subsume picker list
- *   image-map.json              — uniqueName → imageName for items/mods/
- *                                 arcanes/helminth (build image re-resolution)
- *   incarnon-evolutions.json    — evolution trees (curated passthrough)
- *   meta.json + _report.json    — build metadata + diagnostics
+ * Main outputs: items-index.json (per-category browse listing),
+ * items/<cat>/<slug>.json (per-item detail), mods-all.json, arcanes-all.json,
+ * helminth-abilities.json, image-map.json, plus small lookup files, meta.json
+ * (cache-bust version + counts, see build/meta.ts) and _report.json
+ * (diagnostics the weekly refresh PR diffs).
  *
- * Schema notes:
- *   - BrowseItem carries `displayClass` (the wiki Class label).
- *   - Per-item weapon detail carries `modPools`, `polarities`,
- *     `family`, `traits` from the wiki merge.
- *   - Polarities everywhere are lowercase full names ("naramon", not "V").
- *   - All items (weapons + frames + companions) carry `modPools` — the
- *     structural mod-routing field consumed by `getModsForItem`.
- *
- * Stable fields: uniqueName, name, slug, category, imageName, masteryReq,
- * isPrime, vaulted, releaseDate.
+ * Every emitted file name is in CATALOG_FILES
+ * (packages/shared/src/warframe/catalog-files.ts).
  */
 
 import { spawnSync } from "node:child_process"
-import { readdirSync } from "node:fs"
 import { mkdir, rm, writeFile } from "node:fs/promises"
 import { resolve } from "node:path"
 
+import type { HelminthAbility } from "@arsenyx/shared/warframe/build-data"
+import {
+  CATALOG_FILES,
+  ITEM_DETAIL_DIR,
+} from "@arsenyx/shared/warframe/catalog-files"
 import { INCARNON_GENESIS_IMAGES } from "@arsenyx/shared/warframe/incarnon-data"
 import { INCARNON_EVOLUTIONS } from "@arsenyx/shared/warframe/incarnon-evolutions"
 import {
@@ -38,6 +28,8 @@ import {
   KITGUN_GRIPS,
   KITGUN_LOADERS,
 } from "@arsenyx/shared/warframe/kitgun-data"
+import { isPlexusMod } from "@arsenyx/shared/warframe/mods"
+import type { Arcane, Mod } from "@arsenyx/shared/warframe/types"
 import {
   ZAW_GRIPS,
   ZAW_LINKS,
@@ -47,12 +39,15 @@ import {
 import { ARCANE_KEEP, ARCANE_SLOT_FALLBACKS } from "../data/curated/arcane-keep"
 import { DE_MISSING_ARCANES } from "../data/curated/de-missing-arcanes"
 import { DE_MISSING_MODS } from "../data/curated/de-missing-mods"
+import { EXALTED_STANCES } from "../data/curated/exalted-stances"
+import { FRAME_POLARITY_OVERRIDES } from "../data/curated/frame-polarities"
 import { OPERATOR_IMAGE_FIXES } from "../data/curated/operator-images"
-import { PVE_USABLE_CONCLAVE_MODS } from "../data/curated/pve-usable-conclave-mods"
+import { RELEASE_HISTORY } from "../data/curated/release-history"
+import { WIKI_ALIASES } from "../data/curated/wiki-aliases"
 import { buildBrowseIndex } from "./build/browse-index"
 import { injectMissingDeMods } from "./build/de-missing-mods"
+import type { DeSentinel } from "./build/de-types"
 import { buildFamilyIndex, makeExpandCompat } from "./build/expand-compat"
-import { iterWikiRecords } from "./build/images"
 import {
   abilityStatsLookup,
   type AbilityRef,
@@ -72,12 +67,18 @@ import { mergeModular } from "./build/merge-modular"
 import {
   mergeWeapon,
   mergeWikiOnlyWeapon,
-  validateCuratedAgainstKnown,
+  validateCuratedPools,
   type MergedWeapon,
 } from "./build/merge-weapons"
+import { countsFromCatalog, writeMeta } from "./build/meta"
 import { buildModConflicts } from "./build/mod-conflicts"
-import { primeFamily } from "./build/names"
-import { readCurated } from "./build/read-curated"
+import { ATMOSPHERE_SLOT, primeFamily } from "./build/names"
+import {
+  CATALOG_DIR,
+  CATALOG_OUT_DIR as OUT_DIR,
+  REPO_ROOT,
+  WIKI_IMAGE_CACHE,
+} from "./build/paths"
 import {
   readDeArcanes,
   readDeFrames,
@@ -85,24 +86,15 @@ import {
   readDeSentinels,
   readDeUpgrades,
   readDeWeapons,
-  type DeSentinel,
 } from "./build/read-de"
 import { readPePlusUpgrades, readPePlusWeaponTags } from "./build/read-pe-plus"
-import { readWikiModule } from "./build/read-wiki"
+import { readWiki, readWikiWeaponSubpages } from "./build/read-wiki"
 import { resolveImages } from "./build/resolve-images"
 import { validateOutputs } from "./build/validate-output"
-import { resolveWikiModKeys } from "./build/wiki-mod-keys"
+import { readWikiModFlags } from "./build/wiki-mod-flags"
 import { writeItemDetails } from "./build/write-details"
 
-const REPO_ROOT = resolve(import.meta.dirname, "..")
-const WIKI_DIR = resolve(REPO_ROOT, "data/raw/wiki")
-// data:ab (scripts/data-ab.ts) points this at a snapshot dir.
-const OUT_DIR = resolve(
-  REPO_ROOT,
-  process.env.CATALOG_OUT_DIR ?? "apps/web/public/data",
-)
-const DETAIL_DIR = resolve(OUT_DIR, "items")
-const WIKI_IMAGE_CACHE = resolve(REPO_ROOT, "data/curated/wiki-image-urls.json")
+const DETAIL_DIR = resolve(OUT_DIR, ITEM_DETAIL_DIR)
 
 interface BuildStats {
   weapons: { de: number; merged: number; emitted: number; unmatched: number }
@@ -138,8 +130,7 @@ async function main() {
   console.log(`Output dir: ${OUT_DIR}\n`)
 
   // ---------- 1. Read everything from disk ----------
-  const curated = readCurated()
-  validateCuratedAgainstKnown(curated)
+  validateCuratedPools()
 
   const deWeapons = readDeWeapons()
   const deFramesBlob = readDeFrames()
@@ -152,10 +143,7 @@ async function main() {
 
   // Wiki weapon subpages — flat name → entry map.
   const wikiWeaponsByName = new Map<string, Record<string, unknown>>()
-  for (const f of readdirSync(WIKI_DIR).filter(
-    (n) => n.startsWith("Weapons_data_") && n.endsWith(".lua"),
-  )) {
-    const m = readWikiModule(resolve(WIKI_DIR, f))
+  for (const m of readWikiWeaponSubpages()) {
     for (const [n, e] of Object.entries(m)) {
       if (e && typeof e === "object") {
         wikiWeaponsByName.set(n, e as Record<string, unknown>)
@@ -166,18 +154,16 @@ async function main() {
     `Wiki weapons (across subpages): ${wikiWeaponsByName.size} unique names`,
   )
 
-  const wikiFramesBlob = readWikiModule(
-    resolve(WIKI_DIR, "Warframes_data.lua"),
-  ) as {
+  const wikiFramesBlob = readWiki("Warframes/data") as {
     Warframes?: Record<string, Record<string, unknown>>
     Archwings?: Record<string, Record<string, unknown>>
     Necramechs?: Record<string, Record<string, unknown>>
     Operators?: Record<string, Record<string, unknown>>
   }
 
-  const wikiCompanionsBlob = readWikiModule(
-    resolve(WIKI_DIR, "Companions_data.lua"),
-  ) as { Companions?: Record<string, Record<string, unknown>> }
+  const wikiCompanionsBlob = readWiki("Companions/data") as {
+    Companions?: Record<string, Record<string, unknown>>
+  }
   const wikiCompanions = wikiCompanionsBlob.Companions ?? {}
   console.log(
     `Wiki: ${Object.keys(wikiFramesBlob.Warframes ?? {}).length} warframes, ${Object.keys(wikiCompanions).length} companions`,
@@ -185,16 +171,13 @@ async function main() {
 
   // Mods + Arcane wiki modules — consumed by image resolution (phase 5) and
   // the mod/arcane merge (phase 6).
-  const wikiModsBlob = readWikiModule(resolve(WIKI_DIR, "Mods_data.lua"))
-  const wikiArcanesBlob = readWikiModule(resolve(WIKI_DIR, "Arcane_data.lua"))
+  const wikiModsBlob = readWiki("Mods/data")
+  const wikiArcanesBlob = readWiki("Arcane/data")
 
   // Modular (Kitgun/Zaw) stat tables. Module:Modular/data is the only
   // verifiable source for the per-combination stats DE zeroes out; pass the
   // weapon entries so chamber damage can be allocated across attack modes.
-  const modularData = mergeModular(
-    readWikiModule(resolve(WIKI_DIR, "Modular_data.lua")),
-    wikiWeaponsByName,
-  )
+  const modularData = mergeModular(readWiki("Modular/data"), wikiWeaponsByName)
 
   // ---------- 2. Merge weapons ----------
   // DE rows with `slot === undefined` are modular component parts (Kitgun
@@ -219,7 +202,6 @@ async function main() {
     if (seenWeaponUniqueNames.has(de.uniqueName)) continue
     seenWeaponUniqueNames.add(de.uniqueName)
     const merged = mergeWeapon(de, {
-      curated,
       wikiByName: wikiWeaponsByName,
       unmatched: weaponUnmatched,
     })
@@ -228,7 +210,7 @@ async function main() {
     // strips `<ARCHWING> ` prefixes, so `merged.name` is the wiki key).
     seenWikiNames.add(merged.name)
     // Aliases also count as matched.
-    const alias = curated.wikiAliases[merged.name]
+    const alias = WIKI_ALIASES[merged.name]
     if (alias) seenWikiNames.add(alias)
   }
   // Wiki-only entries: things like beast claws (Adarza Claws, Chesa
@@ -240,11 +222,10 @@ async function main() {
     // with no Slot, sub-pages without Class, etc.).
     const w = wiki as { Class?: string; Slot?: string }
     if (!w.Class || !w.Slot) continue
-    // Arch-gun atmospheric variants (Slot "Archgun (Atmosphere)") are
-    // folded into the base weapon's atmospheric* fields by `mergeWeapon`.
-    // Skip emitting them as standalone browse items.
-    if (w.Slot === "Archgun (Atmosphere)") continue
-    mergedWeapons.push(mergeWikiOnlyWeapon(name, wiki, curated))
+    // Arch-gun atmospheric variants are folded into the base weapon's
+    // atmospheric* fields by `mergeWeapon`, not emitted standalone.
+    if (w.Slot === ATMOSPHERE_SLOT) continue
+    mergedWeapons.push(mergeWikiOnlyWeapon(name, wiki))
     wikiOnlyEmitted++
   }
   console.log(`Wiki-only weapons emitted: ${wikiOnlyEmitted}`)
@@ -260,7 +241,7 @@ async function main() {
       mergeFrame(de, {
         wiki: wikiFramesBlob,
         unmatched: frameUnmatched,
-        polarityOverrides: curated.framePolarities,
+        polarityOverrides: FRAME_POLARITY_OVERRIDES,
       }),
     )
   }
@@ -270,7 +251,7 @@ async function main() {
   // Per-ability stats from Module:Ability/data/stats (max-rank values).
   const abilityStatsUnhandled: string[] = []
   const abilityStats = abilityStatsLookup(
-    readWikiModule(resolve(WIKI_DIR, "Ability_data_stats.lua")),
+    readWiki("Ability/data/stats"),
     twinCollapsed.flatMap((f) => [
       ...f.abilities,
       ...(f.forms ?? []).flatMap((form) => form.abilities),
@@ -319,12 +300,21 @@ async function main() {
       deCompanionByName.set(ent.name, ent)
     }
   }
-  const { companions: mergedCompanions, unmatchedDeNames } = mergeCompanions({
+  const {
+    companions: mergedCompanions,
+    unmatchedDeNames,
+    unknownTypes: companionsUnknownType,
+  } = mergeCompanions({
     wikiCompanions,
     deByName: deCompanionByName,
   })
   stats.companions.wiki = mergedCompanions.length
   stats.companions.deOnly = unmatchedDeNames.length
+  for (const c of companionsUnknownType) {
+    console.warn(
+      `  WARN companion ${c}: unknown wiki Type, routed as a beast — add it to subTypeOf in merge-companions.ts`,
+    )
+  }
 
   // ---------- 5. Image lookup ----------
   const {
@@ -339,7 +329,7 @@ async function main() {
     wikiWeaponsByName,
     wikiModsBlob,
     wikiArcanesBlob,
-    exaltedStances: curated.exaltedStances,
+    exaltedStances: EXALTED_STANCES,
     operatorWikiImages: new Map(
       operators.flatMap((o) => {
         const image =
@@ -364,90 +354,6 @@ async function main() {
   // against mod compat/incompat tags by getModsForItem. Attached to weapon
   // detail items below.
   const pePlusWeaponTags = readPePlusWeaponTags()
-  const wikiExilus = new Map<string, boolean>()
-  // Wiki `Tradable` flag, keyed by InternalName (= DE uniqueName). DE's
-  // ExportUpgrades carries no tradability, so this is the only source — it
-  // gates the "Warframe Market" link on the build-view mod detail popover.
-  // Mods missing from this map default to non-tradable (no Market link).
-  const wikiTradable = new Map<string, boolean>()
-  // Wiki convention: `_IgnoreEntry = true` flags records the wiki maintainers
-  // consider unreleased / non-functional (e.g. "Primed Streamline" — exists
-  // in DE ExportUpgrades but isn't a real in-game mod). We honor it.
-  const wikiIgnoreMods = new Set<string>()
-  // Names of every wiki-registered mod. Used by merge-mods to gate the
-  // Primed-Expert allowance against DE's stream of unreleased Primed mods.
-  const wikiKnownModNames = new Set<string>()
-  // Wiki PvP flag — `Conclave = true` is the canonical Conclave marker
-  // (155 mods). The description "in Conclave" substring covers only ~14%
-  // of them, so we route via this instead.
-  const wikiConclaveMods = new Set<string>()
-  // PVE_USABLE_CONCLAVE_MODS entries we actually saw as Conclave-flagged
-  // records. Used to warn on drift: an entry that never matches (typo, or a
-  // wiki InternalName rename) silently stops excluding its mod and the mod
-  // vanishes from the PvE picker again — surface that at build time.
-  const pveUsableSeen = new Set<string>()
-  // Mod display Name → wiki InternalName (= DE uniqueName). Resolves the
-  // name-keyed `Incompatible` lists into uniqueNames below.
-  const wikiModUniqueNameByName = new Map<string, string>()
-  // Owning mod display Name → its `Incompatible` list (display Names). Mutually
-  // exclusive variant mods (Serration / Amalgam Serration / Spectral
-  // Serration, …) — see the conflict-graph build after mod merge. Keyed by
-  // display Name (not InternalName) because the wiki's InternalName drifts from
-  // DE's uniqueName for some recent Primed mods, which silently dropped the
-  // edge; resolving both endpoints by display Name against the emitted catalog
-  // is robust to that drift.
-  const wikiIncompatByName = new Map<string, string[]>()
-  const wikiModRecords: Array<{ internalName: string; name: unknown }> = []
-  for (const { internalName, record } of iterWikiRecords(wikiModsBlob)) {
-    const name = record["Name"]
-    wikiModRecords.push({ internalName, name })
-    if (typeof name === "string") {
-      wikiKnownModNames.add(name)
-      wikiModUniqueNameByName.set(name, internalName)
-    }
-    if (typeof record["IsExilus"] === "boolean") {
-      wikiExilus.set(internalName, record["IsExilus"])
-    }
-    if (typeof record["Tradable"] === "boolean") {
-      wikiTradable.set(internalName, record["Tradable"])
-    }
-    if (record["_IgnoreEntry"] === true) {
-      wikiIgnoreMods.add(internalName)
-    }
-    // `Conclave = true` means "usable in Conclave", not "PvP-exclusive". A
-    // handful of ability augments + zoom mods are usable in PvE too (and one,
-    // Vexing Retaliation, is mis-flagged outright) — keep those out of the PvP
-    // set so the picker's PvE view shows them. See pve-usable-conclave-mods.ts.
-    if (record["Conclave"] === true) {
-      if (PVE_USABLE_CONCLAVE_MODS.has(internalName)) {
-        pveUsableSeen.add(internalName)
-      } else {
-        wikiConclaveMods.add(internalName)
-      }
-    }
-    const incompat = record["Incompatible"]
-    if (Array.isArray(incompat) && typeof name === "string") {
-      // Some wiki entries carry placeholder `""` names; drop them so they
-      // never become a dead lookup key.
-      wikiIncompatByName.set(
-        name,
-        incompat.filter((x): x is string => typeof x === "string" && x !== ""),
-      )
-    }
-  }
-  const unmatchedPveUsable = [...PVE_USABLE_CONCLAVE_MODS].filter(
-    (name) => !pveUsableSeen.has(name),
-  )
-  if (unmatchedPveUsable.length > 0) {
-    console.warn(
-      `  WARN pve-usable-conclave-mods.ts: ${unmatchedPveUsable.length} allowlist entr${
-        unmatchedPveUsable.length === 1 ? "y" : "ies"
-      } matched no Conclave-flagged wiki record (typo or wiki rename — these mods are no longer being un-hidden from the PvE picker):\n${unmatchedPveUsable
-        .map((n) => `         - ${n}`)
-        .join("\n")}`,
-    )
-  }
-
   // Backfill mods DE's export dropped but that are still in-game (#377).
   const missing = injectMissingDeMods(
     deUpgrades.ExportUpgrades ?? [],
@@ -464,45 +370,31 @@ async function main() {
     )
   }
 
-  // One uniqueName → wiki-record resolution (InternalName, else unique Name —
-  // see wiki-mod-keys.ts) feeds every wiki flag and the unmatched report.
-  const wikiKeyByUniqueName = resolveWikiModKeys(
-    missing.upgrades,
-    wikiModRecords,
-  )
-  const nameFallbacks: string[] = []
-  for (const u of missing.upgrades) {
-    const wikiKey = u.uniqueName && wikiKeyByUniqueName.get(u.uniqueName)
-    if (!wikiKey || wikiKey === u.uniqueName) continue
-    const exilus = wikiExilus.get(wikiKey)
-    if (exilus !== undefined) wikiExilus.set(u.uniqueName, exilus)
-    const tradable = wikiTradable.get(wikiKey)
-    if (tradable !== undefined) wikiTradable.set(u.uniqueName, tradable)
-    if (
-      wikiConclaveMods.has(wikiKey) &&
-      !PVE_USABLE_CONCLAVE_MODS.has(u.uniqueName)
+  // Every wiki-sourced flag, resolved onto DE uniqueNames through one
+  // InternalName-else-unique-Name mapping (see wiki-mod-flags.ts).
+  const wikiMods = readWikiModFlags(wikiModsBlob, missing.upgrades)
+  if (wikiMods.unmatchedPveUsable.length > 0) {
+    console.warn(
+      `  WARN pve-usable-conclave-mods.ts: ${wikiMods.unmatchedPveUsable.length} allowlist entr${
+        wikiMods.unmatchedPveUsable.length === 1 ? "y" : "ies"
+      } matched no Conclave-flagged wiki record (typo or wiki rename — these mods are no longer being un-hidden from the PvE picker):\n${wikiMods.unmatchedPveUsable
+        .map((n) => `         - ${n}`)
+        .join("\n")}`,
     )
-      wikiConclaveMods.add(u.uniqueName)
-    if (wikiIgnoreMods.has(wikiKey)) wikiIgnoreMods.add(u.uniqueName)
-    nameFallbacks.push(u.name!)
   }
-  if (nameFallbacks.length > 0) {
+  if (wikiMods.nameFallbacks.length > 0) {
     console.log(
-      `  wiki mods: matched ${nameFallbacks.length} mod(s) by Name (InternalName drift): ${nameFallbacks.join(", ")}`,
+      `  wiki mods: matched ${wikiMods.nameFallbacks.length} mod(s) by Name (InternalName drift): ${wikiMods.nameFallbacks.join(", ")}`,
     )
   }
 
-  const { mods: rawMergedMods, counts: modCounts } = mergeMods(
-    missing.upgrades,
-    deUpgrades.ExportModSet ?? [],
-    pePlusUpgrades,
-    wikiExilus,
-    deUpgrades.ExportAvionics ?? [],
-    wikiIgnoreMods,
-    wikiKnownModNames,
-    wikiConclaveMods,
-    wikiTradable,
-  )
+  const { mods: rawMergedMods, counts: modCounts } = mergeMods({
+    upgrades: missing.upgrades,
+    modSets: deUpgrades.ExportModSet,
+    avionics: deUpgrades.ExportAvionics,
+    pePlus: pePlusUpgrades,
+    wiki: wikiMods,
+  })
   let mergedMods = rawMergedMods.map((m) => ({
     ...m,
     imageName: imageByUniqueName.get(m.uniqueName),
@@ -548,29 +440,22 @@ async function main() {
   }))
 
   // ---------- 7. Build items-index.json ----------
-  const { byCategory, weaponDetailByCatAndSlug, releaseHistoryResolved } =
-    buildBrowseIndex({
-      mergedFrames,
-      operators,
-      mergedWeapons,
-      mergedCompanions,
-      curated,
-      imageByUniqueName,
-      stats,
-    })
+  const { byCategory, details, releaseHistoryResolved } = buildBrowseIndex({
+    mergedFrames,
+    operators,
+    mergedWeapons,
+    mergedCompanions,
+    imageByUniqueName,
+    stats,
+  })
 
   // ---------- 8. Expand mod `compat` to per-item lists ----------
   // See scripts/build/expand-compat.ts for the three-case routing. Output
   // field is `compatItems: string[]` — the closed list of item uniqueNames the
   // augment fits; the runtime check collapses to `includes(item.uniqueName)`.
-  const knownItemUniqueNames = new Set<string>()
   const categoryByUniqueName = new Map<string, string>()
   for (const [cat, arr] of Object.entries(byCategory)) {
-    if (!arr) continue
-    for (const item of arr) {
-      knownItemUniqueNames.add(item.uniqueName)
-      categoryByUniqueName.set(item.uniqueName, cat)
-    }
+    for (const item of arr ?? []) categoryByUniqueName.set(item.uniqueName, cat)
   }
 
   // `family` lives on the merged records — the lightweight `byCategory` browse
@@ -586,7 +471,6 @@ async function main() {
     categoryByUniqueName,
   )
   const expandCompat = makeExpandCompat({
-    knownItemUniqueNames,
     categoryByUniqueName,
     familyKeyByUniqueName,
     familyMembers,
@@ -610,11 +494,7 @@ async function main() {
   )
 
   // ---------- 8b. Mod conflict graph ----------
-  const modConflicts = buildModConflicts(
-    mergedMods,
-    wikiIncompatByName,
-    wikiModUniqueNameByName,
-  )
+  const modConflicts = buildModConflicts(mergedMods, wikiMods)
 
   // ---------- 8c. Validate before touching the output dir ----------
   // Shape-check every emitted record and compare counts against the previous
@@ -622,12 +502,12 @@ async function main() {
   // so a broken merge can't replace a good catalog with a hollowed-out one.
   // A crash mid-write (rm below) can leave meta.json missing or truncated —
   // fall back to the committed copy rather than skip the regression check.
-  const prevMeta = await Bun.file(resolve(OUT_DIR, "meta.json"))
+  const prevMeta = await Bun.file(resolve(OUT_DIR, CATALOG_FILES.meta))
     .json()
     .catch(() => {
       const r = spawnSync(
         "git",
-        ["show", "HEAD:apps/web/public/data/meta.json"],
+        ["show", `HEAD:${CATALOG_DIR}/${CATALOG_FILES.meta}`],
         {
           cwd: REPO_ROOT,
           encoding: "utf8",
@@ -635,15 +515,17 @@ async function main() {
       )
       return r.status === 0 ? JSON.parse(r.stdout) : undefined
     })
-  const nextCounts = {
-    itemCount: Object.values(stats.perCategory).reduce((a, b) => a + b, 0),
-    modCount: mergedMods.length,
-    arcaneCount: arcanesWithImages.length,
-    perCategory: stats.perCategory,
-  }
+  const nextCounts = countsFromCatalog(
+    byCategory,
+    mergedMods,
+    arcanesWithImages satisfies Arcane[],
+  )
+  stats.perCategory = nextCounts.perCategory
   validateOutputs({
     byCategory: byCategory as Record<string, Array<Record<string, unknown>>>,
-    mods: mergedMods as unknown as Array<Record<string, unknown>>,
+    mods: mergedMods satisfies Mod[] as unknown as Array<
+      Record<string, unknown>
+    >,
     arcanes: arcanesWithImages as unknown as Array<Record<string, unknown>>,
     prevMeta,
     nextCounts,
@@ -655,13 +537,13 @@ async function main() {
   await mkdir(OUT_DIR, { recursive: true })
 
   const indexJson = JSON.stringify(byCategory)
-  await writeFile(resolve(OUT_DIR, "items-index.json"), indexJson, "utf8")
+  await writeFile(resolve(OUT_DIR, CATALOG_FILES.itemsIndex), indexJson, "utf8")
   console.log(
     `\n  OK  items-index.json (${(indexJson.length / 1024).toFixed(1)} KB)`,
   )
 
   await writeFile(
-    resolve(OUT_DIR, "mods-all.json"),
+    resolve(OUT_DIR, CATALOG_FILES.mods),
     JSON.stringify(mergedMods),
     "utf8",
   )
@@ -673,7 +555,7 @@ async function main() {
   // drift (#297, #399). Avionics come from a separate wiki module — skip them.
   const modsUnmatched = mergedMods
     .filter(
-      (m) => m.type !== "Plexus Mod" && !wikiKeyByUniqueName.has(m.uniqueName),
+      (m) => !isPlexusMod(m) && !wikiMods.keyByUniqueName.has(m.uniqueName),
     )
     .map((m) => `${m.name} (${m.uniqueName})`)
     .sort()
@@ -688,14 +570,14 @@ async function main() {
     .map((m) => m.uniqueName)
     .sort()
   await writeFile(
-    resolve(OUT_DIR, "mod-tradable.json"),
+    resolve(OUT_DIR, CATALOG_FILES.modTradable),
     JSON.stringify(nonTradable),
     "utf8",
   )
   console.log(`  OK  mod-tradable.json (${nonTradable.length} non-tradable)`)
 
   await writeFile(
-    resolve(OUT_DIR, "mod-conflicts.json"),
+    resolve(OUT_DIR, CATALOG_FILES.modConflicts),
     JSON.stringify(modConflicts),
     "utf8",
   )
@@ -704,7 +586,7 @@ async function main() {
   )
 
   await writeFile(
-    resolve(OUT_DIR, "arcanes-all.json"),
+    resolve(OUT_DIR, CATALOG_FILES.arcanes),
     JSON.stringify(arcanesWithImages),
     "utf8",
   )
@@ -714,16 +596,23 @@ async function main() {
   // ExportAbilities array (which holds the Helminth-native ones). DE
   // doesn't populate `imageName` inline, so fill it from the central
   // image lookup keyed on each ability's uniqueName.
+  const subsumableMisses: string[] = []
   const helminthRaw = deriveHelminthAbilities(
     mergedFrames,
     deFramesBlob.ExportAbilities ?? [],
+    subsumableMisses,
   )
+  for (const miss of subsumableMisses) {
+    console.warn(
+      `  WARN subsumable-abilities.ts: "${miss}" matches no emitted frame ability — it is missing from the Helminth picker`,
+    )
+  }
   const helminth = helminthRaw.map((a) => ({
     ...withAbilityStats(a),
     imageName: imageByUniqueName.get(a.uniqueName) ?? a.imageName,
-  }))
+  })) satisfies HelminthAbility[]
   await writeFile(
-    resolve(OUT_DIR, "helminth-abilities.json"),
+    resolve(OUT_DIR, CATALOG_FILES.helminthAbilities),
     JSON.stringify(helminth),
     "utf8",
   )
@@ -749,7 +638,11 @@ async function main() {
   for (const a of arcanesWithImages) addImage(a.uniqueName, a.imageName)
   for (const h of helminth) addImage(h.uniqueName, h.imageName)
   const imageMapBody = JSON.stringify(imageMap)
-  await writeFile(resolve(OUT_DIR, "image-map.json"), imageMapBody, "utf8")
+  await writeFile(
+    resolve(OUT_DIR, CATALOG_FILES.imageMap),
+    imageMapBody,
+    "utf8",
+  )
   console.log(
     `  OK  image-map.json (${Object.keys(imageMap).length} entries, ${(imageMapBody.length / 1024).toFixed(1)} KB)`,
   )
@@ -758,7 +651,7 @@ async function main() {
   // shared module (lazy-fetched by the editor sidebar).
   const incarnonBody = JSON.stringify(INCARNON_EVOLUTIONS)
   await writeFile(
-    resolve(OUT_DIR, "incarnon-evolutions.json"),
+    resolve(OUT_DIR, CATALOG_FILES.incarnonEvolutions),
     incarnonBody,
     "utf8",
   )
@@ -769,7 +662,7 @@ async function main() {
   // Modular (Kitgun/Zaw) stat reconstruction tables — fetched by the build
   // editor to recompute a chamber's stats from the selected grip + loader.
   const modularBody = JSON.stringify(modularData)
-  await writeFile(resolve(OUT_DIR, "modular.json"), modularBody, "utf8")
+  await writeFile(resolve(OUT_DIR, CATALOG_FILES.modular), modularBody, "utf8")
   const kitgunChambers =
     Object.keys(modularData.kitgun.primary).length +
     Object.keys(modularData.kitgun.secondary).length
@@ -807,7 +700,7 @@ async function main() {
   }
   const zawTotal = ZAW_STRIKES.length + ZAW_GRIPS.length + ZAW_LINKS.length
   await writeFile(
-    resolve(OUT_DIR, "zaw-images.json"),
+    resolve(OUT_DIR, CATALOG_FILES.zawImages),
     JSON.stringify(zawImages),
     "utf8",
   )
@@ -830,7 +723,7 @@ async function main() {
   }
   const kitgunTotal = KITGUN_GRIPS.length + KITGUN_LOADERS.length
   await writeFile(
-    resolve(OUT_DIR, "kitgun-images.json"),
+    resolve(OUT_DIR, CATALOG_FILES.kitgunImages),
     JSON.stringify(kitgunImages),
     "utf8",
   )
@@ -856,7 +749,7 @@ async function main() {
     if (url) incarnonAdapterImages[name] = url
   }
   await writeFile(
-    resolve(OUT_DIR, "incarnon-adapter-images.json"),
+    resolve(OUT_DIR, CATALOG_FILES.incarnonAdapterImages),
     JSON.stringify(incarnonAdapterImages),
     "utf8",
   )
@@ -873,39 +766,16 @@ async function main() {
   // Per-item detail files (items/<cat>/<slug>.json).
   await writeItemDetails({
     detailDir: DETAIL_DIR,
-    weaponDetailByCatAndSlug,
-    mergedFrames,
-    operators,
-    mergedCompanions,
-    curated,
+    details,
     imageByUniqueName,
     pePlusWeaponTags,
   })
 
-  // Meta
-  await writeFile(
-    resolve(OUT_DIR, "meta.json"),
-    JSON.stringify(
-      {
-        generatedAt: new Date().toISOString(),
-        source: "DE PublicExport + wiki Lua (v2 pipeline)",
-        pipelineVersion: 2,
-        itemCount: nextCounts.itemCount,
-        modCount: nextCounts.modCount,
-        arcaneCount: nextCounts.arcaneCount,
-        perCategory: nextCounts.perCategory,
-        unmatchedWeapons: stats.weapons.unmatched,
-        unmatchedFrames: frameUnmatched.size,
-      },
-      null,
-      2,
-    ),
-    "utf8",
-  )
+  await writeMeta(OUT_DIR, nextCounts)
 
   // Report
   await writeFile(
-    resolve(OUT_DIR, "_report.json"),
+    resolve(OUT_DIR, CATALOG_FILES.report),
     JSON.stringify(
       {
         stats,
@@ -913,10 +783,11 @@ async function main() {
         framesUnmatched: [...frameUnmatched].sort(),
         frameRankUpDrift,
         companionsUnmatched: unmatchedDeNames.sort(),
+        companionsUnknownType: companionsUnknownType.sort(),
         modsUnmatched,
         abilityStatsUnhandled: [...new Set(abilityStatsUnhandled)].sort(),
         skippedModularComponents: skippedModular.sort(),
-        releaseHistoryUnmatched: Object.keys(curated.releaseHistory)
+        releaseHistoryUnmatched: Object.keys(RELEASE_HISTORY)
           .filter((n) => !releaseHistoryResolved.has(n))
           .sort(),
       },

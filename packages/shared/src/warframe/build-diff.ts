@@ -17,6 +17,16 @@
  * inside one variant cancel out (see `cancelMoves`).
  */
 
+import {
+  asRecord,
+  type PlacedArcane,
+  type PlacedMod,
+  type SavedBuildData,
+  type SavedVariant,
+  type Untrusted,
+  type VariantMode,
+} from "./build-data"
+
 export type BuildChangeOp = "add" | "remove" | "modify" | "info"
 
 export interface BuildChange {
@@ -33,6 +43,13 @@ export interface BuildChange {
  *  loadout) can touch everything at once; past this the list stops being read
  *  and starts being a JSON column that grows without bound. */
 const MAX_CHANGES = 40
+
+/** The `info` label a save that moved nothing gets. Readers filter on it. */
+export const NO_CHANGES_LABEL = "No loadout changes"
+
+/** Label of the Variant mode switch. The mode has two values, so a second
+ *  switch in one burst always undoes the first — `mergeChanges` cancels them. */
+const MODE_LABEL = "Forma & shards"
 
 /** Per-field length cap on stored changes. Labels, scopes and details echo
  *  user strings (variant labels, mod names) and a variant's label is stamped
@@ -54,18 +71,13 @@ function clipChange(c: BuildChange): BuildChange {
 }
 
 // ---------------------------------------------------------------------------
-// Defensive readers over the persisted shape (apps/web SavedBuildData). That
-// type lives in apps/web and can't be imported here (api must not reach into
-// web), so this module reads the subset it needs structurally.
+// Defensive readers over the persisted shape (SavedBuildData). Field names are
+// checked against the real types; every value is still treated as unknown.
 // ---------------------------------------------------------------------------
 
-type Json = Record<string, unknown>
+type DocJson = Untrusted<SavedBuildData>
 
-function obj(v: unknown): Json | null {
-  return typeof v === "object" && v !== null && !Array.isArray(v)
-    ? (v as Json)
-    : null
-}
+const obj = asRecord<Record<string, unknown>>
 
 function arr(v: unknown): unknown[] {
   return Array.isArray(v) ? v : []
@@ -86,25 +98,28 @@ interface Placed {
 }
 
 function placedMod(v: unknown): Placed | null {
-  const o = obj(v)
+  const o: Untrusted<PlacedMod> | null = obj(v)
   if (!o) return null
   const name = str(obj(o.mod)?.name)
   return name ? { name, rank: num(o.rank) } : null
 }
 
 function placedArcane(v: unknown): Placed | null {
-  const o = obj(v)
+  const o: Untrusted<PlacedArcane> | null = obj(v)
   if (!o) return null
-  const name = str(o.name)
+  const name = str(obj(o.arcane)?.name)
   return name ? { name, rank: num(o.rank) } : null
 }
 
 interface Variant {
   key: string
   label: string
+  /** Twin-frame form index; 0 for normal frames. */
+  form: number
   mods: Placed[]
   arcanes: Placed[]
   shards: string[]
+  forma: Record<string, unknown>
   helminth: string[]
   guideSummary: string | null
   guideDescription: string | null
@@ -132,14 +147,15 @@ function helminthNames(v: unknown): string[] {
     .filter(Boolean)
 }
 
-function readVariant(v: unknown, index: number, fallback: Json): Variant {
-  const o = obj(v) ?? {}
+function readVariant(v: unknown, index: number, fallback: DocJson): Variant {
+  const o: Untrusted<SavedVariant> = obj(v) ?? {}
   // Legacy single-loadout documents have no `variants`; their loadout lives on
   // the top-level fields, which is what `fallback` carries.
-  const src = Object.keys(o).length > 0 ? o : fallback
+  const src: Untrusted<SavedVariant> = Object.keys(o).length > 0 ? o : fallback
   return {
     key: str(o.id) ?? `#${index}`,
     label: str(o.label) ?? "",
+    form: num(o.formIndex) ?? 0,
     mods: Object.values(obj(src.slots) ?? {})
       .map(placedMod)
       .filter((m): m is Placed => m !== null),
@@ -147,6 +163,8 @@ function readVariant(v: unknown, index: number, fallback: Json): Variant {
       .map(placedArcane)
       .filter((a): a is Placed => a !== null),
     shards: arr(src.shards).map(stamp),
+    // Variants saved before per-variant forma only have the top-level set.
+    forma: obj(src.formaPolarities) ?? obj(fallback.formaPolarities) ?? {},
     helminth: helminthNames(src.helminth ?? fallback.helminth),
     // Kept as separate fields and compared field-by-field. Folding them into
     // one string would mean allocating a copy of the guide prose (up to 50 KB
@@ -159,7 +177,23 @@ function readVariant(v: unknown, index: number, fallback: Json): Variant {
   }
 }
 
-function readVariants(doc: Json): Variant[] {
+/** The stored mode, or for builds saved before it existed, "independent" when
+ *  two variants of the same form disagree on forma or shards — the same
+ *  inference the editor's `resolveVariantMode` makes on load. */
+function variantModeOf(doc: DocJson, variants: Variant[]): VariantMode {
+  if (doc.variantMode === "linked" || doc.variantMode === "independent")
+    return doc.variantMode
+  const seen = new Map<number, string>()
+  for (const v of variants) {
+    const sig = `${stamp(v.forma)}|${v.shards.join(";")}`
+    const prior = seen.get(v.form)
+    if (prior !== undefined && prior !== sig) return "independent"
+    seen.set(v.form, sig)
+  }
+  return "linked"
+}
+
+function readVariants(doc: DocJson): Variant[] {
   const list = arr(doc.variants)
   if (list.length === 0) return [readVariant(null, 0, doc)]
   return list.map((v, i) => readVariant(v, i, doc))
@@ -232,7 +266,27 @@ function countChanged(before: string[], after: string[]): number {
   return n
 }
 
-function diffVariant(before: Variant, after: Variant): BuildChange[] {
+function formaChange(
+  before: Record<string, unknown>,
+  after: Record<string, unknown>,
+): BuildChange[] {
+  const slots = new Set([...Object.keys(before), ...Object.keys(after)])
+  const n = [...slots].filter((k) => str(before[k]) !== str(after[k])).length
+  if (n === 0) return []
+  return [
+    {
+      op: "modify",
+      label: "Forma",
+      detail: `${n} ${n === 1 ? "slot" : "slots"} changed`,
+    },
+  ]
+}
+
+function diffVariant(
+  before: Variant,
+  after: Variant,
+  perVariantForma: boolean,
+): BuildChange[] {
   const out: BuildChange[] = [
     ...cancelMoves(after.mods, before.mods),
     ...cancelMoves(after.arcanes, before.arcanes),
@@ -247,6 +301,9 @@ function diffVariant(before: Variant, after: Variant): BuildChange[] {
       detail: `${shardsChanged} of ${total} changed`,
     })
   }
+
+  // Linked builds share one forma set — diffBuildWide reports it once.
+  if (perVariantForma) out.push(...formaChange(before.forma, after.forma))
 
   // Helminth isn't a slot, so there's no +/- form for it — name the swap.
   const bh = before.helminth.join(", ")
@@ -277,7 +334,7 @@ function diffVariant(before: Variant, after: Variant): BuildChange[] {
   return out.map((c) => (after.label ? { ...c, scope: after.label } : c))
 }
 
-function diffBuildWide(before: Json, after: Json): BuildChange[] {
+function diffBuildWide(before: DocJson, after: DocJson): BuildChange[] {
   const out: BuildChange[] = []
 
   if (before.hasReactor !== after.hasReactor) {
@@ -318,8 +375,25 @@ export function diffBuildData(before: unknown, after: unknown): BuildChange[] {
   const beforeVariants = readVariants(a)
   const afterVariants = readVariants(b)
   const byKey = new Map(beforeVariants.map((v) => [v.key, v]))
+  const modeBefore = variantModeOf(a, beforeVariants)
+  const modeAfter = variantModeOf(b, afterVariants)
+  // Forma goes per variant when either side is independent: switching to
+  // shared overwrites the other variants' forma, which a build-wide compare of
+  // the active set can't see. Twin-frame forms each have their own forma even
+  // when linked, so a build spanning forms reports forma per variant too.
+  const independent =
+    modeBefore === "independent" ||
+    modeAfter === "independent" ||
+    new Set(afterVariants.map((v) => v.form)).size > 1
 
   const out: BuildChange[] = []
+  if (modeBefore !== modeAfter) {
+    out.push({
+      op: "modify",
+      label: MODE_LABEL,
+      detail: modeAfter === "linked" ? "now shared" : "now per variant",
+    })
+  }
 
   afterVariants.forEach((av, i) => {
     // Match on the variant's stable id. Position is only a fallback for
@@ -359,7 +433,7 @@ export function diffBuildData(before: unknown, after: unknown): BuildChange[] {
         detail: `${prev.label} → ${av.label}`,
       })
     }
-    out.push(...diffVariant(prev, av))
+    out.push(...diffVariant(prev, av, independent))
   })
 
   for (const gone of byKey.values()) {
@@ -371,8 +445,15 @@ export function diffBuildData(before: unknown, after: unknown): BuildChange[] {
   }
 
   out.push(...diffBuildWide(a, b))
+  if (!independent)
+    out.push(
+      ...formaChange(
+        obj(a.formaPolarities) ?? {},
+        obj(b.formaPolarities) ?? {},
+      ),
+    )
 
-  if (out.length === 0) return [{ op: "info", label: "No loadout changes" }]
+  if (out.length === 0) return [{ op: "info", label: NO_CHANGES_LABEL }]
   if (out.length > MAX_CHANGES) {
     const kept = out.slice(0, MAX_CHANGES).map(clipChange)
     kept.push({
@@ -406,14 +487,18 @@ export function mergeChanges(lists: BuildChange[][]): BuildChange[] {
       // Informational lines aren't stateful — one "Guide updated" for the
       // whole burst, no matter how many saves touched it.
       if (c.op === "info") {
-        if (c.label === "No loadout changes") continue
+        if (c.label === NO_CHANGES_LABEL) continue
         merged.set(`info|${c.scope ?? ""}|${c.label}`, c)
         continue
       }
       const key = `${c.scope ?? ""}|${c.label}`
       const prior = merged.get(key)
       // In then out (or out then in) across the burst = nothing happened.
-      if (prior && CANCELS[prior.op] === c.op) {
+      if (
+        prior &&
+        (CANCELS[prior.op] === c.op ||
+          (c.label === MODE_LABEL && prior.detail !== c.detail))
+      ) {
         merged.delete(key)
         continue
       }
@@ -421,5 +506,5 @@ export function mergeChanges(lists: BuildChange[][]): BuildChange[] {
     }
   }
   const out = [...merged.values()]
-  return out.length > 0 ? out : [{ op: "info", label: "No loadout changes" }]
+  return out.length > 0 ? out : [{ op: "info", label: NO_CHANGES_LABEL }]
 }

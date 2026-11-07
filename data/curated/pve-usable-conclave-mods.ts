@@ -9,7 +9,7 @@
  * PvE and Conclave" / "is a PvE and Conclave Warframe Augment"). Nothing in the
  * DE export or the wiki Lua module distinguishes these from the Conclave-only
  * augments — the records are byte-identical — so this allowlist is curated from
- * each mod's wiki page. See merge step in scripts/build-items-index.ts.
+ * each mod's wiki page. Applied in scripts/build/wiki-mod-flags.ts.
  *
  * Keyed by uniqueName (= wiki InternalName), which is stable across renames.
  * Verified against wiki.warframe.com, 2026-06-01.

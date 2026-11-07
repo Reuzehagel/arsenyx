@@ -17,6 +17,11 @@
  */
 
 import { readFileSync } from "node:fs"
+import { resolve } from "node:path"
+
+import { parse as luaparse } from "luaparse"
+
+import { RAW_WIKI_DIR } from "./paths"
 
 // `luaparse` types are loose: every node carries arbitrary fields and the
 // shape depends on the node `type`. We type the few we care about at use
@@ -24,13 +29,106 @@ import { readFileSync } from "node:fs"
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Node = any
 
-import { parse as luaparse } from "luaparse"
+/** Modules sync-wiki.ts mirrors. `Module:Weapons/data/{primary,...}` are the
+ *  eight subpages declared by the router; the rest are independent top-level
+ *  Module pages. All are pure data per the upstream contract.
+ *
+ *  `Modular/data` carries the per-combination stat modifiers for Kitguns and
+ *  Zaws (chamber/grip/loader and strike/grip/link tables). DE ships modular
+ *  parts as zero-stat shells, so this module is the only verifiable source for
+ *  the reconstructed stats — see merge-modular.ts. */
+export const WIKI_MODULES = [
+  "Weapons/data/primary",
+  "Weapons/data/secondary",
+  "Weapons/data/melee",
+  "Weapons/data/archwing",
+  "Weapons/data/companion",
+  "Weapons/data/railjack",
+  "Weapons/data/modular",
+  "Weapons/data/misc",
+  "Warframes/data",
+  "Companions/data",
+  "Arcane/data",
+  "Mods/data",
+  "Modular/data",
+  // Per-ability stat values, each tagged with the mod stat it scales by
+  // (Modifier) — see merge-ability-stats.ts.
+  "Ability/data/stats",
+] as const
+
+export type WikiModule = (typeof WIKI_MODULES)[number]
+
+/** `Weapons/data/primary` → `Weapons_data_primary.lua`. */
+export function wikiModuleFile(module: string): string {
+  return module.replace(/\//g, "_") + ".lua"
+}
+
+/** Parse one mirrored module from data/raw/wiki/. */
+export function readWiki(module: WikiModule): Record<string, unknown> {
+  return readWikiModule(resolve(RAW_WIKI_DIR, wikiModuleFile(module)))
+}
+
+/** Every `Weapons/data/*` module in WIKI_MODULES, sorted by file name (a
+ *  later subpage wins a duplicate weapon name; the sort keeps the order the
+ *  old directory scan had). */
+export function readWikiWeaponSubpages(): Record<string, unknown>[] {
+  return WIKI_MODULES.filter((m) => m.startsWith("Weapons/data/"))
+    .map(wikiModuleFile)
+    .sort()
+    .map((n) => readWikiModule(resolve(RAW_WIKI_DIR, n)))
+}
+
+/** Walk a parsed module and yield every record `isRecord` accepts, without
+ *  descending into it. Tables nest arbitrarily (Mods_data has a top-level
+ *  `DefaultUpgrades` subtable; Warframes_data has Warframes / Archwings /
+ *  Necramechs / Operators; per-slot Weapons_data_* are flat). */
+function* walkWikiRecords(
+  obj: unknown,
+  isRecord: (rec: Record<string, unknown>) => boolean,
+): Generator<Record<string, unknown>> {
+  if (!obj || typeof obj !== "object") return
+  const rec = obj as Record<string, unknown>
+  if (isRecord(rec)) {
+    yield rec
+    return
+  }
+  for (const v of Object.values(rec)) {
+    if (v && typeof v === "object") yield* walkWikiRecords(v, isRecord)
+  }
+}
+
+const nonEmpty = (v: unknown): v is string =>
+  typeof v === "string" && v.length > 0
+
+/** Every record carrying an `InternalName` (= DE uniqueName), whole, so
+ *  callers can pluck arbitrary fields (IsExilus, Polarity, …). */
+export function* iterWikiRecords(
+  obj: unknown,
+): Generator<{ internalName: string; record: Record<string, unknown> }> {
+  for (const record of walkWikiRecords(obj, (r) => nonEmpty(r["InternalName"])))
+    yield { internalName: record["InternalName"] as string, record }
+}
+
+/** `(InternalName, Image)` pairs. Unlike `iterWikiRecords`, a record with an
+ *  InternalName but no Image is descended into. */
+export function* iterWikiImageEntries(
+  obj: unknown,
+): Generator<{ internalName: string; image: string }> {
+  for (const rec of walkWikiRecords(
+    obj,
+    (r) => nonEmpty(r["InternalName"]) && nonEmpty(r["Image"]),
+  ))
+    yield {
+      internalName: rec["InternalName"] as string,
+      image: rec["Image"] as string,
+    }
+}
 
 /** Tracks bare identifiers we've already warned about — keeps logs readable
  *  when the same wiki typo recurs across many weapon entries. */
 const seenUnquotedIdents = new Set<string>()
 
-export function readWikiModule(path: string): Record<string, unknown> {
+function readWikiModule(path: string): Record<string, unknown> {
   const src = readFileSync(path, "utf8")
   // We use encodingMode "none" because luaparse's pseudo-latin1 and
   // x-user-defined modes both reject source code points beyond U+00FF, and
@@ -68,21 +166,7 @@ export function readWikiModule(path: string): Record<string, unknown> {
   let arg: Node | undefined = ret.arguments[0]
   if (!arg) throw new Error(`return has no argument in ${path}`)
 
-  // Three return shapes we handle:
-  //   return { ... }                  — inline table (most modules)
-  //   return Foo                       — references a local
-  //   return wrapFn(Foo) or wrapFn({}) — module wraps data through a helper
-  //                                      (e.g. Stances uses addSharedCombos).
-  //                                      We unwrap to the first argument.
-  if (arg.type === "CallExpression") {
-    const inner = arg.arguments?.[0]
-    if (!inner) {
-      throw new Error(
-        `return ${arg.base?.name as string}(...) has no arguments in ${path}`,
-      )
-    }
-    arg = inner
-  }
+  // `return { ... }` (most modules) or `return Foo` (a local, e.g. Mods/data).
   if (arg.type === "Identifier") {
     const resolved = locals.get(arg.name as string)
     if (!resolved) {
@@ -122,7 +206,6 @@ function luaUnescape(raw: string): string {
   if (quote !== '"' && quote !== "'") {
     throw new Error(`Unrecognized string literal: ${raw.slice(0, 32)}`)
   }
-  // Strip the surrounding quote, then unescape.
   const inner = raw.slice(1, -1)
   let out = ""
   for (let i = 0; i < inner.length; i++) {
@@ -167,7 +250,6 @@ function luaUnescape(raw: string): string {
         out += "\n"
         break
       case "x": {
-        // Two hex digits.
         const hex = inner.slice(i + 1, i + 3)
         if (!/^[0-9a-fA-F]{2}$/.test(hex)) {
           throw new Error(`Bad \\x escape in ${raw.slice(0, 64)}`)

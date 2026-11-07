@@ -115,32 +115,3 @@ export async function toggleBookmark(
   const rows = await prisma.$queryRaw<{ count: number }[]>(query)
   return rows[0]?.count ?? fallbackCount
 }
-
-/**
- * Remove a user's Likes, Dislikes and Bookmarks and take them back off the counters.
- * Run before deleting the user: the FK cascade would drop the rows but leave
- * every counter they moved permanently inflated.
- */
-export function releaseUserSocial(userId: string) {
-  return [
-    prisma.$executeRaw`
-      WITH deleted AS (
-        DELETE FROM build_likes WHERE "userId" = ${userId}
-        RETURNING "buildId", value
-      )
-      UPDATE builds b
-      SET "likeCount" = GREATEST(0, b."likeCount" - (d.value = 1)::int),
-          "dislikeCount" = GREATEST(0, b."dislikeCount" - (d.value = -1)::int)
-      FROM deleted d
-      WHERE b.id = d."buildId"
-    `,
-    prisma.$executeRaw`
-      WITH deleted AS (
-        DELETE FROM build_bookmarks WHERE "userId" = ${userId} RETURNING "buildId"
-      )
-      UPDATE builds
-      SET "bookmarkCount" = GREATEST(0, "bookmarkCount" - 1)
-      WHERE id IN (SELECT "buildId" FROM deleted)
-    `,
-  ]
-}

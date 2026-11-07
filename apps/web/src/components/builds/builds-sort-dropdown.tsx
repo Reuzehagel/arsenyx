@@ -1,5 +1,6 @@
+import type { ListSort } from "@arsenyx/shared/api/build-list"
+
 import { SortSelect } from "@/components/sort-select"
-import type { BuildListSort } from "@/lib/queries/builds-list-query"
 
 const SORT_ITEMS = [
   { value: "newest", label: "Newest" },
@@ -12,16 +13,14 @@ const SORT_ITEMS = [
   { value: "forma-desc", label: "Most Forma" },
   { value: "name-asc", label: "Name A-Z" },
   { value: "name-desc", label: "Name Z-A" },
-] as const
-
-export const SORT_VALUES: BuildListSort[] = SORT_ITEMS.map((i) => i.value)
+] as const satisfies readonly { value: ListSort; label: string }[]
 
 export function BuildsSortDropdown({
   value,
   onChange,
 }: {
-  value: BuildListSort
-  onChange: (value: BuildListSort) => void
+  value: ListSort
+  onChange: (value: ListSort) => void
 }) {
   return (
     <SortSelect
