@@ -6,6 +6,11 @@ set windows-shell := ["pwsh", "-NoLogo", "-NoProfile", "-Command"]
 dev:
     bunx concurrently -k -n api,web -c blue,green "just api" "just web"
 
+# Sign in to the local API as the dev admin and print a Cookie header:
+#   curl -H "$(just dev-login)" http://localhost:8787/auth/get-session
+dev-login:
+    @bun --env-file=apps/api/.env scripts/dev-login.ts
+
 # Run only the Hono API. Needs apps/api/.env (`just setup`). The dev-db preflight
 # starts the container and stops a checkout whose .env points anywhere else.
 [working-directory('apps/api')]
