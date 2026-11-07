@@ -23,7 +23,7 @@ import { Kbd } from "@/components/ui/kbd"
 import { Popover, PopoverContent } from "@/components/ui/popover"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
-import { useWorstCaseList } from "@/dev/fixtures"
+import { useBuildListFixture } from "@/dev/fixtures"
 import { HOTKEYS, useSearchHotkey } from "@/lib/hooks/hotkeys"
 import { useUrlSearchInput } from "@/lib/hooks/use-url-search-input"
 import type { publicBuildsQuery } from "@/lib/queries/builds-list-query"
@@ -153,7 +153,7 @@ function Results({
     ...query,
     placeholderData: keepPreviousData,
   })
-  const data = useWorstCaseList(res.data)
+  const data = useBuildListFixture(res.data)
   const isFetching = res.isFetching
   const isPending = res.isPending && !data
 

@@ -1,6 +1,7 @@
 // DEV-ONLY stress fixtures (break-ui skill). `?data=worst|empty|one|many`
-// swaps a list or profile response at the data boundary; the toggle and the
-// swap are both gated on import.meta.env.DEV.
+// swaps a list or profile response at the data boundary. Every export is
+// picked on import.meta.env.DEV at definition and all data is built lazily,
+// so a prod build gets pass-throughs and tree-shakes the fixtures away.
 import type {
   BuildListItemResponse,
   BuildListResponse,
@@ -27,13 +28,13 @@ const LABELS: Record<DataState, string> = {
 }
 
 const EVENT = "worst-case-data"
-function read(): DataState {
+function readDataState(): DataState {
   const v = new URLSearchParams(location.search).get("data")
   return (STATES as readonly string[]).includes(v ?? "")
     ? (v as DataState)
     : "demo"
 }
-function subscribe(cb: () => void) {
+function subscribeDataState(cb: () => void) {
   addEventListener(EVENT, cb)
   addEventListener("popstate", cb)
   return () => {
@@ -41,7 +42,7 @@ function subscribe(cb: () => void) {
     removeEventListener("popstate", cb)
   }
 }
-function set(state: DataState) {
+function setDataState(state: DataState) {
   const url = new URL(location.href)
   if (state === "demo") url.searchParams.delete("data")
   else url.searchParams.set("data", state)
@@ -126,7 +127,7 @@ const user = (displayUsername: string | null, username: string | null) => ({
   image: null,
 })
 
-const WORST: BuildListItemResponse[] = [
+const worstBuilds = (): BuildListItemResponse[] => [
   // 120 chars: the API's MAX_NAME (apps/api/src/routes/builds.ts:86).
   build(1, {
     name: "Wisp Prime — Steel Path Survival / Mirror Defense / Netracells (no Helminth, budget, works without Archon Shards!!) v3",
@@ -224,11 +225,11 @@ function fixture(state: DataState): BuildListResponse | null {
   })
   switch (state) {
     case "worst":
-      return page(WORST)
+      return page(worstBuilds())
     case "empty":
       return page([])
     case "one":
-      return page([WORST[2]!])
+      return page([worstBuilds()[2]!])
     case "many":
       return page(many(), 1284)
     default:
@@ -238,16 +239,21 @@ function fixture(state: DataState): BuildListResponse | null {
 
 /** `real`, or the fixture for the `?data=` state when one is given (dev only).
  *  Swap at the data boundary: right where the query result is read. */
-export function useFixture<T>(
+function useFixture<T>(
   real: T,
   fixtures: Partial<Record<DataState, () => T>>,
 ): T {
-  const state = useSyncExternalStore(subscribe, read, () => "demo" as const)
-  if (!import.meta.env.DEV) return real
+  const state = useSyncExternalStore(
+    subscribeDataState,
+    readDataState,
+    () => "demo" as const,
+  )
   return fixtures[state]?.() ?? real
 }
 
-export function useWorstCaseList<T extends BuildListResponse | undefined>(
+const passThrough = <T,>(real: T) => real
+
+function useBuildListFixtureDev<T extends BuildListResponse | undefined>(
   real: T,
 ): T | BuildListResponse {
   return useFixture<T | BuildListResponse>(real, {
@@ -289,7 +295,7 @@ function profileItem(
   }
 }
 
-const WORST_PROFILES: ProfileDirectoryItem[] = [
+const worstProfiles = (): ProfileDirectoryItem[] => [
   profileItem(1, {
     displayUsername: "Aleksandra Wiśniewska-Kowalczyk-Nowakowska-Zielińs", // 50 = DISPLAY_USERNAME_MAX
     username: "aleksandra.wisniewska-kowalczy", // 30 = USERNAME_MAX
@@ -341,7 +347,7 @@ function orgItem(i: number, over: Partial<OrgDirectoryItem>): OrgDirectoryItem {
   }
 }
 
-const WORST_ORGS: OrgDirectoryItem[] = [
+const worstOrgs = (): OrgDirectoryItem[] => [
   orgItem(1, {
     name: "Steel Path Endurance Collective!", // 32 = ORG_NAME_MAX
     slug: "steel-path-endurance-collectiv", // 30 = ORG_SLUG_MAX
@@ -365,28 +371,27 @@ const WORST_ORGS: OrgDirectoryItem[] = [
 
 const envelope = { page: 1, limit: 24 }
 
-export function useProfilesFixture(real: ProfileDirectoryResponse) {
+function useProfilesFixtureDev(real: ProfileDirectoryResponse) {
   return useFixture(real, {
-    worst: () => ({ ...envelope, users: WORST_PROFILES, total: 6 }),
+    worst: () => ({ ...envelope, users: worstProfiles(), total: 6 }),
     empty: () => ({ ...envelope, users: [], total: 0 }),
-    one: () => ({ ...envelope, users: [WORST_PROFILES[1]!], total: 1 }),
+    one: () => ({ ...envelope, users: [worstProfiles()[1]!], total: 1 }),
   })
 }
 
-export function useOrgsFixture(real: OrgDirectoryResponse) {
+function useOrgsFixtureDev(real: OrgDirectoryResponse) {
   return useFixture(real, {
-    worst: () => ({ ...envelope, orgs: WORST_ORGS, total: 4 }),
+    worst: () => ({ ...envelope, orgs: worstOrgs(), total: 4 }),
     empty: () => ({ ...envelope, orgs: [], total: 0 }),
-    one: () => ({ ...envelope, orgs: [WORST_ORGS[1]!], total: 1 }),
+    one: () => ({ ...envelope, orgs: [worstOrgs()[1]!], total: 1 }),
   })
 }
 
-export function useProfileFixture(real: Profile) {
-  const p = WORST_PROFILES[0]!
+function useProfileFixtureDev(real: Profile) {
   return useFixture(real, {
     worst: () => ({
       ...real,
-      ...p,
+      ...worstProfiles()[0]!,
       image: DEAD_AVATAR,
       displayUsername: "SP_Eidolon_Hunter_Christopher_Montgomery_the_Third",
       badges: {
@@ -401,14 +406,17 @@ export function useProfileFixture(real: Profile) {
         totalBookmarks: 1,
         totalViews: 12_345_678,
       },
-      orgs: WORST_ORGS.map((o) => ({ ...o, role: "MEMBER" as const })),
+      orgs: worstOrgs().map((o) => ({ ...o, role: "MEMBER" as const })),
     }),
   })
 }
 
-export function FixtureToggle() {
-  const state = useSyncExternalStore(subscribe, read, () => "demo" as const)
-  if (!import.meta.env.DEV) return null
+function FixtureToggleDev() {
+  const state = useSyncExternalStore(
+    subscribeDataState,
+    readDataState,
+    () => "demo" as const,
+  )
   return (
     <div
       role="radiogroup"
@@ -434,7 +442,7 @@ export function FixtureToggle() {
           type="button"
           role="radio"
           aria-checked={state === s}
-          onClick={() => set(s)}
+          onClick={() => setDataState(s)}
           style={{
             border: 0,
             borderRadius: 999,
@@ -450,3 +458,12 @@ export function FixtureToggle() {
     </div>
   )
 }
+
+const DEV = import.meta.env.DEV
+export const useBuildListFixture: typeof useBuildListFixtureDev = DEV
+  ? useBuildListFixtureDev
+  : passThrough
+export const useProfilesFixture = DEV ? useProfilesFixtureDev : passThrough
+export const useOrgsFixture = DEV ? useOrgsFixtureDev : passThrough
+export const useProfileFixture = DEV ? useProfileFixtureDev : passThrough
+export const FixtureToggle = DEV ? FixtureToggleDev : () => null
