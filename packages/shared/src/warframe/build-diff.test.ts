@@ -349,6 +349,19 @@ describe("mergeChanges", () => {
     ).toEqual([{ op: "info", label: "No loadout changes" }])
   })
 
+  it("cancels a Variant mode switch undone within the burst", () => {
+    const toShared = {
+      op: "modify",
+      label: "Forma & shards",
+      detail: "now shared",
+    } as const
+    const toPer = { ...toShared, detail: "now per variant" }
+    expect(mergeChanges([[toShared], [toPer]])).toEqual([
+      { op: "info", label: "No loadout changes" },
+    ])
+    expect(mergeChanges([[toShared], [toPer], [toShared]])).toEqual([toShared])
+  })
+
   it("keeps the latest state of a repeatedly edited entry", () => {
     expect(
       mergeChanges([

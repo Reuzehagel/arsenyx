@@ -47,6 +47,10 @@ const MAX_CHANGES = 40
 /** The `info` label a save that moved nothing gets. Readers filter on it. */
 export const NO_CHANGES_LABEL = "No loadout changes"
 
+/** Label of the Variant mode switch. The mode has two values, so a second
+ *  switch in one burst always undoes the first — `mergeChanges` cancels them. */
+const MODE_LABEL = "Forma & shards"
+
 /** Per-field length cap on stored changes. Labels, scopes and details echo
  *  user strings (variant labels, mod names) and a variant's label is stamped
  *  onto every one of its changes — uncapped, one PATCH could store ~40× its
@@ -386,7 +390,7 @@ export function diffBuildData(before: unknown, after: unknown): BuildChange[] {
   if (modeBefore !== modeAfter) {
     out.push({
       op: "modify",
-      label: "Forma & shards",
+      label: MODE_LABEL,
       detail: modeAfter === "linked" ? "now shared" : "now per variant",
     })
   }
@@ -490,7 +494,11 @@ export function mergeChanges(lists: BuildChange[][]): BuildChange[] {
       const key = `${c.scope ?? ""}|${c.label}`
       const prior = merged.get(key)
       // In then out (or out then in) across the burst = nothing happened.
-      if (prior && CANCELS[prior.op] === c.op) {
+      if (
+        prior &&
+        (CANCELS[prior.op] === c.op ||
+          (c.label === MODE_LABEL && prior.detail !== c.detail))
+      ) {
         merged.delete(key)
         continue
       }
