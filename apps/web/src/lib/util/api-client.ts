@@ -28,8 +28,8 @@ export function apiErrorMessage(err: unknown, fallback: string): string {
   return err.body?.message ?? err.body?.error ?? err.body?.details ?? fallback
 }
 
-/** HTTP status and `error` code of a failed API call; both null when the
- *  request never got an answer (offline, CORS, DNS). */
+/** HTTP status and `error` code of a failed API call; both null for anything
+ *  that isn't an ApiError (no answer, or a client-side throw). */
 export function apiErrorInfo(err: unknown): {
   status: number | null
   code: string | null

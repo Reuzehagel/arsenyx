@@ -5,7 +5,7 @@
  *   just dev-login
  *   curl -H "$(just dev-login)" http://localhost:8787/auth/get-session
  *
- * Reads apps/api/.env (via `just`'s --env-file). API_URL overrides the API
+ * Reads apps/api/.env (the `dev-login` recipe runs bun --env-file). API_URL overrides the API
  * origin, e.g. for a second worktree's port.
  */
 
@@ -29,7 +29,7 @@ if (!/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(api)) {
   console.error(`dev-login: refusing a non-local API (${api}).`)
   process.exit(1)
 }
-// The API's origin guard wants a browser-like Origin from the web app.
+// Better Auth's CSRF check rejects an Origin outside trustedOrigins (WEB_ORIGIN).
 const origin = (env.WEB_ORIGIN ?? "http://localhost:5173").split(",")[0]!
 
 let res: Response

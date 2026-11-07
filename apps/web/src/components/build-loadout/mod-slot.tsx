@@ -329,6 +329,9 @@ export function ModSlot({
               mod &&
               kind !== "aura" &&
               (isDragging ? "cursor-grabbing" : "cursor-grab"),
+            // While this slot is the drag source, hide the mod card behind
+            // a dashed "ghost" so it reads as a vacated slot (matches how
+            // an empty slot looks). The drag overlay carries the real card.
             (!mod || isDragging) && "rounded-md border",
             (!mod || isDragging) &&
               !readOnly &&
@@ -341,10 +344,7 @@ export function ModSlot({
               selected &&
               !readOnly &&
               "rounded-md ring-2 ring-white/60",
-            // While this slot is the drag source, hide the mod card behind
-            // a dashed "ghost" so it reads as a vacated slot (matches how
-            // an empty slot looks). The drag overlay carries the real card.
-            // Distinct from the white "selected" ring, and red when the drop
+            // Drop target: distinct from the white "selected" ring, and red when the drop
             // would be refused, so a release never silently does nothing.
             isOver &&
               !isDragging &&
