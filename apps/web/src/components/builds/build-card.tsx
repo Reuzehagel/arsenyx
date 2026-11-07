@@ -65,49 +65,10 @@ function useBuildCardData(build: BuildListItemResponse) {
   }
 }
 
-/** Byline line(s) crediting the org and/or author. `card` stacks two <p> rows
- *  (org line + author line) to keep card heights aligned; `row` renders the
- *  inline "· by …" variant used in the dense row layout. */
-function BuildByline({
-  build,
-  variant,
-}: {
-  build: BuildListItemResponse
-  variant: "card" | "row"
-}) {
+/** One-line byline: "Org · by author", "Org", or "by author". Each part
+ *  truncates on its own; the caller supplies the flex row. */
+function BuildByline({ build }: { build: BuildListItemResponse }) {
   const author = authorName(build.user)
-
-  if (variant === "card") {
-    return (
-      <>
-        <p
-          className="text-muted-foreground truncate text-xs"
-          title={build.organization?.name ?? `by ${author}`}
-        >
-          {build.organization ? (
-            <span className={build.organization.verified ? "text-wf-org" : ""}>
-              {build.organization.name}
-            </span>
-          ) : (
-            <>by {author}</>
-          )}
-        </p>
-        <p
-          className="text-muted-foreground truncate text-xs"
-          title={
-            build.organization && !build.hideAuthor ? `by ${author}` : undefined
-          }
-          aria-hidden={!build.organization || build.hideAuthor}
-        >
-          {build.organization && !build.hideAuthor ? (
-            <>by {author}</>
-          ) : (
-            <>&nbsp;</>
-          )}
-        </p>
-      </>
-    )
-  }
 
   return build.organization ? (
     <>
@@ -210,7 +171,9 @@ export function BuildCard({ build }: { build: BuildListItemResponse }) {
             </TooltipContent>
           </Tooltip>
         </div>
-        <BuildByline build={build} variant="card" />
+        <div className="text-muted-foreground flex min-w-0 items-center gap-x-1.5 text-xs">
+          <BuildByline build={build} />
+        </div>
         <div className="text-muted-foreground flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
           <span className="flex items-center gap-1">
             <Heart className="size-3" />
@@ -261,7 +224,7 @@ export function BuildRow({ build }: { build: BuildListItemResponse }) {
           <span aria-hidden className="shrink-0">
             ·
           </span>
-          <BuildByline build={build} variant="row" />
+          <BuildByline build={build} />
         </div>
       </div>
       <div className="text-muted-foreground flex shrink-0 items-center gap-3 text-xs">
@@ -320,7 +283,6 @@ export function BuildCardSkeleton() {
           <Skeleton className="h-[0.875rem] w-10" />
         </div>
         <Skeleton className="h-[0.875rem] w-2/5" />
-        <Skeleton className="h-[0.875rem] w-1/3" />
         <Skeleton className="mt-0.5 h-3 w-24" />
       </div>
     </div>
