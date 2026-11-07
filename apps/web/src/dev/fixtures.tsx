@@ -27,7 +27,9 @@ const LABELS: Record<DataState, string> = {
   many: "Many",
 }
 
-const EVENT = "worst-case-data"
+// Also the marker `check:dev-leak` looks for in the prod bundle: every export
+// path reads it, so any fixture code that ships carries it.
+const EVENT = "arsenyx-dev-only"
 function readDataState(): DataState {
   const v = new URLSearchParams(location.search).get("data")
   return (STATES as readonly string[]).includes(v ?? "")

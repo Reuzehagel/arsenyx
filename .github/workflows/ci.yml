@@ -81,6 +81,9 @@ jobs:
         working-directory: apps/web
         run: bun run build
 
+      - name: Check no dev-only code shipped
+        run: bun run check:dev-leak
+
       - name: Check Worker configs (wrangler dry-run)
         # After Build (web) — apps/web's [assets] directory is ./dist.
         run: bun run check:wrangler
