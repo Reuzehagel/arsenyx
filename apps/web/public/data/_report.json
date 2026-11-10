@@ -24,14 +24,14 @@
       "archwing": 33,
       "warframes": 119,
       "necramechs": 2,
+      "operators": 2,
       "secondary": 154,
       "melee": 239,
       "primary": 203,
       "companion-weapons": 41,
       "exalted-weapons": 37,
       "companions": 41,
-      "railjack": 1,
-      "operators": 2
+      "railjack": 1
     }
   },
   "weaponsUnmatched": [],
@@ -40,6 +40,7 @@
   ],
   "frameRankUpDrift": [],
   "companionsUnmatched": [],
+  "companionsUnknownType": [],
   "modsUnmatched": [
     "Air Martial (/Lotus/Upgrades/Mods/PvPMods/Melee/AirborneMeleeAutoTargetBonus)",
     "Fizzbang Flourish (/Lotus/Upgrades/Mods/Hoverboard/HBFireWorksMod)",
