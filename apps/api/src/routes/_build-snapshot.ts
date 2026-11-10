@@ -246,16 +246,44 @@ export async function snapshotSlugs(
   return rows.flatMap((b) => [b.slug, ...b.partnerBuilds.map((p) => p.slug)])
 }
 
-/** Deletes one build and refreshes it (dropping its snapshot) and its
- *  partners' strips. False when there was no such build. */
+const DELETION_RETENTION_DAYS = 90
+
+/** Deletes one build, logging a BuildDeletion tombstone in the same
+ *  transaction, and refreshes it (dropping its snapshot) and its partners'
+ *  strips. False when there was no such build. */
 export async function deleteBuild(
   c: Context,
   where: { id: string } | { slug: string },
+  deletedById: string,
 ): Promise<boolean> {
-  const slugs = await snapshotSlugs(where)
-  if (slugs.length === 0) return false
-  await prisma.build.delete({ where })
+  const build = await prisma.build.findUnique({
+    where,
+    include: { buildGuide: true },
+  })
+  if (!build) return false
+  const slugs = await snapshotSlugs({ id: build.id })
+  await prisma.$transaction([
+    prisma.buildDeletion.create({
+      data: {
+        buildId: build.id,
+        slug: build.slug,
+        deletedById,
+        build: build as unknown as Prisma.InputJsonValue,
+      },
+    }),
+    prisma.build.delete({ where: { id: build.id } }),
+  ])
   invalidateBuilds(c, slugs)
+  registerBackgroundWork(
+    prisma.buildDeletion.deleteMany({
+      where: {
+        deletedAt: {
+          lt: new Date(Date.now() - DELETION_RETENTION_DAYS * 86_400_000),
+        },
+      },
+    }),
+    "build deletion prune",
+  )
   return true
 }
 

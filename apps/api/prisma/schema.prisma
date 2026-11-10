@@ -309,6 +309,26 @@ enum BuildRevisionKind {
   EDITED
 }
 
+// Tombstone for every build deleted through deleteBuild (_build-snapshot.ts):
+// who deleted it and a full copy of the row, so a deletion can be explained
+// and undone without a backup restore. No FKs: the build is gone, and the
+// actor's account may go later. Rows older than DELETION_RETENTION_DAYS are
+// pruned on the next delete. Account deletion cascades builds without
+// passing through here, on purpose: that data is meant to be gone.
+model BuildDeletion {
+  id          String   @id @default(cuid())
+  buildId     String
+  slug        String
+  deletedById String
+  // The builds row plus its buildGuide, as Prisma read it before the delete.
+  build       Json
+  deletedAt   DateTime @default(now())
+
+  @@index([deletedAt])
+  @@index([slug])
+  @@map("build_deletions")
+}
+
 model BuildGuide {
   id      String @id @default(cuid())
   buildId String @unique

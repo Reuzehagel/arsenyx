@@ -408,7 +408,7 @@ builds.delete("/:slug", rateLimitUser("mutate"), async (c) => {
     return c.json({ error: "forbidden" }, 403)
   }
 
-  await deleteBuild(c, { id: existing.id })
+  await deleteBuild(c, { id: existing.id }, user.id)
   return c.body(null, 204)
 })
 

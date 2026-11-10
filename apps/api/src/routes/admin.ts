@@ -190,9 +190,9 @@ admin.patch("/builds/:slug", adminMutateLimit, async (c) => {
 })
 
 admin.delete("/builds/:slug", adminMutateLimit, async (c) => {
-  await requireAdmin(c)
+  const actor = await requireAdmin(c)
 
-  if (!(await deleteBuild(c, { slug: c.req.param("slug") }))) {
+  if (!(await deleteBuild(c, { slug: c.req.param("slug") }, actor.id))) {
     return c.json({ error: "not_found" }, 404)
   }
   return c.body(null, 204)
