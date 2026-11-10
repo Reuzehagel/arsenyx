@@ -13,9 +13,12 @@ import { prisma } from "../db"
  *   orgs.ts' last-admin guard, and no admin route can appoint an org ADMIN, so
  *   the org would otherwise be left unmanageable. Orgs with no other members
  *   are left as they are.
+ * - Tombstones of builds the user authored (build_deletions) go too: account
+ *   deletion means their content is gone, not kept for the 90-day window.
  */
 export function beforeUserDeletion(userId: string) {
   return [
+    prisma.$executeRaw`DELETE FROM build_deletions WHERE build->>'userId' = ${userId}`,
     prisma.$executeRaw`
       WITH deleted AS (
         DELETE FROM build_likes WHERE "userId" = ${userId}
