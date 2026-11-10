@@ -67,6 +67,15 @@ bun --cwd apps/api run db:studio   # Prisma Studio GUI
 bun --cwd apps/api run db:generate # regenerate Prisma client
 ```
 
+### A build went missing
+
+Claude can't connect to prod (the permission classifier blocks the prod URL), so it writes the SQL and the owner runs it in the PlanetScale console on `main`.
+
+1. Get the build link or slug from whoever reported it. A 404 from `api.arsenyx.com/builds/<slug>` means deleted *or* not visible to you, so it settles nothing.
+2. `SELECT b.slug, b.visibility, b."organizationId", u.username FROM builds b JOIN users u ON u.id = b."userId" WHERE b.slug = '<slug>';` A row means it exists and is just private, or belongs to someone else.
+3. `SELECT "deletedById", "deletedAt", build->>'name', build->>'userId' FROM build_deletions WHERE slug = '<slug>';` gives who deleted it and when. To undo, re-insert from the `build` JSON with `INSERT INTO builds SELECT * FROM jsonb_populate_record(NULL::builds, build - 'buildGuide')`, plus the guide from `build->'buildGuide'`. Tombstones are kept 90 days. Account deletion leaves none, on purpose.
+4. Only for deletes older than that, or from before tombstones existed: restore a backup (Backups → a backup → Restore, which creates a new branch billed while it exists; daily backups are kept 2 days), run step 2 on it, then delete the branch.
+
 ### Sign in as the dev admin
 
 `just setup` seeds `admin@local.dev` and keeps its password in `apps/api/.env`

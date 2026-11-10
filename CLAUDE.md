@@ -41,7 +41,7 @@ Game data is static, user data is dynamic. If something is read-heavy and rarely
 ## Progressive disclosure — load on demand
 
 - [GLOSSARY.md](GLOSSARY.md) — domain terms (Build, Variant, Like, Bookmark): read before naming a new concept, route, or field
-- [docs/commands.md](docs/commands.md) — full command reference (build, local dev DB, signing in as the dev admin (browser or curl), data sync, reading a PR's diff, shipping a data-pipeline fix, dev-server ports taken by another worktree)
+- [docs/commands.md](docs/commands.md) — full command reference (build, local dev DB, a missing or deleted build, signing in as the dev admin (browser or curl), data sync, reading a PR's diff, shipping a data-pipeline fix, dev-server ports taken by another worktree)
 - [docs/gotchas.md](docs/gotchas.md) — non-obvious pitfalls (PowerShell, Base UI, shadcn in monorepo)
 - [docs/reviewing-prs.md](docs/reviewing-prs.md) — reviewing or merging a PR: merge-blocker checklist (hand to reviewer subagents), batch-merge order
 - [docs/hotkeys.md](docs/hotkeys.md) — adding or rebinding a keyboard shortcut
