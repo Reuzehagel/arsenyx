@@ -75,7 +75,12 @@ Claude can't connect to prod (the permission classifier blocks the prod URL), so
 2. `SELECT b.slug, b.visibility, b."organizationId", u.username FROM builds b JOIN users u ON u.id = b."userId" WHERE b.slug = '<slug>';` A row means it exists and is just private, or belongs to someone else.
 3. `SELECT "deletedById", "deletedAt", build->>'name', build->>'userId' FROM build_deletions WHERE slug = '<slug>';` gives who deleted it and when. To undo, with `<id>` the tombstone's `id`:
    ```sql
-   INSERT INTO builds SELECT * FROM jsonb_populate_record(NULL::builds, (SELECT build FROM build_deletions WHERE id = '<id>'));
+   -- Links to a fork source or org deleted since are dropped (and hideAuthor with the org), or the FK aborts the insert.
+   INSERT INTO builds SELECT * FROM jsonb_populate_record(NULL::builds, (
+     SELECT build
+       || CASE WHEN EXISTS (SELECT 1 FROM builds WHERE id = build->>'forkedFromId') THEN '{}' ELSE '{"forkedFromId": null}' END::jsonb
+       || CASE WHEN EXISTS (SELECT 1 FROM organizations WHERE id = build->>'organizationId') THEN '{}' ELSE '{"organizationId": null, "hideAuthor": false}' END::jsonb
+     FROM build_deletions WHERE id = '<id>'));
    INSERT INTO build_guides SELECT * FROM jsonb_populate_record(NULL::build_guides, (SELECT build->'buildGuide' FROM build_deletions WHERE id = '<id>' AND jsonb_typeof(build->'buildGuide') = 'object'));
    INSERT INTO "_PartnerBuilds" ("A", "B")
      SELECT x.a, x.b FROM build_deletions d

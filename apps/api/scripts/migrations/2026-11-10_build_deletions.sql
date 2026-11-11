@@ -1,5 +1,5 @@
 -- Tombstone per deleted build: who deleted it, when, and a full copy of the
--- row plus its guide (deleteBuild in routes/_build-snapshot.ts). Written in the
+-- row plus its guide and partner ids (deleteBuild in routes/_build-snapshot.ts). Written in the
 -- same transaction as the delete, so this table MUST exist before the API that
 -- writes to it deploys, or every build delete fails.
 --
