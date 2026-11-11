@@ -5,11 +5,12 @@ import type {
 import type { Context } from "hono"
 
 import type { Bindings } from "../bindings"
-import { prisma, registerBackgroundWork } from "../db"
+import { prisma, registerBackgroundWork, sometimesInBackground } from "../db"
 import type { Prisma } from "../generated/prisma/client"
 import type { BuildVisibility } from "../generated/prisma/enums"
 import { purgeEdge } from "../lib/edge-cache"
 import { DETAIL_MARKERS } from "../lib/measure"
+import { isPrismaNotFound } from "../lib/validate"
 import {
   ANON_VIEWER,
   DETAIL_INCLUDE,
@@ -258,23 +259,30 @@ export async function deleteBuild(
 ): Promise<boolean> {
   const build = await prisma.build.findUnique({
     where,
-    include: { buildGuide: true },
+    // Partner ids ride along so an undo can relink the strip (_PartnerBuilds).
+    include: { buildGuide: true, partnerBuilds: { select: { id: true } } },
   })
   if (!build) return false
   const slugs = await snapshotSlugs({ id: build.id })
-  await prisma.$transaction([
-    prisma.buildDeletion.create({
-      data: {
-        buildId: build.id,
-        slug: build.slug,
-        deletedById,
-        build: build as unknown as Prisma.InputJsonValue,
-      },
-    }),
-    prisma.build.delete({ where: { id: build.id } }),
-  ])
+  try {
+    await prisma.$transaction([
+      prisma.buildDeletion.create({
+        data: {
+          buildId: build.id,
+          slug: build.slug,
+          deletedById,
+          build: build as unknown as Prisma.InputJsonValue,
+        },
+      }),
+      prisma.build.delete({ where: { id: build.id } }),
+    ])
+  } catch (err) {
+    // A concurrent delete won the race; its transaction wrote the tombstone.
+    if (isPrismaNotFound(err)) return false
+    throw err
+  }
   invalidateBuilds(c, slugs)
-  registerBackgroundWork(
+  sometimesInBackground(0.1, "build deletion prune", () =>
     prisma.buildDeletion.deleteMany({
       where: {
         deletedAt: {
@@ -282,7 +290,6 @@ export async function deleteBuild(
         },
       },
     }),
-    "build deletion prune",
   )
   return true
 }

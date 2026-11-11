@@ -73,7 +73,19 @@ Claude can't connect to prod (the permission classifier blocks the prod URL), so
 
 1. Get the build link or slug from whoever reported it. A 404 from `api.arsenyx.com/builds/<slug>` means deleted *or* not visible to you, so it settles nothing.
 2. `SELECT b.slug, b.visibility, b."organizationId", u.username FROM builds b JOIN users u ON u.id = b."userId" WHERE b.slug = '<slug>';` A row means it exists and is just private, or belongs to someone else.
-3. `SELECT "deletedById", "deletedAt", build->>'name', build->>'userId' FROM build_deletions WHERE slug = '<slug>';` gives who deleted it and when. To undo, re-insert from the `build` JSON with `INSERT INTO builds SELECT * FROM jsonb_populate_record(NULL::builds, build - 'buildGuide')`, plus the guide from `build->'buildGuide'`, then zero `likeCount` / `dislikeCount` / `bookmarkCount` (the like and bookmark rows didn't survive). Tombstones are kept 90 days. Account deletion leaves none, on purpose.
+3. `SELECT "deletedById", "deletedAt", build->>'name', build->>'userId' FROM build_deletions WHERE slug = '<slug>';` gives who deleted it and when. To undo, with `<id>` the tombstone's `id`:
+   ```sql
+   INSERT INTO builds SELECT * FROM jsonb_populate_record(NULL::builds, (SELECT build FROM build_deletions WHERE id = '<id>'));
+   INSERT INTO build_guides SELECT * FROM jsonb_populate_record(NULL::build_guides, (SELECT build->'buildGuide' FROM build_deletions WHERE id = '<id>' AND jsonb_typeof(build->'buildGuide') = 'object'));
+   INSERT INTO "_PartnerBuilds" ("A", "B")
+     SELECT x.a, x.b FROM build_deletions d
+     CROSS JOIN LATERAL jsonb_array_elements(d.build->'partnerBuilds') p
+     CROSS JOIN LATERAL (VALUES (d."buildId", p->>'id'), (p->>'id', d."buildId")) x(a, b)
+     WHERE d.id = '<id>' AND EXISTS (SELECT 1 FROM builds WHERE id = p->>'id')
+     ON CONFLICT DO NOTHING;
+   UPDATE builds SET "likeCount" = 0, "dislikeCount" = 0, "bookmarkCount" = 0 WHERE id = (SELECT "buildId" FROM build_deletions WHERE id = '<id>');
+   ```
+   Extra JSON keys are ignored and the search trigger rebuilds `searchVector`. Not restored: likes, bookmarks (hence the zeroed counts), edit history (`build_revisions`), view days, and forks' `forkedFromId` (nulled on delete). Tombstones are kept 90 days. Account deletion leaves none, on purpose.
 4. Only for deletes older than that, or from before tombstones existed: restore a backup (Backups → a backup → Restore, which creates a new branch billed while it exists; daily backups are kept 2 days), run step 2 on it, then delete the branch.
 
 ### Sign in as the dev admin
