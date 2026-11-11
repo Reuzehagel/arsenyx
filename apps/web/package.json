@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "bun ../../scripts/pass-env.mjs .env.development.local bun x vite",
     "build": "vite build",
     "typecheck": "tsgo --noEmit",
     "preview": "vite preview",

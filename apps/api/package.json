@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "bun ../../scripts/pass-env.mjs .env bun x wrangler dev",
     "deploy": "wrangler deploy",
     "db:push": "bunx prisma db push",
     "db:studio": "bunx prisma studio",

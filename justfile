@@ -9,7 +9,7 @@ dev:
 # Sign in to the local API as the dev admin and print a Cookie header:
 #   curl -H "$(just dev-login)" http://localhost:8787/auth/get-session
 dev-login:
-    @bun --env-file=apps/api/.env scripts/dev-login.ts
+    @bun scripts/pass-env.mjs apps/api/.env bun --env-file=apps/api/.env scripts/dev-login.ts
 
 # Run only the Hono API. Needs apps/api/.env (`just setup`). The dev-db preflight
 # starts the container and stops a checkout whose .env points anywhere else.
@@ -54,7 +54,7 @@ stop:
 # BETTER_AUTH_SECRET, pushes the schema, and seeds an admin user with a fresh
 # random password (printed to stdout — copy it). Safe to re-run.
 setup:
-    bun run scripts/setup.ts
+    bun scripts/pass-env.mjs apps/api/.env bun run scripts/setup.ts
 
 # Refresh the two generated artifacts `typecheck` reads: apps/web's route tree
 # and the Prisma client. Both are gitignored, so a fresh checkout has neither —
@@ -120,4 +120,4 @@ prune-worktrees *args:
 # + schema push, search migration, fresh admin password, sample data.
 db-reset:
     bun run scripts/dev-db.ts reset
-    bun run scripts/setup.ts
+    bun scripts/pass-env.mjs apps/api/.env bun run scripts/setup.ts

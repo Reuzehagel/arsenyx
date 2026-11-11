@@ -223,13 +223,16 @@ async function main() {
   )
 
   console.log("\n› seeding admin user\n")
+  // A pass:// reference (Proton Pass) stays in the file; scripts/pass-env.mjs puts its value in process.env.
+  const resolved = (key: string, value: string) =>
+    value.startsWith("pass://") ? (process.env[key] ?? value) : value
   await run(["bun", "run", "scripts/seed-admin.ts"], API_DIR, {
     DATABASE_URL: dbUrl!,
-    BETTER_AUTH_SECRET: secret,
+    BETTER_AUTH_SECRET: resolved("BETTER_AUTH_SECRET", secret),
     NODE_ENV: "development",
     SEED_ADMIN_EMAIL: adminEmail,
     SEED_ADMIN_USERNAME: adminUsername,
-    SEED_ADMIN_PASSWORD: adminPassword,
+    SEED_ADMIN_PASSWORD: resolved("SEED_ADMIN_PASSWORD", adminPassword),
   })
 
   if (isComposeDbUrl(dbUrl)) {
