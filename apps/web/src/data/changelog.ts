@@ -11,6 +11,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-11-14",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "Item pages like Saryn now include their name, description, and abilities in the page itself, so search engines that don't run JavaScript (such as Bing and DuckDuckGo) can find them.",
+      },
+    ],
+  },
+  {
     date: "2026-11-07",
     changes: [
       {
@@ -163,11 +173,6 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-10-31",
     changes: [
-      {
-        type: "fix",
-        description:
-          "Item pages like Saryn now include their name, description, and abilities in the page itself, so search engines that don't run JavaScript (such as Bing and DuckDuckGo) can find them.",
-      },
       {
         type: "feat",
         description:
