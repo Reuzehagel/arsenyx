@@ -12,7 +12,7 @@
     "dev:api": "bun --filter=arsenyx-api run dev",
     "build:web": "bun --filter=arsenyx-web run build",
     "build:items": "bun run scripts/build-items-index.ts",
-    "sync:images": "bun run scripts/sync-images.ts",
+    "sync:images": "bun scripts/pass-env.mjs .env bun run scripts/sync-images.ts",
     "check:images": "bun run scripts/check-image-hosts.ts",
     "check:data-version": "bun run scripts/check-data-version.ts",
     "check:changelog": "bun run scripts/check-changelog.ts",
