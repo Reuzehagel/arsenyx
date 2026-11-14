@@ -307,7 +307,9 @@ export function useDragGesture<TSource, TTarget>(
       cleanup()
     }
 
+    // Also the path for a touch drag the browser takes over to scroll.
     const onPointerCancel = () => {
+      if (activeRef.current != null) flyBack()
       disarmClickSwallow()
       cleanup()
     }

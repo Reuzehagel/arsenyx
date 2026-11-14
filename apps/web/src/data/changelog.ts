@@ -16,7 +16,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "fix",
         description:
-          "Mod hover cards now unfold out of the card you're pointing at, the art opening above while the name and stats slide down like a drawer, instead of zooming in from a sliver. A slot's Alternate mod now shows in full right next to it when you hover or tap the slot, so you can compare the two. Dropping a mod into the same slot twice in quick succession shows the landing flash both times, a drag you let go of over empty space slides the mod back to where it came from, and the remove buttons on slots are always visible on touch tablets.",
+          "Mod hover cards now unfold out of the card you're pointing at, the art opening above while the name and stats slide down like a drawer, instead of zooming in from a sliver. A slot's Alternate mod now shows in full right next to it when you hover or tap the slot, so you can compare the two, and its drain now reflects that slot's forma. Dropping a mod into the same slot twice in quick succession shows the landing flash both times, a drag you let go of over empty space slides the mod back to where it came from, and the remove buttons on slots are always visible on touch tablets.",
       },
     ],
   },

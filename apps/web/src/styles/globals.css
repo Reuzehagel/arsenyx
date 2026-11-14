@@ -215,7 +215,8 @@ body {
 
 /* Mod hover card: unfolds out of the compact card it enlarges. Both are 184px
  * wide; the expanded card is 285px tall to the compact's 64, so its edges sit
- * 110px further out ((285 - 64) / 2, DISPLAY_SIZE in mod-card-config.ts).
+ * about 110px further out ((285 - 64) / 2 = 110.5, DISPLAY_SIZE in
+ * mod-card-config.ts).
  * The layers split into halves that start pushed 110px toward the middle and
  * ride the opening edges: `.unfold-top` (top frame, badges, art) and
  * `.unfold-bottom` (bottom frame, name/stats panel, rank dots, like a drawer).

@@ -52,7 +52,7 @@ const RARITY_CONFIG: Record<ModRarity, RarityConfig> = {
 }
 
 // The hover card's unfold keyframes in styles/globals.css hard-code offsets
-// derived from these sizes ((285 - 64) / 2 and friends); update them together.
+// derived from these sizes ((285 - 64) / 2 = 110.5, rounded to 110, and friends); update them together.
 export const DISPLAY_SIZE = {
   compact: { width: 184, height: 64 },
   expanded: { width: 184, height: 285 },

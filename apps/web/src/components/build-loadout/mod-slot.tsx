@@ -431,8 +431,9 @@ export function ModSlot({
                   onAddAlternate ||
                   (isRivenMod(mod) && onEditRiven)) && (
                   // Touch (incl. tablets): always visible. Mouse: appear on slot
-                  // hover or keyboard focus via CSS group-hover (parent has `group`) so we don't
-                  // re-render the slot for a purely visual transition.
+                  // hover (CSS group-hover, parent has `group`) or keyboard focus
+                  // (focus-within), so we don't re-render the slot for a purely
+                  // visual transition.
                   <div className="absolute -top-2 -right-2 z-30 flex flex-col items-end gap-1 pointer-fine:opacity-0 pointer-fine:transition-opacity pointer-fine:group-hover:opacity-100 pointer-fine:focus-within:opacity-100">
                     {onRemove && (
                       <SlotIconButton

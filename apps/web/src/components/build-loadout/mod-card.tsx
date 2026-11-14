@@ -559,6 +559,15 @@ export function ModCard({
     )
   }
 
+  // No room beside the card for its Alternate (phones): shrink the pair to
+  // the screen width and centre it, as the pinned detail does (mod-slot.tsx).
+  const hoverFit =
+    alternate &&
+    hoverCenter.current &&
+    alternateSide(hoverCenter.current.x) == null
+      ? fitPairOnScreen()
+      : null
+
   return (
     <div
       className={cn(
@@ -616,7 +625,8 @@ export function ModCard({
       {/* Expanded — portaled to <body> so it escapes the horizontal-scroll
           parent's clipping. Positioned with `fixed` at the compact card's
           viewport-center; scroll listener closes hover so stale coords
-          don't matter. Unfolds via `.animate-mod-card-expand` (globals.css). */}
+          don't matter. Unfolds via `.animate-mod-card-expand`, whose
+          `mod-card-unfold*` keyframes live in globals.css. */}
       {effectiveHover &&
         hoverCenter.current &&
         typeof document !== "undefined" &&
@@ -625,10 +635,10 @@ export function ModCard({
             className="animate-mod-card-expand pointer-events-none fixed z-50"
             style={{
               top: hoverCenter.current.y,
-              left: hoverCenter.current.x,
+              left: hoverFit?.centerX ?? hoverCenter.current.x,
               width: DISPLAY_SIZE.expanded.width,
               height: DISPLAY_SIZE.expanded.height,
-              transform: "translate(-50%, -50%)",
+              transform: `translate(-50%, -50%)${hoverFit ? ` scale(${hoverFit.scale})` : ""}`,
               transformOrigin: "center center",
               filter: "drop-shadow(0 0 20px rgba(0,0,0,0.8))",
             }}
