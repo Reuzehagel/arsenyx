@@ -4,6 +4,7 @@ import type { Mod, Polarity } from "@arsenyx/shared/warframe/types"
 import { Pencil, Plus, X, type LucideIcon } from "lucide-react"
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type MouseEvent,
@@ -36,7 +37,12 @@ import {
   useStartDrag,
 } from "./drag-controller"
 import { DetailLinks } from "./item-detail"
-import { ModCard } from "./mod-card"
+import {
+  alternateSide,
+  fitPairOnScreen,
+  ModCard,
+  type CardAlternate,
+} from "./mod-card"
 import { PolarityIcon, PolarityPicker } from "./polarity"
 import { useRankHover } from "./rank-hover"
 
@@ -150,25 +156,31 @@ export function ModSlot({
     }
   }, [isAnyDragging, isDragging, rankHover, slotId, readOnly])
   const canDrag = !readOnly && !!mod && !!slotId && kind !== "aura"
-  // Drop settle (issue #188), gated for prefers-reduced-motion: a one-shot
-  // scale when a mod lands. Driven by a state flag cleared on animationend —
-  // deliberately NOT a React `key`. Re-keying the wrapper would remount
-  // ModCard, which owns the hover-preview portal; remounting it out from under
-  // an open preview orphans that portal (preview stays stuck). The flag flips
-  // only when the mod identity changes to a non-empty mod, so it fires on
-  // placement/swap but never on initial load or rank-only changes.
-  const [settling, setSettling] = useState(false)
+  // Drop settle (issue #188): when a mod lands, the card eases from 96% to
+  // rest under a fading white wash. Played with WAAPI on refs rather than a
+  // class or a React `key`: a second drop inside the 200ms window restarts it
+  // (a class that is already on can't replay), no state flag can get stuck,
+  // and ModCard is never remounted (it owns the hover-preview portal, and
+  // remounting it under an open preview orphans that portal). Fires only when
+  // the mod identity changes to a non-empty mod: placement and swap, never
+  // initial load or rank-only changes. Layout effect so the first painted
+  // frame is already at 96%.
+  const settleRef = useRef<HTMLDivElement>(null)
+  const flashRef = useRef<HTMLDivElement>(null)
   const prevModName = useRef<string | null>(mod?.name ?? null)
-  useEffect(() => {
+  useLayoutEffect(() => {
     const name = mod?.name ?? null
-    if (name !== prevModName.current) {
-      prevModName.current = name
-      // Gate the settle at the source: under prefers-reduced-motion the flash
-      // overlay's `animation: none` means its `animationend` never fires, so
-      // `settling` would latch true forever. Never flip it on instead — no
-      // overlay, no scale class, no stuck state.
-      setSettling(name != null && !reducedMotionQuery.matches)
-    }
+    if (name === prevModName.current) return
+    prevModName.current = name
+    if (name == null || reducedMotionQuery.matches) return
+    settleRef.current?.animate(
+      [{ transform: "scale(0.96)" }, { transform: "none" }],
+      { duration: 160, easing: "cubic-bezier(0.23, 1, 0.32, 1)" },
+    )
+    flashRef.current?.animate([{ opacity: 0.2 }, { opacity: 0 }], {
+      duration: 200,
+      easing: "ease-out",
+    })
   }, [mod?.name])
 
   const onDragPointerDown = (e: PointerEvent) => {
@@ -212,15 +224,30 @@ export function ModSlot({
   // not on every filled slot of every build view.
   const marketHref = useModMarketHref(mod, detailEnabled && detailOpen)
 
-  // Shared by the in-slot card and the pinned detail card so the two can't show
-  // a different drain / polarity-match for the same mod. Aura & stance slots
-  // contribute a bonus rather than draining capacity.
-  const cardDrain = mod
-    ? kind === "aura" || kind === "stance"
-      ? auraBonusForMod(mod, rank, effective)
-      : effectiveDrainForMod(mod, rank, effective)
-    : undefined
+  // Shared by the in-slot card, the pinned detail card and the Alternate shown
+  // beside them, so each reads its drain / polarity-match against this slot's
+  // forma. Aura & stance slots contribute a bonus rather than draining capacity.
+  const drainInSlot = (m: Mod, r: number) =>
+    kind === "aura" || kind === "stance"
+      ? auraBonusForMod(m, r, effective)
+      : effectiveDrainForMod(m, r, effective)
+  const cardDrain = mod ? drainInSlot(mod, rank) : undefined
   const cardMatch = mod ? getMatchState(mod.polarity, effective) : undefined
+  const cardAlternate = alternate && {
+    ...alternate,
+    drainOverride: drainInSlot(alternate.mod, alternate.rank),
+    matchState: getMatchState(alternate.mod.polarity, effective),
+    hideDrain,
+  }
+  // A pinned card with an Alternate that has no room beside the slot (phones):
+  // shrink the pair to the screen width and centre it instead.
+  const pinFit =
+    detailOpen &&
+    detailCenter &&
+    cardAlternate &&
+    alternateSide(detailCenter.x) == null
+      ? fitPairOnScreen()
+      : null
 
   // Dismiss the pinned detail on outside click / Escape / scroll / resize. The
   // overlay is position:fixed at coords captured on open, so any scroll or
@@ -355,9 +382,9 @@ export function ModSlot({
         >
           {mod && !isDragging ? (
             <>
-              {alternate && (
+              {cardAlternate && (
                 <AlternateShoulder
-                  alternate={alternate}
+                  alternate={cardAlternate}
                   onRemove={readOnly ? undefined : onRemoveAlternate}
                   onHoverChange={
                     canRank && rankHover && !isAnyDragging
@@ -371,14 +398,11 @@ export function ModSlot({
                   }
                 />
               )}
-              {/* No `key` here on purpose — see the `settling` comment above.
-                  The scale class is added while `settling` is true; ModCard
-                  underneath is never remounted. The flash overlay below owns
-                  clearing the flag (it's the longer of the two animations). */}
+              {/* No `key` here on purpose — see the drop settle comment above. */}
               <div
+                ref={settleRef}
                 className={cn(
                   "relative z-10",
-                  settling && "animate-drop-settle",
                   // The pinned detail is a twin of the hover preview, which
                   // fades the compact card out; with hover disabled while
                   // pinned, hide it here or it shows through the expanded
@@ -391,28 +415,26 @@ export function ModSlot({
                   rank={rank}
                   setCount={setCount}
                   disableHover={popoverOpen || detailOpen || isAnyDragging}
+                  alternate={cardAlternate}
                   drainOverride={cardDrain}
                   matchState={cardMatch}
                   hideDrain={hideDrain}
                 />
               </div>
-              {/* White wash confirming the drop. Isolated sibling overlay (no
-                  children), so its animationend can't be confused with a
-                  ModCard child animation. Clears `settling` when it ends. */}
-              {settling && (
-                <div
-                  className="animate-drop-flash pointer-events-none absolute inset-0 z-30 rounded-md bg-white opacity-0"
-                  onAnimationEnd={() => setSettling(false)}
-                />
-              )}
+              {/* White wash confirming the drop; rests invisible. */}
+              <div
+                ref={flashRef}
+                className="pointer-events-none absolute inset-0 z-30 rounded-md bg-white opacity-0"
+              />
               {!readOnly &&
                 (onRemove ||
                   onAddAlternate ||
                   (isRivenMod(mod) && onEditRiven)) && (
-                  // Mobile: always visible (no hover). Desktop: appear on slot
-                  // hover via CSS group-hover (parent has `group`) so we don't
-                  // re-render the slot for a purely visual transition.
-                  <div className="absolute -top-2 -right-2 z-30 flex flex-col items-end gap-1 md:opacity-0 md:transition-opacity md:group-hover:opacity-100">
+                  // Touch (incl. tablets): always visible. Mouse: appear on slot
+                  // hover (CSS group-hover, parent has `group`) or keyboard focus
+                  // (focus-within), so we don't re-render the slot for a purely
+                  // visual transition.
+                  <div className="absolute -top-2 -right-2 z-30 flex flex-col items-end gap-1 pointer-fine:opacity-0 pointer-fine:transition-opacity pointer-fine:group-hover:opacity-100 pointer-fine:focus-within:opacity-100">
                     {onRemove && (
                       <SlotIconButton
                         icon={X}
@@ -485,11 +507,11 @@ export function ModSlot({
             className="fixed z-50"
             style={{
               top: detailCenter.y,
-              left: detailCenter.x,
+              left: pinFit?.centerX ?? detailCenter.x,
               // Center only the card on the anchor (matching hover). The links
               // hang below via absolute positioning so they don't shift the
               // card's center.
-              transform: "translate(-50%, -50%)",
+              transform: `translate(-50%, -50%)${pinFit ? ` scale(${pinFit.scale})` : ""}`,
               filter: "drop-shadow(0 0 20px rgba(0,0,0,0.85))",
             }}
           >
@@ -498,6 +520,7 @@ export function ModSlot({
               rank={rank}
               setCount={setCount}
               alwaysExpanded
+              alternate={cardAlternate}
               drainOverride={cardDrain}
               matchState={cardMatch}
               hideDrain={hideDrain}
@@ -529,7 +552,7 @@ function AlternateShoulder({
   onRemove,
   onHoverChange,
 }: {
-  alternate: AlternateMod
+  alternate: CardAlternate
   onRemove?: () => void
   onHoverChange?: (over: boolean) => void
 }) {
@@ -545,10 +568,17 @@ function AlternateShoulder({
       onMouseLeave={onHoverChange && (() => onHoverChange(false))}
     >
       <div className="brightness-75">
-        <ModCard mod={alternate.mod} rank={alternate.rank} disableHover />
+        <ModCard
+          mod={alternate.mod}
+          rank={alternate.rank}
+          drainOverride={alternate.drainOverride}
+          matchState={alternate.matchState}
+          hideDrain={alternate.hideDrain}
+          disableHover
+        />
       </div>
       {onRemove && (
-        <div className="absolute -top-3 right-10 md:opacity-0 md:transition-opacity md:group-hover:opacity-100">
+        <div className="absolute -top-3 right-10 pointer-fine:opacity-0 pointer-fine:transition-opacity pointer-fine:group-hover:opacity-100 pointer-fine:focus-within:opacity-100">
           <SlotIconButton
             icon={X}
             label="Remove alternate mod"
