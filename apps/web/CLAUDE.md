@@ -27,6 +27,8 @@ Two layers emit head tags, and they must stay in sync:
 
 The two layers emit identical values per tag (the rule and its one exception are in [CODING_STANDARDS.md](../../CODING_STANDARDS.md#edge-and-client-head-tags-are-identical)); build values come from [@arsenyx/shared/seo/build-meta](../../packages/shared/src/seo/build-meta.ts).
 
+On item pages the Worker also swaps the `#root` loading placeholder for plain HTML (name, description, abilities, links) built from the catalog JSON, for crawlers that don't run JS — `itemFallbackHtml` in [worker/index.ts](worker/index.ts). React's `createRoot` replaces it on first render; keep it catalog-only so it costs no subrequest.
+
 `index.html` deliberately has NO static `<title>` / `<meta description>` — it would be a third, always-stale source. Keep it that way.
 
 **Adding a route:** add a `head`. A static page gets an entry in `PAGE_META` ([@arsenyx/shared/seo/site](../../packages/shared/src/seo/site.ts)) and `head: () => pageSeo(path)`; the Worker, the sitemap and the parity test in [worker/index.test.ts](worker/index.test.ts) all read that table. A noindexed page under a dynamic path gets a `NOINDEX_PATTERNS` entry (pattern + meta) instead, its route head reads the same meta (see `ORG_SETTINGS_META`), and it gets a parity case.

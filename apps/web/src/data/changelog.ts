@@ -164,6 +164,11 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-10-31",
     changes: [
       {
+        type: "fix",
+        description:
+          "Item pages like Saryn now include their name, description, and abilities in the page itself, so search engines that don't run JavaScript (such as Bing and DuckDuckGo) can find them.",
+      },
+      {
         type: "feat",
         description:
           "You can now dislike a build. Like and dislike are either-or: picking one clears the other, and clicking it again takes it back. You still can't like or dislike your own builds.",

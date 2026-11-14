@@ -19,6 +19,7 @@ import worker, {
   buildPageCacheKeyUrl,
   genericPageMeta,
   isBrowserNavigation,
+  itemFallbackHtml,
   type Meta,
 } from "./index"
 
@@ -220,5 +221,41 @@ describe("RESERVED_BUILD_SUBPATHS", () => {
       [...tree.matchAll(/fullPath: '\/builds\/([^'/$]+)'/g)].map((m) => m[1]),
     )
     expect(statics).toEqual(RESERVED_BUILD_SUBPATHS)
+  })
+})
+
+describe("itemFallbackHtml", () => {
+  const saryn = {
+    name: "Saryn",
+    description: "Toxicity is Saryn's strength.",
+    abilities: [
+      {
+        name: "Spores",
+        description:
+          "Inflict a <DT_CORROSIVE_COLOR>Corrosive pox for |DMG| damage.",
+      },
+    ],
+  }
+
+  it("renders name, description and abilities with game markup stripped", () => {
+    const html = itemFallbackHtml(saryn, "warframes", "Warframes")
+    expect(html).toContain("<h1>Saryn Builds</h1>")
+    expect(html).toContain("Toxicity is Saryn's strength.")
+    expect(html).toContain(
+      "<strong>Spores</strong>: Inflict a Corrosive pox for damage.",
+    )
+    expect(html).not.toContain("DT_")
+    expect(html).not.toContain("|DMG|")
+    expect(html).toContain('href="/browse?category=warframes"')
+  })
+
+  it("escapes HTML in catalog text", () => {
+    const html = itemFallbackHtml(
+      { name: 'A & "B"', description: "x > y" },
+      "primary",
+      "Primary",
+    )
+    expect(html).toContain("A &amp; &quot;B&quot; Builds")
+    expect(html).not.toContain("<h2>Abilities")
   })
 })
