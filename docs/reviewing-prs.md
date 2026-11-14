@@ -9,7 +9,7 @@ Merge blockers to check on every PR, beyond what CI catches. A reviewer subagent
 ## Blockers
 
 - **Data cache bust** — a hand-edit under `apps/web/public/data/` bumps `meta.json` `generatedAt`. The `?v=` stamp comes only from it ([vite.config.ts](../apps/web/vite.config.ts) `dataVersion()`), and `/data/*` is `immutable`, so without the bump browsers keep the old bytes.
-- **Schema before merge** — any Prisma schema change, even an additive column, ships an idempotent SQL file in `apps/api/scripts/migrations/` and is applied to prod before merge: push to `main` deploys the API, and Prisma selects the new column at once.
+- **Schema before merge** — any Prisma schema change, even an additive column, ships an idempotent SQL file in `apps/api/scripts/migrations/` and is applied to prod before merge: push to `main` deploys the API, and Prisma selects the new column at once. CI fails such a PR until it carries the `schema-applied` label; add the label only after the SQL has run on prod, and remove it again if a later commit changes the schema.
 - **Bindings before merge** — a new KV / R2 / Hyperdrive binding in `apps/*/wrangler.toml` must already exist in Cloudflare (`bunx wrangler kv namespace list`, etc.) with a matching id.
 - **Saved builds still decode** — a codec change in `packages/shared/` reads every older build format.
 - **Game rules sourced** — a hardcoded slot, compatibility, or mechanic rule is backed by the wiki or a data file (see the game-mechanic rule in [CLAUDE.md](../CLAUDE.md)); report what couldn't be verified.

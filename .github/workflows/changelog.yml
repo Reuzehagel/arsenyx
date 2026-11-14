@@ -1,7 +1,7 @@
 name: Changelog
 
-# Separate from ci.yml so adding/removing the no-changelog label re-runs only
-# this cheap check, not the whole build.
+# Separate from ci.yml so adding/removing the no-changelog or schema-applied
+# label re-runs only these cheap checks, not the whole build.
 on:
   pull_request:
     types: [opened, edited, synchronize, reopened, labeled, unlabeled]
@@ -27,6 +27,35 @@ jobs:
           CHANGELOG_BASE: origin/${{ github.base_ref }}
           SKIP_CHANGELOG: ${{ contains(github.event.pull_request.labels.*.name, 'no-changelog') }}
         run: bun run check:changelog
+
+      # Workers Builds deploys the API on merge, and Prisma reads new columns
+      # and tables at once, so a schema change merged before its migration is
+      # on prod breaks every query that touches it.
+      # A label added for an earlier schema change doesn't cover a later one,
+      # so a push that touches the schema fails even when labeled. Re-adding
+      # the label re-runs this as a `labeled` event, which passes.
+      - name: Check schema applied to prod
+        env:
+          BASE: origin/${{ github.base_ref }}
+          LABELED: ${{ contains(github.event.pull_request.labels.*.name, 'schema-applied') }}
+          ACTION: ${{ github.event.action }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.event.after }}
+        run: |
+          schema=apps/api/prisma/schema.prisma
+          if [ "$LABELED" != true ]; then
+            if git diff --name-only "$BASE...HEAD" | grep -qx "$schema"; then
+              echo "::error::This PR changes schema.prisma. Apply its apps/api/scripts/migrations/ SQL to prod, then add the schema-applied label."
+              exit 1
+            fi
+          elif [ "$ACTION" = synchronize ]; then
+            # A force-push can drop BEFORE from history; treat that as changed.
+            if ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null \
+              || git diff --name-only "$BEFORE" "$AFTER" | grep -qx "$schema"; then
+              echo "::error::This push changed schema.prisma after the schema-applied label. Apply the new SQL to prod, then remove and re-add the label."
+              exit 1
+            fi
+          fi
 
       # The squash commit is built from these commits, so this keeps AI
       # attribution out of main even from sessions without the local hooks.

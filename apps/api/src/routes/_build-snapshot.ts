@@ -5,7 +5,7 @@ import type {
 import type { Context } from "hono"
 
 import type { Bindings } from "../bindings"
-import { prisma, registerBackgroundWork } from "../db"
+import { prisma, registerBackgroundWork, sometimesInBackground } from "../db"
 import type { Prisma } from "../generated/prisma/client"
 import type { BuildVisibility } from "../generated/prisma/enums"
 import { purgeEdge } from "../lib/edge-cache"
@@ -246,16 +246,53 @@ export async function snapshotSlugs(
   return rows.flatMap((b) => [b.slug, ...b.partnerBuilds.map((p) => p.slug)])
 }
 
-/** Deletes one build and refreshes it (dropping its snapshot) and its
- *  partners' strips. False when there was no such build. */
+const DELETION_RETENTION_DAYS = 90
+
+/** Deletes one build, logging a BuildDeletion tombstone in the same
+ *  transaction, and refreshes it (dropping its snapshot) and its partners'
+ *  strips. False when there was no such build. */
 export async function deleteBuild(
   c: Context,
   where: { id: string } | { slug: string },
+  deletedById: string,
 ): Promise<boolean> {
-  const slugs = await snapshotSlugs(where)
-  if (slugs.length === 0) return false
-  await prisma.build.delete({ where })
-  invalidateBuilds(c, slugs)
+  const found = await prisma.build.findUnique({
+    where,
+    select: { id: true, slug: true, partnerBuilds: { select: { slug: true } } },
+  })
+  if (!found) return false
+  const deleted = await prisma.$transaction(async (tx) => {
+    // Row lock: an edit committing mid-delete would otherwise be missing from
+    // the tombstone, and a concurrent delete waits here, then finds nothing.
+    await tx.$executeRaw`SELECT 1 FROM builds WHERE id = ${found.id} FOR UPDATE`
+    const build = await tx.build.findUnique({
+      where: { id: found.id },
+      // Partner ids ride along so an undo can relink the strip (_PartnerBuilds).
+      include: { buildGuide: true, partnerBuilds: { select: { id: true } } },
+    })
+    if (!build) return false
+    await tx.buildDeletion.create({
+      data: {
+        buildId: build.id,
+        slug: build.slug,
+        deletedById,
+        build: build as unknown as Prisma.InputJsonValue,
+      },
+    })
+    await tx.build.delete({ where: { id: build.id } })
+    return true
+  })
+  if (!deleted) return false
+  invalidateBuilds(c, [found.slug, ...found.partnerBuilds.map((p) => p.slug)])
+  sometimesInBackground(0.1, "build deletion prune", () =>
+    prisma.buildDeletion.deleteMany({
+      where: {
+        deletedAt: {
+          lt: new Date(Date.now() - DELETION_RETENTION_DAYS * 86_400_000),
+        },
+      },
+    }),
+  )
   return true
 }
 
