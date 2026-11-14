@@ -102,7 +102,8 @@ _Avoid_: Type, Class, Kind. (Reserve "class" for an Item's mechanical `displayCl
 **Slot**:
 A position in a Variant that holds one mod. Kinds: **normal**, **aura**, **exilus**, and
 **stance** — each with its own placement rules. A slot also carries its polarity (innate or
-re-stamped by Forma).
+re-stamped by Forma). The exilus slot is always treated as unlocked: the Exilus Adapter is an
+account unlock nearly every player has, so a Build carries no state, codec field or toggle for it.
 _Avoid_: Cell, Position.
 
 **Alternate mod**:
