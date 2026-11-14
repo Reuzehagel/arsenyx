@@ -107,8 +107,8 @@ const MAX_GUIDE_DESCRIPTION = 50_000
 // but if viewCount fidelity ever matters more than CPU, this is the dial.
 const DETAIL_TTL = 600
 
-// For the list-shaped responses — GET /builds and GET /:slug/partners, both
-// projected through LIST_SELECT. NEITHER is purged on write (purgeEdge), so a
+// For the list-shaped responses — GET /builds and GET /:slug/partners (both
+// projected through LIST_SELECT), plus the GET /users directory. NONE is purged on write (purgeEdge), so a
 // PUBLIC->PRIVATE flip or a delete can linger for the whole TTL; that is why
 // this stays well under DETAIL_TTL. A just-hidden build lingering in lists for
 // 2 min was judged fine. The detail payload also embeds the partner strip; a
@@ -116,7 +116,7 @@ const DETAIL_TTL = 600
 // going PRIVATE lingers only in other colos' edge caches, for up to
 // DETAIL_TTL. Accepted: the strip shows a title and thumbnail, never a
 // loadout.
-const LIST_TTL = 120
+export const LIST_TTL = 120
 
 const MAX_CATALOG_VERSION = 64
 

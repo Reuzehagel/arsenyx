@@ -9,10 +9,12 @@ import { Hono } from "hono"
 
 import { prisma, sql } from "../db"
 import { Prisma } from "../generated/prisma/client"
+import { edgeCache } from "../lib/edge-cache"
 import { enforceAnonSearchLimit } from "../middleware/rate-limit"
 import { BUILD_USER_SELECT, parseListQuery, runList } from "./_build-list"
 import { AUTHORED_PUBLIC_BUILD, userPublicScope } from "./_build-visibility"
 import { directoryPage, directoryQuery, matchAny } from "./_query"
+import { LIST_TTL } from "./builds"
 
 export const users = new Hono()
 
@@ -62,7 +64,10 @@ function toProfileCard(u: ProfileRow) {
 // (see RESERVED_USERNAMES in auth.ts — "public" isn't in it), so any named
 // path here would shadow a real profile that happens to hold that handle.
 // The root path can't collide with /:username at all.
-users.get("/", async (c) => {
+// Edge-cached like GET /builds: a miss builds a PrismaClient and runs the
+// heaviest app query in prod (an author count per user), and a new author
+// showing up a couple of minutes late is fine.
+users.get("/", edgeCache({ maxAge: LIST_TTL }), async (c) => {
   const dir = directoryQuery(c, DIRECTORY_PAGE)
 
   // Only charge the tighter search bucket when a query is actually present —
