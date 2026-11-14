@@ -7,6 +7,7 @@ Game data (items, mods, arcanes) is static JSON precomputed at build time and se
 - Web (Vite SPA) → Cloudflare Workers (Static Assets), `www.arsenyx.com` (canonical; the Worker 301s `arsenyx.com` → www). SPA fallback + cache headers via [apps/web/wrangler.toml](apps/web/wrangler.toml) and [apps/web/public/\_headers](apps/web/public/_headers). The edge Worker also injects per-page SEO meta — see [apps/web/CLAUDE.md](apps/web/CLAUDE.md).
 - API (Hono on Workers) → `api.arsenyx.com`; DB → PlanetScale Postgres via Cloudflare Hyperdrive. Stack and connection details in [apps/api/CLAUDE.md](apps/api/CLAUDE.md).
 - CI deploys both Workers on push to `main` via Workers Builds (configured in the CF dashboard). Secrets live in the CF dashboard, not in `.env`.
+- Live Cloudflare state (Hyperdrive flags, deployed bindings, usage): run `bunx wrangler` or `cf` read commands directly. Both are logged in through OAuth (`bunx wrangler whoami`, `cf auth whoami`; `cf auth login` prints a link the owner approves). Writes to prod resources need the owner's OK.
 
 ## Monorepo
 
@@ -36,6 +37,7 @@ Game data is static, user data is dynamic. If something is read-heavy and rarely
 **Never**
 
 - Modify `apps/web/src/components/ui/` — override via `className` instead
+- Name outside people, forks or sites in PR text, commit messages, `changelog.ts` or issue comments. Write "a fork", "a partner site": the repo is public, and GitHub keeps old wording in a PR's edit history.
 - Don't assume Warframe game-mechanic facts from memory. Mod compatibility, slot rules, ability behavior, drop sources, etc. drift between updates and the model's training data is unreliable here. Check [wiki.warframe.com](https://wiki.warframe.com) or the data files under `apps/web/public/data/` ([index](docs/commands.md#what-the-built-catalog-holds), e.g. `mod-conflicts.json`) before encoding a rule into filters, validators, or hardcoded branches. `curl` the raw wikitext of any page or Lua module (`https://wiki.warframe.com/index.php?title=<Page or Module:name>&action=raw`) and grep it; WebFetch summarizes and misreports rank tables and lists. If a fact can't be verified, say so instead of guessing. Cloudflare product behavior is the same: load the matching `cloudflare:*` skill (or its docs) before stating what a dashboard or API can do.
 
 ## Progressive disclosure — load on demand

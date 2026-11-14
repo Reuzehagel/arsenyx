@@ -6,6 +6,10 @@ Merge blockers to check on every PR, beyond what CI catches. A reviewer subagent
 
 - `git worktree list` for the PR's `headRefName`. A local worktree may be ahead of the PR head; review that and report unpushed commits (`git log --oneline <pr-head>..HEAD`).
 
+## Before opening a PR
+
+- `git log --oneline origin/main..HEAD` lists only this task's commits. Worktrees branch from local `main`, which can hold unpushed commits that would ride into the PR unreviewed; rebase those away with `git rebase --onto origin/main <last-foreign-commit>`. Pushing local `main` is the owner's call.
+
 ## Blockers
 
 - **Data cache bust** — a hand-edit under `apps/web/public/data/` bumps `meta.json` `generatedAt`. The `?v=` stamp comes only from it ([vite.config.ts](../apps/web/vite.config.ts) `dataVersion()`), and `/data/*` is `immutable`, so without the bump browsers keep the old bytes.
@@ -23,3 +27,5 @@ GitHub auto-merge is disabled and `main` is unprotected, so CI on each PR ran ag
 1. Merge one: `gh pr merge N --squash --delete-branch`.
 2. Before the next, wait for its `mergeStateStatus` to be `CLEAN` (`gh pr view N --json mergeStateStatus`).
 3. After the last: fast-forward local `main`, run `just check`, then `just prune-worktrees` (dry run; `--go` once the user confirms). On Windows `--delete-branch` leaves the worktree folder and local branch behind.
+
+Stacked PRs: merge the child first, or retarget it (`gh pr edit <child> --base main`) before merging the parent. Deleting the parent's branch closes the child, and a closed PR whose base is gone can't be reopened or retargeted.

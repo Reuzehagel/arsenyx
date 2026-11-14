@@ -145,6 +145,14 @@ Every pipeline path, including `CATALOG_OUT_DIR` (redirects the catalog that
 `build:items`, `sync:images`, `check:images`, `data:stamp` and `data:patch`
 read and write), is in [scripts/build/paths.ts](../scripts/build/paths.ts).
 
+Incarnon trees are hand-curated; the weekly data-refresh PR never adds one. A new Incarnon
+weapon goes into `INCARNON_NAMES` in
+[incarnon-data.ts](../packages/shared/src/warframe/incarnon-data.ts) (a genesis weapon also into
+`INCARNON_GENESIS_IMAGES`; innate ones have no adapter image) and gets its tree in
+[incarnon-evolutions.ts](../packages/shared/src/warframe/incarnon-evolutions.ts), with
+per-variant values under `variants` where the wiki lists a column per variant. A new genesis
+adapter icon needs `data:sync` first, so the texture is in the DE manifest, then `sync:images`.
+
 ### What the built catalog holds
 
 Game rules (compatibility, conflicts, tradability) come from these files, not memory:
