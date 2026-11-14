@@ -270,11 +270,39 @@ export function useDragGesture<TSource, TTarget>(
       rafId = requestAnimationFrame(flushMove)
     }
 
+    // A cancelled drag flies a copy of the ghost back to where the card came
+    // from, so the card is seen returning rather than vanishing. A detached
+    // clone, so cleanup and React state stay exactly as before.
+    const flyBack = () => {
+      const g = ghostRef.current
+      const src = sourceElRef.current
+      // Not yet moved under the cursor (released within the activation
+      // frame): the ghost is still parked off-screen, nothing to fly back.
+      if (!g || !src || g.style.transform.includes("-9999px")) return
+      if (matchMedia("(prefers-reduced-motion: reduce)").matches) return
+      const r = src.getBoundingClientRect()
+      const clone = g.cloneNode(true) as HTMLDivElement
+      document.body.append(clone)
+      clone
+        .animate(
+          [
+            { transform: g.style.transform, opacity: 1 },
+            {
+              transform: `translate3d(${r.left + r.width / 2}px, ${r.top + r.height / 2}px, 0) translate(-50%, -50%)`,
+              opacity: 0,
+            },
+          ],
+          { duration: 200, easing: "cubic-bezier(0.23, 1, 0.32, 1)" },
+        )
+        .finished.finally(() => clone.remove())
+    }
+
     const onPointerUp = () => {
       const a = activeRef.current
       if (a != null) {
         const t = targetRef.current
         if (t != null) onCommitRef.current(a, t)
+        else flyBack()
       }
       cleanup()
     }
@@ -290,6 +318,7 @@ export function useDragGesture<TSource, TTarget>(
         // editor's window-level Escape also deselects the slot.
         e.stopImmediatePropagation()
         disarmClickSwallow()
+        flyBack()
         cleanup()
       }
     }

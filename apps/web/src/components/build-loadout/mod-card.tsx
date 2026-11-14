@@ -1,3 +1,4 @@
+import type { AlternateMod } from "@arsenyx/shared/warframe/build-data"
 import { getModSetCode } from "@arsenyx/shared/warframe/mods"
 import { RIVEN_FLAT_STAT_UNITS } from "@arsenyx/shared/warframe/rivens"
 import type { Mod } from "@arsenyx/shared/warframe/types"
@@ -327,7 +328,7 @@ function ExpandedModCard({
       />
 
       <div
-        className="absolute top-[4px] right-[3px] bottom-[4px] left-[3px] z-10 overflow-hidden"
+        className="unfold-top unfold-art absolute top-[4px] right-[3px] bottom-[4px] left-[3px] z-10 overflow-hidden"
         style={
           vtPrefix
             ? ({ viewTransitionName: `${vtPrefix}-art` } as React.CSSProperties)
@@ -341,7 +342,7 @@ function ExpandedModCard({
         />
       </div>
 
-      <div className="absolute right-[3px] bottom-[20px] left-[3px] z-[15]">
+      <div className="unfold-bottom unfold-panel absolute right-[3px] bottom-[20px] left-[3px] z-[15]">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <img
             src={getModAssetUrl(rarity, "Background")}
@@ -401,11 +402,12 @@ function ExpandedModCard({
       {isMaxRank && (
         <RankCompleteLine
           rarity={rarity}
-          className="absolute bottom-[4px] left-1/2 z-25 w-[calc(100%-8px)] -translate-x-1/2"
+          className="unfold-bottom absolute bottom-[4px] left-1/2 z-25 w-[calc(100%-8px)] -translate-x-1/2"
         />
       )}
 
       <RankDots
+        className="unfold-bottom"
         rank={rank}
         maxRank={maxRank}
         variant="expanded"
@@ -429,6 +431,9 @@ interface ModCardProps {
   alwaysExpanded?: boolean
   /** When true, never show the expanded variant (used while dragging). */
   disableHover?: boolean
+  /** The slot's Alternate, shown expanded beside this card's expanded form so
+   * the two can be compared (it otherwise only peeks out behind the slot). */
+  alternate?: CardAlternate
   onClick?: () => void
   isSelected?: boolean
   className?: string
@@ -447,6 +452,7 @@ export function ModCard({
   hideDrain = false,
   alwaysExpanded = false,
   disableHover = false,
+  alternate,
   onClick,
   isSelected,
   className,
@@ -548,6 +554,7 @@ export function ModCard({
           matchState={matchState}
           hideDrain={noDrain}
         />
+        {alternate && <AlternateCompanion alternate={alternate} />}
       </div>
     )
   }
@@ -609,7 +616,7 @@ export function ModCard({
       {/* Expanded — portaled to <body> so it escapes the horizontal-scroll
           parent's clipping. Positioned with `fixed` at the compact card's
           viewport-center; scroll listener closes hover so stale coords
-          don't matter. Grows in via `.animate-mod-card-expand` (globals.css). */}
+          don't matter. Unfolds via `.animate-mod-card-expand` (globals.css). */}
       {effectiveHover &&
         hoverCenter.current &&
         typeof document !== "undefined" &&
@@ -635,9 +642,83 @@ export function ModCard({
               drainOverride={drainOverride}
               matchState={matchState}
             />
+            {alternate && <AlternateCompanion alternate={alternate} />}
           </div>,
           document.body,
         )}
+    </div>
+  )
+}
+
+/** An Alternate plus how it would read in this card's slot (forma'd drain). */
+export type CardAlternate = AlternateMod & {
+  drainOverride?: number
+  matchState?: DrainMatchState
+  hideDrain?: boolean
+}
+
+const COMPANION_GAP = 12
+
+/** Which side of an expanded card centred at `centerX` (drawn at `scale`) has
+ * room for its Alternate, or null when neither does (phones). */
+export function alternateSide(
+  centerX: number,
+  scale = 1,
+): "right" | "left" | null {
+  const half = (DISPLAY_SIZE.expanded.width / 2) * scale
+  const need = (COMPANION_GAP + DISPLAY_SIZE.expanded.width) * scale
+  // 1px slack: a pair scaled to fit exactly must not round itself out.
+  if (centerX + half + need <= window.innerWidth + 1) return "right"
+  if (centerX - half - need >= -1) return "left"
+  return null
+}
+
+/** Scale and centre for a pinned card plus its Alternate on a screen too
+ * narrow to fit them beside the slot: the pair shrinks to fit and is centred,
+ * so the Alternate lands on the right. */
+export function fitPairOnScreen(margin = 16) {
+  const pair = 2 * DISPLAY_SIZE.expanded.width + COMPANION_GAP
+  const scale = Math.min(1, (window.innerWidth - 2 * margin) / pair)
+  const centerX =
+    window.innerWidth / 2 -
+    ((COMPANION_GAP + DISPLAY_SIZE.expanded.width) * scale) / 2
+  return { scale, centerX }
+}
+
+/**
+ * The slot's Alternate, expanded beside the main mod's expanded card (hover
+ * preview or pinned detail) under an "Alternate" label: to the right, or to
+ * the left when the right would leave the viewport. Inside the hover preview
+ * it unfolds with it, a beat later.
+ */
+function AlternateCompanion({ alternate }: { alternate: CardAlternate }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [side, setSide] = useState<"right" | "left">("right")
+  useLayoutEffect(() => {
+    const anchor = ref.current?.parentElement?.getBoundingClientRect()
+    if (!anchor) return
+    const scale = anchor.width / DISPLAY_SIZE.expanded.width
+    setSide(alternateSide(anchor.left + anchor.width / 2, scale) ?? "right")
+  }, [])
+  const gap = `calc(100% + ${COMPANION_GAP}px)`
+  return (
+    <div
+      ref={ref}
+      data-alt-companion
+      className="absolute"
+      style={side === "right" ? { top: 0, left: gap } : { top: 0, right: gap }}
+    >
+      <span className="unfold-top text-muted-foreground absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-medium tracking-wide uppercase">
+        Alternate
+      </span>
+      <ModCard
+        mod={alternate.mod}
+        rank={alternate.rank}
+        drainOverride={alternate.drainOverride}
+        matchState={alternate.matchState}
+        hideDrain={alternate.hideDrain}
+        alwaysExpanded
+      />
     </div>
   )
 }
