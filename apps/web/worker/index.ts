@@ -367,13 +367,19 @@ async function handleItemPage(
 
   const label = getCategoryLabel(category)
   const description = itemMetaDescription(item, label)
+  let body: string | undefined
+  try {
+    body = itemFallbackHtml(item, category, label)
+  } catch {
+    // Catalog shape drift must not 500 the page: serve the plain shell.
+  }
 
   return rewriteMeta(shellRes, {
     title: pageTitle(itemMetaTitle(item.name)),
     description,
     canonical: `${SITE_URL}${getItemUrl(category, slug)}`,
     image: absoluteImage(item.imageName),
-    body: itemFallbackHtml(item, category, label),
+    body,
   })
 }
 
@@ -386,8 +392,9 @@ type CatalogItem = {
 }
 
 // Plain-HTML stand-in for #root on item pages, so crawlers that don't run JS
-// (Bing, DuckDuckGo) index real text and links instead of the loading
-// placeholder. React's createRoot replaces it on first render. Built only from
+// (or only sometimes do) index real text and links instead of the loading
+// placeholder. Real users see it until React mounts, so it's styled to read as
+// a quiet loading page rather than raw HTML. React's createRoot replaces it on first render. Built only from
 // the catalog JSON already fetched for the meta, so it costs no subrequest.
 export function itemFallbackHtml(
   item: CatalogItem,
@@ -396,7 +403,7 @@ export function itemFallbackHtml(
 ): string {
   const text = (s: string) => escapeAttr(stripTags(s))
   const parts = [
-    `<main><h1>${text(item.name)} Builds</h1>`,
+    `<main style="${FALLBACK_STYLE}"><h1>${text(item.name)} Builds</h1>`,
     `<p>${text(label)}</p>`,
   ]
   if (item.description) parts.push(`<p>${text(item.description)}</p>`)
@@ -417,11 +424,14 @@ export function itemFallbackHtml(
   return parts.join("")
 }
 
+const FALLBACK_STYLE =
+  "max-width:42rem;margin:0 auto;padding:4rem 1rem;font:15px/1.6 system-ui,sans-serif;opacity:0.5"
+
 // Catalog text carries game markup (`<DT_POISON_COLOR>`, `<ENERGY>`, `|VAL|`
 // placeholders) that only the SPA's StatText knows how to render.
 function stripTags(s: string): string {
   return s
-    .replace(/<[^>]*>/g, "")
+    .replace(/<[^>]*>/g, " ") // a space, so `Overguard.<br>Dante` doesn't join
     .replace(/\|[A-Z_]+\|%?/g, "")
     .replace(/\s+/g, " ")
     .trim()

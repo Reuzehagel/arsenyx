@@ -249,6 +249,15 @@ describe("itemFallbackHtml", () => {
     expect(html).toContain('href="/browse?category=warframes"')
   })
 
+  it("keeps words apart where a tag is removed", () => {
+    const html = itemFallbackHtml(
+      { name: "Dante", description: "regenerate Overguard.<br>Dante must" },
+      "warframes",
+      "Warframes",
+    )
+    expect(html).toContain("Overguard. Dante must")
+  })
+
   it("escapes HTML in catalog text", () => {
     const html = itemFallbackHtml(
       { name: 'A & "B"', description: "x > y" },
