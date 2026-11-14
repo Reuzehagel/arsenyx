@@ -367,13 +367,74 @@ async function handleItemPage(
 
   const label = getCategoryLabel(category)
   const description = itemMetaDescription(item, label)
+  let body: string | undefined
+  try {
+    body = itemFallbackHtml(item, category, label)
+  } catch {
+    // Catalog shape drift must not 500 the page: serve the plain shell.
+  }
 
   return rewriteMeta(shellRes, {
     title: pageTitle(itemMetaTitle(item.name)),
     description,
     canonical: `${SITE_URL}${getItemUrl(category, slug)}`,
     image: absoluteImage(item.imageName),
+    body,
   })
+}
+
+type CatalogItem = {
+  name: string
+  description?: string
+  imageName?: string
+  passiveDescription?: string
+  abilities?: { name: string; description?: string }[]
+}
+
+// Plain-HTML stand-in for #root on item pages, so crawlers that don't run JS
+// (or only sometimes do) index real text and links instead of the loading
+// placeholder. Real users see it until React mounts, so it's styled to read as
+// a quiet loading page rather than raw HTML. React's createRoot replaces it on first render. Built only from
+// the catalog JSON already fetched for the meta, so it costs no subrequest.
+export function itemFallbackHtml(
+  item: CatalogItem,
+  category: string,
+  label: string,
+): string {
+  const text = (s: string) => escapeAttr(stripTags(s))
+  const parts = [
+    `<main style="${FALLBACK_STYLE}"><h1>${text(item.name)} Builds</h1>`,
+    `<p>${text(label)}</p>`,
+  ]
+  if (item.description) parts.push(`<p>${text(item.description)}</p>`)
+  if (item.passiveDescription)
+    parts.push(`<p>Passive: ${text(item.passiveDescription)}</p>`)
+  if (item.abilities?.length) {
+    parts.push("<h2>Abilities</h2><ul>")
+    for (const a of item.abilities) {
+      const desc = a.description ? `: ${text(a.description)}` : ""
+      parts.push(`<li><strong>${text(a.name)}</strong>${desc}</li>`)
+    }
+    parts.push("</ul>")
+  }
+  parts.push(
+    `<p><a href="/browse?category=${encodeURIComponent(category)}">Browse ${text(label)}</a> · `,
+    `<a href="/builds">All builds</a></p></main>`,
+  )
+  return parts.join("")
+}
+
+const FALLBACK_STYLE =
+  "max-width:42rem;margin:0 auto;padding:4rem 1rem;font:15px/1.6 system-ui,sans-serif;opacity:0.5"
+
+// Catalog text carries game markup (`<DT_POISON_COLOR>`, `<ENERGY>`, `|VAL|`
+// placeholders) that only the SPA's StatText knows how to render.
+function stripTags(s: string): string {
+  return s
+    .replace(/<[^>]*>/g, " ") // a space, so `Overguard.<br>Dante` doesn't join
+    .replace(/\|[A-Z_]+\|%?/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
 }
 
 // The catalog item JSON the SPA itself loads, fetched through the ASSETS
@@ -384,11 +445,7 @@ async function fetchItem(
   base: URL,
   category: string,
   slug: string,
-): Promise<
-  | { name: string; description?: string; imageName?: string }
-  | "not-found"
-  | null
-> {
+): Promise<CatalogItem | "not-found" | null> {
   try {
     const req = new Request(
       new URL(itemDetailUrl(category, slug), base).toString(),
@@ -398,11 +455,7 @@ async function fetchItem(
     if (!res.ok) return res.status === 404 ? "not-found" : null
     const type = res.headers.get("content-type") ?? ""
     if (!type.includes("json")) return "not-found"
-    return (await res.json()) as {
-      name: string
-      description?: string
-      imageName?: string
-    }
+    return (await res.json()) as CatalogItem
   } catch {
     return null
   }
@@ -575,6 +628,8 @@ export type Meta = {
   image?: string
   ogType?: string
   noindex?: boolean
+  /** Trusted HTML that replaces the #root loading placeholder. */
+  body?: string
 }
 
 // index.html has no static <title>/<meta description>, so this always injects
@@ -610,13 +665,19 @@ function rewriteMeta(res: Response, meta: Meta): Response {
 
   const Rewriter = (globalThis as unknown as { HTMLRewriter: HTMLRewriterCtor })
     .HTMLRewriter
-  return new Rewriter()
-    .on("head", {
+  const rewriter = new Rewriter().on("head", {
+    element(el) {
+      el.append(parts.join(""), { html: true })
+    },
+  })
+  const body = meta.body
+  if (body)
+    rewriter.on("#root", {
       element(el) {
-        el.append(parts.join(""), { html: true })
+        el.setInnerContent(body, { html: true })
       },
     })
-    .transform(res)
+  return rewriter.transform(res)
 }
 
 function escapeAttr(s: string): string {
@@ -645,4 +706,5 @@ interface ElementHandlers {
 }
 interface RewriterElement {
   append(content: string, opts?: { html?: boolean }): RewriterElement
+  setInnerContent(content: string, opts?: { html?: boolean }): RewriterElement
 }
