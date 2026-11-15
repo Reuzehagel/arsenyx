@@ -40,6 +40,10 @@ Game data is static, user data is dynamic. If something is read-heavy and rarely
 - Name outside people, forks or sites in PR text, commit messages, `changelog.ts` or issue comments. Write "a fork", "a partner site": the repo is public, and GitHub keeps old wording in a PR's edit history.
 - Don't assume Warframe game-mechanic facts from memory. Mod compatibility, slot rules, ability behavior, drop sources, etc. drift between updates and the model's training data is unreliable here. Check [wiki.warframe.com](https://wiki.warframe.com) or the data files under `apps/web/public/data/` ([index](docs/commands.md#what-the-built-catalog-holds), e.g. `mod-conflicts.json`) before encoding a rule into filters, validators, or hardcoded branches. `curl` the raw wikitext of any page or Lua module (`https://wiki.warframe.com/index.php?title=<Page or Module:name>&action=raw`) and grep it; WebFetch summarizes and misreports rank tables and lists. If a fact can't be verified, say so instead of guessing. Cloudflare product behavior is the same: load the matching `cloudflare:*` skill (or its docs) before stating what a dashboard or API can do.
 
+## Claude Code plugins
+
+[.claude/settings.json](.claude/settings.json) declares the shared plugins. Local sessions offer them after the workspace-trust prompt. Cloud sessions never show that prompt, so the SessionStart hook [.claude/hooks/install-plugins.sh](.claude/hooks/install-plugins.sh) installs them there (`--scope local`, gitignored). Add or remove a plugin in both files.
+
 ## Progressive disclosure — load on demand
 
 - [GLOSSARY.md](GLOSSARY.md) — domain terms (Build, Variant, Like, Bookmark): read before naming a new concept, route, or field
