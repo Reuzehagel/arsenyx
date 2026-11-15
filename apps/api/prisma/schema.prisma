@@ -158,6 +158,11 @@ model Build {
 
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  // When the build was last put under its current org (create or PATCH), null
+  // when it has none or was tagged before this was recorded. For an hour after,
+  // its author may still delete it or move it out (ORG_GRACE_MS in
+  // _build-visibility.ts), so a build put in the wrong org can be taken back.
+  organizationSince DateTime?
 
   // When true and the build is published under an organization, the
   // author's handle is suppressed in card / detail UI. No effect on
@@ -297,6 +302,12 @@ model BuildRevision {
   // BuildChange[] from @arsenyx/shared/warframe/build-diff, JSON-encoded.
   // Null on CREATED rows (nothing to diff against).
   changes Json?
+
+  // The build as it was before this save (BuildSnapshot in
+  // _build-revisions.ts), so an org admin can revert vandalism. Only on org
+  // builds, only on the first save of an editing session (needsSnapshot), and
+  // only the newest MAX_STORED_SNAPSHOTS per build; null everywhere else.
+  snapshot Json?
 
   createdAt DateTime @default(now())
 

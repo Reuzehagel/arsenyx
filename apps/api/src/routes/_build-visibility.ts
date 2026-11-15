@@ -38,7 +38,12 @@ const ANON_VISIBLE_WHERE = {
 // Per-Build access
 // ---------------------------------------------------------------------------
 
-type Owned = { userId: string; organizationId: string | null }
+type Owned = {
+  userId: string
+  organizationId: string | null
+  /** When the build joined its org; null/absent reads as long ago. */
+  organizationSince?: Date | null
+}
 type AccessBuild = Owned & { visibility: BuildVisibility }
 type Viewer = {
   id: string | undefined
@@ -51,15 +56,27 @@ type Viewer = {
 const mayMutate = (build: { userId: string }, viewer: Viewer) =>
   viewer.id != null && (build.userId === viewer.id || viewer.isOrgMember)
 
+/** How long after a Build joins an org its author may still take it back. */
+export const ORG_GRACE_MS = 60 * 60 * 1000
+
+/** Within {@link ORG_GRACE_MS} of the Build joining its org. Measured from
+ *  `organizationSince`, which only moves when the org does, so editing the
+ *  build can't extend it. */
+export const inOrgGrace = (build: Owned, now = Date.now()) =>
+  build.organizationSince != null &&
+  now - build.organizationSince.getTime() < ORG_GRACE_MS
+
 /** Deleting a Build, or moving it out of its org: the author of a solo
  *  Build, an org ADMIN of an org Build. An org owns what is published under
  *  it, so neither a member nor the author (who may since have left) can take
- *  an org Build down. */
+ *  an org Build down, except the author within the grace period, to undo
+ *  publishing to the wrong org. */
 const mayDelete = (build: Owned, viewer: Viewer) =>
   viewer.id != null &&
   (build.organizationId == null
     ? build.userId === viewer.id
-    : viewer.isOrgAdmin === true)
+    : viewer.isOrgAdmin === true ||
+      (build.userId === viewer.id && inOrgGrace(build)))
 
 /** Per-Build access for one viewer. `isOrgMember` / `isOrgAdmin` are the
  *  viewer's membership in the Build's org (false when it has none). Admins

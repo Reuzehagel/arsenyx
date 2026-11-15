@@ -40,9 +40,8 @@ type PublishDialogProps = {
   /** Editing an already-saved build: the dialog only sets what the next Save
    *  will use, so it says so instead of promising a save. */
   settingsOnly?: boolean
-  /** The build sits in an org this user isn't an admin of: only the org's
-   *  admins may move it out (the API answers org_admin_only), so the
-   *  "Publish as" choice is shown but fixed. */
+  /** The build sits in an org and this user may not take it out (the API
+   *  answers org_admin_only), so the "Publish as" choice is shown but fixed. */
   organizationLocked?: boolean
   onConfirm: (values: PublishDialogValues) => void
 }

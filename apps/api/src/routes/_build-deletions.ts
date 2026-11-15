@@ -20,6 +20,8 @@ type TombstoneBuild = {
   slug: string
   userId: string
   organizationId: string | null
+  /** Absent on tombstones written before it was recorded. */
+  organizationSince?: string | null
   hideAuthor: boolean
   itemUniqueName: string
   itemCategory: string
@@ -194,6 +196,8 @@ export async function restoreOrgDeletion(
         slug: b.slug,
         userId: authorGone ? actorId : b.userId,
         organizationId,
+        // Kept, so a restore never reopens the author's grace period.
+        organizationSince: b.organizationSince ?? null,
         hideAuthor: authorGone ? true : b.hideAuthor,
         itemUniqueName: b.itemUniqueName,
         itemCategory: b.itemCategory,

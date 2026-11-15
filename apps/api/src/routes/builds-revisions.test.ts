@@ -204,3 +204,31 @@ describe("describeEdit", () => {
     ])
   })
 })
+
+describe("foldRevisions revert targets", () => {
+  it("offers the snapshot on the entry's oldest save", () => {
+    const folded = foldRevisions(
+      [row("r3", 1, "vandal"), row("r2", 5, "vandal"), row("r1", 90, "cyn")],
+      new Set(["r2", "r1"]),
+    )
+    expect(folded.map((e) => e.revert?.id)).toEqual(["r2", "r1"])
+  })
+
+  it("falls back to an earlier snapshot when the oldest save took none", () => {
+    // r2 and r1 are one editor's session split by the fold window; only the
+    // session's first save (r1) stored a snapshot.
+    const folded = foldRevisions(
+      [row("r3", 1, "cyn"), row("r2", 29, "cyn"), row("r1", 40, "cyn")],
+      new Set(["r1"]),
+    )
+    expect(folded.map((e) => e.revert?.id)).toEqual(["r1", "r1"])
+  })
+
+  it("offers nothing without a snapshot, or on the CREATED entry", () => {
+    const folded = foldRevisions(
+      [row("r2", 1, "cyn"), row("r1", 90, "cyn", [], { kind: "CREATED" })],
+      new Set(["r1"]),
+    )
+    expect(folded.map((e) => e.revert)).toEqual([undefined, undefined])
+  })
+})

@@ -69,10 +69,12 @@ function TermsPage() {
           </p>
           <p>
             A build you publish under an organization is the organization&apos;s
-            to keep. Its members can edit it, but only its admins can delete it
-            or move it out, and it stays up if you leave the organization or
-            delete your account (passed to one of its admins, with your name
-            taken off it).
+            to keep. Its members can edit it, but only its admins can delete it,
+            move it out or roll back its edits, and it stays up if you leave the
+            organization or delete your account (passed to one of its admins,
+            with your name taken off it). For the first hour after you publish a
+            build to an organization you can still delete it or take it back
+            yourself, in case you picked the wrong one.
           </p>
 
           <h2>Warframe</h2>

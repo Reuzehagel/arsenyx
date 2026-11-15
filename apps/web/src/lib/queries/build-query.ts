@@ -116,6 +116,27 @@ export const buildRevisionsQuery = (slug: string, enabled: boolean) =>
     staleTime: 60_000,
   })
 
+/** Puts a build back to the version a history entry offers (`revert.id`). */
+export function useRevertBuild(slug: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    meta: { errorToast: "Couldn't restore that version" },
+    mutationFn: (revisionId: string) =>
+      apiCall<void>(
+        `${buildPath(slug)}/revisions/${encodeURIComponent(revisionId)}/revert`,
+        {
+          method: "POST",
+          codes: { default: "failed_revert" },
+        },
+      ),
+    // detail(slug) prefix-matches the revisions and partners keys too.
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: buildKeys.detail(slug) })
+      qc.invalidateQueries({ queryKey: buildKeys.lists })
+    },
+  })
+}
+
 export function useDeleteBuild(slug: string) {
   const qc = useQueryClient()
   return useMutation({

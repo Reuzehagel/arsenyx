@@ -3,7 +3,7 @@ import type {
   BuildRevisionResponse,
 } from "@arsenyx/shared/api/build-dto"
 import { useQuery } from "@tanstack/react-query"
-import { History } from "lucide-react"
+import { History, RotateCcw } from "lucide-react"
 import { useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import { UserAvatar } from "@/components/user-avatar"
-import { buildRevisionsQuery } from "@/lib/queries/build-query"
+import { buildRevisionsQuery, useRevertBuild } from "@/lib/queries/build-query"
 import { formatAbsoluteTime, relativeTime } from "@/lib/util/relative-time"
 import { authorName } from "@/lib/util/user-display"
 import { cn } from "@/lib/util/utils"
@@ -126,7 +126,49 @@ function groupByDay(revisions: BuildRevisionResponse[]) {
   return out
 }
 
-function Entry({ revision }: { revision: BuildRevisionResponse }) {
+/** "Restore" on an entry, with a second click to confirm: it rewrites the
+ *  build for everyone (the restore is logged, and can itself be undone). */
+function RevertButton({
+  slug,
+  revert,
+}: {
+  slug: string
+  revert: NonNullable<BuildRevisionResponse["revert"]>
+}) {
+  const [confirming, setConfirming] = useState(false)
+  const mutation = useRevertBuild(slug)
+  return (
+    <Button
+      variant={confirming ? "destructive" : "ghost"}
+      size="xs"
+      className="mt-1.5"
+      disabled={mutation.isPending}
+      title={`Restore the build as it was before ${formatAbsoluteTime(revert.at)}`}
+      onBlur={() => setConfirming(false)}
+      onClick={() => {
+        if (!confirming) return setConfirming(true)
+        mutation.mutate(revert.id, { onSettled: () => setConfirming(false) })
+      }}
+    >
+      <RotateCcw data-icon="inline-start" />
+      {mutation.isPending
+        ? "Restoring…"
+        : confirming
+          ? "Click again to restore"
+          : `Restore version from before ${relativeTime(revert.at)}`}
+    </Button>
+  )
+}
+
+function Entry({
+  revision,
+  slug,
+  canRevert,
+}: {
+  revision: BuildRevisionResponse
+  slug: string
+  canRevert: boolean
+}) {
   // A deleted account leaves its entries behind (BuildRevision.editorId is
   // SetNull) — the history of who touched what shouldn't vanish with the user.
   const who = revision.editor
@@ -170,6 +212,9 @@ function Entry({ revision }: { revision: BuildRevisionResponse }) {
         ) : (
           <ChangeLines changes={revision.changes} />
         )}
+        {canRevert && revision.revert ? (
+          <RevertButton slug={slug} revert={revision.revert} />
+        ) : null}
       </div>
     </li>
   )
@@ -183,8 +228,17 @@ function Entry({ revision }: { revision: BuildRevisionResponse }) {
  *
  * The list is fetched on first open rather than with the page: most visitors
  * can't see it at all, and those who can rarely want it.
+ *
+ * `canRevert` (an org build's admins: `BuildDetail.canDelete`) adds a Restore
+ * button to entries that keep the version from before them.
  */
-export function BuildHistorySheet({ slug }: { slug: string }) {
+export function BuildHistorySheet({
+  slug,
+  canRevert = false,
+}: {
+  slug: string
+  canRevert?: boolean
+}) {
   const [open, setOpen] = useState(false)
   const { data, isPending, isError } = useQuery(buildRevisionsQuery(slug, open))
   const groups = useMemo(() => groupByDay(data?.revisions ?? []), [data])
@@ -238,7 +292,12 @@ export function BuildHistorySheet({ slug }: { slug: string }) {
                 </h3>
                 <ol className="flex flex-col">
                   {g.items.map((r) => (
-                    <Entry key={r.id} revision={r} />
+                    <Entry
+                      key={r.id}
+                      revision={r}
+                      slug={slug}
+                      canRevert={canRevert}
+                    />
                   ))}
                 </ol>
               </section>

@@ -65,6 +65,37 @@ describe("buildAccess canDelete", () => {
   )
 })
 
+describe("buildAccess grace period", () => {
+  const now = Date.now()
+  const joined = (minutesAgo: number | null) => ({
+    userId: OWNER,
+    organizationId: "org",
+    organizationSince:
+      minutesAgo === null ? null : new Date(now - minutesAgo * 60_000),
+    visibility: "PUBLIC" as const,
+  })
+  const canDelete = (minutesAgo: number | null, id: string) =>
+    buildAccess(joined(minutesAgo), {
+      id,
+      isOrgMember: true,
+      isOrgAdmin: false,
+    }).canDelete
+
+  it("lets the author take a build back within the hour after it joined", () => {
+    expect(canDelete(5, OWNER)).toBe(true)
+    expect(canDelete(59, OWNER)).toBe(true)
+  })
+
+  it("closes after the hour, and never opened for builds tagged before", () => {
+    expect(canDelete(61, OWNER)).toBe(false)
+    expect(canDelete(null, OWNER)).toBe(false)
+  })
+
+  it("gives other members nothing within it", () => {
+    expect(canDelete(5, "member")).toBe(false)
+  })
+})
+
 describe("visibleAuthor", () => {
   const user = { id: "u1", name: "Real Name" }
   const org = { id: "o1" }
