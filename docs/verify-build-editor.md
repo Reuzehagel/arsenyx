@@ -2,6 +2,8 @@
 
 The editor needs only the web dev server (`preview_start` name `web`, :5173). The API isn't required until you save.
 
+`preview_start` reads only the main checkout's `.claude/launch.json` (gitignored), so `web` always serves the main checkout's code. To preview a worktree, add an entry there with `--cwd=.claude/worktrees/<name>/apps/web` and a free `--port`.
+
 ## Open an editor
 
 `/create?category=<category>&item=<slug>`. Example: `/create?category=warframes&item=excalibur`. Categories and slugs come from `apps/web/public/data/items-index.json`.

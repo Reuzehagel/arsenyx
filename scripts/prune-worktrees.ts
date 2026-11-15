@@ -9,6 +9,10 @@
  * Removes folders under .claude/worktrees/ that `git worktree list` no longer
  * knows, and local branches whose upstream is gone. `git branch -D` prints each
  * branch's sha, so a deleted branch stays recoverable from the reflog.
+ *
+ * Also lists unshipped work, which it never deletes: worktrees with
+ * uncommitted changes, and branches whose changes aren't on origin/main
+ * (squash-aware, so a squash-merged branch doesn't show).
  */
 
 import { readdirSync, renameSync, rmSync } from "node:fs"
@@ -49,6 +53,44 @@ const branches = git(
   .split("\n")
   .filter((l) => l.endsWith("\t[gone]"))
   .map((l) => l.split("\t")[0])
+
+// Unshipped work: listed so it isn't forgotten, never pruned.
+const tryGit = (...args: string[]) => {
+  try {
+    return git(...args)
+  } catch {
+    return "" // e.g. a registered worktree whose folder is gone
+  }
+}
+const dirty = [...registered].flatMap((w) => {
+  const n = tryGit("-C", w, "status", "--porcelain").split("\n").filter(Boolean)
+  return n.length ? [`${n.length} files\t${w}`] : []
+})
+const unmerged = git("for-each-ref", "--format=%(refname:short)", "refs/heads")
+  .split("\n")
+  .filter(Boolean)
+  .flatMap((b) => {
+    // Squash the branch into one commit on its merge base: `git cherry` then
+    // prints "-" when main already holds that patch (a squash merge).
+    const base = tryGit("merge-base", "origin/main", b).trim()
+    const n = Number(tryGit("rev-list", "--count", `${base}..${b}`).trim())
+    if (!base || !n) return []
+    const squashed = tryGit(
+      "commit-tree",
+      `${b}^{tree}`,
+      "-p",
+      base,
+      "-m",
+      "squash",
+    ).trim()
+    const merged = tryGit("cherry", "origin/main", squashed).startsWith("-")
+    return merged ? [] : [`${n} commits\t${b}`]
+  })
+console.log(`Worktrees with uncommitted changes (${dirty.length}):`)
+for (const d of dirty) console.log(`  ${d}`)
+console.log(`Branches not merged into origin/main (${unmerged.length}):`)
+for (const b of unmerged) console.log(`  ${b}`)
+console.log()
 
 if (!dirs.length && !branches.length) {
   console.log("Nothing to prune.")

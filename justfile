@@ -111,8 +111,9 @@ fix:
 test: deps
     bun run test
 
-# After merging PRs: list orphan .claude/worktrees folders and branches whose
-# remote is gone. Pass --go to delete them.
+# After merging PRs, or when asked where some work went: lists unshipped work
+# (dirty worktrees, branches not on main), orphan .claude/worktrees folders and
+# branches whose remote is gone. --go deletes only the last two.
 prune-worktrees *args:
     bun run scripts/prune-worktrees.ts {{args}}
 

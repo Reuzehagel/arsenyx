@@ -9,6 +9,7 @@
  */
 
 import { spawnSync } from "node:child_process"
+import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
 
 const REPO_ROOT = resolve(import.meta.dirname, "..")
@@ -64,8 +65,30 @@ if (appChanges.length === 0) {
 }
 
 if (changed.includes(CHANGELOG)) {
-  console.log("✓ check:changelog — changelog entry included.")
-  process.exit(0)
+  // The entry must land in the newest (top) date block: work rebased from an
+  // old branch keeps its old date and sinks mid-list, where no one reads it.
+  const dateLines = readFileSync(resolve(REPO_ROOT, CHANGELOG), "utf8")
+    .split("\n")
+    .flatMap((l, i) => (/^\s*date: "/.test(l) ? [i + 1] : []))
+  const topEnd = dateLines[1] ?? Infinity
+  const added = git(["diff", "-U0", mergeBase, "--", CHANGELOG])
+    .stdout.split("\n")
+    .flatMap((l) => {
+      const m = /^@@ [^+]*\+(\d+)(?:,(\d+))? @@/.exec(l)
+      if (!m) return []
+      const start = Number(m[1])
+      const count = m[2] === undefined ? 1 : Number(m[2])
+      return Array.from({ length: count }, (_, k) => start + k)
+    })
+  if (added.some((n) => n < topEnd)) {
+    console.log("✓ check:changelog — changelog entry included.")
+    process.exit(0)
+  }
+  console.error(
+    `✗ check:changelog — ${CHANGELOG} changed, but nothing was added to the ` +
+      `newest date block at the top. Move the entry into a block dated today.`,
+  )
+  process.exit(1)
 }
 
 console.error(
