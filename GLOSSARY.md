@@ -76,8 +76,10 @@ _Avoid_: Linked Build, Related Build, Combo.
 
 **User**:
 A registered person who owns the Builds they create and is credited for them by username
-(the byline). Owns the Build outright — edit and delete rights — regardless of any
-Organization it is published under.
+(the byline). Owns a solo Build outright (edit and delete rights). A Build published under an
+Organization belongs to the Org: the User and the Org's members may edit it, but only the Org's
+ADMINs may delete it, move it out or revert its edits (the User keeps those rights for the first
+hour after it joins the Org), and it stays with the Org if the User deletes their account.
 _Avoid_: Author, Owner, Account, Member (all collapse into User; "Member" specifically means an Organization membership, below).
 
 **Organization**:
@@ -153,5 +155,5 @@ _Avoid_: Buffed, Peak mode.
 > **Dev:** Right. And when it's published under their Organization with the username hidden —
 > who's the owner?
 >
-> **Domain:** Still the **User**. The Org only changes the byline; ownership and edit rights never
-> leave the User.
+> **Domain:** Still the **User** for credit and editing. The Org only changes the byline, but it
+> holds the delete rights: only its ADMINs can delete the Build or take it out of the Org.

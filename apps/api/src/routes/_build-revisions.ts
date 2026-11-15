@@ -19,6 +19,9 @@ import { BUILD_USER_SELECT } from "./_build-list"
 // of an entry — how a save is described on write, and how a burst of saves
 // collapses on read.
 
+/** describeEdit's entry for a save it can describe no change in. */
+export const UPDATED_LABEL = "Updated"
+
 /** Matches BuildRevision.note's @db.VarChar(300). */
 export const MAX_REVISION_NOTE = 300
 
@@ -34,6 +37,7 @@ export type BuildPatch = {
   description?: string | null
   visibility?: BuildVisibility
   organizationId?: string | null
+  organizationSince?: Date | null
   hideAuthor?: boolean
   buildData?: InputJsonValue
   hasShards?: boolean
@@ -42,6 +46,112 @@ export type BuildPatch = {
   catalogVersion?: string | null
   itemImageName?: string | null
   guide?: GuideInput
+}
+
+// ---------------------------------------------------------------------------
+// Snapshots (org builds): what an org admin can revert to
+// ---------------------------------------------------------------------------
+
+/** The columns a snapshot keeps. Organization and hideAuthor are left out on
+ *  purpose: a revert restores the build's content, not who it belongs to. */
+export const SNAPSHOT_SELECT = {
+  name: true,
+  description: true,
+  visibility: true,
+  buildData: true,
+  hasShards: true,
+  formaCount: true,
+  formaCalcVersion: true,
+  catalogVersion: true,
+  itemImageName: true,
+  buildGuide: { select: { summary: true, description: true } },
+} as const
+
+/** The build as it was before a save, stored on that save's revision
+ *  (BuildRevision.snapshot). */
+export type BuildSnapshot = {
+  name: string
+  description: string | null
+  visibility: BuildVisibility
+  buildData: InputJsonValue
+  hasShards: boolean
+  formaCount: number
+  formaCalcVersion: number
+  catalogVersion: string | null
+  itemImageName: string | null
+  guide: GuideInput | null
+}
+
+export function snapshotOf(b: {
+  name: string
+  description: string | null
+  visibility: BuildVisibility
+  buildData: unknown
+  hasShards: boolean
+  formaCount: number
+  formaCalcVersion: number
+  catalogVersion: string | null
+  itemImageName: string | null
+  buildGuide: GuideInput | null
+}): BuildSnapshot {
+  return {
+    name: b.name,
+    description: b.description,
+    visibility: b.visibility,
+    buildData: b.buildData as InputJsonValue,
+    hasShards: b.hasShards,
+    formaCount: b.formaCount,
+    formaCalcVersion: b.formaCalcVersion,
+    catalogVersion: b.catalogVersion,
+    itemImageName: b.itemImageName,
+    guide: b.buildGuide && {
+      summary: b.buildGuide.summary,
+      description: b.buildGuide.description,
+    },
+  }
+}
+
+/** The PATCH that puts a snapshot back. A build that had no guide gets an
+ *  empty one, which reads as none (hasGuide false). */
+export function patchFromSnapshot(s: BuildSnapshot): BuildPatch {
+  return {
+    name: s.name,
+    description: s.description,
+    visibility: s.visibility,
+    buildData: s.buildData,
+    hasShards: s.hasShards,
+    formaCount: s.formaCount,
+    formaCalcVersion: s.formaCalcVersion,
+    catalogVersion: s.catalogVersion,
+    itemImageName: s.itemImageName,
+    guide: s.guide ?? { summary: null, description: null },
+  }
+}
+
+/**
+ * Whether this save stores a snapshot of the build before it. Only org
+ * builds keep them: there, members other than the author can edit, and an
+ * org admin may need to undo one (`POST /builds/:slug/revisions/:id/revert`).
+ * Only the first save of an editing session stores one (a different editor
+ * than the last save, or a gap of {@link REVISION_FOLD_MS}): a snapshot is
+ * 5-80 KB, and the many saves of one session would otherwise push the good
+ * version out of {@link MAX_STORED_SNAPSHOTS} in minutes.
+ */
+export async function needsSnapshot(
+  build: { id: string; organizationId: string | null },
+  editorId: string,
+): Promise<boolean> {
+  if (build.organizationId == null) return false
+  const last = await prisma.buildRevision.findFirst({
+    where: { buildId: build.id },
+    orderBy: { createdAt: "desc" },
+    select: { editorId: true, createdAt: true },
+  })
+  return (
+    last == null ||
+    last.editorId !== editorId ||
+    Date.now() - last.createdAt.getTime() >= REVISION_FOLD_MS
+  )
 }
 
 /** The Prisma update for a patch; the guide row is upserted. */
@@ -118,7 +228,7 @@ export function describeEdit(
   // that touched no slots shouldn't read "No loadout changes · Renamed".
   const real = out.filter((ch) => ch.label !== NO_CHANGES_LABEL)
   if (real.length > 0) return real
-  return out.length > 0 ? out : [{ op: "info", label: "Updated" }]
+  return out.length > 0 ? out : [{ op: "info", label: UPDATED_LABEL }]
 }
 
 /**
@@ -128,11 +238,12 @@ export function describeEdit(
  * of writes.
  */
 const MAX_STORED_REVISIONS = 200
+/** Snapshots kept per build; older ones are dropped from their revisions
+ *  (the entry itself stays). One per editing session, see needsSnapshot. */
+const MAX_STORED_SNAPSHOTS = 30
 export function pruneRevisions(buildId: string) {
-  sometimesInBackground(
-    0.02,
-    "revision prune",
-    () => prisma.$executeRaw`
+  sometimesInBackground(0.02, "revision prune", async () => {
+    await prisma.$executeRaw`
       DELETE FROM build_revisions
       WHERE "buildId" = ${buildId}
         AND id NOT IN (
@@ -141,8 +252,18 @@ export function pruneRevisions(buildId: string) {
           ORDER BY "createdAt" DESC
           LIMIT ${MAX_STORED_REVISIONS}
         )
-    `,
-  )
+    `
+    await prisma.$executeRaw`
+      UPDATE build_revisions SET snapshot = NULL
+      WHERE "buildId" = ${buildId} AND snapshot IS NOT NULL
+        AND id NOT IN (
+          SELECT id FROM build_revisions
+          WHERE "buildId" = ${buildId} AND snapshot IS NOT NULL
+          ORDER BY "createdAt" DESC
+          LIMIT ${MAX_STORED_SNAPSHOTS}
+        )
+    `
+  })
 }
 
 // Consecutive saves by one editor inside this window collapse into a single
@@ -166,6 +287,11 @@ export type RevisionRow = {
 /** The newest slice of a build's log, already folded, plus whether older
  *  entries exist beyond it. */
 export async function readRevisions(buildId: string) {
+  // Which rows carry a snapshot, without reading the snapshots themselves.
+  const withSnapshot = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT id FROM build_revisions
+    WHERE "buildId" = ${buildId} AND snapshot IS NOT NULL
+  `
   const rows = await prisma.buildRevision.findMany({
     where: { buildId },
     orderBy: { createdAt: "desc" },
@@ -181,7 +307,10 @@ export async function readRevisions(buildId: string) {
     },
   })
   return {
-    revisions: foldRevisions(rows.slice(0, REVISION_READ_LIMIT)),
+    revisions: foldRevisions(
+      rows.slice(0, REVISION_READ_LIMIT),
+      new Set(withSnapshot.map((r) => r.id)),
+    ),
     truncated: rows.length > REVISION_READ_LIMIT,
   }
 }
@@ -194,14 +323,32 @@ function toChanges(raw: unknown): BuildChange[] {
  * Fold a newest-first row list into display entries, collapsing runs of
  * same-editor saves inside {@link REVISION_FOLD_MS}. A CREATED row never folds
  * into anything — "who made this" is a different fact from "who edited it".
+ *
+ * An EDITED entry offers a revert to the newest snapshot at or before its
+ * oldest save: the build as it was before the entry. Snapshots are taken per
+ * editing session, so when the entry's oldest save didn't take one, that's
+ * an earlier save by the same editor (`revert.at` says when).
  */
-export function foldRevisions(rows: RevisionRow[]): BuildRevisionResponse[] {
+export function foldRevisions(
+  rows: RevisionRow[],
+  snapshotIds: ReadonlySet<string> = new Set(),
+): BuildRevisionResponse[] {
   const out: BuildRevisionResponse[] = []
   let group: RevisionRow[] = []
+  let next = 0 // index in `rows` of the row after the current group
+
+  const revertFor = (newest: RevisionRow) => {
+    if (newest.kind !== "EDITED") return undefined
+    const snap = rows
+      .slice(next - group.length)
+      .find((r) => r.kind === "EDITED" && snapshotIds.has(r.id))
+    return snap && { id: snap.id, at: snap.createdAt.toISOString() }
+  }
 
   const flush = () => {
     if (group.length === 0) return
     const newest = group[0]
+    const revert = revertFor(newest)
     out.push({
       id: newest.id,
       at: newest.createdAt.toISOString(),
@@ -214,6 +361,7 @@ export function foldRevisions(rows: RevisionRow[]): BuildRevisionResponse[] {
         [...group].reverse().map((r) => toChanges(r.changes)),
       ),
       saves: group.length,
+      ...(revert && { revert }),
     })
     group = []
   }
@@ -228,6 +376,7 @@ export function foldRevisions(rows: RevisionRow[]): BuildRevisionResponse[] {
       head.createdAt.getTime() - row.createdAt.getTime() < REVISION_FOLD_MS
     if (!foldable) flush()
     group.push(row)
+    next++
   }
   flush()
 

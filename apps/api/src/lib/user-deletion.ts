@@ -13,12 +13,23 @@ import { prisma } from "../db"
  *   orgs.ts' last-admin guard, and no admin route can appoint an org ADMIN, so
  *   the org would otherwise be left unmanageable. Orgs with no other members
  *   are left as they are.
- * - Tombstones of builds the user authored (build_deletions) go too: account
+ * - Builds the user published under an org pass to one of its ADMINs (the
+ *   longest-standing, after the promotion above) with the author hidden: the
+ *   org owns them, and only an org admin may delete them (canDeleteBuild).
+ *   Org builds with nobody left to inherit them cascade with the account.
+ * - Tombstones of the user's solo builds (build_deletions) go too: account
  *   deletion means their content is gone, not kept for the 90-day window.
+ *   Org builds' tombstones stay, so the org's admins can still restore them.
+ *
+ * Order matters: the transaction runs these in sequence, and the handover
+ * reads the ADMIN the promotion may have just made.
  */
 export function beforeUserDeletion(userId: string) {
   return [
-    prisma.$executeRaw`DELETE FROM build_deletions WHERE build->>'userId' = ${userId}`,
+    prisma.$executeRaw`
+      DELETE FROM build_deletions
+      WHERE build->>'userId' = ${userId} AND build->>'organizationId' IS NULL
+    `,
     prisma.$executeRaw`
       WITH deleted AS (
         DELETE FROM build_likes WHERE "userId" = ${userId}
@@ -58,6 +69,18 @@ export function beforeUserDeletion(userId: string) {
       ) next
       WHERE m."organizationId" = next."organizationId"
         AND m."userId" = next."userId"
+    `,
+    prisma.$executeRaw`
+      UPDATE builds b
+      SET "userId" = heir."userId", "hideAuthor" = true
+      FROM (
+        SELECT DISTINCT ON (m."organizationId") m."organizationId", m."userId"
+        FROM organization_members m
+        WHERE m.role = 'ADMIN' AND m."userId" <> ${userId}
+        ORDER BY m."organizationId", m."joinedAt", m."userId"
+      ) heir
+      WHERE b."userId" = ${userId}
+        AND b."organizationId" = heir."organizationId"
     `,
   ]
 }

@@ -313,6 +313,12 @@ function saveErrorText(
       retry: false,
       signIn: true,
     }
+  if (code === "org_admin_only")
+    return {
+      message:
+        "Only the organization's admins can move a build out of it. Ask one of them, or keep it in the org.",
+      retry: false,
+    }
   if (status === 403)
     return {
       message: hasOrg

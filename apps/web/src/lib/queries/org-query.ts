@@ -1,6 +1,7 @@
 import type { BuildListResponse } from "@arsenyx/shared/api/build-dto"
 import type {
   MyOrgsResponse,
+  OrgDeletedBuildsResponse,
   OrgDirectoryResponse,
   OrgProfile,
   OrgRole,
@@ -29,6 +30,7 @@ export const orgKeys = {
     ["orgs", "directory", page, q ?? ""] as const,
   mine: ["orgs", "mine"] as const,
   detail: (slug: string) => ["org", slug.toLowerCase()] as const,
+  deleted: (slug: string) => ["org", slug.toLowerCase(), "deleted"] as const,
 }
 
 const orgPath = (slug: string) => `/orgs/${encodeURIComponent(slug)}`
@@ -61,6 +63,16 @@ export const orgBuildsQuery = (slug: string, params: BuildListParams) =>
         `${orgPath(slug)}/builds${listQueryString(params, "org")}`,
         { codes: { default: "failed to load builds" } },
       ),
+  })
+
+/** The org's recently deleted builds (admins only; the settings page). */
+export const orgDeletedBuildsQuery = (slug: string) =>
+  queryOptions({
+    queryKey: orgKeys.deleted(slug),
+    queryFn: () =>
+      apiCall<OrgDeletedBuildsResponse>(`${orgPath(slug)}/deleted-builds`, {
+        codes: { default: "failed to load deleted builds" },
+      }),
   })
 
 export const myOrgsQuery = () =>
@@ -192,6 +204,29 @@ export function useRemoveOrgMember(slug: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: orgKeys.detail(slug) })
       qc.invalidateQueries({ queryKey: orgKeys.mine })
+    },
+  })
+}
+
+export function useRestoreOrgBuild(slug: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (deletionId: string) =>
+      apiCall<{ slug: string }>(
+        `${orgPath(slug)}/deleted-builds/${encodeURIComponent(deletionId)}/restore`,
+        {
+          method: "POST",
+          codes: {
+            404: "That build can no longer be restored.",
+            409: "That build is already back.",
+            default: "Couldn't restore the build. Try again.",
+          },
+        },
+      ),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: orgKeys.deleted(slug) })
+      qc.invalidateQueries({ queryKey: orgKeys.detail(slug) })
+      qc.invalidateQueries({ queryKey: buildKeys.lists })
     },
   })
 }

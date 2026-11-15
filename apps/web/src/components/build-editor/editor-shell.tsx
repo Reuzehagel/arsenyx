@@ -241,6 +241,13 @@ export function EditorShell({
     enabled: !!session?.user,
   })
   const organizations = myOrgs?.memberships.map((m) => m.organization) ?? []
+  // Moving a build out of its org takes the same right as deleting it (org
+  // admins, or its author within the grace period: the API's canDeleteBuild),
+  // so without it the "Publish as" choice is fixed.
+  const organizationLocked =
+    isUpdate &&
+    existingBuild?.organization != null &&
+    existingBuild.canDelete !== true
 
   const riven = useRivenDialog({ slots, normalSlotCount, category })
 
@@ -484,6 +491,7 @@ export function EditorShell({
         organizations={organizations}
         organizationsLoading={!!session?.user && orgsPending}
         settingsOnly={isUpdate}
+        organizationLocked={organizationLocked}
         onConfirm={({
           visibility: next,
           organizationId: nextOrgId,

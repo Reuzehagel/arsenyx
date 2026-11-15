@@ -5,9 +5,9 @@ import {
 } from "@arsenyx/shared/api/limits"
 import type { OrgProfile, OrgRole } from "@arsenyx/shared/api/orgs"
 import { ORG_SETTINGS_META } from "@arsenyx/shared/seo/site"
-import { useSuspenseQuery } from "@tanstack/react-query"
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
-import { ArrowLeft, X } from "lucide-react"
+import { ArrowLeft, RotateCcw, X } from "lucide-react"
 import { Suspense, useState } from "react"
 
 import { Link } from "@/components/link"
@@ -40,14 +40,17 @@ import { Textarea } from "@/components/ui/textarea"
 import { UserAvatar } from "@/components/user-avatar"
 import { requireUser } from "@/lib/auth-guards"
 import {
+  orgDeletedBuildsQuery,
   orgQuery,
   useAddOrgMember,
   useDeleteOrg,
   useRemoveOrgMember,
+  useRestoreOrgBuild,
   useUpdateOrg,
   useUpdateOrgMemberRole,
 } from "@/lib/queries/org-query"
 import { seo } from "@/lib/seo"
+import { formatAbsoluteTime, relativeTime } from "@/lib/util/relative-time"
 import { authorName } from "@/lib/util/user-display"
 
 export const Route = createFileRoute("/_app/org/$slug_/settings")({
@@ -90,6 +93,7 @@ function OrgSettingsContent() {
 
       <GeneralCard org={org} />
       <MembersCard org={org} />
+      <RecentlyDeletedCard org={org} />
       <DangerCard org={org} />
     </>
   )
@@ -320,6 +324,95 @@ function MembersCard({ org }: { org: OrgProfile }) {
           </div>
           {addError ? <FieldError>{addError}</FieldError> : null}
         </form>
+      </CardContent>
+    </Card>
+  )
+}
+
+/** Builds deleted from the org in the last 90 days. Only admins can delete an
+ *  org build, and only they can bring one back. */
+function RecentlyDeletedCard({ org }: { org: OrgProfile }) {
+  const navigate = useNavigate()
+  const deleted = useQuery(orgDeletedBuildsQuery(org.slug))
+  const restore = useRestoreOrgBuild(org.slug)
+  const builds = deleted.data?.builds ?? []
+  const error =
+    (restore.error instanceof Error && restore.error.message) ||
+    (deleted.error instanceof Error && "Couldn't load deleted builds.") ||
+    null
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Recently deleted</CardTitle>
+        <CardDescription>
+          Builds deleted from this organization in the last 90 days. Restoring
+          one brings it back on its old link, with its guide, likes and
+          bookmarks.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        {deleted.isPending ? (
+          <p className="text-muted-foreground text-sm">Loading…</p>
+        ) : builds.length === 0 && !deleted.error ? (
+          <p className="text-muted-foreground text-sm">
+            Nothing has been deleted recently.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {builds.map((b) => {
+              const restoring = restore.isPending && restore.variables === b.id
+              return (
+                <li
+                  key={b.id}
+                  className="flex items-center gap-3 rounded-lg border px-3 py-2"
+                >
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate text-sm font-medium">
+                      {b.name}
+                    </span>
+                    <span className="text-muted-foreground truncate text-xs">
+                      {b.item.name}
+                      {b.author
+                        ? ` · by ${authorName(b.author)}`
+                        : " · author's account deleted"}
+                      {b.likeCount > 0
+                        ? ` · ${b.likeCount} like${b.likeCount === 1 ? "" : "s"}`
+                        : ""}
+                    </span>
+                    <span
+                      className="text-muted-foreground truncate text-xs"
+                      title={formatAbsoluteTime(b.deletedAt)}
+                    >
+                      Deleted {relativeTime(b.deletedAt)} by{" "}
+                      {b.deletedBy
+                        ? authorName(b.deletedBy)
+                        : "a deleted account"}
+                    </span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={restore.isPending}
+                    onClick={() =>
+                      restore.mutate(b.id, {
+                        onSuccess: ({ slug }) =>
+                          void navigate({
+                            to: "/builds/$slug",
+                            params: { slug },
+                          }),
+                      })
+                    }
+                  >
+                    <RotateCcw data-icon="inline-start" />
+                    {restoring ? "Restoring…" : "Restore"}
+                  </Button>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+        {error ? <FieldError>{error}</FieldError> : null}
       </CardContent>
     </Card>
   )

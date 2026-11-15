@@ -9,6 +9,10 @@ import {
   hasShardsInBuildData,
   variantsOverCap,
 } from "@arsenyx/shared/warframe/build-data"
+import {
+  NO_CHANGES_LABEL,
+  type BuildChange,
+} from "@arsenyx/shared/warframe/build-diff"
 import { isValidCategory } from "@arsenyx/shared/warframe/categories"
 import {
   FORMA_CALC_VERSION,
@@ -57,8 +61,14 @@ import {
   describeEdit,
   MAX_REVISION_NOTE,
   pruneRevisions,
+  needsSnapshot,
+  patchFromSnapshot,
   readRevisions,
+  SNAPSHOT_SELECT,
+  snapshotOf,
+  UPDATED_LABEL,
   toBuildUpdate,
+  type BuildSnapshot,
   type BuildPatch,
   type GuideInput,
 } from "./_build-revisions"
@@ -73,6 +83,7 @@ import { setLike, clearLike, toggleBookmark } from "./_build-social"
 import {
   bookmarkedScope,
   canActOnBuild,
+  canDeleteBuild,
   canMutateBuild,
   isOrgMember,
   mutableScope,
@@ -181,6 +192,7 @@ async function createBuild(
       return await prisma.build.create({
         data: {
           ...data,
+          organizationSince: data.organizationId ? new Date() : null,
           slug: generateSlug(),
           revisions: {
             create: {
@@ -280,12 +292,12 @@ builds.patch("/:slug", rateLimitUser("mutate"), async (c) => {
       id: true,
       userId: true,
       organizationId: true,
-      buildData: true,
-      name: true,
-      visibility: true,
-      // The editor sends `guide` on every save whether or not it changed, so
-      // "was the guide edited" is answered by comparing content.
-      buildGuide: { select: { summary: true, description: true } },
+      organizationSince: true,
+      // Everything a snapshot keeps (org builds store one per editing
+      // session), which includes the guide: the editor sends `guide` on
+      // every save whether or not it changed, so "was the guide edited" is
+      // answered by comparing content.
+      ...SNAPSHOT_SELECT,
     },
   })
   if (!existing) return c.json({ error: "not_found" }, 404)
@@ -313,11 +325,20 @@ builds.patch("/:slug", rateLimitUser("mutate"), async (c) => {
     b.organizationId !== existing.organizationId
   ) {
     // Only the author may move a build between orgs: a co-member moving it
-    // into another org of theirs would hand edit rights to strangers.
+    // into another org of theirs would hand edit rights to strangers. Out of
+    // an org, the author must also be an admin of it: the org owns the
+    // build, and leaving it untagged would let the author delete it.
     if (existing.userId !== user.id) {
       return c.json({ error: "forbidden" }, 403)
     }
+    if (
+      existing.organizationId !== null &&
+      !(await canDeleteBuild(existing, user.id))
+    ) {
+      return c.json({ error: "org_admin_only" }, 403)
+    }
     patch.organizationId = await resolveOrgAssignment(b.organizationId, user.id)
+    patch.organizationSince = patch.organizationId ? new Date() : null
   }
   // Against the org after this PATCH. An org change without a fresh
   // hideAuthor resets it, so a flag chosen for the previous org (or none)
@@ -356,6 +377,9 @@ builds.patch("/:slug", rateLimitUser("mutate"), async (c) => {
 
   // One revision per accepted PATCH, in the same statement as the update so a
   // save can never land without its log entry.
+  const snapshot = (await needsSnapshot(existing, user.id))
+    ? snapshotOf(existing)
+    : undefined
   const updated = await prisma.build.update({
     where: { id: existing.id },
     data: {
@@ -366,6 +390,7 @@ builds.patch("/:slug", rateLimitUser("mutate"), async (c) => {
           kind: "EDITED",
           note: trimToMax(b.revisionNote, MAX_REVISION_NOTE),
           changes: describeEdit(existing, patch) as unknown as InputJsonValue,
+          snapshot: snapshot as InputJsonValue | undefined,
         },
       },
     },
@@ -396,16 +421,93 @@ builds.get("/:slug/revisions", async (c) => {
   return c.json(await readRevisions(build.id))
 })
 
+// Puts an org build back to a snapshot (needsSnapshot), undoing whatever was
+// saved after it: the answer to a member editing an org build into nonsense.
+// Same gate as deleting (org admins; a solo build's author, though solo
+// builds keep no snapshots). The revert is itself a logged save carrying a
+// snapshot of what it replaced, so it can be reverted too.
+builds.post(
+  "/:slug/revisions/:id/revert",
+  rateLimitUser("mutate"),
+  async (c) => {
+    const user = await requireUser(c)
+
+    const existing = await prisma.build.findUnique({
+      where: { slug: c.req.param("slug") },
+      select: {
+        id: true,
+        userId: true,
+        organizationId: true,
+        organizationSince: true,
+        ...SNAPSHOT_SELECT,
+      },
+    })
+    if (!existing) return c.json({ error: "not_found" }, 404)
+    if (!(await canDeleteBuild(existing, user.id))) {
+      const error = existing.organizationId ? "org_admin_only" : "forbidden"
+      return c.json({ error }, 403)
+    }
+    const revision = await prisma.buildRevision.findFirst({
+      where: { id: c.req.param("id"), buildId: existing.id },
+      select: { snapshot: true, createdAt: true },
+    })
+    if (!revision?.snapshot) return c.json({ error: "not_found" }, 404)
+
+    const patch = patchFromSnapshot(
+      revision.snapshot as unknown as BuildSnapshot,
+    )
+    const changes: BuildChange[] = [
+      {
+        op: "info",
+        label: "Restored an earlier version",
+        detail: `as it was before ${revision.createdAt.toISOString().slice(0, 16).replace("T", " ")} UTC`,
+      },
+      ...describeEdit(existing, patch).filter(
+        (ch) => ch.label !== NO_CHANGES_LABEL && ch.label !== UPDATED_LABEL,
+      ),
+    ]
+    const updated = await prisma.build.update({
+      where: { id: existing.id },
+      data: {
+        ...toBuildUpdate(patch),
+        revisions: {
+          create: {
+            editorId: user.id,
+            kind: "EDITED",
+            changes: changes as unknown as InputJsonValue,
+            snapshot: snapshotOf(existing) as unknown as InputJsonValue,
+          },
+        },
+      },
+      select: {
+        id: true,
+        slug: true,
+        partnerBuilds: { select: { slug: true } },
+      },
+    })
+    pruneRevisions(existing.id)
+    const { partnerBuilds, ...result } = updated
+    invalidateBuilds(c, [result.slug, ...partnerBuilds.map((p) => p.slug)])
+    return c.json(result)
+  },
+)
+
 builds.delete("/:slug", rateLimitUser("mutate"), async (c) => {
   const user = await requireUser(c)
 
   const existing = await prisma.build.findUnique({
     where: { slug: c.req.param("slug") },
-    select: { id: true, userId: true, organizationId: true },
+    select: {
+      id: true,
+      userId: true,
+      organizationId: true,
+      organizationSince: true,
+    },
   })
   if (!existing) return c.json({ error: "not_found" }, 404)
-  if (!(await canMutateBuild(existing, user.id))) {
-    return c.json({ error: "forbidden" }, 403)
+  if (!(await canDeleteBuild(existing, user.id))) {
+    const error = existing.organizationId ? "org_admin_only" : "forbidden"
+    return c.json({ error }, 403)
   }
 
   await deleteBuild(c, { id: existing.id }, user.id)
@@ -950,6 +1052,7 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
       build,
       {
         isOwner: access.canMutate,
+        canDelete: access.canDelete,
         hasLiked: like?.value === 1,
         hasDisliked: like?.value === -1,
         hasBookmarked: bookmark != null,

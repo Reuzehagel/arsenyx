@@ -168,7 +168,10 @@ export function ViewerHeader({
               which is the same gate the revisions route enforces. */}
           {build.isOwner ? (
             <>
-              <BuildHistorySheet slug={build.slug} />
+              <BuildHistorySheet
+                slug={build.slug}
+                canRevert={build.canDelete === true}
+              />
               <Button
                 size="sm"
                 nativeButton={false}
@@ -188,7 +191,8 @@ export function ViewerHeader({
           <BuildActionsMenu
             slug={build.slug}
             name={build.name}
-            isOwner={build.isOwner}
+            canDelete={build.canDelete === true}
+            inOrg={build.organization != null}
             visibility={build.visibility}
           />
         </div>

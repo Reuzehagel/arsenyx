@@ -27,12 +27,73 @@ describe("buildAccess", () => {
     (visibility, id, isOrgMember, isAdmin, view, act, mutate) => {
       expect(
         buildAccess(
-          { userId: OWNER, visibility },
+          { userId: OWNER, organizationId: "org", visibility },
           { id, isOrgMember, isAdmin },
         ),
-      ).toEqual({ canView: view, canAct: act, canMutate: mutate })
+      ).toMatchObject({ canView: view, canAct: act, canMutate: mutate })
     },
   )
+})
+
+describe("buildAccess canDelete", () => {
+  const cases = [
+    // org, viewer, isOrgMember, isOrgAdmin, isAdmin → canDelete
+    // A solo build: its author alone.
+    [null, OWNER, false, false, false, true],
+    [null, "stranger", false, false, false, false],
+    [null, "admin", false, false, true, false],
+    // An org build: org ADMINs alone, whoever wrote it.
+    ["org", OWNER, true, false, false, false],
+    ["org", OWNER, false, false, false, false],
+    ["org", OWNER, true, true, false, true],
+    ["org", "member", true, false, false, false],
+    ["org", "orgAdmin", true, true, false, true],
+    ["org", "admin", false, false, true, false],
+    ["org", undefined, true, true, false, false],
+  ] as const
+
+  it.each(cases)(
+    "org=%s, viewer %s (member=%s, orgAdmin=%s, admin=%s)",
+    (organizationId, id, isOrgMember, isOrgAdmin, isAdmin, canDelete) => {
+      expect(
+        buildAccess(
+          { userId: OWNER, organizationId, visibility: "PUBLIC" },
+          { id, isOrgMember, isOrgAdmin, isAdmin },
+        ).canDelete,
+      ).toBe(canDelete)
+    },
+  )
+})
+
+describe("buildAccess grace period", () => {
+  const now = Date.now()
+  const joined = (minutesAgo: number | null) => ({
+    userId: OWNER,
+    organizationId: "org",
+    organizationSince:
+      minutesAgo === null ? null : new Date(now - minutesAgo * 60_000),
+    visibility: "PUBLIC" as const,
+  })
+  const canDelete = (minutesAgo: number | null, id: string) =>
+    buildAccess(joined(minutesAgo), {
+      id,
+      isOrgMember: true,
+      isOrgAdmin: false,
+    }).canDelete
+
+  it("lets the author take a build back within the hour after it joined", () => {
+    expect(canDelete(5, OWNER)).toBe(true)
+    expect(canDelete(59, OWNER)).toBe(true)
+  })
+
+  it("closes after the hour, and never opened for builds tagged before", () => {
+    expect(canDelete(61, OWNER)).toBe(false)
+    expect(canDelete(null, OWNER)).toBe(false)
+  })
+
+  it("gives other members nothing within it", () => {
+    expect(canDelete(5, "member")).toBe(false)
+  })
 })
 
 describe("visibleAuthor", () => {

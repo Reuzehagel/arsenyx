@@ -158,6 +158,11 @@ model Build {
 
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  // When the build was last put under its current org (create or PATCH), null
+  // when it has none or was tagged before this was recorded. For an hour after,
+  // its author may still delete it or move it out (ORG_GRACE_MS in
+  // _build-visibility.ts), so a build put in the wrong org can be taken back.
+  organizationSince DateTime?
 
   // When true and the build is published under an organization, the
   // author's handle is suppressed in card / detail UI. No effect on
@@ -298,6 +303,12 @@ model BuildRevision {
   // Null on CREATED rows (nothing to diff against).
   changes Json?
 
+  // The build as it was before this save (BuildSnapshot in
+  // _build-revisions.ts), so an org admin can revert vandalism. Only on org
+  // builds, only on the first save of an editing session (needsSnapshot), and
+  // only the newest MAX_STORED_SNAPSHOTS per build; null everywhere else.
+  snapshot Json?
+
   createdAt DateTime @default(now())
 
   @@index([buildId, createdAt])
@@ -310,19 +321,21 @@ enum BuildRevisionKind {
 }
 
 // Tombstone for every build deleted through deleteBuild (_build-snapshot.ts):
-// who deleted it and a copy of the row, its guide and its partner ids, so a
-// deletion can be explained and its content restored without a backup restore
-// (revisions, likes, bookmarks, view days and fork links are not kept). No
-// FKs: the build is gone, and the actor's account may go later. Rows older
-// than DELETION_RETENTION_DAYS are pruned by an occasional delete. Account
-// deletion cascades builds without passing through here, on purpose: that
-// data is meant to be gone.
+// who deleted it and a copy of the row, its guide, partner ids, votes and
+// bookmarks, so a deletion can be explained and undone without a backup
+// restore (revisions, view days and fork links are not kept). An org's admins
+// restore its builds from these (_build-deletions.ts). No FKs: the build is
+// gone, and the actor's account may go later. Rows older than
+// DELETION_RETENTION_DAYS are pruned by an occasional delete. Account deletion
+// cascades solo builds without passing through here, on purpose: that data is
+// meant to be gone (org builds pass to an org admin, beforeUserDeletion).
 model BuildDeletion {
   id          String   @id @default(cuid())
   buildId     String
   slug        String
   deletedById String
-  // The builds row plus buildGuide and partnerBuilds ids, read before the delete.
+  // The builds row plus buildGuide, partnerBuilds ids, likes and bookmarks,
+  // read before the delete.
   build       Json
   deletedAt   DateTime @default(now())
 

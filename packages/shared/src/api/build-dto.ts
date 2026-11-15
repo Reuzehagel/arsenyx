@@ -74,6 +74,9 @@ export type BuildDetailResponse = {
   organization: BuildOrganizationSummary | null
   guide: BuildGuideSummary | null
   isOwner: boolean
+  /** May delete the build: the author of a solo build, an org admin of an
+   *  org build. Absent on snapshots cached before it was added. */
+  canDelete?: boolean
   viewerHasLiked: boolean
   viewerHasDisliked: boolean
   viewerHasBookmarked: boolean
@@ -118,6 +121,10 @@ export type BuildRevisionResponse = {
   changes: BuildChangeResponse[]
   /** How many raw saves this entry represents. >1 means it was folded. */
   saves: number
+  /** The version a revert from this entry puts back (org builds only): the
+   *  build as it was just before `at` here, which is this entry's first save
+   *  or an earlier one in the same editing session. Absent when none is kept. */
+  revert?: { id: string; at: string }
 }
 
 /** The change list goes over the wire exactly as the differ produces it —

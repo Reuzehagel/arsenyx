@@ -9,7 +9,7 @@ export const Route = createFileRoute("/_app/terms")({
   component: TermsPage,
 })
 
-const LAST_UPDATED = "2026-09-03"
+const LAST_UPDATED = "2026-11-15"
 
 function TermsPage() {
   return (
@@ -66,6 +66,15 @@ function TermsPage() {
             ends when you make the build private or delete it (apart from
             short-lived copies in database backups, which age out within 30
             days).
+          </p>
+          <p>
+            A build you publish under an organization is the organization&apos;s
+            to keep. Its members can edit it, but only its admins can delete it,
+            move it out or roll back its edits, and it stays up if you leave the
+            organization or delete your account (passed to one of its admins,
+            with your name taken off it). For the first hour after you publish a
+            build to an organization you can still delete it or take it back
+            yourself, in case you picked the wrong one.
           </p>
 
           <h2>Warframe</h2>
