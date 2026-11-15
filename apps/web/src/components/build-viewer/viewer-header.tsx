@@ -188,7 +188,8 @@ export function ViewerHeader({
           <BuildActionsMenu
             slug={build.slug}
             name={build.name}
-            isOwner={build.isOwner}
+            canDelete={build.canDelete === true}
+            inOrg={build.organization != null}
             visibility={build.visibility}
           />
         </div>

@@ -47,19 +47,24 @@ const VISIBILITIES: BuildVisibility[] = ["PUBLIC", "UNLISTED", "PRIVATE"]
 
 /**
  * "More actions" overflow menu for the viewer header: Fork (anyone signed
- * in), Delete (owner only, behind a confirm dialog). Admins additionally get
+ * in), Delete (behind a confirm dialog, for viewers the API marks
+ * `canDelete`: a solo build's author, an org build's org admins). Admins
+ * additionally get
  * an in-context moderation section — change visibility / delete — without a
  * trip to the admin panel.
  */
 export function BuildActionsMenu({
   slug,
   name,
-  isOwner,
+  canDelete,
+  inOrg,
   visibility,
 }: {
   slug: string
   name: string
-  isOwner: boolean
+  canDelete: boolean
+  /** Published under an org, whose admins can restore it once deleted. */
+  inOrg: boolean
   visibility: BuildVisibility
 }) {
   const { data: session } = authClient.useSession()
@@ -135,7 +140,7 @@ export function BuildActionsMenu({
             <GitFork />
             {fork.isPending ? "Forking…" : "Fork"}
           </DropdownMenuItem>
-          {isOwner ? (
+          {canDelete ? (
             <>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -190,7 +195,9 @@ export function BuildActionsMenu({
           <DialogHeader>
             <DialogTitle>Delete this build?</DialogTitle>
             <DialogDescription>
-              This permanently removes “{name}”. This action cannot be undone.
+              {inOrg
+                ? `This removes “${name}” from the organization. Its admins can restore it from the organization's settings for 90 days.`
+                : `This permanently removes “${name}”. This action cannot be undone.`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

@@ -246,7 +246,7 @@ export async function snapshotSlugs(
   return rows.flatMap((b) => [b.slug, ...b.partnerBuilds.map((p) => p.slug)])
 }
 
-const DELETION_RETENTION_DAYS = 90
+export const DELETION_RETENTION_DAYS = 90
 
 /** Deletes one build, logging a BuildDeletion tombstone in the same
  *  transaction, and refreshes it (dropping its snapshot) and its partners'
@@ -267,8 +267,14 @@ export async function deleteBuild(
     await tx.$executeRaw`SELECT 1 FROM builds WHERE id = ${found.id} FOR UPDATE`
     const build = await tx.build.findUnique({
       where: { id: found.id },
-      // Partner ids ride along so an undo can relink the strip (_PartnerBuilds).
-      include: { buildGuide: true, partnerBuilds: { select: { id: true } } },
+      // Partner ids ride along so an undo can relink the strip (_PartnerBuilds),
+      // and votes and bookmarks so it can bring them back (restoreBuild).
+      include: {
+        buildGuide: true,
+        partnerBuilds: { select: { id: true } },
+        likes: { select: { userId: true, value: true, createdAt: true } },
+        bookmarks: { select: { userId: true, createdAt: true } },
+      },
     })
     if (!build) return false
     await tx.buildDeletion.create({

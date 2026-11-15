@@ -5,7 +5,10 @@ import {
   ORG_NAME_MAX,
   ORG_SLUG_MAX,
 } from "@arsenyx/shared/api/limits"
-import type { OrgProfile } from "@arsenyx/shared/api/orgs"
+import type {
+  OrgDeletedBuildsResponse,
+  OrgProfile,
+} from "@arsenyx/shared/api/orgs"
 import { Hono } from "hono"
 
 import { prisma, sql } from "../db"
@@ -19,6 +22,7 @@ import {
   validateExternalUrl,
 } from "../lib/validate"
 import { enforceAnonSearchLimit, rateLimitUser } from "../middleware/rate-limit"
+import { listOrgDeletions, restoreOrgDeletion } from "./_build-deletions"
 import { BUILD_USER_SELECT, parseListQuery, runList } from "./_build-list"
 import {
   deleteOrganization,
@@ -297,6 +301,49 @@ orgs.get("/:slug/builds", async (c) => {
   })
   return c.json(result)
 })
+
+// The org's recently deleted builds, for its admins to restore
+// (_build-deletions.ts). Org builds are the org's to keep: only its admins
+// may delete one (canDeleteBuild), and only they may bring one back.
+orgs.get("/:slug/deleted-builds", async (c) => {
+  const slug = c.req.param("slug").toLowerCase()
+  const user = await requireUser(c)
+
+  const ctx = await loadOrgWithViewerRole(slug, user.id)
+  if (!ctx) return c.json({ error: "not_found" }, 404)
+  if (ctx.role !== "ADMIN") return c.json({ error: "forbidden" }, 403)
+
+  return c.json({
+    builds: await listOrgDeletions(ctx.id),
+  } satisfies OrgDeletedBuildsResponse)
+})
+
+orgs.post(
+  "/:slug/deleted-builds/:id/restore",
+  rateLimitUser("mutate"),
+  async (c) => {
+    const slug = c.req.param("slug").toLowerCase()
+    const user = await requireUser(c)
+
+    const ctx = await loadOrgWithViewerRole(slug, user.id)
+    if (!ctx) return c.json({ error: "not_found" }, 404)
+    if (ctx.role !== "ADMIN") return c.json({ error: "forbidden" }, 403)
+
+    const result = await restoreOrgDeletion(
+      c,
+      ctx.id,
+      c.req.param("id"),
+      user.id,
+    )
+    if (!result.ok) {
+      return c.json(
+        { error: result.error },
+        result.error === "not_found" ? 404 : 409,
+      )
+    }
+    return c.json({ slug: result.slug })
+  },
+)
 
 orgs.patch("/:slug", rateLimitUser("mutate"), async (c) => {
   const slug = c.req.param("slug").toLowerCase()

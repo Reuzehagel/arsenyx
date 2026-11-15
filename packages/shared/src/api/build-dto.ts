@@ -74,6 +74,9 @@ export type BuildDetailResponse = {
   organization: BuildOrganizationSummary | null
   guide: BuildGuideSummary | null
   isOwner: boolean
+  /** May delete the build: the author of a solo build, an org admin of an
+   *  org build. Absent on snapshots cached before it was added. */
+  canDelete?: boolean
   viewerHasLiked: boolean
   viewerHasDisliked: boolean
   viewerHasBookmarked: boolean

@@ -11,6 +11,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-11-15",
+    changes: [
+      {
+        type: "feat",
+        description:
+          "Builds published under an organization now belong to the organization. Members can still edit them, but only the org's admins can delete one or move it out of the org, and they stay up when their author leaves or deletes their account. Org admins get a \"Recently deleted\" list in the org's settings to bring back anything deleted in the last 90 days, on its old link and with its likes and bookmarks.",
+      },
+    ],
+  },
+  {
     date: "2026-11-10",
     changes: [
       {

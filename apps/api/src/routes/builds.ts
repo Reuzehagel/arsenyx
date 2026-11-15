@@ -73,6 +73,7 @@ import { setLike, clearLike, toggleBookmark } from "./_build-social"
 import {
   bookmarkedScope,
   canActOnBuild,
+  canDeleteBuild,
   canMutateBuild,
   isOrgMember,
   mutableScope,
@@ -313,9 +314,17 @@ builds.patch("/:slug", rateLimitUser("mutate"), async (c) => {
     b.organizationId !== existing.organizationId
   ) {
     // Only the author may move a build between orgs: a co-member moving it
-    // into another org of theirs would hand edit rights to strangers.
+    // into another org of theirs would hand edit rights to strangers. Out of
+    // an org, the author must also be an admin of it: the org owns the
+    // build, and leaving it untagged would let the author delete it.
     if (existing.userId !== user.id) {
       return c.json({ error: "forbidden" }, 403)
+    }
+    if (
+      existing.organizationId !== null &&
+      !(await canDeleteBuild(existing, user.id))
+    ) {
+      return c.json({ error: "org_admin_only" }, 403)
     }
     patch.organizationId = await resolveOrgAssignment(b.organizationId, user.id)
   }
@@ -404,8 +413,9 @@ builds.delete("/:slug", rateLimitUser("mutate"), async (c) => {
     select: { id: true, userId: true, organizationId: true },
   })
   if (!existing) return c.json({ error: "not_found" }, 404)
-  if (!(await canMutateBuild(existing, user.id))) {
-    return c.json({ error: "forbidden" }, 403)
+  if (!(await canDeleteBuild(existing, user.id))) {
+    const error = existing.organizationId ? "org_admin_only" : "forbidden"
+    return c.json({ error }, 403)
   }
 
   await deleteBuild(c, { id: existing.id }, user.id)
@@ -950,6 +960,7 @@ builds.get("/:slug", edgeCache({ maxAge: DETAIL_TTL }), async (c) => {
       build,
       {
         isOwner: access.canMutate,
+        canDelete: access.canDelete,
         hasLiked: like?.value === 1,
         hasDisliked: like?.value === -1,
         hasBookmarked: bookmark != null,

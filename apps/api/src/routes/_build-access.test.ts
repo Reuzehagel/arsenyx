@@ -27,10 +27,40 @@ describe("buildAccess", () => {
     (visibility, id, isOrgMember, isAdmin, view, act, mutate) => {
       expect(
         buildAccess(
-          { userId: OWNER, visibility },
+          { userId: OWNER, organizationId: "org", visibility },
           { id, isOrgMember, isAdmin },
         ),
-      ).toEqual({ canView: view, canAct: act, canMutate: mutate })
+      ).toMatchObject({ canView: view, canAct: act, canMutate: mutate })
+    },
+  )
+})
+
+describe("buildAccess canDelete", () => {
+  const cases = [
+    // org, viewer, isOrgMember, isOrgAdmin, isAdmin → canDelete
+    // A solo build: its author alone.
+    [null, OWNER, false, false, false, true],
+    [null, "stranger", false, false, false, false],
+    [null, "admin", false, false, true, false],
+    // An org build: org ADMINs alone, whoever wrote it.
+    ["org", OWNER, true, false, false, false],
+    ["org", OWNER, false, false, false, false],
+    ["org", OWNER, true, true, false, true],
+    ["org", "member", true, false, false, false],
+    ["org", "orgAdmin", true, true, false, true],
+    ["org", "admin", false, false, true, false],
+    ["org", undefined, true, true, false, false],
+  ] as const
+
+  it.each(cases)(
+    "org=%s, viewer %s (member=%s, orgAdmin=%s, admin=%s)",
+    (organizationId, id, isOrgMember, isOrgAdmin, isAdmin, canDelete) => {
+      expect(
+        buildAccess(
+          { userId: OWNER, organizationId, visibility: "PUBLIC" },
+          { id, isOrgMember, isOrgAdmin, isAdmin },
+        ).canDelete,
+      ).toBe(canDelete)
     },
   )
 })

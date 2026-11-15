@@ -310,19 +310,21 @@ enum BuildRevisionKind {
 }
 
 // Tombstone for every build deleted through deleteBuild (_build-snapshot.ts):
-// who deleted it and a copy of the row, its guide and its partner ids, so a
-// deletion can be explained and its content restored without a backup restore
-// (revisions, likes, bookmarks, view days and fork links are not kept). No
-// FKs: the build is gone, and the actor's account may go later. Rows older
-// than DELETION_RETENTION_DAYS are pruned by an occasional delete. Account
-// deletion cascades builds without passing through here, on purpose: that
-// data is meant to be gone.
+// who deleted it and a copy of the row, its guide, partner ids, votes and
+// bookmarks, so a deletion can be explained and undone without a backup
+// restore (revisions, view days and fork links are not kept). An org's admins
+// restore its builds from these (_build-deletions.ts). No FKs: the build is
+// gone, and the actor's account may go later. Rows older than
+// DELETION_RETENTION_DAYS are pruned by an occasional delete. Account deletion
+// cascades solo builds without passing through here, on purpose: that data is
+// meant to be gone (org builds pass to an org admin, beforeUserDeletion).
 model BuildDeletion {
   id          String   @id @default(cuid())
   buildId     String
   slug        String
   deletedById String
-  // The builds row plus buildGuide and partnerBuilds ids, read before the delete.
+  // The builds row plus buildGuide, partnerBuilds ids, likes and bookmarks,
+  // read before the delete.
   build       Json
   deletedAt   DateTime @default(now())
 

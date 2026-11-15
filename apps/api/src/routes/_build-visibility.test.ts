@@ -4,12 +4,18 @@ import {
   AUTHORED_PUBLIC_BUILD,
   bookmarkedScope,
   canActOnBuild,
+  canDeleteBuild,
   canMutateBuild,
   resolveAccess,
   userPublicScope,
 } from "./_build-visibility"
 
-// Membership rows the access checks may look up: "member" belongs to org1.
+// Membership rows the access checks may look up: "member" belongs to org1,
+// "orgAdmin" is its ADMIN.
+const ROLES: Record<string, "ADMIN" | "MEMBER"> = {
+  member: "MEMBER",
+  orgAdmin: "ADMIN",
+}
 const lookups: { organizationId: string; userId: string }[] = []
 vi.mock("../db", () => ({
   prisma: {
@@ -23,9 +29,8 @@ vi.mock("../db", () => ({
       }) => {
         const key = where.organizationId_userId
         lookups.push(key)
-        return key.organizationId === "org1" && key.userId === "member"
-          ? { userId: key.userId }
-          : null
+        const role = key.organizationId === "org1" && ROLES[key.userId]
+        return role ? { role } : null
       },
     },
   },
@@ -74,8 +79,33 @@ describe("per-build access with membership resolved", () => {
       id: "admin",
       isAdmin: true,
     })
-    expect(access).toEqual({ canView: true, canAct: false, canMutate: false })
+    expect(access).toEqual({
+      canView: true,
+      canAct: false,
+      canMutate: false,
+      canDelete: false,
+    })
     expect(await canActOnBuild(orgBuild("PRIVATE"), "admin")).toBe(false)
+  })
+
+  it("lets only org admins delete an org build, the author included", async () => {
+    expect(await canDeleteBuild(orgBuild("PUBLIC"), "orgAdmin")).toBe(true)
+    expect(await canDeleteBuild(orgBuild("PUBLIC"), "owner")).toBe(false)
+    expect(await canDeleteBuild(orgBuild("PUBLIC"), "member")).toBe(false)
+    expect(await canDeleteBuild(orgBuild("PUBLIC"), "stranger")).toBe(false)
+    expect(
+      (await resolveAccess(orgBuild("PUBLIC"), { id: "orgAdmin" })).canDelete,
+    ).toBe(true)
+    expect(
+      (await resolveAccess(orgBuild("PUBLIC"), { id: "owner" })).canDelete,
+    ).toBe(false)
+  })
+
+  it("lets the author alone delete a solo build, without a lookup", async () => {
+    const solo = { userId: "owner", organizationId: null }
+    expect(await canDeleteBuild(solo, "owner")).toBe(true)
+    expect(await canDeleteBuild(solo, "orgAdmin")).toBe(false)
+    expect(lookups).toEqual([])
   })
 
   it("grants nothing through membership on a build with no org", async () => {

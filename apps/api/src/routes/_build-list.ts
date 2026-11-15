@@ -92,6 +92,9 @@ export type DetailRow = Prisma.BuildGetPayload<{
 
 export type ViewerState = {
   isOwner: boolean
+  /** May delete the build (see canDeleteBuild): stricter than `isOwner` on
+   *  org builds. */
+  canDelete: boolean
   hasLiked: boolean
   hasDisliked: boolean
   hasBookmarked: boolean
@@ -99,6 +102,7 @@ export type ViewerState = {
 
 export const ANON_VIEWER: ViewerState = {
   isOwner: false,
+  canDelete: false,
   hasLiked: false,
   hasDisliked: false,
   hasBookmarked: false,
@@ -143,6 +147,7 @@ export function serializeBuildDetail(
       updatedAt: b.buildGuide.updatedAt.toISOString(),
     },
     isOwner: viewer.isOwner,
+    canDelete: viewer.canDelete,
     viewerHasLiked: viewer.hasLiked,
     viewerHasDisliked: viewer.hasDisliked,
     viewerHasBookmarked: viewer.hasBookmarked,

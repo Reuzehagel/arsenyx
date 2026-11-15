@@ -2,7 +2,7 @@ import type { Context } from "hono"
 
 import { prisma } from "../db"
 import { Prisma } from "../generated/prisma/client"
-import { BuildVisibility } from "../generated/prisma/enums"
+import { BuildVisibility, type OrgRole } from "../generated/prisma/enums"
 import { isCurrentAdmin } from "../lib/session"
 
 /**
@@ -43,35 +43,58 @@ type AccessBuild = Owned & { visibility: BuildVisibility }
 type Viewer = {
   id: string | undefined
   isOrgMember: boolean
+  /** ADMIN of the Build's org (false when it has none). */
+  isOrgAdmin?: boolean
   isAdmin?: boolean
 }
 
 const mayMutate = (build: { userId: string }, viewer: Viewer) =>
   viewer.id != null && (build.userId === viewer.id || viewer.isOrgMember)
 
-/** Per-Build access for one viewer. `isOrgMember` is the viewer's membership
- *  in the Build's org (false when it has none). Admins may VIEW anything to
- *  moderate it, but never mutate or act on it (like/bookmark/fork). */
-export function buildAccess(
-  build: { userId: string; visibility: BuildVisibility },
-  viewer: Viewer,
-) {
+/** Deleting a Build, or moving it out of its org: the author of a solo
+ *  Build, an org ADMIN of an org Build. An org owns what is published under
+ *  it, so neither a member nor the author (who may since have left) can take
+ *  an org Build down. */
+const mayDelete = (build: Owned, viewer: Viewer) =>
+  viewer.id != null &&
+  (build.organizationId == null
+    ? build.userId === viewer.id
+    : viewer.isOrgAdmin === true)
+
+/** Per-Build access for one viewer. `isOrgMember` / `isOrgAdmin` are the
+ *  viewer's membership in the Build's org (false when it has none). Admins
+ *  may VIEW anything to moderate it, but never mutate or act on it
+ *  (like/bookmark/fork). */
+export function buildAccess(build: AccessBuild, viewer: Viewer) {
   const canMutate = mayMutate(build, viewer)
   const canAct = isAnonVisible(build.visibility) || canMutate
-  return { canMutate, canAct, canView: canAct || viewer.isAdmin === true }
+  return {
+    canMutate,
+    canDelete: mayDelete(build, viewer),
+    canAct,
+    canView: canAct || viewer.isAdmin === true,
+  }
 }
 
-/** Whether `userId` belongs to `organizationId`. The one membership lookup
- *  behind every access rule. */
+/** `userId`'s role in `organizationId`, null when not a member. The one
+ *  membership lookup behind every access rule. */
+export async function orgRole(
+  organizationId: string,
+  userId: string,
+): Promise<OrgRole | null> {
+  const membership = await prisma.organizationMember.findUnique({
+    where: { organizationId_userId: { organizationId, userId } },
+    select: { role: true },
+  })
+  return membership?.role ?? null
+}
+
+/** Whether `userId` belongs to `organizationId`. */
 export async function isOrgMember(
   organizationId: string,
   userId: string,
 ): Promise<boolean> {
-  const membership = await prisma.organizationMember.findUnique({
-    where: { organizationId_userId: { organizationId, userId } },
-    select: { userId: true },
-  })
-  return membership != null
+  return (await orgRole(organizationId, userId)) != null
 }
 
 /** The viewer's membership in the Build's org, looked up only when it can
@@ -86,14 +109,21 @@ async function memberOf(build: Owned, viewerId: string | undefined) {
   )
 }
 
-/** {@link buildAccess} with membership resolved. */
+/** {@link buildAccess} with membership resolved. On an org Build a signed-in
+ *  viewer's role is looked up even when they're the author: deleting it
+ *  turns on being an org ADMIN. Anonymous viewers never query. */
 export async function resolveAccess(
   build: AccessBuild,
   viewer: { id: string; isAdmin?: boolean } | undefined,
 ) {
+  const role =
+    viewer != null && build.organizationId != null
+      ? await orgRole(build.organizationId, viewer.id)
+      : null
   return buildAccess(build, {
     id: viewer?.id,
-    isOrgMember: await memberOf(build, viewer?.id),
+    isOrgMember: role != null,
+    isOrgAdmin: role === "ADMIN",
     isAdmin: viewer?.isAdmin,
   })
 }
@@ -124,6 +154,23 @@ export async function canMutateBuild(
   return mayMutate(build, {
     id: userId,
     isOrgMember: await memberOf(build, userId),
+  })
+}
+
+/** May this user delete the Build, or move it out of its org? See
+ *  {@link mayDelete}. */
+export async function canDeleteBuild(
+  build: Owned,
+  userId: string,
+): Promise<boolean> {
+  const role =
+    build.organizationId != null
+      ? await orgRole(build.organizationId, userId)
+      : null
+  return mayDelete(build, {
+    id: userId,
+    isOrgMember: role != null,
+    isOrgAdmin: role === "ADMIN",
   })
 }
 

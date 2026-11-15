@@ -83,9 +83,11 @@ function PrivacyPage() {
             You can delete your account at any time from the settings dialog.
             That permanently removes your account, all sessions, your API keys,
             your votes, bookmarks and organization memberships, and every build
-            and guide you authored. Shared links to your builds will return 404
-            afterwards. You can also export all your builds as JSON from the
-            same panel before deleting.
+            and guide you authored on your own. Shared links to those builds
+            will return 404 afterwards. Builds you published under an
+            organization belong to it: they stay up, passed to one of its
+            admins, with your name taken off them. You can also export all your
+            builds as JSON from the same panel before deleting.
           </p>
           <p>
             Residual copies in routine database backups age out within 30 days.

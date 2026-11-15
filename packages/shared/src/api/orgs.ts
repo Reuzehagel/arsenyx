@@ -1,6 +1,7 @@
 // Wire shapes for organizations (apps/api routes/orgs.ts). Dates are ISO
 // strings on the wire (see build-dto.ts).
 
+import type { BuildItemSummary } from "./build-dto"
 import type { DirectoryEnvelope, PublicUser } from "./users"
 
 export type OrgRole = "ADMIN" | "MEMBER"
@@ -48,4 +49,26 @@ export type OrgDirectoryItem = OrgSummary & {
 /** `GET /orgs/public`. */
 export type OrgDirectoryResponse = DirectoryEnvelope & {
   orgs: OrgDirectoryItem[]
+}
+
+/** A build deleted from an org that its admins can still restore. */
+export type OrgDeletedBuild = {
+  /** The deletion's id: what `POST …/deleted-builds/:id/restore` takes. */
+  id: string
+  slug: string
+  name: string
+  item: BuildItemSummary
+  /** Null once the author's account is gone. */
+  author: PublicUser | null
+  /** Null once the deleter's account is gone. */
+  deletedBy: PublicUser | null
+  deletedAt: string
+  /** Likes saved with it (deletions from before they were saved have none). */
+  likeCount: number
+}
+
+/** `GET /orgs/:slug/deleted-builds` (org admins only): the org's builds
+ *  deleted within the restore window and not back yet, newest first. */
+export type OrgDeletedBuildsResponse = {
+  builds: OrgDeletedBuild[]
 }

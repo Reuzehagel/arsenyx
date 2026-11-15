@@ -40,6 +40,10 @@ type PublishDialogProps = {
   /** Editing an already-saved build: the dialog only sets what the next Save
    *  will use, so it says so instead of promising a save. */
   settingsOnly?: boolean
+  /** The build sits in an org this user isn't an admin of: only the org's
+   *  admins may move it out (the API answers org_admin_only), so the
+   *  "Publish as" choice is shown but fixed. */
+  organizationLocked?: boolean
   onConfirm: (values: PublishDialogValues) => void
 }
 
@@ -75,6 +79,7 @@ export function PublishDialog({
   organizations,
   organizationsLoading = false,
   settingsOnly = false,
+  organizationLocked = false,
   onConfirm,
 }: PublishDialogProps) {
   const [visibility, setVisibility] =
@@ -144,8 +149,15 @@ export function PublishDialog({
           </Section>
 
           <Section label="Publish as">
+            {organizationLocked ? (
+              <p className="text-muted-foreground text-xs">
+                This build belongs to its organization. Only the org&apos;s
+                admins can move it out.
+              </p>
+            ) : null}
             <OptionCard
               selected={organizationId === null}
+              disabled={organizationLocked}
               onSelect={() => setOrganizationId(null)}
               leading={
                 <UserAvatar src={owner.image} fallback={owner.name} size={7} />
@@ -178,6 +190,7 @@ export function PublishDialog({
                 <OptionCard
                   key={org.id}
                   selected={organizationId === org.id}
+                  disabled={organizationLocked && organizationId !== org.id}
                   onSelect={() => setOrganizationId(org.id)}
                   leading={
                     <UserAvatar src={org.image} fallback={org.name} size={7} />

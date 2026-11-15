@@ -67,6 +67,13 @@ function TermsPage() {
             short-lived copies in database backups, which age out within 30
             days).
           </p>
+          <p>
+            A build you publish under an organization is the organization&apos;s
+            to keep. Its members can edit it, but only its admins can delete it
+            or move it out, and it stays up if you leave the organization or
+            delete your account (passed to one of its admins, with your name
+            taken off it).
+          </p>
 
           <h2>Warframe</h2>
           <p>
