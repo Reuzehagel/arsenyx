@@ -16,6 +16,11 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "feat",
         description:
+          "Org admins can now choose, in the org's settings, whether members may delete the builds they published under the org, and how long an author has to take a build back after publishing it there (off, 15 minutes, an hour, a day or a week). Deletion stays admin-only with an hour to take it back unless an admin changes it.",
+      },
+      {
+        type: "feat",
+        description:
           "Builds published under an organization now belong to the organization. Members can still edit them, but only the org's admins can delete one or move it out of the org, and they stay up when their author leaves or deletes their account. Published to the wrong org by mistake? You can still delete it or take it back yourself for an hour. Org admins get a \"Recently deleted\" list in the org's settings to bring back anything deleted in the last 90 days, on its old link and with its likes and bookmarks, and can restore an earlier version of an org build from its edit history if someone edits it into nonsense.",
       },
     ],

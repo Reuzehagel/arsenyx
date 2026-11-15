@@ -115,6 +115,14 @@ model Organization {
   // Flood, …). Verified orgs render purple (--color-wf-org); the rest muted.
   verified    Boolean @default(false)
 
+  // Who may delete an org build besides the org's ADMINs (canDeleteBuild,
+  // _build-visibility.ts). Off by default: the org owns what's published
+  // under it. On lets a current member delete or move out their own builds.
+  membersDeleteOwnBuilds Boolean @default(false)
+  // How long after a build joins the org its author may still take it back.
+  // Null is the default hour (ORG_GRACE_MINUTES_DEFAULT); 0 turns it off.
+  authorGraceMinutes     Int?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

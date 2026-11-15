@@ -1,6 +1,7 @@
 import type { BuildListResponse } from "@arsenyx/shared/api/build-dto"
 import type {
   MyOrgsResponse,
+  OrgBuildDeletion,
   OrgDeletedBuildsResponse,
   OrgDirectoryResponse,
   OrgProfile,
@@ -132,6 +133,21 @@ export function useUpdateOrg(slug: string) {
         qc.invalidateQueries({ queryKey: orgKeys.detail(data.slug) })
       }
       qc.invalidateQueries({ queryKey: orgKeys.mine })
+    },
+  })
+}
+
+/** Org settings → Build deletion (`PATCH /orgs/:slug`, admins only). */
+export function useUpdateOrgBuildDeletion(slug: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: OrgBuildDeletion) =>
+      orgCall<OrgWriteResponse>(orgPath(slug), {
+        method: "PATCH",
+        json: input,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: orgKeys.detail(slug) })
     },
   })
 }

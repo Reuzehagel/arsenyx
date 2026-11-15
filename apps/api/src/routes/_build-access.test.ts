@@ -94,6 +94,45 @@ describe("buildAccess grace period", () => {
   it("gives other members nothing within it", () => {
     expect(canDelete(5, "member")).toBe(false)
   })
+
+  it("follows the org's own grace length, and 0 turns it off", () => {
+    const withGrace = (minutesAgo: number, authorGraceMinutes: number) =>
+      buildAccess(joined(minutesAgo), {
+        id: OWNER,
+        isOrgMember: true,
+        orgPolicy: { membersDeleteOwnBuilds: false, authorGraceMinutes },
+      }).canDelete
+    expect(withGrace(90, 120)).toBe(true)
+    expect(withGrace(10, 5)).toBe(false)
+    expect(withGrace(0, 0)).toBe(false)
+  })
+})
+
+describe("buildAccess membersDeleteOwnBuilds", () => {
+  const policy = { membersDeleteOwnBuilds: true, authorGraceMinutes: 0 }
+  const build = {
+    userId: OWNER,
+    organizationId: "org",
+    visibility: "PUBLIC" as const,
+  }
+
+  it("lets a member delete their own org build, at any age", () => {
+    expect(
+      buildAccess(build, { id: OWNER, isOrgMember: true, orgPolicy: policy })
+        .canDelete,
+    ).toBe(true)
+  })
+
+  it("not someone else's, and not once the author has left", () => {
+    expect(
+      buildAccess(build, { id: "member", isOrgMember: true, orgPolicy: policy })
+        .canDelete,
+    ).toBe(false)
+    expect(
+      buildAccess(build, { id: OWNER, isOrgMember: false, orgPolicy: policy })
+        .canDelete,
+    ).toBe(false)
+  })
 })
 
 describe("visibleAuthor", () => {
