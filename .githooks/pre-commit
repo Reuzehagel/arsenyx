@@ -1,6 +1,8 @@
 #!/bin/sh
 # Format gate before CI sees it (~0.5s). Enable once per clone:
 #   git config core.hooksPath .githooks
+# Before the first `bun install` there's no oxfmt to run; CI still checks.
+[ -x node_modules/.bin/oxfmt ] || exit 0
 bun run fmt:check >/dev/null 2>&1 || {
   echo "pre-commit: formatting issues. Run \`just fix\`, then re-stage." >&2
   exit 1

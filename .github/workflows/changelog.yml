@@ -59,13 +59,19 @@ jobs:
 
       # The squash commit is built from these commits, so this keeps AI
       # attribution out of main even from sessions without the local hooks.
+      # GitHub adds a Co-authored-by line to the squash commit for every
+      # commit author, so a commit authored as Claude fails here too.
       - name: Check for AI attribution
         env:
           BASE: origin/${{ github.base_ref }}
           PR_BODY: ${{ github.event.pull_request.body }}
         run: |
-          pattern='co-authored-by:.*(claude|anthropic)|generated with.*claude'
+          pattern='co-authored-by:.*(claude|anthropic)|^claude-session:|generated (with|by) .*claude|claude\.ai/code/session_'
           if { git log --format=%B "$BASE..HEAD"; printf '%s\n' "$PR_BODY"; } | grep -iE "$pattern"; then
-            echo "::error::Remove the Claude co-author / 'Generated with Claude Code' lines above from the PR commits or description."
+            echo "::error::Remove the Claude co-author, Claude-Session or 'Generated with Claude Code' lines above from the PR commits or description."
+            exit 1
+          fi
+          if git log --no-merges --format='%h %an <%ae>' "$BASE..HEAD" | grep -iE 'noreply@anthropic\.com'; then
+            echo "::error::These commits are authored as Claude. Re-author them (git rebase --exec 'git commit --amend --no-edit --reset-author') and force-push."
             exit 1
           fi
