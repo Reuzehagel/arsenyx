@@ -46,7 +46,7 @@ git diff <merge-base> HEAD -- . ':!apps/web/public/data' ':!data/curated/wiki-im
 
 Oxlint / oxfmt config lives at the repo root (`.oxlintrc.json`, `.oxfmtrc.json`).
 
-`.githooks/pre-commit` blocks commits that fail `fmt:check`; `.githooks/commit-msg` strips Claude co-author / "Generated with Claude Code" lines; `post-merge` / `post-checkout` run `just deps` when `bun.lock` changed, so `bun run` scripts after a pull don't hit missing packages. `bun install` enables them (the root `prepare` script sets `core.hooksPath`), as does `just setup`.
+`.githooks/pre-commit` blocks commits that fail `fmt:check`; `.githooks/commit-msg` strips Claude co-author, `Claude-Session` and "Generated with/by Claude Code" lines; `post-merge` / `post-checkout` run `just deps` when `bun.lock` changed, so `bun run` scripts after a pull don't hit missing packages. `bun install` enables them (the root `prepare` script sets `core.hooksPath`), as does `just setup`, and cloud sessions get it from `.claude/hooks/cloud-session-setup.sh`.
 
 ## Database (apps/api)
 
