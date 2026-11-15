@@ -9,7 +9,7 @@ export const Route = createFileRoute("/_app/terms")({
   component: TermsPage,
 })
 
-const LAST_UPDATED = "2026-09-03"
+const LAST_UPDATED = "2026-11-15"
 
 function TermsPage() {
   return (
