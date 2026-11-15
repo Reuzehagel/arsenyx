@@ -257,7 +257,7 @@ export function userPublicScope(userId: string): ListScope {
 
 /** An Organization's PUBLIC Builds — its public profile list
  *  (`GET /orgs/:slug/builds`). */
-function orgPublicScope(organizationId: string): ListScope {
+export function orgPublicScope(organizationId: string): ListScope {
   return {
     baseFilter: Prisma.sql`"organizationId" = ${organizationId} AND visibility = 'PUBLIC'`,
   }
