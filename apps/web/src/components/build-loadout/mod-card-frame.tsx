@@ -46,7 +46,7 @@ export function ModCardFrame({
       }}
     >
       {isExpanded && (
-        <div className="absolute inset-x-[3px] top-[4px] bottom-[4px] z-[5] overflow-hidden rounded-b-[20px]">
+        <div className="unfold-bg absolute inset-x-[3px] top-[4px] bottom-[4px] z-[5] overflow-hidden rounded-b-[20px]">
           <img
             src={getModAssetUrl(rarity, "Background")}
             alt=""
@@ -59,7 +59,7 @@ export function ModCardFrame({
         src={getModAssetUrl(rarity, "FrameTop")}
         alt=""
         className={cn(
-          "pointer-events-none absolute left-1/2 z-20 -translate-x-1/2",
+          "unfold-top pointer-events-none absolute left-1/2 z-20 -translate-x-1/2",
           isOversizedTop ? "-top-2 h-auto w-[110%] max-w-none" : "top-0 w-full",
         )}
         style={
@@ -77,7 +77,7 @@ export function ModCardFrame({
         src={getModAssetUrl(rarity, "FrameBottom")}
         alt=""
         className={cn(
-          "pointer-events-none absolute left-1/2 z-20 -translate-x-1/2",
+          "unfold-bottom pointer-events-none absolute left-1/2 z-20 -translate-x-1/2",
           isExpanded ? "bottom-0" : "-bottom-8",
           isOversizedTop ? "h-auto w-[110%] max-w-none" : "w-full",
         )}
@@ -209,7 +209,7 @@ export function DrainBadge({
 
   return (
     <div
-      className="absolute top-[7px] right-[2px] z-30 flex items-center justify-center"
+      className="unfold-top absolute top-[7px] right-[2px] z-30 flex items-center justify-center"
       style={
         vtPrefix
           ? ({ viewTransitionName: `${vtPrefix}-badge` } as React.CSSProperties)
@@ -285,7 +285,7 @@ export function ModSlotBadge({
     <>
       {slotKind && (
         <div
-          className="pointer-events-none absolute left-1/2 z-30 -translate-x-1/2"
+          className="unfold-top pointer-events-none absolute left-1/2 z-30 -translate-x-1/2"
           style={{ top: 7, width: slotSize, height: slotSize }}
           aria-hidden
         >
@@ -308,7 +308,7 @@ export function ModSlotBadge({
       )}
       {setIconUrl && (
         <div
-          className="pointer-events-none absolute left-1/2 z-30 -translate-x-1/2"
+          className="unfold-top pointer-events-none absolute left-1/2 z-30 -translate-x-1/2"
           style={{ top: -32, width: setSize, height: setSize }}
           aria-hidden
         >

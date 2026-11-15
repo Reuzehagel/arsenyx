@@ -213,21 +213,107 @@ body {
   contain-intrinsic-size: 200px 80px;
 }
 
-/* Mod hover card: grows out of the compact card it enlarges (0.225 is roughly
- * compact/expanded), so it reads as the same card getting bigger. */
-@keyframes mod-card-expand {
+/* Mod hover card: unfolds out of the compact card it enlarges. Both are 184px
+ * wide; the expanded card is 285px tall to the compact's 64, so its edges sit
+ * about 110px further out ((285 - 64) / 2 = 110.5, DISPLAY_SIZE in
+ * mod-card-config.ts).
+ * The layers split into halves that start pushed 110px toward the middle and
+ * ride the opening edges: `.unfold-top` (top frame, badges, art) and
+ * `.unfold-bottom` (bottom frame, name/stats panel, rank dots, like a drawer).
+ *
+ * Nothing may show past the frames mid-animation, so the three tall layers are
+ * clipped at the opposite frame's moving edge. With progress p, the frames sit
+ * 110(1 - p) in from the card's edges; each clip below is that line written in
+ * the layer's own box, which is linear in p, so the same easing keeps them in
+ * lockstep with the frames. Layer offsets: background and art are inset 4px top
+ * and bottom, the panel is anchored 20px above the bottom. */
+@keyframes mod-card-unfold {
   from {
-    transform: translate(-50%, -50%) scale(0.225);
-    opacity: 0;
+    opacity: 0.6;
   }
-  to {
-    transform: translate(-50%, -50%) scale(1);
+  40% {
     opacity: 1;
   }
 }
 
+@keyframes mod-card-unfold-top {
+  from {
+    transform: translateY(110px);
+  }
+}
+
+@keyframes mod-card-unfold-bottom {
+  from {
+    transform: translateY(-110px);
+  }
+}
+
+/* Static background: between the two frame lines. */
+@keyframes mod-card-unfold-bg {
+  from {
+    clip-path: inset(106px 0);
+  }
+  to {
+    clip-path: inset(-4px 0);
+  }
+}
+
+/* Art rides the top edge: cut at the bottom frame line, 220(1 - p) - 4 above
+ * its own bottom. */
+@keyframes mod-card-unfold-art {
+  from {
+    clip-path: inset(0 0 216px 0);
+  }
+  to {
+    clip-path: inset(0 0 -4px 0);
+  }
+}
+
+/* Panel rides the bottom edge: cut at the top frame line, which is
+ * 265 - 220(1 - p) above its own bottom. */
+@keyframes mod-card-unfold-panel {
+  from {
+    clip-path: inset(calc(100% - 45px) -20px -20px);
+  }
+  to {
+    clip-path: inset(calc(100% - 265px) -20px -20px);
+  }
+}
+
 .animate-mod-card-expand {
-  animation: mod-card-expand 150ms var(--ease-snappy) both;
+  animation: mod-card-unfold 180ms var(--ease-snappy) both;
+}
+
+.animate-mod-card-expand .unfold-top {
+  animation: mod-card-unfold-top 180ms var(--ease-snappy) both;
+}
+
+.animate-mod-card-expand .unfold-bottom {
+  animation: mod-card-unfold-bottom 180ms var(--ease-snappy) both;
+}
+
+.animate-mod-card-expand .unfold-bg {
+  animation: mod-card-unfold-bg 180ms var(--ease-snappy) both;
+}
+
+.animate-mod-card-expand .unfold-art {
+  animation:
+    mod-card-unfold-top 180ms var(--ease-snappy) both,
+    mod-card-unfold-art 180ms var(--ease-snappy) both;
+}
+
+.animate-mod-card-expand .unfold-panel {
+  animation:
+    mod-card-unfold-bottom 180ms var(--ease-snappy) both,
+    mod-card-unfold-panel 180ms var(--ease-snappy) both;
+}
+
+/* A slot's Alternate, shown beside the hover card, unfolds a beat after it so
+ * the eye lands on the slot's own mod first. */
+.animate-mod-card-expand
+  [data-alt-companion]
+  :is(.unfold-top, .unfold-bottom, .unfold-bg) {
+  animation-delay: 50ms;
 }
 
 /* Max-rank line sweeping open from the centre. `both` holds the closed state
@@ -243,40 +329,13 @@ body {
   animation: rank-reveal 300ms var(--ease-snappy) both;
 }
 
-/* Drop settle: a placed/swapped mod card eases from 96% to rest so the action
- * reads as landing rather than snapping in. No overshoot: drops happen dozens
- * of times per edit, and a bounce gets old fast. */
-@keyframes drop-settle {
-  from {
-    transform: scale(0.96);
-  }
-}
-
-.animate-drop-settle {
-  animation: drop-settle 160ms var(--ease-snappy);
-}
-
-/* Drop flash: a white wash over the destination slot that fades out, making a
- * mod landing unmistakable. Paired with the subtler drop-settle scale. */
-@keyframes drop-flash {
-  from {
-    opacity: 0.2;
-  }
-  to {
-    opacity: 0;
-  }
-}
-
-.animate-drop-flash {
-  animation: drop-flash 200ms ease-out;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .animate-pulse,
   .animate-mod-card-expand,
-  .animate-rank-reveal,
-  .animate-drop-settle,
-  .animate-drop-flash {
+  .animate-mod-card-expand .unfold-top,
+  .animate-mod-card-expand .unfold-bottom,
+  .animate-mod-card-expand .unfold-bg,
+  .animate-rank-reveal {
     animation: none;
   }
 }
