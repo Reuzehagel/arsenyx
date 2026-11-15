@@ -279,6 +279,9 @@ const ROUTES: [label: string, ...filters: Filter[]][] = [
   ["GET /builds", path("eq", "/builds")],
   ["GET /users/*", path("starts_with", "/users/")],
   ["GET /orgs/*", path("starts_with", "/orgs/")],
+  ["  /orgs/public", path("eq", "/orgs/public")],
+  ["  /orgs/:slug", path("regex", "^/orgs/[^/]+$")],
+  ["  /orgs/:slug/builds", path("regex", "^/orgs/[^/]+/builds$")],
   ["GET /auth/get-session", path("eq", "/auth/get-session")],
   ["GET /img*", path("starts_with", "/img")],
 ]

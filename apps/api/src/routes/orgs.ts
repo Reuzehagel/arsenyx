@@ -8,8 +8,8 @@ import {
 import type { OrgProfile } from "@arsenyx/shared/api/orgs"
 import { Hono } from "hono"
 
-import { prisma } from "../db"
-import type { Prisma } from "../generated/prisma/client"
+import { prisma, sql } from "../db"
+import { Prisma } from "../generated/prisma/client"
 import type { OrgRole } from "../generated/prisma/enums"
 import { getSession, requireUser } from "../lib/session"
 import {
@@ -25,7 +25,11 @@ import {
   invalidateBuilds,
   snapshotSlugs,
 } from "./_build-snapshot"
-import { ORG_PUBLIC_BUILD, orgListScope } from "./_build-visibility"
+import {
+  ORG_PUBLIC_BUILD,
+  orgListScope,
+  orgPublicScope,
+} from "./_build-visibility"
 import { orgDirectorySelect, toOrgDirectoryItem } from "./_org-directory"
 import { directoryPage, directoryQuery, matchAny } from "./_query"
 
@@ -38,6 +42,17 @@ const DIRECTORY_PAGE = 20
 // (`/orgs/public` is registered before `/:slug`; pinned by
 // route-order.test.ts).
 const RESERVED_SLUGS = new Set(["public"])
+
+type OrgRow = Omit<
+  OrgProfile,
+  "members" | "buildCount" | "viewer" | "createdAt"
+> & {
+  createdAt: Date
+}
+type MemberRow = Prisma.UserGetPayload<{ select: typeof BUILD_USER_SELECT }> & {
+  role: OrgRole
+  joinedAt: Date
+}
 
 class OrgLimitError extends Error {}
 
@@ -213,41 +228,37 @@ orgs.get("/public", async (c) => {
 orgs.get("/:slug", async (c) => {
   const slug = c.req.param("slug").toLowerCase()
 
-  const [session, org] = await Promise.all([
-    getSession(c),
-    prisma.organization.findUnique({
-      where: { slug },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        image: true,
-        description: true,
-        verified: true,
-        createdAt: true,
-        members: {
-          orderBy: [{ role: "asc" }, { joinedAt: "asc" }],
-          take: MEMBERS_LIMIT,
-          select: {
-            role: true,
-            joinedAt: true,
-            user: { select: BUILD_USER_SELECT },
-          },
-        },
-        _count: {
-          select: {
-            builds: { where: ORG_PUBLIC_BUILD },
-          },
-        },
-      },
-    }),
-  ])
-
+  // Plain SQL rather than Prisma: no PrismaClient is built for a profile read.
+  const session = await getSession(c)
+  const [org] = await sql<OrgRow>(Prisma.sql`
+    SELECT id, name, slug, image, description, verified, "createdAt"
+    FROM organizations WHERE slug = ${slug}
+  `)
   if (!org) return c.json({ error: "not_found" }, 404)
+
+  // Sequential, not Promise.all: one connection beats a second connect.
+  const [{ buildCount }] = await sql<{ buildCount: number }>(Prisma.sql`
+    SELECT COUNT(*)::int AS "buildCount" FROM builds
+    WHERE ${orgPublicScope(org.id).baseFilter}
+  `)
+  // ORDER BY role follows the OrgRole enum's declaration order (ADMIN first).
+  const memberRows = await sql<MemberRow>(Prisma.sql`
+    SELECT m.role, m."joinedAt", u.id, u.name, u.username, u."displayUsername", u.image
+    FROM organization_members m
+    JOIN users u ON u.id = m."userId"
+    WHERE m."organizationId" = ${org.id}
+    ORDER BY m.role ASC, m."joinedAt" ASC
+    LIMIT ${MEMBERS_LIMIT}
+  `)
+  const members = memberRows.map(({ role, joinedAt, ...user }) => ({
+    role,
+    joinedAt,
+    user,
+  }))
 
   const viewerId = session?.user.id
   const viewerMembership = viewerId
-    ? org.members.find((m) => m.user.id === viewerId)
+    ? members.find((m) => m.user.id === viewerId)
     : undefined
 
   return c.json({
@@ -258,12 +269,12 @@ orgs.get("/:slug", async (c) => {
     description: org.description,
     verified: org.verified,
     createdAt: org.createdAt.toISOString(),
-    members: org.members.map((m) => ({
+    members: members.map((m) => ({
       role: m.role,
       joinedAt: m.joinedAt.toISOString(),
       user: m.user,
     })),
-    buildCount: org._count.builds,
+    buildCount,
     viewer: {
       role: viewerMembership?.role ?? null,
       isAdmin: viewerMembership?.role === "ADMIN",
@@ -273,13 +284,10 @@ orgs.get("/:slug", async (c) => {
 
 orgs.get("/:slug/builds", async (c) => {
   const slug = c.req.param("slug").toLowerCase()
-  const [session, org] = await Promise.all([
-    getSession(c),
-    prisma.organization.findUnique({
-      where: { slug },
-      select: { id: true },
-    }),
-  ])
+  const session = await getSession(c)
+  const [org] = await sql<{ id: string }>(Prisma.sql`
+    SELECT id FROM organizations WHERE slug = ${slug}
+  `)
   if (!org) return c.json({ error: "not_found" }, 404)
 
   const result = await runList({
