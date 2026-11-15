@@ -242,7 +242,8 @@ export function EditorShell({
   })
   const organizations = myOrgs?.memberships.map((m) => m.organization) ?? []
   // Moving a build out of its org takes the same right as deleting it (org
-  // admins, or its author within the grace period: the API's canDeleteBuild),
+  // admins, or its author within the grace period or when the org lets
+  // members delete their own: the API's canDeleteBuild),
   // so without it the "Publish as" choice is fixed.
   const organizationLocked =
     isUpdate &&

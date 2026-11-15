@@ -21,9 +21,19 @@ export type OrgMember = {
   user: PublicUser
 }
 
+/** Who besides an org's admins may delete its builds (org settings). */
+export type OrgBuildDeletion = {
+  /** A member may delete, or move out of the org, the builds they authored. */
+  membersDeleteOwnBuilds: boolean
+  /** Minutes after a build joins the org that its author may still take it
+   *  back; 0 is none. */
+  authorGraceMinutes: number
+}
+
 /** `GET /orgs/:slug`. */
 export type OrgProfile = OrgSummary & {
   createdAt: string
+  buildDeletion: OrgBuildDeletion
   members: OrgMember[]
   buildCount: number
   viewer: {

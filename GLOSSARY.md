@@ -78,8 +78,10 @@ _Avoid_: Linked Build, Related Build, Combo.
 A registered person who owns the Builds they create and is credited for them by username
 (the byline). Owns a solo Build outright (edit and delete rights). A Build published under an
 Organization belongs to the Org: the User and the Org's members may edit it, but only the Org's
-ADMINs may delete it, move it out or revert its edits (the User keeps those rights for the first
-hour after it joins the Org), and it stays with the Org if the User deletes their account.
+ADMINs may delete it, move it out or revert its edits (the User keeps those rights for a grace
+window after it joins the Org, an hour unless the Org sets another, and for good while still a
+member if the Org lets members delete their own Builds), and it stays with the Org if the User
+deletes their account.
 _Avoid_: Author, Owner, Account, Member (all collapse into User; "Member" specifically means an Organization membership, below).
 
 **Organization**:

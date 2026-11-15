@@ -51,32 +51,72 @@ type Viewer = {
   /** ADMIN of the Build's org (false when it has none). */
   isOrgAdmin?: boolean
   isAdmin?: boolean
+  /** The Build's org's deletion settings; absent reads as the defaults. */
+  orgPolicy?: OrgDeletePolicy
+}
+
+/** An Organization's say over who besides its ADMINs may delete its Builds
+ *  (`organizations.membersDeleteOwnBuilds` / `authorGraceMinutes`). */
+export type OrgDeletePolicy = {
+  /** A current member may delete, or move out, the org Builds they authored. */
+  membersDeleteOwnBuilds: boolean
+  /** The author's take-back window after a Build joins the org; 0 is none. */
+  authorGraceMinutes: number
 }
 
 const mayMutate = (build: { userId: string }, viewer: Viewer) =>
   viewer.id != null && (build.userId === viewer.id || viewer.isOrgMember)
 
-/** How long after a Build joins an org its author may still take it back. */
-export const ORG_GRACE_MS = 60 * 60 * 1000
+/** How long after a Build joins an org its author may still take it back,
+ *  unless the org sets its own `authorGraceMinutes`. */
+export const ORG_GRACE_MINUTES_DEFAULT = 60
+/** The longest grace an org may set: a week. */
+export const ORG_GRACE_MINUTES_MAX = 7 * 24 * 60
 
-/** Within {@link ORG_GRACE_MS} of the Build joining its org. Measured from
+/** An org with no settings of its own: admin-only, the default hour. */
+export const DEFAULT_ORG_DELETE_POLICY: OrgDeletePolicy = {
+  membersDeleteOwnBuilds: false,
+  authorGraceMinutes: ORG_GRACE_MINUTES_DEFAULT,
+}
+
+/** The policy from an `organizations` row (null grace is the default). */
+export const orgDeletePolicyOf = (org: {
+  membersDeleteOwnBuilds: boolean
+  authorGraceMinutes: number | null
+}): OrgDeletePolicy => ({
+  membersDeleteOwnBuilds: org.membersDeleteOwnBuilds,
+  authorGraceMinutes: org.authorGraceMinutes ?? ORG_GRACE_MINUTES_DEFAULT,
+})
+
+/** Within the org's grace of the Build joining it. Measured from
  *  `organizationSince`, which only moves when the org does, so editing the
  *  build can't extend it. */
-export const inOrgGrace = (build: Owned, now = Date.now()) =>
+export const inOrgGrace = (
+  build: Owned,
+  graceMinutes = ORG_GRACE_MINUTES_DEFAULT,
+  now = Date.now(),
+) =>
   build.organizationSince != null &&
-  now - build.organizationSince.getTime() < ORG_GRACE_MS
+  now - build.organizationSince.getTime() < graceMinutes * 60_000
 
 /** Deleting a Build, or moving it out of its org: the author of a solo
  *  Build, an org ADMIN of an org Build. An org owns what is published under
- *  it, so neither a member nor the author (who may since have left) can take
- *  an org Build down, except the author within the grace period, to undo
- *  publishing to the wrong org. */
-const mayDelete = (build: Owned, viewer: Viewer) =>
-  viewer.id != null &&
-  (build.organizationId == null
-    ? build.userId === viewer.id
-    : viewer.isOrgAdmin === true ||
-      (build.userId === viewer.id && inOrgGrace(build)))
+ *  it, so by default neither a member nor the author (who may since have
+ *  left) can take an org Build down, except the author within the grace
+ *  period, to undo publishing to the wrong org. An org may opt to let its
+ *  members delete their own Builds (`membersDeleteOwnBuilds`), which still
+ *  needs the author to be a member now. */
+const mayDelete = (build: Owned, viewer: Viewer) => {
+  if (viewer.id == null) return false
+  if (build.organizationId == null) return build.userId === viewer.id
+  if (viewer.isOrgAdmin === true) return true
+  if (build.userId !== viewer.id) return false
+  const policy = viewer.orgPolicy ?? DEFAULT_ORG_DELETE_POLICY
+  return (
+    (policy.membersDeleteOwnBuilds && viewer.isOrgMember) ||
+    inOrgGrace(build, policy.authorGraceMinutes)
+  )
+}
 
 /** Per-Build access for one viewer. `isOrgMember` / `isOrgAdmin` are the
  *  viewer's membership in the Build's org (false when it has none). Admins
@@ -106,6 +146,36 @@ export async function orgRole(
   return membership?.role ?? null
 }
 
+/** The org's deletion settings. Only looked up when they can change an
+ *  answer: the author of an org Build who isn't its ADMIN. */
+async function orgDeletePolicy(
+  organizationId: string,
+): Promise<OrgDeletePolicy> {
+  const org = await prisma.organization.findUnique({
+    where: { id: organizationId },
+    select: { membersDeleteOwnBuilds: true, authorGraceMinutes: true },
+  })
+  return org ? orgDeletePolicyOf(org) : DEFAULT_ORG_DELETE_POLICY
+}
+
+/** The viewer's side of {@link mayDelete} on an org Build: their role, and
+ *  the org's policy when it matters (see {@link orgDeletePolicy}). */
+async function deleteViewer(build: Owned, userId: string) {
+  const role =
+    build.organizationId != null
+      ? await orgRole(build.organizationId, userId)
+      : null
+  const orgPolicy =
+    build.organizationId != null && role !== "ADMIN" && build.userId === userId
+      ? await orgDeletePolicy(build.organizationId)
+      : undefined
+  return {
+    isOrgMember: role != null,
+    isOrgAdmin: role === "ADMIN",
+    orgPolicy,
+  }
+}
+
 /** Whether `userId` belongs to `organizationId`. */
 export async function isOrgMember(
   organizationId: string,
@@ -128,20 +198,18 @@ async function memberOf(build: Owned, viewerId: string | undefined) {
 
 /** {@link buildAccess} with membership resolved. On an org Build a signed-in
  *  viewer's role is looked up even when they're the author: deleting it
- *  turns on being an org ADMIN. Anonymous viewers never query. */
+ *  turns on being an org ADMIN, or else on the org's policy. Anonymous
+ *  viewers never query. */
 export async function resolveAccess(
   build: AccessBuild,
   viewer: { id: string; isAdmin?: boolean } | undefined,
 ) {
-  const role =
-    viewer != null && build.organizationId != null
-      ? await orgRole(build.organizationId, viewer.id)
-      : null
+  if (viewer == null)
+    return buildAccess(build, { id: undefined, isOrgMember: false })
   return buildAccess(build, {
-    id: viewer?.id,
-    isOrgMember: role != null,
-    isOrgAdmin: role === "ADMIN",
-    isAdmin: viewer?.isAdmin,
+    id: viewer.id,
+    isAdmin: viewer.isAdmin,
+    ...(await deleteViewer(build, viewer.id)),
   })
 }
 
@@ -180,14 +248,9 @@ export async function canDeleteBuild(
   build: Owned,
   userId: string,
 ): Promise<boolean> {
-  const role =
-    build.organizationId != null
-      ? await orgRole(build.organizationId, userId)
-      : null
   return mayDelete(build, {
     id: userId,
-    isOrgMember: role != null,
-    isOrgAdmin: role === "ADMIN",
+    ...(await deleteViewer(build, userId)),
   })
 }
 
@@ -200,8 +263,8 @@ export async function canActOnBuild(
   viewerId: string | undefined,
 ): Promise<boolean> {
   if (isAnonVisible(build.visibility)) return true
-  return (await resolveAccess(build, viewerId ? { id: viewerId } : undefined))
-    .canAct
+  // Past that, acting is mutating (see buildAccess's canAct).
+  return viewerId != null && canMutateBuild(build, viewerId)
 }
 
 // ---------------------------------------------------------------------------

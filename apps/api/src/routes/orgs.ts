@@ -30,7 +30,9 @@ import {
   snapshotSlugs,
 } from "./_build-snapshot"
 import {
+  ORG_GRACE_MINUTES_MAX,
   ORG_PUBLIC_BUILD,
+  orgDeletePolicyOf,
   orgListScope,
   orgPublicScope,
 } from "./_build-visibility"
@@ -49,9 +51,11 @@ const RESERVED_SLUGS = new Set(["public"])
 
 type OrgRow = Omit<
   OrgProfile,
-  "members" | "buildCount" | "viewer" | "createdAt"
+  "members" | "buildCount" | "viewer" | "createdAt" | "buildDeletion"
 > & {
   createdAt: Date
+  membersDeleteOwnBuilds: boolean
+  authorGraceMinutes: number | null
 }
 type MemberRow = Prisma.UserGetPayload<{ select: typeof BUILD_USER_SELECT }> & {
   role: OrgRole
@@ -235,7 +239,8 @@ orgs.get("/:slug", async (c) => {
   // Plain SQL rather than Prisma: no PrismaClient is built for a profile read.
   const session = await getSession(c)
   const [org] = await sql<OrgRow>(Prisma.sql`
-    SELECT id, name, slug, image, description, verified, "createdAt"
+    SELECT id, name, slug, image, description, verified, "createdAt",
+      "membersDeleteOwnBuilds", "authorGraceMinutes"
     FROM organizations WHERE slug = ${slug}
   `)
   if (!org) return c.json({ error: "not_found" }, 404)
@@ -273,6 +278,7 @@ orgs.get("/:slug", async (c) => {
     description: org.description,
     verified: org.verified,
     createdAt: org.createdAt.toISOString(),
+    buildDeletion: orgDeletePolicyOf(org),
     members: members.map((m) => ({
       role: m.role,
       joinedAt: m.joinedAt.toISOString(),
@@ -369,6 +375,24 @@ orgs.patch("/:slug", rateLimitUser("mutate"), async (c) => {
   }
   if (typeof b.description === "string" || b.description === null) {
     data.description = trimToMax(b.description, ORG_DESCRIPTION_MAX)
+  }
+  if (b.membersDeleteOwnBuilds !== undefined) {
+    if (typeof b.membersDeleteOwnBuilds !== "boolean") {
+      return c.json({ error: "invalid_build_deletion" }, 400)
+    }
+    data.membersDeleteOwnBuilds = b.membersDeleteOwnBuilds
+  }
+  if (b.authorGraceMinutes !== undefined) {
+    const m = b.authorGraceMinutes
+    if (
+      typeof m !== "number" ||
+      !Number.isInteger(m) ||
+      m < 0 ||
+      m > ORG_GRACE_MINUTES_MAX
+    ) {
+      return c.json({ error: "invalid_build_deletion" }, 400)
+    }
+    data.authorGraceMinutes = m
   }
   if (typeof b.image === "string" || b.image === null) {
     // Validate before any truncation — see POST handler above for rationale.

@@ -3,7 +3,11 @@ import {
   ORG_NAME_MAX,
   ORG_SLUG_MAX,
 } from "@arsenyx/shared/api/limits"
-import type { OrgProfile, OrgRole } from "@arsenyx/shared/api/orgs"
+import type {
+  OrgBuildDeletion,
+  OrgProfile,
+  OrgRole,
+} from "@arsenyx/shared/api/orgs"
 import { ORG_SETTINGS_META } from "@arsenyx/shared/seo/site"
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
@@ -23,6 +27,7 @@ import {
 import {
   Field,
   FieldDescription,
+  FieldContent,
   FieldError,
   FieldGroup,
   FieldLabel,
@@ -36,6 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { UserAvatar } from "@/components/user-avatar"
 import { requireUser } from "@/lib/auth-guards"
@@ -47,6 +53,7 @@ import {
   useRemoveOrgMember,
   useRestoreOrgBuild,
   useUpdateOrg,
+  useUpdateOrgBuildDeletion,
   useUpdateOrgMemberRole,
 } from "@/lib/queries/org-query"
 import { seo } from "@/lib/seo"
@@ -93,6 +100,7 @@ function OrgSettingsContent() {
 
       <GeneralCard org={org} />
       <MembersCard org={org} />
+      <BuildDeletionCard org={org} />
       <RecentlyDeletedCard org={org} />
       <DangerCard org={org} />
     </>
@@ -331,6 +339,121 @@ function MembersCard({ org }: { org: OrgProfile }) {
 
 /** Builds deleted from the org in the last 90 days. Only admins can delete an
  *  org build, and only they can bring one back. */
+/** The author's take-back window choices, in minutes. */
+const GRACE_OPTIONS = [
+  { value: 0, label: "Off" },
+  { value: 15, label: "15 minutes" },
+  { value: 60, label: "1 hour" },
+  { value: 24 * 60, label: "1 day" },
+  { value: 7 * 24 * 60, label: "1 week" },
+]
+
+function graceItems(current: number) {
+  return GRACE_OPTIONS.some((o) => o.value === current)
+    ? GRACE_OPTIONS
+    : [...GRACE_OPTIONS, { value: current, label: `${current} minutes` }].sort(
+        (a, b) => a.value - b.value,
+      )
+}
+
+function BuildDeletionCard({ org }: { org: OrgProfile }) {
+  const update = useUpdateOrgBuildDeletion(org.slug)
+  const [policy, setPolicy] = useState<OrgBuildDeletion>(org.buildDeletion)
+  const dirty =
+    policy.membersDeleteOwnBuilds !==
+      org.buildDeletion.membersDeleteOwnBuilds ||
+    policy.authorGraceMinutes !== org.buildDeletion.authorGraceMinutes
+  const error = update.error instanceof Error ? update.error.message : null
+  const items = graceItems(policy.authorGraceMinutes)
+
+  function onSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    update.mutate(policy)
+  }
+
+  return (
+    <form onSubmit={onSubmit}>
+      <Card>
+        <CardHeader>
+          <CardTitle>Build deletion</CardTitle>
+          <CardDescription>
+            Admins can always delete the organization's builds. Choose what
+            members can do with the builds they wrote.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <FieldGroup>
+            <Field orientation="horizontal">
+              <FieldContent>
+                <FieldLabel htmlFor="org-members-delete">
+                  Members can delete their own builds
+                </FieldLabel>
+                <FieldDescription>
+                  Lets a member delete, or move out of the organization, any
+                  build they published here while they're still a member.
+                </FieldDescription>
+              </FieldContent>
+              <Switch
+                id="org-members-delete"
+                checked={policy.membersDeleteOwnBuilds}
+                onCheckedChange={(checked) =>
+                  setPolicy((p) => ({ ...p, membersDeleteOwnBuilds: checked }))
+                }
+              />
+            </Field>
+
+            <Field orientation="horizontal">
+              <FieldContent>
+                <FieldLabel htmlFor="org-grace">Take-back window</FieldLabel>
+                <FieldDescription>
+                  How long after publishing a build here its author can still
+                  delete it or move it out, to undo picking the wrong
+                  organization.
+                </FieldDescription>
+              </FieldContent>
+              <Select
+                value={String(policy.authorGraceMinutes)}
+                onValueChange={(val) => {
+                  if (val != null) {
+                    setPolicy((p) => ({
+                      ...p,
+                      authorGraceMinutes: Number(val),
+                    }))
+                  }
+                }}
+                items={items.map((o) => ({
+                  value: String(o.value),
+                  label: o.label,
+                }))}
+              >
+                <SelectTrigger id="org-grace" className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent alignItemWithTrigger={false}>
+                  <SelectGroup>
+                    {items.map((o) => (
+                      <SelectItem key={o.value} value={String(o.value)}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
+
+            {error ? <FieldError>{error}</FieldError> : null}
+          </FieldGroup>
+        </CardContent>
+        <CardFooter>
+          <Button type="submit" disabled={!dirty || update.isPending}>
+            {update.isPending ? "Saving…" : "Save Changes"}
+          </Button>
+        </CardFooter>
+      </Card>
+    </form>
+  )
+}
+
 function RecentlyDeletedCard({ org }: { org: OrgProfile }) {
   const navigate = useNavigate()
   const deleted = useQuery(orgDeletedBuildsQuery(org.slug))

@@ -17,8 +17,20 @@ const ROLES: Record<string, "ADMIN" | "MEMBER"> = {
   orgAdmin: "ADMIN",
 }
 const lookups: { organizationId: string; userId: string }[] = []
+// org1's deletion settings, as the organizations row holds them.
+const org1 = {
+  membersDeleteOwnBuilds: false,
+  authorGraceMinutes: null as number | null,
+}
+const policyLookups: string[] = []
 vi.mock("../db", () => ({
   prisma: {
+    organization: {
+      findUnique: async ({ where }: { where: { id: string } }) => {
+        policyLookups.push(where.id)
+        return where.id === "org1" ? org1 : null
+      },
+    },
     organizationMember: {
       findUnique: async ({
         where,
@@ -38,6 +50,9 @@ vi.mock("../db", () => ({
 
 beforeEach(() => {
   lookups.length = 0
+  policyLookups.length = 0
+  org1.membersDeleteOwnBuilds = false
+  org1.authorGraceMinutes = null
 })
 
 const orgBuild = (visibility: "PUBLIC" | "UNLISTED" | "PRIVATE") => ({
@@ -101,11 +116,40 @@ describe("per-build access with membership resolved", () => {
     ).toBe(false)
   })
 
+  it("reads the org's policy only for the author", async () => {
+    await canDeleteBuild(orgBuild("PUBLIC"), "orgAdmin")
+    await canDeleteBuild(orgBuild("PUBLIC"), "member")
+    expect(policyLookups).toEqual([])
+    await canDeleteBuild(orgBuild("PUBLIC"), "owner")
+    expect(policyLookups).toEqual(["org1"])
+  })
+
+  it("lets a member delete their own build when the org allows it", async () => {
+    org1.membersDeleteOwnBuilds = true
+    const own = { ...orgBuild("PUBLIC"), userId: "member" }
+    expect(await canDeleteBuild(own, "member")).toBe(true)
+    expect(await canDeleteBuild(own, "orgAdmin")).toBe(true)
+    // Another member's build, or an author who isn't a member any more.
+    expect(await canDeleteBuild(orgBuild("PUBLIC"), "member")).toBe(false)
+    expect(await canDeleteBuild(orgBuild("PUBLIC"), "owner")).toBe(false)
+  })
+
+  it("uses the org's grace length", async () => {
+    const recent = {
+      ...orgBuild("PUBLIC"),
+      organizationSince: new Date(Date.now() - 30 * 60_000),
+    }
+    expect(await canDeleteBuild(recent, "owner")).toBe(true)
+    org1.authorGraceMinutes = 0
+    expect(await canDeleteBuild(recent, "owner")).toBe(false)
+  })
+
   it("lets the author alone delete a solo build, without a lookup", async () => {
     const solo = { userId: "owner", organizationId: null }
     expect(await canDeleteBuild(solo, "owner")).toBe(true)
     expect(await canDeleteBuild(solo, "orgAdmin")).toBe(false)
     expect(lookups).toEqual([])
+    expect(policyLookups).toEqual([])
   })
 
   it("grants nothing through membership on a build with no org", async () => {
