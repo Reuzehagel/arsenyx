@@ -14,6 +14,11 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-11-17",
     changes: [
       {
+        type: "fix",
+        description:
+          "Rifles and launchers can equip Rifle Ammo Mutation, Primed Rifle Ammo Mutation and the other assault rifle mods again (Tainted Mag, Tactical Reload, Gun Glide, Overview, Guided Ordnance, Spring-Loaded Chamber).",
+      },
+      {
         type: "feat",
         description:
           "Your recent issue reports now show whether they're still open, closed, not planned or a duplicate, and how many replies they have on GitHub. Reports also include your browser, window size and site version, so problems are easier to reproduce.",

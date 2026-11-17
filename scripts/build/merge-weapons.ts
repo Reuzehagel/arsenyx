@@ -258,6 +258,32 @@ export function addSlotWidePools(pools: Set<string>): void {
   if (MELEE_GRANULAR_POOLS.some((p) => pools.has(p))) pools.add("MELEE")
 }
 
+/** Wiki Classes whose primaries take DE's "Assault Rifle" mods (Rifle Ammo
+ *  Mutation, Tainted Mag, Tactical Reload, …). The pool is a subset of
+ *  "Rifle": bows, crossbows and sniper rifles are excluded, launchers are
+ *  in. Per wiki.warframe.com/w/Tainted_Mag ("does not work with Bows/Crossbows
+ *  or Sniper Rifles", "will work on launchers like the Tonkor"), verified
+ *  2026-11-17. Spearguns and companion (Robotic) weapons are left out until
+ *  the wiki confirms them. */
+const ASSAULT_RIFLE_CLASSES = new Set(["Rifle", "Launcher"])
+
+/** Add the "Assault Rifle" pool to a Primary-slot Rifle/Launcher. Mutates in
+ *  place. Per-name overrides (arm-cannons, exalted weapons) are exempt: they
+ *  replace the class default wholesale. */
+export function addAssaultRiflePool(
+  pools: Set<string>,
+  displayClass: string | null,
+  slot: string | null,
+): void {
+  if (
+    slot === "Primary" &&
+    displayClass &&
+    ASSAULT_RIFLE_CLASSES.has(displayClass)
+  ) {
+    pools.add("Assault Rifle")
+  }
+}
+
 /** Strip the Coda / Kuva / Tenet prefix from a variant name to recover the
  *  base weapon name (for augment-mod matching). */
 function baseWeaponName(name: string): string | null {
@@ -295,7 +321,8 @@ function beastClawPools(user: string): string[] {
  *   3. class default (class-pools.ts)
  *   4. `wikilessPool` — a brand-new real weapon not yet on the wiki
  *      (WIKILESS_PRODUCT_CATEGORIES)
- * then the weapon's own name (augment matching), its base name if it's a
+ * then the "Assault Rifle" pool for class-default primary rifles/launchers,
+ * the weapon's own name (augment matching), its base name if it's a
  * Coda/Kuva/Tenet variant, `extra`, and the No-Aoe / slot-wide pools.
  */
 function computeModPools(opts: {
@@ -320,6 +347,7 @@ function computeModPools(opts: {
     (opts.wikilessPool ? [opts.wikilessPool] : undefined) ??
     []
   const pools = new Set<string>(baseList)
+  if (!MOD_POOL_OVERRIDES[name]) addAssaultRiflePool(pools, displayClass, slot)
   pools.add(name)
   const base = baseWeaponName(name)
   if (base) pools.add(base)
