@@ -17,6 +17,7 @@ import { img } from "./routes/img"
 import { imports } from "./routes/imports"
 import { me } from "./routes/me"
 import { orgs } from "./routes/orgs"
+import { reports } from "./routes/reports"
 import { users } from "./routes/users"
 
 const app = new Hono()
@@ -82,6 +83,7 @@ app.use("/builds/*", originGuard, banGuard)
 app.use("/imports/*", originGuard, banGuard)
 app.use("/me/*", originGuard, banGuard)
 app.use("/orgs/*", originGuard, banGuard)
+app.use("/reports/*", originGuard, banGuard)
 app.use("/users/*", originGuard, banGuard)
 app.use("/admin/*", originGuard, banGuard)
 
@@ -100,6 +102,7 @@ app.route("/img", img)
 app.route("/imports", imports)
 app.route("/me", me)
 app.route("/orgs", orgs)
+app.route("/reports", reports)
 app.route("/users", users)
 
 app.get("/health", (c) => c.json({ ok: true }))

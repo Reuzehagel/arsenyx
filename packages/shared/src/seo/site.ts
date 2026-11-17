@@ -146,6 +146,7 @@ export const PAGE_META = {
   "/create": { title: "Build Editor", noindex: true },
   "/import": { title: "Import Builds", noindex: true },
   "/bookmarks": { title: "Bookmarks", noindex: true },
+  "/report": { title: "Report an Issue", noindex: true },
   "/builds/mine": { title: "My Builds", noindex: true },
   "/auth/signin": { title: "Sign in", noindex: true },
   "/auth/error": { title: "Sign-in error", noindex: true },

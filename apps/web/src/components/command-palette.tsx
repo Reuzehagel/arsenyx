@@ -36,7 +36,6 @@ import { SEARCH_DEBOUNCE_MS } from "@/lib/hooks/use-url-search-input"
 import { getImageUrl } from "@/lib/image-url"
 import { allItems } from "@/lib/items-index"
 import { itemsIndexQuery } from "@/lib/queries/items-index-query"
-import { EXTERNAL_LINKS } from "@/lib/util/constants"
 
 type ItemEntry = BrowseItem & { categoryLabel: string }
 
@@ -188,17 +187,15 @@ export function CommandPalette({
                 <CommandItem
                   onSelect={() =>
                     go(() =>
-                      window.open(
-                        EXTERNAL_LINKS.reportIssue,
-                        "_blank",
-                        "noopener,noreferrer",
-                      ),
+                      navigate({
+                        to: "/report",
+                        search: { from: window.location.pathname },
+                      }),
                     )
                   }
                 >
                   <Bug />
                   <span>Report an issue</span>
-                  <CommandShortcut>GitHub</CommandShortcut>
                 </CommandItem>
               </CommandGroup>
             )}
