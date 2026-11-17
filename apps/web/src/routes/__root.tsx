@@ -9,6 +9,7 @@ import {
 
 import { AppChrome } from "@/components/app-chrome"
 import { HotkeyCheatSheet } from "@/components/hotkey-cheat-sheet"
+import { ReportDialogHost } from "@/components/report-dialog"
 import { RouteNotFound } from "@/components/route-not-found"
 import { Button } from "@/components/ui/button"
 import { Toaster } from "@/components/ui/sonner"
@@ -36,6 +37,7 @@ function RootLayout() {
       <HeadContent />
       <Outlet />
       <HotkeyCheatSheet />
+      <ReportDialogHost />
       <Toaster />
     </TooltipProvider>
   )

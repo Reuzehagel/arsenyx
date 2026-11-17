@@ -44,7 +44,6 @@ export const FOOTER_LINKS = {
     { label: "Documentation", href: "/docs" },
     { label: "Changelog", href: "/changelog" },
     { label: "GitHub", href: EXTERNAL_LINKS.github, external: true },
-    { label: "Report an Issue", href: "/report" },
   ],
   legal: [
     { label: "Privacy Policy", href: "/privacy" },
