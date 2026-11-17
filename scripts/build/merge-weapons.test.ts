@@ -1,7 +1,11 @@
 import { describe, expect, it } from "bun:test"
 
 import { CLASS_DEFAULT_POOLS } from "../../data/curated/class-pools"
-import { addNoAoePools, addSlotWidePools } from "./merge-weapons"
+import {
+  addAssaultRiflePool,
+  addNoAoePools,
+  addSlotWidePools,
+} from "./merge-weapons"
 
 describe("CLASS_DEFAULT_POOLS", () => {
   it("keeps BEAST precepts out of the beast-claws pool", () => {
@@ -9,6 +13,29 @@ describe("CLASS_DEFAULT_POOLS", () => {
     // claws must route through "BeastClaws" alone or the editor offers them
     // in the weapon slot.
     expect(CLASS_DEFAULT_POOLS["Claws (Beast)"]).not.toContain("BEAST")
+  })
+})
+
+describe("addAssaultRiflePool", () => {
+  const run = (cls: string | null, slot: string | null) => {
+    const set = new Set(["Rifle"])
+    addAssaultRiflePool(set, cls, slot)
+    return set.has("Assault Rifle")
+  }
+
+  it("gives primary rifles and launchers the Assault Rifle pool", () => {
+    // #494: Rifle Ammo Mutation is compatName "Assault Rifle"; no weapon
+    // carried that pool, so Acceltra (and every rifle) couldn't equip it.
+    expect(run("Rifle", "Primary")).toBe(true)
+    expect(run("Launcher", "Primary")).toBe(true)
+  })
+
+  it("withholds it from bows, snipers and non-primary rifles", () => {
+    expect(run("Bow", "Primary")).toBe(false)
+    expect(run("Crossbow", "Primary")).toBe(false)
+    expect(run("Sniper Rifle", "Primary")).toBe(false)
+    expect(run("Rifle", "Robotic")).toBe(false)
+    expect(run(null, "Primary")).toBe(false)
   })
 })
 
