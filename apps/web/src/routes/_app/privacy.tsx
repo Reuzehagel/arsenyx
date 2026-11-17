@@ -56,7 +56,9 @@ function PrivacyPage() {
             <li>
               Issue reports you send from the site: their title and a link to
               the GitHub issue they became. The issue itself is public on GitHub
-              and mentions your GitHub username.
+              and mentions your GitHub username, along with your browser&apos;s
+              user-agent string, your window size and which version of the site
+              you were on, so we can reproduce the problem.
             </li>
           </ul>
           <p>

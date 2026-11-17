@@ -5,11 +5,14 @@ import {
   ISSUE_REPORT_TITLE_MAX,
   ISSUE_REPORT_TITLE_MIN,
   ISSUE_REPORT_URL_MAX,
+  ISSUE_REPORTS_LISTED,
   ISSUE_REPORTS_PER_DAY,
   isIssueReportKind,
+  type IssueReportContext,
   type IssueReportDto,
   type IssueReportKind,
   type IssueReportListResponse,
+  type IssueReportStatus,
 } from "@arsenyx/shared/api/issue-reports"
 import { Hono } from "hono"
 
@@ -18,6 +21,7 @@ import { webOrigins } from "../env"
 import {
   createGithubIssue,
   githubAppConfig,
+  githubIssueStatuses,
   githubLoginForId,
 } from "../lib/github-app"
 import { requireUser } from "../lib/session"
@@ -40,11 +44,12 @@ export interface ReportInput {
   title: string
   description: string
   pageUrl: string | null
+  context: IssueReportContext
 }
 
 /** Validates a POST body, or throws a 400 naming the bad field. */
 export function parseReportInput(body: Record<string, unknown>): ReportInput {
-  const { kind, title, description, pageUrl } = body
+  const { kind, title, description, pageUrl, context } = body
   if (!isIssueReportKind(kind)) throw httpError(400, "invalid_kind")
 
   const t = typeof title === "string" ? title.replace(/\s+/g, " ").trim() : ""
@@ -67,7 +72,62 @@ export function parseReportInput(body: Record<string, unknown>): ReportInput {
     throw httpError(400, "invalid_page_url")
   }
 
-  return { kind, title: t, description: d, pageUrl: url }
+  return {
+    kind,
+    title: t,
+    description: d,
+    pageUrl: url,
+    context: parseContext(context),
+  }
+}
+
+// Each context field must match its shape or it's dropped: it's diagnostic
+// extra the user didn't type, so a malformed one never fails the report. The
+// patterns also keep backticks, pipes and newlines out of the table cells.
+const CONTEXT_FIELDS = {
+  userAgent: /^[\x20-\x7e]{1,300}$/,
+  viewport: /^\d{1,5}x\d{1,5}$/,
+  dataVersion: /^[\w.:+-]{1,64}$/,
+  appBuild: /^[\w.-]{1,80}$/,
+} as const satisfies Record<keyof IssueReportContext, RegExp>
+
+export function parseContext(raw: unknown): IssueReportContext {
+  if (!raw || typeof raw !== "object") return {}
+  const out: IssueReportContext = {}
+  for (const [key, pattern] of Object.entries(CONTEXT_FIELDS)) {
+    const v = (raw as Record<string, unknown>)[key]
+    if (typeof v !== "string" || !pattern.test(v)) continue
+    // The user agent's printable-ASCII range still allows these two.
+    if (/[`|]/.test(v)) continue
+    out[key as keyof IssueReportContext] = v
+  }
+  return out
+}
+
+const CONTEXT_LABELS: Record<keyof IssueReportContext, string> = {
+  userAgent: "Browser",
+  viewport: "Viewport",
+  dataVersion: "Game data",
+  appBuild: "App build",
+}
+
+function contextBlock(context: IssueReportContext): string[] {
+  const rows = (
+    Object.keys(CONTEXT_LABELS) as (keyof IssueReportContext)[]
+  ).flatMap((k) =>
+    context[k] ? [`| ${CONTEXT_LABELS[k]} | \`${context[k]}\` |`] : [],
+  )
+  if (rows.length === 0) return []
+  return [
+    "",
+    "<details><summary>Context</summary>",
+    "",
+    "| | |",
+    "|-|-|",
+    ...rows,
+    "",
+    "</details>",
+  ]
 }
 
 /** Only links to the site itself: the field says where on Arsenyx it
@@ -103,17 +163,21 @@ export function issueBody(
     `Reported from the website by ${credit}${profile}.`,
   ]
   if (input.pageUrl) lines.push(`Page: ${input.pageUrl}`)
+  lines.push(...contextBlock(input.context))
   return lines.join("\n")
 }
 
-function toDto(r: {
-  id: string
-  kind: string
-  title: string
-  issueNumber: number
-  issueUrl: string
-  createdAt: Date
-}): IssueReportDto {
+function toDto(
+  r: {
+    id: string
+    kind: string
+    title: string
+    issueNumber: number
+    issueUrl: string
+    createdAt: Date
+  },
+  status: IssueReportStatus | null = null,
+): IssueReportDto {
   return {
     id: r.id,
     kind: isIssueReportKind(r.kind) ? r.kind : "bug",
@@ -121,6 +185,7 @@ function toDto(r: {
     issueNumber: r.issueNumber,
     issueUrl: r.issueUrl,
     createdAt: r.createdAt.toISOString(),
+    status,
   }
 }
 
@@ -138,12 +203,20 @@ reports.get("/", async (c) => {
   const rows = await prisma.issueReport.findMany({
     where: { userId: user.id },
     orderBy: { createdAt: "desc" },
-    take: 20,
+    take: ISSUE_REPORTS_LISTED,
     select: REPORT_SELECT,
   })
+  const cfg = githubAppConfig()
+  const statuses =
+    cfg && rows.length > 0
+      ? await githubIssueStatuses(
+          cfg,
+          rows.map((r) => r.issueNumber),
+        )
+      : new Map<number, IssueReportStatus>()
   const payload: IssueReportListResponse = {
-    available: githubAppConfig() !== null,
-    reports: rows.map(toDto),
+    available: cfg !== null,
+    reports: rows.map((r) => toDto(r, statuses.get(r.issueNumber) ?? null)),
   }
   return c.json(payload)
 })

@@ -16,6 +16,11 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "feat",
         description:
+          "Your recent issue reports now show whether they're still open, closed, not planned or a duplicate, and how many replies they have on GitHub. Reports also include your browser, window size and site version, so problems are easier to reproduce.",
+      },
+      {
+        type: "feat",
+        description:
           "Report bugs, wrong game data and ideas right from the site: \"Report an Issue\" in the footer or the command palette opens a quick form with the page you're on already filled in, and your report becomes a GitHub issue that credits your GitHub account, so you're notified when someone replies.",
       },
     ],
