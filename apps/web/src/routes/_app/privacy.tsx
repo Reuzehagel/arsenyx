@@ -9,7 +9,7 @@ export const Route = createFileRoute("/_app/privacy")({
   component: PrivacyPage,
 })
 
-const LAST_UPDATED = "2026-11-15"
+const LAST_UPDATED = "2026-11-17"
 
 function PrivacyPage() {
   return (
@@ -52,6 +52,11 @@ function PrivacyPage() {
             <li>
               Whatever you create: builds, guides, votes, bookmarks, and
               organizations.
+            </li>
+            <li>
+              Issue reports you send from the site: their title and a link to
+              the GitHub issue they became. The issue itself is public on GitHub
+              and mentions your GitHub username.
             </li>
           </ul>
           <p>

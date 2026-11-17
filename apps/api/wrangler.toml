@@ -17,11 +17,16 @@ routes = [
 #   BETTER_AUTH_SECRET        — `openssl rand -base64 32`
 #   GITHUB_CLIENT_ID
 #   GITHUB_CLIENT_SECRET
+#   GITHUB_APP_ID             — the issue-reporting GitHub App
+#   GITHUB_APP_PRIVATE_KEY      (lib/github-app.ts); without both, POST /reports
+#                               answers 503 and the site links to GitHub.
 
 [vars]
 BETTER_AUTH_URL = "https://api.arsenyx.com"
 WEB_ORIGIN = "https://www.arsenyx.com,https://arsenyx.com"
 NODE_ENV = "production"
+# Where POST /reports files issues (lib/github-app.ts).
+GITHUB_ISSUES_REPO = "Reuzehagel/arsenyx"
 
 # Workers Rate Limiting API binding — keyed per IP at the edge, free and
 # cheap because the cap is enforced before our handler runs any DB work.

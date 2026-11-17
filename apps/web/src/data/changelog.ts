@@ -11,6 +11,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-11-17",
+    changes: [
+      {
+        type: "feat",
+        description:
+          'Report bugs, wrong game data and ideas right from the site: "Report an Issue" in the footer or the command palette opens a form, and your report becomes a GitHub issue that credits your GitHub account, so you\'re notified when someone replies. Your past reports are listed on the same page.',
+      },
+    ],
+  },
+  {
     date: "2026-11-15",
     changes: [
       {

@@ -42,6 +42,7 @@ model User {
   bookmarks               BuildBookmark[]
   organizationMemberships OrganizationMember[]
   rateLimitWindows        UserRateLimitWindow[]
+  issueReports            IssueReport[]
   buildRevisions          BuildRevision[]
 
   @@map("users")
@@ -442,4 +443,22 @@ model UserRateLimitWindow {
   @@id([userId, bucket, windowStart])
   @@index([windowStart])
   @@map("user_rate_limit_windows")
+}
+
+// An issue a signed-in user filed from the site (POST /reports). The GitHub
+// issue is the report itself; this row lets the user find theirs again and
+// backs the per-day cap (ISSUE_REPORTS_PER_DAY).
+model IssueReport {
+  id          String   @id @default(cuid())
+  userId      String
+  kind        String
+  title       String
+  issueNumber Int
+  issueUrl    String
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("issue_reports")
 }

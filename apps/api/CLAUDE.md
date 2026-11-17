@@ -18,6 +18,7 @@ Hono on Cloudflare Workers (Bun-compatible for local dev). Better Auth + Prisma 
 - **Auth gates throw.** `requireUser(c)` and `requireAdmin(c)` ([lib/session.ts](src/lib/session.ts)) return the user or throw an `httpError` (`HTTPException` carrying `{ error }` JSON), which Hono / `app.onError` answer as-is. Don't hand-roll `if (!session?.user) return 401`.
 - **Work after the response goes through `registerBackgroundWork`** ([src/db.ts](src/db.ts)): kept alive past the response, failures logged under a label. Sampled prunes use `sometimesInBackground`.
 - **`?page` is clamped** to `MAX_PAGE` in [routes/_query.ts](src/routes/_query.ts). Pagination is OFFSET-based, so an unbounded page number is a free way for an anonymous caller to make Postgres walk millions of rows. Don't remove the clamp to "support deep paging" — switch to keyset pagination instead.
+- **Issue reports** (`/reports`, [routes/reports.ts](src/routes/reports.ts)) open a GitHub issue as the GitHub App, then store an `IssueReport` row (the user's list + the `ISSUE_REPORTS_PER_DAY` cap). User text has `@mentions` broken (`neutralizeMentions`) so a report can't make the App ping strangers; only the reporter's own login is mentioned.
 - Shared cross-cut types live in `packages/shared`, imported as `@arsenyx/shared/*`. If both web and api need it, put it there — don't duplicate.
 
 ## Prisma
@@ -42,7 +43,7 @@ Local secrets live in a **single file: `apps/api/.env`** (gitignored — created
 - Prisma (`db:push` / `db:studio` / `db:generate`) via [prisma.config.ts](prisma.config.ts) (dotenv).
 - The `bun run` scripts (e.g. `seed-admin`) via `dotenv` / bun's auto-load.
 
-Keys: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`, `NODE_ENV`, `WEB_ORIGIN`.
+Keys: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`, `NODE_ENV`, `WEB_ORIGIN`. Optional: `GITHUB_APP_ID` / `GITHUB_APP_PRIVATE_KEY` / `GITHUB_ISSUES_REPO` turn on site issue reports (`POST /reports`, [lib/github-app.ts](src/lib/github-app.ts)); leave them out locally unless you want real issues filed.
 
 Prod injects secrets via `wrangler secret put` (see [wrangler.toml](wrangler.toml) for the list). Plaintext vars (`WEB_ORIGIN`, `BETTER_AUTH_URL`, `NODE_ENV`) live in `wrangler.toml`'s `[vars]` block. **Don't branch on `NODE_ENV`** for credentials or cookie flags (cookie `SameSite`/`Secure` follow `BETTER_AUTH_URL`'s scheme, [src/env.ts](src/env.ts)); it only gates dev-only email/password sign-in ([src/auth.ts](src/auth.ts)).
 
