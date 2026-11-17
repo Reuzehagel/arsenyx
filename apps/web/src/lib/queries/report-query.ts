@@ -1,4 +1,5 @@
 import type {
+  IssueReportContext,
   IssueReportDto,
   IssueReportKind,
   IssueReportListResponse,
@@ -28,6 +29,7 @@ export interface ReportInput {
   title: string
   description: string
   pageUrl: string
+  context: IssueReportContext
 }
 
 /** `POST /reports`: files a GitHub issue for the signed-in user. */

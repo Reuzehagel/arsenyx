@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest"
 
 import { webOrigins } from "../env"
-import { issueBody, neutralizeMentions, parseReportInput } from "./reports"
+import {
+  issueBody,
+  neutralizeMentions,
+  parseContext,
+  parseReportInput,
+} from "./reports"
 
 const valid = {
   kind: "bug",
@@ -22,7 +27,7 @@ describe("parseReportInput", () => {
   it("accepts a valid report and collapses title whitespace", () => {
     expect(
       parseReportInput({ ...valid, title: "  Mod   search\ndrops results " }),
-    ).toEqual({ ...valid, pageUrl: null })
+    ).toEqual({ ...valid, pageUrl: null, context: {} })
   })
 
   it("rejects an unknown kind, short title or short description", () => {
@@ -80,5 +85,43 @@ describe("issueBody", () => {
       username: null,
     })
     expect(body).toContain("Reported from the website by a user.")
+  })
+})
+
+describe("parseContext", () => {
+  it("keeps well-formed fields and drops the rest", () => {
+    expect(
+      parseContext({
+        userAgent: "Mozilla/5.0 (X11; Linux x86_64) Firefox/140.0",
+        viewport: "1280x900",
+        dataVersion: "2026-11-15",
+        appBuild: "index-Dk3a9_Q",
+        extra: "ignored",
+      }),
+    ).toEqual({
+      userAgent: "Mozilla/5.0 (X11; Linux x86_64) Firefox/140.0",
+      viewport: "1280x900",
+      dataVersion: "2026-11-15",
+      appBuild: "index-Dk3a9_Q",
+    })
+    expect(
+      parseContext({
+        userAgent: "evil | `x`",
+        viewport: "huge",
+        dataVersion: "a\nb",
+        appBuild: 5,
+      }),
+    ).toEqual({})
+    expect(parseContext("nope")).toEqual({})
+  })
+
+  it("renders the context as a collapsed table", () => {
+    const body = issueBody(
+      parseReportInput({ ...valid, context: { viewport: "390x844" } }),
+      { githubLogin: null, username: null },
+    )
+    expect(body).toContain("<details><summary>Context</summary>")
+    expect(body).toContain("| Viewport | `390x844` |")
+    expect(body).not.toContain("Browser")
   })
 })

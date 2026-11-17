@@ -5,15 +5,18 @@ import {
   ISSUE_REPORT_TITLE_MAX,
   ISSUE_REPORT_TITLE_MIN,
   ISSUE_REPORT_URL_MAX,
+  type IssueReportContext,
   type IssueReportDto,
   type IssueReportKind,
+  type IssueReportStatus,
 } from "@arsenyx/shared/api/issue-reports"
 import { useQuery } from "@tanstack/react-query"
 import { Link as RouterLink } from "@tanstack/react-router"
-import { Bug, CheckCircle2, ExternalLink } from "lucide-react"
+import { Bug, CheckCircle2, ExternalLink, MessageSquare } from "lucide-react"
 import { useState } from "react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -41,6 +44,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { authClient } from "@/lib/auth-client"
+import { entryHref } from "@/lib/hooks/use-app-update"
 import { myReportsQuery, useSubmitReport } from "@/lib/queries/report-query"
 import { EXTERNAL_LINKS } from "@/lib/util/constants"
 import { relativeTime } from "@/lib/util/relative-time"
@@ -50,8 +54,26 @@ const KIND_ITEMS = Object.entries(ISSUE_REPORT_KINDS).map(([value, k]) => ({
   label: k.label,
 }))
 
-/** How many past reports the dialog lists under the form. */
-const RECENT_REPORTS = 3
+/** Browser details attached to every report, so it can be reproduced. Read
+ *  at send time: the window may have been resized since the dialog opened. */
+function reportContext(): IssueReportContext {
+  // Dev serves unhashed entries (`/@vite/client`, `/src/main.tsx`), which name
+  // no build; in production it's e.g. "/assets/index-Dk3a9.js" → "index-Dk3a9".
+  const entry = import.meta.env.PROD ? entryHref(document) : null
+  return {
+    userAgent: navigator.userAgent,
+    viewport: `${window.innerWidth}x${window.innerHeight}`,
+    dataVersion: __DATA_VERSION__,
+    appBuild: entry?.split("/").pop()?.replace(/\.js$/, ""),
+  }
+}
+
+const STATUS_LABELS: Record<IssueReportStatus["state"], string> = {
+  open: "Open",
+  closed: "Closed",
+  not_planned: "Not planned",
+  duplicate: "Duplicate",
+}
 
 export function ReportDialog({
   open,
@@ -145,9 +167,7 @@ function SignedIn({
   if (!data) return null
 
   const recent =
-    data.reports.length > 0 ? (
-      <RecentReports reports={data.reports.slice(0, RECENT_REPORTS)} />
-    ) : null
+    data.reports.length > 0 ? <RecentReports reports={data.reports} /> : null
 
   return (
     <>
@@ -234,6 +254,7 @@ function ReportForm({
         title: title.trim(),
         description: description.trim(),
         pageUrl: pageUrl.trim(),
+        context: reportContext(),
       },
       {
         // The dialog keeps this form mounted while the user stays on the
@@ -322,8 +343,9 @@ function ReportForm({
         </Field>
 
         <p className="text-muted-foreground text-xs">
-          Reports are public GitHub issues that mention your GitHub username, so
-          don't include anything private.
+          Reports are public GitHub issues. They mention your GitHub username
+          and include your browser and window size, so don't include anything
+          private.
         </p>
 
         {error ? <FieldError>{error}</FieldError> : null}
@@ -351,6 +373,7 @@ function RecentReports({ reports }: { reports: IssueReportDto[] }) {
         {reports.map((r) => (
           <li key={r.id} className="flex items-center gap-3 py-1 text-sm">
             <span className="flex-1 truncate">{r.title}</span>
+            {r.status ? <ReportStatus status={r.status} /> : null}
             <span className="text-muted-foreground shrink-0 text-xs">
               {relativeTime(r.createdAt)}
             </span>
@@ -367,5 +390,25 @@ function RecentReports({ reports }: { reports: IssueReportDto[] }) {
         ))}
       </ul>
     </section>
+  )
+}
+
+function ReportStatus({ status }: { status: IssueReportStatus }) {
+  const replies = status.comments
+  return (
+    <span className="flex shrink-0 items-center gap-1.5">
+      {replies > 0 ? (
+        <span
+          className="text-muted-foreground inline-flex items-center gap-0.5 text-xs"
+          title={`${replies} ${replies === 1 ? "reply" : "replies"} on GitHub`}
+        >
+          <MessageSquare className="size-3" />
+          {replies}
+        </span>
+      ) : null}
+      <Badge variant={status.state === "open" ? "outline" : "secondary"}>
+        {STATUS_LABELS[status.state]}
+      </Badge>
+    </span>
   )
 }

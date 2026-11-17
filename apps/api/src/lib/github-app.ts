@@ -225,3 +225,66 @@ export async function createGithubIssue(
   }
   return { number: created.number, url: created.html_url }
 }
+
+export interface IssueStatus {
+  state: "open" | "closed" | "not_planned" | "duplicate"
+  comments: number
+}
+
+export type GraphqlIssue = {
+  state: "OPEN" | "CLOSED"
+  stateReason: "COMPLETED" | "NOT_PLANNED" | "DUPLICATE" | "REOPENED" | null
+  comments: { totalCount: number }
+} | null
+
+export function issueStatus(issue: NonNullable<GraphqlIssue>): IssueStatus {
+  const state =
+    issue.state === "OPEN"
+      ? "open"
+      : issue.stateReason === "NOT_PLANNED"
+        ? "not_planned"
+        : issue.stateReason === "DUPLICATE"
+          ? "duplicate"
+          : "closed"
+  return { state, comments: issue.comments.totalCount }
+}
+
+/** Live state and comment count of a few issues, in one GraphQL request.
+ *  Returns an empty map when GitHub can't be asked: the status is a nicety
+ *  on the user's report list, never a reason to fail it. */
+export async function githubIssueStatuses(
+  cfg: GithubAppConfig,
+  numbers: readonly number[],
+): Promise<Map<number, IssueStatus>> {
+  const out = new Map<number, IssueStatus>()
+  const wanted = numbers.filter((n) => Number.isSafeInteger(n) && n > 0)
+  if (wanted.length === 0) return out
+  const [owner, name] = cfg.repo.split("/")
+  const fields = wanted
+    .map(
+      (n) =>
+        `i${n}: issue(number: ${n}) { state stateReason comments { totalCount } }`,
+    )
+    .join("\n")
+  try {
+    const token = await installationToken(cfg)
+    const res = await github<{
+      data?: { repository?: Record<string, GraphqlIssue> }
+    }>("/graphql", token, {
+      method: "POST",
+      body: {
+        query: `query($owner: String!, $name: String!) { repository(owner: $owner, name: $name) { ${fields} } }`,
+        variables: { owner, name },
+      },
+    })
+    const repo = res.data?.repository ?? {}
+    for (const n of wanted) {
+      const issue = repo[`i${n}`]
+      if (!issue) continue
+      out.set(n, issueStatus(issue))
+    }
+  } catch (err) {
+    console.warn("github: issue status lookup failed", (err as Error).message)
+  }
+  return out
+}

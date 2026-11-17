@@ -2,7 +2,7 @@ import { generateKeyPairSync } from "node:crypto"
 
 import { describe, expect, it } from "vitest"
 
-import { pemToPkcs8 } from "./github-app"
+import { issueStatus, pemToPkcs8 } from "./github-app"
 
 // GitHub App keys download as PKCS#1, which WebCrypto can't import; pin that
 // the hand-written PKCS#8 wrapper yields a key that imports and signs.
@@ -34,5 +34,25 @@ describe("pemToPkcs8", () => {
   it("passes a PKCS#8 PEM through", () => {
     const pem = privateKey.export({ type: "pkcs8", format: "pem" }) as string
     expect(Buffer.from(pemToPkcs8(pem))).toEqual(pkcs8)
+  })
+})
+
+describe("issueStatus", () => {
+  const issue = (
+    state: "OPEN" | "CLOSED",
+    stateReason: "COMPLETED" | "NOT_PLANNED" | "DUPLICATE" | "REOPENED" | null,
+  ) => ({ state, stateReason, comments: { totalCount: 2 } })
+
+  it("maps GitHub's state and close reason", () => {
+    expect(issueStatus(issue("OPEN", "REOPENED"))).toEqual({
+      state: "open",
+      comments: 2,
+    })
+    expect(issueStatus(issue("CLOSED", "COMPLETED")).state).toBe("closed")
+    expect(issueStatus(issue("CLOSED", null)).state).toBe("closed")
+    expect(issueStatus(issue("CLOSED", "NOT_PLANNED")).state).toBe(
+      "not_planned",
+    )
+    expect(issueStatus(issue("CLOSED", "DUPLICATE")).state).toBe("duplicate")
   })
 })

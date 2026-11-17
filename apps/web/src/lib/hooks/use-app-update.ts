@@ -28,7 +28,7 @@ const POLL_MS = 5 * 60 * 1000
 const MIN_REFETCH_MS = 30 * 1000
 const TOAST_ID = "app-update"
 
-function entryHref(doc: Document): string | null {
+export function entryHref(doc: Document): string | null {
   const el = doc.querySelector<HTMLScriptElement>('script[type="module"][src]')
   return el?.getAttribute("src") ?? null
 }
