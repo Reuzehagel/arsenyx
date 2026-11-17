@@ -1,5 +1,6 @@
 import { Icons } from "@/components/icons"
 import { Link } from "@/components/link"
+import { openReportDialog } from "@/components/report-dialog"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -27,9 +28,12 @@ function FooterLink({ label, href, external }: NavLink) {
 function FooterLinkSection({
   title,
   links,
+  children,
 }: {
   title: string
   links: readonly NavLink[]
+  /** Extra items after the links (e.g. a button that opens a dialog). */
+  children?: React.ReactNode
 }) {
   return (
     <div className="flex flex-col gap-4">
@@ -38,6 +42,7 @@ function FooterLinkSection({
         {links.map((link) => (
           <FooterLink key={link.href} {...link} />
         ))}
+        {children}
       </ul>
     </div>
   )
@@ -61,7 +66,17 @@ export function Footer() {
           </div>
 
           <FooterLinkSection title="Build" links={FOOTER_LINKS.build} />
-          <FooterLinkSection title="Community" links={FOOTER_LINKS.community} />
+          <FooterLinkSection title="Community" links={FOOTER_LINKS.community}>
+            <li>
+              <button
+                type="button"
+                onClick={openReportDialog}
+                className="text-muted-foreground hover:text-foreground text-sm transition-colors"
+              >
+                Report an Issue
+              </button>
+            </li>
+          </FooterLinkSection>
           <FooterLinkSection title="Legal" links={FOOTER_LINKS.legal} />
         </div>
 

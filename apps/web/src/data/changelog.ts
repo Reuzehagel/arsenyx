@@ -16,7 +16,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         type: "feat",
         description:
-          'Report bugs, wrong game data and ideas right from the site: "Report an Issue" in the footer or the command palette opens a form, and your report becomes a GitHub issue that credits your GitHub account, so you\'re notified when someone replies. Your past reports are listed on the same page.',
+          "Report bugs, wrong game data and ideas right from the site: \"Report an Issue\" in the footer or the command palette opens a quick form with the page you're on already filled in, and your report becomes a GitHub issue that credits your GitHub account, so you're notified when someone replies.",
       },
     ],
   },

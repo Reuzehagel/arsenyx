@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
+import { openReportDialog } from "@/components/report-dialog"
 import {
   Command,
   CommandEmpty,
@@ -184,16 +185,7 @@ export function CommandPalette({
                   <span>Changelog</span>
                   <CommandShortcut>what's new</CommandShortcut>
                 </CommandItem>
-                <CommandItem
-                  onSelect={() =>
-                    go(() =>
-                      navigate({
-                        to: "/report",
-                        search: { from: window.location.pathname },
-                      }),
-                    )
-                  }
-                >
+                <CommandItem onSelect={() => go(openReportDialog)}>
                   <Bug />
                   <span>Report an issue</span>
                 </CommandItem>
