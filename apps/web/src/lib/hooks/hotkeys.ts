@@ -138,6 +138,11 @@ export const HOTKEYS = {
     keys: ["Esc"],
     description: "Return focus to the search input",
   },
+  modSearchExit: {
+    scope: "Mod search",
+    keys: ["Esc"],
+    description: "From the search input, return to the selected slot",
+  },
   guideBold: {
     scope: "Guide editor",
     keys: ["mod B"],

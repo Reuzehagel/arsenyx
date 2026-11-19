@@ -28,7 +28,11 @@ import { useModMarketHref } from "@/lib/queries/mod-tradable-query"
 import { cn } from "@/lib/util/utils"
 import { wikiUrl } from "@/lib/util/warframe-links"
 
-import { buildSlotMarker, DROP_SLOT_ATTR } from "./dom-attrs"
+import {
+  buildSlotMarker,
+  DROP_SLOT_ATTR,
+  focusIfSlotFocused,
+} from "./dom-attrs"
 import {
   useIsAnyDragActive,
   useIsDragSourceSlot,
@@ -191,6 +195,9 @@ export function ModSlot({
   // open-state to `selected` lets arrow-key nav implicitly close the popover
   // on the previously-clicked slot without a separate close effect.
   const popoverOpen = pickerOpen && !!selected
+  useEffect(() => {
+    if (selected && !readOnly) focusIfSlotFocused(triggerRef.current)
+  }, [selected, readOnly])
   // Deselecting (Escape, arrow keys, click-outside) closes the picker without
   // going through onOpenChange, so drop the latch too — otherwise the stale
   // `true` reopens it the next time this slot is selected.
@@ -293,11 +300,17 @@ export function ModSlot({
       <Popover open={popoverOpen} onOpenChange={setPickerOpen}>
         <PopoverTrigger
           nativeButton={false}
-          // Slots are driven by arrow-key navigation (window-scoped, see
-          // use-keyboard-nav.ts), not by Tab traversal. Keeping them out of the
-          // tab order avoids the browser focus ring visually enlarging the
-          // focused slot relative to its neighbors.
-          render={<div ref={triggerRef} tabIndex={-1} />}
+          // Roving tabindex: only the selected slot is a Tab stop; arrow keys
+          // (window-scoped, see use-keyboard-nav.ts) move the selection and
+          // focus follows it. The selected border is the focus indicator.
+          render={
+            <div
+              ref={triggerRef}
+              tabIndex={selected && !readOnly ? 0 : -1}
+              aria-label={`${KIND_LABEL[kind] || "Mod"} slot: ${mod ? `${mod.name}, rank ${rank}` : "empty"}`}
+              aria-pressed={readOnly ? undefined : !!selected}
+            />
+          }
           {...buildSlotMarker}
           onClick={
             detailEnabled
@@ -473,7 +486,7 @@ export function ModSlot({
               )}
               <Plus className="text-muted-foreground/15 group-hover:text-muted-foreground/30 size-5 transition-colors" />
               {KIND_LABEL[kind] && (
-                <span className="text-muted-foreground/30 mt-1 font-mono text-[10px] tracking-wide uppercase">
+                <span className="text-muted-foreground mt-1 font-mono text-[10px] tracking-wide uppercase">
                   {KIND_LABEL[kind]}
                 </span>
               )}

@@ -39,6 +39,11 @@ export function ShardSlot({
   const triggerButton = (
     <button
       type="button"
+      aria-label={
+        shard
+          ? `Archon shard: ${shard.tauforged ? "Tauforged " : ""}${SHARD_COLOR_NAMES[shard.color]}, ${shard.stat}`
+          : "Archon shard slot: empty"
+      }
       className={cn(
         "relative flex size-10 items-center justify-center rounded-sm border transition-colors",
         shard

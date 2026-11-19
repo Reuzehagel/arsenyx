@@ -19,7 +19,8 @@ export function KeyboardHintsStrip({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-2 px-1 pt-2 pb-4 text-[11px]",
+        // Touch-only devices have no keys to press.
+        "text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-2 px-1 pt-2 pb-4 text-[11px] pointer-coarse:hidden",
         className,
       )}
     >
@@ -67,7 +68,7 @@ export function KeyboardHintBanner() {
   }
 
   return (
-    <div className="bg-muted/30 flex items-center gap-3 rounded-md border border-dashed px-3 py-2 text-sm">
+    <div className="bg-muted/30 flex items-center gap-3 rounded-md border border-dashed px-3 py-2 text-sm pointer-coarse:hidden">
       <span className="text-muted-foreground">
         Keyboard-first: arrows move between slots, <Kbd>−</Kbd> / <Kbd>+</Kbd>{" "}
         rank a mod, <Kbd>/</Kbd> opens mod search. Press <Kbd>?</Kbd> any time
