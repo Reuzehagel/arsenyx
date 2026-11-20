@@ -13,6 +13,7 @@ import {
   type PointerEvent,
 } from "react"
 
+import { BUILD_SLOT_ATTR } from "@/components/build-loadout/dom-attrs"
 import { useStartDrag } from "@/components/build-loadout/drag-controller"
 import { ModCard } from "@/components/build-loadout/mod-card"
 import {
@@ -495,6 +496,20 @@ export function ModSearchGrid({
                 if (!first) return
                 e.preventDefault()
                 if (onSelect(first) !== false) setQuery("")
+                return
+              }
+              if (e.key === "Escape") {
+                // Back to the slot grid, so arrows and -/= act on slots again
+                // instead of editing the query.
+                e.preventDefault()
+                const slot = document.querySelector<HTMLElement>(
+                  `[${BUILD_SLOT_ATTR}][tabindex="0"]`,
+                )
+                if (slot) {
+                  // "nearest" would leave the slot under the sticky header.
+                  slot.focus({ preventScroll: true })
+                  slot.scrollIntoView({ block: "center" })
+                } else e.currentTarget.blur()
                 return
               }
               if (e.key === "Tab" && !e.shiftKey) {

@@ -21,6 +21,16 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
+    date: "2026-11-19",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "The build editor works better from the keyboard and with screen readers: Tab now reaches the selected mod or arcane slot and the arrow keys carry focus with them, Escape in the mod search takes you back to your slot, and slots, Archon shards and the Reactor/Catalyst switch now say what they are. The Aura, Exilus and Arcane labels on empty slots are easier to read, and the keyboard hints no longer show on phones.",
+      },
+    ],
+  },
+  {
     date: "2026-11-17",
     changes: [
       {
