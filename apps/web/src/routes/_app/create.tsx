@@ -11,6 +11,7 @@ import { buildQuery } from "@/lib/queries/build-query"
 import { helminthQuery } from "@/lib/queries/helminth-query"
 import { incarnonAdapterImagesQuery } from "@/lib/queries/incarnon-query"
 import { itemQuery } from "@/lib/queries/item-query"
+import { modConflictsQuery } from "@/lib/queries/mod-conflicts-query"
 import { modsQuery } from "@/lib/queries/mods-query"
 import { pageSeo } from "@/lib/seo"
 import { parseVariantIndex } from "@/lib/util/search-params"
@@ -73,6 +74,8 @@ export const Route = createFileRoute("/_app/create")({
       // through useSuspenseQuery unconditionally, so skipping it here only
       // moved the same 25 KB fetch into a render-time suspense waterfall.
       context.queryClient.ensureQueryData(helminthQuery),
+      // useEditorHydration suspends on it; loading it here avoids a late waterfall.
+      context.queryClient.ensureQueryData(modConflictsQuery),
     ]
     if (deps.build) {
       tasks.push(context.queryClient.ensureQueryData(buildQuery(deps.build)))

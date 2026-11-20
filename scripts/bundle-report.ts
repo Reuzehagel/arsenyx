@@ -9,7 +9,7 @@
  * sourcemap mappings, so it counts minified output bytes, not source size.
  */
 
-import { readFileSync, rmSync } from "node:fs"
+import { existsSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { brotliCompressSync } from "node:zlib"
@@ -49,7 +49,8 @@ for (const file of eager) {
   totalRaw += buf.length
   totalBr += br
   console.log(`\n${file}  ${kb(buf.length)} raw, ${kb(br)} br`)
-  if (!file.endsWith(".js")) continue
+  // rolldown-runtime ships without a sourcemap
+  if (!file.endsWith(".js") || !existsSync(join(OUT, `${file}.map`))) continue
   const rows = [...attribute(buf.toString("utf8"), join(OUT, `${file}.map`))]
   for (const [name, bytes] of rows.sort((a, b) => b[1] - a[1]).slice(0, TOP)) {
     console.log(`  ${kb(bytes).padStart(9)}  ${name}`)

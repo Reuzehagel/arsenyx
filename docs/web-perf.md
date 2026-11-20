@@ -29,6 +29,7 @@ const nav = performance.getEntriesByType("navigation")[0]
 ## Baseline (2026-11-03)
 
 - **Eager JS:** about 300 KB brotli on every route (`main` + `globals` + `relative-time` + `link`), plus 27 KB of CSS and the 29 KB Geist font. Most of it is framework code: react-dom, Base UI (`Select` is pulled in by the sort dropdowns), TanStack Router and Query. Vendor `manualChunks` was tried and reverted (see the comment in [vite.config.ts](../apps/web/vite.config.ts)). Lazy-loading the settings dialog would save only about 15 KB raw.
+- **2026-11-20 recheck:** eager total 256 KB brotli (JS + 21 KB CSS), with react-dom 202 KB raw of the 263 KB `globals` chunk. RUM P75 over 7 days: load 1.9 s (desktop 1.35 s, mobile 2.3 s), FCP 320 ms. Most mobile time is connect and request in SG (P75 conn 384 ms, req 775 ms), not JS. `/create` is the slowest busy route (2.5 s).
 - **Caching is done:** hashed `/assets/*` and versioned `/data/*` are `immutable`, HTML revalidates, UI art caches for a day ([public/\_headers](../apps/web/public/_headers)). Everything is brotli and an edge HIT.
 - **Warm vitals:** home TTFB 73 ms, CLS 0; build page LCP about 1.05 s (a mod-card frame image), CLS 0; no long tasks.
 - **Home hero:** `index.html` preloads `items-index.json` on `/` only, and the hero `<img>` is `fetchPriority="high"` (#441).

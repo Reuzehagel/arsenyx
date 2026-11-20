@@ -11,6 +11,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-11-20",
+    changes: [
+      {
+        type: "fix",
+        description:
+          "The build editor and build pages load faster: the game data they need now downloads alongside the page instead of after it.",
+      },
+    ],
+  },
+  {
     date: "2026-11-17",
     changes: [
       {
