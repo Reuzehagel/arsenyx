@@ -551,6 +551,7 @@ export function ItemSidebar({
               <span className="font-medium">{boosterLabel}</span>
               <Switch
                 size="sm"
+                aria-label={boosterLabel}
                 checked={hasReactor}
                 onCheckedChange={(on) => set({ hasReactor: on })}
                 disabled={readOnly}

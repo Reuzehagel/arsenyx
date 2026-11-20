@@ -2,6 +2,12 @@
 export const BUILD_SLOT_ATTR = "data-build-slot"
 export const buildSlotMarker = { [BUILD_SLOT_ATTR]: true }
 
+/** Arrow keys move the selection, not DOM focus: when focus sits on another
+ *  slot, carry it to the newly selected one so screen readers follow. */
+export function focusIfSlotFocused(el: HTMLElement | null) {
+  if (el && document.activeElement?.hasAttribute(BUILD_SLOT_ATTR)) el.focus()
+}
+
 /** Carries a mod slot's SlotId so the drag layer can find the drop target. */
 export const DROP_SLOT_ATTR = "data-drop-slot-id"
 

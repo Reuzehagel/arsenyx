@@ -6,6 +6,7 @@ import {
   useDeferredValue,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
@@ -32,7 +33,7 @@ import { ARCANE_PLACEHOLDER_URL, getImageUrl } from "@/lib/image-url"
 import { cn } from "@/lib/util/utils"
 import { marketUrl, wikiUrl } from "@/lib/util/warframe-links"
 
-import { buildSlotMarker } from "./dom-attrs"
+import { buildSlotMarker, focusIfSlotFocused } from "./dom-attrs"
 import { BuildItemDetail } from "./item-detail"
 import { useRankHover } from "./rank-hover"
 
@@ -182,6 +183,10 @@ export function ArcaneSlot({
   readOnly = false,
 }: ArcaneSlotProps) {
   const [open, setOpen] = useState(false)
+  const triggerRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (selected && !readOnly) focusIfSlotFocused(triggerRef.current)
+  }, [selected, readOnly])
 
   const arcaneStats: string[] = placed
     ? statsAt(placed.arcane, placed.rank)
@@ -202,10 +207,15 @@ export function ArcaneSlot({
     >
       <PopoverTrigger
         nativeButton={false}
-        // Same reasoning as mod-slot.tsx: arrow-key nav drives selection,
-        // Tab order would just visually enlarge the focused slot via the
-        // browser's default focus ring.
-        render={<div tabIndex={-1} />}
+        // Roving tabindex, as in mod-slot.tsx.
+        render={
+          <div
+            ref={triggerRef}
+            tabIndex={selected && !readOnly ? 0 : -1}
+            aria-label={`${label} slot: ${placed ? `${placed.arcane.name}, rank ${placed.rank}` : "empty"}`}
+            aria-pressed={readOnly ? undefined : !!selected}
+          />
+        }
         {...buildSlotMarker}
         onClick={
           readOnly
@@ -244,7 +254,7 @@ export function ArcaneSlot({
         ) : (
           <>
             <Plus className="text-muted-foreground/15 group-hover:text-muted-foreground/30 size-6 transition-colors" />
-            <span className="text-muted-foreground/30 mt-1 font-mono text-[10px] tracking-wide uppercase">
+            <span className="text-muted-foreground mt-1 font-mono text-[10px] tracking-wide uppercase">
               {label}
             </span>
           </>

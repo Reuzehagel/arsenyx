@@ -130,7 +130,7 @@ export function RankDots({
           key={i}
           className={cn(
             "h-[5px] w-[5px] rounded-full",
-            i < rank ? "bg-sky-300" : "bg-zinc-600/60",
+            i < rank ? "bg-wf-rank-pip" : "bg-zinc-600/60",
           )}
           style={
             i < rank
