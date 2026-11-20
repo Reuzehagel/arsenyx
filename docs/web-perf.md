@@ -1,6 +1,6 @@
 # Web performance
 
-How to measure page load, and where it stands. For Worker CPU and billing, see [usage-analytics.md](usage-analytics.md).
+How to measure page load, and where it stands. Real-visitor P75 timings by device, country and path: `bun run cf:usage --rum-perf` ([usage-analytics.md](usage-analytics.md), which also covers Worker CPU and billing).
 
 ## Bundle: what every page downloads
 

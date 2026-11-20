@@ -21,7 +21,7 @@ Page-load timings (the dashboard's "Page load time summary"): `bun run cf:usage 
 
 ## Auth
 
-`CF_ANALYTICS_TOKEN` (Windows user env var) holds the read-only Cloudflare token `arsenyx-analytics-readonly`: Account Analytics, Workers Observability, and arsenyx.com zone Analytics, all read. Without it, the script falls back to wrangler's OAuth token (run `bunx wrangler whoami` to refresh it), which can't read Workers Logs, so the per-route table is skipped. The name is deliberately not `CF_API_TOKEN` / `CLOUDFLARE_API_TOKEN`: wrangler reads those, and an analytics-only token there breaks every wrangler command.
+`CF_ANALYTICS_TOKEN` (Windows user env var) holds the read-only Cloudflare token `arsenyx-analytics-readonly`: Account Analytics, Workers Observability, and arsenyx.com zone Analytics, all read. Without it, the script falls back to wrangler's OAuth token (refresh it with `bun run --cwd apps/web wrangler whoami`; root-level `bunx wrangler` can fail to install), which can't read Workers Logs, so the per-route table is skipped. The name is deliberately not `CF_API_TOKEN` / `CLOUDFLARE_API_TOKEN`: wrangler reads those, and an analytics-only token there breaks every wrangler command.
 
 ## Gotchas
 

@@ -42,7 +42,7 @@ const analyticsToken = process.env.CF_ANALYTICS_TOKEN?.trim().replace(
 const token = analyticsToken ?? wranglerToken()
 if (!token) {
   console.error(
-    "✗ cf:usage — set CF_ANALYTICS_TOKEN or run `bunx wrangler login`.",
+    "✗ cf:usage — set CF_ANALYTICS_TOKEN or run `bun run --cwd apps/web wrangler login`.",
   )
   process.exit(1)
 }
@@ -53,7 +53,7 @@ function wranglerToken(): string | undefined {
     : join(homedir(), ".config")
   const file = join(base, ".wrangler", "config", "default.toml")
   if (!existsSync(file)) return undefined
-  // Expires hourly; `bunx wrangler whoami` refreshes it.
+  // Expires hourly; `bun run --cwd apps/web wrangler whoami` refreshes it.
   return readFileSync(file, "utf8").match(/oauth_token = "([^"]+)"/)?.[1]
 }
 
@@ -71,6 +71,12 @@ async function cf<T>(path: string, body: unknown): Promise<T> {
   } & T
   // GraphQL reports failures with HTTP 200 and an `errors` array.
   if (!res.ok || json.errors?.length) {
+    if (res.status === 401 && !analyticsToken) {
+      console.error(
+        "✗ cf:usage — wrangler's OAuth token expired. Refresh it with `bun run --cwd apps/web wrangler whoami`, or set CF_ANALYTICS_TOKEN.",
+      )
+      process.exit(1)
+    }
     throw new Error(`${path}: ${res.status} ${JSON.stringify(json.errors)}`)
   }
   return json
