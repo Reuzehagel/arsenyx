@@ -30,6 +30,11 @@ export const Route = createFileRoute("/_app/builds/$slug")({
   },
   loader: async ({ context, params }) => {
     const qc = context.queryClient
+    // Neither file depends on the build, so start them before the API round-trip.
+    const staticData = [
+      qc.prefetchQuery(imageMapQuery),
+      qc.prefetchQuery(modConflictsQuery),
+    ]
     const build = await qc.ensureQueryData(buildQuery(params.slug))
     // Warm what BuildViewerBodyInner suspends on so the loadout paints complete
     // instead of swapping a "Loading item…" placeholder for the full grid — the
@@ -47,8 +52,7 @@ export const Route = createFileRoute("/_app/builds/$slug")({
       const seedPartners = seedPartnersFromBuild(qc, params.slug, build)
       await Promise.all([
         qc.prefetchQuery(itemQuery(build.item.category, itemSlug)),
-        qc.prefetchQuery(imageMapQuery),
-        qc.prefetchQuery(modConflictsQuery),
+        ...staticData,
         ...(seedPartners
           ? []
           : [qc.prefetchQuery(partnerBuildsQuery(params.slug))]),

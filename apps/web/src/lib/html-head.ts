@@ -17,9 +17,10 @@ export function themeInitScript(): string {
   return `(function(){try{var t=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)})||"system";if(t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches))document.documentElement.classList.add("dark")}catch(e){}})()`
 }
 
-/** The home hero waits on items-index.json; start that fetch in parallel
- *  with the JS bundle. `href` must equal staticDataQuery's URL or the preload
- *  is wasted. */
-export function homePreloadScript(href: string): string {
-  return `if(location.pathname==="/"){var l=document.createElement("link");l.rel="preload";l.as="fetch";l.crossOrigin="anonymous";l.href=${JSON.stringify(href)};document.head.appendChild(l)}`
+/** Starts the static-data fetches a route's loader waits on in parallel with
+ *  the JS bundle, instead of after it. Keys are exact pathnames, or a prefix
+ *  ending in `/*` (which needs at least one more character). Each href must
+ *  equal staticDataQuery's URL or the preload is wasted. */
+export function dataPreloadScript(byPath: Record<string, string[]>): string {
+  return `(function(){var p=location.pathname,m=${JSON.stringify(byPath)};for(var k in m){var w=k.slice(-2)==="/*",b=w?k.slice(0,-1):k;if(w?p.indexOf(b)===0&&p.length>b.length:p===b)m[k].forEach(function(h){var l=document.createElement("link");l.rel="preload";l.as="fetch";l.crossOrigin="anonymous";l.href=h;document.head.appendChild(l)})}})()`
 }

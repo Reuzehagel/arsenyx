@@ -19,7 +19,7 @@ import react from "@vitejs/plugin-react"
 import { defineConfig, type Plugin } from "vite"
 
 import {
-  homePreloadScript,
+  dataPreloadScript,
   themeInitScript,
   versionedDataUrl,
 } from "./src/lib/html-head.ts"
@@ -40,6 +40,26 @@ function dataVersion(): string {
     // meta.json absent on a fresh checkout before build:items has run.
   }
   return dataVersionFromMeta(meta)
+}
+
+/** Static files each route's loader waits on, preloaded from index.html so
+ *  they download alongside the JS bundle (see dataPreloadScript). Keep in sync
+ *  with the loaders: home (index.tsx), /create (create.tsx), /builds/$slug. */
+function dataPreloads(): Record<string, string[]> {
+  const v = dataVersion()
+  const urls = (...files: string[]) =>
+    files.map((f) => versionedDataUrl(catalogUrl(f), v))
+  return {
+    "/": urls(CATALOG_FILES.itemsIndex),
+    "/create": urls(
+      CATALOG_FILES.mods,
+      CATALOG_FILES.arcanes,
+      CATALOG_FILES.helminthAbilities,
+      CATALOG_FILES.incarnonAdapterImages,
+      CATALOG_FILES.modConflicts,
+    ),
+    "/builds/*": urls(CATALOG_FILES.imageMap, CATALOG_FILES.modConflicts),
+  }
 }
 
 /** Emit /sitemap.xml at build time from the committed catalog. Item pages are
@@ -195,12 +215,7 @@ export default defineConfig({
             ? [
                 {
                   tag: "script",
-                  children: homePreloadScript(
-                    versionedDataUrl(
-                      catalogUrl(CATALOG_FILES.itemsIndex),
-                      dataVersion(),
-                    ),
-                  ),
+                  children: dataPreloadScript(dataPreloads()),
                   injectTo: "head" as const,
                 },
               ]

@@ -7,7 +7,7 @@ Game data (items, mods, arcanes) is static JSON precomputed at build time and se
 - Web (Vite SPA) → Cloudflare Workers (Static Assets), `www.arsenyx.com` (canonical; the Worker 301s `arsenyx.com` → www). SPA fallback + cache headers via [apps/web/wrangler.toml](apps/web/wrangler.toml) and [apps/web/public/\_headers](apps/web/public/_headers). The edge Worker also injects per-page SEO meta — see [apps/web/CLAUDE.md](apps/web/CLAUDE.md).
 - API (Hono on Workers) → `api.arsenyx.com`; DB → PlanetScale Postgres via Cloudflare Hyperdrive. Stack and connection details in [apps/api/CLAUDE.md](apps/api/CLAUDE.md).
 - CI deploys both Workers on push to `main` via Workers Builds (configured in the CF dashboard). Secrets live in the CF dashboard, not in `.env`.
-- Live Cloudflare state (Hyperdrive flags, deployed bindings, usage): run `bunx wrangler` or `cf` read commands directly. Both are logged in through OAuth (`bunx wrangler whoami`, `cf auth whoami`; `cf auth login` prints a link the owner approves). Writes to prod resources need the owner's OK.
+- Live Cloudflare state (Hyperdrive flags, deployed bindings, usage): run `bun run --cwd apps/web wrangler` (root-level `bunx wrangler` can fail to install) or `cf` read commands directly. Both are logged in through OAuth (`… wrangler whoami`, `cf auth whoami`; `cf auth login` prints a link the owner approves). Writes to prod resources need the owner's OK.
 
 ## Monorepo
 
