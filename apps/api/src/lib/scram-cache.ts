@@ -7,7 +7,7 @@ import pgCrypto from "pg/lib/crypto/utils"
 // calls `crypto.deriveKey` through the module object, so replacing the export
 // is enough. Values, not promises, are cached: a promise settled in another
 // request's context can't be awaited safely in Workers.
-const derive = pgCrypto.deriveKey
+const derive = pgCrypto.deriveKey.bind(pgCrypto)
 const salted = new Map<string, ArrayBuffer>()
 
 pgCrypto.deriveKey = async (password, salt, iterations) => {

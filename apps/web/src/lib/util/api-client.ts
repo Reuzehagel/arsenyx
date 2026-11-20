@@ -52,13 +52,14 @@ export async function apiResponse(
   init?: ApiFetchInit,
 ): Promise<Response> {
   const { json, headers, body, ...rest } = init ?? {}
+  // HeadersInit may be a Headers instance or tuple list, which object spread drops.
+  const merged = new Headers(headers)
+  if (json !== undefined && !merged.has("content-type"))
+    merged.set("content-type", "application/json")
   const res = await fetch(`${API_URL}${path}`, {
     ...rest,
     credentials: "include",
-    headers: {
-      ...(json !== undefined && { "content-type": "application/json" }),
-      ...headers,
-    },
+    headers: merged,
     body: json !== undefined ? JSON.stringify(json) : body,
   })
   if (!res.ok) {

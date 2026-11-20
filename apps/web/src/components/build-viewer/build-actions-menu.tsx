@@ -87,12 +87,12 @@ export function BuildActionsMenu({
 
   const onFork = () => {
     if (!session?.user) {
-      navigate({ to: "/auth/signin" })
+      void navigate({ to: "/auth/signin" })
       return
     }
     fork.mutate(undefined, {
       onSuccess: ({ slug: newSlug }) => {
-        navigate({ to: "/builds/$slug", params: { slug: newSlug } })
+        void navigate({ to: "/builds/$slug", params: { slug: newSlug } })
       },
     })
   }
@@ -101,7 +101,7 @@ export function BuildActionsMenu({
     del.mutate(undefined, {
       onSuccess: () => {
         setConfirmOpen(false)
-        navigate({ to: "/builds/mine" })
+        void navigate({ to: "/builds/mine" })
       },
     })
   }
@@ -111,7 +111,7 @@ export function BuildActionsMenu({
       onSuccess: () => {
         setAdminConfirmOpen(false)
         // The build is gone — returning to the viewer would 404.
-        navigate({ to: "/" })
+        void navigate({ to: "/" })
       },
     })
   }

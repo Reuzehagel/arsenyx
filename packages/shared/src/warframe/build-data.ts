@@ -204,11 +204,14 @@ export function pickPerVariantData(
 /** A persisted record whose keys are known but whose values are untrusted. */
 export type Untrusted<T> = { [K in keyof T]?: unknown }
 
+// The rule can't see through the generic T, so it reads Untrusted<T> as `{}`.
+/* oxlint-disable typescript/no-generated-empty-object-type */
 export function asRecord<T>(v: unknown): Untrusted<T> | null {
   return v && typeof v === "object" && !Array.isArray(v)
     ? (v as Untrusted<T>)
     : null
 }
+/* oxlint-enable typescript/no-generated-empty-object-type */
 
 /** Implausibly many twin-frame forms in one build. */
 const MAX_FORMS = 4

@@ -72,7 +72,8 @@ const sqlTypes = {
   getTypeParser: ((oid: number, format?: "text" | "binary") =>
     oid === TIMESTAMP_OID
       ? (s: string) => new Date(`${s.replace(" ", "T")}Z`)
-      : types.getTypeParser(oid, format)) as typeof types.getTypeParser,
+      : // oxlint-disable-next-line typescript/no-unsafe-enum-assignment -- pg hands us raw OIDs, not its TypeId enum
+        types.getTypeParser(oid, format)) as typeof types.getTypeParser,
 }
 
 /** Plain parameterized SQL on the request's connection, without constructing

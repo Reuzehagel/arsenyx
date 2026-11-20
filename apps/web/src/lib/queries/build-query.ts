@@ -131,8 +131,8 @@ export function useRevertBuild(slug: string) {
       ),
     // detail(slug) prefix-matches the revisions and partners keys too.
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: buildKeys.detail(slug) })
-      qc.invalidateQueries({ queryKey: buildKeys.lists })
+      void qc.invalidateQueries({ queryKey: buildKeys.detail(slug) })
+      void qc.invalidateQueries({ queryKey: buildKeys.lists })
     },
   })
 }
@@ -152,7 +152,7 @@ export function useDeleteBuild(slug: string) {
       }),
     onSuccess: () => {
       qc.removeQueries({ queryKey: buildKeys.detail(slug) })
-      qc.invalidateQueries({ queryKey: buildKeys.lists })
+      void qc.invalidateQueries({ queryKey: buildKeys.lists })
     },
   })
 }
@@ -171,7 +171,7 @@ export function useForkBuild(slug: string) {
         },
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: buildKeys.lists })
+      void qc.invalidateQueries({ queryKey: buildKeys.lists })
     },
   })
 }
@@ -277,7 +277,7 @@ export function useToggleBookmark(slug: string) {
           bookmarkCount: data.bookmarkCount,
         })
       }
-      qc.invalidateQueries({ queryKey: buildKeys.scope("bookmarks") })
+      void qc.invalidateQueries({ queryKey: buildKeys.scope("bookmarks") })
     },
   })
 }

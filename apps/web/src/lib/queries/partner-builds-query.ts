@@ -112,8 +112,8 @@ export function useLinkPartner(ownerSlug: string) {
     // mutations below. The link is symmetric, so the partner's own strip
     // changes too.
     onSettled: (_d, _e, partner) => {
-      qc.invalidateQueries({ queryKey: key })
-      qc.invalidateQueries({ queryKey: buildKeys.partners(partner.slug) })
+      void qc.invalidateQueries({ queryKey: key })
+      void qc.invalidateQueries({ queryKey: buildKeys.partners(partner.slug) })
     },
   })
 }
@@ -140,7 +140,7 @@ export function useReorderPartners(ownerSlug: string) {
       if (ctx?.prev) qc.setQueryData(key, ctx.prev)
     },
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: key })
+      void qc.invalidateQueries({ queryKey: key })
     },
   })
 }
@@ -174,7 +174,7 @@ export function useSetPartnerVariant(ownerSlug: string) {
       if (ctx?.prev) qc.setQueryData(key, ctx.prev)
     },
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: key })
+      void qc.invalidateQueries({ queryKey: key })
     },
   })
 }
@@ -202,8 +202,8 @@ export function useUnlinkPartner(ownerSlug: string) {
       if (ctx?.prev) qc.setQueryData(key, ctx.prev)
     },
     onSettled: (_d, _e, partnerSlug) => {
-      qc.invalidateQueries({ queryKey: key })
-      qc.invalidateQueries({ queryKey: buildKeys.partners(partnerSlug) })
+      void qc.invalidateQueries({ queryKey: key })
+      void qc.invalidateQueries({ queryKey: buildKeys.partners(partnerSlug) })
     },
   })
 }

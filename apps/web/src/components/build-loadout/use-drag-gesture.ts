@@ -283,7 +283,9 @@ export function useDragGesture<TSource, TTarget>(
       const r = src.getBoundingClientRect()
       const clone = g.cloneNode(true) as HTMLDivElement
       document.body.append(clone)
-      clone
+      // `finished` rejects if the animation is cancelled; remove the clone either way.
+      const remove = () => clone.remove()
+      void clone
         .animate(
           [
             { transform: g.style.transform, opacity: 1 },
@@ -294,7 +296,7 @@ export function useDragGesture<TSource, TTarget>(
           ],
           { duration: 200, easing: "cubic-bezier(0.23, 1, 0.32, 1)" },
         )
-        .finished.finally(() => clone.remove())
+        .finished.then(remove, remove)
     }
 
     const onPointerUp = () => {

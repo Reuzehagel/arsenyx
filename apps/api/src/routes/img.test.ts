@@ -11,7 +11,7 @@ import { img } from "./img"
 // the stub has to answer both the 1.1.1.1 lookup and the image request.
 function stubUpstream(contentType: string, body = "binary-ish") {
   vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
-    const url = typeof input === "string" ? input : input.toString()
+    const url = input instanceof Request ? input.url : String(input)
     if (url.includes("1.1.1.1/dns-query")) {
       // No A/AAAA answers → treated as not-private, request proceeds.
       return new Response(JSON.stringify({ Answer: [] }), {

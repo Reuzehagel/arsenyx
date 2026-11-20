@@ -32,7 +32,7 @@ function SignInPage() {
 
   useEffect(() => {
     if (!isPending && session) {
-      navigate({ to: redirect ?? "/", replace: true })
+      void navigate({ to: redirect ?? "/", replace: true })
     }
   }, [isPending, session, redirect, navigate])
 
@@ -110,7 +110,7 @@ function DevSignInForm({ redirect }: { redirect: string | undefined }) {
       setError(err.message ?? "sign-in failed")
       return
     }
-    navigate({ to: redirect ?? "/", replace: true })
+    void navigate({ to: redirect ?? "/", replace: true })
   }
 
   return (
