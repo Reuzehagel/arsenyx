@@ -58,7 +58,7 @@ export function useAdminPatchUser() {
         json: input.patch,
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: adminKeys.users })
+      void qc.invalidateQueries({ queryKey: adminKeys.users })
     },
   })
 }
@@ -71,8 +71,8 @@ export function useAdminDeleteUser() {
         method: "DELETE",
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: adminKeys.users })
-      qc.invalidateQueries({ queryKey: adminKeys.stats })
+      void qc.invalidateQueries({ queryKey: adminKeys.users })
+      void qc.invalidateQueries({ queryKey: adminKeys.stats })
     },
   })
 }
@@ -94,9 +94,9 @@ export function useAdminDeleteBuild() {
         method: "DELETE",
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: adminKeys.builds })
-      qc.invalidateQueries({ queryKey: adminKeys.stats })
-      qc.invalidateQueries({ queryKey: buildKeys.lists })
+      void qc.invalidateQueries({ queryKey: adminKeys.builds })
+      void qc.invalidateQueries({ queryKey: adminKeys.stats })
+      void qc.invalidateQueries({ queryKey: buildKeys.lists })
     },
   })
 }
@@ -112,9 +112,9 @@ export function useAdminSetBuildVisibility(slug: string) {
     onSuccess: () => {
       // The viewer reads this build under buildKeys.detail; refresh it so the
       // header visibility badge tracks the change without a manual reload.
-      qc.invalidateQueries({ queryKey: buildKeys.detail(slug) })
-      qc.invalidateQueries({ queryKey: adminKeys.builds })
-      qc.invalidateQueries({ queryKey: buildKeys.lists })
+      void qc.invalidateQueries({ queryKey: buildKeys.detail(slug) })
+      void qc.invalidateQueries({ queryKey: adminKeys.builds })
+      void qc.invalidateQueries({ queryKey: buildKeys.lists })
     },
   })
 }
@@ -195,9 +195,9 @@ export function useAdminSetOrgVerified() {
       // pre-write row into an eager refetch; with caching disabled there's no
       // stale window to dodge, so a plain invalidate is correct and also
       // updates any of these that happen to be mounted.
-      qc.invalidateQueries({ queryKey: orgKeys.detail(input.slug) })
-      qc.invalidateQueries({ queryKey: orgKeys.all })
-      qc.invalidateQueries({ queryKey: buildKeys.lists })
+      void qc.invalidateQueries({ queryKey: orgKeys.detail(input.slug) })
+      void qc.invalidateQueries({ queryKey: orgKeys.all })
+      void qc.invalidateQueries({ queryKey: buildKeys.lists })
     },
   })
 }
@@ -210,8 +210,8 @@ export function useAdminDeleteOrg() {
         method: "DELETE",
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: adminKeys.orgs })
-      qc.invalidateQueries({ queryKey: adminKeys.stats })
+      void qc.invalidateQueries({ queryKey: adminKeys.orgs })
+      void qc.invalidateQueries({ queryKey: adminKeys.stats })
     },
   })
 }

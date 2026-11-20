@@ -48,7 +48,11 @@ function parseRawSlots(slots: unknown): OverframeRawSlot[] {
       modIdRaw !== undefined &&
       Number.isFinite(modIdNum) &&
       modIdNum !== 0
-    const overframeId = hasMod ? String(modIdRaw) : null
+    const overframeId = hasMod
+      ? typeof modIdRaw === "string"
+        ? modIdRaw
+        : String(modIdNum)
+      : null
     if (!Number.isFinite(slot_id) || !Number.isFinite(rank)) continue
     const safePolarityCode = Number.isFinite(polarityCode) ? polarityCode : 0
     out.push({

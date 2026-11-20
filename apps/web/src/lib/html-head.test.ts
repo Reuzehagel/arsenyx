@@ -14,6 +14,7 @@ function preloadsFor(pathname: string): string[] {
     "/create": ["mods.json", "arcanes.json"],
     "/builds/*": ["image-map.json"],
   })
+  // oxlint-disable-next-line typescript/no-implied-eval -- runs the inline <head> script under test
   new Function("location", "document", script)({ pathname }, document)
   return hrefs
 }

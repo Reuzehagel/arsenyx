@@ -131,10 +131,10 @@ interface Variant {
  *  depend on object key order. */
 function stamp(v: unknown): string {
   const o = obj(v)
-  if (!o) return v == null ? "" : String(v)
+  if (!o) return v == null ? "" : JSON.stringify(v)
   return Object.keys(o)
     .sort()
-    .map((k) => `${k}=${String(o[k])}`)
+    .map((k) => `${k}=${JSON.stringify(o[k])}`)
     .join(",")
 }
 

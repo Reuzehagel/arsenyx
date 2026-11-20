@@ -64,7 +64,7 @@ const sample = <T>(xs: T[], n: number): T[] =>
   [...xs].sort(() => rand() - 0.5).slice(0, n)
 const slug = () =>
   Array.from({ length: 10 }, () =>
-    pick([..."23456789abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"]),
+    pick("23456789abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ".split("")),
   ).join("")
 const id = () => `seed${slug()}`
 

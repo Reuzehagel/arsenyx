@@ -159,7 +159,7 @@ function BrowseContent() {
             value={q}
             onChange={(e) => {
               const next = e.target.value
-              navigate({
+              void navigate({
                 search: (s) => ({ ...s, q: next || undefined }),
                 replace: true,
               })

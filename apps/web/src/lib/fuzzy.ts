@@ -3,6 +3,8 @@ import uFuzzy from "@leeoniya/ufuzzy"
 // Shared fuzzy matcher for search surfaces (command palette, mod grid). A single
 // instance is fine — uFuzzy holds no per-search state. intraMode 1 (single-error)
 // tolerates one typo per term, so "seration" still finds Serration.
+// IntraMode is an ambient const enum, which isolatedModules can't reference.
+// oxlint-disable-next-line typescript/no-unsafe-enum-assignment
 const uf = new uFuzzy({ intraMode: 1 })
 
 /**

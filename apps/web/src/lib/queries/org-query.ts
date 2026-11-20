@@ -114,7 +114,7 @@ export function useCreateOrg() {
     mutationFn: (input: OrgWriteInput) =>
       orgCall<OrgWriteResponse>(`/orgs`, { method: "POST", json: input }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: orgKeys.mine })
+      void qc.invalidateQueries({ queryKey: orgKeys.mine })
     },
   })
 }
@@ -128,11 +128,11 @@ export function useUpdateOrg(slug: string) {
         json: input,
       }),
     onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: orgKeys.detail(slug) })
+      void qc.invalidateQueries({ queryKey: orgKeys.detail(slug) })
       if (data.slug.toLowerCase() !== slug.toLowerCase()) {
-        qc.invalidateQueries({ queryKey: orgKeys.detail(data.slug) })
+        void qc.invalidateQueries({ queryKey: orgKeys.detail(data.slug) })
       }
-      qc.invalidateQueries({ queryKey: orgKeys.mine })
+      void qc.invalidateQueries({ queryKey: orgKeys.mine })
     },
   })
 }
@@ -147,7 +147,7 @@ export function useUpdateOrgBuildDeletion(slug: string) {
         json: input,
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: orgKeys.detail(slug) })
+      void qc.invalidateQueries({ queryKey: orgKeys.detail(slug) })
     },
   })
 }
@@ -158,8 +158,8 @@ export function useDeleteOrg(slug: string) {
     mutationFn: () => orgCall(orgPath(slug), { method: "DELETE" }),
     onSuccess: () => {
       qc.removeQueries({ queryKey: orgKeys.detail(slug) })
-      qc.invalidateQueries({ queryKey: orgKeys.mine })
-      qc.invalidateQueries({ queryKey: buildKeys.lists })
+      void qc.invalidateQueries({ queryKey: orgKeys.mine })
+      void qc.invalidateQueries({ queryKey: buildKeys.lists })
     },
   })
 }
@@ -173,7 +173,7 @@ export function useAddOrgMember(slug: string) {
         json: { username },
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: orgKeys.detail(slug) })
+      void qc.invalidateQueries({ queryKey: orgKeys.detail(slug) })
     },
   })
 }
@@ -207,7 +207,7 @@ export function useUpdateOrgMemberRole(slug: string) {
       if (ctx?.prev) qc.setQueryData(key, ctx.prev)
     },
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: key })
+      void qc.invalidateQueries({ queryKey: key })
     },
   })
 }
@@ -218,8 +218,8 @@ export function useRemoveOrgMember(slug: string) {
     mutationFn: (userId: string) =>
       orgCall(memberPath(slug, userId), { method: "DELETE" }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: orgKeys.detail(slug) })
-      qc.invalidateQueries({ queryKey: orgKeys.mine })
+      void qc.invalidateQueries({ queryKey: orgKeys.detail(slug) })
+      void qc.invalidateQueries({ queryKey: orgKeys.mine })
     },
   })
 }
@@ -240,9 +240,9 @@ export function useRestoreOrgBuild(slug: string) {
         },
       ),
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: orgKeys.deleted(slug) })
-      qc.invalidateQueries({ queryKey: orgKeys.detail(slug) })
-      qc.invalidateQueries({ queryKey: buildKeys.lists })
+      void qc.invalidateQueries({ queryKey: orgKeys.deleted(slug) })
+      void qc.invalidateQueries({ queryKey: orgKeys.detail(slug) })
+      void qc.invalidateQueries({ queryKey: buildKeys.lists })
     },
   })
 }

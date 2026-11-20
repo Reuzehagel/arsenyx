@@ -26,7 +26,7 @@ export function SocialActions({ build }: { build: BuildDetailResponse }) {
   const requireAuthThen = (busy: boolean, run: () => void) => () => {
     if (busy) return
     if (!session?.user) {
-      navigate({ to: "/auth/signin" })
+      void navigate({ to: "/auth/signin" })
       return
     }
     run()

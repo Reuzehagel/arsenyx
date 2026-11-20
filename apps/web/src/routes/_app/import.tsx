@@ -248,7 +248,7 @@ function ImportResult({
       buildName: applied.buildName,
       guideDescription: applied.guideDescription,
     })
-    navigate({
+    void navigate({
       to: "/create",
       search: {
         item: matchedItem.item.slug,

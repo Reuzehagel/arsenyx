@@ -117,7 +117,7 @@ for (const d of dirs) {
     rmSync(doomed, { recursive: true, force: true })
   } catch (e) {
     failed++
-    console.error(`Could not delete ${d} (still locked?): ${e}`)
+    console.error(`Could not delete ${d} (still locked?): ${String(e)}`)
   }
 }
 for (const b of branches) {

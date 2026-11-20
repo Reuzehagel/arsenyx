@@ -52,7 +52,7 @@ export function UserMenu() {
 
   async function onSignOut() {
     await authClient.signOut()
-    navigate({ to: "/" })
+    void navigate({ to: "/" })
   }
 
   return (

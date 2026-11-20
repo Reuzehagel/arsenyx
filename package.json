@@ -50,8 +50,9 @@
     "luaparse": "^0.3.1",
     "lzma": "^2.3.2",
     "oxfmt": "^0.76.0",
-    "oxlint": "^1.91.0",
+    "oxlint": "^1.94.0",
     "sharp": "^0.35.5",
+    "tsrs": "7.1.0-beta.tsrs3",
     "warframe-public-export-plus": "^0.6.12"
   },
   "patchedDependencies": {

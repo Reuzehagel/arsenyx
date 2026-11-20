@@ -49,7 +49,11 @@ function coerceSlotArray(
       const idVal = obj.id ?? obj.modId ?? obj.itemId ?? obj["0"] // last resort
       const rankVal = obj.rank ?? obj.level ?? obj["1"]
       if (idVal === undefined || rankVal === undefined) continue
-      const id = String(idVal)
+      // A nested object would stringify to "[object Object]"; skip it instead.
+      const id =
+        typeof idVal === "string" || typeof idVal === "number"
+          ? String(idVal)
+          : ""
       const rank = Number(rankVal)
       if (id && Number.isFinite(rank)) out.push({ id, rank })
       continue

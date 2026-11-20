@@ -307,6 +307,8 @@ export function modsConflict(
   b: string,
   conflicts: ModConflictMap,
 ): boolean {
+  // A missing key reads as undefined at runtime (noUncheckedIndexedAccess is off).
+  // oxlint-disable-next-line typescript/no-unnecessary-type-conversion
   return Boolean(conflicts[a]?.includes(b) || conflicts[b]?.includes(a))
 }
 

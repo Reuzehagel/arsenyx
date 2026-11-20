@@ -118,7 +118,7 @@ export function useBuildSave({
     nextHideAuthor: boolean,
   ) => {
     if (!session?.user) {
-      goSignIn()
+      void goSignIn()
       return
     }
     if (savingRef.current) return
@@ -222,7 +222,7 @@ export function useBuildSave({
           { duration: Infinity, closeButton: true },
         )
       }
-      navigate({ to: "/builds/$slug", params: { slug } })
+      void navigate({ to: "/builds/$slug", params: { slug } })
     } catch (err) {
       // The draft is untouched (it's only cleared on success), so nothing's lost.
       setSaveStatus("idle")
@@ -271,7 +271,7 @@ export function useBuildSave({
     // concurrent saves (duplicate POST, double navigate/toast).
     if (saveStatus === "saving") return
     if (!session?.user) {
-      goSignIn()
+      void goSignIn()
       return
     }
     if (!isUpdate) {
