@@ -24,7 +24,14 @@ if (import.meta.env.DEV) {
 // (embed-main.tsx, iframed by external guide pages) stays untracked.
 // The token is public by design: it ships in the page to every visitor.
 // Hostname check keeps forks/mirrors that ship this code out of our stats.
-if (import.meta.env.PROD && location.hostname === "www.arsenyx.com") {
+// JS-running crawlers (Bytespider, PetalBot) fire the beacon too and skewed
+// P75 load times, so they're skipped.
+if (
+  import.meta.env.PROD &&
+  location.hostname === "www.arsenyx.com" &&
+  !navigator.webdriver &&
+  !/bot|spider|crawl|headless/i.test(navigator.userAgent)
+) {
   const beacon = document.createElement("script")
   beacon.src = "https://static.cloudflareinsights.com/beacon.min.js"
   beacon.defer = true
